@@ -11,7 +11,6 @@ describe('Tools module', () => {
 
   /**
    * Construct Tools module for testing purposes
-   *
    * @param config - Editor config
    */
   function constructModule(config: EditorConfig = defaultConfig): Tools {
@@ -238,53 +237,53 @@ describe('Tools module', () => {
       it('Block Tools should contain default tunes if no settings is specified', () => {
         const tool = module.blockTools.get('blockToolWithoutSettings');
 
-        expect(tool.tunes.has('delete')).to.be.true;
-        expect(tool.tunes.has('moveUp')).to.be.true;
-        expect(tool.tunes.has('moveDown')).to.be.true;
+        expect(tool?.tunes.has('delete')).to.be.true;
+        expect(tool?.tunes.has('moveUp')).to.be.true;
+        expect(tool?.tunes.has('moveDown')).to.be.true;
       });
 
       it('Block Tools should contain default tunes', () => {
         const tool = module.blockTools.get('blockTool');
 
-        expect(tool.tunes.has('delete')).to.be.true;
-        expect(tool.tunes.has('moveUp')).to.be.true;
-        expect(tool.tunes.has('moveDown')).to.be.true;
+        expect(tool?.tunes.has('delete')).to.be.true;
+        expect(tool?.tunes.has('moveUp')).to.be.true;
+        expect(tool?.tunes.has('moveDown')).to.be.true;
       });
 
       it('Block Tools should contain tunes in correct order', () => {
         let tool = module.blockTools.get('blockTool');
 
-        expect(tool.tunes.has('blockTune')).to.be.true;
-        expect(tool.tunes.has('blockTune2')).to.be.true;
-        expect(Array.from(tool.tunes.keys())).to.be.deep.eq(['blockTune2', 'blockTune', 'moveUp', 'delete', 'moveDown']);
+        expect(tool?.tunes.has('blockTune')).to.be.true;
+        expect(tool?.tunes.has('blockTune2')).to.be.true;
+        expect(Array.from(tool?.tunes.keys() ?? [])).to.be.deep.eq(['blockTune2', 'blockTune', 'moveUp', 'delete', 'moveDown']);
 
         tool = module.blockTools.get('withSuccessfulPrepare');
 
-        expect(tool.tunes.has('blockTune')).to.be.false;
-        expect(tool.tunes.has('blockTune2')).to.be.true;
+        expect(tool?.tunes.has('blockTune')).to.be.false;
+        expect(tool?.tunes.has('blockTune2')).to.be.true;
 
         tool = module.blockTools.get('withoutPrepare');
 
-        expect(tool.tunes.has('blockTune')).to.be.false;
-        expect(tool.tunes.has('blockTune2')).to.be.false;
+        expect(tool?.tunes.has('blockTune')).to.be.false;
+        expect(tool?.tunes.has('blockTune2')).to.be.false;
       });
 
       it('Block Tools should contain inline tools in correct order', () => {
         let tool = module.blockTools.get('blockTool');
 
-        expect(tool.inlineTools.has('inlineTool')).to.be.true;
-        expect(tool.inlineTools.has('inlineTool2')).to.be.true;
-        expect(Array.from(tool.inlineTools.keys())).to.be.deep.eq(['inlineTool2', 'inlineTool']);
+        expect(tool?.inlineTools.has('inlineTool')).to.be.true;
+        expect(tool?.inlineTools.has('inlineTool2')).to.be.true;
+        expect(Array.from(tool?.inlineTools.keys() ?? [])).to.be.deep.eq(['inlineTool2', 'inlineTool']);
 
         tool = module.blockTools.get('withSuccessfulPrepare');
 
-        expect(tool.inlineTools.has('inlineTool')).to.be.false;
-        expect(tool.inlineTools.has('inlineTool2')).to.be.true;
+        expect(tool?.inlineTools.has('inlineTool')).to.be.false;
+        expect(tool?.inlineTools.has('inlineTool2')).to.be.true;
 
         tool = module.blockTools.get('withoutPrepare');
 
-        expect(tool.inlineTools.has('inlineTool')).to.be.false;
-        expect(tool.inlineTools.has('inlineTool2')).to.be.false;
+        expect(tool?.inlineTools.has('inlineTool')).to.be.false;
+        expect(tool?.inlineTools.has('inlineTool2')).to.be.false;
       });
     });
 

@@ -239,6 +239,9 @@ describe('Backspace keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('@firstInput').should(($div) => {
@@ -330,13 +333,16 @@ describe('Backspace keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('[data-cy=editorjs]')
           .find('.ce-paragraph')
           .should(($block) => {
             expect($block[0].contains(range.startContainer)).to.be.true;
-            expect(range.startOffset).to.be.eq($block[0].textContent.length);
+            expect(range.startOffset).to.be.eq($block[0].textContent?.length ?? 0);
           });
       });
 
@@ -395,6 +401,9 @@ describe('Backspace keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('[data-cy=editorjs]')
@@ -461,6 +470,9 @@ describe('Backspace keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('[data-cy=editorjs]')
@@ -526,6 +538,9 @@ describe('Backspace keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('[data-cy=editorjs]')
@@ -607,6 +622,9 @@ describe('Backspace keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('@firstBlock').should(($div) => {
@@ -690,6 +708,9 @@ describe('Backspace keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('@firstBlock').should(($div) => {
@@ -700,7 +721,7 @@ describe('Backspace keydown', function () {
 
   describe('at the start of the first Block', function () {
     it('should do nothing if Block is not empty', function () {
-      createEditorWithTextBlocks(['The only block. Not empty']);
+      createEditorWithTextBlocks([ 'The only block. Not empty' ]);
 
       cy.get('[data-cy=editorjs]')
         .find('.ce-paragraph')

@@ -1,6 +1,7 @@
 import { PopoverDesktop as Popover, PopoverItemType } from '../../../../src/components/utils/popover';
 import type { PopoverItemParams } from '@/types/utils/popover';
 import type { MenuConfig } from '../../../../types/tools';
+import type { BlockToolConstructable } from '../../../../types/tools';
 import Header from '@editorjs/header';
 
 /* eslint-disable @typescript-eslint/no-empty-function */
@@ -975,7 +976,8 @@ describe('Popover', () => {
       cy.createEditor({
         tools: {
           header: {
-            class: Header,
+            class: Header as unknown as BlockToolConstructable,
+            config: {},
           },
         },
         data: {
@@ -1020,7 +1022,8 @@ describe('Popover', () => {
       cy.createEditor({
         tools: {
           header: {
-            class: Header,
+            class: Header as unknown as BlockToolConstructable,
+            config: {},
           },
         },
         data: {
@@ -1080,7 +1083,8 @@ describe('Popover', () => {
       cy.createEditor({
         tools: {
           header: {
-            class: Header,
+            class: Header as unknown as BlockToolConstructable,
+            config: {},
           },
         },
         data: {

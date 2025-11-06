@@ -33,9 +33,13 @@ describe('BlockTunes', function () {
         .then((window) => {
           const selection = window.getSelection();
 
-          expect(selection.rangeCount).to.be.equal(1);
+          expect(selection?.rangeCount).to.be.equal(1);
 
-          const range = selection.getRangeAt(0);
+          const range = selection?.getRangeAt(0);
+
+          if (!range) {
+            throw new Error('Range is undefined');
+          }
 
           cy.get('[data-cy=editorjs]')
             .find('[data-cy="block-tunes"] .cdx-search-field')
@@ -369,7 +373,11 @@ describe('BlockTunes', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
-          const range = selection.getRangeAt(0);
+          const range = selection?.getRangeAt(0);
+
+          if (!range) {
+            throw new Error('Range is undefined');
+          }
 
           cy.get('[data-cy=editorjs]')
             .find('.ce-header')

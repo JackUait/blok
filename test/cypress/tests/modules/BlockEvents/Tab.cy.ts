@@ -81,7 +81,13 @@ describe('Tab keydown', function () {
       .last()
       .then(($secondBlock) => {
         const editorWindow = $secondBlock.get(0).ownerDocument.defaultView;
+        if (!editorWindow) {
+          throw new Error('Window is not available');
+        }
         const selection = editorWindow.getSelection();
+        if (!selection) {
+          throw new Error('Selection is not available');
+        }
 
         const range = selection.getRangeAt(0);
 
@@ -127,7 +133,13 @@ describe('Tab keydown', function () {
       .last()
       .then(($secondInput) => {
         const editorWindow = $secondInput.get(0).ownerDocument.defaultView;
+        if (!editorWindow) {
+          throw new Error('Window is not available');
+        }
         const selection = editorWindow.getSelection();
+        if (!selection) {
+          throw new Error('Selection is not available');
+        }
 
         const range = selection.getRangeAt(0);
 
@@ -240,7 +252,13 @@ describe('Shift+Tab keydown', function () {
       .first()
       .then(($firstBlock) => {
         const editorWindow = $firstBlock.get(0).ownerDocument.defaultView;
+        if (!editorWindow) {
+          throw new Error('Window is not available');
+        }
         const selection = editorWindow.getSelection();
+        if (!selection) {
+          throw new Error('Selection is not available');
+        }
 
         const range = selection.getRangeAt(0);
 
@@ -289,7 +307,13 @@ describe('Shift+Tab keydown', function () {
       .first()
       .then(($firstInput) => {
         const editorWindow = $firstInput.get(0).ownerDocument.defaultView;
+        if (!editorWindow) {
+          throw new Error('Window is not available');
+        }
         const selection = editorWindow.getSelection();
+        if (!selection) {
+          throw new Error('Selection is not available');
+        }
 
         const range = selection.getRangeAt(0);
 

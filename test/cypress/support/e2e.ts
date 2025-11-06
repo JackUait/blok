@@ -6,20 +6,20 @@ import '@cypress/code-coverage/support';
 // available to them because the supportFile is bundled and served
 // prior to any spec files loading
 
+declare const chai: Chai.ChaiStatic;
+
 import type PartialBlockMutationEvent from '../fixtures/types/PartialBlockMutationEvent';
 
 /**
  * Chai plugin for checking if passed onChange method is called with an array of passed events
- *
  * @param _chai - Chai instance
  */
-const beCalledWithBatchedEvents = (_chai): void => {
+const beCalledWithBatchedEvents = (_chai: typeof chai): void => {
   /**
    * Check if passed onChange method is called with an array of passed events
-   *
    * @param expectedEvents - batched events to check
    */
-  function assertToBeCalledWithBatchedEvents(expectedEvents: PartialBlockMutationEvent[]): void {
+  function assertToBeCalledWithBatchedEvents(this: Chai.AssertionStatic, expectedEvents: PartialBlockMutationEvent[]): void {
     /**
      * EditorJS API is passed as the first parameter of the onChange callback
      */
@@ -29,7 +29,8 @@ const beCalledWithBatchedEvents = (_chai): void => {
     this.assert(
       $onChange.calledOnce,
       'expected #{this} to be called once',
-      'expected #{this} to not be called once'
+      'expected #{this} to not be called once',
+      true
     );
 
     this.assert(

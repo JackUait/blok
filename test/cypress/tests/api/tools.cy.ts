@@ -90,12 +90,12 @@ describe('Editor Tools Api', () => {
       cy.get('[data-cy=editorjs]')
         .get('.ce-popover-item[data-item-name=testTool]')
         .first()
-        .should('contain.text', TestTool.toolbox[0].title);
+        .should('contain.text', (TestTool.toolbox as ToolboxConfigEntry[])[0].title);
 
       cy.get('[data-cy=editorjs]')
         .get('.ce-popover-item[data-item-name=testTool]')
         .last()
-        .should('contain.text', TestTool.toolbox[1].title);
+        .should('contain.text', (TestTool.toolbox as ToolboxConfigEntry[])[1].title);
     });
 
     it('should insert block with overridden data on entry click in case toolbox entry provides data overrides', () => {
@@ -114,10 +114,9 @@ describe('Editor Tools Api', () => {
 
         /**
          * Tool constructor
-         *
          * @param data - previously saved data
          */
-        constructor({ data }) {
+        constructor({ data }: { data: { testProp: string } }) {
           this._data = data;
         }
 
@@ -147,7 +146,6 @@ describe('Editor Tools Api', () => {
 
         /**
          * Extracts Tool's data from the view
-         *
          * @param el - tool view
          */
         public save(el: HTMLElement): BlockToolData {

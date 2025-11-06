@@ -124,7 +124,6 @@ describe('Delete keydown', function () {
          * - Firefox merge blocks and with whitespace - "1 2"
          *
          * So, we have to check both variants.
-         *
          * @todo remove this check after fixing the Firefox merge behaviour
          */
         .should(($block) => {
@@ -232,6 +231,9 @@ describe('Delete keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('@secondInput').should(($div) => {
@@ -323,6 +325,9 @@ describe('Delete keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('[data-cy=editorjs]')
@@ -387,6 +392,9 @@ describe('Delete keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('[data-cy=editorjs]')
@@ -466,6 +474,9 @@ describe('Delete keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('@secondBlock').should(($div) => {

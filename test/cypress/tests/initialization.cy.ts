@@ -13,7 +13,7 @@ describe('Editor basic initialization', () => {
     });
 
     afterEach(function () {
-      if (this.editorInstance) {
+      if (this.editorInstance != null) {
         this.editorInstance.destroy();
       }
     });
@@ -30,8 +30,8 @@ describe('Editor basic initialization', () => {
 
   describe('Configuration', () => {
     describe('readOnly', () => {
-      beforeEach(() => {
-        if (this && this.editorInstance) {
+      beforeEach(function () {
+        if (this.editorInstance != null) {
           this.editorInstance.destroy();
         }
       });

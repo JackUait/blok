@@ -1,6 +1,6 @@
 import Header from '@editorjs/header';
 import NestedEditor, { NESTED_EDITOR_ID } from '../../support/utils/nestedEditorInstance';
-import type { MenuConfig } from '@/types/tools';
+import type { MenuConfig, ToolConstructable } from '@/types/tools';
 
 describe('Inline Toolbar', () => {
   it('should appear aligned with left coord of selection rect', () => {
@@ -25,12 +25,21 @@ describe('Inline Toolbar', () => {
       .should('be.visible')
       .then(($toolbar) => {
         const editorWindow = $toolbar.get(0).ownerDocument.defaultView;
+
+        if (!editorWindow) {
+          throw new Error('Unable to access window from toolbar element');
+        }
+
         const selection = editorWindow.getSelection();
+
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('No selection available');
+        }
 
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
 
-        expect($toolbar.offset().left).to.be.closeTo(rect.left, 1);
+        expect($toolbar.offset()?.left).to.be.closeTo(rect.left, 1);
       });
   });
 
@@ -70,10 +79,17 @@ describe('Inline Toolbar', () => {
           .then(($blockWrapper) => {
             const blockWrapperRect = $blockWrapper.get(0).getBoundingClientRect();
 
+            const toolbarOffset = $toolbar.offset();
+            const toolbarWidth = $toolbar.width();
+
+            if (!toolbarOffset || toolbarWidth === undefined) {
+              throw new Error('Unable to get toolbar offset or width');
+            }
+
             /**
              * Toolbar should be aligned with right side of text column
              */
-            expect($toolbar.offset().left + $toolbar.width()).to.closeTo(blockWrapperRect.right, 10);
+            expect(toolbarOffset.left + toolbarWidth).to.closeTo(blockWrapperRect.right, 10);
           });
       });
   });
@@ -82,13 +98,17 @@ describe('Inline Toolbar', () => {
     cy.createEditor({
       tools: {
         header: {
-          class: Header,
+          class: Header as unknown as ToolConstructable,
           inlineToolbar: ['bold', 'testTool'],
         },
         testTool: {
           class: class {
             public static isInline = true;
             public static isReadOnlySupported = true;
+            // eslint-disable-next-line jsdoc/require-jsdoc
+            public constructor() {
+              // Constructor required for InlineToolConstructable
+            }
             // eslint-disable-next-line jsdoc/require-jsdoc
             public render(): MenuConfig {
               return {
@@ -98,7 +118,7 @@ describe('Inline Toolbar', () => {
                 onActivate: () => {},
               };
             }
-          },
+          } as unknown as ToolConstructable,
         },
       },
       readOnly: true,
@@ -154,7 +174,13 @@ describe('Inline Toolbar', () => {
       doc.body.appendChild(form);
 
       /* Move editor to form */
-      form.appendChild(doc.getElementById('editorjs'));
+      const editorElement = doc.getElementById('editorjs');
+
+      if (!editorElement) {
+        throw new Error('Editor element not found');
+      }
+
+      form.appendChild(editorElement);
 
       cy.get('[data-cy=editorjs]')
         .find('.ce-paragraph')
@@ -172,7 +198,7 @@ describe('Inline Toolbar', () => {
       cy.createEditor({
         tools: {
           header: {
-            class: Header,
+            class: Header as unknown as ToolConstructable,
           },
         },
         data: {
@@ -207,9 +233,13 @@ describe('Inline Toolbar', () => {
         .then((window) => {
           const selection = window.getSelection();
 
-          expect(selection.rangeCount).to.be.equal(1);
+          expect(selection?.rangeCount).to.be.equal(1);
 
-          const range = selection.getRangeAt(0);
+          const range = selection?.getRangeAt(0);
+
+          if (!range) {
+            throw new Error('No range available');
+          }
 
           cy.get('[data-cy=editorjs]')
             .find('.ce-header')

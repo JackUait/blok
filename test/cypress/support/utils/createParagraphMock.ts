@@ -2,7 +2,6 @@ import { nanoid } from 'nanoid';
 
 /**
  * Creates a paragraph mock
- *
  * @param text - text for the paragraph
  * @returns paragraph mock
  */

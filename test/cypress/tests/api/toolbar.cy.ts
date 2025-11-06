@@ -28,7 +28,7 @@ describe('api.toolbar', () => {
   });
 
   afterEach(function () {
-    if (this.editorInstance) {
+    if (this.editorInstance != null) {
       this.editorInstance.destroy();
     }
   });

@@ -1,5 +1,5 @@
 import Header from '@editorjs/header';
-import type { InlineTool, MenuConfig } from '../../../../types/tools';
+import type { InlineTool, InlineToolConstructorOptions, MenuConfig, ToolConstructable } from '../../../../types/tools';
 import { createEditorWithTextBlocks } from '../../support/utils/createEditorWithTextBlocks';
 
 describe('Inline Toolbar', () => {
@@ -8,7 +8,7 @@ describe('Inline Toolbar', () => {
       cy.createEditor({
         tools: {
           header: {
-            class: Header,
+            class: Header as unknown as ToolConstructable,
           },
         },
         data: {
@@ -46,13 +46,17 @@ describe('Inline Toolbar', () => {
       cy.createEditor({
         tools: {
           header: {
-            class: Header,
+            class: Header as unknown as ToolConstructable,
             inlineToolbar: ['bold', 'testTool', 'link'],
 
           },
           testTool: {
-            class: class {
+            class: class TestTool {
               public static isInline = true;
+              // eslint-disable-next-line jsdoc/require-jsdoc
+              public constructor(_config: InlineToolConstructorOptions) {
+                // Constructor required by InlineToolConstructable
+              }
               // eslint-disable-next-line jsdoc/require-jsdoc
               public render(): MenuConfig {
                 return {
@@ -71,7 +75,7 @@ describe('Inline Toolbar', () => {
                   },
                 };
               }
-            },
+            } as unknown as ToolConstructable,
           },
         },
         data: {
@@ -115,13 +119,17 @@ describe('Inline Toolbar', () => {
       cy.createEditor({
         tools: {
           header: {
-            class: Header,
+            class: Header as unknown as ToolConstructable,
             inlineToolbar: ['bold', 'testTool'],
 
           },
           testTool: {
-            class: class {
+            class: class TestTool {
               public static isInline = true;
+              // eslint-disable-next-line jsdoc/require-jsdoc
+              public constructor(_config: InlineToolConstructorOptions) {
+                // Constructor required by InlineToolConstructable
+              }
               // eslint-disable-next-line jsdoc/require-jsdoc
               public render(): MenuConfig {
                 return {
@@ -140,7 +148,7 @@ describe('Inline Toolbar', () => {
                   },
                 };
               }
-            },
+            } as unknown as ToolConstructable,
           },
         },
         data: {

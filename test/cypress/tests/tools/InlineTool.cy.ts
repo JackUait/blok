@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* tslint:disable:max-classes-per-file */
-import type { ToolSettings } from '@/types';
+import type { ToolSettings, ToolConfig } from '@/types';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 import InlineToolAdapter from '../../../../src/components/tools/inline';
 
@@ -17,8 +17,8 @@ describe('InlineTool', () => {
 
       public static title = 'Title';
 
-      public static reset;
-      public static prepare;
+      public static reset?: () => void | Promise<void>;
+      public static prepare?: (data: {toolName: string, config: ToolConfig}) => void | Promise<void>;
 
       public static shortcut = 'CTRL+N';
       public static isReadOnlySupported = true;
@@ -31,7 +31,7 @@ describe('InlineTool', () => {
        * @param options.api - EditorAPI
        * @param options.config - tool config
        */
-      constructor({ api, config }) {
+      constructor({ api, config }: { api: object; config: ToolSettings }) {
         this.api = api;
         this.config = config;
       }

@@ -4,7 +4,6 @@ import type EditorJS from '../../../types';
 describe('ReadOnly API spec', () => {
   /**
    * Creates the new editor instance
-   *
    * @param config - Editor Config
    */
   function createEditor(config?: EditorConfig): void {

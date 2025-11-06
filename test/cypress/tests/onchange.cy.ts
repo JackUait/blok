@@ -7,6 +7,7 @@ import { BlockChangedMutationType } from '../../../types/events/block/BlockChang
 import { BlockRemovedMutationType } from '../../../types/events/block/BlockRemoved';
 import { BlockMovedMutationType } from '../../../types/events/block/BlockMoved';
 import type EditorJS from '../../../types/index';
+import type { API, OutputData, BlockMutationEvent } from '../../../types/index';
 import { modificationsObserverBatchTimeout } from '../../../src/components/constants';
 
 /**
@@ -22,21 +23,20 @@ const EditorJSApiMock = Cypress.sinon.match.any;
 describe('onChange callback', () => {
   /**
    * Creates Editor instance
-   *
    * @param blocks - list of blocks to prefill the editor
    */
-  function createEditor(blocks = null): void {
+  function createEditor(blocks?: OutputData['blocks']): void {
     const config = {
       tools: {
         header: Header,
         code: Code,
       },
-      onChange: (api, event): void => {
+      onChange: (api: API, event: BlockMutationEvent | BlockMutationEvent[]): void => {
         console.log('something changed', event);
       },
       data: blocks ? {
         blocks,
-      } : null,
+      } : undefined,
     };
 
     cy.spy(config, 'onChange').as('onChange');
@@ -46,23 +46,22 @@ describe('onChange callback', () => {
 
   /**
    * Creates Editor instance with save inside the onChange event.
-   *
    * @param blocks - list of blocks to prefill the editor
    */
-  function createEditorWithSave(blocks = null): void {
+  function createEditorWithSave(blocks?: OutputData['blocks']): void {
     const config = {
       tools: {
         header: Header,
         code: Code,
         delimiter: Delimiter,
       },
-      onChange: (api, event): void => {
+      onChange: (api: API, event: BlockMutationEvent | BlockMutationEvent[]): void => {
         console.log('something changed', event);
         api.saver.save();
       },
       data: blocks ? {
         blocks,
-      } : null,
+      } : undefined,
     };
 
     cy.spy(config, 'onChange').as('onChange');
@@ -515,7 +514,7 @@ describe('onChange callback', () => {
       tools: {
         testTool: ToolWithMutationFreeAttribute,
       },
-      onChange: (api, event): void => {
+      onChange: (api: API, event: BlockMutationEvent | BlockMutationEvent[]): void => {
         console.log('something changed', event);
       },
       data: {
@@ -582,7 +581,7 @@ describe('onChange callback', () => {
       tools: {
         testTool: ToolWithMutationFreeAttribute,
       },
-      onChange: (api, event): void => {
+      onChange: (api: API, event: BlockMutationEvent | BlockMutationEvent[]): void => {
         console.log('something changed', event);
       },
       data: {
@@ -652,7 +651,7 @@ describe('onChange callback', () => {
       tools: {
         testTool: ToolWithMutationFreeAttribute,
       },
-      onChange: function (api, event) {
+      onChange: function (api: API, event: BlockMutationEvent | BlockMutationEvent[]): void {
         console.log('something changed!!!!!!!!', event);
       },
       data: {
@@ -767,7 +766,7 @@ describe('onChange callback', () => {
           block,
         ],
       },
-      onChange: (api, event): void => {
+      onChange: (api: API, event: BlockMutationEvent | BlockMutationEvent[]): void => {
         console.log('something changed', event);
       },
     };
@@ -852,7 +851,7 @@ describe('onChange callback', () => {
   it('should not be called when editor is initialized with readOnly mode', () => {
     const config = {
       readOnly: true,
-      onChange: (api, event): void => {
+      onChange: (api: API, event: BlockMutationEvent | BlockMutationEvent[]): void => {
         console.log('something changed', event);
       },
       data: {

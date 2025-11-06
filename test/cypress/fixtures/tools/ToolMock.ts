@@ -32,7 +32,7 @@ export default class ToolMock implements BlockTool {
   public render(): HTMLElement {
     const contenteditable = document.createElement('div');
 
-    if (this.data && this.data.text) {
+    if (this.data.text) {
       contenteditable.innerHTML = this.data.text;
     }
 

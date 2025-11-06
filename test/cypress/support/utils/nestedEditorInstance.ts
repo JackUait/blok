@@ -9,10 +9,17 @@ export const NESTED_EDITOR_ID = 'nested-editor';
 export default class NestedEditor implements BlockTool {
   private data: { text: string };
 
+  /**
+   *
+   * @param value - The constructor options for the block tool
+   */
   constructor(value: BlockToolConstructorOptions) {
     this.data = value.data;
   }
 
+  /**
+   *
+   */
   public render(): HTMLDivElement {
     const editorEl = Object.assign(document.createElement('div'), {
       id: NESTED_EDITOR_ID,
@@ -25,6 +32,9 @@ export default class NestedEditor implements BlockTool {
     return editorEl;
   }
 
+  /**
+   *
+   */
   public save(): string {
     return this.data.text;
   }

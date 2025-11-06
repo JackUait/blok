@@ -70,7 +70,7 @@ export interface Blocks {
   /**
    * Returns the index of Block by id;
    */
-  getBlockIndex(blockId: string): number;
+  getBlockIndex(blockId: string): number | undefined;
 
   /**
    * Get Block API object by html element

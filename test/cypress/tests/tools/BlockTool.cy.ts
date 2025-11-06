@@ -37,8 +37,8 @@ describe('BlockTool', () => {
 
       public static isReadOnlySupported = true;
 
-      public static reset;
-      public static prepare;
+      public static reset?: () => void | Promise<void>;
+      public static prepare?: (data: {toolName: string, config: ToolSettings}) => void | Promise<void>;
 
       public static shortcut = 'CTRL+N';
 
@@ -49,7 +49,7 @@ describe('BlockTool', () => {
       public config: ToolSettings;
 
       // eslint-disable-next-line jsdoc/require-jsdoc
-      constructor({ data, block, readOnly, api, config }) {
+      constructor({ data, block, readOnly, api, config }: { data: BlockToolData; block: object; readOnly: boolean; api: object; config: ToolSettings }) {
         this.data = data;
         this.block = block;
         this.readonly = readOnly;
@@ -157,8 +157,8 @@ describe('BlockTool', () => {
 
       // tslint:disable-next-line:forin
       for (const key in expected) {
-        expected[key] = {
-          ...expected[key],
+        (expected as Record<string, Record<string, boolean>>)[key] = {
+          ...expected[key as keyof typeof expected],
           b: true,
         };
       }
@@ -493,7 +493,7 @@ describe('BlockTool', () => {
       const expected = userDefinedToolboxConfig.map((item, i) => {
         const toolToolboxEntry = toolboxEntries[i];
 
-        if (toolToolboxEntry) {
+        if (toolToolboxEntry !== undefined) {
           return {
             ...toolToolboxEntry,
             ...item,

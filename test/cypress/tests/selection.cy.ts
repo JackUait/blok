@@ -6,7 +6,7 @@ describe('Blocks selection', () => {
   });
 
   afterEach(function () {
-    if (this.editorInstance) {
+    if (this.editorInstance != null) {
       this.editorInstance.destroy();
     }
   });

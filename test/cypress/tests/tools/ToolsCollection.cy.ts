@@ -43,7 +43,7 @@ const FakeBlockTune = {
  * Unit tests for ToolsCollection class
  */
 describe('ToolsCollection', (): void => {
-  let collection;
+  let collection: ToolsCollection;
 
   /**
    * Mock for Tools in collection

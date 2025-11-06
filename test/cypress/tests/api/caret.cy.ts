@@ -40,6 +40,10 @@ describe('Caret API', () => {
             cy.window()
               .then((window) => {
                 const selection = window.getSelection();
+
+                if (!selection) {
+                  throw new Error('Selection not found');
+                }
                 const range = selection.getRangeAt(0);
 
                 cy.get('[data-cy=editorjs]')
@@ -65,6 +69,10 @@ describe('Caret API', () => {
             cy.window()
               .then((window) => {
                 const selection = window.getSelection();
+
+                if (!selection) {
+                  throw new Error('Selection not found');
+                }
                 const range = selection.getRangeAt(0);
 
                 cy.get('[data-cy=editorjs]')
@@ -83,6 +91,10 @@ describe('Caret API', () => {
         cy.get<EditorJS>('@editorInstance')
           .then(async (editor) => {
             const block = editor.blocks.getById(paragraphDataMock.id);
+
+            if (!block) {
+              throw new Error('Block not found');
+            }
             const returnedValue = editor.caret.setToBlock(block);
 
             /**
@@ -91,6 +103,10 @@ describe('Caret API', () => {
             cy.window()
               .then((window) => {
                 const selection = window.getSelection();
+
+                if (!selection) {
+                  throw new Error('Selection not found');
+                }
                 const range = selection.getRangeAt(0);
 
                 cy.get('[data-cy=editorjs]')

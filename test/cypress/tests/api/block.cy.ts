@@ -1,4 +1,5 @@
 import type EditorJS from '../../../../types';
+import type { API, BlockMutationEvent, OutputData } from '../../../../types';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 
 /**
@@ -25,12 +26,11 @@ describe('BlockAPI', () => {
 
   /**
    * Creates Editor instance
-   *
    * @param [data] - data to render
    */
-  function createEditor(data = undefined): void {
+  function createEditor(data?: OutputData): void {
     const config = {
-      onChange: (api, event): void => {
+      onChange: (_api: API, event: BlockMutationEvent | BlockMutationEvent[]): void => {
         console.log('something changed', event);
       },
       data,
@@ -54,6 +54,10 @@ describe('BlockAPI', () => {
       cy.get<EditorJS>('@editorInstance')
         .then(async (editor) => {
           const block = editor.blocks.getById(firstBlock.id);
+
+          if (!block) {
+            throw new Error(`Block with id ${firstBlock.id} not found`);
+          }
 
           block.dispatchChange();
 

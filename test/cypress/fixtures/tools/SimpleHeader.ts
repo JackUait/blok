@@ -22,7 +22,6 @@ export class SimpleHeader implements BaseTool {
 
   /**
    * Return Tool's view
-   *
    * @returns {HTMLHeadingElement}
    * @public
    */
@@ -44,7 +43,6 @@ export class SimpleHeader implements BaseTool {
 
   /**
    * Extract Tool's data from the view
-   *
    * @param toolsContent - Text tools rendered view
    */
   public save(toolsContent: HTMLHeadingElement): BlockToolData {

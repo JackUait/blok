@@ -1,5 +1,6 @@
-import ToolMock from '../../fixtures/tools/ToolMock';
+import ToolMock, { type MockToolData } from '../../fixtures/tools/ToolMock';
 import type EditorJS from '../../../../types/index';
+import type { BlockToolConstructorOptions } from '../../../../types';
 
 describe('Renderer module', function () {
   it('should not cause onChange firing during initial rendering', function () {
@@ -90,7 +91,7 @@ describe('Renderer module', function () {
       /**
        * @param options - tool options
        */
-      constructor(options) {
+      constructor(options: BlockToolConstructorOptions<MockToolData>) {
         super(options);
         throw new Error('Tool error');
       }

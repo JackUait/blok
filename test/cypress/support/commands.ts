@@ -13,7 +13,6 @@ import Chainable = Cypress.Chainable;
 /**
  * Create a wrapper and initialize the new instance of editor.js
  * Then return the instance
- *
  * @param editorConfig - config to pass to the editor
  * @returns EditorJS - created instance
  */
@@ -43,7 +42,6 @@ Cypress.Commands.add('createEditor', (editorConfig: EditorConfig = {}): Chainabl
  *
  * Usage
  * cy.get('div').paste({'text/plain': 'Text', 'text/html': '<b>Text</b>'})
- *
  * @param data - map with MIME type as a key and data as value
  */
 Cypress.Commands.add('paste', {
@@ -54,7 +52,7 @@ Cypress.Commands.add('paste', {
     cancelable: true,
   }), {
     clipboardData: {
-      getData: (type): string => data[type],
+      getData: (type: string): string => data[type],
       types: Object.keys(data),
     },
   });
@@ -70,7 +68,9 @@ Cypress.Commands.add('paste', {
  * Usage:
  * cy.get('div').copy().then(data => {})
  */
-Cypress.Commands.add('copy', { prevSubject: true }, (subject) => {
+Cypress.Commands.add('copy', {
+  prevSubject: ['element'],
+}, (subject) => {
   const clipboardData: {[type: string]: any} = {};
 
   const copyEvent = Object.assign(new Event('copy', {
@@ -86,7 +86,7 @@ Cypress.Commands.add('copy', { prevSubject: true }, (subject) => {
 
   subject[0].dispatchEvent(copyEvent);
 
-  return cy.wrap(clipboardData);
+  return cy.wrap<Record<string, string>>(clipboardData);
 });
 
 /**
@@ -95,7 +95,7 @@ Cypress.Commands.add('copy', { prevSubject: true }, (subject) => {
  * Usage:
  * cy.get('div').cut().then(data => {})
  */
-Cypress.Commands.add('cut', { prevSubject: true }, (subject) => {
+Cypress.Commands.add('cut', { prevSubject: ['element'] }, (subject) => {
   const clipboardData: {[type: string]: any} = {};
 
   const copyEvent = Object.assign(new Event('cut', {
@@ -111,12 +111,11 @@ Cypress.Commands.add('cut', { prevSubject: true }, (subject) => {
 
   subject[0].dispatchEvent(copyEvent);
 
-  return cy.wrap(clipboardData);
+  return cy.wrap<Record<string, string>>(clipboardData);
 });
 
 /**
  * Calls EditorJS API render method
- *
  * @param data — data to render
  */
 Cypress.Commands.add('render', { prevSubject: true }, (subject: EditorJS, data: OutputData) => {
@@ -133,9 +132,8 @@ Cypress.Commands.add('render', { prevSubject: true }, (subject: EditorJS, data: 
  *
  * Usage
  * cy.get('[data-cy=editorjs]')
- *  .find('.ce-paragraph')
- *  .selectText('block te')
- *
+ * .find('.ce-paragraph')
+ * .selectText('block te')
  * @param text - text to select
  */
 Cypress.Commands.add('selectText', {
@@ -162,9 +160,8 @@ Cypress.Commands.add('selectText', {
  *
  * Usage
  * cy.get('[data-cy=editorjs]')
- *  .find('.ce-paragraph')
- *  .selectTextByOffset([0, 5])
- *
+ * .find('.ce-paragraph')
+ * .selectTextByOffset([0, 5])
  * @param offset - offset to select
  */
 Cypress.Commands.add('selectTextByOffset', {
@@ -190,9 +187,8 @@ Cypress.Commands.add('selectTextByOffset', {
  *
  * Usage
  * cy.get('[data-cy=editorjs]')
- *  .find('.ce-paragraph')
- *  .getLineWrapPositions()
- *
+ * .find('.ce-paragraph')
+ * .getLineWrapPositions()
  * @returns number[] - array of line wrap positions
  */
 Cypress.Commands.add('getLineWrapPositions', {
@@ -249,7 +245,6 @@ Cypress.Commands.add('keydown', {
    * so real-world and Cypress behaviour were different.
    *
    * To make it work we need to trigger Cypress event with "eventConstructor: 'KeyboardEvent'",
-   *
    * @see https://github.com/cypress-io/cypress/issues/5650
    * @see https://github.com/cypress-io/cypress/pull/8305/files
    */
@@ -264,15 +259,17 @@ Cypress.Commands.add('keydown', {
 
 /**
  * Extract content of pseudo element
- *
  * @example cy.get('element').getPseudoElementContent('::before').should('eq', 'my-test-string')
  */
 Cypress.Commands.add('getPseudoElementContent', {
-  prevSubject: true,
-}, (subject, pseudoElement: 'string') => {
+  prevSubject: ['element'],
+}, (subject, pseudoElement: string) => {
   const win = subject[0].ownerDocument.defaultView;
+  if (!win) {
+    throw new Error('defaultView is null');
+  }
   const computedStyle = win.getComputedStyle(subject[0], pseudoElement);
   const content = computedStyle.getPropertyValue('content');
 
-  return content.replace(/['"]/g, ''); // Remove quotes around the content
+  return cy.wrap(content.replace(/['"]/g, '')); // Remove quotes around the content
 });

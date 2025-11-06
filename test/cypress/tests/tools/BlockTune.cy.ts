@@ -12,8 +12,8 @@ describe('BlockTune', () => {
   const options = {
     name: 'blockTune',
     constructable: class {
-      public static reset;
-      public static prepare;
+      public static reset?: () => void | Promise<void>;
+      public static prepare?: (data: {toolName: string, config: ToolSettings}) => void | Promise<void>;
 
       public api: object;
       public config: ToolSettings;
@@ -21,7 +21,7 @@ describe('BlockTune', () => {
       public block: object;
 
       // eslint-disable-next-line jsdoc/require-jsdoc
-      constructor({ api, config, block, data }) {
+      constructor({ api, config, block, data }: { api: object; config: ToolSettings; block: object; data: BlockTuneData }) {
         this.api = api;
         this.config = config;
         this.block = block;

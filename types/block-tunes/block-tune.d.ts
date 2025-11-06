@@ -46,6 +46,11 @@ export interface BlockTuneConstructable {
   sanitize?: SanitizerConfig;
 
   /**
+   * Shortcut for Tool
+   */
+  shortcut?: string;
+
+  /**
    * @constructor
    *
    * @param config - Block Tune config

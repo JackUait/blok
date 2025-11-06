@@ -1,5 +1,6 @@
 import type EditorJS from '../../../../types/index';
-import type { ConversionConfig, ToolboxConfig, ToolConfig } from '../../../../types';
+import type { ConversionConfig, ToolboxConfig, ToolConfig, API, BlockAPI } from '../../../../types';
+import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import ToolMock, { type MockToolData } from '../../fixtures/tools/ToolMock';
 import { nanoid } from 'nanoid';
 
@@ -36,7 +37,7 @@ describe('api.blocks', () => {
         const block = editor.blocks.getById(firstBlock.id);
 
         expect(block).not.to.be.undefined;
-        expect(block.id).to.be.eq(firstBlock.id);
+        expect(block?.id).to.be.eq(firstBlock.id);
       });
     });
 
@@ -108,18 +109,17 @@ describe('api.blocks', () => {
        * Example Tune Class
        */
       class ExampleTune {
-        protected data: object;
+        protected data: BlockTuneData | null | undefined;
         /**
          *
-         * @param data
+         * @param config - Block Tune config
          */
-        constructor({ data }) {
+        constructor({ data }: { api: API; config?: ToolConfig; block: BlockAPI; data: BlockTuneData }) {
           this.data = data;
         }
 
         /**
          * Tell editor.js that this Tool is a Block Tune
-         *
          * @returns {boolean}
          */
         public static get isTune(): boolean {
@@ -128,10 +128,9 @@ describe('api.blocks', () => {
 
         /**
          * Create Tunes controls wrapper that will be appended to the Block Tunes panel
-         *
-         * @returns {Element}
+         * @returns {HTMLElement}
          */
-        public render(): Element {
+        public render(): HTMLElement {
           return document.createElement('div');
         }
 
@@ -144,11 +143,10 @@ describe('api.blocks', () => {
 
         /**
          * Returns Tune state
-         *
-         * @returns {string}
+         * @returns {BlockTuneData}
          */
-        public save(): object | string {
-          return this.data || '';
+        public save(): BlockTuneData {
+          return this.data ?? '';
         }
       }
 
@@ -178,7 +176,12 @@ describe('api.blocks', () => {
       // Check if it is updated
       cy.get<EditorJS>('@editorInstance')
         .then(async (editor) => {
-          await editor.blocks.update(editor.blocks.getBlockByIndex(0).id, null, {
+          const block = editor.blocks.getBlockByIndex(0);
+
+          if (!block) {
+            throw new Error('Block at index 0 not found');
+          }
+          await editor.blocks.update(block.id, undefined, {
             exampleTune: 'test',
           });
           const data = await editor.save();
@@ -481,6 +484,8 @@ describe('api.blocks', () => {
             export: (data) => data,
             /**
              * Passed config should be returned
+             * @param _content - The content string (unused in this implementation)
+             * @param config - The tool configuration object
              */
             import: (_content, config) => {
               return { text: JSON.stringify(config) };

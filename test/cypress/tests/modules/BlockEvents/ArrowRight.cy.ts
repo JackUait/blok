@@ -25,6 +25,9 @@ describe('Arrow Right', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            throw new Error('Selection is null or has no ranges');
+          }
           const range = selection.getRangeAt(0);
 
           cy.get('[data-cy=editorjs]')
@@ -57,6 +60,9 @@ describe('Arrow Right', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            throw new Error('Selection is null or has no ranges');
+          }
           const range = selection.getRangeAt(0);
 
           cy.get('[data-cy=editorjs]')
@@ -89,6 +95,9 @@ describe('Arrow Right', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            throw new Error('Selection is null or has no ranges');
+          }
           const range = selection.getRangeAt(0);
 
           cy.get('[data-cy=editorjs]')
@@ -121,6 +130,9 @@ describe('Arrow Right', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            throw new Error('Selection is null or has no ranges');
+          }
           const range = selection.getRangeAt(0);
 
           cy.get('[data-cy=editorjs]')
@@ -154,6 +166,9 @@ describe('Arrow Right', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            throw new Error('Selection is null or has no ranges');
+          }
           const range = selection.getRangeAt(0);
 
           cy.get('[data-cy=editorjs]')
@@ -187,6 +202,9 @@ describe('Arrow Right', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) {
+            throw new Error('Selection is null or has no ranges');
+          }
           const range = selection.getRangeAt(0);
 
           cy.get('[data-cy=editorjs]')
@@ -279,6 +297,9 @@ describe('Arrow Right', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          throw new Error('Selection is null or has no ranges');
+        }
         const range = selection.getRangeAt(0);
 
         cy.get('[data-cy=editorjs]')

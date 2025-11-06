@@ -6,12 +6,14 @@ import InlineToolAdapter from '../../../../src/components/tools/inline';
 import BlockToolAdapter from '../../../../src/components/tools/block';
 import BlockTuneAdapter from '../../../../src/components/tools/tune';
 import Paragraph from '@editorjs/paragraph';
+import type { BlockToolConstructable } from '../../../../types';
 
 describe('ToolsFactory', (): void => {
-  let factory;
+  let factory: ToolsFactory;
+  const paragraphClass = Paragraph as unknown as BlockToolConstructable;
   const config = {
     paragraph: {
-      class: Paragraph,
+      class: paragraphClass,
     },
     link: {
       class: LinkInlineTool,

@@ -42,6 +42,11 @@ export interface BaseToolConstructable {
   sanitize?: SanitizerConfig;
 
   /**
+   * Shortcut for Tool
+   */
+  shortcut?: string;
+
+  /**
    * Title of Inline Tool.
    * @deprecated use {@link MenuConfig} item title instead
    */

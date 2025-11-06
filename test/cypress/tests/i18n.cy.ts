@@ -4,7 +4,7 @@ import type { ToolboxConfig } from '../../../types';
 describe('Editor i18n', () => {
   context('Toolbox', () => {
     it('should translate tool title in a toolbox', function () {
-      if (this && this.editorInstance) {
+      if (this != null && this.editorInstance != null) {
         this.editorInstance.destroy();
       }
       const toolNamesDictionary = {
@@ -36,7 +36,7 @@ describe('Editor i18n', () => {
     });
 
     it('should translate titles of toolbox entries', function () {
-      if (this && this.editorInstance) {
+      if (this != null && this.editorInstance != null) {
         this.editorInstance.destroy();
       }
       const toolNamesDictionary = {
@@ -96,7 +96,7 @@ describe('Editor i18n', () => {
     });
 
     it('should use capitalized tool name as translation key if toolbox title is missing', function () {
-      if (this && this.editorInstance) {
+      if (this != null && this.editorInstance != null) {
         this.editorInstance.destroy();
       }
 

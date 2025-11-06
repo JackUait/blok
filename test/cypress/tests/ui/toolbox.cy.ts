@@ -61,7 +61,11 @@ describe('Toolbox', function () {
           cy.window()
             .then((window) => {
               const selection = window.getSelection();
-              const range = selection.getRangeAt(0);
+              const range = selection?.getRangeAt(0);
+
+              if (!range) {
+                throw new Error('Selection range is not available');
+              }
 
               cy.get('[data-cy=editorjs]')
                 .find(`.ce-block[data-id=${blocks[0].id}]`)

@@ -7,6 +7,7 @@ import { CriticalError } from './errors/critical';
 import EventsDispatcher from './utils/events';
 import Modules from './modules';
 import type { EditorEventMap } from './events';
+import type Renderer from './modules/renderer';
 
 /**
  * Editor.js core class. Bootstraps modules.
@@ -47,6 +48,10 @@ export default class Core {
       onFail = reject;
     });
 
+    // Initialize config to satisfy TypeScript's definite assignment check
+    // The setter will properly assign and process the config
+    this.config = {};
+
     Promise.resolve()
       .then(async () => {
         this.configuration = config;
@@ -80,9 +85,9 @@ export default class Core {
   /**
    * Setting for configuration
    *
-   * @param {EditorConfig|string} config - Editor's config to set
+   * @param {EditorConfig|string|undefined} config - Editor's config to set
    */
-  public set configuration(config: EditorConfig|string) {
+  public set configuration(config: EditorConfig|string|undefined) {
     /**
      * Place config into the class property
      *
@@ -105,10 +110,10 @@ export default class Core {
     /**
      * If holderId is preset, assign him to holder property and work next only with holder
      */
-    _.deprecationAssert(!!this.config.holderId, 'config.holderId', 'config.holder');
-    if (this.config.holderId && !this.config.holder) {
+    _.deprecationAssert(Boolean(this.config.holderId), 'config.holderId', 'config.holder');
+    if (Boolean(this.config.holderId) && this.config.holder == null) {
       this.config.holder = this.config.holderId;
-      this.config.holderId = null;
+      this.config.holderId = undefined;
     }
 
     /**
@@ -118,7 +123,7 @@ export default class Core {
       this.config.holder = 'editorjs';
     }
 
-    if (!this.config.logLevel) {
+    if (this.config.logLevel == null) {
       this.config.logLevel = _.LogLevels.VERBOSE;
     }
 
@@ -128,7 +133,7 @@ export default class Core {
      * If default Block's Tool was not passed, use the Paragraph Tool
      */
     _.deprecationAssert(Boolean(this.config.initialBlock), 'config.initialBlock', 'config.defaultBlock');
-    this.config.defaultBlock = this.config.defaultBlock || this.config.initialBlock || 'paragraph';
+    this.config.defaultBlock = this.config.defaultBlock ?? this.config.initialBlock ?? 'paragraph';
 
     /**
      * Height of Editor's bottom area that allows to set focus on the last Block
@@ -149,14 +154,14 @@ export default class Core {
       data: {},
     };
 
-    this.config.placeholder = this.config.placeholder || false;
+    this.config.placeholder = this.config.placeholder ?? false;
     this.config.sanitizer = this.config.sanitizer || {
       p: true,
       b: true,
       a: true,
     } as SanitizerConfig;
 
-    this.config.hideToolbar = this.config.hideToolbar ? this.config.hideToolbar : false;
+    this.config.hideToolbar = this.config.hideToolbar ?? false;
     this.config.tools = this.config.tools || {};
     this.config.i18n = this.config.i18n || {};
     this.config.data = this.config.data || { blocks: [] };
@@ -203,7 +208,7 @@ export default class Core {
   public validate(): void {
     const { holderId, holder } = this.config;
 
-    if (holderId && holder) {
+    if (Boolean(holderId) && Boolean(holder)) {
       throw Error('«holderId» and «holder» param can\'t assign at the same time.');
     }
 
@@ -214,7 +219,7 @@ export default class Core {
       throw Error(`element with ID «${holder}» is missing. Pass correct holder's ID.`);
     }
 
-    if (holder && _.isObject(holder) && !$.isElement(holder)) {
+    if (Boolean(holder) && _.isObject(holder) && !$.isElement(holder)) {
       throw Error('«holder» value must be an Element node');
     }
   }
@@ -260,7 +265,9 @@ export default class Core {
         // _.log(`Preparing ${module} module`, 'time');
 
         try {
-          await this.moduleInstances[module].prepare();
+          const moduleInstance = this.moduleInstances[module as keyof EditorModules] as { prepare: () => Promise<void> | void };
+
+          await moduleInstance.prepare();
         } catch (e) {
           /**
            * CriticalError's will not be caught
@@ -281,7 +288,17 @@ export default class Core {
    * Render initial data
    */
   private render(): Promise<void> {
-    return this.moduleInstances.Renderer.render(this.config.data.blocks);
+    const renderer = this.moduleInstances['Renderer' as keyof EditorModules] as Renderer | undefined;
+
+    if (!renderer) {
+      throw new CriticalError('Renderer module is not initialized');
+    }
+
+    if (!this.config.data) {
+      throw new CriticalError('Editor data is not initialized');
+    }
+
+    return renderer.render(this.config.data.blocks);
   }
 
   /**
@@ -290,12 +307,12 @@ export default class Core {
   private constructModules(): void {
     Object.entries(Modules).forEach(([key, module]) => {
       try {
-        this.moduleInstances[key] = new module({
+        (this.moduleInstances as unknown as Record<string, EditorModules[keyof EditorModules]>)[key] = new module({
           config: this.configuration,
           eventsDispatcher: this.eventsDispatcher,
-        });
+        }) as EditorModules[keyof EditorModules];
       } catch (e) {
-        _.log('[constructModules]', `Module ${key} skipped because`, 'error', e);
+        _.log(`[constructModules] Module ${key} skipped because`, 'error', e);
       }
     });
   }
@@ -311,7 +328,7 @@ export default class Core {
         /**
          * Module does not need self-instance
          */
-        this.moduleInstances[name].state = this.getModulesDiff(name);
+        this.moduleInstances[name as keyof EditorModules].state = this.getModulesDiff(name);
       }
     }
   }
@@ -331,7 +348,7 @@ export default class Core {
       if (moduleName === name) {
         continue;
       }
-      diff[moduleName] = this.moduleInstances[moduleName];
+      (diff as unknown as Record<string, EditorModules[keyof EditorModules]>)[moduleName] = this.moduleInstances[moduleName as keyof EditorModules] as EditorModules[keyof EditorModules];
     }
 
     return diff;

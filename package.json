@@ -14,7 +14,7 @@
     "wysiwyg"
   ],
   "scripts": {
-    "serve": "vite",
+    "serve": "vite --no-open",
     "build": "vite build --mode production",
     "build:test": "vite build --mode test",
     "lint": "eslint src/ --ext .ts && yarn lint:tests",

@@ -72,5 +72,16 @@
     "@editorjs/caret": "^1.0.1",
     "codex-notifier": "^1.1.2",
     "codex-tooltip": "^1.0.5"
+  },
+  "resolutions": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@typescript-eslint/typescript-estree": "^6.0.0",
+    "@typescript-eslint/scope-manager": "^6.0.0",
+    "@typescript-eslint/types": "^6.0.0",
+    "@typescript-eslint/utils": "^6.0.0",
+    "@typescript-eslint/visitor-keys": "^6.0.0",
+    "@typescript-eslint/type-utils": "^6.0.0",
+    "eslint-plugin-jsdoc": "^48.0.0"
   }
 }

@@ -40,19 +40,19 @@ export default class DomIterator {
    * @param {string} focusedCssClass - user-provided CSS-class that will be set in flipping process
    */
   constructor(
-    nodeList: HTMLElement[],
+    nodeList: HTMLElement[] | null | undefined,
     focusedCssClass: string
   ) {
-    this.items = nodeList || [];
+    this.items = nodeList ?? [];
     this.focusedCssClass = focusedCssClass;
   }
 
   /**
    * Returns Focused button Node
    *
-   * @returns {HTMLElement}
+   * @returns {HTMLElement | null}
    */
-  public get currentItem(): HTMLElement {
+  public get currentItem(): HTMLElement | null {
     if (this.cursor === -1) {
       return null;
     }
@@ -133,13 +133,13 @@ export default class DomIterator {
        * We need to do this to highlight "first" Tool correctly
        *
        * Order of Tools: [0] [1] ... [n - 1]
-       *   [0 = n] because of: n % n = 0 % n
+       * [0 = n] because of: n % n = 0 % n
        *
        * Direction 'right': for [0] the [n - 1] is a previous index
-       *   [n - 1] -> [0]
+       * [n - 1] -> [0]
        *
        * Direction 'left': for [n - 1] the [0] is a previous index
-       *   [n - 1] <- [0]
+       * [n - 1] <- [0]
        *
        * @type {number}
        */

@@ -13,7 +13,7 @@ export default class Dom {
    * @returns {boolean}
    */
   public static isSingleTag(tag: HTMLElement): boolean {
-    return tag.tagName && [
+    return Boolean(tag.tagName) && [
       'AREA',
       'BASE',
       'BR',
@@ -40,10 +40,7 @@ export default class Dom {
    * @returns {boolean}
    */
   public static isLineBreakTag(element: HTMLElement): element is HTMLBRElement {
-    return element && element.tagName && [
-      'BR',
-      'WBR',
-    ].includes(element.tagName);
+    return !!element && ['BR', 'WBR'].includes(element.tagName);
   }
 
   /**
@@ -54,7 +51,7 @@ export default class Dom {
    * @param  {object} [attributes] - any attributes
    * @returns {HTMLElement}
    */
-  public static make(tagName: string, classNames: string | (string | undefined)[] | null = null, attributes: object = {}): HTMLElement {
+  public static make(tagName: string, classNames: string | (string | undefined)[] | null = null, attributes: Record<string, string | number | boolean | null | undefined> = {}): HTMLElement {
     const el = document.createElement(tagName);
 
     if (Array.isArray(classNames)) {
@@ -67,7 +64,17 @@ export default class Dom {
 
     for (const attrName in attributes) {
       if (Object.prototype.hasOwnProperty.call(attributes, attrName)) {
-        el[attrName] = attributes[attrName];
+        const value = attributes[attrName];
+
+        if (value === undefined || value === null) {
+          continue;
+        }
+
+        if (attrName in el) {
+          (el as unknown as Record<string, unknown>)[attrName] = value;
+        } else {
+          el.setAttribute(attrName, String(value));
+        }
       }
     }
 
@@ -128,16 +135,16 @@ export default class Dom {
     const temp = document.createElement('div'),
         parent = el1.parentNode;
 
-    parent.insertBefore(temp, el1);
+    parent?.insertBefore(temp, el1);
 
     // move el1 to right before el2
-    parent.insertBefore(el1, el2);
+    parent?.insertBefore(el1, el2);
 
     // move el2 to right before where el1 used to be
-    parent.insertBefore(el2, temp);
+    parent?.insertBefore(el2, temp);
 
     // remove temporary marker node
-    parent.removeChild(temp);
+    parent?.removeChild(temp);
   }
 
   /**
@@ -216,50 +223,61 @@ export default class Dom {
    * @returns - it can be text Node or Element Node, so that caret will able to work with it
    *            Can return null if node is Document or DocumentFragment, or node is not attached to the DOM
    */
-  public static getDeepestNode(node: Node, atLast = false): Node | null {
+  public static getDeepestNode(node: Node | null, atLast = false): Node | null {
     /**
      * Current function have two directions:
-     *  - starts from first child and every time gets first or nextSibling in special cases
-     *  - starts from last child and gets last or previousSibling
+     * - starts from first child and every time gets first or nextSibling in special cases
+     * - starts from last child and gets last or previousSibling
      *
      * @type {string}
      */
     const child = atLast ? 'lastChild' : 'firstChild',
         sibling = atLast ? 'previousSibling' : 'nextSibling';
 
-    if (node && node.nodeType === Node.ELEMENT_NODE && node[child]) {
-      let nodeChild = node[child] as Node;
-
-      /**
-       * special case when child is single tag that can't contain any content
-       */
-      if (
-        Dom.isSingleTag(nodeChild as HTMLElement) &&
-        !Dom.isNativeInput(nodeChild) &&
-        !Dom.isLineBreakTag(nodeChild as HTMLElement)
-      ) {
-        /**
-         * 1) We need to check the next sibling. If it is Node Element then continue searching for deepest
-         * from sibling
-         *
-         * 2) If single tag's next sibling is null, then go back to parent and check his sibling
-         * In case of Node Element continue searching
-         *
-         * 3) If none of conditions above happened return parent Node Element
-         */
-        if (nodeChild[sibling]) {
-          nodeChild = nodeChild[sibling];
-        } else if (nodeChild.parentNode[sibling]) {
-          nodeChild = nodeChild.parentNode[sibling];
-        } else {
-          return nodeChild.parentNode;
-        }
-      }
-
-      return this.getDeepestNode(nodeChild, atLast);
+    if (node === null || node.nodeType !== Node.ELEMENT_NODE) {
+      return node;
     }
 
-    return node;
+    const nodeChildProperty = node[child];
+
+    if (nodeChildProperty === null) {
+      return node;
+    }
+
+    let nodeChild = nodeChildProperty as Node;
+
+    /**
+     * special case when child is single tag that can't contain any content
+     */
+    if (
+      Dom.isSingleTag(nodeChild as HTMLElement) &&
+      !Dom.isNativeInput(nodeChild) &&
+      !Dom.isLineBreakTag(nodeChild as HTMLElement)
+    ) {
+      /**
+       * 1) We need to check the next sibling. If it is Node Element then continue searching for deepest
+       * from sibling
+       *
+       * 2) If single tag's next sibling is null, then go back to parent and check his sibling
+       * In case of Node Element continue searching
+       *
+       * 3) If none of conditions above happened return parent Node Element
+       */
+      const siblingNode = nodeChild[sibling];
+
+      if (siblingNode) {
+        nodeChild = siblingNode;
+      } else {
+        const parentSiblingNode = nodeChild.parentNode?.[sibling];
+
+        if (!parentSiblingNode) {
+          return nodeChild.parentNode;
+        }
+        nodeChild = parentSiblingNode;
+      }
+    }
+
+    return this.getDeepestNode(nodeChild, atLast);
   }
 
   /**
@@ -274,7 +292,7 @@ export default class Dom {
       return false;
     }
 
-    return node && node.nodeType && node.nodeType === Node.ELEMENT_NODE;
+    return node != null && node.nodeType != null && node.nodeType === Node.ELEMENT_NODE;
   }
 
   /**
@@ -289,7 +307,7 @@ export default class Dom {
       return false;
     }
 
-    return node && node.nodeType && node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
+    return node != null && node.nodeType != null && node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
   }
 
   /**
@@ -315,7 +333,7 @@ export default class Dom {
       'TEXTAREA',
     ];
 
-    return target && target.tagName ? nativeInputs.includes(target.tagName) : false;
+    return target != null && typeof target.tagName === 'string' ? nativeInputs.includes(target.tagName) : false;
   }
 
   /**
@@ -357,7 +375,7 @@ export default class Dom {
    * @returns {boolean} true if it is empty
    */
   public static isNodeEmpty(node: Node, ignoreChars?: string): boolean {
-    let nodeText;
+    let nodeText: string | undefined;
 
     if (this.isSingleTag(node as HTMLElement) && !this.isLineBreakTag(node as HTMLElement)) {
       return false;
@@ -366,14 +384,14 @@ export default class Dom {
     if (this.isElement(node) && this.isNativeInput(node)) {
       nodeText = (node as HTMLInputElement).value;
     } else {
-      nodeText = node.textContent.replace('\u200B', '');
+      nodeText = node.textContent?.replace('\u200B', '');
     }
 
     if (ignoreChars) {
-      nodeText = nodeText.replace(new RegExp(ignoreChars, 'g'), '');
+      nodeText = nodeText?.replace(new RegExp(ignoreChars, 'g'), '');
     }
 
-    return nodeText.length === 0;
+    return (nodeText?.length ?? 0) === 0;
   }
 
   /**
@@ -403,11 +421,13 @@ export default class Dom {
     const treeWalker = [ node ];
 
     while (treeWalker.length > 0) {
-      node = treeWalker.shift();
+      const currentNode = treeWalker.shift();
 
-      if (!node) {
+      if (!currentNode) {
         continue;
       }
+
+      node = currentNode;
 
       if (this.isLeaf(node) && !this.isNodeEmpty(node, ignoreChars)) {
         return false;
@@ -450,7 +470,7 @@ export default class Dom {
       return (node as Text).length;
     }
 
-    return node.textContent.length;
+    return node.textContent?.length ?? 0;
   }
 
   /**
@@ -518,7 +538,7 @@ export default class Dom {
       wrapper = data;
     }
 
-    const check = (element: HTMLElement): boolean => {
+    const check = (element: Element): boolean => {
       return !Dom.blockElements.includes(element.tagName.toLowerCase()) &&
         Array.from(element.children).every(check);
     };
@@ -539,7 +559,7 @@ export default class Dom {
 
     return Array.from(parent.children).reduce((result, element) => {
       return [...result, ...Dom.getDeepestBlockElements(element as HTMLElement)];
-    }, []);
+    }, [] as HTMLElement[]);
   }
 
   /**
@@ -550,7 +570,13 @@ export default class Dom {
    */
   public static getHolder(element: string | HTMLElement): HTMLElement {
     if (_.isString(element)) {
-      return document.getElementById(element);
+      const holder = document.getElementById(element);
+
+      if (holder === null) {
+        throw new Error(`Element with id "${element}" not found`);
+      }
+
+      return holder;
     }
 
     return element;
@@ -572,7 +598,7 @@ export default class Dom {
    * @todo handle case when editor initialized in scrollable popup
    * @param el - element to compute offset
    */
-  public static offset(el): { top: number; left: number; right: number; bottom: number } {
+  public static offset(el: Element): { top: number; left: number; right: number; bottom: number } {
     const rect = el.getBoundingClientRect();
     const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -682,13 +708,13 @@ export function isCollapsedWhitespaces(textContent: string): boolean {
  * The calculation formula is as follows:
  *
  * 1. Calculate the baseline offset:
- *    - Typically, the baseline is about 80% of the `fontSize` from the top of the text, as this is a common average for many fonts.
+ * - Typically, the baseline is about 80% of the `fontSize` from the top of the text, as this is a common average for many fonts.
  *
  * 2. Calculate the additional space due to `lineHeight`:
- *    - If the `lineHeight` is greater than the `fontSize`, the extra space is evenly distributed above and below the text. This extra space is `(lineHeight - fontSize) / 2`.
+ * - If the `lineHeight` is greater than the `fontSize`, the extra space is evenly distributed above and below the text. This extra space is `(lineHeight - fontSize) / 2`.
  *
  * 3. Calculate the total baseline Y coordinate:
- *    - Sum of `marginTop`, `borderTopWidth`, `paddingTop`, the extra space due to `lineHeight`, and the baseline offset.
+ * - Sum of `marginTop`, `borderTopWidth`, `paddingTop`, the extra space due to `lineHeight`, and the baseline offset.
  *
  * @param element - The element to calculate the baseline for.
  * @returns {number} - The Y coordinate of the text baseline from the top of the element's margin box.

@@ -213,7 +213,7 @@ export default class Blocks {
     } else {
       const nextBlock = this.blocks[index + 1];
 
-      if (nextBlock) {
+      if (nextBlock !== undefined) {
         this.insertToDOM(block, 'beforebegin', nextBlock);
       } else {
         this.insertToDOM(block);
@@ -346,7 +346,7 @@ export default class Blocks {
    * @param {Block} target — Block related to position
    */
   private insertToDOM(block: Block, position?: InsertPosition, target?: Block): void {
-    if (position) {
+    if (position && target !== undefined) {
       target.holder.insertAdjacentElement(position, block.holder);
     } else {
       this.workingArea.appendChild(block.holder);

@@ -38,8 +38,8 @@ export default class DragNDrop extends Module {
   private enableModuleBindings(): void {
     const { UI } = this.Editor;
 
-    this.readOnlyMutableListeners.on(UI.nodes.holder, 'drop', async (dropEvent: DragEvent) => {
-      await this.processDrop(dropEvent);
+    this.readOnlyMutableListeners.on(UI.nodes.holder, 'drop', (dropEvent: Event) => {
+      void this.processDrop(dropEvent as DragEvent);
     }, true);
 
     this.readOnlyMutableListeners.on(UI.nodes.holder, 'dragstart', () => {
@@ -49,8 +49,8 @@ export default class DragNDrop extends Module {
     /**
      * Prevent default browser behavior to allow drop on non-contenteditable elements
      */
-    this.readOnlyMutableListeners.on(UI.nodes.holder, 'dragover', (dragEvent: DragEvent) => {
-      this.processDragOver(dragEvent);
+    this.readOnlyMutableListeners.on(UI.nodes.holder, 'dragover', (dragEvent: Event) => {
+      this.processDragOver(dragEvent as DragEvent);
     }, true);
   }
 

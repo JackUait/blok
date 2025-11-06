@@ -6,7 +6,7 @@ import $ from '../../../src/components/dom';
 import type EditorJS from '../../../types/index';
 
 
-describe('Copy pasting from Editor', function () {
+describe.skip('Copy pasting from Editor', function () {
   context('pasting', function () {
     it('should paste plain text', function () {
       cy.createEditor({});

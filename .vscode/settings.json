@@ -6,14 +6,50 @@
     "typescript",
     "typescriptreact"
   ],
-  "eslint.workingDirectories": [
-    {
-      "mode": "auto"
-    }
-  ],
-  "eslint.options": {
-    "extensions": [".ts", ".tsx", ".js", ".jsx"]
-  },
+  "eslint.workingDirectories": [{ "mode": "auto" }],
   "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always"
+  },
+  "eslint.useFlatConfig": true,
+  "cSpell.words": [
+    "autofocused",
+    "Behaviour",
+    "cacheable",
+    "childs",
+    "codexteam",
+    "colspan",
+    "contenteditable",
+    "contentless",
+    "Convertable",
+    "cssnano",
+    "cssnext",
+    "Debouncer",
+    "devserver",
+    "editorjs",
+    "entrypoints",
+    "Flippable",
+    "GRAMMARLY",
+    "hsablonniere",
+    "intellij",
+    "keydown",
+    "keydowns",
+    "Kilian",
+    "mergeable",
+    "movetostart",
+    "nofollow",
+    "opencollective",
+    "preconfigured",
+    "resetors",
+    "rowspan",
+    "selectall",
+    "sometool",
+    "stylelint",
+    "textareas",
+    "twitterwidget",
+    "typeof",
+    "Unmergeable",
+    "viewports"
+  ]
 }

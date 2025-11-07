@@ -1,0 +1,146 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { FlatCompat } from '@eslint/eslintrc';
+import cypress from 'eslint-plugin-cypress';
+import playwright from 'eslint-plugin-playwright';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+export default [
+  {
+    ignores: [
+      'node_modules/**',
+      '**/*.d.ts',
+      'src/components/tools/paragraph/**',
+      'src/polyfills.ts',
+    ],
+  },
+  ...compat.config({
+    root: true,
+    extends: ['codex/ts'],
+    parser: '@typescript-eslint/parser',
+    parserOptions: {
+      tsconfigRootDir: __dirname,
+    },
+    globals: {
+      Node: true,
+      Range: true,
+      HTMLElement: true,
+      HTMLDivElement: true,
+      Element: true,
+      Selection: true,
+      SVGElement: true,
+      Text: true,
+      InsertPosition: true,
+      PropertyKey: true,
+      MouseEvent: true,
+      TouchEvent: true,
+      KeyboardEvent: true,
+      ClipboardEvent: true,
+      DragEvent: true,
+      Event: true,
+      EventTarget: true,
+      Document: true,
+      NodeList: true,
+      File: true,
+      FileList: true,
+      MutationRecord: true,
+      AddEventListenerOptions: true,
+      DataTransfer: true,
+      DOMRect: true,
+      ClientRect: true,
+      ArrayLike: true,
+      InputEvent: true,
+      unknown: true,
+      requestAnimationFrame: true,
+      navigator: true,
+    },
+    rules: {
+      'jsdoc/require-returns-type': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/consistent-type-exports': 'error',
+      'prefer-arrow-callback': 'error',
+      'func-style': ['error', 'expression', { allowArrowFunctions: true }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
+    },
+    overrides: [
+      {
+        files: ['*.ts', '*.tsx'],
+        parserOptions: {
+          project: ['./tsconfig.json'],
+          tsconfigRootDir: __dirname,
+        },
+      },
+      {
+        files: ['tsconfig.json', 'package.json', 'tsconfig.*.json', 'tslint.json'],
+        rules: {
+          quotes: [1, 'double'],
+          semi: [1, 'never'],
+        },
+      },
+    ],
+  }),
+  {
+    files: ['test/cypress/**/*.ts'],
+    plugins: {
+      cypress,
+    },
+    languageOptions: {
+      globals: {
+        // Cypress/Mocha globals
+        describe: 'readonly',
+        it: 'readonly',
+        context: 'readonly',
+        before: 'readonly',
+        after: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        cy: 'readonly',
+        Cypress: 'readonly',
+        expect: 'readonly',
+        assert: 'readonly',
+        // Custom globals
+        EditorJS: 'readonly',
+      },
+    },
+    rules: {
+      ...cypress.configs.recommended.rules,
+      'cypress/require-data-selectors': 'error',
+      'cypress/no-unnecessary-waiting': 'off',
+      '@typescript-eslint/no-magic-numbers': 'off',
+    },
+  },
+  {
+    files: ['test/playwright/**/*.ts'],
+    plugins: {
+      playwright,
+    },
+    languageOptions: {
+      globals: {
+        // Playwright globals
+        test: 'readonly',
+        expect: 'readonly',
+        // Custom globals
+        EditorJS: 'readonly',
+      },
+    },
+    rules: {
+      ...playwright.configs.recommended.rules,
+      '@typescript-eslint/no-magic-numbers': 'off',
+    },
+  },
+];

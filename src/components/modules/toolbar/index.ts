@@ -43,39 +43,38 @@ interface ToolbarNodes {
 }
 /**
  *
- * «Toolbar» is the node that moves up/down over current block
+ *«Toolbar» is the node that moves up/down over current block
  *
- *  ______________________________________ Toolbar ____________________________________________
- * |                                                                                           |
- * |  ..................... Content .........................................................  |
- * |  .                                                   ........ Block Actions ...........   |
- * |  .                                                   .        [Open Settings]         .   |
- * |  .  [Plus Button]  [Toolbox: {Tool1}, {Tool2}]       .                                .   |
- * |  .                                                   .        [Settings Panel]        .   |
- * |  .                                                   ..................................   |
- * |  .......................................................................................  |
- * |                                                                                           |
- * |___________________________________________________________________________________________|
- *
- *
- * Toolbox — its an Element contains tools buttons. Can be shown by Plus Button.
- *
- *  _______________ Toolbox _______________
- * |                                       |
- * | [Header] [Image] [List] [Quote] ...   |
- * |_______________________________________|
+ *______________________________________ Toolbar ____________________________________________
+ *|                                                                                           |
+ *|  ..................... Content .........................................................  |
+ *|  .                                                   ........ Block Actions ...........   |
+ *|  .                                                   .        [Open Settings]         .   |
+ *|  .  [Plus Button]  [Toolbox: {Tool1}, {Tool2}]       .                                .   |
+ *|  .                                                   .        [Settings Panel]        .   |
+ *|  .                                                   ..................................   |
+ *|  .......................................................................................  |
+ *|                                                                                           |
+ *|___________________________________________________________________________________________|
  *
  *
- * Settings Panel — is an Element with block settings:
+ *Toolbox — its an Element contains tools buttons. Can be shown by Plus Button.
  *
- *   ____ Settings Panel ____
- *  | ...................... |
- *  | .   Tool Settings    . |
- *  | ...................... |
- *  | .  Default Settings  . |
- *  | ...................... |
- *  |________________________|
+ *_______________ Toolbox _______________
+ *|                                       |
+ *| [Header] [Image] [List] [Quote] ...   |
+ *|_______________________________________|
  *
+ *
+ *Settings Panel — is an Element with block settings:
+ *
+ *____ Settings Panel ____
+ *| ...................... |
+ *| .   Tool Settings    . |
+ *| ...................... |
+ *| .  Default Settings  . |
+ *| ...................... |
+ *|________________________|
  *
  * @class
  * @classdesc Toolbar module

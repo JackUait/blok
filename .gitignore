@@ -12,6 +12,7 @@ yarn-error.log
 
 test/cypress/screenshots
 test/cypress/videos
+test-results
 
 dist/
 

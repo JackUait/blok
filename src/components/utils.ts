@@ -371,7 +371,7 @@ export const sequence = async (
 
     return waitNextBlock(currentValue, success, fallback);
   }, Promise.resolve());
-}
+};
 
 /**
  * Make array from array-like collection
@@ -380,9 +380,9 @@ export const sequence = async (
  * @returns {Array}
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function array(collection: ArrayLike<any>): any[] {
+export const array = (collection: ArrayLike<any>): any[] => {
   return Array.prototype.slice.call(collection);
-}
+};
 
 /**
  * Delays method execution

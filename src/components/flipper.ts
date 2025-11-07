@@ -65,7 +65,7 @@ export default class Flipper {
   /**
    * Call back for button click/enter
    */
-  private readonly activateCallback: (item: HTMLElement) => void;
+  private readonly activateCallback?: (item: HTMLElement) => void;
 
   /**
    * Contains list of callbacks to be executed on each flip
@@ -76,7 +76,7 @@ export default class Flipper {
    * @param options - different constructing settings
    */
   constructor(options: FlipperOptions) {
-    this.iterator = new DomIterator(options.items, options.focusedItemClass);
+    this.iterator = new DomIterator(options.items || [], options.focusedItemClass ?? '');
     this.activateCallback = options.activateCallback;
     this.allowedKeys = options.allowedKeys || Flipper.usedKeys;
   }
@@ -107,11 +107,11 @@ export default class Flipper {
   public activate(items?: HTMLElement[], cursorPosition?: number): void {
     this.activated = true;
     if (items) {
-      this.iterator.setItems(items);
+      this.iterator?.setItems(items);
     }
 
     if (cursorPosition !== undefined) {
-      this.iterator.setCursor(cursorPosition);
+      this.iterator?.setCursor(cursorPosition);
     }
 
     /**
@@ -148,7 +148,7 @@ export default class Flipper {
    * Focuses previous flipper iterator item
    */
   public flipLeft(): void {
-    this.iterator.previous();
+    this.iterator?.previous();
     this.flipCallback();
   }
 
@@ -156,7 +156,7 @@ export default class Flipper {
    * Focuses next flipper iterator item
    */
   public flipRight(): void {
-    this.iterator.next();
+    this.iterator?.next();
     this.flipCallback();
   }
 
@@ -164,7 +164,7 @@ export default class Flipper {
    * Return true if some button is focused
    */
   public hasFocus(): boolean {
-    return !!this.iterator.currentItem;
+    return !!this.iterator?.currentItem;
   }
 
   /**
@@ -191,7 +191,7 @@ export default class Flipper {
    * @see DomIterator#dropCursor
    */
   private dropCursor(): void {
-    this.iterator.dropCursor();
+    this.iterator?.dropCursor();
   }
 
   /**
@@ -283,7 +283,7 @@ export default class Flipper {
       return;
     }
 
-    if (this.iterator.currentItem) {
+    if (this.iterator?.currentItem) {
       /**
        * Stop Enter propagation only if flipper is ready to select focused item
        */
@@ -292,7 +292,7 @@ export default class Flipper {
       this.iterator.currentItem.click();
     }
 
-    if (_.isFunction(this.activateCallback)) {
+    if (_.isFunction(this.activateCallback) && this.iterator?.currentItem) {
       this.activateCallback(this.iterator.currentItem);
     }
   }
@@ -301,7 +301,7 @@ export default class Flipper {
    * Fired after flipping in any direction
    */
   private flipCallback(): void {
-    if (this.iterator.currentItem) {
+    if (this.iterator?.currentItem) {
       this.iterator.currentItem.scrollIntoViewIfNeeded();
     }
 

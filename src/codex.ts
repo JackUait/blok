@@ -1,6 +1,6 @@
 'use strict';
 
-import type { EditorConfig } from '../types';
+import type { EditorConfig, API } from '../types';
 
 /**
  * Apply polyfills
@@ -43,22 +43,23 @@ export default class EditorJS {
    */
   constructor(configuration?: EditorConfig|string) {
     /**
-     * Set default onReady function
+     * Set default onReady function or use the one from configuration if provided
      */
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    let onReady = (): void => {};
-
-    /**
-     * If `onReady` was passed in `configuration` then redefine onReady function
-     */
-    if (_.isObject(configuration) && _.isFunction(configuration.onReady)) {
-      onReady = configuration.onReady;
-    }
+    const onReady = (_.isObject(configuration) && _.isFunction(configuration.onReady))
+      ? configuration.onReady
+      : () => {};
 
     /**
      * Create a Editor.js instance
      */
     const editor = new Core(configuration);
+
+    /**
+     * Initialize destroy with a no-op function that will be replaced in exportAPI
+     */
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    this.destroy = (): void => {};
 
     /**
      * We need to export isReady promise in the constructor
@@ -93,11 +94,9 @@ export default class EditorJS {
 
       destroyTooltip();
 
-      editor = null;
-
       for (const field in this) {
         if (Object.prototype.hasOwnProperty.call(this, field)) {
-          delete this[field];
+          delete (this as Record<string, unknown>)[field];
         }
       }
 
@@ -105,14 +104,14 @@ export default class EditorJS {
     };
 
     fieldsToExport.forEach((field) => {
-      this[field] = editor[field];
+      (this as Record<string, unknown>)[field] = (editor as unknown as Record<string, unknown>)[field];
     });
 
     this.destroy = destroy;
 
     Object.setPrototypeOf(this, editor.moduleInstances.API.methods);
 
-    delete this.exportAPI;
+    delete (this as Partial<EditorJS>).exportAPI;
 
     const shorthands = {
       blocks: {
@@ -136,7 +135,10 @@ export default class EditorJS {
       .forEach(([key, methods]) => {
         Object.entries(methods)
           .forEach(([name, alias]) => {
-            this[alias] = editor.moduleInstances.API.methods[key][name];
+            const apiKey = key as keyof API;
+            const apiMethods = editor.moduleInstances.API.methods[apiKey] as unknown as Record<string, unknown>;
+
+            (this as Record<string, unknown>)[alias] = apiMethods[name];
           });
       });
   }

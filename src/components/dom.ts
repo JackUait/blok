@@ -691,7 +691,7 @@ export default class Dom {
  * @param textContent — any string, for ex a textContent of a node
  * @returns True if passed text content is whitespace which is collapsed (invisible) in browser
  */
-export function isCollapsedWhitespaces(textContent: string): boolean {
+export const isCollapsedWhitespaces = (textContent: string): boolean => {
   /**
    *  Throughout, whitespace is defined as one of the characters
    *  "\t" TAB \u0009
@@ -700,7 +700,7 @@ export function isCollapsedWhitespaces(textContent: string): boolean {
    *  " "  SPC \u0020
    */
   return !/[^\t\n\r ]/.test(textContent);
-}
+};
 
 /**
  * Calculates the Y coordinate of the text baseline from the top of the element's margin box,
@@ -719,7 +719,7 @@ export function isCollapsedWhitespaces(textContent: string): boolean {
  * @param element - The element to calculate the baseline for.
  * @returns {number} - The Y coordinate of the text baseline from the top of the element's margin box.
  */
-export function calculateBaseline(element: Element): number {
+export const calculateBaseline = (element: Element): number => {
   const style = window.getComputedStyle(element);
   const fontSize = parseFloat(style.fontSize);
   // eslint-disable-next-line @typescript-eslint/no-magic-numbers
@@ -745,7 +745,7 @@ export function calculateBaseline(element: Element): number {
   const baselineY = marginTop + borderTopWidth + paddingTop + extraLineHeight + baselineOffset;
 
   return baselineY;
-}
+};
 
 /**
  * Toggles the [data-empty] attribute on element depending on its emptiness
@@ -753,6 +753,6 @@ export function calculateBaseline(element: Element): number {
  *
  * @param element - The element to toggle the [data-empty] attribute on
  */
-export function toggleEmptyMark(element: HTMLElement): void {
+export const toggleEmptyMark = (element: HTMLElement): void => {
   element.dataset.empty = Dom.isEmpty(element) ? 'true' : 'false';
-}
+};

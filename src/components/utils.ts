@@ -28,8 +28,7 @@ declare const VERSION: string;
  */
 export interface ChainData {
   data?: object;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function: (...args: any[]) => any;
+  function: (...args: unknown[]) => unknown;
 }
 
 /**
@@ -55,7 +54,24 @@ export const keyCodes = {
   DOWN: 40,
   RIGHT: 39,
   DELETE: 46,
+  // Number keys range (0-9)
+  NUMBER_KEY_MIN: 47,
+  NUMBER_KEY_MAX: 58,
+  // Letter keys range (A-Z)
+  LETTER_KEY_MIN: 64,
+  LETTER_KEY_MAX: 91,
   META: 91,
+  // Numpad keys range
+  NUMPAD_KEY_MIN: 95,
+  NUMPAD_KEY_MAX: 112,
+  // Punctuation keys range (;=,-./`)
+  PUNCTUATION_KEY_MIN: 185,
+  PUNCTUATION_KEY_MAX: 193,
+  // Bracket keys range ([\]')
+  BRACKET_KEY_MIN: 218,
+  BRACKET_KEY_MAX: 223,
+  // Processing key input for certain languages (Chinese, Japanese, etc.)
+  PROCESSING_KEY: 229,
   SLASH: 191,
 };
 
@@ -71,6 +87,19 @@ export const mouseButtons = {
 };
 
 /**
+ * Constants for ID generation
+ */
+const ID_RANDOM_MULTIPLIER = 100_000_000; // 1e8
+const HEXADECIMAL_RADIX = 16;
+
+/**
+ * Type representing callable console methods
+ */
+type ConsoleMethod = {
+  [K in keyof Console]: Console[K] extends (...args: unknown[]) => unknown ? K : never;
+}[keyof Console];
+
+/**
  * Custom logger
  *
  * @param {boolean} labeled — if true, Editor.js label is shown
@@ -79,14 +108,13 @@ export const mouseButtons = {
  * @param {*} [args]      - argument to log with a message
  * @param {string} style  - additional styling to message
  */
-function _log(
+const _log = (
   labeled: boolean,
   msg: string,
-  type = 'log',
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args?: any,
+  type: ConsoleMethod = 'log',
+  args?: unknown,
   style = 'color: inherit'
-): void {
+): void => {
   if (!('console' in window) || !window.console[type]) {
     return;
   }
@@ -148,7 +176,7 @@ function _log(
       console[type](msg, ...argsToPass);
     }
   } catch (ignored) {}
-}
+};
 
 /**
  * Current log level
@@ -160,9 +188,9 @@ _log.logLevel = LogLevels.VERBOSE;
  *
  * @param {LogLevels} logLevel - log level to set
  */
-export function setLogLevel(logLevel: LogLevels): void {
+export const setLogLevel = (logLevel: LogLevels): void => {
   _log.logLevel = logLevel;
-}
+};
 
 /**
  * _log method proxy without Editor.js label
@@ -180,10 +208,11 @@ export const logLabeled = _log.bind(window, true);
  * @param {*} object - object to get type
  * @returns {string}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function typeOf(object: any): string {
-  return Object.prototype.toString.call(object).match(/\s([a-zA-Z]+)/)[1].toLowerCase();
-}
+export const typeOf = (object: unknown): string => {
+  const match = Object.prototype.toString.call(object).match(/\s([a-zA-Z]+)/);
+
+  return match ? match[1].toLowerCase() : 'unknown';
+};
 
 /**
  * Check if passed variable is a function
@@ -191,10 +220,9 @@ export function typeOf(object: any): string {
  * @param {*} fn - function to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isFunction(fn: any): fn is (...args: any[]) => any {
+export const isFunction = (fn: unknown): fn is (...args: unknown[]) => unknown => {
   return typeOf(fn) === 'function' || typeOf(fn) === 'asyncfunction';
-}
+};
 
 /**
  * Checks if passed argument is an object
@@ -202,10 +230,9 @@ export function isFunction(fn: any): fn is (...args: any[]) => any {
  * @param {*} v - object to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isObject(v: any): v is object {
+export const isObject = (v: unknown): v is object => {
   return typeOf(v) === 'object';
-}
+};
 
 /**
  * Checks if passed argument is a string
@@ -213,10 +240,9 @@ export function isObject(v: any): v is object {
  * @param {*} v - variable to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isString(v: any): v is string {
+export const isString = (v: unknown): v is string => {
   return typeOf(v) === 'string';
-}
+};
 
 /**
  * Checks if passed argument is boolean
@@ -224,10 +250,9 @@ export function isString(v: any): v is string {
  * @param {*} v - variable to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isBoolean(v: any): v is boolean {
+export const isBoolean = (v: unknown): v is boolean => {
   return typeOf(v) === 'boolean';
-}
+};
 
 /**
  * Checks if passed argument is number
@@ -235,10 +260,9 @@ export function isBoolean(v: any): v is boolean {
  * @param {*} v - variable to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isNumber(v: any): v is number {
+export const isNumber = (v: unknown): v is number => {
   return typeOf(v) === 'number';
-}
+};
 
 /**
  * Checks if passed argument is undefined
@@ -246,10 +270,9 @@ export function isNumber(v: any): v is number {
  * @param {*} v - variable to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isUndefined(v: any): v is undefined {
+export const isUndefined = function (v: unknown): v is undefined {
   return typeOf(v) === 'undefined';
-}
+};
 
 /**
  * Check if passed function is a class
@@ -257,10 +280,9 @@ export function isUndefined(v: any): v is undefined {
  * @param {Function} fn - function to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isClass(fn: any): boolean {
+export const isClass = (fn: unknown): boolean => {
   return isFunction(fn) && /^\s*class\s+/.test(fn.toString());
-}
+};
 
 /**
  * Checks if object is empty
@@ -268,13 +290,13 @@ export function isClass(fn: any): boolean {
  * @param {object} object - object to check
  * @returns {boolean}
  */
-export function isEmpty(object: object): boolean {
+export const isEmpty = (object: object | null | undefined): boolean => {
   if (!object) {
     return true;
   }
 
   return Object.keys(object).length === 0 && object.constructor === Object;
-}
+};
 
 /**
  * Check if passed object is a Promise
@@ -282,28 +304,25 @@ export function isEmpty(object: object): boolean {
  * @param  {*}  object - object to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isPromise(object: any): object is Promise<any> {
+export const isPromise = (object: unknown): object is Promise<unknown> => {
   return Promise.resolve(object) === object;
-}
+};
 
-/* eslint-disable @typescript-eslint/no-magic-numbers */
 /**
  * Returns true if passed key code is printable (a-Z, 0-9, etc) character.
  *
  * @param {number} keyCode - key code
  * @returns {boolean}
  */
-export function isPrintableKey(keyCode: number): boolean {
-  return (keyCode > 47 && keyCode < 58) || // number keys
-    keyCode === 32 || keyCode === 13 || // Space bar & return key(s)
-    keyCode === 229 || // processing key input for certain languages — Chinese, Japanese, etc.
-    (keyCode > 64 && keyCode < 91) || // letter keys
-    (keyCode > 95 && keyCode < 112) || // Numpad keys
-    (keyCode > 185 && keyCode < 193) || // ;=,-./` (in order)
-    (keyCode > 218 && keyCode < 223); // [\]' (in order)
-}
-/* eslint-enable @typescript-eslint/no-magic-numbers */
+export const isPrintableKey = (keyCode: number): boolean => {
+  return (keyCode > keyCodes.NUMBER_KEY_MIN && keyCode < keyCodes.NUMBER_KEY_MAX) || // number keys
+    keyCode === keyCodes.SPACE || keyCode === keyCodes.ENTER || // Space bar & return key(s)
+    keyCode === keyCodes.PROCESSING_KEY || // processing key input for certain languages — Chinese, Japanese, etc.
+    (keyCode > keyCodes.LETTER_KEY_MIN && keyCode < keyCodes.LETTER_KEY_MAX) || // letter keys
+    (keyCode > keyCodes.NUMPAD_KEY_MIN && keyCode < keyCodes.NUMPAD_KEY_MAX) || // Numpad keys
+    (keyCode > keyCodes.PUNCTUATION_KEY_MIN && keyCode < keyCodes.PUNCTUATION_KEY_MAX) || // ;=,-./` (in order)
+    (keyCode > keyCodes.BRACKET_KEY_MIN && keyCode < keyCodes.BRACKET_KEY_MAX); // [\]' (in order)
+};
 
 /**
  * Fires a promise sequence asynchronously
@@ -314,13 +333,11 @@ export function isPrintableKey(keyCode: number): boolean {
  * @returns {Promise}
  * @deprecated use PromiseQueue.ts instead
  */
-export async function sequence(
+export const sequence = async (
   chains: ChainData[],
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   success: (data: object) => void = (): void => {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   fallback: (data: object) => void = (): void => {}
-): Promise<void> {
+): Promise<void> => {
   /**
    * Decorator
    *
@@ -329,18 +346,18 @@ export async function sequence(
    * @param {Function} fallbackCallback - fail callback
    * @returns {Promise}
    */
-  async function waitNextBlock(
+  const waitNextBlock = async (
     chainData: ChainData,
     successCallback: (data: object) => void,
     fallbackCallback: (data: object) => void
-  ): Promise<void> {
+  ): Promise<void> => {
     try {
       await chainData.function(chainData.data);
       await successCallback(!isUndefined(chainData.data) ? chainData.data : {});
     } catch (e) {
       fallbackCallback(!isUndefined(chainData.data) ? chainData.data : {});
     }
-  }
+  };
 
   /**
    * pluck each element from queue
@@ -373,17 +390,11 @@ export function array(collection: ArrayLike<any>): any[] {
  * @param {Function} method - method to execute
  * @param {number} timeout - timeout in ms
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function delay(method: (...args: any[]) => any, timeout: number) {
-  return function (): void {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const context = this,
-        // eslint-disable-next-line prefer-rest-params
-        args = arguments;
-
-    window.setTimeout(() => method.apply(context, args), timeout);
+export const delay = (method: (...args: unknown[]) => unknown, timeout: number) => {
+  return function (this: unknown, ...args: unknown[]): void {
+    window.setTimeout(() => method.apply(this, args), timeout);
   };
-}
+};
 
 /**
  * Get file extension
@@ -391,9 +402,9 @@ export function delay(method: (...args: any[]) => any, timeout: number) {
  * @param {File} file - file
  * @returns {string}
  */
-export function getFileExtension(file: File): string {
-  return file.name.split('.').pop();
-}
+export const getFileExtension = (file: File): string => {
+  return file.name.split('.').pop() ?? '';
+};
 
 /**
  * Check if string is MIME type
@@ -401,9 +412,9 @@ export function getFileExtension(file: File): string {
  * @param {string} type - string to check
  * @returns {boolean}
  */
-export function isValidMimeType(type: string): boolean {
+export const isValidMimeType = (type: string): boolean => {
   return /^[-\w]+\/([-+\w]+|\*)$/.test(type);
-}
+};
 
 /**
  * Debouncing method
@@ -416,30 +427,28 @@ export function isValidMimeType(type: string): boolean {
  * @param {boolean} immediate - call now
  * @returns {Function}
  */
-export function debounce(func: (...args: unknown[]) => void, wait?: number, immediate?: boolean): () => void {
-  let timeout;
+export const debounce = (func: (...args: unknown[]) => void, wait?: number, immediate?: boolean): (...args: unknown[]) => void => {
+  let timeout: number | null = null;
 
-  return (...args: unknown[]): void => {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const context = this;
-
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    const later = () => {
+  return function (this: unknown, ...args: unknown[]): void {
+    const later = (): void => {
       timeout = null;
-      if (!immediate) {
-        func.apply(context, args);
+      if (immediate !== true) {
+        func.apply(this, args);
       }
     };
 
-    const callNow = immediate && !timeout;
+    const callNow = immediate === true && timeout === null;
 
-    window.clearTimeout(timeout);
+    if (timeout !== null) {
+      window.clearTimeout(timeout);
+    }
     timeout = window.setTimeout(later, wait);
     if (callNow) {
-      func.apply(context, args);
+      func.apply(this, args);
     }
   };
-}
+};
 
 /**
  * Returns a function, that, when invoked, will only be triggered at most once during a given window of time.
@@ -451,65 +460,66 @@ export function debounce(func: (...args: unknown[]) => void, wait?: number, imme
  *                  but if you'd like to disable the execution on the leading edge, pass
  *                  `{leading: false}`. To disable execution on the trailing edge, ditto.
  */
-export function throttle(func, wait, options: {leading?: boolean; trailing?: boolean} = undefined): () => void {
-  let context, args, result;
-  let timeout = null;
+export const throttle = (func: (...args: unknown[]) => unknown, wait: number, options?: {leading?: boolean; trailing?: boolean}): (...args: unknown[]) => unknown => {
+  let args: unknown[] | null;
+  let result: unknown;
+  let timeout: number | null = null;
   let previous = 0;
+  let boundFunc: ((...args: unknown[]) => unknown) | null = null;
 
-  if (!options) {
-    options = {};
-  }
+  const opts = options || {};
 
   const later = function (): void {
-    previous = options.leading === false ? 0 : Date.now();
+    previous = opts.leading === false ? 0 : Date.now();
     timeout = null;
-    result = func.apply(context, args);
-
-    if (!timeout) {
-      context = args = null;
+    if (args !== null && boundFunc !== null) {
+      result = boundFunc(...args);
     }
+
+    boundFunc = null;
+    args = null;
   };
 
-  return function (): unknown {
+  return function (this: unknown, ...restArgs: unknown[]): unknown {
     const now = Date.now();
 
-    if (!previous && options.leading === false) {
+    if (!previous && opts.leading === false) {
       previous = now;
     }
 
     const remaining = wait - (now - previous);
 
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    context = this;
-
-    // eslint-disable-next-line prefer-rest-params
-    args = arguments;
+    boundFunc = func.bind(this);
+    args = restArgs;
 
     if (remaining <= 0 || remaining > wait) {
-      if (timeout) {
-        clearTimeout(timeout);
+      if (timeout !== null) {
+        window.clearTimeout(timeout);
         timeout = null;
       }
       previous = now;
-      result = func.apply(context, args);
-
-      if (!timeout) {
-        context = args = null;
+      if (args !== null && boundFunc !== null) {
+        result = boundFunc(...args);
       }
-    } else if (!timeout && options.trailing !== false) {
-      timeout = setTimeout(later, remaining);
+
+      if (timeout === null) {
+        boundFunc = null;
+        args = null;
+      }
+    } else if (timeout === null && opts.trailing !== false) {
+      timeout = window.setTimeout(later, remaining);
     }
 
     return result;
   };
-}
+};
 
 /**
- * Copies passed text to the clipboard
+ * Legacy fallback method for copying text to clipboard
  *
  * @param text - text to copy
  */
-export function copyTextToClipboard(text): void {
+const fallbackCopyTextToClipboard = (text: string): void => {
   const el = Dom.make('div', 'codex-editor-clipboard', {
     innerHTML: text,
   });
@@ -521,18 +531,38 @@ export function copyTextToClipboard(text): void {
 
   range.selectNode(el);
 
-  window.getSelection().removeAllRanges();
-  selection.addRange(range);
+  window.getSelection()?.removeAllRanges();
+  selection?.addRange(range);
 
   document.execCommand('copy');
   document.body.removeChild(el);
-}
+};
+
+/**
+ * Copies passed text to the clipboard
+ *
+ * @param text - text to copy
+ */
+export const copyTextToClipboard = (text: string): void => {
+  // Use modern Clipboard API if available
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => {
+      // Fallback to legacy method if Clipboard API fails
+      fallbackCopyTextToClipboard(text);
+    });
+
+    return;
+  }
+
+  // Fallback to legacy method for older browsers
+  fallbackCopyTextToClipboard(text);
+};
 
 /**
  * Returns object with os name as key and boolean as value. Shows current user OS
  */
-export function getUserOS(): {[key: string]: boolean} {
-  const OS = {
+export const getUserOS = (): {[key: string]: boolean} => {
+  const OS: {[key: string]: boolean} = {
     win: false,
     mac: false,
     x11: false,
@@ -541,14 +571,14 @@ export function getUserOS(): {[key: string]: boolean} {
 
   const userOS = Object.keys(OS).find((os: string) => window.navigator.appVersion.toLowerCase().indexOf(os) !== -1);
 
-  if (userOS) {
+  if (userOS !== undefined) {
     OS[userOS] = true;
 
     return OS;
   }
 
   return OS;
-}
+};
 
 /**
  * Capitalizes first letter of the string
@@ -556,9 +586,9 @@ export function getUserOS(): {[key: string]: boolean} {
  * @param {string} text - text to capitalize
  * @returns {string}
  */
-export function capitalize(text: string): string {
+export const capitalize = (text: string): string => {
   return text[0].toUpperCase() + text.slice(1);
-}
+};
 
 /**
  * Merge to objects recursively
@@ -567,7 +597,7 @@ export function capitalize(text: string): string {
  * @param {object[]} sources - merge sources
  * @returns {object}
  */
-export function deepMerge<T extends object>(target, ...sources): T {
+export const deepMerge = <T extends object> (target: T, ...sources: Partial<T>[]): T => {
   if (!sources.length) {
     return target;
   }
@@ -575,20 +605,40 @@ export function deepMerge<T extends object>(target, ...sources): T {
 
   if (isObject(target) && isObject(source)) {
     for (const key in source) {
-      if (isObject(source[key])) {
-        if (!target[key]) {
-          Object.assign(target, { [key]: {} });
-        }
+      const value = source[key];
 
-        deepMerge(target[key], source[key]);
-      } else {
-        Object.assign(target, { [key]: source[key] });
+      if (value === null || value === undefined) {
+        Object.assign(target, { [key]: value });
+        continue;
       }
+
+      // Check if it's an array (arrays should not be merged)
+      if (Array.isArray(value)) {
+        Object.assign(target, { [key]: value });
+        continue;
+      }
+
+      // Check if value is a primitive type (primitives should not be merged)
+      const valueType = typeof value;
+      const isPrimitive = valueType !== 'object';
+
+      if (isPrimitive) {
+        Object.assign(target, { [key]: value });
+        continue;
+      }
+
+      // At this point, value must be an object (already checked null/undefined/array/primitives)
+      // Try to merge it as an object
+      if (target[key] === undefined || target[key] === null) {
+        Object.assign(target, { [key]: {} });
+      }
+
+      deepMerge(target[key] as object, value as object);
     }
   }
 
   return deepMerge(target, ...sources);
-}
+};
 
 /**
  * Return true if current device supports touch events
@@ -606,7 +656,7 @@ export const isTouchSupported: boolean = 'ontouchstart' in document.documentElem
  *
  * @param {string} shortcut — string like 'CMD+B'
  */
-export function beautifyShortcut(shortcut: string): string {
+export const beautifyShortcut = (shortcut: string): string => {
   const OS = getUserOS();
 
   shortcut = shortcut
@@ -629,7 +679,7 @@ export function beautifyShortcut(shortcut: string): string {
   }
 
   return shortcut;
-}
+};
 
 /**
  * Returns valid URL. If it is going outside and valid, it returns itself
@@ -638,7 +688,7 @@ export function beautifyShortcut(shortcut: string): string {
  *
  * @param {string} url - url to prettify
  */
-export function getValidUrl(url: string): string {
+export const getValidUrl = (url: string): string => {
   try {
     const urlObject = new URL(url);
 
@@ -652,27 +702,27 @@ export function getValidUrl(url: string): string {
   } else {
     return window.location.origin + url;
   }
-}
+};
 
 /**
  * Create a block id
  *
  * @returns {string}
  */
-export function generateBlockId(): string {
+export const generateBlockId = (): string => {
   const idLen = 10;
 
   return nanoid(idLen);
-}
+};
 
 /**
  * Opens new Tab with passed URL
  *
  * @param {string} url - URL address to redirect
  */
-export function openTab(url: string): void {
+export const openTab = (url: string): void => {
   window.open(url, '_blank');
-}
+};
 
 /**
  * Returns random generated identifier
@@ -680,10 +730,9 @@ export function openTab(url: string): void {
  * @param {string} prefix - identifier prefix
  * @returns {string}
  */
-export function generateId(prefix = ''): string {
-  // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-  return `${prefix}${(Math.floor(Math.random() * 1e8)).toString(16)}`;
-}
+export const generateId = (prefix = ''): string => {
+  return `${prefix}${(Math.floor(Math.random() * ID_RANDOM_MULTIPLIER)).toString(HEXADECIMAL_RADIX)}`;
+};
 
 /**
  * Common method for printing a warning about the usage of deprecated property or method.
@@ -692,13 +741,13 @@ export function generateId(prefix = ''): string {
  * @param oldProperty - deprecated property.
  * @param newProperty - the property that should be used instead.
  */
-export function deprecationAssert(condition: boolean, oldProperty: string, newProperty: string): void {
+export const deprecationAssert = (condition: boolean, oldProperty: string, newProperty: string): void => {
   const message = `«${oldProperty}» is deprecated and will be removed in the next major release. Please use the «${newProperty}» instead.`;
 
   if (condition) {
     logLabeled(message, 'warn');
   }
-}
+};
 
 /**
  * Decorator which provides ability to cache method or accessor result
@@ -707,48 +756,64 @@ export function deprecationAssert(condition: boolean, oldProperty: string, newPr
  * @param propertyKey - method or accessor name
  * @param descriptor - property descriptor
  */
-export function cacheable<Target, Value, Arguments extends unknown[] = unknown[]>(
+export const cacheable = <Target, Value, Arguments extends unknown[] = unknown[]> (
   target: Target,
   propertyKey: string,
   descriptor: PropertyDescriptor
-): PropertyDescriptor {
-  const propertyToOverride = descriptor.value ? 'value' : 'get';
-  const originalMethod = descriptor[propertyToOverride];
-  const cacheKey = `#${propertyKey}Cache`;
+): PropertyDescriptor => {
+  const cacheKey = `#${propertyKey}Cache` as const;
 
   /**
    * Override get or value descriptor property to cache return value
    *
    * @param args - method args
    */
-  descriptor[propertyToOverride] = function (...args: Arguments): Value {
-    /**
-     * If there is no cache, create it
-     */
-    if (this[cacheKey] === undefined) {
-      this[cacheKey] = originalMethod.apply(this, ...args);
-    }
+  if (descriptor.value !== undefined) {
+    const originalMethod = descriptor.value as (...args: Arguments) => Value;
 
-    return this[cacheKey];
-  };
+    descriptor.value = function (this: Record<string, unknown>, ...args: Arguments): Value {
+      /**
+       * If there is no cache, create it
+       */
+      if (this[cacheKey] === undefined) {
+        this[cacheKey] = originalMethod.apply(this, args);
+      }
 
-  /**
-   * If get accessor has been overridden, we need to override set accessor to clear cache
-   *
-   * @param value - value to set
-   */
-  if (propertyToOverride === 'get' && descriptor.set) {
-    const originalSet = descriptor.set;
-
-    descriptor.set = function (value: unknown): void {
-      delete target[cacheKey];
-
-      originalSet.apply(this, value);
+      return this[cacheKey] as Value;
     };
+  } else if (descriptor.get !== undefined) {
+    const originalMethod = descriptor.get as () => Value;
+
+    descriptor.get = function (this: Record<string, unknown>): Value {
+      /**
+       * If there is no cache, create it
+       */
+      if (this[cacheKey] === undefined) {
+        this[cacheKey] = originalMethod.apply(this);
+      }
+
+      return this[cacheKey] as Value;
+    };
+
+    /**
+     * If get accessor has been overridden, we need to override set accessor to clear cache
+     *
+     * @param value - value to set
+     */
+    if (descriptor.set) {
+      const originalSet = descriptor.set as (value: unknown) => void;
+      const targetRecord = target as Record<string, unknown>;
+
+      descriptor.set = function (this: Record<string, unknown>, value: unknown): void {
+        delete targetRecord[cacheKey];
+
+        originalSet.call(this, value);
+      };
+    }
   }
 
   return descriptor;
-}
+};
 
 /**
  * All screens below this width will be treated as mobile;
@@ -758,19 +823,48 @@ export const mobileScreenBreakpoint = 650;
 /**
  * True if screen has mobile size
  */
-export function isMobileScreen(): boolean {
+export const isMobileScreen = function (): boolean {
   return window.matchMedia(`(max-width: ${mobileScreenBreakpoint}px)`).matches;
-}
+};
 
 /**
  * True if current device runs iOS
  */
 export const isIosDevice =
   typeof window !== 'undefined' &&
-  window.navigator &&
-  window.navigator.platform &&
-  (/iP(ad|hone|od)/.test(window.navigator.platform) ||
-    (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1));
+  typeof window.navigator !== 'undefined' &&
+  (() => {
+    const navigator = window.navigator;
+    const userAgent = navigator.userAgent || '';
+
+    // Use modern User-Agent Client Hints API if available
+    const userAgentData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
+    const platform = userAgentData?.platform;
+
+    // Check userAgent string first (most reliable method)
+    if (/iP(ad|hone|od)/.test(userAgent)) {
+      return true;
+    }
+
+    // Check platform from User-Agent Client Hints API if available
+    if (platform !== undefined && platform !== '' && /iP(ad|hone|od)/.test(platform)) {
+      return true;
+    }
+
+    // Check for iPad on iOS 13+ (reports as MacIntel with touch support)
+    // Only access deprecated platform property when necessary
+    if (navigator.maxTouchPoints > 1) {
+      // Use platform only if userAgentData is not available
+      // Use bracket notation to access deprecated property to avoid TypeScript warning
+      const platformValue = platform !== undefined && platform !== '' ? platform : (navigator as Navigator & { platform?: string })['platform'];
+
+      if (platformValue === 'MacIntel') {
+        return true;
+      }
+    }
+
+    return false;
+  })();
 
 /**
  * Compares two values with unknown type
@@ -779,7 +873,7 @@ export const isIosDevice =
  * @param var2 - value to compare with
  * @returns {boolean} true if they are equal
  */
-export function equals(var1: unknown, var2: unknown): boolean {
+export const equals = (var1: unknown, var2: unknown): boolean => {
   const isVar1NonPrimitive = Array.isArray(var1) || isObject(var1);
   const isVar2NonPrimitive = Array.isArray(var2) || isObject(var2);
 
@@ -788,4 +882,4 @@ export function equals(var1: unknown, var2: unknown): boolean {
   }
 
   return var1 === var2;
-}
+};

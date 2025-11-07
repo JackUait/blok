@@ -414,6 +414,7 @@ export default class SelectionUtils {
     this.isFakeBackgroundEnabled = false;
 
     const selection = window.getSelection();
+
     if (!selection || selection.rangeCount === 0) {
       return;
     }
@@ -461,6 +462,7 @@ export default class SelectionUtils {
         // If it's a span with the fake background color, unwrap it
         if (element.tagName.toLowerCase() === 'span') {
           const parent = element.parentNode;
+
           if (parent) {
             while (element.firstChild) {
               parent.insertBefore(element.firstChild, element);
@@ -484,6 +486,7 @@ export default class SelectionUtils {
    */
   public setFakeBackground(): void {
     const selection = window.getSelection();
+
     if (!selection || selection.rangeCount === 0) {
       return;
     }
@@ -496,8 +499,9 @@ export default class SelectionUtils {
     }
 
     // Check if selection is already wrapped in a single element
-    let contents = range.extractContents();
+    const contents = range.extractContents();
     const span = document.createElement('span');
+
     span.style.backgroundColor = '#a8d6ff';
     span.appendChild(contents);
     range.insertNode(span);
@@ -509,6 +513,7 @@ export default class SelectionUtils {
 
     // Update selection to include the new span
     const newRange = document.createRange();
+
     newRange.selectNodeContents(span);
     selection.removeAllRanges();
     selection.addRange(newRange);

@@ -163,7 +163,7 @@ if (typeof window.requestIdleCallback === 'undefined') {
   window.requestIdleCallback = function (cb) {
     const start = Date.now();
 
-    return setTimeout(function () {
+    return setTimeout(() => {
       cb({
         didTimeout: false,
         timeRemaining: function () {

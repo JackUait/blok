@@ -39,7 +39,9 @@
     "jsdoc/require-returns-type": "off",
     "@typescript-eslint/strict-boolean-expressions": "off",
     "@typescript-eslint/consistent-type-imports": "error",
-    "@typescript-eslint/consistent-type-exports": "error"
+    "@typescript-eslint/consistent-type-exports": "error",
+    "prefer-arrow-callback": "error",
+    "func-style": ["error", "expression", { "allowArrowFunctions": true }]
   },
   "overrides": [
     {

@@ -8,8 +8,8 @@ import { isObject, isString } from '../utils';
  * @param dict - Messages dictionary
  * @param [keyPath] - subsection path (used in recursive call)
  */
-function getNamespaces(dict: object, keyPath?: string): DictNamespaces<typeof defaultDictionary> {
-  const result = {};
+const getNamespaces = (dict: object, keyPath?: string): DictNamespaces<typeof defaultDictionary> => {
+  const result: Record<string, string | Record<string, unknown>> = {};
 
   Object.entries(dict).forEach(([key, section]) => {
     if (isObject(section)) {
@@ -42,7 +42,7 @@ function getNamespaces(dict: object, keyPath?: string): DictNamespaces<typeof de
   });
 
   return result as DictNamespaces<typeof defaultDictionary>;
-}
+};
 
 /**
  * Type safe access to the internal messages dictionary sections

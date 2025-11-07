@@ -85,7 +85,9 @@ export default class I18n {
         return {};
       }
 
-      return section[part];
-    }, I18n.currentDictionary);
+      const value = section[part];
+
+      return typeof value === 'string' ? {} : (value as Dictionary);
+    }, I18n.currentDictionary as Dictionary);
   }
 }

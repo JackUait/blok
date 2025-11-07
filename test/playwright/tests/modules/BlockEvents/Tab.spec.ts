@@ -269,9 +269,11 @@ test.describe('Tab keydown', () => {
        * Hide block tune popovers to keep the tab order identical to the Cypress plugin,
        * which skips hidden elements when emulating native Tab navigation.
        */
-      document.querySelectorAll('.ce-popover__items').forEach((element) => {
+      const elements = Array.from(document.querySelectorAll('.ce-popover__items'));
+
+      for (const element of elements) {
         (element as HTMLElement).style.display = 'none';
-      });
+      }
     });
 
     const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();

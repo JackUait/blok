@@ -2,9 +2,9 @@ import type EditorJS from '../../../../types/index';
 import type { ConversionConfig, ToolboxConfig } from '../../../../types/index';
 import ToolMock from '../../fixtures/tools/ToolMock';
 
-describe('Toolbox', function () {
-  describe('Shortcuts', function () {
-    it('should convert current Block to the Shortcuts\'s Block if both tools provides a "conversionConfig". Caret should be restored after conversion.', function () {
+describe('Toolbox', () => {
+  describe('Shortcuts', () => {
+    it('should convert current Block to the Shortcuts\'s Block if both tools provides a "conversionConfig". Caret should be restored after conversion.', () => {
       /**
        * Mock of Tool with conversionConfig
        */
@@ -76,7 +76,7 @@ describe('Toolbox', function () {
         });
     });
 
-    it('should insert a Shortcuts\'s Block below the current if some (original or target) tool does not provide a "conversionConfig" ', function () {
+    it('should insert a Shortcuts\'s Block below the current if some (original or target) tool does not provide a "conversionConfig" ', () => {
       /**
        * Mock of Tool with conversionConfig
        */
@@ -119,7 +119,7 @@ describe('Toolbox', function () {
         });
     });
 
-    it('should display shortcut only for the first toolbox item if tool exports toolbox with several items', function () {
+    it('should display shortcut only for the first toolbox item if tool exports toolbox with several items', () => {
       /**
        * Mock of Tool with conversionConfig
        */
@@ -177,7 +177,7 @@ describe('Toolbox', function () {
         .should('not.exist');
     });
 
-    it('should display shortcut for the item if tool exports toolbox as an one item object', function () {
+    it('should display shortcut for the item if tool exports toolbox as an one item object', () => {
       /**
        * Mock of Tool with conversionConfig
        */

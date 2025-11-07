@@ -17,10 +17,11 @@
     "serve": "vite --no-open",
     "build": "vite build --mode production",
     "build:test": "vite build --mode test",
-    "lint": "eslint src/ && yarn lint:tests",
+    "lint": "eslint src/ && yarn lint:tests && yarn lint:types",
     "lint:errors": "eslint src/ --quiet",
-    "lint:fix": "eslint src/ --fix",
+    "lint:fix": "eslint src/ --fix && yarn lint:types",
     "lint:tests": "eslint test/",
+    "lint:types": "tsc --noEmit",
     "test:e2e": "yarn build:test && cypress run",
     "test:e2e:open": "yarn build:test && cypress open",
     "test:e2e:playwright": "playwright test",
@@ -76,8 +77,10 @@
   },
   "dependencies": {
     "@editorjs/caret": "^1.0.1",
+    "@types/lodash": "^4.17.20",
     "codex-notifier": "^1.1.2",
-    "codex-tooltip": "^1.0.5"
+    "codex-tooltip": "^1.0.5",
+    "lodash": "^4.17.21"
   },
   "resolutions": {
     "@typescript-eslint/eslint-plugin": "^6.0.0",

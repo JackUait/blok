@@ -8,7 +8,7 @@ describe('Editor basic initialization', () => {
      */
     const editorConfig = {};
 
-    beforeEach(function () {
+    beforeEach(() => {
       cy.createEditor(editorConfig).as('editorInstance');
     });
 

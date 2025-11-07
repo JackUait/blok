@@ -106,7 +106,7 @@ describe('Inline Toolbar', () => {
             public static isInline = true;
             public static isReadOnlySupported = true;
             // eslint-disable-next-line jsdoc/require-jsdoc
-            public constructor() {
+            constructor() {
               // Constructor required for InlineToolConstructable
             }
             // eslint-disable-next-line jsdoc/require-jsdoc

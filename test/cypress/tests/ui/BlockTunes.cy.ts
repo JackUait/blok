@@ -4,7 +4,7 @@ import type { ConversionConfig, ToolboxConfig } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools';
 import { ToolWithoutConversionExport } from '../../fixtures/tools/ToolWithoutConversionExport';
 
-describe('BlockTunes', function () {
+describe('BlockTunes', () => {
   describe('Search', () => {
     it('should be focused after popover opened', () => {
       cy.createEditor({
@@ -50,8 +50,8 @@ describe('BlockTunes', function () {
     });
   });
 
-  describe('Keyboard only', function () {
-    it('should not delete the currently selected block when Enter pressed on a search input (or any block tune)', function () {
+  describe('Keyboard only', () => {
+    it('should not delete the currently selected block when Enter pressed on a search input (or any block tune)', () => {
       const ENTER_KEY_CODE = 13;
 
       cy.createEditor({
@@ -81,7 +81,7 @@ describe('BlockTunes', function () {
         .should('have.text', 'Some text');
     });
 
-    it('should not unselect currently selected block when Enter pressed on a block tune', function () {
+    it('should not unselect currently selected block when Enter pressed on a block tune', () => {
       const ENTER_KEY_CODE = 13;
 
       cy.createEditor({

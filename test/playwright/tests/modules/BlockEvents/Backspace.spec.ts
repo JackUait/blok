@@ -481,7 +481,7 @@ test.describe('Backspace keydown', () => {
 
       await lastParagraph.click();
       await lastParagraph.press('ArrowDown');
-      for (let i = 0; i < 4; i += 1) {
+      for (const _ of Array(4)) {
         await page.keyboard.press('Backspace');
       }
 

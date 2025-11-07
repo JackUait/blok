@@ -1,7 +1,7 @@
 import * as _ from '../../../src/components/utils';
 
 describe('Blocks selection', () => {
-  beforeEach(function () {
+  beforeEach(() => {
     cy.createEditor({}).as('editorInstance');
   });
 

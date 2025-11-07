@@ -23,9 +23,10 @@ const EditorJSApiMock = Cypress.sinon.match.any;
 describe('onChange callback', () => {
   /**
    * Creates Editor instance
+   *
    * @param blocks - list of blocks to prefill the editor
    */
-  function createEditor(blocks?: OutputData['blocks']): void {
+  const createEditor = (blocks?: OutputData['blocks']): void => {
     const config = {
       tools: {
         header: Header,
@@ -42,13 +43,14 @@ describe('onChange callback', () => {
     cy.spy(config, 'onChange').as('onChange');
 
     cy.createEditor(config).as('editorInstance');
-  }
+  };
 
   /**
    * Creates Editor instance with save inside the onChange event.
+   *
    * @param blocks - list of blocks to prefill the editor
    */
-  function createEditorWithSave(blocks?: OutputData['blocks']): void {
+  const createEditorWithSave = (blocks?: OutputData['blocks']): void => {
     const config = {
       tools: {
         header: Header,
@@ -57,7 +59,7 @@ describe('onChange callback', () => {
       },
       onChange: (api: API, event: BlockMutationEvent | BlockMutationEvent[]): void => {
         console.log('something changed', event);
-        api.saver.save();
+        void api.saver.save();
       },
       data: blocks ? {
         blocks,
@@ -67,7 +69,7 @@ describe('onChange callback', () => {
     cy.spy(config, 'onChange').as('onChange');
 
     cy.createEditor(config).as('editorInstance');
-  }
+  };
 
   it('should batch events when several changes happened at once', () => {
     createEditor([
@@ -701,7 +703,7 @@ describe('onChange callback', () => {
 
     cy.get<EditorJS>('@editorInstance')
       .then(async editor => {
-        cy.wrap(editor.blocks.clear());
+        void editor.blocks.clear();
       });
 
     cy.get('@onChange').should('be.calledWithBatchedEvents', [
@@ -775,7 +777,7 @@ describe('onChange callback', () => {
 
     cy.createEditor(config)
       .then((editor) => {
-        editor.blocks.update(block.id, {
+        void editor.blocks.update(block.id, {
           text: 'Updated text',
         });
 
@@ -887,7 +889,7 @@ describe('onChange callback', () => {
 
     cy.get<EditorJS>('@editorInstance')
       .then(async editor => {
-        editor.readOnly.toggle(true);
+        void editor.readOnly.toggle(true);
       });
 
     cy.wait(modificationsObserverBatchTimeout);
@@ -896,7 +898,7 @@ describe('onChange callback', () => {
 
     cy.get<EditorJS>('@editorInstance')
       .then(async editor => {
-        editor.readOnly.toggle(false);
+        void editor.readOnly.toggle(false);
       });
 
     cy.wait(modificationsObserverBatchTimeout);

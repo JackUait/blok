@@ -312,7 +312,7 @@ describe('BlockTool', () => {
       options.constructable.prepare = cy.stub();
       const tool = new BlockToolAdapter(options as any);
 
-      tool.prepare();
+      void tool.prepare();
 
       expect(options.constructable.prepare).to.have.been.calledWithMatch({
         toolName: tool.name,
@@ -335,7 +335,7 @@ describe('BlockTool', () => {
       options.constructable.reset = cy.stub();
       const tool = new BlockToolAdapter(options as any);
 
-      tool.reset();
+      void tool.reset();
 
       expect(options.constructable.reset).to.be.calledOnce;
     });

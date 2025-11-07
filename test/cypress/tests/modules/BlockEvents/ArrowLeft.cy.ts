@@ -1,9 +1,9 @@
 import { createEditorWithTextBlocks } from '../../../support/utils/createEditorWithTextBlocks';
 import ContentlessToolMock from '../../../fixtures/tools/ContentlessTool';
 
-describe('Arrow Left', function () {
-  describe('starting whitespaces handling', function () {
-    it('&nbsp;| — should natively move caret over the visible space. Then move to the prev block', function () {
+describe('Arrow Left', () => {
+  describe('starting whitespaces handling', () => {
+    it('&nbsp;| — should natively move caret over the visible space. Then move to the prev block', () => {
       createEditorWithTextBlocks([
         '1',
         '&nbsp;2',
@@ -23,6 +23,7 @@ describe('Arrow Left', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+
           if (!selection || selection.rangeCount === 0) {
             throw new Error('Selection is null or has no ranges');
           }
@@ -36,7 +37,7 @@ describe('Arrow Left', function () {
             });
         });
     });
-    it(' | — should ignore invisible space before caret and move caret to the prev block', function () {
+    it(' | — should ignore invisible space before caret and move caret to the prev block', () => {
       createEditorWithTextBlocks([
         '1',
         ' 2',
@@ -55,6 +56,7 @@ describe('Arrow Left', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+
           if (!selection || selection.rangeCount === 0) {
             throw new Error('Selection is null or has no ranges');
           }
@@ -69,7 +71,7 @@ describe('Arrow Left', function () {
         });
     });
 
-    it('<b></b>| — should ignore empty tags before caret and move caret to the prev block', function () {
+    it('<b></b>| — should ignore empty tags before caret and move caret to the prev block', () => {
       createEditorWithTextBlocks([
         '1',
         '<b></b>2',
@@ -88,6 +90,7 @@ describe('Arrow Left', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+
           if (!selection || selection.rangeCount === 0) {
             throw new Error('Selection is null or has no ranges');
           }
@@ -101,7 +104,7 @@ describe('Arrow Left', function () {
             });
         });
     });
-    it('<b></b>&nbsp;| — should move caret over the visible space and then to the prev block', function () {
+    it('<b></b>&nbsp;| — should move caret over the visible space and then to the prev block', () => {
       createEditorWithTextBlocks([
         '1',
         '<b></b>&nbsp;2',
@@ -121,6 +124,7 @@ describe('Arrow Left', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+
           if (!selection || selection.rangeCount === 0) {
             throw new Error('Selection is null or has no ranges');
           }
@@ -135,7 +139,7 @@ describe('Arrow Left', function () {
         });
     });
 
-    it('&nbsp;<b></b>| — should ignore empty tag and move caret over the visible space. Then move to the prev block', function () {
+    it('&nbsp;<b></b>| — should ignore empty tag and move caret over the visible space. Then move to the prev block', () => {
       createEditorWithTextBlocks([
         '1',
         '<b></b>&nbsp;2',
@@ -155,6 +159,7 @@ describe('Arrow Left', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+
           if (!selection || selection.rangeCount === 0) {
             throw new Error('Selection is null or has no ranges');
           }
@@ -169,7 +174,7 @@ describe('Arrow Left', function () {
         });
     });
 
-    it(' &nbsp;| — should move caret over the visible space. Then move to the prev block', function () {
+    it(' &nbsp;| — should move caret over the visible space. Then move to the prev block', () => {
       createEditorWithTextBlocks([
         '1',
         ' &nbsp;2',
@@ -189,6 +194,7 @@ describe('Arrow Left', function () {
       cy.window()
         .then((window) => {
           const selection = window.getSelection();
+
           if (!selection || selection.rangeCount === 0) {
             throw new Error('Selection is null or has no ranges');
           }
@@ -219,7 +225,7 @@ describe('Arrow Left', function () {
    *
    * Expected: Caret is set to the end of the Text Block №1
    */
-  it('should move caret to the prev block if currently focused block is contentless (Delimiter)', function () {
+  it('should move caret to the prev block if currently focused block is contentless (Delimiter)', () => {
     cy.createEditor({
       tools: {
         delimiter: ContentlessToolMock,
@@ -284,6 +290,7 @@ describe('Arrow Left', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+
         if (!selection || selection.rangeCount === 0) {
           throw new Error('Selection is null or has no ranges');
         }

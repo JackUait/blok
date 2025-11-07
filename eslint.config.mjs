@@ -66,7 +66,21 @@ export default [
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/consistent-type-exports': 'error',
       'prefer-arrow-callback': 'error',
+      'prefer-const': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'VariableDeclaration[kind="let"]',
+          message: 'Use const instead of let. If reassignment is needed, refactor to avoid mutation.',
+        },
+      ],
+      'no-param-reassign': ['error', { props: true }],
+      'no-global-assign': 'error',
+      'no-implicit-globals': 'error',
       'func-style': ['error', 'expression', { allowArrowFunctions: true }],
+      'no-nested-ternary': 'error',
+      'max-depth': ['error', { max: 2 }],
+      'one-var': ['error', 'never'],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -90,6 +104,8 @@ export default [
         rules: {
           quotes: [1, 'double'],
           semi: [1, 'never'],
+          '@typescript-eslint/consistent-type-imports': 'off',
+          '@typescript-eslint/consistent-type-exports': 'off',
         },
       },
     ],
@@ -122,6 +138,7 @@ export default [
       'cypress/require-data-selectors': 'error',
       'cypress/no-unnecessary-waiting': 'off',
       '@typescript-eslint/no-magic-numbers': 'off',
+      'no-restricted-syntax': 'off',
     },
   },
   {
@@ -141,6 +158,7 @@ export default [
     rules: {
       ...playwright.configs.recommended.rules,
       '@typescript-eslint/no-magic-numbers': 'off',
+      'no-restricted-syntax': 'off',
     },
   },
 ];

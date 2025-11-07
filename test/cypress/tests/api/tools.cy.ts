@@ -114,6 +114,7 @@ describe('Editor Tools Api', () => {
 
         /**
          * Tool constructor
+         *
          * @param data - previously saved data
          */
         constructor({ data }: { data: { testProp: string } }) {
@@ -146,6 +147,7 @@ describe('Editor Tools Api', () => {
 
         /**
          * Extracts Tool's data from the view
+         *
          * @param el - tool view
          */
         public save(el: HTMLElement): BlockToolData {
@@ -553,7 +555,7 @@ describe('Editor Tools Api', () => {
         /**
          * Variable used for spying the pasted element we are passing to the Tool
          */
-        let pastedElement;
+        let pastedElement: HTMLElement | undefined;
 
         /**
          * Test tool with pasteConfig.tags specified
@@ -600,6 +602,9 @@ describe('Editor Tools Api', () => {
           })
           .then(() => {
             expect(pastedElement).not.to.be.undefined;
+            if (pastedElement === undefined) {
+              throw new Error('pastedElement should be defined');
+            }
             expect(pastedElement.tagName.toLowerCase()).eq('img');
             expect(pastedElement.attributes.length).eq(0);
           });
@@ -616,7 +621,7 @@ describe('Editor Tools Api', () => {
         /**
          * Variable used for spying the pasted element we are passing to the Tool
          */
-        let pastedElement;
+        let pastedElement: HTMLElement | undefined;
 
         /**
          * Test tool with pasteConfig.tags specified
@@ -663,6 +668,9 @@ describe('Editor Tools Api', () => {
           })
           .then(() => {
             expect(pastedElement).not.to.be.undefined;
+            if (pastedElement === undefined) {
+              throw new Error('pastedElement should be defined');
+            }
             expect(pastedElement.tagName.toLowerCase()).eq('ol');
             expect(pastedElement.attributes.length).eq(0);
             // check number of children
@@ -672,8 +680,10 @@ describe('Editor Tools Api', () => {
              * Check that all children are <li> tags
              */
             pastedElement.childNodes.forEach((child) => {
-              expect(child.tagName.toLowerCase()).eq('li');
-              expect(child.attributes.length).eq(0);
+              if (child instanceof Element) {
+                expect(child.tagName.toLowerCase()).eq('li');
+                expect(child.attributes.length).eq(0);
+              }
             });
           });
       });
@@ -691,7 +701,7 @@ describe('Editor Tools Api', () => {
         /**
          * Variable used for spying the pasted element we are passing to the Tool
          */
-        let pastedElement;
+        let pastedElement: HTMLElement | undefined;
 
         /**
          * Test tool with pasteConfig.tags specified
@@ -744,6 +754,9 @@ describe('Editor Tools Api', () => {
           })
           .then(() => {
             expect(pastedElement).not.to.be.undefined;
+            if (pastedElement === undefined) {
+              throw new Error('pastedElement should be defined');
+            }
 
             /**
              * Check that the <img> has only "src" attribute
@@ -768,7 +781,7 @@ describe('Editor Tools Api', () => {
         /**
          * Variable used for spying the pasted element we are passing to the Tool
          */
-        let pastedElement;
+        let pastedElement: HTMLElement | undefined;
 
         /**
          * Test tool with pasteConfig.tags specified
@@ -822,6 +835,9 @@ describe('Editor Tools Api', () => {
           })
           .then(() => {
             expect(pastedElement).not.to.be.undefined;
+            if (pastedElement === undefined) {
+              throw new Error('pastedElement should be defined');
+            }
 
             /**
              * Check that <video>  has no attributes
@@ -832,9 +848,13 @@ describe('Editor Tools Api', () => {
             /**
              * Check that the <source> has only 'src' attribute
              */
-            expect(pastedElement.firstChild.tagName.toLowerCase()).eq('source');
-            expect(pastedElement.firstChild.getAttribute('src')).eq('movie.mp4');
-            expect(pastedElement.firstChild.attributes.length).eq(1);
+            const firstChild = pastedElement.firstChild;
+
+            if (firstChild instanceof Element) {
+              expect(firstChild.tagName.toLowerCase()).eq('source');
+              expect(firstChild.getAttribute('src')).eq('movie.mp4');
+              expect(firstChild.attributes.length).eq(1);
+            }
           });
       });
 
@@ -850,7 +870,7 @@ describe('Editor Tools Api', () => {
         /**
          * Variable used for spying the pasted element we are passing to the Tool
          */
-        let pastedElement;
+        let pastedElement: HTMLElement | undefined;
 
         /**
          * Test tool with pasteConfig.tags specified
@@ -906,13 +926,20 @@ describe('Editor Tools Api', () => {
           })
           .then(() => {
             expect(pastedElement).not.to.be.undefined;
+            if (pastedElement === undefined) {
+              throw new Error('pastedElement should be defined');
+            }
             expect(pastedElement.tagName.toLowerCase()).eq('video');
 
             /**
              * Check that the <tr> has the 'height' attribute
              */
-            expect(pastedElement.firstChild.tagName.toLowerCase()).eq('source');
-            expect(pastedElement.firstChild.getAttribute('src')).eq('movie.mp4');
+            const firstChild = pastedElement.firstChild;
+
+            if (firstChild instanceof Element) {
+              expect(firstChild.tagName.toLowerCase()).eq('source');
+              expect(firstChild.getAttribute('src')).eq('movie.mp4');
+            }
           });
       });
 
@@ -924,7 +951,7 @@ describe('Editor Tools Api', () => {
         /**
          * Variable used for spying the pasted element we are passing to the Tool
          */
-        let pastedElement;
+        let pastedElement: HTMLElement | undefined;
 
         /**
          * Test tool with pasteConfig.tags specified
@@ -982,19 +1009,30 @@ describe('Editor Tools Api', () => {
           })
           .then(() => {
             expect(pastedElement).not.to.be.undefined;
+            if (pastedElement === undefined) {
+              throw new Error('pastedElement should be defined');
+            }
             expect(pastedElement.tagName.toLowerCase()).eq('table');
 
             /**
              * Check that the <tr> has the 'height' attribute
              */
-            expect(pastedElement.querySelector('tr')).not.to.be.undefined;
-            expect(pastedElement.querySelector('tr').getAttribute('height')).eq('50');
+            const trElement = pastedElement.querySelector('tr');
+
+            expect(trElement).not.to.be.null;
+            if (trElement !== null) {
+              expect(trElement.getAttribute('height')).eq('50');
+            }
 
             /**
              * Check that the <td> has the 'width' attribute
              */
-            expect(pastedElement.querySelector('td')).not.to.be.undefined;
-            expect(pastedElement.querySelector('td').getAttribute('width')).eq('300');
+            const tdElement = pastedElement.querySelector('td');
+
+            expect(tdElement).not.to.be.null;
+            if (tdElement !== null) {
+              expect(tdElement.getAttribute('width')).eq('300');
+            }
           });
       });
     });

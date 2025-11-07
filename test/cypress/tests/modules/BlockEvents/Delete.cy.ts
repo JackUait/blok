@@ -1,9 +1,9 @@
 import type EditorJS from '../../../../../types/index';
 import { createEditorWithTextBlocks } from '../../../support/utils/createEditorWithTextBlocks';
 
-describe('Delete keydown', function () {
-  describe('ending whitespaces handling', function () {
-    it('|&nbsp; — should delete visible space', function () {
+describe('Delete keydown', () => {
+  describe('ending whitespaces handling', () => {
+    it('|&nbsp; — should delete visible space', () => {
       createEditorWithTextBlocks([
         '1&nbsp;',
         '2',
@@ -20,7 +20,7 @@ describe('Delete keydown', function () {
 
         .should('have.text', '12');
     });
-    it('"| " — should ignore invisible space after caret and handle it like regular delete case (merge with next)', function () {
+    it('"| " — should ignore invisible space after caret and handle it like regular delete case (merge with next)', () => {
       createEditorWithTextBlocks([
         '1 ',
         '2',
@@ -39,7 +39,7 @@ describe('Delete keydown', function () {
         .last()
         .should('have.text', '1 2');
     });
-    it('|<b></b> — should ignore empty tags after caret and handle it like regular delete case (merge)', function () {
+    it('|<b></b> — should ignore empty tags after caret and handle it like regular delete case (merge)', () => {
       createEditorWithTextBlocks([
         '1<b></b>',
         '2',
@@ -58,7 +58,7 @@ describe('Delete keydown', function () {
         .last()
         .should('have.text', '12');
     });
-    it('|&nbsp;<b></b> — should remove visible space and ignore empty tag', function () {
+    it('|&nbsp;<b></b> — should remove visible space and ignore empty tag', () => {
       createEditorWithTextBlocks([
         '1&nbsp;<b></b>',
         '2',
@@ -79,7 +79,7 @@ describe('Delete keydown', function () {
         .should('have.text', '12');
     });
 
-    it('|<b></b>&nbsp; — should remove visible space and ignore empty tag', function () {
+    it('|<b></b>&nbsp; — should remove visible space and ignore empty tag', () => {
       createEditorWithTextBlocks([
         '1<b></b>&nbsp;',
         '2',
@@ -100,7 +100,7 @@ describe('Delete keydown', function () {
         .should('have.text', '12');
     });
 
-    it('"|&nbsp; " — should remove visible space and ignore space', function () {
+    it('"|&nbsp; " — should remove visible space and ignore space', () => {
       createEditorWithTextBlocks([
         '1&nbsp; ',
         '2',
@@ -124,6 +124,7 @@ describe('Delete keydown', function () {
          * - Firefox merge blocks and with whitespace - "1 2"
          *
          * So, we have to check both variants.
+         *
          * @todo remove this check after fixing the Firefox merge behaviour
          */
         .should(($block) => {
@@ -133,7 +134,7 @@ describe('Delete keydown', function () {
         });
     });
   });
-  it('should just delete chars (native behaviour) when some fragment is selected', function () {
+  it('should just delete chars (native behaviour) when some fragment is selected', () => {
     createEditorWithTextBlocks([
       'The first block',
       'The second block',
@@ -152,7 +153,7 @@ describe('Delete keydown', function () {
       .should('have.text', 'first block');
   });
 
-  it('should just delete chars (native behaviour) when Caret is not at the end of the Block', function () {
+  it('should just delete chars (native behaviour) when Caret is not at the end of the Block', () => {
     createEditorWithTextBlocks([
       'The first block',
       'The second block',
@@ -171,7 +172,7 @@ describe('Delete keydown', function () {
       .should('have.text', 'The first bloc'); // last char is removed
   });
 
-  it('should navigate next input when Caret is not at the last input', function () {
+  it('should navigate next input when Caret is not at the last input', () => {
     /**
      * Mock of tool with several inputs
      */
@@ -231,6 +232,7 @@ describe('Delete keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+
         if (!selection || selection.rangeCount === 0) {
           throw new Error('Selection is null or has no ranges');
         }
@@ -242,7 +244,7 @@ describe('Delete keydown', function () {
       });
   });
 
-  it('should remove next Block if Caret at the end of the Block and next Block is empty. Also, should close the Toolbox', function () {
+  it('should remove next Block if Caret at the end of the Block and next Block is empty. Also, should close the Toolbox', () => {
     cy.createEditor({
       data: {
         blocks: [
@@ -279,7 +281,7 @@ describe('Delete keydown', function () {
       });
   });
 
-  it('should remove current Block if it is empty, but next is not. Also, should close the Toolbox and set Caret to the start of the next Block', function () {
+  it('should remove current Block if it is empty, but next is not. Also, should close the Toolbox and set Caret to the start of the next Block', () => {
     cy.createEditor({
       data: {
         blocks: [
@@ -325,6 +327,7 @@ describe('Delete keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+
         if (!selection || selection.rangeCount === 0) {
           throw new Error('Selection is null or has no ranges');
         }
@@ -346,7 +349,7 @@ describe('Delete keydown', function () {
       .should('not.have.class', 'ce-toolbar--opened');
   });
 
-  it('should merge current Block with the next one if Caret at the end of the Block and both Blocks are mergeable. Also, should close the Toolbox.', function () {
+  it('should merge current Block with the next one if Caret at the end of the Block and both Blocks are mergeable. Also, should close the Toolbox.', () => {
     cy.createEditor({
       data: {
         blocks: [
@@ -392,6 +395,7 @@ describe('Delete keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+
         if (!selection || selection.rangeCount === 0) {
           throw new Error('Selection is null or has no ranges');
         }
@@ -414,7 +418,7 @@ describe('Delete keydown', function () {
       .should('not.have.class', 'ce-toolbar--opened');
   });
 
-  it('should simply set Caret to the start of the next Block if Caret at the end of the Block but Blocks are not mergeable. Also, should close the Toolbox.', function () {
+  it('should simply set Caret to the start of the next Block if Caret at the end of the Block but Blocks are not mergeable. Also, should close the Toolbox.', () => {
     /**
      * Mock of tool without merge method
      */
@@ -474,6 +478,7 @@ describe('Delete keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+
         if (!selection || selection.rangeCount === 0) {
           throw new Error('Selection is null or has no ranges');
         }
@@ -485,8 +490,8 @@ describe('Delete keydown', function () {
       });
   });
 
-  describe('at the end of the last Block', function () {
-    it('should do nothing', function () {
+  describe('at the end of the last Block', () => {
+    it('should do nothing', () => {
       createEditorWithTextBlocks([ 'The only block. Not empty' ]);
 
       cy.get('[data-cy=editorjs]')

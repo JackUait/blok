@@ -4,12 +4,12 @@ import { isFunction } from '../../../src/components/utils';
 /**
  * Example of typical synchronous function
  */
-function syncFunction(): void {}
+const syncFunction = (): void => {};
 
 /**
  * Example of typical asynchronous function
  */
-async function asyncFunction(): Promise<void> {}
+const asyncFunction = async (): Promise<void> => {};
 
 const syncArrowFunction = (): void => {};
 

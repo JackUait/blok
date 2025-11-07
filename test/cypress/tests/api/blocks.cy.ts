@@ -65,13 +65,13 @@ describe('api.blocks', () => {
     it('should update block in DOM', () => {
       cy.createEditor({
         data: editorDataMock,
-      }).then((editor) => {
+      }).then(async (editor) => {
         const idToUpdate = firstBlock.id;
         const newBlockData = {
           text: 'Updated text',
         };
 
-        editor.blocks.update(idToUpdate, newBlockData);
+        await editor.blocks.update(idToUpdate, newBlockData);
 
         cy.get('[data-cy=editorjs]')
           .get('div.ce-block')
@@ -85,21 +85,20 @@ describe('api.blocks', () => {
     it('should update block in saved data', () => {
       cy.createEditor({
         data: editorDataMock,
-      }).then((editor) => {
+      }).then(async (editor) => {
         const idToUpdate = firstBlock.id;
         const newBlockData = {
           text: 'Updated text',
         };
 
-        editor.blocks.update(idToUpdate, newBlockData);
+        await editor.blocks.update(idToUpdate, newBlockData);
 
         // wait a little since some tools (paragraph) could have async hydration
-        cy.wait(100).then(() => {
-          editor.save().then((output) => {
-            const text = output.blocks[0].data.text;
+        cy.wait(100).then(async () => {
+          const output = await editor.save();
+          const text = output.blocks[0].data.text;
 
-            expect(text).to.be.eq(newBlockData.text);
-          });
+          expect(text).to.be.eq(newBlockData.text);
         });
       });
     });
@@ -120,6 +119,7 @@ describe('api.blocks', () => {
 
         /**
          * Tell editor.js that this Tool is a Block Tune
+         *
          * @returns {boolean}
          */
         public static get isTune(): boolean {
@@ -128,6 +128,7 @@ describe('api.blocks', () => {
 
         /**
          * Create Tunes controls wrapper that will be appended to the Block Tunes panel
+         *
          * @returns {HTMLElement}
          */
         public render(): HTMLElement {
@@ -143,6 +144,7 @@ describe('api.blocks', () => {
 
         /**
          * Returns Tune state
+         *
          * @returns {BlockTuneData}
          */
         public save(): BlockTuneData {
@@ -224,8 +226,8 @@ describe('api.blocks', () => {
   /**
    * api.blocks.insert(type, data, config, index, needToFocus, replace, id)
    */
-  describe('.insert()', function () {
-    it('should preserve block id if it is passed', function () {
+  describe('.insert()', () => {
+    it('should preserve block id if it is passed', () => {
       cy.createEditor({
         data: editorDataMock,
       }).then((editor) => {
@@ -248,8 +250,8 @@ describe('api.blocks', () => {
   /**
    * api.blocks.insertMany(blocks, index)
    */
-  describe('.insertMany()', function () {
-    it('should insert several blocks to passed index', function () {
+  describe('.insertMany()', () => {
+    it('should insert several blocks to passed index', () => {
       cy.createEditor({
         data: {
           blocks: [
@@ -292,8 +294,8 @@ describe('api.blocks', () => {
     });
   });
 
-  describe('.convert()', function () {
-    it('should convert a Block to another type if original Tool has "conversionConfig.export" and target Tool has "conversionConfig.import". Should return BlockAPI as well.', function () {
+  describe('.convert()', () => {
+    it('should convert a Block to another type if original Tool has "conversionConfig.export" and target Tool has "conversionConfig.import". Should return BlockAPI as well.', () => {
       /**
        * Mock of Tool with conversionConfig
        */
@@ -364,7 +366,7 @@ describe('api.blocks', () => {
       });
     });
 
-    it('should throw an error if nonexisting Block id passed', function () {
+    it('should throw an error if nonexisting Block id passed', () => {
       cy.createEditor({})
         .then((editor) => {
           /**
@@ -380,7 +382,7 @@ describe('api.blocks', () => {
         });
     });
 
-    it('should throw an error if nonexisting Tool name passed', function () {
+    it('should throw an error if nonexisting Tool name passed', () => {
       const existingBlock = {
         id: 'test-id-123',
         type: 'paragraph',
@@ -409,7 +411,7 @@ describe('api.blocks', () => {
       });
     });
 
-    it('should throw an error if some tool does not provide "conversionConfig"', function () {
+    it('should throw an error if some tool does not provide "conversionConfig"', () => {
       const existingBlock = {
         id: 'test-id-123',
         type: 'paragraph',
@@ -448,7 +450,7 @@ describe('api.blocks', () => {
       });
     });
 
-    it('should pass tool config to the conversionConfig.import method of the tool', function () {
+    it('should pass tool config to the conversionConfig.import method of the tool', () => {
       const existingBlock = {
         id: 'test-id-123',
         type: 'paragraph',
@@ -484,6 +486,7 @@ describe('api.blocks', () => {
             export: (data) => data,
             /**
              * Passed config should be returned
+             *
              * @param _content - The content string (unused in this implementation)
              * @param config - The tool configuration object
              */

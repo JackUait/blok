@@ -26,9 +26,11 @@ describe('BlockAPI', () => {
 
   /**
    * Creates Editor instance
+   *
    * @param [data] - data to render
    */
-  function createEditor(data?: OutputData): void {
+
+  const createEditor = (data?: OutputData): void => {
     const config = {
       onChange: (_api: API, event: BlockMutationEvent | BlockMutationEvent[]): void => {
         console.log('something changed', event);
@@ -39,7 +41,7 @@ describe('BlockAPI', () => {
     cy.spy(config, 'onChange').as('onChange');
 
     cy.createEditor(config).as('editorInstance');
-  }
+  };
 
   /**
    * block.dispatchChange();

@@ -1,10 +1,10 @@
 import { createEditorWithTextBlocks } from '../../support/utils/createEditorWithTextBlocks';
 import type EditorJS from '../../../../types/index';
 
-describe('Ui module', function () {
-  describe('documentKeydown', function () {
-    describe('Backspace', function () {
-      it('should remove selected blocks', function () {
+describe('Ui module', () => {
+  describe('documentKeydown', () => {
+    describe('Backspace', () => {
+      it('should remove selected blocks', () => {
         cy.createEditor({
           data: {
             blocks: [
@@ -49,8 +49,8 @@ describe('Ui module', function () {
       });
     });
 
-    describe('Delete', function () {
-      it('should remove selected blocks', function () {
+    describe('Delete', () => {
+      it('should remove selected blocks', () => {
         cy.createEditor({
           data: {
             blocks: [
@@ -95,8 +95,8 @@ describe('Ui module', function () {
     });
   });
 
-  describe('mousedown', function () {
-    it('should update current block by click on block', function () {
+  describe('mousedown', () => {
+    it('should update current block by click on block', () => {
       createEditorWithTextBlocks([
         'first block',
         'second block',
@@ -117,7 +117,7 @@ describe('Ui module', function () {
         });
     });
 
-    it('(in readonly) should update current block by click on block', function () {
+    it('(in readonly) should update current block by click on block', () => {
       createEditorWithTextBlocks([
         'first block',
         'second block',

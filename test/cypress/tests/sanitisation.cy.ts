@@ -75,7 +75,7 @@ describe('Sanitizing', () => {
     });
   });
 
-  it('should sanitize unwanted html on blocks merging', function () {
+  it('should sanitize unwanted html on blocks merging', () => {
     cy.createEditor({
       data: {
         blocks: [

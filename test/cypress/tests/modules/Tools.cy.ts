@@ -11,16 +11,16 @@ describe('Tools module', () => {
 
   /**
    * Construct Tools module for testing purposes
+   *
    * @param config - Editor config
    */
-  function constructModule(config: EditorConfig = defaultConfig): Tools {
+  const constructModule = (config: EditorConfig = defaultConfig): Tools => {
     const module = new Tools({
       config,
       eventsDispatcher: {},
     } as any);
 
     const APIMethods = {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       method(): void {},
     };
 
@@ -36,7 +36,7 @@ describe('Tools module', () => {
     } as any;
 
     return module;
-  }
+  };
 
   context('.prepare()', () => {
     it('should return Promise resolved to void', async () => {

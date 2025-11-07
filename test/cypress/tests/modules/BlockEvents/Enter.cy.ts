@@ -1,5 +1,5 @@
-describe('Enter keydown', function () {
-  it('should split block and remove selected fragment if some text fragment selected', function () {
+describe('Enter keydown', () => {
+  it('should split block and remove selected fragment if some text fragment selected', () => {
     cy.createEditor({
       data: {
         blocks: [
@@ -36,7 +36,7 @@ describe('Enter keydown', function () {
       });
   });
 
-  it('should set caret to the new block if it was created after Enter key press at very end of the block', function () {
+  it('should set caret to the new block if it was created after Enter key press at very end of the block', () => {
     cy.createEditor({
       data: {
         blocks: [
@@ -63,6 +63,7 @@ describe('Enter keydown', function () {
     cy.window()
       .then((window) => {
         const selection = window.getSelection();
+
         if (!selection || selection.rangeCount === 0) {
           throw new Error('Selection is null or has no ranges');
         }

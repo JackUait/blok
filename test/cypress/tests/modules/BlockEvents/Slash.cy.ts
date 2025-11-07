@@ -1,5 +1,5 @@
-describe('Slash keydown', function () {
-  describe('pressed in empty block', function () {
+describe('Slash keydown', () => {
+  describe('pressed in empty block', () => {
     it('should add "/" in a block and open Toolbox', () => {
       cy.createEditor({
         data: {
@@ -60,7 +60,7 @@ describe('Slash keydown', function () {
     });
   });
 
-  describe('pressed in non-empty block', function () {
+  describe('pressed in non-empty block', () => {
     it('should not open Toolbox and just add the / char', () => {
       cy.createEditor({
         data: {
@@ -93,7 +93,7 @@ describe('Slash keydown', function () {
     });
   });
 
-  describe('pressed outside editor', function () {
+  describe('pressed outside editor', () => {
     it('should not modify any text outside editor when text block is selected', () => {
       cy.createEditor({
         data: {
@@ -148,7 +148,7 @@ describe('Slash keydown', function () {
   });
 });
 
-describe('CMD+Slash keydown', function () {
+describe('CMD+Slash keydown', () => {
   it('should open Block Tunes', () => {
     cy.createEditor({
       data: {

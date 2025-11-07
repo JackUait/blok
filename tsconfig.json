@@ -18,10 +18,18 @@
     "paths": {
       "@/types": [ "./types/" ],
       "@/types/*": [ "./types/*" ],
+      "@editorjs/editorjs": [ "./types" ],
+      "@editorjs/editorjs/*": [ "./types/*" ],
     },
 
     // @todo move to cypress/tsconfig.json when cypress will support overriding tsconfig path
     // @see https://github.com/cypress-io/cypress/issues/23045
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.json"
+  ]
 }

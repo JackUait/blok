@@ -4,13 +4,14 @@ import type EditorJS from '../../../types';
 describe('ReadOnly API spec', () => {
   /**
    * Creates the new editor instance
+   *
    * @param config - Editor Config
    */
-  function createEditor(config?: EditorConfig): void {
+  const createEditor = (config?: EditorConfig): void => {
     const editorConfig = Object.assign({}, config || {});
 
     cy.createEditor(editorConfig).as('editorInstance');
-  }
+  };
 
   it('should return correct value for readOnly.isEnabled when editor initialized in normal mode', () => {
     createEditor();
@@ -42,14 +43,11 @@ describe('ReadOnly API spec', () => {
       .then(async editor => {
         expect(editor.readOnly.isEnabled).to.be.false;
 
-        editor.readOnly.toggle()
-          .then(() => {
-            expect(editor.readOnly.isEnabled).to.be.true;
-          })
-          .then(() => editor.readOnly.toggle())
-          .then(() => {
-            expect(editor.readOnly.isEnabled).to.be.false;
-          });
+        await editor.readOnly.toggle();
+        expect(editor.readOnly.isEnabled).to.be.true;
+
+        await editor.readOnly.toggle();
+        expect(editor.readOnly.isEnabled).to.be.false;
       });
   });
 });

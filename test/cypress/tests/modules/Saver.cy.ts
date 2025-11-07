@@ -1,9 +1,9 @@
 import type EditorJS from '../../../../types/index';
 import Header from '@editorjs/header';
 
-describe('Saver module', function () {
-  describe('save()', function () {
-    it('should correctly save block if there are some 3rd party (eg. browser extensions) nodes inserted into the layout', function () {
+describe('Saver module', () => {
+  describe('save()', () => {
+    it('should correctly save block if there are some 3rd party (eg. browser extensions) nodes inserted into the layout', () => {
       cy.createEditor({
         data: {
           blocks: [
@@ -38,7 +38,7 @@ describe('Saver module', function () {
     /**
      * This test case covers Block@detectToolRootChange
      */
-    it('should correctly save block data if block\'s main container element have been changed', function () {
+    it('should correctly save block data if block\'s main container element have been changed', () => {
       cy.createEditor({
         tools: {
           header: Header,

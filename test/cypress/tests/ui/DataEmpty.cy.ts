@@ -1,7 +1,7 @@
 import { createEditorWithTextBlocks } from '../../support/utils/createEditorWithTextBlocks';
 
-describe('inputs [data-empty] mark', function () {
-  it('should be added to inputs of editor on initialization', function () {
+describe('inputs [data-empty] mark', () => {
+  it('should be added to inputs of editor on initialization', () => {
     createEditorWithTextBlocks([
       'First', // not empty block
       '', // empty block
@@ -18,7 +18,7 @@ describe('inputs [data-empty] mark', function () {
       .should('have.attr', 'data-empty', 'true');
   });
 
-  it('should be added as "false" to the input on typing', function () {
+  it('should be added as "false" to the input on typing', () => {
     createEditorWithTextBlocks([
       'First', // not empty block
       '', // empty block
@@ -35,7 +35,7 @@ describe('inputs [data-empty] mark', function () {
       .should('have.attr', 'data-empty', 'false');
   });
 
-  it('should be added as "true" to the input on chars removal', function () {
+  it('should be added as "true" to the input on chars removal', () => {
     createEditorWithTextBlocks([
       '', // empty block
       'Some text', // not empty block
@@ -52,7 +52,7 @@ describe('inputs [data-empty] mark', function () {
       .should('have.attr', 'data-empty', 'true');
   });
 
-  it('should be added to the new block inputs', function () {
+  it('should be added to the new block inputs', () => {
     createEditorWithTextBlocks([
       'First', // not empty block
       '', // empty block

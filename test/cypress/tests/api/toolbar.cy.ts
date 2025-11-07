@@ -20,7 +20,7 @@ describe('api.toolbar', () => {
     ],
   };
 
-  beforeEach(function () {
+  beforeEach(() => {
     cy.createEditor({
       data: editorDataMock,
       readOnly: false,
@@ -56,15 +56,15 @@ describe('api.toolbar', () => {
         });
     };
 
-    it('should open the toolbox', function () {
-      cy.get<EditorJS>('@editorInstance').then(async function (editor) {
+    it('should open the toolbox', () => {
+      cy.get<EditorJS>('@editorInstance').then(async (editor) => {
         editor.toolbar.toggleToolbox(true);
         isToolboxVisible();
       });
     });
 
-    it('should close the toolbox', function () {
-      cy.get<EditorJS>('@editorInstance').then(async function (editor) {
+    it('should close the toolbox', () => {
+      cy.get<EditorJS>('@editorInstance').then(async (editor) => {
         editor.toolbar.toggleToolbox(true);
 
         isToolboxVisible();
@@ -73,8 +73,8 @@ describe('api.toolbar', () => {
         isToolboxNotVisible();
       });
     });
-    it('should toggle the toolbox', function () {
-      cy.get<EditorJS>('@editorInstance').then(async function (editor) {
+    it('should toggle the toolbox', () => {
+      cy.get<EditorJS>('@editorInstance').then(async (editor) => {
         editor.toolbar.toggleToolbox();
         isToolboxVisible();
 

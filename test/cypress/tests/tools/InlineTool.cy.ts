@@ -116,7 +116,7 @@ describe('InlineTool', () => {
       options.constructable.prepare = cy.stub();
       const tool = new InlineToolAdapter(options as any);
 
-      tool.prepare();
+      void tool.prepare();
 
       expect(options.constructable.prepare).to.have.been.calledWithMatch({
         toolName: tool.name,
@@ -139,7 +139,7 @@ describe('InlineTool', () => {
       options.constructable.reset = cy.stub();
       const tool = new InlineToolAdapter(options as any);
 
-      tool.reset();
+      void tool.reset();
 
       expect(options.constructable.reset).to.be.calledOnce;
     });

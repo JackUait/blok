@@ -3,7 +3,7 @@
  */
 const PLACEHOLDER_TEXT = 'Write something or press / to select a tool';
 
-describe('Placeholders', function () {
+describe('Placeholders', () => {
   /**
    * There is no ability to get pseudo elements content in Firefox
    * It will return CSS-bases value (attr(data-placeholder) instead of DOM-based
@@ -12,7 +12,7 @@ describe('Placeholders', function () {
     return;
   }
 
-  it('should be shown near first block if passed via editor config', function () {
+  it('should be shown near first block if passed via editor config', () => {
     cy.createEditor({
       placeholder: PLACEHOLDER_TEXT,
     });
@@ -23,7 +23,7 @@ describe('Placeholders', function () {
       .should('eq', PLACEHOLDER_TEXT);
   });
 
-  it('should be shown when editor is autofocusable', function () {
+  it('should be shown when editor is autofocusable', () => {
     cy.createEditor({
       placeholder: PLACEHOLDER_TEXT,
       autofocus: true,
@@ -35,7 +35,7 @@ describe('Placeholders', function () {
       .should('eq', PLACEHOLDER_TEXT);
   });
 
-  it('should be shown event if input is focused', function () {
+  it('should be shown event if input is focused', () => {
     cy.createEditor({
       placeholder: PLACEHOLDER_TEXT,
     });
@@ -48,7 +48,7 @@ describe('Placeholders', function () {
       .should('eq', PLACEHOLDER_TEXT);
   });
 
-  it('should be shown event when user removes all text by cmd+a and delete', function () {
+  it('should be shown event when user removes all text by cmd+a and delete', () => {
     cy.createEditor({
       placeholder: PLACEHOLDER_TEXT,
     });
@@ -61,7 +61,7 @@ describe('Placeholders', function () {
       .should('eq', PLACEHOLDER_TEXT);
   });
 
-  it('should be hidden when user starts typing', function () {
+  it('should be hidden when user starts typing', () => {
     cy.createEditor({
       placeholder: PLACEHOLDER_TEXT,
     });
@@ -78,7 +78,7 @@ describe('Placeholders', function () {
       .should('eq', 'none');
   });
 
-  it('should be hidden when user adds trailing whitespace characters', function () {
+  it('should be hidden when user adds trailing whitespace characters', () => {
     cy.createEditor({
       placeholder: PLACEHOLDER_TEXT,
     });

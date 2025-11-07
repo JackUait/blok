@@ -54,7 +54,7 @@ describe('Inline Toolbar', () => {
             class: class TestTool {
               public static isInline = true;
               // eslint-disable-next-line jsdoc/require-jsdoc
-              public constructor(_config: InlineToolConstructorOptions) {
+              constructor(_config: InlineToolConstructorOptions) {
                 // Constructor required by InlineToolConstructable
               }
               // eslint-disable-next-line jsdoc/require-jsdoc
@@ -127,7 +127,7 @@ describe('Inline Toolbar', () => {
             class: class TestTool {
               public static isInline = true;
               // eslint-disable-next-line jsdoc/require-jsdoc
-              public constructor(_config: InlineToolConstructorOptions) {
+              constructor(_config: InlineToolConstructorOptions) {
                 // Constructor required by InlineToolConstructable
               }
               // eslint-disable-next-line jsdoc/require-jsdoc

@@ -103,6 +103,8 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
 
     this.config = config;
     this.eventsDispatcher = eventsDispatcher;
+    // Editor is initialized via the state setter after construction
+    this.Editor = {} as EditorModules;
   }
 
   /**
@@ -131,6 +133,6 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
    * Returns true if current direction is RTL (Right-To-Left)
    */
   protected get isRtl(): boolean {
-    return this.config.i18n.direction === 'rtl';
+    return this.config.i18n?.direction === 'rtl';
   }
 }

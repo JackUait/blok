@@ -9,9 +9,10 @@ import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
  * @class
  * @param {Block} block - Block to expose
  */
-function BlockAPI(
+const BlockAPI = function BlockAPI(
+  this: BlockAPIInterface,
   block: Block
-): void {
+): BlockAPIInterface {
   const blockAPI: BlockAPIInterface = {
     /**
      * Block id
@@ -139,6 +140,11 @@ function BlockAPI(
   };
 
   Object.setPrototypeOf(this, blockAPI);
-}
 
-export default BlockAPI;
+  return this;
+};
+
+// Export BlockAPI with proper constructor type
+export default BlockAPI as unknown as {
+  new (block: Block): BlockAPIInterface;
+};

@@ -57,6 +57,12 @@ export default class SelectionUtils {
   public isFakeBackgroundEnabled = false;
 
   /**
+   * Native Document's commands for fake background
+   */
+  private readonly commandBackground: string = 'backColor';
+  private readonly commandRemoveFormat: string = 'removeFormat';
+
+  /**
    * Editor styles
    *
    * @returns {{editorWrapper: string, editorZone: string}}
@@ -173,9 +179,9 @@ export default class SelectionUtils {
    *
    * @param range - range to check
    */
-  public static isRangeAtEditor(range: Range | null): boolean {
+  public static isRangeAtEditor(range: Range): boolean | void {
     if (!range) {
-      return false;
+      return;
     }
 
     let selectedNode: Node | null = range.startContainer;
@@ -239,7 +245,7 @@ export default class SelectionUtils {
       height: 0,
     } as DOMRect;
 
-    if (sel && 'type' in sel && sel.type !== 'Control') {
+    if (sel && sel.type !== 'Control') {
       sel = sel as MSSelection;
       range = sel.createRange() as TextRange;
       rect.x = range.boundingLeft;
@@ -412,111 +418,14 @@ export default class SelectionUtils {
     }
 
     this.isFakeBackgroundEnabled = false;
-
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount === 0) {
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-    const walkerContainer = container.nodeType === Node.TEXT_NODE && container.parentNode
-      ? container.parentNode
-      : container;
-    const walker = document.createTreeWalker(
-      walkerContainer,
-      NodeFilter.SHOW_ELEMENT,
-      null
-    );
-
-    const elementsToProcess: HTMLElement[] = [];
-    let node: Node | null = walker.currentNode as Node;
-
-    // Collect all elements in the range
-    while (node) {
-      if (node instanceof HTMLElement && range.intersectsNode(node)) {
-        elementsToProcess.push(node);
-      }
-      node = walker.nextNode();
-    }
-
-    // Also check text nodes' parent elements
-    if (range.startContainer.nodeType === Node.TEXT_NODE && range.startContainer.parentElement) {
-      if (!elementsToProcess.includes(range.startContainer.parentElement)) {
-        elementsToProcess.push(range.startContainer.parentElement);
-      }
-    }
-    if (range.endContainer.nodeType === Node.TEXT_NODE && range.endContainer.parentElement) {
-      if (!elementsToProcess.includes(range.endContainer.parentElement)) {
-        elementsToProcess.push(range.endContainer.parentElement);
-      }
-    }
-
-    // Remove background-color style from collected elements
-    elementsToProcess.forEach((element) => {
-      const bgColor = element.style.backgroundColor;
-      const isFakeBackground = bgColor === '#a8d6ff' || bgColor === 'rgb(168, 214, 255)';
-
-      if (isFakeBackground) {
-        // If it's a span with the fake background color, unwrap it
-        if (element.tagName.toLowerCase() === 'span') {
-          const parent = element.parentNode;
-
-          if (parent) {
-            while (element.firstChild) {
-              parent.insertBefore(element.firstChild, element);
-            }
-            parent.removeChild(element);
-            parent.normalize();
-          }
-        } else {
-          // Otherwise, just remove the background-color style
-          element.style.backgroundColor = '';
-          if (!element.style.cssText.trim()) {
-            element.removeAttribute('style');
-          }
-        }
-      }
-    });
+    document.execCommand(this.commandRemoveFormat);
   }
 
   /**
    * Sets fake background
    */
   public setFakeBackground(): void {
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount === 0) {
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-
-    // If range is collapsed (no selection), do nothing
-    if (range.collapsed) {
-      return;
-    }
-
-    // Check if selection is already wrapped in a single element
-    const contents = range.extractContents();
-    const span = document.createElement('span');
-
-    span.style.backgroundColor = '#a8d6ff';
-    span.appendChild(contents);
-    range.insertNode(span);
-
-    // Normalize to merge adjacent text nodes
-    if (span.parentNode) {
-      span.parentNode.normalize();
-    }
-
-    // Update selection to include the new span
-    const newRange = document.createRange();
-
-    newRange.selectNodeContents(span);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
+    document.execCommand(this.commandBackground, false, '#a8d6ff');
 
     this.isFakeBackgroundEnabled = true;
   }

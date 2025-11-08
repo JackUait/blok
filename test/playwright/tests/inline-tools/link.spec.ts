@@ -14,7 +14,7 @@ const EDITOR_SELECTOR = '[data-cy=editorjs]';
 const PARAGRAPH_SELECTOR = `${EDITOR_SELECTOR} .ce-paragraph`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_SELECTOR} [data-cy=inline-toolbar]`;
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-item-name="link"] button`;
-const LINK_INPUT_SELECTOR = '.ce-inline-tool-input';
+const LINK_INPUT_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-link-tool-input-opened]`;
 const NOTIFIER_SELECTOR = '.cdx-notifies';
 const MODIFIER_KEY = process.platform === 'darwin' ? 'Meta' : 'Control';
 
@@ -286,8 +286,8 @@ test.describe('Inline Tool Link', () => {
     const linkButton = page.locator(LINK_BUTTON_SELECTOR);
     const linkInput = page.locator(LINK_INPUT_SELECTOR);
 
-    await expect(linkButton).toHaveClass(/ce-inline-tool--unlink/);
-    await expect(linkButton).toHaveClass(/ce-inline-tool--active/);
+    await expect(linkButton).toHaveAttribute('data-link-tool-unlink', 'true');
+    await expect(linkButton).toHaveAttribute('data-link-tool-active', 'true');
     await expect(linkInput).toHaveValue('https://codex.so');
 
     await submitLink(page, 'example.org');
@@ -350,4 +350,3 @@ declare global {
     EditorJS: new (...args: unknown[]) => EditorJS;
   }
 }
-

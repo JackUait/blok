@@ -57,10 +57,9 @@ export default class SelectionUtils {
   public isFakeBackgroundEnabled = false;
 
   /**
-   * Native Document's commands for fake background
+   * Elements that currently imitate the selection highlight
    */
-  private readonly commandBackground: string = 'backColor';
-  private readonly commandRemoveFormat: string = 'removeFormat';
+  private fakeBackgroundElements: HTMLElement[] = [];
 
   /**
    * Editor styles
@@ -413,21 +412,167 @@ export default class SelectionUtils {
    * Removes fake background
    */
   public removeFakeBackground(): void {
-    if (!this.isFakeBackgroundEnabled) {
+    if (!this.fakeBackgroundElements.length) {
+      this.isFakeBackgroundEnabled = false;
       return;
     }
 
+    this.fakeBackgroundElements.forEach((element) => {
+      this.unwrapFakeBackground(element);
+    });
+
+    this.fakeBackgroundElements = [];
     this.isFakeBackgroundEnabled = false;
-    document.execCommand(this.commandRemoveFormat);
   }
 
   /**
    * Sets fake background
    */
   public setFakeBackground(): void {
-    document.execCommand(this.commandBackground, false, '#a8d6ff');
+    this.removeFakeBackground();
+
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    if (range.collapsed) {
+      return;
+    }
+
+    const textNodes = this.collectTextNodes(range);
+
+    if (textNodes.length === 0) {
+      return;
+    }
+
+    const anchorStartNode = range.startContainer;
+    const anchorStartOffset = range.startOffset;
+    const anchorEndNode = range.endContainer;
+    const anchorEndOffset = range.endOffset;
+
+    this.fakeBackgroundElements = [];
+
+    textNodes.forEach((textNode) => {
+      const segmentRange = document.createRange();
+      const isStartNode = textNode === anchorStartNode;
+      const isEndNode = textNode === anchorEndNode;
+      const startOffset = isStartNode ? anchorStartOffset : 0;
+      const nodeTextLength = textNode.textContent?.length ?? 0;
+      const endOffset = isEndNode ? anchorEndOffset : nodeTextLength;
+
+      if (startOffset === endOffset) {
+        return;
+      }
+
+      segmentRange.setStart(textNode, startOffset);
+      segmentRange.setEnd(textNode, endOffset);
+
+      const wrapper = this.wrapRangeWithFakeBackground(segmentRange);
+
+      if (wrapper) {
+        this.fakeBackgroundElements.push(wrapper);
+      }
+    });
+
+    if (!this.fakeBackgroundElements.length) {
+      return;
+    }
+
+    const visualRange = document.createRange();
+
+    visualRange.setStartBefore(this.fakeBackgroundElements[0]);
+    visualRange.setEndAfter(this.fakeBackgroundElements[this.fakeBackgroundElements.length - 1]);
+
+    selection.removeAllRanges();
+    selection.addRange(visualRange);
 
     this.isFakeBackgroundEnabled = true;
+  }
+
+  /**
+   * Collects text nodes that intersect with the passed range
+   *
+   * @param range - selection range
+   */
+  private collectTextNodes(range: Range): Text[] {
+    const nodes: Text[] = [];
+    const walker = document.createTreeWalker(
+      range.commonAncestorContainer,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node: Node): number => {
+          if (!range.intersectsNode(node)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          return node.textContent && node.textContent.length > 0
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_REJECT;
+        },
+      }
+    );
+
+    while (walker.nextNode()) {
+      nodes.push(walker.currentNode as Text);
+    }
+
+    return nodes;
+  }
+
+  /**
+   * Wraps passed range (that belongs to the single text node) with fake background element
+   *
+   * @param range - range to wrap
+   */
+  private wrapRangeWithFakeBackground(range: Range): HTMLElement | null {
+    if (range.collapsed) {
+      return null;
+    }
+
+    const wrapper = $.make('span', 'codex-editor__fake-background');
+
+    wrapper.dataset.fakeBackground = 'true';
+    wrapper.dataset.mutationFree = 'true';
+    wrapper.style.backgroundColor = '#a8d6ff';
+    wrapper.style.color = 'inherit';
+    wrapper.style.display = 'inline';
+    wrapper.style.padding = '0';
+    wrapper.style.margin = '0';
+
+    const contents = range.extractContents();
+
+    if (contents.childNodes.length === 0) {
+      return null;
+    }
+
+    wrapper.appendChild(contents);
+    range.insertNode(wrapper);
+
+    return wrapper;
+  }
+
+  /**
+   * Removes fake background wrapper
+   *
+   * @param element - wrapper element
+   */
+  private unwrapFakeBackground(element: HTMLElement): void {
+    const parent = element.parentNode;
+
+    if (!parent) {
+      return;
+    }
+
+    while (element.firstChild) {
+      parent.insertBefore(element.firstChild, element);
+    }
+
+    parent.removeChild(element);
+    parent.normalize();
   }
 
   /**

@@ -67,8 +67,8 @@ export default class LinkInlineTool implements InlineTool {
    * Elements
    */
   private nodes: {
-    button: HTMLButtonElement;
-    input: HTMLInputElement;
+    button: HTMLButtonElement | null;
+    input: HTMLInputElement | null;
   } = {
       button: null,
       input: null,
@@ -148,9 +148,9 @@ export default class LinkInlineTool implements InlineTool {
   /**
    * Handle clicks on the Inline Toolbar icon
    *
-   * @param {Range} range - range to wrap with link
+   * @param {Range | null} range - range to wrap with link
    */
-  public surround(range: Range): void {
+  public surround(range: Range | null): void {
     /**
      * Range will be null when user makes second click on the 'link icon' to close opened input
      */
@@ -191,6 +191,10 @@ export default class LinkInlineTool implements InlineTool {
   public checkState(): boolean {
     const anchorTag = this.selection.findParentTag('A');
 
+    if (!this.nodes.button || !this.nodes.input) {
+      return !!anchorTag;
+    }
+
     if (anchorTag) {
       this.nodes.button.innerHTML = IconUnlink;
       this.nodes.button.classList.add(this.CSS.buttonUnlink);
@@ -202,7 +206,7 @@ export default class LinkInlineTool implements InlineTool {
        */
       const hrefAttr = anchorTag.getAttribute('href');
 
-      this.nodes.input.value = hrefAttr !== 'null' ? hrefAttr : '';
+      this.nodes.input.value = hrefAttr !== null ? hrefAttr : '';
 
       this.selection.save();
     } else {
@@ -243,6 +247,9 @@ export default class LinkInlineTool implements InlineTool {
    * @param {boolean} needFocus - on link creation we need to focus input. On editing - nope.
    */
   private openActions(needFocus = false): void {
+    if (!this.nodes.input) {
+      return;
+    }
     this.nodes.input.classList.add(this.CSS.inputShowed);
     if (needFocus) {
       this.nodes.input.focus();
@@ -270,6 +277,9 @@ export default class LinkInlineTool implements InlineTool {
       currentSelection.restore();
     }
 
+    if (!this.nodes.input) {
+      return;
+    }
     this.nodes.input.classList.remove(this.CSS.inputShowed);
     this.nodes.input.value = '';
     if (clearSavedSelection) {
@@ -284,7 +294,10 @@ export default class LinkInlineTool implements InlineTool {
    * @param {KeyboardEvent} event - enter keydown event
    */
   private enterPressed(event: KeyboardEvent): void {
-    let value = this.nodes.input.value || '';
+    if (!this.nodes.input) {
+      return;
+    }
+    const value = this.nodes.input.value || '';
 
     if (!value.trim()) {
       this.selection.restore();
@@ -306,12 +319,12 @@ export default class LinkInlineTool implements InlineTool {
       return;
     }
 
-    value = this.prepareLink(value);
+    const preparedValue = this.prepareLink(value);
 
     this.selection.restore();
     this.selection.removeFakeBackground();
 
-    this.insertLink(value);
+    this.insertLink(preparedValue);
 
     /**
      * Preventing events that will be able to happen
@@ -344,10 +357,7 @@ export default class LinkInlineTool implements InlineTool {
    * @param {string} link - raw user input
    */
   private prepareLink(link: string): string {
-    link = link.trim();
-    link = this.addProtocol(link);
-
-    return link;
+    return this.addProtocol(link.trim());
   }
 
   /**
@@ -369,12 +379,12 @@ export default class LinkInlineTool implements InlineTool {
      *     2) Anchors looks like "#results"
      *     3) Protocol-relative URLs like "//google.com"
      */
-    const isInternal = /^\/[^/\s]/.test(link),
-        isAnchor = link.substring(0, 1) === '#',
-        isProtocolRelative = /^\/\/[^/\s]/.test(link);
+    const isInternal = /^\/[^/\s]/.test(link);
+    const isAnchor = link.substring(0, 1) === '#';
+    const isProtocolRelative = /^\/\/[^/\s]/.test(link);
 
     if (!isInternal && !isAnchor && !isProtocolRelative) {
-      link = 'http://' + link;
+      return 'http://' + link;
     }
 
     return link;

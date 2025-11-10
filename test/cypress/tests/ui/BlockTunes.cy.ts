@@ -5,51 +5,6 @@ import type { MenuConfig } from '../../../../types/tools';
 import { ToolWithoutConversionExport } from '../../fixtures/tools/ToolWithoutConversionExport';
 
 describe('BlockTunes', () => {
-  describe('Search', () => {
-    it('should be focused after popover opened', () => {
-      cy.createEditor({
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: {
-                text: 'Some text',
-              },
-            },
-          ],
-        },
-      });
-
-      cy.get('[data-cy=editorjs]')
-        .find('.ce-paragraph')
-        .click()
-        .type('{cmd}/')
-        .wait(selectionChangeDebounceTimeout);
-
-      /**
-       * Caret is set to the search input
-       */
-      cy.window()
-        .then((window) => {
-          const selection = window.getSelection();
-
-          expect(selection?.rangeCount).to.be.equal(1);
-
-          const range = selection?.getRangeAt(0);
-
-          if (!range) {
-            throw new Error('Range is undefined');
-          }
-
-          cy.get('[data-cy=editorjs]')
-            .find('[data-cy="block-tunes"] .cdx-search-field')
-            .should(($block) => {
-              expect($block[0].contains(range.startContainer)).to.be.true;
-            });
-        });
-    });
-  });
-
   describe('Keyboard only', () => {
     it('should not delete the currently selected block when Enter pressed on a search input (or any block tune)', () => {
       const ENTER_KEY_CODE = 13;

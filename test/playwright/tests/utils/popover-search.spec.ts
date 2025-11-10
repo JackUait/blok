@@ -4,6 +4,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import type { MenuConfig } from '../../../../types/tools';
+import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
+import { selectionChangeDebounceTimeout } from '../../../../src/components/constants';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
@@ -90,6 +92,21 @@ const openBlockTunes = async (page: Page): Promise<void> => {
   await block.click();
   await page.locator(SETTINGS_BUTTON_SELECTOR).click();
   await expect(page.locator(BLOCK_TUNES_SELECTOR)).toBeVisible();
+};
+
+/**
+ * Open block tunes popover using Cmd+/ shortcut
+ *
+ * @param page - The Playwright page object
+ */
+const openBlockTunesWithShortcut = async (page: Page): Promise<void> => {
+  const block = page.locator(BLOCK_SELECTOR).first();
+
+  await block.click();
+  const modifierKey = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+  await page.keyboard.press(`${modifierKey}+/`);
+  await expect(page.locator(BLOCK_TUNES_SELECTOR)).toBeVisible({ timeout: selectionChangeDebounceTimeout + 100 });
 };
 
 test.describe('Popover Search/Filter', () => {
@@ -890,6 +907,233 @@ test.describe('Popover Search/Filter', () => {
 
       // Search input should still be focused
       await expect(searchInput).toBeFocused();
+    });
+  });
+
+  test.describe('Search input focus', () => {
+    /**
+     * Test that search input is focused after popover opened
+     */
+    test('should be focused after popover opened', async ({ page }) => {
+      await createEditorWithBlocks(
+        page,
+        [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Some text',
+            },
+          },
+        ]
+      );
+
+      await openBlockTunesWithShortcut(page);
+
+      // Check that caret is set to the search input
+      const containsCaret = await page.evaluate((selector) => {
+        const sel = window.getSelection();
+
+        if (!sel || sel.rangeCount !== 1) {
+          return false;
+        }
+
+        const range = sel.getRangeAt(0);
+        const searchFieldElement = document.querySelector(selector);
+
+        if (!searchFieldElement) {
+          return false;
+        }
+
+        return searchFieldElement.contains(range.startContainer);
+      }, `${BLOCK_TUNES_SELECTOR} .cdx-search-field`);
+
+      expect(containsCaret).toBe(true);
+    });
+  });
+
+  test.describe('Keyboard navigation with search', () => {
+    /**
+     * Test keyboard navigation between items ignoring separators when search query is applied
+     */
+    test('should perform keyboard navigation between items ignoring separators when search query is applied', async ({ page }) => {
+      /**
+       * Block Tune with separator
+       *
+       * @class TestTune
+       */
+      class TestTune {
+        public static isTune = true;
+
+        /**
+         *
+         */
+        public render(): MenuConfig {
+          return [
+            {
+              onActivate: (): void => {},
+              icon: 'Icon',
+              title: 'Tune 1',
+              name: 'test-item-1',
+            },
+            {
+              type: PopoverItemType.Separator,
+            },
+            {
+              onActivate: (): void => {},
+              icon: 'Icon',
+              title: 'Tune 2',
+              name: 'test-item-2',
+            },
+          ];
+        }
+      }
+
+      await createEditorWithBlocks(
+        page,
+        [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Hello',
+            },
+          },
+        ],
+        {
+          testTool: TestTune,
+        },
+        [ 'testTool' ]
+      );
+
+      await openBlockTunes(page);
+
+      const separator = page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-item-separator`);
+
+      // Check separator is displayed initially
+      await expect(separator).toBeVisible();
+
+      // Enter search query
+      const searchInput = page.locator(SEARCH_INPUT_SELECTOR);
+
+      await searchInput.fill('Tune');
+
+      // Check separator is not displayed when search is active
+      await expect(separator).toBeHidden();
+
+      // Press Tab to navigate
+      await page.keyboard.press('Tab');
+
+      // Check first item is focused
+      await expect(page.locator('[data-item-name="test-item-1"].ce-popover-item--focused')).toBeVisible();
+      await expect(page.locator('[data-item-name="test-item-2"].ce-popover-item--focused')).toBeHidden();
+
+      // Press Tab again
+      await page.keyboard.press('Tab');
+
+      // Check second item is focused
+      await expect(page.locator('[data-item-name="test-item-1"].ce-popover-item--focused')).toBeHidden();
+      await expect(page.locator('[data-item-name="test-item-2"].ce-popover-item--focused')).toBeVisible();
+    });
+  });
+
+  test.describe('i18n support', () => {
+    /**
+     * Test i18n support in nested popover search
+     */
+    test('should support i18n in nested popover', async ({ page }) => {
+      await resetEditor(page);
+      await page.evaluate(
+        async ({ holderId }) => {
+          /**
+           * Block Tune with nested children
+           *
+           * @class TestTune
+           */
+          class TestTune {
+            public static isTune = true;
+
+            /**
+             *
+             */
+            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- return type inferred from usage
+            public render() {
+              return {
+                icon: 'Icon',
+                title: 'Title',
+                toggle: 'key',
+                name: 'test-item',
+                children: {
+                  searchable: true,
+                  items: [
+                    {
+                      icon: 'Icon',
+                      title: 'Title',
+                      name: 'nested-test-item',
+                      onActivate: (): void => {},
+                    },
+                  ],
+                },
+              };
+            }
+          }
+
+          const editor = new window.EditorJS({
+            holder: holderId,
+            data: {
+              blocks: [
+                {
+                  type: 'paragraph',
+                  data: {
+                    text: 'Hello',
+                  },
+                },
+              ],
+            },
+            tools: {
+              testTool: TestTune,
+            },
+            tunes: [ 'testTool' ],
+            i18n: {
+              messages: {
+                ui: {
+                  popover: {
+                    'Filter': 'Искать',
+                    // eslint-disable-next-line @typescript-eslint/naming-convention -- i18n
+                    'Nothing found': 'Ничего не найдено',
+                  },
+                },
+              },
+            },
+          });
+
+          window.editorInstance = editor;
+          await editor.isReady;
+        },
+        {
+          holderId: HOLDER_ID,
+        }
+      );
+
+      await openBlockTunes(page);
+
+      // Click the item to open nested popover
+      await page.locator('[data-item-name="test-item"]').click();
+
+      // Check nested popover search input has placeholder text with i18n
+      const nestedSearchInput = page.locator(
+        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .cdx-search-field__input`
+      );
+
+      await expect(nestedSearchInput).toHaveAttribute('placeholder', 'Искать');
+
+      // Enter search query
+      await nestedSearchInput.fill('Some text');
+
+      // Check nested popover has nothing found message with i18n
+      const nothingFoundMessage = page.locator(
+        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .ce-popover__nothing-found-message`
+      );
+
+      await expect(nothingFoundMessage).toHaveText('Ничего не найдено');
     });
   });
 

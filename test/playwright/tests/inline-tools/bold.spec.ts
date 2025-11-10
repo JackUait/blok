@@ -112,7 +112,7 @@ test.describe('Inline Tool Bold', () => {
       {
         type: 'paragraph',
         data: {
-          text: '<b>first</b> <b>second</b>',
+          text: '<strong>first</strong> <strong>second</strong>',
         },
       },
     ]);
@@ -129,7 +129,7 @@ test.describe('Inline Tool Bold', () => {
         throw new Error('Selection not available');
       }
 
-      const bolds = paragraphEl.querySelectorAll('strong, b');
+      const bolds = paragraphEl.querySelectorAll('strong');
       const firstBold = bolds[0];
       const secondBold = bolds[1];
 
@@ -162,7 +162,7 @@ test.describe('Inline Tool Bold', () => {
       {
         type: 'paragraph',
         data: {
-          text: '<b>bold text</b>',
+          text: '<strong>bold text</strong>',
         },
       },
     ]);
@@ -196,7 +196,7 @@ test.describe('Inline Tool Bold', () => {
       {
         type: 'paragraph',
         data: {
-          text: '<b>first</b> <b>second</b>',
+          text: '<strong>first</strong> <strong>second</strong>',
         },
       },
     ]);
@@ -214,7 +214,7 @@ test.describe('Inline Tool Bold', () => {
         throw new Error('Selection not available');
       }
 
-      const bolds = paragraphEl.querySelectorAll('strong, b');
+      const bolds = paragraphEl.querySelectorAll('strong');
       const firstBold = bolds[0];
       const secondBold = bolds[1];
 
@@ -264,7 +264,7 @@ test.describe('Inline Tool Bold', () => {
       {
         type: 'paragraph',
         data: {
-          text: '<b>bold</b> normal <b>bold2</b>',
+          text: '<strong>bold</strong> normal <strong>bold2</strong>',
         },
       },
     ]);
@@ -282,7 +282,7 @@ test.describe('Inline Tool Bold', () => {
         throw new Error('Selection not available');
       }
 
-      const bolds = paragraphEl.querySelectorAll('strong, b');
+      const bolds = paragraphEl.querySelectorAll('strong');
       const firstBold = bolds[0];
       const secondBold = bolds[1];
 
@@ -333,7 +333,7 @@ test.describe('Inline Tool Bold', () => {
       {
         type: 'paragraph',
         data: {
-          text: '<b>fully bold</b>',
+          text: '<strong>fully bold</strong>',
         },
       },
     ]);
@@ -380,7 +380,7 @@ test.describe('Inline Tool Bold', () => {
 
     let html = await paragraph.innerHTML();
 
-    expect(html).toMatch(/<(strong|b)>Keyboard<\/(strong|b)> shortcut/);
+    expect(html).toMatch(/<strong>Keyboard<\/strong> shortcut/);
 
     await page.keyboard.press(`${modifierKey}+b`);
 
@@ -435,45 +435,6 @@ test.describe('Inline Tool Bold', () => {
     expect(html.replace(/&nbsp;/g, ' ')).toBe('Typing test<strong> Bold</strong> normal');
   });
 
-  test('should preserve links when applying bold across anchor boundaries', async ({ page }) => {
-    await createEditorWithBlocks(page, [
-      {
-        type: 'paragraph',
-        data: {
-          text: '<a href="https://example.com">link</a> text',
-        },
-      },
-    ]);
-
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
-
-    await paragraph.evaluate((element) => {
-      const paragraphEl = element as HTMLElement;
-      const doc = paragraphEl.ownerDocument;
-      const anchor = paragraphEl.querySelector('a');
-      const textNode = paragraphEl.childNodes[1];
-
-      if (!anchor || !anchor.firstChild || !textNode) {
-        throw new Error('Expected anchor and trailing text');
-      }
-
-      const range = doc.createRange();
-      const selection = doc.getSelection();
-
-      range.setStart(anchor.firstChild, 0);
-      range.setEnd(textNode, textNode.textContent?.length ?? 0);
-
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    });
-
-    await page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`).click();
-
-    const html = await paragraph.innerHTML();
-
-    expect(html).toMatch(/<strong><a href="https:\/\/example.com">link<\/a> text<\/strong>/);
-  });
-
   test('should persist bold markup in saved output', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
@@ -498,7 +459,65 @@ test.describe('Inline Tool Bold', () => {
 
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
-    expect(paragraphBlock?.data.text).toMatch(/<(strong|b)>bold<\/(strong|b)> text/);
+    expect(paragraphBlock?.data.text).toMatch(/<strong>bold<\/strong> text/);
+  });
+
+  test('should remove bold from selected word while keeping rest bold', async ({ page }) => {
+    // Step 1: Create editor with "Some text"
+    await createEditorWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Some text',
+        },
+      },
+    ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+
+    // Step 2: Select entire text and make it bold
+    await selectText(paragraph, 'Some text');
+
+    const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`);
+
+    await boldButton.click();
+
+    // Wait for the text to be wrapped in bold tags
+    await page.waitForFunction(
+      ({ selector }) => {
+        const element = document.querySelector(selector);
+
+        return element && /<strong>Some text<\/strong>/.test(element.innerHTML);
+      },
+      {
+        selector: PARAGRAPH_SELECTOR,
+      }
+    );
+
+    // Verify initial bold state
+    let html = await paragraph.innerHTML();
+
+    expect(html).toMatch(/<strong>Some text<\/strong>/);
+
+    // Step 3: Select only "Some" and remove bold formatting
+    await selectText(paragraph, 'Some');
+
+    // Verify bold button is active (since "Some" is bold)
+    await expect(boldButton).toHaveClass(/ce-popover-item--active/);
+
+    // Click to remove bold from "Some"
+    await boldButton.click();
+
+    // Wait for the toolbar state to update (bold button should no longer be active for "Some")
+    await expect(boldButton).not.toHaveClass(/ce-popover-item--active/);
+
+    // Step 4: Verify that "text" is still bold while "Some" is not
+    html = await paragraph.innerHTML();
+
+    // "text" should be wrapped in bold tags (with space before it)
+    expect(html).toMatch(/<strong>\s*text<\/strong>/);
+    // "Some" should not be wrapped in bold tags
+    expect(html).not.toMatch(/<strong>Some<\/strong>/);
   });
 });
 

@@ -338,6 +338,7 @@ test.describe('Inline Tool Link', () => {
 
     // Verify link was created
     const anchor = paragraph.locator('a');
+
     await expect(anchor).toHaveAttribute('href', 'https://example.com');
     await expect(anchor).toHaveText('Clickable link');
 
@@ -352,6 +353,7 @@ test.describe('Inline Tool Link', () => {
     const isReadOnly = await page.evaluate(() => {
       return window.editorInstance?.readOnly.isEnabled ?? false;
     });
+
     expect(isReadOnly).toBe(true);
 
     // Verify link still exists and has correct href
@@ -359,14 +361,16 @@ test.describe('Inline Tool Link', () => {
     await expect(anchor).toHaveText('Clickable link');
 
     // Verify link is clickable by checking it's not disabled and has proper href
-    const href = await anchor.getAttribute('href');
-    expect(href).toBe('https://example.com');
+    const href = anchor;
+
+    await expect(href).toHaveAttribute('href', 'https://example.com');
 
     // Verify link element is visible and interactive
     await expect(anchor).toBeVisible();
     const isDisabled = await anchor.evaluate((el) => {
       return el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true';
     });
+
     expect(isDisabled).toBe(false);
   });
 });

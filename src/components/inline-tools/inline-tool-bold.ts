@@ -99,16 +99,47 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     // Check if container is inside a <b> tag
-    let parent: Node | null = container.nodeType === Node.TEXT_NODE ? container.parentElement : container as Element;
+    const startParent: Node | null = container.nodeType === Node.TEXT_NODE ? container.parentElement : container as Element;
 
-    while (parent && parent.nodeType === Node.ELEMENT_NODE) {
-      if ((parent as Element).tagName === 'B') {
-        return true;
-      }
-      parent = parent.parentElement;
+    return this.hasBoldParent(startParent);
+  }
+
+  /**
+   * Recursively check if a node or any of its parents is a <b> tag
+   *
+   * @param node - The node to check
+   */
+  private hasBoldParent(node: Node | null): boolean {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+      return false;
     }
 
-    return false;
+    const element = node as Element;
+
+    if (element.tagName === 'B') {
+      return true;
+    }
+
+    return this.hasBoldParent(element.parentElement);
+  }
+
+  /**
+   * Recursively find a <b> element in the parent chain
+   *
+   * @param node - The node to start searching from
+   */
+  private findBoldElement(node: Node | null): HTMLElement | null {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+      return null;
+    }
+
+    const element = node as Element;
+
+    if (element.tagName === 'B') {
+      return element as HTMLElement;
+    }
+
+    return this.findBoldElement(element.parentElement);
   }
 
   /**
@@ -149,65 +180,79 @@ export default class BoldInlineTool implements InlineTool {
    */
   private unwrapBoldTags(range: Range): void {
     const container = range.commonAncestorContainer;
-    let boldElement: HTMLElement | null = null;
 
     // Find the <b> element
-    if (container.nodeType === Node.ELEMENT_NODE && (container as Element).tagName === 'B') {
-      boldElement = container as HTMLElement;
+    const boldElement: HTMLElement | null = container.nodeType === Node.ELEMENT_NODE && (container as Element).tagName === 'B'
+      ? container as HTMLElement
+      : this.findBoldElement(container.nodeType === Node.TEXT_NODE ? container.parentElement : container as Element);
+
+    if (!boldElement) {
+      return;
+    }
+
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    // Save references to first and last child before unwrapping
+    const firstChild = boldElement.firstChild;
+    const lastChild = boldElement.lastChild;
+
+    // Replace <b> with its contents
+    const parent = boldElement.parentNode;
+
+    if (!parent || !firstChild || !lastChild) {
+      return;
+    }
+
+    this.unwrapBoldElement(boldElement, parent, firstChild, lastChild, selection, range);
+  }
+
+  /**
+   * Unwrap a bold element by moving its children to the parent
+   *
+   * @param boldElement - The <b> element to unwrap
+   * @param parent - The parent node of the bold element
+   * @param firstChild - The first child of the bold element
+   * @param lastChild - The last child of the bold element
+   * @param selection - The current selection
+   * @param range - The original range
+   */
+  private unwrapBoldElement(
+    boldElement: HTMLElement,
+    parent: Node,
+    firstChild: Node,
+    lastChild: Node,
+    selection: Selection,
+    range: Range
+  ): void {
+    // Insert all children before the bold element
+    while (boldElement.firstChild) {
+      parent.insertBefore(boldElement.firstChild, boldElement);
+    }
+    parent.removeChild(boldElement);
+
+    // Restore selection to the unwrapped content
+    selection.removeAllRanges();
+    const newRange = document.createRange();
+
+    if (firstChild === lastChild && firstChild.nodeType === Node.TEXT_NODE) {
+      // Single text node: try to preserve offsets
+      const textLength = firstChild.textContent?.length ?? 0;
+      const start = Math.min(range.startOffset, textLength);
+      const end = Math.min(range.endOffset, textLength);
+
+      newRange.setStart(firstChild, start);
+      newRange.setEnd(firstChild, end);
     } else {
-      let parent: Node | null = container.nodeType === Node.TEXT_NODE ? container.parentElement : container as Element;
-
-      while (parent && parent.nodeType === Node.ELEMENT_NODE) {
-        if ((parent as Element).tagName === 'B') {
-          boldElement = parent as HTMLElement;
-          break;
-        }
-        parent = parent.parentElement;
-      }
+      // Multiple nodes: select from first to last
+      newRange.setStartBefore(firstChild);
+      newRange.setEndAfter(lastChild);
     }
 
-    if (boldElement) {
-      const selection = window.getSelection();
-
-      if (!selection || selection.rangeCount === 0) {
-        return;
-      }
-
-      // Save references to first and last child before unwrapping
-      const firstChild = boldElement.firstChild;
-      const lastChild = boldElement.lastChild;
-
-      // Replace <b> with its contents
-      const parent = boldElement.parentNode;
-
-      if (parent && firstChild && lastChild) {
-        // Insert all children before the bold element
-        while (boldElement.firstChild) {
-          parent.insertBefore(boldElement.firstChild, boldElement);
-        }
-        parent.removeChild(boldElement);
-
-        // Restore selection to the unwrapped content
-        selection.removeAllRanges();
-        const newRange = document.createRange();
-
-        if (firstChild === lastChild && firstChild.nodeType === Node.TEXT_NODE) {
-          // Single text node: try to preserve offsets
-          const textLength = firstChild.textContent?.length ?? 0;
-          const start = Math.min(range.startOffset, textLength);
-          const end = Math.min(range.endOffset, textLength);
-
-          newRange.setStart(firstChild, start);
-          newRange.setEnd(firstChild, end);
-        } else {
-          // Multiple nodes: select from first to last
-          newRange.setStartBefore(firstChild);
-          newRange.setEndAfter(lastChild);
-        }
-
-        selection.addRange(newRange);
-      }
-    }
+    selection.addRange(newRange);
   }
 
   /**

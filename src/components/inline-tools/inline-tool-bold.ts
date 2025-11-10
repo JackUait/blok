@@ -192,7 +192,7 @@ export default class BoldInlineTool implements InlineTool {
     const range = selection.getRangeAt(0);
 
     if (range.collapsed) {
-      this.handleCollapsedToggle(selection);
+      this.toggleCollapsedSelection();
 
       return;
     }
@@ -206,32 +206,6 @@ export default class BoldInlineTool implements InlineTool {
     } else {
       this.wrapWithBold(range);
     }
-  }
-
-  /**
-   * Handle bold toggling for collapsed selections
-   *
-   * @param selection - Current selection
-   */
-  private handleCollapsedToggle(selection: Selection): void {
-    if (!BoldInlineTool.tryNativeBold(selection)) {
-      this.toggleCollapsedSelection();
-
-      return;
-    }
-
-    BoldInlineTool.normalizeBoldTagsWithinEditor(selection);
-    BoldInlineTool.replaceNbspInBlock(selection);
-
-    const updatedRange = selection.rangeCount ? selection.getRangeAt(0) : null;
-
-    if (updatedRange) {
-      BoldInlineTool.exitCollapsedIfNeeded(selection, updatedRange);
-    }
-
-    BoldInlineTool.removeEmptyBoldElements(selection);
-    BoldInlineTool.moveCaretAfterBoundaryBold(selection);
-    this.notifySelectionChange();
   }
 
   /**
@@ -578,7 +552,8 @@ export default class BoldInlineTool implements InlineTool {
   }
 
   /**
-   *
+   * Toggle bold formatting for a collapsed selection (caret position)
+   * Exits bold if caret is inside a bold element, otherwise starts a new bold element
    */
   private toggleCollapsedSelection(): void {
     const selection = window.getSelection();
@@ -1357,22 +1332,6 @@ export default class BoldInlineTool implements InlineTool {
    *
    * @param selection - Current selection
    */
-  private static tryNativeBold(selection: Selection): boolean {
-    if (typeof document === 'undefined' || typeof document.execCommand !== 'function') {
-      return false;
-    }
-
-    if (!BoldInlineTool.isSelectionInsideEditor(selection)) {
-      return false;
-    }
-
-    try {
-      return document.execCommand('bold');
-    } catch (error) {
-      return false;
-    }
-  }
-
   /**
    * Exit a collapsed bold selection by moving the caret outside the bold element
    *
@@ -1400,6 +1359,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     boldElement.setAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH, (boldElement.textContent?.length ?? 0).toString());
+    boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
     boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE);
 
     const parent = boldElement.parentNode;

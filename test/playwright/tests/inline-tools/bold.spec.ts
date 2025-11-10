@@ -107,7 +107,7 @@ test.describe('Inline Tool Bold', () => {
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
   });
 
-  test('should detect bold state when selection spans multiple bold words with non-bold space', async ({ page }) => {
+  test('detects bold state across multiple bold words', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -157,7 +157,7 @@ test.describe('Inline Tool Bold', () => {
     await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`)).toHaveClass(/ce-popover-item--active/);
   });
 
-  test('should detect bold state when selection is within a single bold word', async ({ page }) => {
+  test('detects bold state within a single word', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -174,7 +174,7 @@ test.describe('Inline Tool Bold', () => {
     await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`)).toHaveClass(/ce-popover-item--active/);
   });
 
-  test('should not detect bold state when selection is in non-bold text', async ({ page }) => {
+  test('does not detect bold state in normal text', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -191,7 +191,7 @@ test.describe('Inline Tool Bold', () => {
     await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`)).not.toHaveClass(/ce-popover-item--active/);
   });
 
-  test('should toggle bold when selection spans multiple separate bold elements', async ({ page }) => {
+  test('toggles bold across multiple bold elements', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -259,7 +259,7 @@ test.describe('Inline Tool Bold', () => {
     expect(html).toMatch(/<strong>first second<\/strong>/);
   });
 
-  test('should make entire selection bold when it contains both bold and non-bold text', async ({ page }) => {
+  test('makes mixed selection (bold and normal text) bold', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -328,7 +328,7 @@ test.describe('Inline Tool Bold', () => {
     expect(html).toMatch(/<strong>bold normal bold2<\/strong>/);
   });
 
-  test('should remove bold when toggled off on a fully bold selection', async ({ page }) => {
+  test('removes bold from fully bold selection', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -355,7 +355,7 @@ test.describe('Inline Tool Bold', () => {
     expect(html).toBe('fully bold');
   });
 
-  test('should toggle bold using keyboard shortcut', async ({ page }) => {
+  test('toggles bold with keyboard shortcut', async ({ page }) => {
     // eslint-disable-next-line playwright/no-conditional-in-test
     const modifierKey = process.platform === 'darwin' ? 'Meta' : 'Control';
 
@@ -391,7 +391,7 @@ test.describe('Inline Tool Bold', () => {
     expect(html).toBe('Keyboard shortcut');
   });
 
-  test('should apply bold formatting to typed text with a collapsed caret', async ({ page }) => {
+  test('applies bold to typed text', async ({ page }) => {
     // eslint-disable-next-line playwright/no-conditional-in-test
     const modifierKey = process.platform === 'darwin' ? 'Meta' : 'Control';
 
@@ -435,7 +435,7 @@ test.describe('Inline Tool Bold', () => {
     expect(html.replace(/&nbsp;/g, ' ')).toBe('Typing test<strong> Bold</strong> normal');
   });
 
-  test('should persist bold markup in saved output', async ({ page }) => {
+  test('persists bold in saved output', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -462,7 +462,7 @@ test.describe('Inline Tool Bold', () => {
     expect(paragraphBlock?.data.text).toMatch(/<strong>bold<\/strong> text/);
   });
 
-  test('should remove bold from selected word while keeping rest bold', async ({ page }) => {
+  test('removes bold from selected word while keeping the rest bold', async ({ page }) => {
     // Step 1: Create editor with "Some text"
     await createEditorWithBlocks(page, [
       {

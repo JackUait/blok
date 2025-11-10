@@ -35,11 +35,12 @@ export default class BoldInlineTool implements InlineTool {
     } as SanitizerConfig;
   }
 
-  private static collapsedShortcutListenerRegistered = false;
+  private static shortcutListenerRegistered = false;
   private static selectionListenerRegistered = false;
   private static inputListenerRegistered = false;
   private static markerSequence = 0;
   private static readonly DATA_ATTR_COLLAPSED_LENGTH = 'data-bold-collapsed-length';
+  private static readonly instances = new Set<BoldInlineTool>();
 
   /**
    *
@@ -49,9 +50,11 @@ export default class BoldInlineTool implements InlineTool {
       return;
     }
 
-    if (!BoldInlineTool.collapsedShortcutListenerRegistered) {
-      document.addEventListener('keydown', BoldInlineTool.handleCollapsedShortcut, true);
-      BoldInlineTool.collapsedShortcutListenerRegistered = true;
+    BoldInlineTool.instances.add(this);
+
+    if (!BoldInlineTool.shortcutListenerRegistered) {
+      document.addEventListener('keydown', BoldInlineTool.handleShortcut, true);
+      BoldInlineTool.shortcutListenerRegistered = true;
     }
 
     if (!BoldInlineTool.selectionListenerRegistered) {
@@ -466,6 +469,40 @@ export default class BoldInlineTool implements InlineTool {
   private notifySelectionChange(): void {
     BoldInlineTool.enforceCollapsedBoldLengths(window.getSelection());
     document.dispatchEvent(new Event('selectionchange'));
+    this.updateToolbarButtonState();
+  }
+
+  /**
+   * Ensure inline toolbar button reflects the actual bold state after programmatic toggles
+   */
+  private updateToolbarButtonState(): void {
+    const selection = window.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
+    const anchor = selection.anchorNode;
+    const anchorElement = anchor?.nodeType === Node.ELEMENT_NODE ? anchor as Element : anchor?.parentElement;
+    const editorWrapper = anchorElement?.closest(`.${SelectionUtils.CSS.editorWrapper}`);
+
+    if (!editorWrapper) {
+      return;
+    }
+
+    const toolbar = editorWrapper.querySelector('[data-cy=inline-toolbar]');
+
+    if (!(toolbar instanceof HTMLElement)) {
+      return;
+    }
+
+    const button = toolbar.querySelector('[data-item-name="bold"]');
+
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    button.classList.toggle('ce-popover-item--active', this.isSelectionVisuallyBold(selection));
   }
 
   /**
@@ -663,16 +700,24 @@ export default class BoldInlineTool implements InlineTool {
 
       const shouldRemoveCurrentLength = currentText.length > allowedLength;
 
-      if (shouldRemoveCurrentLength) {
-        const preserved = currentText.slice(0, allowedLength);
-        const extra = currentText.slice(allowedLength);
+      const newTextNodeAfterSplit: Text | null = (() => {
+        if (shouldRemoveCurrentLength) {
+          const preserved = currentText.slice(0, allowedLength);
+          const extra = currentText.slice(allowedLength);
 
-        boldEl.textContent = preserved;
+          boldEl.textContent = preserved;
 
-        const textNode = document.createTextNode(extra);
+          const textNode = document.createTextNode(extra);
 
-        boldEl.parentNode?.insertBefore(textNode, boldEl.nextSibling);
-      }
+          if (boldEl.parentNode) {
+            boldEl.parentNode.insertBefore(textNode, boldEl.nextSibling);
+
+            return textNode;
+          }
+        }
+
+        return null;
+      })();
 
       const prevLengthAttr = boldEl.getAttribute('data-bold-prev-length');
 
@@ -709,10 +754,35 @@ export default class BoldInlineTool implements InlineTool {
         boldEl.removeAttribute('data-bold-prev-length');
       }
 
+      if (selection?.isCollapsed && newTextNodeAfterSplit && BoldInlineTool.isNodeWithin(selection.focusNode, boldEl)) {
+        const caretRange = document.createRange();
+        const caretOffset = newTextNodeAfterSplit.textContent?.length ?? 0;
+
+        caretRange.setStart(newTextNodeAfterSplit, caretOffset);
+        caretRange.collapse(true);
+
+        selection.removeAllRanges();
+        selection.addRange(caretRange);
+      }
+
       if (shouldRemoveCurrentLength) {
         boldEl.removeAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH);
       }
     });
+  }
+
+  /**
+   * Check if a node is within the provided container
+   *
+   * @param target - Node to test
+   * @param container - Potential ancestor container
+   */
+  private static isNodeWithin(target: Node | null, container: Node): boolean {
+    if (!target) {
+      return false;
+    }
+
+    return target === container || container.contains(target);
   }
 
   /**
@@ -827,40 +897,28 @@ export default class BoldInlineTool implements InlineTool {
    *
    * @param event - The keyboard event
    */
-  private static handleCollapsedShortcut(event: KeyboardEvent): void {
+  private static handleShortcut(event: KeyboardEvent): void {
     if (!BoldInlineTool.isBoldShortcut(event)) {
       return;
     }
 
     const selection = window.getSelection();
 
-    if (!selection || !selection.rangeCount || !selection.isCollapsed || !BoldInlineTool.isSelectionInsideEditor(selection)) {
+    if (!selection || !selection.rangeCount || !BoldInlineTool.isSelectionInsideEditor(selection)) {
+      return;
+    }
+
+    const instance = BoldInlineTool.instances.values().next().value;
+
+    if (!instance) {
       return;
     }
 
     event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
 
-    const range = selection.getRangeAt(0);
-    const boldElement = BoldInlineTool.findBoldElement(range.startContainer) ?? BoldInlineTool.getBoundaryBold(range);
-
-    if (boldElement) {
-      const caretRange = BoldInlineTool.exitCollapsedBold(selection, boldElement);
-      const storedRange = caretRange?.cloneRange();
-
-      document.execCommand('bold');
-
-      if (storedRange) {
-        selection.removeAllRanges();
-        selection.addRange(storedRange);
-      }
-    } else {
-      document.execCommand('bold');
-    }
-
-    BoldInlineTool.normalizeBoldTagsWithinEditor(selection);
-    BoldInlineTool.replaceNbspInBlock(selection);
-    BoldInlineTool.enforceCollapsedBoldLengths(selection);
-    document.dispatchEvent(new Event('selectionchange'));
+    instance.toggleBold();
   }
 
   /**

@@ -4,7 +4,7 @@
  * @param mutationRecord - mutation to check
  * @param element - element that is expected to contain mutation
  */
-export function isMutationBelongsToElement(mutationRecord: MutationRecord, element: Element): boolean {
+export const isMutationBelongsToElement = (mutationRecord: MutationRecord, element: Element): boolean => {
   const { type, target, addedNodes, removedNodes } = mutationRecord;
 
   /**
@@ -39,4 +39,4 @@ export function isMutationBelongsToElement(mutationRecord: MutationRecord, eleme
   }
 
   return false;
-}
+};

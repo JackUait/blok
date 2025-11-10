@@ -149,7 +149,7 @@ export class PopoverInline extends PopoverDesktop {
     const nestedPopoverEl = nestedPopover.getElement();
 
     /**
-     * We need to add class with nesting level, shich will help position nested popover.
+     * We need to add class with nesting level, which will help position nested popover.
      * Currently only '.ce-popover--nested-level-1' class is used
      */
     nestedPopoverEl.classList.add(css.getPopoverNestedClass(nestedPopover.nestingLevel));

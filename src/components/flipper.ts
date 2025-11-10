@@ -168,7 +168,7 @@ export default class Flipper {
   }
 
   /**
-   * Registeres function that should be executed on each navigation action
+   * Registers a function that should be executed on each navigation action
    *
    * @param cb - function to execute
    */
@@ -177,7 +177,7 @@ export default class Flipper {
   }
 
   /**
-   * Unregisteres function that is executed on each navigation action
+   * Unregisters a function that is executed on each navigation action
    *
    * @param cb - function to stop executing
    */
@@ -260,8 +260,8 @@ export default class Flipper {
    */
   private handleTabPress(event: KeyboardEvent): void {
     /** this property defines leaf direction */
-    const shiftKey = event.shiftKey,
-        direction = shiftKey ? DomIterator.directions.LEFT : DomIterator.directions.RIGHT;
+    const shiftKey = event.shiftKey;
+    const direction = shiftKey ? DomIterator.directions.LEFT : DomIterator.directions.RIGHT;
 
     switch (direction) {
       case DomIterator.directions.RIGHT:

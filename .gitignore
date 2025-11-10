@@ -19,3 +19,4 @@ dist/
 coverage/
 .nyc_output/
 .vscode/launch.json
+jscpd-report/

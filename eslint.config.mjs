@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { FlatCompat } from '@eslint/eslintrc';
 import cypress from 'eslint-plugin-cypress';
 import playwright from 'eslint-plugin-playwright';
+import sonarjs from 'eslint-plugin-sonarjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -110,6 +111,18 @@ export default [
       },
     ],
   }),
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    plugins: {
+      sonarjs,
+    },
+    rules: {
+      // Duplicate code detection
+      'sonarjs/no-duplicate-string': ['error', { threshold: 3 }],
+      'sonarjs/no-identical-functions': 'error',
+      'sonarjs/no-identical-expressions': 'error',
+    },
+  },
   {
     files: ['test/cypress/**/*.ts'],
     plugins: {

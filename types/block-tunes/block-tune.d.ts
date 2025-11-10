@@ -9,7 +9,7 @@ export interface BlockTune {
   /**
    * Returns BlockTune's UI.
    * Should return either MenuConfig (recommended) (@see https://editorjs.io/menu-config/)
-   * or HTMLElement (UI consitency is not guaranteed)
+   * or an HTMLElement (UI consistency is not guaranteed)
    */
   render(): HTMLElement | MenuConfig;
 

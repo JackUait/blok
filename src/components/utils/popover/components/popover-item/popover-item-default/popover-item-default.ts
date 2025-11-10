@@ -9,7 +9,7 @@ import { PopoverItem } from '../popover-item';
 import { css } from './popover-item-default.const';
 
 /**
- * Represents sigle popover item node
+ * Represents single popover item node
  *
  * @todo move nodes initialization to constructor
  * @todo replace multiple make() usages with constructing separate instances
@@ -293,7 +293,7 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
-   * Animates item which symbolizes that error occured while executing 'onActivate()' callback
+   * Animates item which symbolizes that error occurred while executing 'onActivate()' callback
    */
   private animateError(): void {
     if (this.nodes.icon?.classList.contains(css.wobbleAnimation)) {

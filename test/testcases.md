@@ -66,7 +66,7 @@ This document will describe various test cases of the editor.js functionality. F
         - [ ] If `object` passed Editor.js should initialize `tool` and pass this object as `config` parameter of the tool's constructor
       - [ ] Checking the `shortcut` property
         - [ ] If `string` passed Editor.js should append the `tool` when such keys combination executed.
-      - [ ] Checking the `inilineToolbar` property
+      - [ ] Checking the `inlineToolbar` property
         - [ ] If `true` passed, the Editor.js should show the Inline Toolbar for this tool with [common](https://editorjs.io/configuration#inline-toolbar-order) settings.
         - [ ] If `false` passed, the Editor.js should not show the Inline Toolbar for this tool.
         - [ ] If `array` passed, the Editor.js should show the Inline Toolbar for this tool with a passed list of tools and their order.
@@ -90,7 +90,7 @@ This document will describe various test cases of the editor.js functionality. F
   - [ ] If `object` passed
     - [ ] Checking the `blocks` property
       - [ ] If `array` of `object` passed,
-        - [ ] for each `object` 
+        - [ ] for each `object`
           - [ ] Checking the `type` and `data` property
             - [ ] the Editor.js should be initialize with `block` of class `type`
             - [ ] If `type` not present in `tools`, the Editor.js should throw an error.
@@ -101,7 +101,7 @@ This document will describe various test cases of the editor.js functionality. F
 - [ ] `readOnly` property
   - [ ] If `true` passed,
     - [ ] If any `tool` have not readOnly getter defined,The Editor.js should throw an error.
-    - [ ] otherwise, the Editor.js should be initialize with readOnly mode. 
+    - [ ] otherwise, the Editor.js should be initialize with readOnly mode.
   - [ ] If `false` passed,the Editor.js should be initialized with the `tools` only.
   - [ ] If omitted,the Editor.js should be initialized with the `tools` only.
 

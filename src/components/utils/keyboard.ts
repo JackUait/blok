@@ -40,7 +40,7 @@ declare global {
  * @param code - {@link https://www.w3.org/TR/uievents-code/#key-alphanumeric-writing-system}
  * @param fallback - fallback value to be returned if Keyboard API is not supported (Safari, Firefox)
  */
-export async function getKeyboardKeyForCode(code: string, fallback: string): Promise<string> {
+export const getKeyboardKeyForCode = async (code: string, fallback: string): Promise<string> => {
   const keyboard = navigator.keyboard;
 
   if (!keyboard) {
@@ -58,4 +58,4 @@ export async function getKeyboardKeyForCode(code: string, fallback: string): Pro
 
     return fallback;
   }
-}
+};

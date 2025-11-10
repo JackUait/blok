@@ -1,25 +1,27 @@
 import '@cypress/code-coverage/support';
 
-/* global chai */
 // because this file is imported from cypress/support/e2e.js
 // that means all other spec files will have this assertion plugin
 // available to them because the supportFile is bundled and served
 // prior to any spec files loading
 
+// eslint-disable-next-line no-undef
 declare const chai: Chai.ChaiStatic;
 
 import type PartialBlockMutationEvent from '../fixtures/types/PartialBlockMutationEvent';
 
 /**
  * Chai plugin for checking if passed onChange method is called with an array of passed events
+ *
  * @param _chai - Chai instance
  */
 const beCalledWithBatchedEvents = (_chai: typeof chai): void => {
   /**
    * Check if passed onChange method is called with an array of passed events
+   *
    * @param expectedEvents - batched events to check
    */
-  function assertToBeCalledWithBatchedEvents(this: Chai.AssertionStatic, expectedEvents: PartialBlockMutationEvent[]): void {
+  const assertToBeCalledWithBatchedEvents = function (this: typeof chai.Assertion.prototype, expectedEvents: PartialBlockMutationEvent[]): void {
     /**
      * EditorJS API is passed as the first parameter of the onChange callback
      */
@@ -50,7 +52,7 @@ const beCalledWithBatchedEvents = (_chai: typeof chai): void => {
       'expected #{this} to not be called with #{exp}, but it was called with #{act} ',
       expectedEvents
     );
-  }
+  };
 
   _chai.Assertion.addMethod('calledWithBatchedEvents', assertToBeCalledWithBatchedEvents);
 };

@@ -1,0 +1,24 @@
+{
+  "threshold": 0,
+  "reporters": ["console", "html", "json"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/test-results/**",
+    "**/cypress/downloads/**",
+    "**/*.d.ts",
+    "**/yarn.lock",
+    "**/package-lock.json",
+    "**/.git/**"
+  ],
+  "format": [
+    "typescript",
+    "javascript",
+    "css"
+  ],
+  "minLines": 5,
+  "minTokens": 50,
+  "absolute": true,
+  "output": "./jscpd-report"
+}
+

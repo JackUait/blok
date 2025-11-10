@@ -152,7 +152,7 @@ describe('BlockTunes', () => {
         .contains('Convert to')
         .click();
 
-      /** Check nected popover with "Heading" option is present */
+      /** Check connected popover with the "Heading" option is present */
       cy.get('[data-cy=editorjs]')
         .get('.ce-popover--nested [data-item-name=header]')
         .should('exist');

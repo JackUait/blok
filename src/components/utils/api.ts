@@ -8,7 +8,7 @@ import type Block from '../block';
  * @param attribute - either BlockAPI or Block id or Block index
  * @param editor - Editor instance
  */
-export function resolveBlock(attribute: BlockAPI | BlockAPI['id'] | number, editor: EditorModules): Block | undefined {
+export const resolveBlock = (attribute: BlockAPI | BlockAPI['id'] | number, editor: EditorModules): Block | undefined => {
   if (typeof attribute === 'number') {
     return editor.BlockManager.getBlockByIndex(attribute);
   }
@@ -18,4 +18,4 @@ export function resolveBlock(attribute: BlockAPI | BlockAPI['id'] | number, edit
   }
 
   return editor.BlockManager.getBlockById(attribute.id);
-}
+};

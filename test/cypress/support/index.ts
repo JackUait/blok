@@ -27,6 +27,7 @@ import chaiSubset from 'chai-subset';
 /**
  * "containSubset" object properties matcher
  */
+// eslint-disable-next-line no-undef
 chai.use(chaiSubset);
 
 /**

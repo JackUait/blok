@@ -664,7 +664,7 @@ describe('Editor Tools Api', () => {
           .click()
           .paste({
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            'text/html': '<ol start="50"><li>Orderd List</li><li>Unorderd List</li></ol>', // all attributes should be sanitized, <li> should be preserved
+            'text/html': '<ol start="50"><li>Ordered List</li><li>Unordered List</li></ol>', // all attributes should be sanitized, <li>s should be preserved
           })
           .then(() => {
             expect(pastedElement).not.to.be.undefined;

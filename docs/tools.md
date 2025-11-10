@@ -124,10 +124,10 @@ Both methods might be async.
 
 Editor.js handles paste on Blocks and provides API for Tools to process the pasted data.
 
-When user pastes content into Editor, pasted content will be splitted into blocks.
+When user pastes content into Editor, pasted content will be split into blocks.
 
-1. If plain text will be pasted, it will be splitted by new line characters
-2. If HTML string will be pasted, it will be splitted by block tags
+1. If plain text will be pasted, it will be split by new line characters
+2. If HTML string will be pasted, it will be split by block tags
 
 Also Editor API allows you to define your own pasting scenario. You can either:
 
@@ -199,7 +199,7 @@ Pattern will be processed only if paste was on `defaultBlock` Tool and pasted st
 
 > Example
 
-You can handle YouTube links and insert embeded video instead:
+You can handle YouTube links and insert embedded video instead:
 
 ```javascript
 static get pasteConfig() {
@@ -222,7 +222,7 @@ To handle file you should provide `files`  property in your `pasteConfig` config
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | `extensions` | `string[]` | _Optional_ Array of extensions your Tool can handle |
-| `mimeTypes` | `sring[]` | _Optional_ Array of MIME types your Tool can handle |
+| `mimeTypes` | `string[]` | _Optional_ Array of MIME types your Tool can handle |
 
 Example
 
@@ -456,7 +456,7 @@ class ListTool {
   constructor(){
     this.data = {
       items: [
-        'Fisrt item',
+        'First item',
         'Second item',
         'Third item'
       ],

@@ -50,7 +50,7 @@ describe('Inline Toolbar', () => {
           {
             type: 'paragraph',
             data: {
-              text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam lectus. Sed sit amet ipsum mauris. Maecenas congue ligula ac quam viverra nec consectetur ante hendrerit. Donec et mollis dolor.',
+              text: 'Writing is a powerful tool for communication and expression. When crafting content, it is important to consider your audience and the message you want to convey. Good writing requires careful thought, clear structure, and attention to detail. The process of editing helps refine your ideas and improve clarity.',
             },
           },
         ],
@@ -263,13 +263,13 @@ describe('Inline Toolbar', () => {
             {
               type: 'paragraph',
               data: {
-                text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+                text: 'Document editing requires precision and attention to detail. Every word matters when crafting clear and effective content.',
               },
             },
             {
               type: 'nestedEditor',
               data: {
-                text: 'Nunc pellentesque, tortor nec luctus venenatis',
+                text: 'The nested editor allows for complex document structures and hierarchical content organization',
               },
             },
           ],
@@ -278,7 +278,7 @@ describe('Inline Toolbar', () => {
 
       cy.get(`[data-cy=${NESTED_EDITOR_ID}]`)
         .find('.ce-paragraph')
-        .selectText('tortor nec luctus');
+        .selectText('document structures');
 
       cy.get(`[data-cy=${NESTED_EDITOR_ID}]`)
         .find('[data-item-name=link]')

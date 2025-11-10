@@ -372,7 +372,7 @@ describe('api.blocks', () => {
           /**
            * Call the 'convert' api method with nonexisting Block id
            */
-          const fakeId = 'WRNG_ID';
+          const fakeId = 'WRONG_ID';
           const { convert } = editor.blocks;
 
           return convert(fakeId, 'convertableTool')
@@ -401,7 +401,7 @@ describe('api.blocks', () => {
         /**
          * Call the 'convert' api method with nonexisting tool name
          */
-        const nonexistingToolName = 'WRNG_TOOL_NAME';
+        const nonexistingToolName = 'WRONG_TOOL_NAME';
         const { convert } = editor.blocks;
 
         return convert(existingBlock.id, nonexistingToolName)

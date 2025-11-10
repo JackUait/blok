@@ -21,7 +21,7 @@ At the constructor of Tune's class exemplar you will receive an object with foll
 
 | Parameter | Description |
 | --------- | ----------- |
-| api  | Editor's [API](api.md) obejct |
+| api  | Editor's [API](api.md) object |
 | config | Configuration of Block Tool Tune is connected to (might be useful in some cases) |
 | block | [Block API](api.md#block-api) methods for block Tune is connected to |
 | data | Saved Tune data |

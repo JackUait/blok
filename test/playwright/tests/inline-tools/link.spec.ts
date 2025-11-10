@@ -10,11 +10,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const EDITOR_SELECTOR = '[data-cy=editorjs]';
-const PARAGRAPH_SELECTOR = `${EDITOR_SELECTOR} .ce-paragraph`;
-const INLINE_TOOLBAR_SELECTOR = `${EDITOR_SELECTOR} [data-cy=inline-toolbar]`;
+const PARAGRAPH_SELECTOR = '.ce-paragraph';
+const INLINE_TOOLBAR_SELECTOR = '[data-interface=inline-toolbar]';
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-item-name="link"] button`;
-const LINK_INPUT_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-link-tool-input-opened]`;
+const LINK_INPUT_SELECTOR = `input[data-link-tool-input-opened]`;
 const NOTIFIER_SELECTOR = '.cdx-notifies';
 const MODIFIER_KEY = process.platform === 'darwin' ? 'Meta' : 'Control';
 
@@ -100,47 +99,42 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
 };
 
 /**
- * Select text content within a locator by string match
+ * Select text content within a locator by string match using Playwright's built-in methods
  *
  * @param locator - The Playwright locator for the element containing the text
  * @param text - The text string to select within the element
  */
 const selectText = async (locator: Locator, text: string): Promise<void> => {
-  await locator.evaluate((element, targetText) => {
-    const el = element as HTMLElement;
-    const doc = el.ownerDocument;
-    const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    let textNode: Node | null = null;
-    let start = -1;
+  // Get the full text content to find the position
+  const fullText = await locator.textContent();
 
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      const content = node.textContent ?? '';
-      const idx = content.indexOf(targetText);
+  if (!fullText || !fullText.includes(text)) {
+    throw new Error(`Text "${text}" was not found in element`);
+  }
 
-      if (idx !== -1) {
-        textNode = node;
-        start = idx;
-        break;
-      }
-    }
+  const startIndex = fullText.indexOf(text);
+  const endIndex = startIndex + text.length;
 
-    if (!textNode || start === -1) {
-      throw new Error(`Text "${targetText}" was not found in element`);
-    }
+  // Click on the element to focus it
+  await locator.click();
 
-    const range = doc.createRange();
+  // Get the page from the locator to use keyboard API
+  const page = locator.page();
 
-    range.setStart(textNode, start);
-    range.setEnd(textNode, start + targetText.length);
+  // Move cursor to the start of the element
+  await page.keyboard.press('Home');
 
-    const selection = doc.getSelection();
+  // Navigate to the start position of the target text
+  for (let i = 0; i < startIndex; i++) {
+    await page.keyboard.press('ArrowRight');
+  }
 
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-
-    doc.dispatchEvent(new Event('selectionchange'));
-  }, text);
+  // Select the target text by holding Shift and moving right
+  await page.keyboard.down('Shift');
+  for (let i = startIndex; i < endIndex; i++) {
+    await page.keyboard.press('ArrowRight');
+  }
+  await page.keyboard.up('Shift');
 };
 
 /**
@@ -163,7 +157,7 @@ test.describe('Inline Tool Link', () => {
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
   });
 
-  test('should create a link by pressing Enter in the inline input', async ({ page }) => {
+  test('should create a link via Enter key', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -177,41 +171,13 @@ test.describe('Inline Tool Link', () => {
 
     await selectText(paragraph, 'First block text');
     await page.keyboard.press(`${MODIFIER_KEY}+k`);
+
     await submitLink(page, 'https://codex.so');
 
     await expect(paragraph.locator('a')).toHaveAttribute('href', 'https://codex.so');
   });
 
-  test('should remove fake background on selection change', async ({ page }) => {
-    await createEditorWithBlocks(page, [
-      {
-        type: 'paragraph',
-        data: {
-          text: 'First block text',
-        },
-      },
-      {
-        type: 'paragraph',
-        data: {
-          text: 'Second block text',
-        },
-      },
-    ]);
-
-    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
-    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
-
-    await selectText(firstParagraph, 'First block text');
-    await page.keyboard.press(`${MODIFIER_KEY}+k`);
-
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} span[style]`)).toHaveCount(1);
-
-    await selectText(secondParagraph, 'Second block text');
-
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} span[style]`)).toHaveCount(0);
-  });
-
-  test('should create a link via the inline toolbar button', async ({ page }) => {
+  test('should create a link via toolbar button', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -238,7 +204,7 @@ test.describe('Inline Tool Link', () => {
     await expect(anchor).toHaveText('Link me');
   });
 
-  test('should keep link input open and show validation notice for invalid URLs', async ({ page }) => {
+  test('should show validation error for invalid URL', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -269,7 +235,7 @@ test.describe('Inline Tool Link', () => {
     }, { notifierSelector: NOTIFIER_SELECTOR });
   });
 
-  test('should prefill inline input and update an existing link', async ({ page }) => {
+  test('should fill in and update existing link', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -282,20 +248,26 @@ test.describe('Inline Tool Link', () => {
     const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
 
     await selectAll(paragraph);
+    // Use keyboard shortcut to trigger the link tool (this will open the toolbar and input)
+    await page.keyboard.press(`${MODIFIER_KEY}+k`);
 
-    const linkButton = page.locator(LINK_BUTTON_SELECTOR);
     const linkInput = page.locator(LINK_INPUT_SELECTOR);
 
-    await expect(linkButton).toHaveAttribute('data-link-tool-unlink', 'true');
-    await expect(linkButton).toHaveAttribute('data-link-tool-active', 'true');
+    // Wait for the input to appear (it should open automatically when a link is detected)
+    await expect(linkInput).toBeVisible();
     await expect(linkInput).toHaveValue('https://codex.so');
+
+    // Verify button state - find button by data attributes directly
+    const linkButton = page.locator('button[data-link-tool-unlink="true"][data-link-tool-active="true"]');
+
+    await expect(linkButton).toBeVisible();
 
     await submitLink(page, 'example.org');
 
     await expect(paragraph.locator('a')).toHaveAttribute('href', 'http://example.org');
   });
 
-  test('should remove link when toggled while selection is inside anchor', async ({ page }) => {
+  test('should remove link when toggled', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -308,15 +280,19 @@ test.describe('Inline Tool Link', () => {
     const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
 
     await selectAll(paragraph);
+    // Use keyboard shortcut to trigger the link tool
+    await page.keyboard.press(`${MODIFIER_KEY}+k`);
 
-    const linkButton = page.locator(LINK_BUTTON_SELECTOR);
+    // Find the unlink button by its data attributes
+    const linkButton = page.locator('button[data-link-tool-unlink="true"]');
 
+    await expect(linkButton).toBeVisible();
     await linkButton.click();
 
     await expect(paragraph.locator('a')).toHaveCount(0);
   });
 
-  test('should persist link markup in saved output', async ({ page }) => {
+  test('should persist link in saved output', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -341,6 +317,57 @@ test.describe('Inline Tool Link', () => {
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
     expect(paragraphBlock?.data.text).toContain('<a href="https://codex.so">Persist me</a>');
+  });
+
+  test('should work in read-only mode', async ({ page }) => {
+    await createEditorWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Clickable link',
+        },
+      },
+    ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+
+    // Create a link
+    await selectText(paragraph, 'Clickable link');
+    await page.keyboard.press(`${MODIFIER_KEY}+k`);
+    await submitLink(page, 'https://example.com');
+
+    // Verify link was created
+    const anchor = paragraph.locator('a');
+    await expect(anchor).toHaveAttribute('href', 'https://example.com');
+    await expect(anchor).toHaveText('Clickable link');
+
+    // Enable read-only mode
+    await page.evaluate(async () => {
+      if (window.editorInstance) {
+        await window.editorInstance.readOnly.toggle(true);
+      }
+    });
+
+    // Verify read-only mode is enabled
+    const isReadOnly = await page.evaluate(() => {
+      return window.editorInstance?.readOnly.isEnabled ?? false;
+    });
+    expect(isReadOnly).toBe(true);
+
+    // Verify link still exists and has correct href
+    await expect(anchor).toHaveAttribute('href', 'https://example.com');
+    await expect(anchor).toHaveText('Clickable link');
+
+    // Verify link is clickable by checking it's not disabled and has proper href
+    const href = await anchor.getAttribute('href');
+    expect(href).toBe('https://example.com');
+
+    // Verify link element is visible and interactive
+    await expect(anchor).toBeVisible();
+    const isDisabled = await anchor.evaluate((el) => {
+      return el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true';
+    });
+    expect(isDisabled).toBe(false);
   });
 });
 

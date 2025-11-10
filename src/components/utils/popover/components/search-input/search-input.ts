@@ -57,6 +57,7 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
     });
 
     this.input = Dom.make('input', css.input, {
+      type: 'search',
       placeholder,
       /**
        * Used to prevent focusing on the input by Tab key

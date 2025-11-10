@@ -1,4 +1,5 @@
 import * as _ from '../../../src/components/utils';
+import { EDITOR_SELECTOR } from '../support/constants';
 
 describe('Blocks selection', () => {
   beforeEach(() => {
@@ -12,12 +13,12 @@ describe('Blocks selection', () => {
   });
 
   it('should remove block selection on click', () => {
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('div.ce-block')
       .click()
       .type('First block{enter}');
 
-    cy.get('[data-cy=editorjs')
+    cy.get(EDITOR_SELECTOR)
       .find('div.ce-block')
       .next()
       .type('Second block')
@@ -27,7 +28,7 @@ describe('Blocks selection', () => {
         keyCode: _.keyCodes.UP,
       });
 
-    cy.get('[data-cy=editorjs')
+    cy.get(EDITOR_SELECTOR)
       .click()
       .find('div.ce-block')
       .should('not.have.class', '.ce-block--selected');

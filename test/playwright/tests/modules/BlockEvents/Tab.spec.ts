@@ -5,12 +5,12 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '../../../../../types';
 import type { OutputData } from '../../../../../types';
 import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
+import { EDITOR_SELECTOR } from '../../constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../../cypress/fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const EDITOR_SELECTOR = '[data-cy=editorjs]';
 const PARAGRAPH_SELECTOR = `${EDITOR_SELECTOR} [data-block-tool="paragraph"]`;
 const TOOL_WITH_TWO_INPUTS_SELECTOR = '[data-cy=tool-with-two-inputs] div[contenteditable=true]';
 const CONTENTLESS_TOOL_SELECTOR = '[data-cy=contentless-tool]';

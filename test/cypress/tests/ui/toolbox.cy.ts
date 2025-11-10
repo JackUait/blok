@@ -1,6 +1,7 @@
 import type EditorJS from '../../../../types/index';
 import type { ConversionConfig, ToolboxConfig } from '../../../../types/index';
 import ToolMock from '../../fixtures/tools/ToolMock';
+import { EDITOR_SELECTOR } from '../../support/constants';
 
 describe('Toolbox', () => {
   describe('Shortcuts', () => {
@@ -38,7 +39,7 @@ describe('Toolbox', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .click()
         .type('Some text')
@@ -67,7 +68,7 @@ describe('Toolbox', () => {
                 throw new Error('Selection range is not available');
               }
 
-              cy.get('[data-cy=editorjs]')
+              cy.get(EDITOR_SELECTOR)
                 .find(`.ce-block[data-id=${blocks[0].id}]`)
                 .should(($block) => {
                   expect($block[0].contains(range.startContainer)).to.be.true;
@@ -101,7 +102,7 @@ describe('Toolbox', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .click()
         .type('Some text')
@@ -150,7 +151,7 @@ describe('Toolbox', () => {
         },
       });
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .click()
         .type('Some text')
@@ -202,7 +203,7 @@ describe('Toolbox', () => {
         },
       });
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .click()
         .type('Some text')

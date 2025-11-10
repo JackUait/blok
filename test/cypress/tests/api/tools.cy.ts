@@ -1,6 +1,7 @@
 import type { ToolboxConfig, BlockToolData, ToolboxConfigEntry, PasteConfig } from '../../../../types';
 import type EditorJS from '../../../../types';
 import type { HTMLPasteEvent, TunesMenuConfig } from '../../../../types/tools';
+import { EDITOR_SELECTOR } from '../../support/constants';
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -30,19 +31,19 @@ describe('Editor Tools Api', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-popover-item[data-item-name=testTool]')
         .should('have.length', 1);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-popover-item[data-item-name=testTool] .ce-popover-item__icon')
         .should('contain.html', TestTool.toolbox.icon);
     });
@@ -75,24 +76,24 @@ describe('Editor Tools Api', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-popover-item[data-item-name=testTool]')
         .should('have.length', 2);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-popover-item[data-item-name=testTool]')
         .first()
         .should('contain.text', (TestTool.toolbox as ToolboxConfigEntry[])[0].title);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-popover-item[data-item-name=testTool]')
         .last()
         .should('contain.text', (TestTool.toolbox as ToolboxConfigEntry[])[1].title);
@@ -164,19 +165,19 @@ describe('Editor Tools Api', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-popover-item[data-item-name=testTool]')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .last()
         .click()
@@ -237,26 +238,26 @@ describe('Editor Tools Api', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
       // Insert test tool block
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get(`[data-item-name="testTool"]`)
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-name=testBlock]')
         .type('some text')
         .click();
 
       // Open block tunes
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
@@ -315,26 +316,26 @@ describe('Editor Tools Api', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
       // Insert test tool block
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get(`[data-item-name="testTool"]`)
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-name=testBlock]')
         .type('some text')
         .click();
 
       // Open block tunes
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
@@ -385,31 +386,31 @@ describe('Editor Tools Api', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
       // Insert test tool block
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get(`[data-item-name="testTool"]`)
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-name=testBlock]')
         .type('some text')
         .click();
 
       // Open block tunes
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
       // Expect preconfigured custom html tunes to exist in tunes menu
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-popover')
         .should('contain.text', sampleText);
     });
@@ -467,26 +468,26 @@ describe('Editor Tools Api', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
       // Insert test tool block
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get(`[data-item-name="testTool"]`)
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-name=testBlock]')
         .type('some text')
         .click();
 
       // Open block tunes
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
@@ -536,7 +537,7 @@ describe('Editor Tools Api', () => {
           },
         }).as('editorInstance');
 
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .get('div.ce-block')
           .click()
           .paste({
@@ -593,7 +594,7 @@ describe('Editor Tools Api', () => {
           },
         });
 
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .get('div.ce-block')
           .click()
           .paste({
@@ -659,7 +660,7 @@ describe('Editor Tools Api', () => {
           },
         });
 
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .get('div.ce-block')
           .click()
           .paste({
@@ -745,7 +746,7 @@ describe('Editor Tools Api', () => {
           },
         });
 
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .get('div.ce-block')
           .click()
           .paste({
@@ -826,7 +827,7 @@ describe('Editor Tools Api', () => {
           },
         });
 
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .get('div.ce-block')
           .click()
           .paste({
@@ -917,7 +918,7 @@ describe('Editor Tools Api', () => {
           },
         });
 
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .get('div.ce-block')
           .click()
           .paste({
@@ -1000,7 +1001,7 @@ describe('Editor Tools Api', () => {
           },
         });
 
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .get('div.ce-block')
           .click()
           .paste({

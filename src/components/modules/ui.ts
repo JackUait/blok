@@ -288,6 +288,7 @@ export default class UI extends Module<UINodes> {
       this.CSS.editorWrapper,
       ...(this.isRtl ? [ this.CSS.editorRtlFix ] : []),
     ]);
+    this.nodes.wrapper.setAttribute('data-interface', 'editorjs');
     this.nodes.redactor = $.make('div', this.CSS.editorZone);
 
     /**

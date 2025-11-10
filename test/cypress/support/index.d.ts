@@ -53,7 +53,7 @@ declare global {
        * Note. Previous subject should have 'textNode' as firstChild
        *
        * Usage
-       * cy.get('[data-cy=editorjs]')
+       * cy.get('[data-interface=editorjs]')
        *  .find('.ce-paragraph')
        *  .selectText('block te')
        *
@@ -66,7 +66,7 @@ declare global {
        * Note. Previous subject should have 'textNode' as firstChild
        *
        * Usage
-       * cy.get('[data-cy=editorjs]')
+       * cy.get('[data-interface=editorjs]')
        *  .find('.ce-paragraph')
        *  .selectTextByOffset([0, 5])
        *
@@ -78,7 +78,7 @@ declare global {
        * Returns line wrap positions for passed element
        *
        * Usage
-       * cy.get('[data-cy=editorjs]')
+       * cy.get('[data-interface=editorjs]')
        *  .find('.ce-paragraph')
        *  .getLineWrapPositions()
        *

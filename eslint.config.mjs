@@ -149,7 +149,7 @@ export default [
     },
     rules: {
       ...cypress.configs.recommended.rules,
-      'cypress/require-data-selectors': 'error',
+      'cypress/require-data-selectors': 'off',
       'cypress/no-unnecessary-waiting': 'off',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',

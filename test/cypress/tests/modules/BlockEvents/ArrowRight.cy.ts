@@ -1,5 +1,6 @@
 import { createEditorWithTextBlocks } from '../../../support/utils/createEditorWithTextBlocks';
 import ContentlessToolMock from '../../../fixtures/tools/ContentlessTool';
+import { EDITOR_SELECTOR } from '../../../support/constants';
 
 describe('Arrow Right', () => {
   describe('starting whitespaces handling', () => {
@@ -9,7 +10,7 @@ describe('Arrow Right', () => {
         '2',
       ]);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .first() // select first block
         .as('firstBlock')
@@ -31,7 +32,7 @@ describe('Arrow Right', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get('[data-cy=editorjs]')
+          cy.get(EDITOR_SELECTOR)
             .find('.ce-paragraph')
             .last()
             .should(($block) => {
@@ -47,7 +48,7 @@ describe('Arrow Right', () => {
         '2',
       ]);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -67,7 +68,7 @@ describe('Arrow Right', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get('[data-cy=editorjs]')
+          cy.get(EDITOR_SELECTOR)
             .find('.ce-paragraph')
             .last()
             .should(($block) => {
@@ -83,7 +84,7 @@ describe('Arrow Right', () => {
         '2',
       ]);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -103,7 +104,7 @@ describe('Arrow Right', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get('[data-cy=editorjs]')
+          cy.get(EDITOR_SELECTOR)
             .find('.ce-paragraph')
             .last()
             .should(($block) => {
@@ -118,7 +119,7 @@ describe('Arrow Right', () => {
         '2',
       ]);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -139,7 +140,7 @@ describe('Arrow Right', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get('[data-cy=editorjs]')
+          cy.get(EDITOR_SELECTOR)
             .find('.ce-paragraph')
             .last()
             .should(($block) => {
@@ -155,7 +156,7 @@ describe('Arrow Right', () => {
         '2',
       ]);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -176,7 +177,7 @@ describe('Arrow Right', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get('[data-cy=editorjs]')
+          cy.get(EDITOR_SELECTOR)
             .find('.ce-paragraph')
             .last()
             .should(($block) => {
@@ -192,7 +193,7 @@ describe('Arrow Right', () => {
         '2',
       ]);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -213,7 +214,7 @@ describe('Arrow Right', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get('[data-cy=editorjs]')
+          cy.get(EDITOR_SELECTOR)
             .find('.ce-paragraph')
             .last()
             .should(($block) => {
@@ -269,7 +270,7 @@ describe('Arrow Right', () => {
       },
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .first()
       .as('firstBlock')
@@ -279,7 +280,7 @@ describe('Arrow Right', () => {
     /**
      * We navigated to the Delimiter and it is highlighted
      */
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('div[data-cy-type=contentless-tool]')
       .parents('.ce-block')
       .as('delimiterBlock')
@@ -309,7 +310,7 @@ describe('Arrow Right', () => {
         }
         const range = selection.getRangeAt(0);
 
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .find('.ce-paragraph')
           .last()
           .should(($block) => {

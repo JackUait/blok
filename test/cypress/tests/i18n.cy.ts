@@ -1,5 +1,6 @@
 import Header from '@editorjs/header';
 import type { ToolboxConfig } from '../../../types';
+import { EDITOR_SELECTOR } from '../support/constants';
 
 describe('Editor i18n', () => {
   context('Toolbox', () => {
@@ -22,15 +23,15 @@ describe('Editor i18n', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-popover-item[data-item-name=header]')
         .should('contain.text', toolNamesDictionary.Heading);
     });
@@ -76,20 +77,20 @@ describe('Editor i18n', () => {
         },
       }).as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-popover-item[data-item-name=testTool]')
         .first()
         .should('contain.text', toolNamesDictionary.Title1);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-popover-item[data-item-name=testTool]')
         .last()
         .should('contain.text', toolNamesDictionary.Title2);
@@ -129,15 +130,15 @@ describe('Editor i18n', () => {
         },
       });
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-toolbar__plus')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-popover-item[data-item-name=testTool]')
         .should('contain.text', toolNamesDictionary.TestTool);
     });
@@ -171,26 +172,26 @@ describe('Editor i18n', () => {
         },
       });
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
       /** Open block tunes menu */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
       /** Open "Convert to" menu  */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-item-name=convert-to]')
         .click();
 
       /** Check item in convert to menu is internationalized */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-popover--nested .ce-popover-item[data-item-name=header]')
         .should('contain.text', toolNamesDictionary.Heading);
     });
@@ -225,17 +226,17 @@ describe('Editor i18n', () => {
       });
 
       /** Open Inline Toolbar */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .selectText('Some text');
 
       /** Open "Convert to" menu  */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-item-name=convert-to]')
         .click();
 
       /** Check item in convert to menu is internationalized */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-popover--nested .ce-popover-item[data-item-name=header]')
         .should('contain.text', toolNamesDictionary.Heading);
     });

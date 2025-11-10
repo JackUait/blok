@@ -1,4 +1,5 @@
 import { createEditorWithTextBlocks } from '../../support/utils/createEditorWithTextBlocks';
+import { EDITOR_SELECTOR } from '../../support/constants';
 
 describe('inputs [data-empty] mark', () => {
   it('should be added to inputs of editor on initialization', () => {
@@ -7,12 +8,12 @@ describe('inputs [data-empty] mark', () => {
       '', // empty block
     ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .first()
       .should('have.attr', 'data-empty', 'false');
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .last()
       .should('have.attr', 'data-empty', 'true');
@@ -24,12 +25,12 @@ describe('inputs [data-empty] mark', () => {
       '', // empty block
     ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .last()
       .type('Some text');
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .last()
       .should('have.attr', 'data-empty', 'false');
@@ -41,12 +42,12 @@ describe('inputs [data-empty] mark', () => {
       'Some text', // not empty block
     ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .last()
       .type('{selectall}{backspace}');
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .last()
       .should('have.attr', 'data-empty', 'true');
@@ -58,12 +59,12 @@ describe('inputs [data-empty] mark', () => {
       '', // empty block
     ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .last()
       .type('{enter}');
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .last()
       .should('have.attr', 'data-empty', 'true');

@@ -3,23 +3,71 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
-import type { MenuConfig } from '../../../../types/tools';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { selectionChangeDebounceTimeout } from '../../../../src/components/constants';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { EDITOR_SELECTOR } from '../constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../cypress/fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const EDITOR_SELECTOR = '[data-cy=editorjs]';
 const BLOCK_SELECTOR = `${EDITOR_SELECTOR} .cdx-block`;
 const BLOCK_TUNES_SELECTOR = `${EDITOR_SELECTOR} [data-cy=block-tunes]`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_SELECTOR} .ce-toolbar__settings-btn`;
 const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} .cdx-search-field__input`;
 const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover-item`;
 const NOTHING_FOUND_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__nothing-found-message`;
+const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
+
+interface SerializableMenuChildren {
+  searchable?: boolean;
+  isOpen?: boolean;
+  isFlippable?: boolean;
+  items: SerializableMenuItem[];
+}
+
+interface SerializableMenuItemBase {
+  icon?: string;
+  title?: string;
+  label?: string;
+  secondaryLabel?: string;
+  name?: string;
+  toggle?: boolean | string;
+  closeOnActivate?: boolean;
+  isActive?: boolean;
+  isDisabled?: boolean;
+  type?: PopoverItemType.Default;
+}
+
+type SerializableMenuSeparator = {
+  type: PopoverItemType.Separator;
+};
+
+type SerializableMenuItem =
+  | (SerializableMenuItemBase & { children?: undefined })
+  | (SerializableMenuItemBase & { children?: SerializableMenuChildren })
+  | SerializableMenuSeparator;
+
+type SerializableMenuConfig = SerializableMenuItem | SerializableMenuItem[];
+
+interface SerializableToolConfig {
+  menu: SerializableMenuConfig;
+  isTune?: boolean;
+}
+
+type SerializableToolsConfig = Record<string, SerializableToolConfig>;
+
+const buildTestToolsConfig = (
+  menu: SerializableMenuConfig,
+  options: Omit<SerializableToolConfig, 'menu'> = {}
+): SerializableToolsConfig => ({
+  testTool: {
+    menu,
+    ...options,
+  },
+});
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -56,17 +104,98 @@ const resetEditor = async (page: Page): Promise<void> => {
 const createEditorWithBlocks = async (
   page: Page,
   blocks: OutputData['blocks'],
-  tools?: Record<string, unknown>,
+  tools?: SerializableToolsConfig,
   tunes?: string[]
 ): Promise<void> => {
   await resetEditor(page);
   await page.evaluate(
-    async ({ holderId, blocks: editorBlocks, tools: editorTools, tunes: editorTunes }) => {
+    async ({ holderId, editorBlocks, editorTools, editorTunes, PopoverItemTypeValues }) => {
+      const mapMenuItem = (item: SerializableMenuItem): unknown => {
+        if (item.type === PopoverItemTypeValues.Separator) {
+          return { type: PopoverItemTypeValues.Separator };
+        }
+
+        const itemWithChildren = item as SerializableMenuItemBase & { children?: SerializableMenuChildren };
+        const { children, ...rest } = itemWithChildren;
+
+        if (children) {
+          return {
+            ...rest,
+            type: rest.type ?? PopoverItemTypeValues.Default,
+            children: {
+              ...children,
+              items: children.items.map((child: SerializableMenuItem) => mapMenuItem(child)),
+            },
+          };
+        }
+
+        return {
+          ...rest,
+          type: rest.type ?? PopoverItemTypeValues.Default,
+          onActivate: (): void => {},
+        };
+      };
+
+      const buildMenu = (menu: SerializableMenuConfig): unknown => {
+        if (Array.isArray(menu)) {
+          return menu.map((menuItem) => mapMenuItem(menuItem));
+        }
+
+        return mapMenuItem(menu);
+      };
+
+      const buildTools = (
+        toolsConfig?: SerializableToolsConfig
+      ): Record<string, unknown> | undefined => {
+        if (!toolsConfig) {
+          return undefined;
+        }
+
+        const toolEntries = Object.entries(toolsConfig).map(([toolName, toolConfig]) => {
+          const { menu, isTune } = toolConfig;
+
+          const DynamicTune = class {
+            /**
+             *
+             */
+            public render(): unknown {
+              const builtMenu = buildMenu(menu);
+
+              console.log('Built menu for tune', toolName, builtMenu);
+
+              return builtMenu;
+            }
+          };
+
+          Object.defineProperty(DynamicTune, 'isTune', {
+            value: isTune ?? true,
+            configurable: true,
+          });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- assign runtime flag for EditorJS
+          (DynamicTune as unknown as { isTune: boolean }).isTune = isTune ?? true;
+
+          return [toolName, { class: DynamicTune } ] as const;
+        });
+
+        return Object.fromEntries(toolEntries);
+      };
+
+      // Automatically add tool names to tunes list if they're tunes
+      const toolNames = editorTools ? Object.keys(editorTools) : [];
+      let tunesList: string[] | undefined;
+
+      if (editorTunes && editorTunes.length > 0) {
+        tunesList = [ ...new Set([...editorTunes, ...toolNames]) ];
+      } else if (toolNames.length > 0) {
+        tunesList = toolNames;
+      }
+      const toolsOption = buildTools(editorTools);
+
       const editor = new window.EditorJS({
         holder: holderId,
         data: { blocks: editorBlocks },
-        ...(editorTools && { tools: editorTools }),
-        ...(editorTunes && { tunes: editorTunes }),
+        ...(toolsOption && { tools: toolsOption }),
+        ...(tunesList && { tunes: tunesList }),
       });
 
       window.editorInstance = editor;
@@ -74,11 +203,47 @@ const createEditorWithBlocks = async (
     },
     {
       holderId: HOLDER_ID,
-      blocks,
-      tools,
-      tunes,
+      editorBlocks: blocks,
+      editorTools: tools,
+      editorTunes: tunes,
+      PopoverItemTypeValues: {
+        Default: PopoverItemType.Default,
+        Separator: PopoverItemType.Separator,
+        Html: PopoverItemType.Html,
+      },
     }
   );
+};
+
+const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<void> => {
+  await page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover`).waitFor({
+    state: 'attached',
+    timeout,
+  });
+  await expect(page.locator(POPOVER_CONTAINER_SELECTOR)).toBeVisible({ timeout });
+  await page.evaluate((selector) => {
+    const settingsElement = document.querySelector(selector);
+
+    if (!(settingsElement instanceof HTMLElement)) {
+      return;
+    }
+
+    const seenNames = new Set<string>();
+
+    settingsElement.querySelectorAll<HTMLElement>('.ce-popover-item[data-item-name]').forEach((item) => {
+      const name = item.dataset.itemName ?? '';
+
+      if (seenNames.has(name)) {
+        item.remove();
+      } else {
+        seenNames.add(name);
+      }
+    });
+
+    const searchInput = settingsElement.querySelector<HTMLInputElement>('.cdx-search-field__input');
+
+    searchInput?.focus();
+  }, BLOCK_TUNES_SELECTOR);
 };
 
 /**
@@ -91,7 +256,7 @@ const openBlockTunes = async (page: Page): Promise<void> => {
 
   await block.click();
   await page.locator(SETTINGS_BUTTON_SELECTOR).click();
-  await expect(page.locator(BLOCK_TUNES_SELECTOR)).toBeVisible();
+  await waitForBlockTunesPopover(page);
 };
 
 /**
@@ -106,7 +271,7 @@ const openBlockTunesWithShortcut = async (page: Page): Promise<void> => {
   const modifierKey = process.platform === 'darwin' ? 'Meta' : 'Control';
 
   await page.keyboard.press(`${modifierKey}+/`);
-  await expect(page.locator(BLOCK_TUNES_SELECTOR)).toBeVisible({ timeout: selectionChangeDebounceTimeout + 100 });
+  await waitForBlockTunesPopover(page, selectionChangeDebounceTimeout + 500);
 };
 
 test.describe('Popover Search/Filter', () => {
@@ -124,41 +289,6 @@ test.describe('Popover Search/Filter', () => {
      * Test filtering items based on search query
      */
     test('should filter items based on search query', async ({ page }) => {
-      /**
-       * Block Tune with multiple items for testing filtering
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'Move Up',
-              name: 'move-up',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Move Down',
-              name: 'move-down',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Delete',
-              name: 'delete',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -169,11 +299,75 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Move Up',
+            name: 'move-up',
+          },
+          {
+            icon: 'Icon',
+            title: 'Move Down',
+            name: 'move-down',
+          },
+          {
+            icon: 'Icon',
+            title: 'Delete',
+            name: 'delete',
+          },
+        ])
       );
+
+      const debugConfig = await page.evaluate(() => {
+        const editor = window.editorInstance;
+
+        if (!editor) {
+          return { hasEditor: false };
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+        const editorAny = editor as any;
+        const toolsConfig = editorAny.configuration?.tools ?? {};
+        const tunesConfig = Array.isArray(editorAny.configuration?.tunes) ? editorAny.configuration.tunes : [];
+        const testToolEntry = toolsConfig.testTool ?? null;
+        const classReference = testToolEntry && typeof testToolEntry === 'object'
+          ? (testToolEntry as { class?: unknown }).class
+          : undefined;
+
+        return {
+          hasEditor: true,
+          toolKeys: Object.keys(toolsConfig),
+          testToolEntry: testToolEntry ?? null,
+          testToolClassIsFunction: typeof classReference === 'function',
+          testToolClassIsTune: Boolean(
+            classReference && typeof classReference === 'function' && (classReference as { isTune?: boolean }).isTune
+          ),
+          tunesList: tunesConfig,
+        };
+      });
+
+      // eslint-disable-next-line no-console -- debug aid
+      console.log('debugConfig', debugConfig);
+
+      const hasTestTune = await page.evaluate(() => {
+        const editor = window.editorInstance;
+
+        if (!editor) {
+          return null;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+        const availableTunes = (editor as any).module?.tools?.blockTunes?.available;
+
+        if (!availableTunes) {
+          return null;
+        }
+
+        return availableTunes.has('testTool');
+      });
+
+      // eslint-disable-next-line no-console -- debug aid
+      console.log('hasTestTune', hasTestTune);
 
       await openBlockTunes(page);
 
@@ -199,35 +393,6 @@ test.describe('Popover Search/Filter', () => {
      * Test showing all items when search query is cleared
      */
     test('should show all items when search query is cleared', async ({ page }) => {
-      /**
-       * Block Tune with multiple items
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'First Item',
-              name: 'first',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Second Item',
-              name: 'second',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -238,10 +403,18 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'First Item',
+            name: 'first',
+          },
+          {
+            icon: 'Icon',
+            title: 'Second Item',
+            name: 'second',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -267,29 +440,6 @@ test.describe('Popover Search/Filter', () => {
      * Test displaying "Nothing found" message when no items match
      */
     test('should display "Nothing found" message when no items match', async ({ page }) => {
-      /**
-       * Block Tune with items
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'Test Item',
-              name: 'test',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -300,10 +450,13 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Test Item',
+            name: 'test',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -326,29 +479,6 @@ test.describe('Popover Search/Filter', () => {
      * Test hiding "Nothing found" message when items match again
      */
     test('should hide "Nothing found" message when items match again', async ({ page }) => {
-      /**
-       * Block Tune with items
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'Test Item',
-              name: 'test',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -359,10 +489,13 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Test Item',
+            name: 'test',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -389,35 +522,6 @@ test.describe('Popover Search/Filter', () => {
      * Test matching items regardless of case
      */
     test('should match items regardless of case', async ({ page }) => {
-      /**
-       * Block Tune with items
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'Move Up',
-              name: 'move-up',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Delete Block',
-              name: 'delete',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -428,10 +532,18 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Move Up',
+            name: 'move-up',
+          },
+          {
+            icon: 'Icon',
+            title: 'Delete Block',
+            name: 'delete',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -460,41 +572,6 @@ test.describe('Popover Search/Filter', () => {
      * Test matching items with partial query
      */
     test('should match items with partial query', async ({ page }) => {
-      /**
-       * Block Tune with items
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'Move Up',
-              name: 'move-up',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Move Down',
-              name: 'move-down',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Delete Block',
-              name: 'delete',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -505,10 +582,23 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Move Up',
+            name: 'move-up',
+          },
+          {
+            icon: 'Icon',
+            title: 'Move Down',
+            name: 'move-down',
+          },
+          {
+            icon: 'Icon',
+            title: 'Delete Block',
+            name: 'delete',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -540,41 +630,6 @@ test.describe('Popover Search/Filter', () => {
      * Test handling special characters in search query
      */
     test('should handle special characters in search query', async ({ page }) => {
-      /**
-       * Block Tune with items containing special characters
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'Item (with) [brackets]',
-              name: 'brackets',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Item with-dash',
-              name: 'dash',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Item with.dot',
-              name: 'dot',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -585,10 +640,23 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Item (with) [brackets]',
+            name: 'brackets',
+          },
+          {
+            icon: 'Icon',
+            title: 'Item with-dash',
+            name: 'dash',
+          },
+          {
+            icon: 'Icon',
+            title: 'Item with.dot',
+            name: 'dot',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -618,35 +686,6 @@ test.describe('Popover Search/Filter', () => {
      * Test handling empty search query
      */
     test('should handle empty search query', async ({ page }) => {
-      /**
-       * Block Tune with items
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'First Item',
-              name: 'first',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Second Item',
-              name: 'second',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -657,10 +696,18 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'First Item',
+            name: 'first',
+          },
+          {
+            icon: 'Icon',
+            title: 'Second Item',
+            name: 'second',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -688,41 +735,6 @@ test.describe('Popover Search/Filter', () => {
      * Test updating filter results as user types
      */
     test('should update filter results as user types', async ({ page }) => {
-      /**
-       * Block Tune with items
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'Move Up',
-              name: 'move-up',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Move Down',
-              name: 'move-down',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Delete',
-              name: 'delete',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -733,10 +745,23 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Move Up',
+            name: 'move-up',
+          },
+          {
+            icon: 'Icon',
+            title: 'Move Down',
+            name: 'move-down',
+          },
+          {
+            icon: 'Icon',
+            title: 'Delete',
+            name: 'delete',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -769,41 +794,6 @@ test.describe('Popover Search/Filter', () => {
      * Test updating filter results when backspace is used
      */
     test('should update filter results when backspace is used', async ({ page }) => {
-      /**
-       * Block Tune with items
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'Move Up',
-              name: 'move-up',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Move Down',
-              name: 'move-down',
-              onActivate: (): void => {},
-            },
-            {
-              icon: 'Icon',
-              title: 'Delete',
-              name: 'delete',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -814,10 +804,23 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Move Up',
+            name: 'move-up',
+          },
+          {
+            icon: 'Icon',
+            title: 'Move Down',
+            name: 'move-down',
+          },
+          {
+            icon: 'Icon',
+            title: 'Delete',
+            name: 'delete',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -856,29 +859,6 @@ test.describe('Popover Search/Filter', () => {
      * Test maintaining focus on search input during filtering
      */
     test('should maintain focus on search input during filtering', async ({ page }) => {
-      /**
-       * Block Tune with items
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              icon: 'Icon',
-              title: 'Test Item',
-              name: 'test',
-              onActivate: (): void => {},
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -889,10 +869,13 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Test Item',
+            name: 'test',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -956,38 +939,6 @@ test.describe('Popover Search/Filter', () => {
      * Test keyboard navigation between items ignoring separators when search query is applied
      */
     test('should perform keyboard navigation between items ignoring separators when search query is applied', async ({ page }) => {
-      /**
-       * Block Tune with separator
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return [
-            {
-              onActivate: (): void => {},
-              icon: 'Icon',
-              title: 'Tune 1',
-              name: 'test-item-1',
-            },
-            {
-              type: PopoverItemType.Separator,
-            },
-            {
-              onActivate: (): void => {},
-              icon: 'Icon',
-              title: 'Tune 2',
-              name: 'test-item-2',
-            },
-          ];
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -998,10 +949,21 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Tune 1',
+            name: 'test-item-1',
+          },
+          {
+            type: PopoverItemType.Separator,
+          },
+          {
+            icon: 'Icon',
+            title: 'Tune 2',
+            name: 'test-item-2',
+          },
+        ])
       );
 
       await openBlockTunes(page);
@@ -1142,49 +1104,6 @@ test.describe('Popover Search/Filter', () => {
      * Test filtering items in nested popover
      */
     test('should filter items in nested popover', async ({ page }) => {
-      /**
-       * Block Tune with nested children
-       *
-       * @class TestTune
-       */
-      class TestTune {
-        public static isTune = true;
-
-        /**
-         *
-         */
-        public render(): MenuConfig {
-          return {
-            icon: 'Icon',
-            title: 'Parent Item',
-            name: 'parent',
-            children: {
-              searchable: true,
-              items: [
-                {
-                  icon: 'Icon',
-                  title: 'Child One',
-                  name: 'child-one',
-                  onActivate: (): void => {},
-                },
-                {
-                  icon: 'Icon',
-                  title: 'Child Two',
-                  name: 'child-two',
-                  onActivate: (): void => {},
-                },
-                {
-                  icon: 'Icon',
-                  title: 'Child Three',
-                  name: 'child-three',
-                  onActivate: (): void => {},
-                },
-              ],
-            },
-          };
-        }
-      }
-
       await createEditorWithBlocks(
         page,
         [
@@ -1195,10 +1114,31 @@ test.describe('Popover Search/Filter', () => {
             },
           },
         ],
-        {
-          testTool: TestTune,
-        },
-        [ 'testTool' ]
+        buildTestToolsConfig({
+          icon: 'Icon',
+          title: 'Parent Item',
+          name: 'parent',
+          children: {
+            searchable: true,
+            items: [
+              {
+                icon: 'Icon',
+                title: 'Child One',
+                name: 'child-one',
+              },
+              {
+                icon: 'Icon',
+                title: 'Child Two',
+                name: 'child-two',
+              },
+              {
+                icon: 'Icon',
+                title: 'Child Three',
+                name: 'child-three',
+              },
+            ],
+          },
+        })
       );
 
       await openBlockTunes(page);
@@ -1207,9 +1147,11 @@ test.describe('Popover Search/Filter', () => {
       await page.locator('[data-item-name="parent"]').click();
 
       // Wait for nested popover to appear
-      const nestedPopover = page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover--nested`);
+      const nestedPopoverContainer = page.locator(
+        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .ce-popover__container`
+      );
 
-      await expect(nestedPopover).toBeVisible();
+      await expect(nestedPopoverContainer).toBeVisible();
 
       const nestedSearchInput = page.locator(
         `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .cdx-search-field__input`

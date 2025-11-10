@@ -2,6 +2,7 @@ import Header from '@editorjs/header';
 import Code from '@editorjs/code';
 import ToolMock from '../fixtures/tools/ToolMock';
 import Delimiter from '@editorjs/delimiter';
+import { EDITOR_SELECTOR } from '../support/constants';
 import { BlockAddedMutationType } from '../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../types/events/block/BlockChanged';
 import { BlockRemovedMutationType } from '../../../types/events/block/BlockRemoved';
@@ -81,7 +82,7 @@ describe('onChange callback', () => {
       },
     ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click()
       .type('change')
@@ -113,7 +114,7 @@ describe('onChange callback', () => {
       },
     ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click()
       .type('first change')
@@ -136,7 +137,7 @@ describe('onChange callback', () => {
   it('should be fired with correct index on block insertion above the current (by pressing Enter at the start)', () => {
     createEditor();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click()
       .type('{enter}');
@@ -160,7 +161,7 @@ describe('onChange callback', () => {
       },
     } ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click()
       .type('{enter}');
@@ -179,7 +180,7 @@ describe('onChange callback', () => {
       },
     } ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click()
       .type('{enter}');
@@ -195,7 +196,7 @@ describe('onChange callback', () => {
   it('should be fired on typing into block', () => {
     createEditor();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click()
       .type('some text');
@@ -211,15 +212,15 @@ describe('onChange callback', () => {
   it('should be fired on block insertion with save inside onChange', () => {
     createEditorWithSave();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-toolbar__plus')
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('.ce-popover-item[data-item-name=delimiter]')
       .click();
 
@@ -257,15 +258,15 @@ describe('onChange callback', () => {
   it('should be fired on block replacement for both of blocks', () => {
     createEditor();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-toolbar__plus')
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('.ce-popover-item[data-item-name=header]')
       .click();
 
@@ -301,15 +302,15 @@ describe('onChange callback', () => {
       },
     ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('span.ce-toolbar__settings-btn')
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('.ce-settings .ce-popover-item:nth-child(4)')
       .click();
 
@@ -334,20 +335,20 @@ describe('onChange callback', () => {
       },
     ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('span.ce-toolbar__settings-btn')
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('[data-item-name=delete]')
       .click();
 
     /** Second click for confirmation */
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('[data-item-name=delete]')
       .click();
 
@@ -389,16 +390,16 @@ describe('onChange callback', () => {
       },
     ]);
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .last()
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('span.ce-toolbar__settings-btn')
       .click();
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('[data-item-name=move-up]')
       .click();
 
@@ -419,7 +420,7 @@ describe('onChange callback', () => {
       },
     } ]);
 
-    cy.get('[data-cy=editorjs')
+    cy.get(EDITOR_SELECTOR)
       .get('textarea')
       .type('Some input to the textarea');
 
@@ -439,21 +440,21 @@ describe('onChange callback', () => {
       },
     } ]);
 
-    cy.get('[data-cy=editorjs')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click();
 
     /**
      * Open Block Tunes, add fake cursor
      */
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('span.ce-toolbar__settings-btn')
       .click();
 
     /**
      * Close Block Tunes, remove fake cursor
      */
-    cy.get('[data-cy=editorjs')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click();
 
@@ -470,7 +471,7 @@ describe('onChange callback', () => {
       },
     } ]);
 
-    cy.get('[data-cy=editorjs')
+    cy.get(EDITOR_SELECTOR)
       .get('div.ce-block')
       .click()
       .type('{backspace}');
@@ -672,7 +673,7 @@ describe('onChange callback', () => {
     /**
      * Emulate tool's child-element text typing
      */
-    cy.get('[data-cy=editorjs')
+    cy.get(EDITOR_SELECTOR)
       .get('[data-cy=tool-child]')
       .click()
       .type('some text');

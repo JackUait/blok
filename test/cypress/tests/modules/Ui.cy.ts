@@ -1,5 +1,6 @@
 import { createEditorWithTextBlocks } from '../../support/utils/createEditorWithTextBlocks';
 import type EditorJS from '../../../../types/index';
+import { EDITOR_SELECTOR } from '../../support/constants';
 
 describe('Ui module', () => {
   describe('documentKeydown', () => {
@@ -29,7 +30,7 @@ describe('Ui module', () => {
         /**
          * Select two blocks by shift+down
          */
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .find('.ce-paragraph')
           .first()
           .click()
@@ -75,7 +76,7 @@ describe('Ui module', () => {
         /**
          * Select two blocks by shift+down
          */
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .find('.ce-paragraph')
           .first()
           .click()
@@ -104,7 +105,7 @@ describe('Ui module', () => {
       ])
         .as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .eq(1)
         .click();
@@ -127,7 +128,7 @@ describe('Ui module', () => {
       })
         .as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .eq(1)
         .click();

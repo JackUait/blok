@@ -24,7 +24,6 @@ Cypress.Commands.add('createEditor', (editorConfig: EditorConfig = {}): Chainabl
         const editorContainer = window.document.createElement('div');
 
         editorContainer.setAttribute('id', 'editorjs');
-        editorContainer.dataset.cy = 'editorjs';
         editorContainer.style.border = '1px dotted #388AE5';
 
         window.document.body.appendChild(editorContainer);
@@ -136,7 +135,7 @@ Cypress.Commands.add('render', { prevSubject: true }, (subject: EditorJS, data: 
  * Note. Previous subject should have 'textNode' as firstChild
  *
  * Usage
- * cy.get('[data-cy=editorjs]')
+ * cy.get('[data-interface=editorjs]')
  * .find('.ce-paragraph')
  * .selectText('block te')
  *
@@ -165,7 +164,7 @@ Cypress.Commands.add('selectText', {
  * Note. Previous subject should have 'textNode' as firstChild
  *
  * Usage
- * cy.get('[data-cy=editorjs]')
+ * cy.get('[data-interface=editorjs]')
  * .find('.ce-paragraph')
  * .selectTextByOffset([0, 5])
  *
@@ -193,7 +192,7 @@ Cypress.Commands.add('selectTextByOffset', {
  * Returns line wrap positions for passed element
  *
  * Usage
- * cy.get('[data-cy=editorjs]')
+ * cy.get('[data-interface=editorjs]')
  * .find('.ce-paragraph')
  * .getLineWrapPositions()
  *

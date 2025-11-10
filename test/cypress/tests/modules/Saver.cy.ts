@@ -1,5 +1,6 @@
 import type EditorJS from '../../../../types/index';
 import Header from '@editorjs/header';
+import { EDITOR_SELECTOR } from '../../support/constants';
 
 describe('Saver module', () => {
   describe('save()', () => {
@@ -21,7 +22,7 @@ describe('Saver module', () => {
          */
         const extensionNode = document.createElement('extension-node');
 
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .find('.ce-block__content')
           .then((blockContent) => {
             blockContent.append(extensionNode);
@@ -57,18 +58,18 @@ describe('Saver module', () => {
       })
         .as('editorInstance');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('div.ce-block')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('span.ce-toolbar__settings-btn')
         .click();
 
       /**
        * Change header level
        */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-settings .ce-popover-item:nth-child(3)')
         .click();
 

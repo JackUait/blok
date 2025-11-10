@@ -18,6 +18,11 @@ installLogsCollector();
 import './commands';
 
 /**
+ * Test constants
+ */
+export { EDITOR_SELECTOR } from './constants';
+
+/**
  * File with custom assertions
  */
 import './e2e';

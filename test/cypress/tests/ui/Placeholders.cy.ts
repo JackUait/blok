@@ -1,3 +1,5 @@
+import { EDITOR_SELECTOR } from '../../support/constants';
+
 /**
  * Text will be passed as a placeholder to the editor
  */
@@ -17,7 +19,7 @@ describe('Placeholders', () => {
       placeholder: PLACEHOLDER_TEXT,
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .getPseudoElementContent('::before')
       .should('eq', PLACEHOLDER_TEXT);
@@ -29,7 +31,7 @@ describe('Placeholders', () => {
       autofocus: true,
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .getPseudoElementContent('::before')
       .should('eq', PLACEHOLDER_TEXT);
@@ -40,7 +42,7 @@ describe('Placeholders', () => {
       placeholder: PLACEHOLDER_TEXT,
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .click()
       .as('firstBlock')
@@ -53,7 +55,7 @@ describe('Placeholders', () => {
       placeholder: PLACEHOLDER_TEXT,
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .type('aaa')
       .type('{selectall}{backspace}')
@@ -66,7 +68,7 @@ describe('Placeholders', () => {
       placeholder: PLACEHOLDER_TEXT,
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .as('firstBlock')
       .getPseudoElementContent('::before')
@@ -83,7 +85,7 @@ describe('Placeholders', () => {
       placeholder: PLACEHOLDER_TEXT,
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .as('firstBlock')
       .getPseudoElementContent('::before')

@@ -1,6 +1,7 @@
 import Header from '@editorjs/header';
 import type { InlineTool, InlineToolConstructorOptions, MenuConfig, ToolConstructable } from '../../../../types/tools';
 import { createEditorWithTextBlocks } from '../../support/utils/createEditorWithTextBlocks';
+import { EDITOR_SELECTOR } from '../../support/constants';
 
 describe('Inline Toolbar', () => {
   describe('Separators', () => {
@@ -24,18 +25,18 @@ describe('Inline Toolbar', () => {
       });
 
       /** Open Inline Toolbar */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .selectText('block');
 
       /** Check that first item (which is convert-to and has children) has a separator after it */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-cy=inline-toolbar] .ce-popover__items')
         .children()
         .first()
         .should('have.attr', 'data-item-name', 'convert-to');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-cy=inline-toolbar] .ce-popover__items')
         .children()
         .eq(1)
@@ -91,24 +92,24 @@ describe('Inline Toolbar', () => {
       });
 
       /** Open Inline Toolbar */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-header')
         .selectText('block');
 
       /** Check that item with children is surrounded by separators */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-cy=inline-toolbar] .ce-popover__items')
         .children()
         .eq(3)
         .should('have.class', 'ce-popover-item-separator');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-cy=inline-toolbar] .ce-popover__items')
         .children()
         .eq(4)
         .should('have.attr', 'data-item-name', 'test-tool');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-cy=inline-toolbar] .ce-popover__items')
         .children()
         .eq(5)
@@ -164,18 +165,18 @@ describe('Inline Toolbar', () => {
       });
 
       /** Open Inline Toolbar */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-header')
         .selectText('block');
 
       /** Check that item with children is surrounded by separators */
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-cy=inline-toolbar] .ce-popover__items')
         .children()
         .eq(3)
         .should('have.class', 'ce-popover-item-separator');
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('[data-cy=inline-toolbar] .ce-popover__items')
         .children()
         .eq(4)
@@ -213,7 +214,7 @@ describe('Inline Toolbar', () => {
         readOnly: true,
       });
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .selectText('text');
 

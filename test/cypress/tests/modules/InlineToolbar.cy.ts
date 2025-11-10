@@ -1,6 +1,7 @@
 import Header from '@editorjs/header';
 import NestedEditor, { NESTED_EDITOR_ID } from '../../support/utils/nestedEditorInstance';
 import type { MenuConfig, ToolConstructable } from '@/types/tools';
+import { EDITOR_SELECTOR } from '../../support/constants';
 
 describe('Inline Toolbar', () => {
   it('should appear aligned with left coord of selection rect', () => {
@@ -17,7 +18,7 @@ describe('Inline Toolbar', () => {
       },
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .selectText('block');
 
@@ -57,7 +58,7 @@ describe('Inline Toolbar', () => {
       },
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .as('blockWrapper')
       .getLineWrapPositions()
@@ -67,7 +68,7 @@ describe('Inline Toolbar', () => {
         /**
          * Select last 5 chars of the first line
          */
-        cy.get('[data-cy=editorjs]')
+        cy.get(EDITOR_SELECTOR)
           .find('.ce-paragraph')
           .selectTextByOffset([firstLineWrapIndex - 5, firstLineWrapIndex - 1]);
       });
@@ -135,11 +136,11 @@ describe('Inline Toolbar', () => {
     });
 
     /** Open Inline Toolbar */
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-header')
       .selectText('block');
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .get('[data-cy=inline-toolbar]')
       .get('.ce-popover--opened')
       .as('toolbar')
@@ -182,7 +183,7 @@ describe('Inline Toolbar', () => {
 
       form.appendChild(editorElement);
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .selectText('Some text');
 
@@ -213,19 +214,19 @@ describe('Inline Toolbar', () => {
         },
       });
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-paragraph')
         .selectText('Some text');
 
       cy.get('[data-item-name=convert-to]')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .get('.ce-inline-toolbar')
         .find('.ce-popover-item[data-item-name=header]')
         .click();
 
-      cy.get('[data-cy=editorjs]')
+      cy.get(EDITOR_SELECTOR)
         .find('.ce-header')
         .should('have.text', 'Some text');
 
@@ -241,7 +242,7 @@ describe('Inline Toolbar', () => {
             throw new Error('No range available');
           }
 
-          cy.get('[data-cy=editorjs]')
+          cy.get(EDITOR_SELECTOR)
             .find('.ce-header')
             .should(($block) => {
               expect($block[0].contains(range.startContainer)).to.be.true;

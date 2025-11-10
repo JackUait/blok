@@ -1,3 +1,5 @@
+import { EDITOR_SELECTOR } from '../../../support/constants';
+
 describe('Enter keydown', () => {
   it('should split block and remove selected fragment if some text fragment selected', () => {
     cy.createEditor({
@@ -13,14 +15,14 @@ describe('Enter keydown', () => {
       },
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .click()
       .selectText('with so')
       .wait(0)
       .type('{enter}');
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('div.ce-block')
       .then((blocks) => {
         /**
@@ -50,12 +52,12 @@ describe('Enter keydown', () => {
       },
     });
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('.ce-paragraph')
       .click()
       .type('{enter}');
 
-    cy.get('[data-cy=editorjs]')
+    cy.get(EDITOR_SELECTOR)
       .find('div.ce-block')
       .last()
       .as('lastBlock');

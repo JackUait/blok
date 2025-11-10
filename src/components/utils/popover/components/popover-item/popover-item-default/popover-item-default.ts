@@ -6,7 +6,7 @@ import type {
   PopoverItemType
 } from '@/types/utils/popover/popover-item';
 import { PopoverItem } from '../popover-item';
-import { css } from './popover-item-default.const';
+import { css, DATA_ATTRIBUTE_ACTIVE } from './popover-item-default.const';
 
 /**
  * Represents single popover item node
@@ -111,7 +111,19 @@ export class PopoverItemDefault extends PopoverItem {
    * @param isActive - true if item should strictly should become active
    */
   public toggleActive(isActive?: boolean): void {
-    this.nodes.root?.classList.toggle(css.active, isActive);
+    if (this.nodes.root === null) {
+      return;
+    }
+
+    const shouldBeActive = isActive !== undefined ? isActive : !this.nodes.root.classList.contains(css.active);
+
+    this.nodes.root.classList.toggle(css.active, isActive);
+
+    if (shouldBeActive) {
+      this.nodes.root.setAttribute(DATA_ATTRIBUTE_ACTIVE, 'true');
+    } else {
+      this.nodes.root.removeAttribute(DATA_ATTRIBUTE_ACTIVE);
+    }
   }
 
   /**
@@ -181,6 +193,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     if (this.isActive) {
       el.classList.add(css.active);
+      el.setAttribute(DATA_ATTRIBUTE_ACTIVE, 'true');
     }
 
     if (params.isDisabled) {

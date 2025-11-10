@@ -336,12 +336,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
      * Measuring execution time
      */
     const measuringStart = window.performance.now();
-    let measuringEnd;
 
     return Promise.resolve(extractedBlock)
       .then((finishedExtraction) => {
         /** measure promise execution */
-        measuringEnd = window.performance.now();
+        const measuringEnd = window.performance.now();
 
         return {
           id: this.id,
@@ -367,13 +366,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {Promise<boolean>} valid
    */
   public async validate(data: BlockToolData): Promise<boolean> {
-    let isValid = true;
-
     if (this.toolInstance.validate instanceof Function) {
-      isValid = await this.toolInstance.validate(data);
+      return await this.toolInstance.validate(data);
     }
 
-    return isValid;
+    return true;
   }
 
   /**
@@ -770,9 +767,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {HTMLDivElement}
    */
   private compose(): HTMLDivElement {
-    const wrapper = $.make('div', Block.CSS.wrapper) as HTMLDivElement,
-        contentNode = $.make('div', Block.CSS.content),
-        pluginsContent = this.toolInstance.render();
+    const wrapper = $.make('div', Block.CSS.wrapper) as HTMLDivElement;
+    const contentNode = $.make('div', Block.CSS.content);
+    const pluginsContent = this.toolInstance.render();
 
     if (import.meta.env.MODE === 'test') {
       wrapper.setAttribute('data-cy', 'block-wrapper');
@@ -792,6 +789,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       // Handle async render: resolve the promise and update DOM when ready
       pluginsContent.then((resolvedElement) => {
         this.toolRenderedElement = resolvedElement;
+        this.addToolDataAttributes(resolvedElement);
         contentNode.appendChild(resolvedElement);
       }).catch((error) => {
         _.log(`Tool render promise rejected: %o`, 'error', error);
@@ -799,6 +797,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     } else {
       // Handle synchronous render
       this.toolRenderedElement = pluginsContent;
+      this.addToolDataAttributes(pluginsContent);
       contentNode.appendChild(pluginsContent);
     }
 
@@ -811,22 +810,37 @@ export default class Block extends EventsDispatcher<BlockEvents> {
      *   </tune1wrapper>
      * </tune2wrapper>
      */
-    let wrappedContentNode: HTMLElement = contentNode;
-
-    [...this.tunesInstances.values(), ...this.defaultTunesInstances.values()]
-      .forEach((tune) => {
+    const wrappedContentNode: HTMLElement = [...this.tunesInstances.values(), ...this.defaultTunesInstances.values()]
+      .reduce((acc, tune) => {
         if (_.isFunction(tune.wrap)) {
           try {
-            wrappedContentNode = tune.wrap(wrappedContentNode);
+            return tune.wrap(acc);
           } catch (e) {
             _.log(`Tune ${tune.constructor.name} wrap method throws an Error %o`, 'warn', e);
+
+            return acc;
           }
         }
-      });
+
+        return acc;
+      }, contentNode);
 
     wrapper.appendChild(wrappedContentNode);
 
     return wrapper;
+  }
+
+  /**
+   * Add data attributes to tool-rendered element based on tool name
+   *
+   * @param element - The tool-rendered element
+   * @private
+   */
+  private addToolDataAttributes(element: HTMLElement): void {
+    // Add data-block-tool attribute to identify the tool type used for the block
+    if (this.name === 'paragraph' && element.classList.contains('ce-paragraph')) {
+      element.setAttribute('data-block-tool', 'paragraph');
+    }
   }
 
   /**
@@ -925,13 +939,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     /**
      * We won't fire a Block mutation event if mutation contain only nodes marked with 'data-mutation-free' attributes
      */
-    let shouldFireUpdate;
+    const shouldFireUpdate = (() => {
+      if (isManuallyDispatched || isInputEventHandler) {
+        return true;
+      }
 
-    if (isManuallyDispatched) {
-      shouldFireUpdate = true;
-    } else if (isInputEventHandler) {
-      shouldFireUpdate = true;
-    } else {
       /**
        * Update from 2023, Feb 17:
        *    Changed mutationsOrInputEvent.some() to mutationsOrInputEvent.every()
@@ -948,24 +960,20 @@ export default class Block extends EventsDispatcher<BlockEvents> {
         ];
 
         return changedNodes.some((node) => {
-          if (!$.isElement(node)) {
-            /**
-             * "characterData" mutation record has Text node as a target, so we need to get parent element to check it for mutation-free attribute
-             */
-            const parentElement = node.parentElement;
+          const elementToCheck: Element | null = !$.isElement(node)
+            ? node.parentElement ?? null
+            : node;
 
-            if (!parentElement) {
-              return false;
-            }
-            node = parentElement;
+          if (elementToCheck === null) {
+            return false;
           }
 
-          return (node as HTMLElement).closest('[data-mutation-free="true"]') !== null;
+          return elementToCheck.closest('[data-mutation-free="true"]') !== null;
         });
       });
 
-      shouldFireUpdate = !everyRecordIsMutationFree;
-    }
+      return !everyRecordIsMutationFree;
+    })();
 
     /**
      * In case some mutation free elements are added or removed, do not trigger didMutated event

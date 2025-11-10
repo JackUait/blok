@@ -13,13 +13,14 @@ import Chainable = Cypress.Chainable;
 /**
  * Create a wrapper and initialize the new instance of editor.js
  * Then return the instance
+ *
  * @param editorConfig - config to pass to the editor
  * @returns EditorJS - created instance
  */
 Cypress.Commands.add('createEditor', (editorConfig: EditorConfig = {}): Chainable<EditorJS> => {
   return cy.window()
     .then((window) => {
-      return new Promise((resolve: (instance: EditorJS) => void) => {
+      return new Promise((resolve: (instance: EditorJS) => void, reject: (error: unknown) => void) => {
         const editorContainer = window.document.createElement('div');
 
         editorContainer.setAttribute('id', 'editorjs');
@@ -32,6 +33,8 @@ Cypress.Commands.add('createEditor', (editorConfig: EditorConfig = {}): Chainabl
 
         editorInstance.isReady.then(() => {
           resolve(editorInstance);
+        }).catch((error) => {
+          reject(error);
         });
       });
     });
@@ -42,6 +45,7 @@ Cypress.Commands.add('createEditor', (editorConfig: EditorConfig = {}): Chainabl
  *
  * Usage
  * cy.get('div').paste({'text/plain': 'Text', 'text/html': '<b>Text</b>'})
+ *
  * @param data - map with MIME type as a key and data as value
  */
 Cypress.Commands.add('paste', {
@@ -69,7 +73,7 @@ Cypress.Commands.add('paste', {
  * cy.get('div').copy().then(data => {})
  */
 Cypress.Commands.add('copy', {
-  prevSubject: ['element'],
+  prevSubject: [ 'element' ],
 }, (subject) => {
   const clipboardData: {[type: string]: any} = {};
 
@@ -95,7 +99,7 @@ Cypress.Commands.add('copy', {
  * Usage:
  * cy.get('div').cut().then(data => {})
  */
-Cypress.Commands.add('cut', { prevSubject: ['element'] }, (subject) => {
+Cypress.Commands.add('cut', { prevSubject: [ 'element' ] }, (subject) => {
   const clipboardData: {[type: string]: any} = {};
 
   const copyEvent = Object.assign(new Event('cut', {
@@ -116,6 +120,7 @@ Cypress.Commands.add('cut', { prevSubject: ['element'] }, (subject) => {
 
 /**
  * Calls EditorJS API render method
+ *
  * @param data — data to render
  */
 Cypress.Commands.add('render', { prevSubject: true }, (subject: EditorJS, data: OutputData) => {
@@ -134,6 +139,7 @@ Cypress.Commands.add('render', { prevSubject: true }, (subject: EditorJS, data: 
  * cy.get('[data-cy=editorjs]')
  * .find('.ce-paragraph')
  * .selectText('block te')
+ *
  * @param text - text to select
  */
 Cypress.Commands.add('selectText', {
@@ -162,6 +168,7 @@ Cypress.Commands.add('selectText', {
  * cy.get('[data-cy=editorjs]')
  * .find('.ce-paragraph')
  * .selectTextByOffset([0, 5])
+ *
  * @param offset - offset to select
  */
 Cypress.Commands.add('selectTextByOffset', {
@@ -189,6 +196,7 @@ Cypress.Commands.add('selectTextByOffset', {
  * cy.get('[data-cy=editorjs]')
  * .find('.ce-paragraph')
  * .getLineWrapPositions()
+ *
  * @returns number[] - array of line wrap positions
  */
 Cypress.Commands.add('getLineWrapPositions', {
@@ -245,6 +253,7 @@ Cypress.Commands.add('keydown', {
    * so real-world and Cypress behaviour were different.
    *
    * To make it work we need to trigger Cypress event with "eventConstructor: 'KeyboardEvent'",
+   *
    * @see https://github.com/cypress-io/cypress/issues/5650
    * @see https://github.com/cypress-io/cypress/pull/8305/files
    */
@@ -259,12 +268,14 @@ Cypress.Commands.add('keydown', {
 
 /**
  * Extract content of pseudo element
+ *
  * @example cy.get('element').getPseudoElementContent('::before').should('eq', 'my-test-string')
  */
 Cypress.Commands.add('getPseudoElementContent', {
-  prevSubject: ['element'],
+  prevSubject: [ 'element' ],
 }, (subject, pseudoElement: string) => {
   const win = subject[0].ownerDocument.defaultView;
+
   if (!win) {
     throw new Error('defaultView is null');
   }

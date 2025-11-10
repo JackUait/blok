@@ -4,13 +4,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
+import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../cypress/fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = '.ce-paragraph';
+const PARAGRAPH_SELECTOR = '[data-block-tool="paragraph"]';
 const INLINE_TOOLBAR_SELECTOR = '[data-interface=inline-toolbar]';
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-item-name="link"] button`;
 const LINK_INPUT_SELECTOR = `input[data-link-tool-input-opened]`;
@@ -152,6 +153,10 @@ const submitLink = async (page: Page, url: string): Promise<void> => {
 };
 
 test.describe('Inline Tool Link', () => {
+  test.beforeAll(() => {
+    ensureEditorBundleBuilt();
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
     await page.waitForFunction(() => typeof window.EditorJS === 'function');

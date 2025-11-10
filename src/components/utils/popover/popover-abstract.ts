@@ -117,6 +117,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public show(): void {
     this.nodes.popover.classList.add(css.popoverOpened);
+    this.nodes.popover.setAttribute('data-popover-opened', 'true');
 
     if (this.search !== undefined) {
       this.search.focus();
@@ -129,6 +130,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   public hide(): void {
     this.nodes.popover.classList.remove(css.popoverOpened);
     this.nodes.popover.classList.remove(css.popoverOpenTop);
+    this.nodes.popover.removeAttribute('data-popover-opened');
 
     this.itemsDefault.forEach(item => item.reset());
 
@@ -156,6 +158,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public activateItemByName(name: string): void {
     const foundItem = this.items.find(item => item.name === name);
+
+    if (foundItem === undefined) {
+      return;
+    }
 
     this.handleItemClick(foundItem);
   }
@@ -203,7 +209,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * @param item - item to handle click of
    */
   protected handleItemClick(item: PopoverItem): void {
-    if ('isDisabled' in item && item.isDisabled) {
+    if (item instanceof PopoverItemDefault && item.isDisabled) {
       return;
     }
 
@@ -226,7 +232,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     this.toggleItemActivenessIfNeeded(item);
 
-    if (item.closeOnActivate) {
+    if (item.closeOnActivate === true) {
       this.hide();
 
       this.emit(PopoverEvent.ClosedOnActivate);

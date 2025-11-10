@@ -4,6 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
+import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../cypress/fixtures/test.html')
@@ -11,7 +12,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const EDITOR_SELECTOR = '[data-cy=editorjs]';
-const PARAGRAPH_SELECTOR = `${EDITOR_SELECTOR} .ce-paragraph`;
+const PARAGRAPH_SELECTOR = `${EDITOR_SELECTOR} [data-block-tool="paragraph"]`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_SELECTOR} [data-cy=inline-toolbar]`;
 
 /**
@@ -102,6 +103,10 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
 };
 
 test.describe('Inline Tool Bold', () => {
+  test.beforeAll(() => {
+    ensureEditorBundleBuilt();
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
@@ -153,8 +158,8 @@ test.describe('Inline Tool Bold', () => {
       doc.dispatchEvent(new Event('selectionchange'));
     });
 
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} .ce-popover--opened`)).toHaveCount(1);
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`)).toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-popover-opened="true"]`)).toHaveCount(1);
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`)).toHaveAttribute('data-popover-item-active', 'true');
   });
 
   test('detects bold state within a single word', async ({ page }) => {
@@ -171,7 +176,7 @@ test.describe('Inline Tool Bold', () => {
 
     await selectText(paragraph, 'bold');
 
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`)).toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`)).toHaveAttribute('data-popover-item-active', 'true');
   });
 
   test('does not detect bold state in normal text', async ({ page }) => {
@@ -188,7 +193,7 @@ test.describe('Inline Tool Bold', () => {
 
     await selectText(paragraph, 'normal');
 
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`)).not.toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`)).not.toHaveAttribute('data-popover-item-active', 'true');
   });
 
   test('toggles bold across multiple bold elements', async ({ page }) => {
@@ -238,25 +243,22 @@ test.describe('Inline Tool Bold', () => {
       doc.dispatchEvent(new Event('selectionchange'));
     });
 
-    // Click bold button to toggle (should unwrap and then wrap together)
-    await page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`).click();
+    const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`);
 
-    // Wait for the text to be wrapped in a single <strong> tag
-    await page.waitForFunction(
-      ({ selector }) => {
-        const element = document.querySelector(selector);
+    // Verify bold button is active (since all text is visually bold)
+    await expect(boldButton).toHaveAttribute('data-popover-item-active', 'true');
 
-        return element && /<strong>first second<\/strong>/.test(element.innerHTML);
-      },
-      {
-        selector: PARAGRAPH_SELECTOR,
-      }
-    );
+    // Click bold button - should remove bold on first click (since selection is visually bold)
+    await boldButton.click();
 
-    // Verify that the text is now wrapped in a single <strong> tag
+    // Wait for the toolbar state to update (bold button should no longer be active)
+    await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
+
+    // Verify that bold has been removed
     const html = await paragraph.innerHTML();
 
-    expect(html).toMatch(/<strong>first second<\/strong>/);
+    expect(html).toBe('first second');
+    expect(html).not.toMatch(/<strong>/);
   });
 
   test('makes mixed selection (bold and normal text) bold', async ({ page }) => {
@@ -344,11 +346,11 @@ test.describe('Inline Tool Bold', () => {
 
     const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`);
 
-    await expect(boldButton).toHaveClass(/ce-popover-item--active/);
+    await expect(boldButton).toHaveAttribute('data-popover-item-active', 'true');
 
     await boldButton.click();
 
-    await expect(boldButton).not.toHaveClass(/ce-popover-item--active/);
+    await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
 
     const html = await paragraph.innerHTML();
 
@@ -376,7 +378,7 @@ test.describe('Inline Tool Bold', () => {
 
     await page.keyboard.press(`${modifierKey}+b`);
 
-    await expect(boldButton).toHaveClass(/ce-popover-item--active/);
+    await expect(boldButton).toHaveAttribute('data-popover-item-active', 'true');
 
     let html = await paragraph.innerHTML();
 
@@ -384,7 +386,7 @@ test.describe('Inline Tool Bold', () => {
 
     await page.keyboard.press(`${modifierKey}+b`);
 
-    await expect(boldButton).not.toHaveClass(/ce-popover-item--active/);
+    await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
 
     html = await paragraph.innerHTML();
 
@@ -462,7 +464,7 @@ test.describe('Inline Tool Bold', () => {
     expect(paragraphBlock?.data.text).toMatch(/<strong>bold<\/strong> text/);
   });
 
-  test('removes bold from selected word while keeping the rest bold', async ({ page }) => {
+  test('removes bold from selection within bold text', async ({ page }) => {
     // Step 1: Create editor with "Some text"
     await createEditorWithBlocks(page, [
       {
@@ -503,13 +505,13 @@ test.describe('Inline Tool Bold', () => {
     await selectText(paragraph, 'Some');
 
     // Verify bold button is active (since "Some" is bold)
-    await expect(boldButton).toHaveClass(/ce-popover-item--active/);
+    await expect(boldButton).toHaveAttribute('data-popover-item-active', 'true');
 
     // Click to remove bold from "Some"
     await boldButton.click();
 
     // Wait for the toolbar state to update (bold button should no longer be active for "Some")
-    await expect(boldButton).not.toHaveClass(/ce-popover-item--active/);
+    await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
 
     // Step 4: Verify that "text" is still bold while "Some" is not
     html = await paragraph.innerHTML();
@@ -518,6 +520,90 @@ test.describe('Inline Tool Bold', () => {
     expect(html).toMatch(/<strong>\s*text<\/strong>/);
     // "Some" should not be wrapped in bold tags
     expect(html).not.toMatch(/<strong>Some<\/strong>/);
+  });
+
+  test('removes bold from separately bolded words', async ({ page }) => {
+    // Step 1: Start with normal text "some text"
+    await createEditorWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'some text',
+        },
+      },
+    ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`);
+
+    // Step 2: Make "some" bold
+    await selectText(paragraph, 'some');
+    await boldButton.click();
+
+    // Verify "some" is now bold
+    let html = await paragraph.innerHTML();
+
+    expect(html).toMatch(/<strong>some<\/strong> text/);
+
+    // Step 3: Make "text" bold (now we have <strong>some</strong> <strong>text</strong>)
+    await selectText(paragraph, 'text');
+    await boldButton.click();
+
+    // Verify both words are now bold with space between them
+    html = await paragraph.innerHTML();
+
+    expect(html).toMatch(/<strong>some<\/strong> <strong>text<\/strong>/);
+
+    // Step 4: Select the whole phrase including the space
+    await paragraph.evaluate((el) => {
+      const paragraphEl = el as HTMLElement;
+      const doc = paragraphEl.ownerDocument;
+      const range = doc.createRange();
+      const selection = doc.getSelection();
+
+      if (!selection) {
+        throw new Error('Selection not available');
+      }
+
+      const bolds = paragraphEl.querySelectorAll('strong');
+      const firstBold = bolds[0];
+      const secondBold = bolds[1];
+
+      if (!firstBold || !secondBold) {
+        throw new Error('Bold elements not found');
+      }
+
+      const firstBoldText = firstBold.firstChild;
+      const secondBoldText = secondBold.firstChild;
+
+      if (!firstBoldText || !secondBoldText) {
+        throw new Error('Text nodes not found');
+      }
+
+      // Select from start of first bold to end of second bold (including the space)
+      range.setStart(firstBoldText, 0);
+      range.setEnd(secondBoldText, secondBoldText.textContent?.length ?? 0);
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      doc.dispatchEvent(new Event('selectionchange'));
+    });
+
+    // Step 5: Verify the editor indicates the selection is bold (button is active)
+    await expect(boldButton).toHaveAttribute('data-popover-item-active', 'true');
+
+    // Step 6: Click bold button - should remove bold on first click (not wrap again)
+    await boldButton.click();
+
+    // Verify bold button is no longer active
+    await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
+
+    // Verify that bold has been removed from both words on first click
+    html = await paragraph.innerHTML();
+
+    expect(html).toBe('some text');
+    expect(html).not.toMatch(/<strong>/);
   });
 });
 

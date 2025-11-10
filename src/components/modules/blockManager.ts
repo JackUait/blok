@@ -9,7 +9,7 @@ import Module from '../__module';
 import $ from '../dom';
 import * as _ from '../utils';
 import Blocks from '../blocks';
-import type { BlockToolData, PasteEvent } from '../../../types';
+import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import BlockAPI from '../block/api';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../types/events/block';
@@ -18,7 +18,7 @@ import { BlockAddedMutationType } from '../../../types/events/block/BlockAdded';
 import { BlockMovedMutationType } from '../../../types/events/block/BlockMoved';
 import { BlockChangedMutationType } from '../../../types/events/block/BlockChanged';
 import { BlockChanged } from '../events';
-import { clean, sanitizeBlocks } from '../utils/sanitizer';
+import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
 import PromiseQueue from '../utils/promise-queue';
 
@@ -493,7 +493,11 @@ export default class BlockManager extends Module {
         return;
       }
 
-      const [ cleanData ] = sanitizeBlocks([ blockToMergeDataRaw ], targetBlock.tool.sanitizeConfig);
+      const [ cleanData ] = sanitizeBlocks(
+        [ blockToMergeDataRaw ],
+        targetBlock.tool.sanitizeConfig,
+        this.config.sanitizer as SanitizerConfig
+      );
 
       blockToMergeData = cleanData;
 
@@ -689,9 +693,9 @@ export default class BlockManager extends Module {
       element = element.parentNode as HTMLElement;
     }
 
-    const nodes = this._blocks.nodes,
-        firstLevelBlock = element.closest(`.${Block.CSS.wrapper}`),
-        index = nodes.indexOf(firstLevelBlock as HTMLElement);
+    const nodes = this._blocks.nodes;
+    const firstLevelBlock = element.closest(`.${Block.CSS.wrapper}`);
+    const index = nodes.indexOf(firstLevelBlock as HTMLElement);
 
     if (index >= 0) {
       return this._blocks[index];
@@ -857,7 +861,7 @@ export default class BlockManager extends Module {
      */
     const cleanData: string = clean(
       exportedData,
-      replacingTool.sanitizeConfig
+      composeSanitizerConfig(this.config.sanitizer as SanitizerConfig, replacingTool.sanitizeConfig)
     );
 
     /**

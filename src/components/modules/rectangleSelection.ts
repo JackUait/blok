@@ -480,7 +480,7 @@ export default class RectangleSelection extends Module {
   private trySelectNextBlock(index): void {
     const sameBlock = this.stackOfSelected[this.stackOfSelected.length - 1] === index;
     const sizeStack = this.stackOfSelected.length;
-    const down = 1, up = -1, undef = 0;
+    const down = 1; const up = -1; const undef = 0;
 
     if (sameBlock) {
       return;

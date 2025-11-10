@@ -234,8 +234,8 @@ export default class SelectionUtils {
    * @returns {DOMRect}
    */
   public static get rect(): DOMRect {
-    let sel: Selection | MSSelection | undefined | null = (document as Document).selection,
-        range: TextRange | Range;
+    let sel: Selection | MSSelection | undefined | null = (document as Document).selection;
+    let range: TextRange | Range;
 
     let rect = {
       x: 0,
@@ -414,6 +414,7 @@ export default class SelectionUtils {
   public removeFakeBackground(): void {
     if (!this.fakeBackgroundElements.length) {
       this.isFakeBackgroundEnabled = false;
+
       return;
     }
 

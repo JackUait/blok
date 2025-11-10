@@ -12,7 +12,7 @@ import Shortcuts from '../utils/shortcuts';
 
 import SelectionUtils from '../selection';
 import type { SanitizerConfig } from '../../../types/configs';
-import { clean } from '../utils/sanitizer';
+import { clean, composeSanitizerConfig } from '../utils/sanitizer';
 
 /**
  *
@@ -33,7 +33,7 @@ export default class BlockSelection extends Module {
    * @returns {SanitizerConfig}
    */
   private get sanitizerConfig(): SanitizerConfig {
-    return {
+    const baseConfig: SanitizerConfig = {
       p: {},
       h1: {},
       h2: {},
@@ -57,6 +57,8 @@ export default class BlockSelection extends Module {
       i: {},
       u: {},
     };
+
+    return composeSanitizerConfig(this.config.sanitizer as SanitizerConfig, baseConfig);
   }
 
   /**

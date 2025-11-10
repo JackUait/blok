@@ -6,7 +6,7 @@
  * @version 2.0.0
  */
 import Module from '../__module';
-import type { OutputData } from '../../../types';
+import type { OutputData, SanitizerConfig } from '../../../types';
 import type { SavedData, ValidatedData } from '../../../types/data-formats';
 import type Block from '../block';
 import * as _ from '../utils';
@@ -28,8 +28,8 @@ export default class Saver extends Module {
    */
   public async save(): Promise<OutputData> {
     const { BlockManager, Tools } = this.Editor;
-    const blocks = BlockManager.blocks,
-        chainData = [];
+    const blocks = BlockManager.blocks;
+    const chainData = [];
 
     try {
       blocks.forEach((block: Block) => {
@@ -37,9 +37,11 @@ export default class Saver extends Module {
       });
 
       const extractedData = await Promise.all(chainData) as Array<Pick<SavedData, 'data' | 'tool'>>;
-      const sanitizedData = await sanitizeBlocks(extractedData, (name) => {
-        return Tools.blockTools.get(name).sanitizeConfig;
-      });
+      const sanitizedData = await sanitizeBlocks(
+        extractedData,
+        (name) => Tools.blockTools.get(name).sanitizeConfig,
+        this.config.sanitizer as SanitizerConfig
+      );
 
       return this.makeOutput(sanitizedData);
     } catch (e) {

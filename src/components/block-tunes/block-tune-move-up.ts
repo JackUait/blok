@@ -74,8 +74,8 @@ export default class MoveUpTune implements BlockTune {
      *  - when previous block is visible and has offset from the window,
      *      than we scroll window to the difference between this offsets.
      */
-    const currentBlockCoords = currentBlockElement.getBoundingClientRect(),
-        previousBlockCoords = previousBlockElement.getBoundingClientRect();
+    const currentBlockCoords = currentBlockElement.getBoundingClientRect();
+    const previousBlockCoords = previousBlockElement.getBoundingClientRect();
 
     let scrollUpOffset;
 

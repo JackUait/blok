@@ -10,7 +10,7 @@ import type {
 } from '../../../types';
 import type Block from '../block';
 import type { SavedData } from '../../../types/data-formats';
-import { clean, sanitizeBlocks } from '../utils/sanitizer';
+import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import type BlockToolAdapter from '../tools/block';
 
 /**
@@ -214,7 +214,13 @@ export default class Paste extends Module {
       return result;
     }, {} as SanitizerConfig);
 
-    const customConfig = Object.assign({}, toolsTags, Tools.getAllInlineToolsSanitizeConfig(), { br: {} });
+    const inlineSanitizeConfig = Tools.getAllInlineToolsSanitizeConfig();
+    const customConfig = composeSanitizerConfig(
+      this.config.sanitizer as SanitizerConfig,
+      toolsTags,
+      inlineSanitizeConfig,
+      { br: {} }
+    );
     const cleanData = clean(htmlData, customConfig);
 
     /** If there is no HTML or HTML string is equal to plain one, process it as plain text */
@@ -608,7 +614,7 @@ export default class Paste extends Module {
 
     return nodes
       .map((node) => {
-        let content: HTMLElement | null | undefined, tool = Tools.defaultTool, isBlock = false;
+        let content: HTMLElement | null | undefined; let tool = Tools.defaultTool; let isBlock = false;
 
         switch (node.nodeType) {
           /** If node is a document fragment, use temp wrapper to get innerHTML */
@@ -897,8 +903,10 @@ export default class Paste extends Module {
    */
   private insertEditorJSData(blocks: Pick<SavedData, 'id' | 'data' | 'tool'>[]): void {
     const { BlockManager, Caret, Tools } = this.Editor;
-    const sanitizedBlocks = sanitizeBlocks(blocks, (name) =>
-      Tools.blockTools.get(name)?.sanitizeConfig ?? {}
+    const sanitizedBlocks = sanitizeBlocks(
+      blocks,
+      (name) => Tools.blockTools.get(name)?.sanitizeConfig ?? {},
+      this.config.sanitizer as SanitizerConfig
     );
 
     sanitizedBlocks.forEach(({ tool, data }, i) => {

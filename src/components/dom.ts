@@ -132,8 +132,8 @@ export default class Dom {
    */
   public static swap(el1: HTMLElement, el2: HTMLElement): void {
     // create marker element and insert it where el1 is
-    const temp = document.createElement('div'),
-        parent = el1.parentNode;
+    const temp = document.createElement('div');
+    const parent = el1.parentNode;
 
     parent?.insertBefore(temp, el1);
 
@@ -231,8 +231,8 @@ export default class Dom {
      *
      * @type {string}
      */
-    const child = atLast ? 'lastChild' : 'firstChild',
-        sibling = atLast ? 'previousSibling' : 'nextSibling';
+    const child = atLast ? 'lastChild' : 'firstChild';
+    const sibling = atLast ? 'previousSibling' : 'nextSibling';
 
     if (node === null || node.nodeType !== Node.ELEMENT_NODE) {
       return node;

@@ -838,7 +838,6 @@ __metadata:
     "@vitest/ui": "npm:^1.0.0"
     chai-subset: "npm:^1.6.0"
     codex-notifier: "npm:^1.1.2"
-    codex-tooltip: "npm:^1.0.5"
     core-js: "npm:3.30.0"
     cypress: "npm:^13.13.3"
     cypress-intellij-reporter: "npm:^0.0.7"
@@ -2956,13 +2955,6 @@ __metadata:
   version: 1.1.2
   resolution: "codex-notifier@npm:1.1.2"
   checksum: 10c0/fef16977cdc067802004a29f3e52862f28a2821e7079c716ba27a8d51b218e566201a560614d54d3d4ea9c8ece3ffe49304ec9df38cde75da551db32afc508c8
-  languageName: node
-  linkType: hard
-
-"codex-tooltip@npm:^1.0.5":
-  version: 1.0.5
-  resolution: "codex-tooltip@npm:1.0.5"
-  checksum: 10c0/1834fb829044ea64b95fe7fb4eb4bfa9e8a667c2e51830a1bb11819921553e4978c4a3ee18643efc1f85f8e9766a43ab941d77d445420908c3d52bae5f3f0276
   languageName: node
   linkType: hard
 

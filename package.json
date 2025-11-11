@@ -89,7 +89,6 @@
     "@editorjs/caret": "^1.0.1",
     "@types/lodash": "^4.17.20",
     "codex-notifier": "^1.1.2",
-    "codex-tooltip": "^1.0.5",
     "lodash": "^4.17.21"
   },
   "resolutions": {

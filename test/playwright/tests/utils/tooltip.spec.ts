@@ -230,6 +230,48 @@ test.describe('Tooltip API', () => {
       await expect(tooltip).toContainText('Second tooltip');
       await expect(tooltip).not.toContainText('First tooltip');
     });
+
+    test('should throw when content is neither string nor Node', async ({ page }) => {
+      const testElement = await page.evaluate(({ holderId }) => {
+        const container = document.getElementById(holderId);
+        const element = document.createElement('div');
+
+        element.textContent = 'Invalid content test';
+        element.id = 'invalid-content';
+        container?.appendChild(element);
+
+        return {
+          id: element.id,
+        };
+      }, { holderId: HOLDER_ID });
+
+      const errorMessage = await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (!element || !editor?.tooltip) {
+          return null;
+        }
+
+        try {
+          const invalidContent = { text: 'invalid' } as unknown as Node;
+
+          editor.tooltip.show(element, invalidContent);
+
+          return 'no error';
+        } catch (error) {
+          if (error instanceof Error) {
+            return error.message;
+          }
+
+          return String(error);
+        }
+      }, { elementId: testElement.id });
+
+      expect(errorMessage).not.toBeNull();
+      expect(errorMessage).not.toBe('no error');
+      expect(errorMessage).toContain('[CodeX Tooltip] Wrong type');
+    });
   });
 
   test.describe('hide()', () => {
@@ -313,6 +355,46 @@ test.describe('Tooltip API', () => {
       });
 
       // Should hide
+      await waitForTooltipToHide(page);
+    });
+
+    test('should bypass hiding delay when hide(true) is called', async ({ page }) => {
+      const testElement = await page.evaluate(({ holderId }) => {
+        const container = document.getElementById(holderId);
+        const element = document.createElement('span');
+
+        element.textContent = 'Skip delay element';
+        element.id = 'skip-delay';
+        container?.appendChild(element);
+
+        return {
+          id: element.id,
+        };
+      }, { holderId: HOLDER_ID });
+
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Delayed tooltip', {
+            hidingDelay: 1000,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      const tooltipBeforeHide = await waitForTooltip(page);
+
+      await expect(tooltipBeforeHide).toBeVisible();
+
+      await page.evaluate(() => {
+        const editor = window.editorInstance;
+
+        if (editor?.tooltip) {
+          (editor.tooltip as unknown as { hide(skipDelay?: boolean): void }).hide(true);
+        }
+      });
+
       await waitForTooltipToHide(page);
     });
 
@@ -686,6 +768,87 @@ test.describe('Tooltip API', () => {
 
       await expect(tooltip).toContainText('After recreate');
     });
+
+    test('should reuse existing tooltip stylesheet across reinitializations', async ({ page }) => {
+      const testElement = await page.evaluate(({ holderId }) => {
+        const container = document.getElementById(holderId);
+        const element = document.createElement('button');
+
+        element.textContent = 'Stylesheet check';
+        element.id = 'stylesheet-button';
+        container?.appendChild(element);
+
+        return {
+          id: element.id,
+        };
+      }, { holderId: HOLDER_ID });
+
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Stylesheet tooltip', {
+            delay: 0,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      await waitForTooltip(page);
+
+      const initialStyleCount = await page.evaluate(() => {
+        return document.querySelectorAll('#codex-tooltips-style').length;
+      });
+
+      expect(initialStyleCount).toBe(1);
+
+      await page.evaluate(async () => {
+        if (window.editorInstance) {
+          await window.editorInstance.destroy();
+          window.editorInstance = undefined;
+        }
+      });
+
+      const afterDestroyStyleCount = await page.evaluate(() => {
+        return document.querySelectorAll('#codex-tooltips-style').length;
+      });
+
+      expect(afterDestroyStyleCount).toBe(1);
+
+      await createEditor(page);
+
+      await page.evaluate(({ holderId, elementId }) => {
+        const container = document.getElementById(holderId);
+        let element = document.getElementById(elementId);
+
+        if (!element && container) {
+          element = document.createElement('button');
+          element.textContent = 'Stylesheet check';
+          element.id = elementId;
+          container.appendChild(element);
+        }
+      }, { holderId: HOLDER_ID,
+        elementId: testElement.id });
+
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Stylesheet tooltip reinit', {
+            delay: 0,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      await waitForTooltip(page);
+
+      const afterReinitStyleCount = await page.evaluate(() => {
+        return document.querySelectorAll('#codex-tooltips-style').length;
+      });
+
+      expect(afterReinitStyleCount).toBe(1);
+    });
   });
 
   test.describe('Edge cases', () => {
@@ -969,6 +1132,323 @@ test.describe('Tooltip API', () => {
 
       // Should still be hidden (no errors)
       await waitForTooltipToHide(page);
+    });
+
+    test('should hide tooltip when window scrolls', async ({ page }) => {
+      const testElement = await page.evaluate(({ holderId }) => {
+        const container = document.getElementById(holderId);
+        const element = document.createElement('button');
+
+        element.textContent = 'Scroll target';
+        element.id = 'scroll-target';
+        element.style.marginTop = '800px';
+        container?.appendChild(element);
+
+        return {
+          id: element.id,
+        };
+      }, { holderId: HOLDER_ID });
+
+      await page.evaluate(() => {
+        document.body.style.height = '2000px';
+      });
+
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Scroll tooltip', {
+            delay: 0,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      const tooltipBeforeScroll = await waitForTooltip(page);
+
+      await expect(tooltipBeforeScroll).toBeVisible();
+
+      await page.evaluate(() => {
+        window.scrollTo(0, 100);
+        window.dispatchEvent(new Event('scroll'));
+      });
+
+      await waitForTooltipToHide(page);
+
+      await page.evaluate(() => {
+        document.body.style.height = '';
+        window.scrollTo(0, 0);
+      });
+    });
+
+    test('should sync aria-hidden and visibility with tooltip state', async ({ page }) => {
+      const testElement = await page.evaluate(({ holderId }) => {
+        const container = document.getElementById(holderId);
+        const element = document.createElement('button');
+
+        element.textContent = 'Accessibility target';
+        element.id = 'accessibility-target';
+        container?.appendChild(element);
+
+        return {
+          id: element.id,
+        };
+      }, { holderId: HOLDER_ID });
+
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Accessible tooltip', {
+            delay: 0,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      const tooltip = await waitForTooltip(page);
+
+      await expect(tooltip).toHaveAttribute('role', 'tooltip');
+      await expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+
+      const shownState = await page.evaluate((selector) => {
+        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+
+        if (!tooltipElement) {
+          return null;
+        }
+
+        return {
+          ariaHidden: tooltipElement.getAttribute('aria-hidden'),
+          visibility: tooltipElement.style.visibility,
+        };
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      expect(shownState).not.toBeNull();
+      expect(shownState?.ariaHidden).toBe('false');
+      expect(shownState?.visibility).toBe('visible');
+
+      await page.evaluate(() => {
+        const editor = window.editorInstance;
+
+        if (editor?.tooltip) {
+          editor.tooltip.hide();
+        }
+      });
+
+      await waitForTooltipToHide(page);
+
+      const hiddenState = await page.evaluate((selector) => {
+        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+
+        if (!tooltipElement) {
+          return null;
+        }
+
+        return {
+          ariaHidden: tooltipElement.getAttribute('aria-hidden'),
+          visibility: tooltipElement.style.visibility,
+        };
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      expect(hiddenState).not.toBeNull();
+      expect(hiddenState?.ariaHidden).toBe('true');
+      expect(hiddenState?.visibility).toBe('hidden');
+    });
+
+    test('should update aria-hidden when tooltip class changes', async ({ page }) => {
+      const testElement = await page.evaluate(({ holderId }) => {
+        const container = document.getElementById(holderId);
+        const element = document.createElement('span');
+
+        element.textContent = 'Mutation target';
+        element.id = 'mutation-target';
+        container?.appendChild(element);
+
+        return {
+          id: element.id,
+        };
+      }, { holderId: HOLDER_ID });
+
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Mutation tooltip', {
+            delay: 0,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      await waitForTooltip(page);
+
+      await page.evaluate((selector) => {
+        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+
+        tooltipElement?.classList.remove('ct--shown');
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      await page.waitForFunction((selector) => {
+        const tooltipElement = document.querySelector(selector);
+
+        return tooltipElement?.getAttribute('aria-hidden') === 'true';
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      const state = await page.evaluate((selector) => {
+        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+
+        if (!tooltipElement) {
+          return null;
+        }
+
+        return {
+          ariaHidden: tooltipElement.getAttribute('aria-hidden'),
+          visibility: tooltipElement.style.visibility,
+        };
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      expect(state).not.toBeNull();
+      expect(state?.ariaHidden).toBe('true');
+      expect(state?.visibility).toBe('hidden');
+    });
+
+    test('should apply placement offsets for left and right positions', async ({ page }) => {
+      const testElement = await page.evaluate(({ holderId }) => {
+        const container = document.getElementById(holderId);
+        const element = document.createElement('div');
+
+        element.textContent = 'Placement target';
+        element.id = 'placement-target';
+        element.style.margin = '200px';
+        element.style.display = 'inline-block';
+        element.style.padding = '16px';
+        container?.appendChild(element);
+
+        return {
+          id: element.id,
+        };
+      }, { holderId: HOLDER_ID });
+
+      // Left placement without margin
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Left placement', {
+            placement: 'left',
+            delay: 0,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      await waitForTooltip(page);
+
+      const leftPlacement = await page.evaluate((selector) => {
+        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+
+        if (!tooltipElement) {
+          return null;
+        }
+
+        return {
+          left: parseFloat(tooltipElement.style.left),
+          classes: Array.from(tooltipElement.classList),
+        };
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      expect(leftPlacement).not.toBeNull();
+      expect(leftPlacement?.classes).toContain('ct--left');
+
+      // Left placement with margin
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Left margin placement', {
+            placement: 'left',
+            delay: 0,
+            marginLeft: 40,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      await waitForTooltip(page);
+
+      const leftPlacementWithMargin = await page.evaluate((selector) => {
+        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+
+        if (!tooltipElement) {
+          return null;
+        }
+
+        return parseFloat(tooltipElement.style.left);
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      expect(leftPlacementWithMargin).not.toBeNull();
+      expect(leftPlacementWithMargin as number).toBeLessThan(leftPlacement?.left ?? Number.POSITIVE_INFINITY);
+
+      // Right placement without margin
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Right placement', {
+            placement: 'right',
+            delay: 0,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      await waitForTooltip(page);
+
+      const rightPlacement = await page.evaluate((selector) => {
+        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+
+        if (!tooltipElement) {
+          return null;
+        }
+
+        return {
+          left: parseFloat(tooltipElement.style.left),
+          classes: Array.from(tooltipElement.classList),
+        };
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      expect(rightPlacement).not.toBeNull();
+      expect(rightPlacement?.classes).toContain('ct--right');
+
+      // Right placement with margin
+      await page.evaluate(({ elementId }) => {
+        const editor = window.editorInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && editor?.tooltip) {
+          editor.tooltip.show(element, 'Right margin placement', {
+            placement: 'right',
+            delay: 0,
+            marginRight: 40,
+          });
+        }
+      }, { elementId: testElement.id });
+
+      await waitForTooltip(page);
+
+      const rightPlacementWithMargin = await page.evaluate((selector) => {
+        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+
+        if (!tooltipElement) {
+          return null;
+        }
+
+        return parseFloat(tooltipElement.style.left);
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      expect(rightPlacementWithMargin).not.toBeNull();
+      expect(rightPlacementWithMargin as number).toBeGreaterThan(rightPlacement?.left ?? Number.NEGATIVE_INFINITY);
     });
   });
 });

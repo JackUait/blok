@@ -72,8 +72,6 @@ type CSSTooltipClasses = {
  *
  * Can be showed near passed Element with any specified HTML content
  *
- * Based on codex-tooltip: https://github.com/codex-team/codex.tooltips
- *
  * @author CodeX <codex.so>
  * @license MIT
  */

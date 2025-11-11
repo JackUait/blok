@@ -37,7 +37,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
   /**
    * Tool's constructable blueprint
    */
-  protected constructable: BlockToolConstructable;
+  protected constructable!: BlockToolConstructable;
 
   /**
    * Creates new Tool instance
@@ -68,7 +68,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * Returns true if Tool supports linebreaks
    */
   public get isLineBreaksEnabled(): boolean {
-    return this.constructable[InternalBlockToolSettings.IsEnabledLineBreaks];
+    return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.IsEnabledLineBreaks] ?? false;
   }
 
   /**
@@ -153,7 +153,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * Returns enabled tunes for Tool
    */
   public get enabledBlockTunes(): boolean | string[] {
-    return this.config[UserSettings.EnabledBlockTunes];
+    return this.config[UserSettings.EnabledBlockTunes] ?? false;
   }
 
   /**
@@ -178,19 +178,21 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
     const toolConfig = {} as SanitizerConfig;
 
     for (const fieldName in toolRules) {
-      if (Object.prototype.hasOwnProperty.call(toolRules, fieldName)) {
-        const rule = toolRules[fieldName];
+      if (!Object.prototype.hasOwnProperty.call(toolRules, fieldName)) {
+        continue;
+      }
 
-        /**
-         * If rule is object, merge it with Inline Tools configuration
-         *
-         * Otherwise pass as it is
-         */
-        if (_.isObject(rule)) {
-          toolConfig[fieldName] = Object.assign({}, baseConfig, rule);
-        } else {
-          toolConfig[fieldName] = rule;
-        }
+      const rule = toolRules[fieldName];
+
+      /**
+       * If rule is object, merge it with Inline Tools configuration
+       *
+       * Otherwise pass as it is
+       */
+      if (_.isObject(rule)) {
+        toolConfig[fieldName] = Object.assign({}, baseConfig, rule);
+      } else {
+        toolConfig[fieldName] = rule;
       }
     }
 

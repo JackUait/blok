@@ -193,25 +193,23 @@ export default class Blocks {
       return;
     }
 
-    if (index > this.length) {
-      index = this.length;
-    }
+    const insertIndex = index > this.length ? this.length : index;
 
     if (replace) {
-      this.blocks[index].holder.remove();
-      this.blocks[index].call(BlockToolAPI.REMOVED);
+      this.blocks[insertIndex].holder.remove();
+      this.blocks[insertIndex].call(BlockToolAPI.REMOVED);
     }
 
     const deleteCount = replace ? 1 : 0;
 
-    this.blocks.splice(index, deleteCount, block);
+    this.blocks.splice(insertIndex, deleteCount, block);
 
-    if (index > 0) {
-      const previousBlock = this.blocks[index - 1];
+    if (insertIndex > 0) {
+      const previousBlock = this.blocks[insertIndex - 1];
 
       this.insertToDOM(block, 'afterend', previousBlock);
     } else {
-      const nextBlock = this.blocks[index + 1];
+      const nextBlock = this.blocks[insertIndex + 1];
 
       if (nextBlock !== undefined) {
         this.insertToDOM(block, 'beforebegin', nextBlock);
@@ -283,15 +281,13 @@ export default class Blocks {
    * @param {number} index - index of Block to remove
    */
   public remove(index: number): void {
-    if (isNaN(index)) {
-      index = this.length - 1;
-    }
+    const removeIndex = isNaN(index) ? this.length - 1 : index;
 
-    this.blocks[index].holder.remove();
+    this.blocks[removeIndex].holder.remove();
 
-    this.blocks[index].call(BlockToolAPI.REMOVED);
+    this.blocks[removeIndex].call(BlockToolAPI.REMOVED);
 
-    this.blocks.splice(index, 1);
+    this.blocks.splice(removeIndex, 1);
   }
 
   /**

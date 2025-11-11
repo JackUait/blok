@@ -1003,12 +1003,39 @@ export default class BlockManager extends Module {
    * @param detailData - additional data to pass with change event
    */
   private blockDidMutated<Type extends BlockMutationType>(mutationType: Type, block: Block, detailData: BlockMutationEventDetailWithoutTarget<Type>): Block {
+    const eventDetail = {
+      target: new BlockAPI(block),
+      ...detailData as BlockMutationEventDetailWithoutTarget<Type>,
+    };
+
     const event = new CustomEvent(mutationType, {
       detail: {
-        target: new BlockAPI(block),
-        ...detailData as BlockMutationEventDetailWithoutTarget<Type>,
+        ...eventDetail,
       },
     });
+
+    /**
+     * The CustomEvent#type getter is not enumerable by default, so it gets lost during structured cloning.
+     * Define it explicitly to keep the type available for consumers like Playwright tests.
+     */
+    if (!Object.prototype.propertyIsEnumerable.call(event, 'type')) {
+      Object.defineProperty(event, 'type', {
+        value: mutationType,
+        enumerable: true,
+        configurable: true,
+      });
+    }
+
+    /**
+     * CustomEvent#detail is also non-enumerable, so preserve it for consumers outside of the browser context.
+     */
+    if (!Object.prototype.propertyIsEnumerable.call(event, 'detail')) {
+      Object.defineProperty(event, 'detail', {
+        value: eventDetail,
+        enumerable: true,
+        configurable: true,
+      });
+    }
 
     this.eventsDispatcher.emit(BlockChanged, {
       event: event as BlockMutationEventMap[Type],

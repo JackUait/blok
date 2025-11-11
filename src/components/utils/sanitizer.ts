@@ -31,11 +31,14 @@ import * as _ from '../utils';
 
 import HTMLJanitor from 'html-janitor';
 import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../types';
+import type { TagConfig } from '../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../types/data-formats';
 
 type DeepSanitizerRule = SanitizerConfig | SanitizerRule | boolean;
 
-const UNSAFE_URL_ATTR_PATTERN = /\s*(href|src)\s*=\s*(["']?)\s*(?:javascript:|data:text\/html)[^"' >]*\2/gi;
+const UNSAFE_URL_PROTOCOL_PATTERN = /^\s*(?:javascript\s*:|data\s*:\s*text\s*\/\s*html)/i;
+const UNSAFE_URL_ATTR_FALLBACK_PATTERN =
+  /\s*(?:href|src)\s*=\s*(?:"\s*(?:javascript\s*:|data\s*:\s*text\s*\/\s*html)[^"]*"|'\s*(?:javascript\s*:|data\s*:\s*text\s*\/\s*html)[^']*|(?:javascript\s*:|data\s*:\s*text\s*\/\s*html)[^ \t\r\n>]*)/gi;
 
 /**
  * Sanitize Blocks
@@ -53,9 +56,9 @@ export const sanitizeBlocks = (
 ): Array<Pick<SavedData, 'data' | 'tool'>> => {
   return blocksData.map((block) => {
     const toolConfig = _.isFunction(sanitizeConfig) ? sanitizeConfig(block.tool) : sanitizeConfig;
-    const rules = toolConfig ?? ({} as SanitizerConfig);
+    const rules: DeepSanitizerRule = (toolConfig ?? {}) as SanitizerConfig;
 
-    if (_.isEmpty(rules) && _.isEmpty(globalSanitizer)) {
+    if (_.isObject(rules) && _.isEmpty(rules) && _.isEmpty(globalSanitizer)) {
       return block;
     }
 
@@ -133,7 +136,7 @@ const deepSanitize = (
  *
  * @param {Array} array - [1, 2, {}, []]
  * @param {SanitizerConfig} ruleForItem - sanitizer config for array
- * @param globalRules
+ * @param {SanitizerConfig} globalRules - global sanitizer config
  */
 const cleanArray = (
   array: Array<object | string>,
@@ -148,7 +151,7 @@ const cleanArray = (
  *
  * @param {object} object  - {level: 0, text: 'adada', items: [1,2,3]}}
  * @param {object} rules - { b: true } or true|false
- * @param globalRules
+ * @param {SanitizerConfig} globalRules - global sanitizer config
  * @returns {object}
  */
 const cleanObject = (
@@ -157,13 +160,14 @@ const cleanObject = (
   globalRules: SanitizerConfig
 ): object => {
   const cleanData: Record<string, unknown> = {};
+  const objectRecord = object as Record<string, unknown>;
 
   for (const fieldName in object) {
     if (!Object.prototype.hasOwnProperty.call(object, fieldName)) {
       continue;
     }
 
-    const currentIterationItem = object[fieldName];
+    const currentIterationItem = objectRecord[fieldName];
 
     /**
      *  Get object from config by field name
@@ -176,7 +180,7 @@ const cleanObject = (
       ? ruleCandidate
       : rules;
 
-    cleanData[fieldName] = deepSanitize(currentIterationItem, ruleForItem as DeepSanitizerRule, globalRules);
+    cleanData[fieldName] = deepSanitize(currentIterationItem as object | string, ruleForItem as DeepSanitizerRule, globalRules);
   }
 
   return cleanData;
@@ -187,7 +191,7 @@ const cleanObject = (
  *
  * @param {string} taintString - string to clean
  * @param {SanitizerConfig|boolean} rule - sanitizer rule
- * @param globalRules
+ * @param {SanitizerConfig} globalRules - global sanitizer config
  * @returns {string}
  */
 const cleanOneItem = (
@@ -225,32 +229,84 @@ const isRule = (config: DeepSanitizerRule): boolean => {
 
 /**
  *
- * @param value
+ * @param {string} value - HTML string to strip unsafe URLs from
  */
+const hasUnsafeUrlProtocol = (value: string | null): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  return UNSAFE_URL_PROTOCOL_PATTERN.test(value);
+};
+
 const stripUnsafeUrls = (value: string): string => {
   if (!value || value.indexOf('<') === -1) {
     return value;
   }
 
-  return value.replace(UNSAFE_URL_ATTR_PATTERN, '');
+  if (typeof document !== 'undefined') {
+    const template = document.createElement('template');
+
+    template.innerHTML = value;
+
+    const elements = template.content.querySelectorAll('[href],[src]');
+
+    elements.forEach((element) => {
+      ['href', 'src'].forEach((attribute) => {
+        const attrValue = element.getAttribute(attribute);
+
+        if (hasUnsafeUrlProtocol(attrValue)) {
+          element.removeAttribute(attribute);
+        }
+      });
+    });
+
+    return template.innerHTML;
+  }
+
+  return value.replace(UNSAFE_URL_ATTR_FALLBACK_PATTERN, '');
 };
 
 /**
  *
- * @param config
+ * @param {SanitizerConfig} config - sanitizer config to clone
  */
 const cloneSanitizerConfig = (config: SanitizerConfig): SanitizerConfig => {
   if (_.isEmpty(config)) {
     return {} as SanitizerConfig;
   }
 
-  return _.deepMerge({}, config);
+  const cloned: SanitizerConfig = {} as SanitizerConfig;
+
+  for (const tag in config) {
+    if (!Object.prototype.hasOwnProperty.call(config, tag)) {
+      continue;
+    }
+
+    cloned[tag] = cloneTagConfig(config[tag]);
+  }
+
+  return cloned;
 };
 
 /**
  *
- * @param rule
+ * @param {SanitizerRule} rule - tag rule to clone
  */
+type SanitizerFunctionRule = (el: Element) => TagConfig;
+
+const wrapFunctionRule = (rule: SanitizerFunctionRule): SanitizerFunctionRule => {
+  return function wrappedRule(this: unknown, element: Element): TagConfig {
+    const result = rule.call(this, element);
+
+    if (result == null) {
+      return {};
+    }
+
+    return result;
+  };
+};
+
 const cloneTagConfig = (rule: SanitizerRule): SanitizerRule => {
   if (rule === true) {
     return {};
@@ -260,7 +316,11 @@ const cloneTagConfig = (rule: SanitizerRule): SanitizerRule => {
     return false;
   }
 
-  if (_.isFunction(rule) || _.isString(rule)) {
+  if (_.isFunction(rule)) {
+    return wrapFunctionRule(rule as SanitizerFunctionRule);
+  }
+
+  if (_.isString(rule)) {
     return rule;
   }
 
@@ -273,8 +333,8 @@ const cloneTagConfig = (rule: SanitizerRule): SanitizerRule => {
 
 /**
  *
- * @param globalRules
- * @param fieldRules
+ * @param {SanitizerConfig} globalRules - global sanitizer config
+ * @param {SanitizerConfig} fieldRules - field-specific sanitizer config
  */
 const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig): SanitizerConfig => {
   if (_.isEmpty(globalRules)) {
@@ -291,14 +351,14 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
     const globalValue = globalRules[tag];
     const fieldValue = fieldRules ? fieldRules[tag] : undefined;
 
-    if (_.isFunction(globalValue)) {
-      merged[tag] = globalValue;
+    if (_.isFunction(fieldValue)) {
+      merged[tag] = cloneTagConfig(fieldValue as SanitizerRule);
 
       continue;
     }
 
-    if (_.isFunction(fieldValue)) {
-      merged[tag] = fieldValue;
+    if (_.isFunction(globalValue)) {
+      merged[tag] = cloneTagConfig(globalValue as SanitizerRule);
 
       continue;
     }
@@ -323,8 +383,8 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
 
 /**
  *
- * @param rule
- * @param globalRules
+ * @param {DeepSanitizerRule} rule - sanitizer rule to evaluate
+ * @param {SanitizerConfig} globalRules - global sanitizer config
  */
 const getEffectiveRuleForString = (
   rule: DeepSanitizerRule,
@@ -347,8 +407,8 @@ const getEffectiveRuleForString = (
 
 /**
  *
- * @param globalConfig
- * @param {...any} configs
+ * @param {SanitizerConfig} globalConfig - base global sanitizer config
+ * @param {...SanitizerConfig[]} configs - additional sanitizer configs to compose
  */
 export const composeSanitizerConfig = (
   globalConfig: SanitizerConfig,

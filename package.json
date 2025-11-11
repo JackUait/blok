@@ -26,6 +26,9 @@
     "test:e2e:cypress:ui": "yarn build:test && cypress open",
     "test:e2e:playwright": "playwright test",
     "test:e2e:playwright:ui": "playwright test --ui",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
     "jscpd": "jscpd src/ test/",
     "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report"
   },
@@ -49,6 +52,7 @@
     "@eslint/eslintrc": "^3.1.0",
     "@playwright/test": "^1.56.1",
     "@types/node": "^18.15.11",
+    "@vitest/ui": "^1.0.0",
     "chai-subset": "^1.6.0",
     "core-js": "3.30.0",
     "cypress": "^13.13.3",
@@ -64,6 +68,7 @@
     "eslint-plugin-sonarjs": "^3.0.5",
     "html-janitor": "^2.0.4",
     "jscpd": "^4.0.5",
+    "jsdom": "^23.0.0",
     "nanoid": "^4.0.2",
     "postcss-apply": "^0.12.0",
     "postcss-nested": "4.1.2",
@@ -73,7 +78,8 @@
     "tslint": "^6.1.1",
     "typescript": "5.0.3",
     "vite": "^4.2.1",
-    "vite-plugin-css-injected-by-js": "^3.1.0"
+    "vite-plugin-css-injected-by-js": "^3.1.0",
+    "vitest": "^1.0.0"
   },
   "collective": {
     "type": "opencollective",

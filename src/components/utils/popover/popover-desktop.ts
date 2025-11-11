@@ -414,14 +414,12 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.items
       .forEach((item) => {
-        let isHidden = false;
+        const isDefaultItem = item instanceof PopoverItemDefault;
+        const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
+        const isHidden = isDefaultItem
+          ? !data.items.includes(item)
+          : isSeparatorOrHtml && (isNothingFound || !isEmptyQuery);
 
-        if (item instanceof PopoverItemDefault) {
-          isHidden = !data.items.includes(item);
-        } else if (item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml) {
-          /** Should hide separators if nothing found message displayed or if there is some search query applied */
-          isHidden = isNothingFound || !isEmptyQuery;
-        }
         item.toggleHidden(isHidden);
       });
     this.toggleNothingFoundMessage(isNothingFound);

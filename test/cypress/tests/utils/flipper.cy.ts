@@ -1,5 +1,5 @@
 import type { PopoverItemParams } from '../../../../types/index.js';
-import { EDITOR_SELECTOR } from '../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 /**
  * Mock of some Block Tool
@@ -70,7 +70,7 @@ describe('Flipper', () => {
 
     cy.spy(SomePlugin, 'pluginInternalKeydownHandler');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-some-plugin')
       .as('pluginInput')
       .focus()
@@ -78,7 +78,7 @@ describe('Flipper', () => {
       .wait(100);
 
     // Try to delete the block via keyboard
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-some-plugin')
       // Open tunes menu
       .trigger('keydown', { code: 'Slash',
@@ -93,7 +93,7 @@ describe('Flipper', () => {
     cy.get('[data-item-name="delete"]')
       .should('have.class', 'ce-popover-item--focused');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-some-plugin')
       // Click delete
       .trigger('keydown', { keyCode: ENTER_KEY_CODE })
@@ -118,7 +118,7 @@ describe('Flipper', () => {
       autofocus: true,
     });
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-paragraph')
       .as('paragraph')
       .selectTextByOffset([0, 10])

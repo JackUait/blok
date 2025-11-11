@@ -15,7 +15,7 @@ import { mobileScreenBreakpoint } from '../utils';
 
 import styles from '../../styles/main.css?inline';
 import { BlockHovered } from '../events/BlockHovered';
-import { selectionChangeDebounceTimeout } from '../constants';
+import { DATA_INTERFACE_ATTRIBUTE, EDITOR_INTERFACE_VALUE, selectionChangeDebounceTimeout } from '../constants';
 import { EditorMobileLayoutToggled } from '../events';
 /**
  * HTML Elements used for UI
@@ -288,7 +288,7 @@ export default class UI extends Module<UINodes> {
       this.CSS.editorWrapper,
       ...(this.isRtl ? [ this.CSS.editorRtlFix ] : []),
     ]);
-    this.nodes.wrapper.setAttribute('data-interface', 'editorjs');
+    this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, EDITOR_INTERFACE_VALUE);
     this.nodes.redactor = $.make('div', this.CSS.editorZone);
 
     /**

@@ -1,6 +1,6 @@
 import type EditorJS from '../../../../../types/index';
 import { createEditorWithTextBlocks } from '../../../support/utils/createEditorWithTextBlocks';
-import { EDITOR_SELECTOR } from '../../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 describe('Delete keydown', () => {
   describe('ending whitespaces handling', () => {
@@ -10,7 +10,7 @@ describe('Delete keydown', () => {
         '2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -27,7 +27,7 @@ describe('Delete keydown', () => {
         '2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -35,7 +35,7 @@ describe('Delete keydown', () => {
         .type('{rightArrow}') // set caret after "1";
         .type('{del}');
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('div.ce-block')
         .last()
         .should('have.text', '1 2');
@@ -46,7 +46,7 @@ describe('Delete keydown', () => {
         '2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -54,7 +54,7 @@ describe('Delete keydown', () => {
         .type('{rightArrow}') // set caret after "1";
         .type('{del}');
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('div.ce-block')
         .last()
         .should('have.text', '12');
@@ -65,7 +65,7 @@ describe('Delete keydown', () => {
         '2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -74,7 +74,7 @@ describe('Delete keydown', () => {
         .type('{del}') // remove nbsp
         .type('{del}'); // ignore empty tag and merge
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('div.ce-block')
         .last()
         .should('have.text', '12');
@@ -86,7 +86,7 @@ describe('Delete keydown', () => {
         '2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -95,7 +95,7 @@ describe('Delete keydown', () => {
         .type('{del}') // remove nbsp
         .type('{del}'); // ignore empty tag and merge
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('div.ce-block')
         .last()
         .should('have.text', '12');
@@ -107,7 +107,7 @@ describe('Delete keydown', () => {
         '2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .first()
         .click()
@@ -116,7 +116,7 @@ describe('Delete keydown', () => {
         .type('{del}') // remove nbsp
         .type('{del}'); // ignore regular space and merge
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('div.ce-block')
         .last()
         /**
@@ -141,14 +141,14 @@ describe('Delete keydown', () => {
       'The second block',
     ]);
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-paragraph')
       .first()
       .click()
       .selectText('The ')
       .type('{del}');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('div.ce-block')
       .first()
       .should('have.text', 'first block');
@@ -160,14 +160,14 @@ describe('Delete keydown', () => {
       'The second block',
     ]);
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-paragraph')
       .first()
       .click() // caret will be at the end of the block
       .type('{leftarrow}') // now caret is not at the end
       .type('{del}');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('div.ce-block')
       .first()
       .should('have.text', 'The first bloc'); // last char is removed
@@ -217,14 +217,14 @@ describe('Delete keydown', () => {
       },
     });
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('[data-cy=quote-tool]')
       .find('div[contenteditable]')
       .first()
       .click()
       .type('{del}');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('[data-cy=quote-tool]')
       .find('div[contenteditable]')
       .last()
@@ -267,7 +267,7 @@ describe('Delete keydown', () => {
       },
     }).as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-paragraph')
       .first()
       .click()
@@ -304,7 +304,7 @@ describe('Delete keydown', () => {
       },
     }).as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-paragraph')
       .first()
       .click()
@@ -334,7 +334,7 @@ describe('Delete keydown', () => {
         }
         const range = selection.getRangeAt(0);
 
-        cy.get(EDITOR_SELECTOR)
+        cy.get(EDITOR_INTERFACE_SELECTOR)
           .find('.ce-paragraph')
           .should(($block) => {
             expect($block[0].contains(range.startContainer)).to.be.true;
@@ -345,7 +345,7 @@ describe('Delete keydown', () => {
     /**
      * Toolbox has been closed
      */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-toolbar')
       .should('not.have.class', 'ce-toolbar--opened');
   });
@@ -372,7 +372,7 @@ describe('Delete keydown', () => {
       },
     }).as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-paragraph')
       .first()
       .click()
@@ -402,7 +402,7 @@ describe('Delete keydown', () => {
         }
         const range = selection.getRangeAt(0);
 
-        cy.get(EDITOR_SELECTOR)
+        cy.get(EDITOR_INTERFACE_SELECTOR)
           .find('.ce-paragraph')
           .should(($block) => {
             expect($block[0].contains(range.startContainer)).to.be.true;
@@ -414,7 +414,7 @@ describe('Delete keydown', () => {
     /**
      * Toolbox has been closed
      */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-toolbar')
       .should('not.have.class', 'ce-toolbar--opened');
   });
@@ -464,12 +464,12 @@ describe('Delete keydown', () => {
       },
     });
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-paragraph')
       .click()
       .type('{del}');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('[data-cy=unmergeable-tool]')
       .as('secondBlock');
 
@@ -495,12 +495,12 @@ describe('Delete keydown', () => {
     it('should do nothing', () => {
       createEditorWithTextBlocks([ 'The only block. Not empty' ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .click()
         .type('{del}');
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .should('have.length', 1)
         .should('have.text', 'The only block. Not empty');

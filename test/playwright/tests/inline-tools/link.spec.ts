@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../cypress/fixtures/test.html')
@@ -12,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = '[data-block-tool="paragraph"]';
-const INLINE_TOOLBAR_SELECTOR = '[data-interface=inline-toolbar]';
+const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-item-name="link"] button`;
 const LINK_INPUT_SELECTOR = `input[data-link-tool-input-opened]`;
 const NOTIFIER_SELECTOR = '.cdx-notifies';

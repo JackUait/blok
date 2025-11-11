@@ -1,6 +1,6 @@
 import { createEditorWithTextBlocks } from '../../../support/utils/createEditorWithTextBlocks';
 import ContentlessToolMock from '../../../fixtures/tools/ContentlessTool';
-import { EDITOR_SELECTOR } from '../../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 describe('Arrow Left', () => {
   describe('starting whitespaces handling', () => {
@@ -10,7 +10,7 @@ describe('Arrow Left', () => {
         '&nbsp;2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .last() // select second block
         .click()
@@ -30,7 +30,7 @@ describe('Arrow Left', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get(EDITOR_SELECTOR)
+          cy.get(EDITOR_INTERFACE_SELECTOR)
             .find('.ce-paragraph')
             .should(($block) => {
               expect($block[0].contains(range.startContainer)).to.be.true;
@@ -44,7 +44,7 @@ describe('Arrow Left', () => {
         ' 2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .last() // select second block
         .click()
@@ -63,7 +63,7 @@ describe('Arrow Left', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get(EDITOR_SELECTOR)
+          cy.get(EDITOR_INTERFACE_SELECTOR)
             .find('.ce-paragraph')
             .should(($block) => {
               expect($block[0].contains(range.startContainer)).to.be.true;
@@ -78,7 +78,7 @@ describe('Arrow Left', () => {
         '<b></b>2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .last() // select second block
         .click()
@@ -97,7 +97,7 @@ describe('Arrow Left', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get(EDITOR_SELECTOR)
+          cy.get(EDITOR_INTERFACE_SELECTOR)
             .find('.ce-paragraph')
             .should(($block) => {
               expect($block[0].contains(range.startContainer)).to.be.true;
@@ -111,7 +111,7 @@ describe('Arrow Left', () => {
         '<b></b>&nbsp;2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .last()
         .click()
@@ -131,7 +131,7 @@ describe('Arrow Left', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get(EDITOR_SELECTOR)
+          cy.get(EDITOR_INTERFACE_SELECTOR)
             .find('.ce-paragraph')
             .should(($block) => {
               expect($block[0].contains(range.startContainer)).to.be.true;
@@ -146,7 +146,7 @@ describe('Arrow Left', () => {
         '<b></b>&nbsp;2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .last()
         .click()
@@ -166,7 +166,7 @@ describe('Arrow Left', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get(EDITOR_SELECTOR)
+          cy.get(EDITOR_INTERFACE_SELECTOR)
             .find('.ce-paragraph')
             .should(($block) => {
               expect($block[0].contains(range.startContainer)).to.be.true;
@@ -181,7 +181,7 @@ describe('Arrow Left', () => {
         ' &nbsp;2',
       ]);
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .last()
         .click()
@@ -201,7 +201,7 @@ describe('Arrow Left', () => {
           }
           const range = selection.getRangeAt(0);
 
-          cy.get(EDITOR_SELECTOR)
+          cy.get(EDITOR_INTERFACE_SELECTOR)
             .find('.ce-paragraph')
             .should(($block) => {
               expect($block[0].contains(range.startContainer)).to.be.true;
@@ -256,7 +256,7 @@ describe('Arrow Left', () => {
       },
     });
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-paragraph')
       .last()
       .as('thirdBlock')
@@ -267,7 +267,7 @@ describe('Arrow Left', () => {
     /**
      * We navigated to the Delimiter and it is highlighted
      */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('div[data-cy-type=contentless-tool]')
       .parents('.ce-block')
       .as('delimiterBlock')
@@ -297,7 +297,7 @@ describe('Arrow Left', () => {
         }
         const range = selection.getRangeAt(0);
 
-        cy.get(EDITOR_SELECTOR)
+        cy.get(EDITOR_INTERFACE_SELECTOR)
           .find('.ce-paragraph')
           .first()
           .should(($block) => {

@@ -4,20 +4,19 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from './helpers/ensure-build';
-import { EDITOR_SELECTOR } from './constants';
+import { TOOLTIP_INTERFACE_SELECTOR, EDITOR_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../cypress/fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_SELECTOR} [data-block-tool="paragraph"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_SELECTOR} .ce-toolbar__settings-btn`;
-const PLUS_BUTTON_SELECTOR = `${EDITOR_SELECTOR} .ce-toolbar__plus`;
-const INLINE_TOOLBAR_SELECTOR = `${EDITOR_SELECTOR} [data-interface=inline-toolbar]`;
-const POPOVER_SELECTOR = `${EDITOR_SELECTOR} .ce-popover`;
-const TOOLTIP_SELECTOR = '.ct';
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
+const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
+const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
+const POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover`;
 const LINK_TOOL_SHORTCUT_MODIFIER = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 /**
@@ -215,7 +214,7 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
 const getTooltipText = async (page: Page, triggerElement: Locator): Promise<string> => {
   await triggerElement.hover();
 
-  const tooltip = page.locator(TOOLTIP_SELECTOR);
+  const tooltip = page.locator(TOOLTIP_INTERFACE_SELECTOR);
 
   await expect(tooltip).toBeVisible();
 

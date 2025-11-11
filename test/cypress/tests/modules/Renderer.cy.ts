@@ -1,7 +1,7 @@
 import ToolMock, { type MockToolData } from '../../fixtures/tools/ToolMock';
 import type EditorJS from '../../../../types/index';
 import type { BlockToolConstructorOptions } from '../../../../types';
-import { EDITOR_SELECTOR } from '../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 describe('Renderer module', () => {
   it('should not cause onChange firing during initial rendering', () => {
@@ -59,11 +59,11 @@ describe('Renderer module', () => {
     })
       .as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-block')
       .should('have.length', 3);
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-block')
       .each(($el, index) => {
         /**
@@ -125,11 +125,11 @@ describe('Renderer module', () => {
     })
       .as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-block')
       .should('have.length', 3);
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-block')
       .each(($el, index) => {
         /**
@@ -158,7 +158,7 @@ describe('Renderer module', () => {
     })
       .as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-block')
       .should('have.length', 1);
   });
@@ -174,7 +174,7 @@ describe('Renderer module', () => {
         });
       });
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-block')
       .should('have.length', 1);
   });

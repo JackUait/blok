@@ -1,7 +1,7 @@
 import Header from '@editorjs/header';
 import { nanoid } from 'nanoid';
 import type EditorJS from '../../../types/index';
-import { EDITOR_SELECTOR } from '../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 
 describe('Block ids', () => {
@@ -12,7 +12,7 @@ describe('Block ids', () => {
       },
     }).as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-block')
       .click()
       .type('First block ')
@@ -22,15 +22,15 @@ describe('Block ids', () => {
       .type('Second block ')
       .type('{enter}');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-toolbar__plus')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover-item[data-item-name=header]')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-block')
       .last()
       .click()
@@ -108,7 +108,7 @@ describe('Block ids', () => {
         blocks,
       });
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-block')
       .first()
       .click()
@@ -152,7 +152,7 @@ describe('Block ids', () => {
         blocks,
       });
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-block')
       .each(($block, index) => {
         expect($block.attr('data-id')).to.eq(blocks[index].id);

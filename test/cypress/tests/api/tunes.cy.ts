@@ -1,5 +1,5 @@
 import type { TunesMenuConfig } from '../../../../types/tools';
-import { EDITOR_SELECTOR } from '../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -32,12 +32,12 @@ describe('Editor Tunes Api', () => {
       tunes: [ 'testTune' ],
     }).as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-block')
       .type('some text')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
@@ -80,12 +80,12 @@ describe('Editor Tunes Api', () => {
       tunes: [ 'testTune' ],
     }).as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-block')
       .type('some text')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
@@ -121,16 +121,16 @@ describe('Editor Tunes Api', () => {
       tunes: [ 'testTune' ],
     }).as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-block')
       .type('some text')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover')
       .should('contain.text', sampleText);
   });
@@ -173,12 +173,12 @@ describe('Editor Tunes Api', () => {
       tunes: [ 'testTune' ],
     }).as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-block')
       .type('some text')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
@@ -218,23 +218,23 @@ describe('Editor Tunes Api', () => {
       tunes: [ 'testTune' ],
     }).as('editorInstance');
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('div.ce-block')
       .type('some text')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
     /** Check test tune is inserted at index 0 */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-settings .ce-popover-item')
       .eq(0)
       .should('have.attr', 'data-item-name', 'test-tune' );
 
     /** Check default Move Up tune is inserted below the test tune */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-settings .ce-popover-item')
       .eq(1)
       .should('have.attr', 'data-item-name', 'move-up' );

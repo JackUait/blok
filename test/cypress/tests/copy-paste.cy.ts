@@ -2,7 +2,7 @@ import Header from '@editorjs/header';
 import Image from '@editorjs/simple-image';
 import * as _ from '../../../src/components/utils';
 import type { BlockTool, BlockToolData, OutputData } from '../../../types';
-import { EDITOR_SELECTOR } from '../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 import $ from '../../../src/components/dom';
 import type EditorJS from '../../../types/index';
 
@@ -12,7 +12,7 @@ describe.skip('Copy pasting from Editor', () => {
     it('should paste plain text', () => {
       cy.createEditor({});
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .as('block')
         .click()
@@ -27,7 +27,7 @@ describe.skip('Copy pasting from Editor', () => {
     it('should paste inline html data', () => {
       cy.createEditor({});
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .as('block')
         .click()
@@ -42,7 +42,7 @@ describe.skip('Copy pasting from Editor', () => {
     it('should paste several blocks if plain text contains new lines', () => {
       cy.createEditor({});
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .click()
         .paste({
@@ -50,7 +50,7 @@ describe.skip('Copy pasting from Editor', () => {
           'text/plain': 'First block\n\nSecond block',
         });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .then(blocks => {
           expect(blocks[0].textContent).to.eq('First block');
@@ -61,7 +61,7 @@ describe.skip('Copy pasting from Editor', () => {
     it('should paste several blocks if html contains several paragraphs', () => {
       cy.createEditor({});
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .click()
         .paste({
@@ -69,7 +69,7 @@ describe.skip('Copy pasting from Editor', () => {
           'text/html': '<p>First block</p><p>Second block</p>',
         });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .then(blocks => {
           expect(blocks[0].textContent).to.eq('First block');
@@ -80,7 +80,7 @@ describe.skip('Copy pasting from Editor', () => {
     it('should paste using custom data type', () => {
       cy.createEditor({});
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .click()
         .paste({
@@ -101,7 +101,7 @@ describe.skip('Copy pasting from Editor', () => {
           ]),
         });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .then(blocks => {
           expect(blocks[0].textContent).to.eq('First block');
@@ -116,7 +116,7 @@ describe.skip('Copy pasting from Editor', () => {
         },
       }).as('editorInstance');
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .click()
         .paste({
@@ -127,11 +127,11 @@ describe.skip('Copy pasting from Editor', () => {
       /**
        * Check inserted blocks
        */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('h2.ce-header')
         .should('contain', 'First block');
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-paragraph')
         .should('contain', 'Second block');
 
@@ -165,7 +165,7 @@ describe.skip('Copy pasting from Editor', () => {
         },
       });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .click()
         .paste({
@@ -173,7 +173,7 @@ describe.skip('Copy pasting from Editor', () => {
           'text/plain': 'https://codex.so/public/app/img/external/codex2x.png',
         });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         // In Edge test are performed slower, so we need to increase timeout to wait until image is loaded on the page
         .get('img', { timeout: 10000 })
         .should('have.attr', 'src', 'https://codex.so/public/app/img/external/codex2x.png');
@@ -246,7 +246,7 @@ describe.skip('Copy pasting from Editor', () => {
     it('should copy inline fragment', () => {
       cy.createEditor({});
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .click()
         .type('Some text{selectall}')
@@ -262,12 +262,12 @@ describe.skip('Copy pasting from Editor', () => {
     it('should copy several blocks', () => {
       cy.createEditor({});
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .click()
         .type('First block{enter}');
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .next()
         .type('Second block')
@@ -302,7 +302,7 @@ describe.skip('Copy pasting from Editor', () => {
     it('should cut inline fragment', () => {
       cy.createEditor({});
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .click()
         .type('Some text{selectall}')
@@ -331,7 +331,7 @@ describe.skip('Copy pasting from Editor', () => {
         },
       });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .last()
         .click()
@@ -360,7 +360,7 @@ describe.skip('Copy pasting from Editor', () => {
           });
         });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .should('not.contain', 'First block')
         .should('not.contain', 'Second block');
     });
@@ -384,7 +384,7 @@ describe.skip('Copy pasting from Editor', () => {
         },
       });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.ce-block')
         .first()
         .click()

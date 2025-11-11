@@ -13,6 +13,7 @@ import type { Popover, PopoverItemHtmlParams, PopoverItemParams, WithChildren } 
 import { PopoverItemType } from '../../utils/popover';
 import { PopoverInline } from '../../utils/popover/popover-inline';
 import type InlineToolAdapter from 'src/components/tools/inline';
+import { DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../constants';
 
 /**
  * Inline Toolbar elements
@@ -159,7 +160,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       ...(this.isRtl ? [ this.Editor.UI.CSS.editorRtlFix ] : []),
     ]);
 
-    this.nodes.wrapper.setAttribute('data-interface', 'inline-toolbar');
+    this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-cy', 'inline-toolbar');
 
     /**

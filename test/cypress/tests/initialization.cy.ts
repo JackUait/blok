@@ -1,6 +1,6 @@
 // eslint-disable-next-line spaced-comment, @typescript-eslint/triple-slash-reference
 /// <reference path="../support/index.d.ts" />
-import { EDITOR_SELECTOR } from '../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 describe('Editor basic initialization', () => {
   describe('Zero-config initialization', () => {
@@ -23,7 +23,7 @@ describe('Editor basic initialization', () => {
       /**
        * Assert if created instance is visible or not.
        */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('div.codex-editor')
         .should('be.visible');
     });
@@ -42,7 +42,7 @@ describe('Editor basic initialization', () => {
           readOnly: true,
         }).as('editorInstance');
 
-        cy.get(EDITOR_SELECTOR)
+        cy.get(EDITOR_INTERFACE_SELECTOR)
           .get('div.codex-editor')
           .get('div.ce-paragraph')
           .invoke('attr', 'contenteditable')
@@ -59,7 +59,7 @@ describe('Editor basic initialization', () => {
             },
           }).as('editorInstance');
 
-          cy.get(EDITOR_SELECTOR)
+          cy.get(EDITOR_INTERFACE_SELECTOR)
             .get('#editor-js-styles')
             .should('have.attr', 'nonce', 'test-nonce');
         });

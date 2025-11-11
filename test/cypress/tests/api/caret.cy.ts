@@ -1,6 +1,6 @@
 import { createParagraphMock } from '../../support/utils/createParagraphMock';
 import type EditorJS from '../../../../types';
-import { EDITOR_SELECTOR } from '../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 /**
  * Test cases for Caret API
@@ -27,7 +27,7 @@ describe('Caret API', () => {
         /**
          * Blur caret from the block before setting via api
          */
-        cy.get(EDITOR_SELECTOR)
+        cy.get(EDITOR_INTERFACE_SELECTOR)
           .click();
       });
       it('should set caret to a block (and return true) if block index is passed as argument', () => {
@@ -47,7 +47,7 @@ describe('Caret API', () => {
                 }
                 const range = selection.getRangeAt(0);
 
-                cy.get(EDITOR_SELECTOR)
+                cy.get(EDITOR_INTERFACE_SELECTOR)
                   .find('.ce-block')
                   .first()
                   .should(($block) => {
@@ -76,7 +76,7 @@ describe('Caret API', () => {
                 }
                 const range = selection.getRangeAt(0);
 
-                cy.get(EDITOR_SELECTOR)
+                cy.get(EDITOR_INTERFACE_SELECTOR)
                   .find('.ce-block')
                   .first()
                   .should(($block) => {
@@ -110,7 +110,7 @@ describe('Caret API', () => {
                 }
                 const range = selection.getRangeAt(0);
 
-                cy.get(EDITOR_SELECTOR)
+                cy.get(EDITOR_INTERFACE_SELECTOR)
                   .find('.ce-block')
                   .first()
                   .should(($block) => {

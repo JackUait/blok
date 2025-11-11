@@ -4,14 +4,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from './helpers/ensure-build';
-import { EDITOR_SELECTOR } from './constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../cypress/fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_SELECTOR} div.ce-block`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -237,7 +237,7 @@ test.describe('Sanitizing', () => {
       await selectAllText(block);
 
       // Click bold button
-      const boldButton = page.locator(`${EDITOR_SELECTOR} [data-item-name="bold"]`);
+      const boldButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-item-name="bold"]`);
 
       await boldButton.click();
 
@@ -288,7 +288,7 @@ test.describe('Sanitizing', () => {
       },
     ]);
 
-    const lastParagraph = page.locator(`${EDITOR_SELECTOR} .ce-paragraph`).last();
+    const lastParagraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`).last();
 
     await lastParagraph.click();
     await page.keyboard.press('Home');
@@ -324,7 +324,7 @@ test.describe('Sanitizing', () => {
 
       await selectAllText(block);
 
-      const italicButton = page.locator(`${EDITOR_SELECTOR} [data-item-name="italic"]`);
+      const italicButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-item-name="italic"]`);
 
       await italicButton.click();
       await block.click();
@@ -359,7 +359,7 @@ test.describe('Sanitizing', () => {
 
       await selectAllText(block);
 
-      const linkButton = page.locator(`${EDITOR_SELECTOR} [data-item-name="link"]`);
+      const linkButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-item-name="link"]`);
 
       await linkButton.click();
 
@@ -721,7 +721,7 @@ test.describe('Sanitizing', () => {
         },
       ]);
 
-      const lastParagraph = page.locator(`${EDITOR_SELECTOR} .ce-paragraph`).last();
+      const lastParagraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`).last();
 
       await lastParagraph.click();
       await page.keyboard.press('Home');
@@ -751,7 +751,7 @@ test.describe('Sanitizing', () => {
         },
       ]);
 
-      const lastParagraph = page.locator(`${EDITOR_SELECTOR} .ce-paragraph`).last();
+      const lastParagraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`).last();
 
       await lastParagraph.click();
       await page.keyboard.press('Home');

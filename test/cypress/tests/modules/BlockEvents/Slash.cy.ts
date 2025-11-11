@@ -1,4 +1,4 @@
-import { EDITOR_SELECTOR } from '../../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 describe('Slash keydown', () => {
   describe('pressed in empty block', () => {
@@ -16,7 +16,7 @@ describe('Slash keydown', () => {
         },
       });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .click()
         .type('/');
@@ -24,7 +24,7 @@ describe('Slash keydown', () => {
       /**
        * Block content should contain slash
        */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .invoke('text')
         .should('eq', '/');
@@ -51,7 +51,7 @@ describe('Slash keydown', () => {
           },
         });
 
-        cy.get(EDITOR_SELECTOR)
+        cy.get(EDITOR_INTERFACE_SELECTOR)
           .find('.ce-paragraph')
           .click()
           .type(`{${key}}/`);
@@ -77,7 +77,7 @@ describe('Slash keydown', () => {
         },
       });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .click()
         .type('/');
@@ -88,7 +88,7 @@ describe('Slash keydown', () => {
       /**
        * Block content should contain slash
        */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .invoke('text')
         .should('eq', 'Hello/');
@@ -120,10 +120,10 @@ describe('Slash keydown', () => {
 
       // Step 1
       // Click on the plus button and select the text option
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .click();
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-toolbar__plus')
         .click({ force: true });
       cy.get('[data-cy="toolbox"] .ce-popover__container')
@@ -165,7 +165,7 @@ describe('CMD+Slash keydown', () => {
       },
     });
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .find('.ce-paragraph')
       .click()
       .type('{cmd}/');

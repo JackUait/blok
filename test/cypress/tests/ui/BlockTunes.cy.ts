@@ -3,7 +3,7 @@ import Header from '@editorjs/header';
 import type { ConversionConfig, ToolboxConfig } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools';
 import { ToolWithoutConversionExport } from '../../fixtures/tools/ToolWithoutConversionExport';
-import { EDITOR_SELECTOR } from '../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 describe('BlockTunes', () => {
   describe('Keyboard only', () => {
@@ -23,7 +23,7 @@ describe('BlockTunes', () => {
         },
       });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .click()
         .type('{cmd}/')
@@ -53,7 +53,7 @@ describe('BlockTunes', () => {
         },
       });
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .click()
         .type('{cmd}/')
@@ -88,28 +88,28 @@ describe('BlockTunes', () => {
       });
 
       /** Open block tunes menu */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.cdx-block')
         .click();
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
       /** Check "Convert to" option is present  */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover-item')
         .contains('Convert to')
         .should('exist');
 
       /** Click "Convert to" option*/
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover-item')
         .contains('Convert to')
         .click();
 
       /** Check connected popover with the "Heading" option is present */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover--nested [data-item-name=header]')
         .should('exist');
     });
@@ -130,16 +130,16 @@ describe('BlockTunes', () => {
       });
 
       /** Open block tunes menu */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.cdx-block')
         .click();
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
       /** Check "Convert to" option is not present  */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover-item')
         .contains('Convert to')
         .should('not.exist');
@@ -163,17 +163,17 @@ describe('BlockTunes', () => {
       }).as('editorInstance');
 
       cy.get('@editorInstance')
-        .get(EDITOR_SELECTOR)
+        .get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-block')
         .click();
 
       cy.get('@editorInstance')
-        .get(EDITOR_SELECTOR)
+        .get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-toolbar__settings-btn')
         .click();
 
       cy.get('@editorInstance')
-        .get(EDITOR_SELECTOR)
+        .get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-popover-item[data-item-name=convert-to]')
         .should('not.exist');
     });
@@ -256,28 +256,28 @@ describe('BlockTunes', () => {
       });
 
       /** Open block tunes menu */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-block')
         .click();
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
       /** Open "Convert to" menu  */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover-item')
         .contains('Convert to')
         .click();
 
       /** Check TestTool option with SAME data is NOT present */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover--nested [data-item-name=testTool]')
         .contains('Title 1')
         .should('not.exist');
 
       /** Check TestTool option with DIFFERENT data IS present */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover--nested [data-item-name=testTool]')
         .contains('Title 2')
         .should('exist');
@@ -301,27 +301,27 @@ describe('BlockTunes', () => {
       });
 
       /** Open block tunes menu */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.cdx-block')
         .click();
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
       /** Click "Convert to" option*/
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover-item')
         .contains('Convert to')
         .click();
 
       /** Click "Heading" option */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover--nested [data-item-name=header]')
         .click();
 
       /** Check the block was converted to the second option */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-header')
         .should('have.text', 'Some text');
 
@@ -335,7 +335,7 @@ describe('BlockTunes', () => {
             throw new Error('Range is undefined');
           }
 
-          cy.get(EDITOR_SELECTOR)
+          cy.get(EDITOR_INTERFACE_SELECTOR)
             .find('.ce-header')
             .should(($block) => {
               expect($block[0].contains(range.startContainer)).to.be.true;
@@ -418,21 +418,21 @@ describe('BlockTunes', () => {
       });
 
       /** Open block tunes menu */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-block')
         .click();
 
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-toolbar__settings-btn')
         .click();
 
       /** Check there are more than 1 tune */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover-item')
         .should('have.length.above', 1);
 
       /** Check the first tune is tool specific tune */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover-item:first-child')
         .contains('Tune')
         .should('exist');

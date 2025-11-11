@@ -2,7 +2,7 @@ import { PopoverDesktop as Popover, PopoverItemType } from '../../../../src/comp
 import type { PopoverItemParams } from '@/types/utils/popover';
 import type { MenuConfig } from '../../../../types/tools';
 import type { BlockToolConstructable } from '../../../../types/tools';
-import { EDITOR_SELECTOR } from '../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import Header from '@editorjs/header';
 
 /* eslint-disable @typescript-eslint/no-empty-function */
@@ -285,16 +285,16 @@ describe('Popover', () => {
     });
 
     /** Open block tunes menu */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-block')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
     /** Check item with custom html content is displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover .ce-popover-item-html')
       .contains('Tune')
       .should('be.visible');
@@ -355,11 +355,11 @@ describe('Popover', () => {
     });
 
     /** Open block tunes menu */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-block')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
@@ -368,7 +368,7 @@ describe('Popover', () => {
     cy.get('body').tab();
 
     /** Check the first custom html item is focused */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover .ce-popover-item-html .ce-settings__button')
       .contains('Tune1')
       .should('have.class', 'ce-popover-item--focused');
@@ -378,7 +378,7 @@ describe('Popover', () => {
     cy.get('body').tab();
 
     /** Check the second custom html item is focused */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover .ce-popover-item-html .ce-settings__button')
       .contains('Tune2')
       .should('have.class', 'ce-popover-item--focused');
@@ -388,7 +388,7 @@ describe('Popover', () => {
     cy.get('body').tab();
 
     /** Check that default popover item got focused */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('[data-item-name=move-up]')
       .should('have.class', 'ce-popover-item--focused');
   });
@@ -438,32 +438,32 @@ describe('Popover', () => {
     });
 
     /** Open block tunes menu */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-block')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
     /** Check item with children has arrow icon */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('[data-item-name="test-item"]')
       .get('.ce-popover-item__icon--chevron-right')
       .should('be.visible');
 
     /** Click the item */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('[data-item-name="test-item"]')
       .click();
 
     /** Check nested popover opened */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover--nested .ce-popover__container')
       .should('be.visible');
 
     /** Check child item displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover--nested .ce-popover__container')
       .get('[data-item-name="nested-test-item"]')
       .should('be.visible');
@@ -517,62 +517,62 @@ describe('Popover', () => {
     });
 
     /** Open block tunes menu */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-block')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
     /** Check item with children has arrow icon */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('[data-item-name="test-item"]')
       .get('.ce-popover-item__icon--chevron-right')
       .should('be.visible');
 
     /** Click the item */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('[data-item-name="test-item"]')
       .click();
 
     /** Check child item displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('[data-item-name="nested-test-item"]')
       .should('be.visible');
 
     /** Check header displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover-header')
       .should('have.text', 'Tune');
 
     /** Check back button displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('.ce-popover-header__back-button')
       .should('be.visible');
 
     /** Click back button */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('.ce-popover-header__back-button')
       .click();
 
     /** Check child item is not displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('[data-item-name="nested-test-item"]')
       .should('not.exist');
 
     /** Check back button is not displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('.ce-popover-header__back-button')
       .should('not.exist');
 
     /** Check header is not displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover-header')
       .should('not.exist');
   });
@@ -614,16 +614,16 @@ describe('Popover', () => {
     });
 
     /** Open block tunes menu */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-block')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
     /** Check item displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('[data-item-name="test-item"]')
       .should('be.visible');
@@ -671,22 +671,22 @@ describe('Popover', () => {
     });
 
     /** Open block tunes menu */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-block')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
     /** Check item displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('[data-item-name="test-item"]')
       .should('be.visible');
 
     /** Check separator displayed */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('.ce-popover-item-separator')
       .should('be.visible');
@@ -738,11 +738,11 @@ describe('Popover', () => {
     });
 
     /** Open block tunes menu */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.cdx-block')
       .click();
 
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-toolbar__settings-btn')
       .click();
 
@@ -751,13 +751,13 @@ describe('Popover', () => {
     cy.get('body').tab();
 
     /** Check first item is focused */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('[data-item-name="test-item-1"].ce-popover-item--focused')
       .should('exist');
 
     /** Check second item is not focused */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('[data-item-name="test-item-2"].ce-popover-item--focused')
       .should('not.exist');
@@ -767,13 +767,13 @@ describe('Popover', () => {
     cy.get('body').tab();
 
     /** Check first item is not focused */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('[data-item-name="test-item-1"].ce-popover-item--focused')
       .should('not.exist');
 
     /** Check second item is focused */
-    cy.get(EDITOR_SELECTOR)
+    cy.get(EDITOR_INTERFACE_SELECTOR)
       .get('.ce-popover__container')
       .get('[data-item-name="test-item-2"].ce-popover-item--focused')
       .should('exist');
@@ -801,27 +801,27 @@ describe('Popover', () => {
       });
 
       /** Open Inline Toolbar */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .selectText('block');
 
       /** Hover Convert To item which has nested popover */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('[data-item-name=convert-to]')
         .trigger('mouseover');
 
       /** Check nested popover didn't open */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover--nested .ce-popover__container')
         .should('not.exist');
 
       /** Click Convert To item which has nested popover */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('[data-item-name=convert-to]')
         .click();
 
       /** Check nested popover opened */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover--nested .ce-popover__container')
         .should('exist');
     });
@@ -847,17 +847,17 @@ describe('Popover', () => {
       });
 
       /** Open Inline Toolbar */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .selectText('block');
 
       /** Check Inline Popover opened */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-inline-toolbar .ce-popover__container')
         .should('be.visible');
 
       /** Check first item is NOT focused */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-inline-toolbar .ce-popover__container')
         .get('[data-item-name="convert-to"].ce-popover-item--focused')
         .should('not.exist');
@@ -866,13 +866,13 @@ describe('Popover', () => {
       cy.tab();
 
       /** Check first item became focused after tab */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-inline-toolbar .ce-popover__container')
         .get('[data-item-name="convert-to"].ce-popover-item--focused')
         .should('exist');
 
       /** Check second item is NOT focused */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-inline-toolbar .ce-popover__container')
         .get('[data-item-name="link"] .ce-popover-item--focused')
         .should('not.exist');
@@ -881,7 +881,7 @@ describe('Popover', () => {
       cy.tab();
 
       /** Check second item became focused after tab */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-inline-toolbar .ce-popover__container')
         .get('[data-item-name="link"] .ce-popover-item--focused')
         .should('exist');
@@ -908,12 +908,12 @@ describe('Popover', () => {
       });
 
       /** Open Inline Toolbar */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .find('.ce-paragraph')
         .selectText('block');
 
       /** Check Inline Popover opened */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-inline-toolbar .ce-popover__container')
         .should('be.visible');
 
@@ -925,12 +925,12 @@ describe('Popover', () => {
         .type('{enter}');
 
       /** Check Inline Popover opened */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-inline-toolbar .ce-popover--nested .ce-popover__container')
         .should('be.visible');
 
       /** Check first item is NOT focused */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover__container')
         .get('[data-item-name="header"].ce-popover-item--focused')
         .should('not.exist');
@@ -940,7 +940,7 @@ describe('Popover', () => {
       cy.get('body').tab();
 
       /** Check first item is focused */
-      cy.get(EDITOR_SELECTOR)
+      cy.get(EDITOR_INTERFACE_SELECTOR)
         .get('.ce-popover__container')
         .get('[data-item-name="header"].ce-popover-item--focused')
         .should('exist');

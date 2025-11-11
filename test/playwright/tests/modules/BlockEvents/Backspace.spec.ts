@@ -5,14 +5,14 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '../../../../../types';
 import type { OutputData } from '../../../../../types';
 import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
-import { EDITOR_SELECTOR } from '../../constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../../cypress/fixtures/test.html')
 ).href;
-const BLOCK_SELECTOR = `${EDITOR_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_SELECTOR} [data-block-tool="paragraph"]`;
-const TOOLBAR_SELECTOR = `${EDITOR_SELECTOR} .ce-toolbar`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
+const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
 const HOLDER_ID = 'editorjs';
 
 /**
@@ -520,7 +520,7 @@ test.describe('Backspace keydown', () => {
   test('should navigate to previous input when caret is not at first input', async ({ page }) => {
     await createMultiInputToolEditor(page);
 
-    const inputs = page.locator(`${EDITOR_SELECTOR} [data-cy=quote-tool] div[contenteditable]`);
+    const inputs = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=quote-tool] div[contenteditable]`);
     const lastInput = inputs.last();
 
     await lastInput.click();
@@ -641,7 +641,7 @@ test.describe('Backspace keydown', () => {
     expect(blocks[0].id).toBe('block1');
     expect((blocks[0].data as { text: string }).text).toBe('First block headingSecond block paragraph');
 
-    await expectCaretOffset(page.locator(`${EDITOR_SELECTOR} [data-cy=block-wrapper]`).first(), 'First block heading'.length, { normalize: true });
+    await expectCaretOffset(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=block-wrapper]`).first(), 'First block heading'.length, { normalize: true });
     await expectToolbarClosed(page);
   });
 
@@ -659,7 +659,7 @@ test.describe('Backspace keydown', () => {
       },
     ]);
 
-    const targetBlock = page.locator(`${EDITOR_SELECTOR} [data-cy="block-wrapper"][data-id="block2"]`);
+    const targetBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"][data-id="block2"]`);
 
     await targetBlock.click();
     await targetBlock.press('Home');
@@ -671,7 +671,7 @@ test.describe('Backspace keydown', () => {
     expect(blocks[0].id).toBe('block1');
     expect((blocks[0].data as { text: string }).text).toBe('First block paragraphSecond block heading');
 
-    await expectCaretOffset(page.locator(`${EDITOR_SELECTOR} [data-cy=block-wrapper]`).first(), 'First block paragraph'.length, { normalize: true });
+    await expectCaretOffset(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=block-wrapper]`).first(), 'First block paragraph'.length, { normalize: true });
     await expectToolbarClosed(page);
   });
 
@@ -687,7 +687,7 @@ test.describe('Backspace keydown', () => {
     const { blocks } = await saveEditor(page);
 
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${EDITOR_SELECTOR} [data-cy=unmergeable-tool]`));
+    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=unmergeable-tool]`));
     await expectToolbarClosed(page);
   });
 
@@ -703,7 +703,7 @@ test.describe('Backspace keydown', () => {
     const { blocks } = await saveEditor(page);
 
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${EDITOR_SELECTOR} [data-cy=unmergeable-tool]`));
+    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=unmergeable-tool]`));
     await expectToolbarClosed(page);
   });
 

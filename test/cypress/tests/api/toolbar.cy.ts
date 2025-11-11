@@ -2,7 +2,7 @@
  * There will be described test cases of 'api.toolbar.*' API
  */
 import type EditorJS from '../../../../types';
-import { EDITOR_SELECTOR } from '../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 describe('api.toolbar', () => {
   /**
@@ -36,7 +36,7 @@ describe('api.toolbar', () => {
 
   describe('*.toggleToolbox()', () => {
     const isToolboxVisible = (): void => {
-      cy.get(EDITOR_SELECTOR).find('div.ce-toolbox')
+      cy.get(EDITOR_INTERFACE_SELECTOR).find('div.ce-toolbox')
         .then((toolbox) => {
           if (toolbox.is(':visible')) {
             assert.isOk(true, 'Toolbox visible');
@@ -47,7 +47,7 @@ describe('api.toolbar', () => {
     };
 
     const isToolboxNotVisible = (): void => {
-      cy.get(EDITOR_SELECTOR).find('div.ce-toolbox')
+      cy.get(EDITOR_INTERFACE_SELECTOR).find('div.ce-toolbox')
         .then((toolbox) => {
           if (!toolbox.is(':visible')) {
             assert.isOk(true, 'Toolbox not visible');

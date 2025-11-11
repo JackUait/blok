@@ -3,7 +3,7 @@ import type { ConversionConfig, ToolboxConfig, ToolConfig, API, BlockAPI } from 
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import ToolMock, { type MockToolData } from '../../fixtures/tools/ToolMock';
 import { nanoid } from 'nanoid';
-import { EDITOR_SELECTOR } from '../../support/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 /**
  * There will be described test cases of 'blocks.*' API
@@ -74,7 +74,7 @@ describe('api.blocks', () => {
 
         await editor.blocks.update(idToUpdate, newBlockData);
 
-        cy.get(EDITOR_SELECTOR)
+        cy.get(EDITOR_INTERFACE_SELECTOR)
           .find('[data-cy="block-wrapper"]')
           .should('have.text', newBlockData.text);
       });
@@ -213,7 +213,7 @@ describe('api.blocks', () => {
             expect(error.message).to.be.eq(`Block with id "${idToUpdate}" not found`);
           })
           .finally(() => {
-            cy.get(EDITOR_SELECTOR)
+            cy.get(EDITOR_INTERFACE_SELECTOR)
               .find('[data-cy="block-wrapper"]')
               .invoke('text')
               .then(blockText => {
@@ -276,7 +276,7 @@ describe('api.blocks', () => {
           },
         ], index)); // paste to the 0 index
 
-        cy.get(EDITOR_SELECTOR)
+        cy.get(EDITOR_INTERFACE_SELECTOR)
           .find('[data-cy="block-wrapper"]')
           .each(($el, i) => {
             switch (i) {

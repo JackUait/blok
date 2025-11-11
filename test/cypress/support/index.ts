@@ -20,7 +20,7 @@ import './commands';
 /**
  * Test constants
  */
-export { EDITOR_SELECTOR } from './constants';
+export { EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 /**
  * File with custom assertions

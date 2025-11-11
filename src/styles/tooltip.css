@@ -8,6 +8,7 @@
     z-index: 999;
     top: 0;
     left: 0;
+    background-color: var(--ct-color-bg);
     opacity: 0;
     user-select: none;
     pointer-events: none;

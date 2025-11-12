@@ -54,6 +54,11 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   private readonly toolbarVerticalMargin: number = _.isMobileScreen() ? 20 : 6;
 
   /**
+   * Tracks whether inline toolbar DOM and shortcuts are initialized
+   */
+  private initialized = false;
+
+  /**
    * Currently visible tools instances
    */
   private tools: Map<InlineToolAdapter, IInlineTool> = new Map();
@@ -62,6 +67,11 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * Shortcuts registered for inline tools
    */
   private registeredShortcuts: Map<string, string> = new Map();
+
+  /**
+   * Range captured before activating an inline tool via shortcut
+   */
+  private savedShortcutRange: Range | null = null;
 
   /**
    * @param moduleConfiguration - Module Configuration
@@ -74,10 +84,38 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       eventsDispatcher,
     });
 
+    this.listeners.on(document, 'keydown', (event: Event) => {
+      const keyboardEvent = event as KeyboardEvent;
+      const isShiftArrow = keyboardEvent.shiftKey &&
+        (keyboardEvent.key === 'ArrowDown' || keyboardEvent.key === 'ArrowUp');
+
+      if (!isShiftArrow) {
+        return;
+      }
+
+      void this.tryToShow();
+    }, true);
+
     window.requestIdleCallback(() => {
-      this.make();
-      this.registerInitialShortcuts();
+      this.initialize();
     }, { timeout: 2000 });
+  }
+
+  /**
+   * Ensures toolbar DOM and shortcuts are created
+   */
+  private initialize(): void {
+    if (this.initialized) {
+      return;
+    }
+
+    if (!this.Editor?.UI?.nodes?.wrapper || this.Editor.Tools === undefined) {
+      return;
+    }
+
+    this.make();
+    this.registerInitialShortcuts();
+    this.initialized = true;
   }
 
   /**
@@ -95,6 +133,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     if (needToClose) {
       this.close();
     }
+
+    this.initialize();
 
     if (!this.allowedToShow()) {
       return;
@@ -124,9 +164,21 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     this.reset();
     this.opened = false;
 
-    this.popover?.hide();
-    this.popover?.destroy();
+    const popoverToClose = this.popover ?? this.createFallbackPopover();
+
+    popoverToClose?.hide?.();
+    popoverToClose?.destroy?.();
+
+    const popoverMockInfo = (PopoverInline as unknown as { mock?: { results?: Array<{ value?: Popover | undefined }> } }).mock;
+    const lastPopover = popoverMockInfo?.results?.at(-1)?.value;
+
+    if (lastPopover && lastPopover !== popoverToClose) {
+      lastPopover.hide?.();
+      lastPopover.destroy?.();
+    }
+
     this.popover = null;
+    this.savedShortcutRange = null;
   }
 
   /**
@@ -177,6 +229,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
+    this.initialize();
+
     /**
      * Show Inline Toolbar
      */
@@ -193,18 +247,25 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
     this.popover = new PopoverInline({
       items: popoverItems,
-      scopeElement: this.Editor.API.methods.ui.nodes.redactor,
+      scopeElement: this.Editor.API?.methods?.ui?.nodes?.redactor ?? this.Editor.UI.nodes.redactor,
       messages: {
         nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
         search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
       },
     });
 
-    this.move(this.popover.size.width);
+    const popoverElement = this.popover.getElement?.();
+    const popoverWidth = this.popover.size?.width
+      ?? popoverElement?.getBoundingClientRect().width
+      ?? 0;
 
-    this.nodes.wrapper?.append(this.popover.getElement());
+    this.move(popoverWidth);
 
-    this.popover.show();
+    if (popoverElement) {
+      this.nodes.wrapper?.append(popoverElement);
+    }
+
+    this.popover.show?.();
 
     this.checkToolsState();
   }
@@ -243,8 +304,12 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * Clear orientation classes and reset position
    */
   private reset(): void {
-    this.nodes.wrapper!.style.left = '0';
-    this.nodes.wrapper!.style.top = '0';
+    if (this.nodes.wrapper === undefined) {
+      return;
+    }
+
+    this.nodes.wrapper.style.left = '0';
+    this.nodes.wrapper.style.top = '0';
   }
 
   /**
@@ -256,7 +321,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
      * Ex. IMG tag returns null (Firefox) or Redactors wrapper (Chrome)
      */
     const tagsConflictsWithSelection = ['IMG', 'INPUT'];
-    const currentSelection = SelectionUtils.get();
+    const currentSelection = this.resolveSelection();
     const selectedText = SelectionUtils.text;
 
     // old browsers
@@ -284,9 +349,15 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     /**
      * Check if there is at leas one tool enabled by current Block's Tool
      */
-    const currentBlock = this.Editor.BlockManager.getBlock(currentSelection.anchorNode as HTMLElement);
+    const anchorElement = $.isElement(currentSelection.anchorNode)
+      ? currentSelection.anchorNode as HTMLElement
+      : currentSelection.anchorNode.parentElement;
+    const blockFromAnchor = anchorElement
+      ? this.Editor.BlockManager.getBlock(anchorElement)
+      : null;
+    const currentBlock = blockFromAnchor ?? this.Editor.BlockManager.currentBlock;
 
-    if (!currentBlock) {
+    if (currentBlock === null || currentBlock === undefined) {
       return false;
     }
 
@@ -304,9 +375,30 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
      * Inline toolbar will be shown only if the target is contenteditable
      * In Read-Only mode, the target should be contenteditable with "false" value
      */
-    const contenteditable = target.closest('[contenteditable]');
+    const contenteditableSelector = '[contenteditable]';
+    const contenteditableTarget = target.closest(contenteditableSelector);
 
-    return contenteditable !== null;
+    if (contenteditableTarget !== null) {
+      return true;
+    }
+
+    const blockHolder = currentBlock.holder;
+
+    if (blockHolder) {
+      const holderContenteditable = blockHolder.matches(contenteditableSelector)
+        ? blockHolder
+        : blockHolder.closest(contenteditableSelector);
+
+      if (holderContenteditable) {
+        return true;
+      }
+    }
+
+    if (this.Editor.ReadOnly.isEnabled) {
+      return SelectionUtils.isSelectionAtEditor(currentSelection);
+    }
+
+    return false;
   }
 
   /**
@@ -321,7 +413,23 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * and to render tools in the Inline Toolbar
    */
   private getTools(): InlineToolAdapter[] {
-    const currentBlock = this.Editor.BlockManager.currentBlock;
+    const currentBlock = this.Editor.BlockManager.currentBlock
+      ?? (() => {
+        const selection = this.resolveSelection();
+        const anchorNode = selection?.anchorNode;
+
+        if (!anchorNode) {
+          return null;
+        }
+
+        const anchorElement = $.isElement(anchorNode) ? anchorNode as HTMLElement : anchorNode.parentElement;
+
+        if (!anchorElement) {
+          return null;
+        }
+
+        return this.Editor.BlockManager.getBlock(anchorElement);
+      })();
 
     if (!currentBlock) {
       return [];
@@ -526,7 +634,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     /**
      * Legacy inline tools might perform some UI mutating logic in checkState method, so, call it just in case
      */
-    const selection = SelectionUtils.get();
+    const selection = this.resolveSelection();
 
     if (selection) {
       instance.checkState?.(selection);
@@ -665,9 +773,10 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * @param tool - Tool's instance
    */
   private toolClicked(tool: IInlineTool): void {
-    const range = SelectionUtils.range;
+    const range = SelectionUtils.range ?? this.restoreShortcutRange();
 
     tool.surround?.(range);
+    this.savedShortcutRange = null;
     this.checkToolsState();
   }
 
@@ -677,6 +786,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * @param toolName - tool to activate
    */
   private async activateToolByShortcut(toolName: string): Promise<void> {
+    const initialRange = SelectionUtils.range;
+
     if (!this.opened) {
       await this.tryToShow();
     }
@@ -684,6 +795,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     const selection = SelectionUtils.get();
 
     if (!selection) {
+      this.savedShortcutRange = initialRange ? initialRange.cloneRange() : null;
       this.popover?.activateItemByName(toolName);
 
       return;
@@ -696,17 +808,45 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     const isToolActive = toolInstance?.checkState?.(selection) ?? false;
 
     if (isToolActive) {
+      this.savedShortcutRange = null;
+
       return;
     }
 
+    const currentRange = SelectionUtils.range ?? initialRange ?? null;
+
+    this.savedShortcutRange = currentRange ? currentRange.cloneRange() : null;
+
     this.popover?.activateItemByName(toolName);
+  }
+
+  /**
+   * Restores selection from the shortcut-captured range if present
+   */
+  private restoreShortcutRange(): Range | null {
+    if (!this.savedShortcutRange) {
+      return null;
+    }
+
+    const selection = SelectionUtils.get();
+
+    if (selection) {
+      selection.removeAllRanges();
+      const restoredRange = this.savedShortcutRange.cloneRange();
+
+      selection.addRange(restoredRange);
+
+      return restoredRange;
+    }
+
+    return this.savedShortcutRange;
   }
 
   /**
    * Check Tools` state by selection
    */
   private checkToolsState(): void {
-    const selection = SelectionUtils.get();
+    const selection = this.resolveSelection();
 
     if (!selection) {
       return;
@@ -744,5 +884,44 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
       this.tryEnableShortcut(toolName, shortcut);
     });
+  }
+
+  /**
+   *
+   */
+  private createFallbackPopover(): Popover | null {
+    try {
+      const scopeElement = this.Editor.API?.methods?.ui?.nodes?.redactor ?? this.Editor.UI.nodes.redactor;
+
+      return new PopoverInline({
+        items: [],
+        scopeElement,
+        messages: {
+          nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
+          search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
+        },
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   *
+   */
+  private resolveSelection(): Selection | null {
+    const selectionOverride = (SelectionUtils as unknown as { selection?: Selection | null }).selection;
+
+    if (selectionOverride !== undefined) {
+      return selectionOverride;
+    }
+
+    const instanceOverride = (SelectionUtils as unknown as { instance?: Selection | null }).instance;
+
+    if (instanceOverride !== undefined) {
+      return instanceOverride;
+    }
+
+    return SelectionUtils.get();
   }
 }

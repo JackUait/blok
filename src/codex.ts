@@ -1,6 +1,7 @@
 'use strict';
 
 import type { EditorConfig, API } from '../types';
+import type { EditorModules } from './types-internal/editor-modules';
 
 /**
  * Apply polyfills
@@ -12,8 +13,6 @@ import Core from './components/core';
 import * as _ from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 
-declare const VERSION: string;
-
 /**
  * Editor.js
  *
@@ -22,6 +21,11 @@ declare const VERSION: string;
  * @author CodeX Team <https://codex.so>
  */
 export default class EditorJS {
+  /**
+   * Store user-provided configuration for later export
+   */
+  private readonly initialConfiguration: EditorConfig|string|undefined;
+
   /**
    * Promise that resolves when core modules are ready and UI is rendered on the page
    */
@@ -35,13 +39,17 @@ export default class EditorJS {
 
   /** Editor version */
   public static get version(): string {
-    return VERSION;
+    return _.getEditorVersion();
   }
 
   /**
    * @param {EditorConfig|string|undefined} [configuration] - user configuration
    */
   constructor(configuration?: EditorConfig|string) {
+    this.initialConfiguration = _.isObject(configuration)
+      ? { ...configuration }
+      : configuration;
+
     /**
      * Set default onReady function or use the one from configuration if provided
      */
@@ -86,10 +94,19 @@ export default class EditorJS {
     const destroy = (): void => {
       Object.values(editor.moduleInstances)
         .forEach((moduleInstance) => {
-          if (_.isFunction(moduleInstance.destroy)) {
-            moduleInstance.destroy();
+          if (moduleInstance === undefined || moduleInstance === null) {
+            return;
           }
-          moduleInstance.listeners.removeAll();
+
+          if (_.isFunction((moduleInstance as { destroy?: () => void }).destroy)) {
+            (moduleInstance as { destroy: () => void }).destroy();
+          }
+
+          const listeners = (moduleInstance as { listeners?: { removeAll?: () => void } }).listeners;
+
+          if (listeners && _.isFunction(listeners.removeAll)) {
+            listeners.removeAll();
+          }
         });
 
       destroyTooltip();
@@ -104,12 +121,77 @@ export default class EditorJS {
     };
 
     fieldsToExport.forEach((field) => {
+      if (field === 'configuration') {
+        const coreConfiguration = (editor as unknown as { configuration?: EditorConfig|string|undefined }).configuration;
+        const configurationToExport = _.isObject(this.initialConfiguration)
+          ? this.initialConfiguration
+          : coreConfiguration ?? this.initialConfiguration;
+
+        if (configurationToExport !== undefined) {
+          (this as Record<string, unknown>)[field] = configurationToExport as EditorConfig|string;
+        }
+
+        return;
+      }
+
       (this as Record<string, unknown>)[field] = (editor as unknown as Record<string, unknown>)[field];
     });
 
     this.destroy = destroy;
 
-    Object.setPrototypeOf(this, editor.moduleInstances.API.methods);
+    const apiMethods = editor.moduleInstances.API.methods;
+
+    if (Object.getPrototypeOf(apiMethods) !== EditorJS.prototype) {
+      Object.setPrototypeOf(apiMethods, EditorJS.prototype);
+    }
+
+    Object.setPrototypeOf(this, apiMethods);
+
+    const moduleAliases = Object.create(null) as Record<string, unknown>;
+    const moduleInstances = editor.moduleInstances as Partial<EditorModules>;
+    const moduleInstancesRecord = moduleInstances as unknown as Record<string, unknown>;
+
+    const getAliasName = (name: string): string => (
+      /^[A-Z]+$/.test(name)
+        ? name.toLowerCase()
+        : name.charAt(0).toLowerCase() + name.slice(1)
+    );
+
+    Object.keys(moduleInstancesRecord)
+      .forEach((name) => {
+        const alias = getAliasName(name);
+
+        Object.defineProperty(moduleAliases, alias, {
+          configurable: true,
+          enumerable: true,
+          get: () => moduleInstancesRecord[name],
+        });
+      });
+
+    type ToolbarModuleWithSettings = {
+      blockSettings?: unknown;
+      inlineToolbar?: unknown;
+    };
+
+    const toolbarModule = moduleInstances.Toolbar as unknown as ToolbarModuleWithSettings | undefined;
+    const blockSettingsModule = moduleInstances.BlockSettings;
+
+    if (toolbarModule !== undefined && blockSettingsModule !== undefined && toolbarModule.blockSettings === undefined) {
+      toolbarModule.blockSettings = blockSettingsModule;
+    }
+
+    const inlineToolbarModule = moduleInstances.InlineToolbar;
+
+    if (toolbarModule !== undefined && inlineToolbarModule !== undefined && toolbarModule.inlineToolbar === undefined) {
+      toolbarModule.inlineToolbar = inlineToolbarModule;
+    }
+
+    Object.defineProperty(this, 'module', {
+      value: moduleAliases,
+      configurable: true,
+      enumerable: false,
+      writable: false,
+    });
 
     delete (this as Partial<EditorJS>).exportAPI;
 
@@ -136,9 +218,9 @@ export default class EditorJS {
         Object.entries(methods)
           .forEach(([name, alias]) => {
             const apiKey = key as keyof API;
-            const apiMethods = editor.moduleInstances.API.methods[apiKey] as unknown as Record<string, unknown>;
+            const apiMethodGroup = editor.moduleInstances.API.methods[apiKey] as unknown as Record<string, unknown>;
 
-            (this as Record<string, unknown>)[alias] = apiMethods[name];
+            (this as Record<string, unknown>)[alias] = apiMethodGroup[name];
           });
       });
   }

@@ -84,16 +84,22 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (params.flippable !== false) {
-      this.flipper = new Flipper({
-        items: this.flippableElements,
-        focusedItemClass: popoverItemCls.focused,
-        allowedKeys: [
-          keyCodes.TAB,
-          keyCodes.UP,
-          keyCodes.DOWN,
-          keyCodes.ENTER,
-        ],
-      });
+      if (params.flipper !== undefined) {
+        params.flipper.deactivate();
+        params.flipper.removeOnFlip(this.onFlip);
+        this.flipper = params.flipper;
+      } else {
+        this.flipper = new Flipper({
+          items: this.flippableElements,
+          focusedItemClass: popoverItemCls.focused,
+          allowedKeys: [
+            keyCodes.TAB,
+            keyCodes.UP,
+            keyCodes.DOWN,
+            keyCodes.ENTER,
+          ],
+        });
+      }
 
       this.flipper.onFlip(this.onFlip);
     }
@@ -242,6 +248,10 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedPopover.getElement().remove();
     this.nestedPopover = null;
     this.flipper?.activate(this.flippableElements);
+    // Use requestAnimationFrame to ensure DOM is updated before focusing
+    requestAnimationFrame(() => {
+      this.flipper?.focusFirst();
+    });
 
     this.nestedPopoverTriggerItem?.onChildrenClose();
   }
@@ -358,20 +368,26 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Returns list of elements available for keyboard navigation.
    */
-  private get flippableElements(): HTMLElement[] {
-    const result = this.items
-      .map(item => {
-        if (item instanceof PopoverItemDefault) {
-          return item.getElement();
+  protected get flippableElements(): HTMLElement[] {
+    const result = this.items.flatMap(item => {
+      if (item instanceof PopoverItemDefault) {
+        if (item.isDisabled) {
+          return [];
         }
-        if (item instanceof PopoverItemHtml) {
-          return item.getControls();
-        }
-      })
-      .flat()
-      .filter(item => item !== undefined && item !== null);
 
-    return result as HTMLElement[];
+        const element = item.getElement();
+
+        return element ? [ element ] : [];
+      }
+
+      if (item instanceof PopoverItemHtml) {
+        return item.getControls();
+      }
+
+      return [];
+    }).filter((item): item is HTMLElement => item !== undefined && item !== null);
+
+    return result;
   }
 
   /**

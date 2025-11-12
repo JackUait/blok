@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
-import { selectionChangeDebounceTimeout, EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { selectionChangeDebounceTimeout, EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
@@ -160,8 +160,6 @@ const createEditorWithBlocks = async (
             public render(): unknown {
               const builtMenu = buildMenu(menu);
 
-              console.log('Built menu for tune', toolName, builtMenu);
-
               return builtMenu;
             }
           };
@@ -246,14 +244,27 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
 };
 
 /**
+ * Focus the first block within the editor interface to expose block tunes actions.
+ *
+ * @param page - The Playwright page object
+ */
+const focusFirstBlock = async (page: Page): Promise<void> => {
+  const blockHandle = await page.locator(BLOCK_SELECTOR).elementHandle();
+
+  if (!blockHandle) {
+    throw new Error('Unable to locate a block within the editor interface.');
+  }
+
+  await blockHandle.click();
+};
+
+/**
  * Open block tunes popover
  *
  * @param page - The Playwright page object
  */
 const openBlockTunes = async (page: Page): Promise<void> => {
-  const block = page.locator(BLOCK_SELECTOR).first();
-
-  await block.click();
+  await focusFirstBlock(page);
   await page.locator(SETTINGS_BUTTON_SELECTOR).click();
   await waitForBlockTunesPopover(page);
 };
@@ -264,16 +275,13 @@ const openBlockTunes = async (page: Page): Promise<void> => {
  * @param page - The Playwright page object
  */
 const openBlockTunesWithShortcut = async (page: Page): Promise<void> => {
-  const block = page.locator(BLOCK_SELECTOR).first();
+  await focusFirstBlock(page);
 
-  await block.click();
-  const modifierKey = process.platform === 'darwin' ? 'Meta' : 'Control';
-
-  await page.keyboard.press(`${modifierKey}+/`);
+  await page.keyboard.press(`${MODIFIER_KEY}+/`);
   await waitForBlockTunesPopover(page, selectionChangeDebounceTimeout + 500);
 };
 
-test.describe('Popover Search/Filter', () => {
+test.describe('popover Search/Filter', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -283,7 +291,7 @@ test.describe('Popover Search/Filter', () => {
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
   });
 
-  test.describe('Filtering behavior', () => {
+  test.describe('filtering behavior', () => {
     /**
      * Test filtering items based on search query
      */
@@ -316,57 +324,6 @@ test.describe('Popover Search/Filter', () => {
           },
         ])
       );
-
-      const debugConfig = await page.evaluate(() => {
-        const editor = window.editorInstance;
-
-        if (!editor) {
-          return { hasEditor: false };
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
-        const editorAny = editor as any;
-        const toolsConfig = editorAny.configuration?.tools ?? {};
-        const tunesConfig = Array.isArray(editorAny.configuration?.tunes) ? editorAny.configuration.tunes : [];
-        const testToolEntry = toolsConfig.testTool ?? null;
-        const classReference = testToolEntry && typeof testToolEntry === 'object'
-          ? (testToolEntry as { class?: unknown }).class
-          : undefined;
-
-        return {
-          hasEditor: true,
-          toolKeys: Object.keys(toolsConfig),
-          testToolEntry: testToolEntry ?? null,
-          testToolClassIsFunction: typeof classReference === 'function',
-          testToolClassIsTune: Boolean(
-            classReference && typeof classReference === 'function' && (classReference as { isTune?: boolean }).isTune
-          ),
-          tunesList: tunesConfig,
-        };
-      });
-
-      // eslint-disable-next-line no-console -- debug aid
-      console.log('debugConfig', debugConfig);
-
-      const hasTestTune = await page.evaluate(() => {
-        const editor = window.editorInstance;
-
-        if (!editor) {
-          return null;
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
-        const availableTunes = (editor as any).module?.tools?.blockTunes?.available;
-
-        if (!availableTunes) {
-          return null;
-        }
-
-        return availableTunes.has('testTool');
-      });
-
-      // eslint-disable-next-line no-console -- debug aid
-      console.log('hasTestTune', hasTestTune);
 
       await openBlockTunes(page);
 
@@ -516,7 +473,7 @@ test.describe('Popover Search/Filter', () => {
     });
   });
 
-  test.describe('Case-insensitive matching', () => {
+  test.describe('case-insensitive matching', () => {
     /**
      * Test matching items regardless of case
      */
@@ -566,7 +523,7 @@ test.describe('Popover Search/Filter', () => {
     });
   });
 
-  test.describe('Partial matching', () => {
+  test.describe('partial matching', () => {
     /**
      * Test matching items with partial query
      */
@@ -624,7 +581,7 @@ test.describe('Popover Search/Filter', () => {
     });
   });
 
-  test.describe('Special characters', () => {
+  test.describe('special characters', () => {
     /**
      * Test handling special characters in search query
      */
@@ -729,7 +686,7 @@ test.describe('Popover Search/Filter', () => {
     });
   });
 
-  test.describe('Search input interactions', () => {
+  test.describe('search input interactions', () => {
     /**
      * Test updating filter results as user types
      */
@@ -892,7 +849,7 @@ test.describe('Popover Search/Filter', () => {
     });
   });
 
-  test.describe('Search input focus', () => {
+  test.describe('search input focus', () => {
     /**
      * Test that search input is focused after popover opened
      */
@@ -933,7 +890,7 @@ test.describe('Popover Search/Filter', () => {
     });
   });
 
-  test.describe('Keyboard navigation with search', () => {
+  test.describe('keyboard navigation with search', () => {
     /**
      * Test keyboard navigation between items ignoring separators when search query is applied
      */
@@ -1098,7 +1055,7 @@ test.describe('Popover Search/Filter', () => {
     });
   });
 
-  test.describe('Nested popover search', () => {
+  test.describe('nested popover search', () => {
     /**
      * Test filtering items in nested popover
      */

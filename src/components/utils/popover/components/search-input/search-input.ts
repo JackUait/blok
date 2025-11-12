@@ -66,6 +66,7 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
        */
       tabIndex: -1,
     }) as HTMLInputElement;
+    this.input.dataset.flipperTabTarget = 'true';
 
     this.wrapper.appendChild(iconWrapper);
     this.wrapper.appendChild(this.input);

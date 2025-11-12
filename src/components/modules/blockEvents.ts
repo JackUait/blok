@@ -138,6 +138,10 @@ export default class BlockEvents extends Module {
   public dragOver(event: DragEvent): void {
     const block = this.Editor.BlockManager.getBlockByChildNode(event.target as Node);
 
+    if (!block) {
+      return;
+    }
+
     block.dropTarget = true;
   }
 
@@ -148,6 +152,10 @@ export default class BlockEvents extends Module {
    */
   public dragLeave(event: DragEvent): void {
     const block = this.Editor.BlockManager.getBlockByChildNode(event.target as Node);
+
+    if (!block) {
+      return;
+    }
 
     block.dropTarget = false;
   }
@@ -166,7 +174,7 @@ export default class BlockEvents extends Module {
     }
 
     // Copy Selected Blocks
-    BlockSelection.copySelectedBlocks(event);
+    void BlockSelection.copySelectedBlocks(event);
   }
 
   /**
@@ -187,13 +195,18 @@ export default class BlockEvents extends Module {
       /**
        * Insert default block in place of removed ones
        */
-      const insertedBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
+      if (selectionPositionIndex !== undefined) {
+        const insertedBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
 
-      Caret.setToBlock(insertedBlock, Caret.positions.START);
+        Caret.setToBlock(insertedBlock, Caret.positions.START);
+      }
 
       /** Clear selection */
       BlockSelection.clearSelection(event);
-    });
+    })
+      .catch(() => {
+        // Handle copy operation failure silently
+      });
   }
 
   /**
@@ -244,7 +257,7 @@ export default class BlockEvents extends Module {
     }
 
     const currentBlock = this.Editor.BlockManager.currentBlock;
-    const canOpenToolbox = currentBlock.isEmpty;
+    const canOpenToolbox = currentBlock?.isEmpty;
 
     /**
      * @todo Handle case when slash pressed when several blocks are selected
@@ -307,27 +320,30 @@ export default class BlockEvents extends Module {
       return;
     }
 
-    let blockToFocus = currentBlock;
-
     /**
      * If enter has been pressed at the start of the text, just insert paragraph Block above
      */
-    if (currentBlock.currentInput !== undefined && caretUtils.isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
-      this.Editor.BlockManager.insertDefaultBlockAtIndex(this.Editor.BlockManager.currentBlockIndex);
+    const blockToFocus = (() => {
+      if (currentBlock.currentInput !== undefined && caretUtils.isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
+        this.Editor.BlockManager.insertDefaultBlockAtIndex(this.Editor.BlockManager.currentBlockIndex);
 
-    /**
-     * If caret is at very end of the block, just append the new block without splitting
-     * to prevent unnecessary dom mutation observing
-     */
-    } else if (currentBlock.currentInput && caretUtils.isCaretAtEndOfInput(currentBlock.currentInput)) {
-      blockToFocus = this.Editor.BlockManager.insertDefaultBlockAtIndex(this.Editor.BlockManager.currentBlockIndex + 1);
-    } else {
+        return currentBlock;
+      }
+
+      /**
+       * If caret is at very end of the block, just append the new block without splitting
+       * to prevent unnecessary dom mutation observing
+       */
+      if (currentBlock.currentInput && caretUtils.isCaretAtEndOfInput(currentBlock.currentInput)) {
+        return this.Editor.BlockManager.insertDefaultBlockAtIndex(this.Editor.BlockManager.currentBlockIndex + 1);
+      }
+
       /**
        * Split the Current Block into two blocks
        * Renew local current node after split
        */
-      blockToFocus = this.Editor.BlockManager.split();
-    }
+      return this.Editor.BlockManager.split();
+    })();
 
     this.Editor.Caret.setToBlock(blockToFocus);
 
@@ -393,7 +409,7 @@ export default class BlockEvents extends Module {
      * If prev Block is empty, it should be removed just like a character
      */
     if (previousBlock.isEmpty) {
-      BlockManager.removeBlock(previousBlock);
+      void BlockManager.removeBlock(previousBlock);
 
       return;
     }
@@ -402,9 +418,13 @@ export default class BlockEvents extends Module {
      * If current Block is empty, just remove it and set cursor to the previous Block (like we're removing line break char)
      */
     if (currentBlock.isEmpty) {
-      BlockManager.removeBlock(currentBlock);
+      void BlockManager.removeBlock(currentBlock);
 
       const newCurrentBlock = BlockManager.currentBlock;
+
+      if (newCurrentBlock === undefined) {
+        return;
+      }
 
       Caret.setToBlock(newCurrentBlock, Caret.positions.END);
 
@@ -435,6 +455,10 @@ export default class BlockEvents extends Module {
     const { BlockManager, Caret } = this.Editor;
     const { currentBlock, nextBlock } = BlockManager;
 
+    if (currentBlock === undefined) {
+      return;
+    }
+
     /**
      * If some fragment is selected, leave native behaviour
      */
@@ -445,7 +469,7 @@ export default class BlockEvents extends Module {
     /**
      * If caret is not at the end, leave native behaviour
      */
-    if (!caretUtils.isCaretAtEndOfInput(currentBlock.currentInput)) {
+    if (!currentBlock.currentInput || !caretUtils.isCaretAtEndOfInput(currentBlock.currentInput)) {
       return;
     }
 
@@ -477,7 +501,7 @@ export default class BlockEvents extends Module {
      * If next Block is empty, it should be removed just like a character
      */
     if (nextBlock.isEmpty) {
-      BlockManager.removeBlock(nextBlock);
+      void BlockManager.removeBlock(nextBlock);
 
       return;
     }
@@ -486,7 +510,7 @@ export default class BlockEvents extends Module {
      * If current Block is empty, just remove it and set cursor to the next Block (like we're removing line break char)
      */
     if (currentBlock.isEmpty) {
-      BlockManager.removeBlock(currentBlock);
+      void BlockManager.removeBlock(currentBlock);
 
       Caret.setToBlock(nextBlock, Caret.positions.START);
 
@@ -525,6 +549,9 @@ export default class BlockEvents extends Module {
       .mergeBlocks(targetBlock, blockToMerge)
       .then(() => {
         Toolbar.close();
+      })
+      .catch(() => {
+        // Error handling for mergeBlocks
       });
   }
 
@@ -546,18 +573,25 @@ export default class BlockEvents extends Module {
     }
 
     /**
-     * Close Toolbar when user moves cursor
+     * Close Toolbar when user moves cursor, but keep toolbars open if the user
+     * is extending selection with the Shift key so inline interactions remain available.
      */
-    this.Editor.Toolbar.close();
+    if (!event.shiftKey) {
+      this.Editor.Toolbar.close();
+    }
 
     const { currentBlock } = this.Editor.BlockManager;
     const caretAtEnd = currentBlock?.currentInput !== undefined ? caretUtils.isCaretAtEndOfInput(currentBlock.currentInput) : undefined;
     const shouldEnableCBS = caretAtEnd || this.Editor.BlockSelection.anyBlockSelected;
 
-    if (event.shiftKey && event.keyCode === _.keyCodes.DOWN && shouldEnableCBS) {
-      this.Editor.CrossBlockSelection.toggleBlockSelectedState();
+    if (event.shiftKey && event.keyCode === _.keyCodes.DOWN) {
+      if (shouldEnableCBS) {
+        this.Editor.CrossBlockSelection.toggleBlockSelectedState();
 
-      return;
+        return;
+      }
+
+      void this.Editor.InlineToolbar.tryToShow();
     }
 
     const navigateNext = event.keyCode === _.keyCodes.DOWN || (event.keyCode === _.keyCodes.RIGHT && !this.isRtl);
@@ -608,18 +642,24 @@ export default class BlockEvents extends Module {
     }
 
     /**
-     * Close Toolbar when user moves cursor
+     * Close Toolbar when user moves cursor, but preserve it for Shift-based selection changes.
      */
-    this.Editor.Toolbar.close();
+    if (!event.shiftKey) {
+      this.Editor.Toolbar.close();
+    }
 
     const { currentBlock } = this.Editor.BlockManager;
     const caretAtStart = currentBlock?.currentInput !== undefined ? caretUtils.isCaretAtStartOfInput(currentBlock.currentInput) : undefined;
     const shouldEnableCBS = caretAtStart || this.Editor.BlockSelection.anyBlockSelected;
 
-    if (event.shiftKey && event.keyCode === _.keyCodes.UP && shouldEnableCBS) {
-      this.Editor.CrossBlockSelection.toggleBlockSelectedState(false);
+    if (event.shiftKey && event.keyCode === _.keyCodes.UP) {
+      if (shouldEnableCBS) {
+        this.Editor.CrossBlockSelection.toggleBlockSelectedState(false);
 
-      return;
+        return;
+      }
+
+      void this.Editor.InlineToolbar.tryToShow();
     }
 
     const navigatePrevious = event.keyCode === _.keyCodes.UP || (event.keyCode === _.keyCodes.LEFT && !this.isRtl);
@@ -705,7 +745,11 @@ export default class BlockEvents extends Module {
        *       — wrong settings will be opened.
        *       To fix it, we should refactor the Block Settings module — make it a standalone class, like the Toolbox
        */
-      this.Editor.BlockSettings.open();
+      void Promise
+        .resolve(this.Editor.BlockSettings.open())
+        .catch(() => {
+          // Error handling for BlockSettings.open
+        });
     }
   }
 }

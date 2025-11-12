@@ -58,7 +58,7 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
   /**
    * Returns enabled tunes for Tool
    */
-  enabledBlockTunes: boolean | string[];
+  enabledBlockTunes: boolean | string[] | undefined;
 
   /**
    * Returns Tool paste configuration

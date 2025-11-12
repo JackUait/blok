@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from './helpers/ensure-build';
-import { TOOLTIP_INTERFACE_SELECTOR, EDITOR_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../src/components/constants';
+import { TOOLTIP_INTERFACE_SELECTOR, EDITOR_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../cypress/fixtures/test.html')
@@ -17,7 +17,6 @@ const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__sett
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
 const POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover`;
-const LINK_TOOL_SHORTCUT_MODIFIER = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -236,15 +235,19 @@ const openInlineToolbarPopover = async (page: Page): Promise<Locator> => {
     window.editorInstance?.inlineToolbar?.open();
   });
 
-  const inlinePopover = inlineToolbar.locator('.ce-popover').first();
-  const inlinePopoverContainer = inlinePopover.locator('.ce-popover__container').first();
+  const inlinePopover = inlineToolbar.locator(':scope > .ce-popover');
 
+  await expect(inlinePopover).toHaveCount(1);
+
+  const inlinePopoverContainer = inlinePopover.locator(':scope > .ce-popover__container');
+
+  await expect(inlinePopoverContainer).toHaveCount(1);
   await expect(inlinePopoverContainer).toBeVisible();
 
   return inlinePopover;
 };
 
-test.describe('Editor i18n', () => {
+test.describe('editor i18n', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -254,7 +257,7 @@ test.describe('Editor i18n', () => {
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
   });
 
-  test.describe('Toolbox', () => {
+  test.describe('toolbox', () => {
     test('should translate tool title in a toolbox', async ({ page }) => {
       const toolNamesDictionary = {
         Heading: 'Заголовок',
@@ -322,8 +325,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
@@ -391,16 +395,19 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
       const testToolItems = page.locator(`${POPOVER_SELECTOR} [data-item-name="testTool"]`);
 
-      await expect(testToolItems.first()).toBeVisible();
-      await expect(testToolItems.first()).toContainText(toolNamesDictionary.Title1);
-      await expect(testToolItems.last()).toContainText(toolNamesDictionary.Title2);
+      await expect(testToolItems).toHaveCount(2);
+      await expect(testToolItems).toContainText([
+        toolNamesDictionary.Title1,
+        toolNamesDictionary.Title2,
+      ]);
     });
 
     test('should use capitalized tool name as translation key if toolbox title is missing', async ({ page }) => {
@@ -454,8 +461,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
@@ -466,7 +474,7 @@ test.describe('Editor i18n', () => {
     });
   });
 
-  test.describe('Block Tunes', () => {
+  test.describe('block tunes', () => {
     test('should translate Delete button title', async ({ page }) => {
       const blockTunesDictionary = {
         delete: {
@@ -492,8 +500,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
@@ -535,8 +544,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const secondBlock = page.locator(BLOCK_SELECTOR).last();
+      const secondBlock = page.locator(BLOCK_SELECTOR).filter({ hasText: 'Second block' });
 
+      await expect(secondBlock).toHaveCount(1);
       await secondBlock.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
@@ -578,8 +588,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const firstBlock = page.locator(BLOCK_SELECTOR).first();
+      const firstBlock = page.locator(BLOCK_SELECTOR).filter({ hasText: 'First block' });
 
+      await expect(firstBlock).toHaveCount(1);
       await firstBlock.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
@@ -615,8 +626,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
@@ -630,7 +642,7 @@ test.describe('Editor i18n', () => {
 
       // Check if confirmation message appears (it might be in a nested popover or notification)
       const confirmationText = blockTunesDictionary.delete['Click to delete'];
-      const confirmationElement = page.locator(`text=${confirmationText}`).first();
+      const confirmationElement = page.locator(`text=${confirmationText}`);
 
       // The confirmation might appear in different ways, so we check if it exists
       const confirmationExists = await confirmationElement.count() > 0;
@@ -725,8 +737,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
@@ -744,7 +757,7 @@ test.describe('Editor i18n', () => {
     });
   });
 
-  test.describe('UI Popover', () => {
+  test.describe('ui popover', () => {
     test('should translate "Filter" search placeholder in toolbox', async ({ page }) => {
       const uiDictionary = {
         popover: {
@@ -760,8 +773,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
@@ -790,14 +804,22 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const popover = page.locator(POPOVER_SELECTOR).first();
-      const searchInput = popover.locator('input[type="search"]').first();
+      const popoverContainer = page
+        .locator(`${POPOVER_SELECTOR} .ce-popover__container:visible`)
+        .filter({ has: page.locator('input[type="search"]') });
 
+      await expect(popoverContainer).toHaveCount(1);
+      await expect(popoverContainer).toBeVisible();
+
+      const searchInput = popoverContainer.locator('input[type="search"]');
+
+      await expect(searchInput).toHaveCount(1);
       await expect(searchInput).toBeVisible();
       await searchInput.fill('nonexistenttool12345');
 
@@ -805,7 +827,7 @@ test.describe('Editor i18n', () => {
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for search results
       await page.waitForTimeout(300);
 
-      const nothingFoundMessage = popover.getByText(uiDictionary.popover['Nothing found']);
+      const nothingFoundMessage = popoverContainer.getByText(uiDictionary.popover['Nothing found']);
 
       await expect(nothingFoundMessage).toBeVisible();
     });
@@ -898,14 +920,22 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
-      const popover = page.locator(POPOVER_SELECTOR).first();
-      const searchInput = popover.getByRole('searchbox', { name: uiDictionary.popover.Filter }).first();
+      const popoverContainer = page
+        .locator(`${POPOVER_SELECTOR} .ce-popover__container:visible`)
+        .filter({ has: page.locator(`input[placeholder*="${uiDictionary.popover.Filter}"]`) });
 
+      await expect(popoverContainer).toHaveCount(1);
+      await expect(popoverContainer).toBeVisible();
+
+      const searchInput = popoverContainer.getByRole('searchbox', { name: uiDictionary.popover.Filter });
+
+      await expect(searchInput).toHaveCount(1);
       await expect(searchInput).toBeVisible();
 
       const placeholder = await searchInput.getAttribute('placeholder');
@@ -916,7 +946,7 @@ test.describe('Editor i18n', () => {
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for search results
       await page.waitForTimeout(300);
 
-      const nothingFoundMessage = popover.getByText(uiDictionary.popover['Nothing found']);
+      const nothingFoundMessage = popoverContainer.getByText(uiDictionary.popover['Nothing found']);
 
       await expect(nothingFoundMessage).toBeVisible();
     });
@@ -1023,7 +1053,9 @@ test.describe('Editor i18n', () => {
           uiDict: uiDictionary }
       );
 
-      const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(paragraph).toHaveCount(1);
 
       await selectText(paragraph, 'Some text');
 
@@ -1035,18 +1067,21 @@ test.describe('Editor i18n', () => {
       const convertToButton = inlinePopover.locator('[data-item-name="convert-to"]');
 
       await expect(convertToButton).toBeVisible();
-      await convertToButton.first().click();
+      await expect(convertToButton).toHaveCount(1);
+      await convertToButton.click();
 
       const nestedPopover = page.locator(`${INLINE_TOOLBAR_SELECTOR} .ce-popover--nested`);
 
       await expect(nestedPopover).toHaveCount(1);
 
-      const nestedPopoverContainer = nestedPopover.locator('.ce-popover__container').first();
+      const nestedPopoverContainer = nestedPopover.locator('.ce-popover__container');
 
+      await expect(nestedPopoverContainer).toHaveCount(1);
       await expect(nestedPopoverContainer).toBeVisible();
 
-      const searchInput = nestedPopover.getByRole('searchbox', { name: uiDictionary.popover.Filter }).first();
+      const searchInput = nestedPopover.getByRole('searchbox', { name: uiDictionary.popover.Filter });
 
+      await expect(searchInput).toHaveCount(1);
       await expect(searchInput).toBeVisible();
 
       const placeholder = await searchInput.getAttribute('placeholder');
@@ -1063,7 +1098,7 @@ test.describe('Editor i18n', () => {
     });
   });
 
-  test.describe('UI Toolbar Toolbox', () => {
+  test.describe('ui toolbar toolbox', () => {
     test('should translate "Add" button tooltip', async ({ page }) => {
       const uiDictionary = {
         toolbar: {
@@ -1081,8 +1116,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
 
       const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
@@ -1095,7 +1131,7 @@ test.describe('Editor i18n', () => {
     });
   });
 
-  test.describe('UI Block Tunes Toggler', () => {
+  test.describe('ui block tunes toggler', () => {
     test('should translate "Click to tune" tooltip', async ({ page }) => {
       const uiDictionary = {
         blockTunes: {
@@ -1124,8 +1160,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = page.locator(BLOCK_SELECTOR);
 
+      await expect(block).toHaveCount(1);
       await block.click();
 
       const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
@@ -1138,7 +1175,7 @@ test.describe('Editor i18n', () => {
     });
   });
 
-  test.describe('UI Inline Toolbar Converter', () => {
+  test.describe('ui inline toolbar converter', () => {
     test('should translate "Convert to" label in inline toolbar', async ({ page }) => {
       const uiDictionary = {
         inlineToolbar: {
@@ -1246,7 +1283,9 @@ test.describe('Editor i18n', () => {
           uiDict: uiDictionary }
       );
 
-      const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(paragraph).toHaveCount(1);
 
       await selectText(paragraph, 'Some text');
 
@@ -1260,13 +1299,13 @@ test.describe('Editor i18n', () => {
       const convertToButton = inlinePopover.locator('[data-item-name="convert-to"]');
 
       await expect(convertToButton).toHaveCount(1);
-      const convertToTooltip = await getTooltipText(page, convertToButton.first());
+      const convertToTooltip = await getTooltipText(page, convertToButton);
 
       expect(convertToTooltip).toContain(uiDictionary.inlineToolbar.converter['Convert to']);
     });
   });
 
-  test.describe('Tools Translations', () => {
+  test.describe('tools translations', () => {
     test('should translate "Add a link" placeholder for link tool', async ({ page }) => {
       const toolsDictionary = {
         link: {
@@ -1293,7 +1332,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(paragraph).toHaveCount(1);
 
       await selectText(paragraph, 'Some text');
 
@@ -1302,7 +1343,7 @@ test.describe('Editor i18n', () => {
       await page.waitForTimeout(200);
 
       // Trigger link tool (Ctrl+K or Cmd+K)
-      await page.keyboard.press(`${LINK_TOOL_SHORTCUT_MODIFIER}+k`);
+      await page.keyboard.press(`${MODIFIER_KEY}+k`);
 
       // Wait for link input to appear
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for UI animation
@@ -1348,7 +1389,7 @@ test.describe('Editor i18n', () => {
     });
   });
 
-  test.describe('Inline Toolbar', () => {
+  test.describe('inline toolbar', () => {
     test('should translate tool name in Convert To', async ({ page }) => {
       const toolNamesDictionary = {
         Heading: 'Заголовок',
@@ -1436,7 +1477,9 @@ test.describe('Editor i18n', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(paragraph).toHaveCount(1);
 
       // Open Inline Toolbar
       await selectText(paragraph, 'Some text');
@@ -1454,9 +1497,13 @@ test.describe('Editor i18n', () => {
       await convertToButton.click();
 
       // Check item in convert to menu is internationalized
-      const nestedPopover = page.locator(`${INLINE_TOOLBAR_SELECTOR} .ce-popover--nested`).first();
-      const headerItem = nestedPopover.locator('[data-item-name="header"]').first();
+      const nestedPopover = page.locator(`${INLINE_TOOLBAR_SELECTOR} .ce-popover--nested`);
 
+      await expect(nestedPopover).toHaveCount(1);
+
+      const headerItem = nestedPopover.locator('[data-item-name="header"]');
+
+      await expect(headerItem).toHaveCount(1);
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(toolNamesDictionary.Heading);
     });

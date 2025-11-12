@@ -51,3 +51,26 @@ export const TOOLTIP_INTERFACE_SELECTOR = '[data-interface="tooltip"]';
  * Used to identify inline toolbar elements in the DOM
  */
 export const INLINE_TOOLBAR_INTERFACE_SELECTOR = '[data-interface=inline-toolbar]';
+
+/**
+ * Platform-specific modifier key for keyboard shortcuts
+ * Returns 'Meta' on macOS (darwin) and 'Control' on other platforms
+ * Used in tests for keyboard shortcut interactions
+ */
+export const MODIFIER_KEY = (() => {
+  // Check if we're in a Node.js environment
+  if (typeof process !== 'undefined' && process.platform) {
+    return process.platform === 'darwin' ? 'Meta' : 'Control';
+  }
+
+  // Browser environment: detect macOS using navigator
+  if (typeof navigator !== 'undefined') {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isMacOS = userAgent.includes('mac');
+
+    return isMacOS ? 'Meta' : 'Control';
+  }
+
+  // Fallback to Control if platform detection fails
+  return 'Control';
+})();

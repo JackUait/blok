@@ -5,6 +5,7 @@ import { PopoverItemHtml } from './components/popover-item/popover-item-html/pop
 import { PopoverDesktop } from './popover-desktop';
 import { CSSVariables, css } from './popover.const';
 import type { PopoverParams } from '@/types/utils/popover/popover';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 /**
  * Horizontal popover that is displayed inline with the content
@@ -47,6 +48,8 @@ export class PopoverInline extends PopoverDesktop {
       }
     );
 
+    this.flipper?.setHandleContentEditableTargets(true);
+
     /**
      * If active popover item has children, show them.
      * This is needed to display link url text (which is displayed as a nested popover content)
@@ -79,16 +82,25 @@ export class PopoverInline extends PopoverDesktop {
    * Open popover
    */
   public override show(): void {
-    /**
-     * If this is not a nested popover, set CSS variable with width of the popover
-     */
-    if (this.nestingLevel === 0) {
-      this.nodes.popover.style.setProperty(
-        CSSVariables.InlinePopoverWidth,
-        this.size.width + 'px'
-      );
-    }
     super.show();
+
+    if (this.nestingLevel === 0) {
+      const containerRect = this.nodes.popoverContainer?.getBoundingClientRect();
+
+      if (containerRect !== undefined) {
+        const width = `${containerRect.width}px`;
+        const height = `${containerRect.height}px`;
+
+        this.nodes.popover.style.setProperty(CSSVariables.InlinePopoverWidth, width);
+        this.nodes.popover.style.width = width;
+        this.nodes.popover.style.height = height;
+      }
+    }
+
+    requestAnimationFrame(() => {
+      this.flipper?.deactivate();
+      this.flipper?.activate(this.flippableElements);
+    });
   }
 
   /**
@@ -147,6 +159,34 @@ export class PopoverInline extends PopoverDesktop {
   protected showNestedPopoverForItem(item: PopoverItem): PopoverDesktop {
     const nestedPopover = super.showNestedPopoverForItem(item);
     const nestedPopoverEl = nestedPopover.getElement();
+
+    nestedPopover.flipper?.setHandleContentEditableTargets(true);
+
+    const handleFirstTab = (event: KeyboardEvent): void => {
+      if (event.key !== 'Tab' || event.shiftKey) {
+        return;
+      }
+
+      if (this.nestedPopover !== nestedPopover) {
+        document.removeEventListener('keydown', handleFirstTab, true);
+
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      nestedPopover.flipper?.activate((nestedPopover as unknown as PopoverInline).flippableElements);
+      nestedPopover.flipper?.focusFirst();
+
+      document.removeEventListener('keydown', handleFirstTab, true);
+    };
+
+    document.addEventListener('keydown', handleFirstTab, true);
+
+    nestedPopover.on(PopoverEvent.Closed, () => {
+      document.removeEventListener('keydown', handleFirstTab, true);
+    });
 
     /**
      * We need to add class with nesting level, which will help position nested popover.

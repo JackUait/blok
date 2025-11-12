@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { INLINE_TOOLBAR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../cypress/fixtures/test.html')
@@ -17,7 +17,10 @@ const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-item-name="link"] button`;
 const LINK_INPUT_SELECTOR = `input[data-link-tool-input-opened]`;
 const NOTIFIER_SELECTOR = '.cdx-notifies';
-const MODIFIER_KEY = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+const getParagraphByText = (page: Page, text: string): Locator => {
+  return page.locator(PARAGRAPH_SELECTOR, { hasText: text });
+};
 
 const selectAll = async (locator: Locator): Promise<void> => {
   await locator.evaluate((element) => {
@@ -153,7 +156,7 @@ const submitLink = async (page: Page, url: string): Promise<void> => {
   await linkInput.press('Enter');
 };
 
-test.describe('Inline Tool Link', () => {
+test.describe('inline tool link', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -173,7 +176,7 @@ test.describe('Inline Tool Link', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = getParagraphByText(page, 'First block text');
 
     await selectText(paragraph, 'First block text');
     await page.keyboard.press(`${MODIFIER_KEY}+k`);
@@ -193,7 +196,7 @@ test.describe('Inline Tool Link', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = getParagraphByText(page, 'Link me please');
 
     await selectText(paragraph, 'Link me');
 
@@ -220,7 +223,7 @@ test.describe('Inline Tool Link', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = getParagraphByText(page, 'Invalid URL test');
 
     await selectText(paragraph, 'Invalid URL test');
     await page.keyboard.press(`${MODIFIER_KEY}+k`);
@@ -251,7 +254,7 @@ test.describe('Inline Tool Link', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = getParagraphByText(page, 'First block text');
 
     await selectAll(paragraph);
     // Use keyboard shortcut to trigger the link tool (this will open the toolbar and input)
@@ -283,7 +286,7 @@ test.describe('Inline Tool Link', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = getParagraphByText(page, 'Link to remove');
 
     await selectAll(paragraph);
     // Use keyboard shortcut to trigger the link tool
@@ -308,7 +311,7 @@ test.describe('Inline Tool Link', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = getParagraphByText(page, 'Persist me');
 
     await selectText(paragraph, 'Persist me');
     await page.keyboard.press(`${MODIFIER_KEY}+k`);
@@ -335,7 +338,7 @@ test.describe('Inline Tool Link', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = getParagraphByText(page, 'Clickable link');
 
     // Create a link
     await selectText(paragraph, 'Clickable link');

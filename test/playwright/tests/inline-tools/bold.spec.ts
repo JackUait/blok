@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../cypress/fixtures/test.html')
@@ -102,7 +102,7 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
   }, text);
 };
 
-test.describe('Inline Tool Bold', () => {
+test.describe('inline tool bold', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -122,7 +122,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     await paragraph.evaluate((el) => {
       const paragraphEl = el as HTMLElement;
@@ -172,7 +172,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     await selectText(paragraph, 'bold');
 
@@ -189,7 +189,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     await selectText(paragraph, 'normal');
 
@@ -206,7 +206,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     // Select text spanning both bold elements
     await paragraph.evaluate((el) => {
@@ -271,7 +271,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     // Select text spanning bold and non-bold
     await paragraph.evaluate((el) => {
@@ -340,7 +340,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     await selectText(paragraph, 'fully bold');
 
@@ -358,9 +358,6 @@ test.describe('Inline Tool Bold', () => {
   });
 
   test('toggles bold with keyboard shortcut', async ({ page }) => {
-    // eslint-disable-next-line playwright/no-conditional-in-test
-    const modifierKey = process.platform === 'darwin' ? 'Meta' : 'Control';
-
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -370,13 +367,13 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     await selectText(paragraph, 'Keyboard');
 
     const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`);
 
-    await page.keyboard.press(`${modifierKey}+b`);
+    await page.keyboard.press(`${MODIFIER_KEY}+b`);
 
     await expect(boldButton).toHaveAttribute('data-popover-item-active', 'true');
 
@@ -384,7 +381,7 @@ test.describe('Inline Tool Bold', () => {
 
     expect(html).toMatch(/<strong>Keyboard<\/strong> shortcut/);
 
-    await page.keyboard.press(`${modifierKey}+b`);
+    await page.keyboard.press(`${MODIFIER_KEY}+b`);
 
     await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
 
@@ -394,9 +391,6 @@ test.describe('Inline Tool Bold', () => {
   });
 
   test('applies bold to typed text', async ({ page }) => {
-    // eslint-disable-next-line playwright/no-conditional-in-test
-    const modifierKey = process.platform === 'darwin' ? 'Meta' : 'Control';
-
     await createEditorWithBlocks(page, [
       {
         type: 'paragraph',
@@ -406,7 +400,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     await paragraph.evaluate((element) => {
       const paragraphEl = element as HTMLElement;
@@ -427,9 +421,9 @@ test.describe('Inline Tool Bold', () => {
       selection?.addRange(range);
     });
 
-    await page.keyboard.press(`${modifierKey}+b`);
+    await page.keyboard.press(`${MODIFIER_KEY}+b`);
     await page.keyboard.type(' Bold');
-    await page.keyboard.press(`${modifierKey}+b`);
+    await page.keyboard.press(`${MODIFIER_KEY}+b`);
     await page.keyboard.type(' normal');
 
     const html = await paragraph.innerHTML();
@@ -447,7 +441,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     await selectText(paragraph, 'bold');
 
@@ -475,7 +469,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     // Step 2: Select entire text and make it bold
     await selectText(paragraph, 'Some text');
@@ -533,7 +527,7 @@ test.describe('Inline Tool Bold', () => {
       },
     ]);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
     const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="bold"]`);
 
     // Step 2: Make "some" bold

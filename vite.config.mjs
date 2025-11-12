@@ -1,9 +1,12 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import license from 'rollup-plugin-license';
 
 import * as pkg from './package.json';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const NODE_ENV = process.argv.mode || 'development';
 const VERSION = pkg.version;
@@ -72,3 +75,4 @@ export default {
     cssInjectedByJsPlugin(),
   ],
 };
+

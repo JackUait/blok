@@ -83,6 +83,13 @@ export default class DomIterator {
   }
 
   /**
+   * Returns true if iterator has items to navigate
+   */
+  public hasItems(): boolean {
+    return this.items.length > 0;
+  }
+
+  /**
    * Sets cursor next to the current
    */
   public next(): void {
@@ -122,54 +129,47 @@ export default class DomIterator {
       return this.cursor;
     }
 
-    let focusedButtonIndex = this.cursor;
-
     /**
      * If activeButtonIndex === -1 then we have no chosen Tool in Toolbox
+     * Normalize "previous" Tool index depending on direction.
+     * We need to do this to highlight "first" Tool correctly
+     *
+     * Order of Tools: [0] [1] ... [n - 1]
+     * [0 = n] because of: n % n = 0 % n
+     *
+     * Direction 'right': for [0] the [n - 1] is a previous index
+     * [n - 1] -> [0]
+     *
+     * Direction 'left': for [n - 1] the [0] is a previous index
+     * [n - 1] <- [0]
      */
-    if (focusedButtonIndex === -1) {
-      /**
-       * Normalize "previous" Tool index depending on direction.
-       * We need to do this to highlight "first" Tool correctly
-       *
-       * Order of Tools: [0] [1] ... [n - 1]
-       * [0 = n] because of: n % n = 0 % n
-       *
-       * Direction 'right': for [0] the [n - 1] is a previous index
-       * [n - 1] -> [0]
-       *
-       * Direction 'left': for [n - 1] the [0] is a previous index
-       * [n - 1] <- [0]
-       *
-       * @type {number}
-       */
-      focusedButtonIndex = direction === DomIterator.directions.RIGHT ? -1 : 0;
-    } else {
-      /**
-       * If we have chosen Tool then remove highlighting
-       */
-      this.items[focusedButtonIndex].classList.remove(this.focusedCssClass);
+    const defaultIndex = direction === DomIterator.directions.RIGHT ? -1 : 0;
+    const startingIndex = this.cursor === -1 ? defaultIndex : this.cursor;
+
+    /**
+     * If we have chosen Tool then remove highlighting
+     */
+    if (startingIndex !== -1) {
+      this.items[startingIndex].classList.remove(this.focusedCssClass);
     }
 
     /**
      * Count index for next Tool
      */
-    if (direction === DomIterator.directions.RIGHT) {
-      /**
-       * If we go right then choose next (+1) Tool
-       *
-       * @type {number}
-       */
-      focusedButtonIndex = (focusedButtonIndex + 1) % this.items.length;
-    } else {
-      /**
-       * If we go left then choose previous (-1) Tool
-       * Before counting module we need to add length before because of "The JavaScript Modulo Bug"
-       *
-       * @type {number}
-       */
-      focusedButtonIndex = (this.items.length + focusedButtonIndex - 1) % this.items.length;
-    }
+    const focusedButtonIndex = direction === DomIterator.directions.RIGHT
+      ? /**
+         * If we go right then choose next (+1) Tool
+         *
+         * @type {number}
+         */
+      (startingIndex + 1) % this.items.length
+      : /**
+         * If we go left then choose previous (-1) Tool
+         * Before counting module we need to add length before because of "The JavaScript Modulo Bug"
+         *
+         * @type {number}
+         */
+      (this.items.length + startingIndex - 1) % this.items.length;
 
     if (Dom.canSetCaret(this.items[focusedButtonIndex])) {
       /**

@@ -12,8 +12,6 @@ import type Block from '../block';
 import * as _ from '../utils';
 import { sanitizeBlocks } from '../utils/sanitizer';
 
-declare const VERSION: string;
-
 /**
  * @classdesc This method reduces all Blocks asyncronically and calls Block's save method to extract data
  * @typedef {Saver} Saver
@@ -103,7 +101,7 @@ export default class Saver extends Module {
     return {
       time: +new Date(),
       blocks,
-      version: VERSION,
+      version: _.getEditorVersion(),
     };
   }
 }

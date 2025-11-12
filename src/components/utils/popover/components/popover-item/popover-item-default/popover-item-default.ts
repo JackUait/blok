@@ -117,7 +117,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     const shouldBeActive = isActive !== undefined ? isActive : !this.nodes.root.classList.contains(css.active);
 
-    this.nodes.root.classList.toggle(css.active, isActive);
+    this.nodes.root.classList.toggle(css.active, shouldBeActive);
 
     if (shouldBeActive) {
       this.nodes.root.setAttribute(DATA_ATTRIBUTE_ACTIVE, 'true');

@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { ConversionConfig, ToolboxConfig, OutputData } from '@/types';
 import type { BlockToolConstructable } from '@/types/tools';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
@@ -165,15 +165,6 @@ const saveEditor = async (page: Page): Promise<OutputData> => {
   });
 };
 
-/**
- * Get platform-specific modifier key
- *
- * @returns Modifier key string
- */
-const getModifierKey = (): string => {
-  return process.platform === 'darwin' ? 'Meta' : 'Control';
-};
-
 const runShortcutBehaviour = async (page: Page, toolName: string): Promise<void> => {
   await page.evaluate(
     async ({ toolName: shortcutTool }) => {
@@ -233,7 +224,7 @@ const isCaretInBlock = async (page: Page, blockId: string): Promise<boolean> => 
   }, { blockId });
 };
 
-test.describe('Toolbox', () => {
+test.describe('toolbox', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -242,7 +233,7 @@ test.describe('Toolbox', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test.describe('Shortcuts', () => {
+  test.describe('shortcuts', () => {
     test('should convert current Block to the Shortcuts\'s Block if both tools provides a "conversionConfig". Caret should be restored after conversion.', async ({ page }) => {
       /**
        * Mock of Tool with conversionConfig
@@ -313,7 +304,9 @@ test.describe('Toolbox', () => {
         },
       });
 
-      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR).first();
+      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(paragraphBlock).toHaveCount(1);
 
       await paragraphBlock.click();
       await paragraphBlock.type('Some text');
@@ -325,7 +318,7 @@ test.describe('Toolbox', () => {
        */
       const editorData = await saveEditor(page);
 
-      expect(editorData.blocks.length).toBe(1);
+      expect(editorData.blocks).toHaveLength(1);
       expect(editorData.blocks[0].type).toBe('convertableTool');
       expect(editorData.blocks[0].data.text).toBe('Some text');
 
@@ -402,7 +395,9 @@ test.describe('Toolbox', () => {
         },
       });
 
-      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR).first();
+      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(paragraphBlock).toHaveCount(1);
 
       await paragraphBlock.click();
       await paragraphBlock.type('Some text');
@@ -414,7 +409,7 @@ test.describe('Toolbox', () => {
        */
       const editorData = await saveEditor(page);
 
-      expect(editorData.blocks.length).toBe(2);
+      expect(editorData.blocks).toHaveLength(2);
       expect(editorData.blocks[1].type).toBe('nonConvertableTool');
     });
 
@@ -485,11 +480,13 @@ test.describe('Toolbox', () => {
         },
       });
 
-      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR).first();
+      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(paragraphBlock).toHaveCount(1);
 
       await paragraphBlock.click();
       await paragraphBlock.type('Some text');
-      await page.keyboard.press(`${getModifierKey()}+A`);
+      await page.keyboard.press(`${MODIFIER_KEY}+A`);
       await page.keyboard.press('Backspace');
 
       // Open toolbox with "/" shortcut
@@ -503,7 +500,10 @@ test.describe('Toolbox', () => {
       /**
        * Secondary title (shortcut) should exist for first toolbox item of the tool
        */
-      const firstItem = page.locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="severalToolboxItemsTool"]`).first();
+      const severalToolboxItems = page.locator(
+        `${POPOVER_ITEM_SELECTOR}[data-item-name="severalToolboxItemsTool"]`
+      );
+      const firstItem = severalToolboxItems.filter({ hasText: 'first tool' });
       const firstSecondaryTitle = firstItem.locator(SECONDARY_TITLE_SELECTOR);
 
       await expect(firstSecondaryTitle).toBeVisible();
@@ -511,7 +511,7 @@ test.describe('Toolbox', () => {
       /**
        * Secondary title (shortcut) should not exist for second toolbox item of the same tool
        */
-      const secondItem = page.locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="severalToolboxItemsTool"]`).nth(1);
+      const secondItem = severalToolboxItems.filter({ hasText: 'second tool' });
       const secondSecondaryTitle = secondItem.locator(SECONDARY_TITLE_SELECTOR);
 
       await expect(secondSecondaryTitle).toBeHidden();
@@ -578,11 +578,13 @@ test.describe('Toolbox', () => {
         },
       });
 
-      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR).first();
+      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(paragraphBlock).toHaveCount(1);
 
       await paragraphBlock.click();
       await paragraphBlock.type('Some text');
-      await page.keyboard.press(`${getModifierKey()}+A`);
+      await page.keyboard.press(`${MODIFIER_KEY}+A`);
       await page.keyboard.press('Backspace');
 
       // Open toolbox with "/" shortcut
@@ -596,7 +598,9 @@ test.describe('Toolbox', () => {
       /**
        * Secondary title (shortcut) should exist for toolbox item of the tool
        */
-      const item = page.locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="oneToolboxItemTool"]`).first();
+      const item = page.locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="oneToolboxItemTool"]`);
+
+      await expect(item).toHaveCount(1);
       const secondaryTitle = item.locator(SECONDARY_TITLE_SELECTOR);
 
       await expect(secondaryTitle).toBeVisible();

@@ -14,6 +14,9 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
+const getBlockWrapperSelectorByIndex = (index: number): string => {
+  return `:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`;
+};
 
 type ToolDefinition = {
   name: string;
@@ -99,6 +102,7 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
       if (hasOnChange) {
         editorConfig.onChange = (api: unknown, event: unknown) => {
           const windowObj = window as unknown as { onChangeEvents?: unknown[]; onChangeCalled?: boolean };
+
           if (windowObj.onChangeEvents) {
             windowObj.onChangeEvents.push(event);
             windowObj.onChangeCalled = true;
@@ -139,7 +143,7 @@ const focusBlockByIndex = async (page: Page, index: number = 0): Promise<void> =
 const openBlockSettings = async (page: Page, index: number = 0): Promise<void> => {
   await focusBlockByIndex(page, index);
 
-  const block = page.locator(`${BLOCK_WRAPPER_SELECTOR}`).nth(index);
+  const block = page.locator(getBlockWrapperSelectorByIndex(index));
 
   await block.scrollIntoViewIfNeeded();
   await block.click();
@@ -477,9 +481,11 @@ test.describe('api.blocks', () => {
 
       const blocks = page.locator(BLOCK_WRAPPER_SELECTOR);
 
-      await expect(blocks.nth(0)).toHaveText('inserting block #1');
-      await expect(blocks.nth(1)).toHaveText('inserting block #2');
-      await expect(blocks.nth(2)).toHaveText('first block');
+      await expect(blocks).toHaveText([
+        'inserting block #1',
+        'inserting block #2',
+        'first block',
+      ]);
     });
   });
 
@@ -584,7 +590,7 @@ test.describe('api.blocks', () => {
         return await window.editorInstance.save();
       });
 
-      expect(blocks.length).toBe(1);
+      expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('convertableTool');
       expect(blocks[0].data.text).toBe(existingBlock.data.text);
 
@@ -838,7 +844,7 @@ test.describe('api.blocks', () => {
         return await window.editorInstance.save();
       });
 
-      expect(blocks.length).toBe(1);
+      expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('conversionTargetTool');
 
       /**
@@ -1257,9 +1263,10 @@ test.describe('api.blocks', () => {
       const convertToMenu = await openConvertToMenu(page);
 
       const headerItems = convertToMenu.locator('[data-item-name="header"]');
+      const firstHeaderItem = convertToMenu.locator(':nth-match([data-item-name="header"], 1)');
 
       await expect(headerItems).toHaveCount(3);
-      await expect(headerItems.first()).toBeVisible();
+      await expect(firstHeaderItem).toBeVisible();
     });
 
     test('should filter out toolbox item with same data as current block (isSameBlockData)', async ({ page }) => {
@@ -1516,7 +1523,7 @@ test.describe('api.blocks', () => {
   /**
    * Additional tests for conversion edge cases
    */
-  test.describe('Conversion edge cases', () => {
+  test.describe('conversion edge cases', () => {
     test('should handle function-based export conversion config', async ({ page }) => {
       const FUNCTION_EXPORT_TOOL_SOURCE = `class FunctionExportTool {
         constructor(options) {
@@ -1606,7 +1613,7 @@ test.describe('api.blocks', () => {
         return await window.editorInstance.save();
       });
 
-      expect(blocks.length).toBe(1);
+      expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('functionExport');
       expect(blocks[0].data.text).toBe(existingBlock.data.text);
     });
@@ -1702,7 +1709,7 @@ test.describe('api.blocks', () => {
         return await window.editorInstance.save();
       });
 
-      expect(blocks.length).toBe(1);
+      expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('functionImport');
       // Function import should transform the text
       expect(blocks[0].data.text).toBe('SOME TEXT');
@@ -1747,12 +1754,14 @@ test.describe('api.blocks', () => {
       // Wait for onChange to be called
       await page.waitForFunction(() => {
         const windowObj = window as unknown as { onChangeCalled?: boolean };
+
         return windowObj.onChangeCalled === true;
       }, { timeout: 1000 });
 
       // Get the onChange events from the browser context
       const onChangeData = await page.evaluate(() => {
         const windowObj = window as unknown as { onChangeEvents?: unknown[]; onChangeCalled?: boolean };
+
         return {
           called: windowObj.onChangeCalled ?? false,
           events: windowObj.onChangeEvents ?? [],
@@ -1762,17 +1771,19 @@ test.describe('api.blocks', () => {
       expect(onChangeData.called).toBe(true);
       expect(onChangeData.events.length).toBeGreaterThan(0);
 
-      // Check if event is an array (batched) or single event
-      const event = Array.isArray(onChangeData.events[0]) 
-        ? (onChangeData.events[0] as BlockMutationEvent[])[0]
-        : onChangeData.events[0] as BlockMutationEvent;
+      // Single dispatchChange() call should result in a single unwrapped event (not batched)
+      const firstEvent = onChangeData.events[0];
+
+      expect(Array.isArray(firstEvent)).toBe(false);
+      const event = firstEvent as BlockMutationEvent;
 
       expect(event).toBeDefined();
       expect(event.type).toBe(BlockChangedMutationType);
       expect(event.detail).toBeDefined();
-      if (event.detail && typeof event.detail === 'object' && 'index' in event.detail) {
-        expect(event.detail.index).toBe(0);
-      }
+      expect(typeof event.detail).toBe('object');
+      expect(event.detail).not.toBeNull();
+      expect('index' in event.detail).toBe(true);
+      expect((event.detail as { index: number }).index).toBe(0);
     });
   });
 });

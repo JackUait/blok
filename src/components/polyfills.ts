@@ -38,12 +38,9 @@ if (typeof Element.prototype.matches === 'undefined') {
     function (this: Element, s: string): boolean {
       const doc = this.ownerDocument;
       const matches = doc.querySelectorAll(s);
-      let i = matches.length;
+      const index = Array.from(matches).findIndex(match => match === this);
 
-      while (--i >= 0 && matches.item(i) !== this) {
-      }
-
-      return i > -1;
+      return index !== -1;
     };
 }
 
@@ -59,23 +56,27 @@ if (typeof Element.prototype.matches === 'undefined') {
 if (typeof Element.prototype.closest === 'undefined') {
   Element.prototype.closest = function (this: Element, s: string): Element | null {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let el: Element | null = this;
+    const startEl: Element = this;
 
-    if (!document.documentElement.contains(el)) {
+    if (!document.documentElement.contains(startEl)) {
       return null;
     }
 
-    do {
+    const findClosest = (el: Element | null): Element | null => {
+      if (el === null) {
+        return null;
+      }
+
       if (el.matches(s)) {
         return el;
       }
 
       const parent: ParentNode | null = el.parentElement || el.parentNode;
 
-      el = parent instanceof Element ? parent : null;
-    } while (el !== null);
+      return findClosest(parent instanceof Element ? parent : null);
+    };
 
-    return null;
+    return findClosest(startEl);
   };
 }
 
@@ -91,11 +92,9 @@ if (typeof Element.prototype.prepend === 'undefined') {
   Element.prototype.prepend = function prepend(nodes: Array<Node | string> | Node | string): void {
     const docFrag = document.createDocumentFragment();
 
-    if (!Array.isArray(nodes)) {
-      nodes = [ nodes ];
-    }
+    const nodesArray = Array.isArray(nodes) ? nodes : [ nodes ];
 
-    nodes.forEach((node: Node | string) => {
+    nodesArray.forEach((node: Node | string) => {
       const isNode = node instanceof Node;
 
       docFrag.appendChild(isNode ? node as Node : document.createTextNode(node as string));
@@ -122,7 +121,7 @@ interface Element {
  */
 if (typeof Element.prototype.scrollIntoViewIfNeeded === 'undefined') {
   Element.prototype.scrollIntoViewIfNeeded = function (this: HTMLElement, centerIfNeeded): void {
-    centerIfNeeded = centerIfNeeded ?? true;
+    const shouldCenter = centerIfNeeded ?? true;
 
     const parent = this.parentElement;
 
@@ -139,15 +138,15 @@ if (typeof Element.prototype.scrollIntoViewIfNeeded === 'undefined') {
     const overRight = (this.offsetLeft - parent.offsetLeft + this.clientWidth - parentBorderLeftWidth) > (parent.scrollLeft + parent.clientWidth);
     const alignWithTop = overTop && !overBottom;
 
-    if ((overTop || overBottom) && centerIfNeeded) {
+    if ((overTop || overBottom) && shouldCenter) {
       parent.scrollTop = this.offsetTop - parent.offsetTop - parent.clientHeight / 2 - parentBorderTopWidth + this.clientHeight / 2;
     }
 
-    if ((overLeft || overRight) && centerIfNeeded) {
+    if ((overLeft || overRight) && shouldCenter) {
       parent.scrollLeft = this.offsetLeft - parent.offsetLeft - parent.clientWidth / 2 - parentBorderLeftWidth + this.clientWidth / 2;
     }
 
-    if ((overTop || overBottom || overLeft || overRight) && !centerIfNeeded) {
+    if ((overTop || overBottom || overLeft || overRight) && !shouldCenter) {
       this.scrollIntoView(alignWithTop);
     }
   };
@@ -159,11 +158,33 @@ if (typeof Element.prototype.scrollIntoViewIfNeeded === 'undefined') {
  * @see https://developer.chrome.com/blog/using-requestidlecallback/
  * @param cb - callback to be executed when the browser is idle
  */
+type TimeoutHandle = ReturnType<typeof globalThis.setTimeout>;
+const nativeSetTimeout = globalThis.setTimeout.bind(globalThis);
+const nativeClearTimeout = globalThis.clearTimeout.bind(globalThis);
+
+const idleCallbackTimeouts = new Map<number, TimeoutHandle>();
+
+const resolveNumericHandle = (handle: TimeoutHandle): number => {
+  const numericHandle = Number(handle);
+
+  if (Number.isFinite(numericHandle) && numericHandle > 0) {
+    return numericHandle;
+  }
+
+  return Date.now();
+};
+
 if (typeof window.requestIdleCallback === 'undefined') {
   window.requestIdleCallback = function (cb) {
     const start = Date.now();
+    const handleRef: { value?: number } = {};
+    const timeoutHandle = nativeSetTimeout(() => {
+      const handle = handleRef.value;
 
-    return setTimeout(() => {
+      if (typeof handle === 'number') {
+        idleCallbackTimeouts.delete(handle);
+      }
+
       cb({
         didTimeout: false,
         timeRemaining: function () {
@@ -171,12 +192,25 @@ if (typeof window.requestIdleCallback === 'undefined') {
           return Math.max(0, 50 - (Date.now() - start));
         },
       });
-    }, 1) as unknown as number;
+    }, 1);
+    const numericHandle = resolveNumericHandle(timeoutHandle);
+
+    handleRef.value = numericHandle;
+    idleCallbackTimeouts.set(numericHandle, timeoutHandle);
+
+    return numericHandle;
   };
 }
 
 if (typeof window.cancelIdleCallback === 'undefined') {
   window.cancelIdleCallback = function (id) {
-    clearTimeout(id);
+    const timeoutHandle = idleCallbackTimeouts.get(id);
+
+    if (timeoutHandle !== undefined) {
+      idleCallbackTimeouts.delete(id);
+      nativeClearTimeout(timeoutHandle);
+    }
+
+    globalThis.clearTimeout(id);
   };
 }

@@ -34,6 +34,13 @@ export interface ListenerData {
   options: boolean | AddEventListenerOptions;
 }
 
+interface NormalizedListenerOptions {
+  capture: boolean;
+  once: boolean;
+  passive: boolean;
+  signal?: AbortSignal | null;
+}
+
 /**
  * Editor.js Listeners helper
  *
@@ -68,21 +75,21 @@ export default class Listeners {
     eventType: string,
     handler: (event: Event) => void,
     options: boolean | AddEventListenerOptions = false
-  ): string {
+  ): string | undefined {
+    const alreadyExist = this.findOne(element, eventType, handler, options);
+
+    if (alreadyExist) {
+      return undefined;
+    }
+
     const id = _.generateId('l');
-    const assignedEventData = {
+    const assignedEventData: ListenerData = {
       id,
       element,
       eventType,
       handler,
       options,
     };
-
-    const alreadyExist = this.findOne(element, eventType, handler);
-
-    if (alreadyExist) {
-      return;
-    }
 
     this.allListeners.push(assignedEventData);
     element.addEventListener(eventType, handler, options);
@@ -102,10 +109,9 @@ export default class Listeners {
     element: EventTarget,
     eventType: string,
     handler?: (event: Event) => void,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
     options?: boolean | AddEventListenerOptions
   ): void {
-    const existingListeners = this.findAll(element, eventType, handler);
+    const existingListeners = this.findAll(element, eventType, handler, options);
 
     existingListeners.forEach((listener, i) => {
       const index = this.allListeners.indexOf(existingListeners[i]);
@@ -131,6 +137,11 @@ export default class Listeners {
     }
 
     listener.element.removeEventListener(listener.eventType, listener.handler, listener.options);
+    const index = this.allListeners.indexOf(listener);
+
+    if (index > -1) {
+      this.allListeners.splice(index, 1);
+    }
   }
 
   /**
@@ -139,12 +150,18 @@ export default class Listeners {
    * @param {EventTarget} element - event target
    * @param {string} [eventType] - event type
    * @param {Function} [handler] - event handler
+   * @param {boolean|AddEventListenerOptions} [options] - event options
    * @returns {ListenerData|null}
    */
-  public findOne(element: EventTarget, eventType?: string, handler?: (event: Event) => void): ListenerData {
-    const foundListeners = this.findAll(element, eventType, handler);
+  public findOne(
+    element: EventTarget,
+    eventType?: string,
+    handler?: (event: Event) => void,
+    options?: boolean | AddEventListenerOptions
+  ): ListenerData | null {
+    const foundListeners = this.findAll(element, eventType, handler, options);
 
-    return foundListeners.length > 0 ? foundListeners[0] : null;
+    return foundListeners[0] ?? null;
   }
 
   /**
@@ -153,28 +170,35 @@ export default class Listeners {
    * @param {EventTarget} element - event target
    * @param {string} eventType - event type
    * @param {Function} handler - event handler
+   * @param {boolean|AddEventListenerOptions} [options] - event options
    * @returns {ListenerData[]}
    */
-  public findAll(element: EventTarget, eventType?: string, handler?: (event: Event) => void): ListenerData[] {
-    let found;
-    const foundByEventTargets = element ? this.findByEventTarget(element) : [];
-
-    if (element && eventType && handler) {
-      found = foundByEventTargets.filter((event) => event.eventType === eventType && event.handler === handler);
-    } else if (element && eventType) {
-      found = foundByEventTargets.filter((event) => event.eventType === eventType);
-    } else {
-      found = foundByEventTargets;
+  public findAll(
+    element: EventTarget,
+    eventType?: string,
+    handler?: (event: Event) => void,
+    options?: boolean | AddEventListenerOptions
+  ): ListenerData[] {
+    if (!element) {
+      return [];
     }
 
-    return found;
+    const foundByEventTargets = this.findByEventTarget(element);
+
+    return foundByEventTargets.filter((listener) => {
+      const matchesEventType = eventType === undefined || listener.eventType === eventType;
+      const matchesHandler = handler === undefined || listener.handler === handler;
+      const matchesOptions = this.areOptionsEqual(listener.options, options);
+
+      return matchesEventType && matchesHandler && matchesOptions;
+    });
   }
 
   /**
    * Removes all listeners
    */
   public removeAll(): void {
-    this.allListeners.map((current) => {
+    this.allListeners.forEach((current) => {
       current.element.removeEventListener(current.eventType, current.handler, current.options);
     });
 
@@ -195,11 +219,7 @@ export default class Listeners {
    * @returns {Array} listeners that found on element
    */
   private findByEventTarget(element: EventTarget): ListenerData[] {
-    return this.allListeners.filter((listener) => {
-      if (listener.element === element) {
-        return listener;
-      }
-    });
+    return this.allListeners.filter((listener) => listener.element === element);
   }
 
   /**
@@ -209,11 +229,7 @@ export default class Listeners {
    * @returns {ListenerData[]} listeners that found on element
    */
   private findByType(eventType: string): ListenerData[] {
-    return this.allListeners.filter((listener) => {
-      if (listener.eventType === eventType) {
-        return listener;
-      }
-    });
+    return this.allListeners.filter((listener) => listener.eventType === eventType);
   }
 
   /**
@@ -223,11 +239,7 @@ export default class Listeners {
    * @returns {ListenerData[]} listeners that found on element
    */
   private findByHandler(handler: (event: Event) => void): ListenerData[] {
-    return this.allListeners.filter((listener) => {
-      if (listener.handler === handler) {
-        return listener;
-      }
-    });
+    return this.allListeners.filter((listener) => listener.handler === handler);
   }
 
   /**
@@ -236,7 +248,64 @@ export default class Listeners {
    * @param {string} id - listener identifier
    * @returns {ListenerData}
    */
-  private findById(id: string): ListenerData {
+  private findById(id: string): ListenerData | undefined {
     return this.allListeners.find((listener) => listener.id === id);
+  }
+
+  /**
+   * Normalizes listener options to a comparable shape
+   *
+   * @param {boolean|AddEventListenerOptions} [options] - event options
+   * @returns {NormalizedListenerOptions}
+   */
+  private normalizeListenerOptions(options?: boolean | AddEventListenerOptions): NormalizedListenerOptions {
+    if (typeof options === 'boolean') {
+      return {
+        capture: options,
+        once: false,
+        passive: false,
+      };
+    }
+
+    if (!options) {
+      return {
+        capture: false,
+        once: false,
+        passive: false,
+      };
+    }
+
+    return {
+      capture: options.capture ?? false,
+      once: options.once ?? false,
+      passive: options.passive ?? false,
+      signal: options.signal,
+    };
+  }
+
+  /**
+   * Compares stored listener options with provided ones
+   *
+   * @param {boolean|AddEventListenerOptions} storedOptions - stored event options
+   * @param {boolean|AddEventListenerOptions} [providedOptions] - provided event options
+   * @returns {boolean}
+   */
+  private areOptionsEqual(
+    storedOptions: boolean | AddEventListenerOptions,
+    providedOptions?: boolean | AddEventListenerOptions
+  ): boolean {
+    if (providedOptions === undefined) {
+      return true;
+    }
+
+    const storedNormalized = this.normalizeListenerOptions(storedOptions);
+    const providedNormalized = this.normalizeListenerOptions(providedOptions);
+
+    return (
+      storedNormalized.capture === providedNormalized.capture &&
+      storedNormalized.once === providedNormalized.once &&
+      storedNormalized.passive === providedNormalized.passive &&
+      storedNormalized.signal === providedNormalized.signal
+    );
   }
 }

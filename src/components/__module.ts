@@ -68,9 +68,11 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
       handler: (event: Event) => void,
       options: boolean | AddEventListenerOptions = false
     ): void => {
-      this.mutableListenerIds.push(
-        this.listeners.on(element, eventType, handler, options)
-      );
+      const listenerId = this.listeners.on(element, eventType, handler, options);
+
+      if (listenerId) {
+        this.mutableListenerIds.push(listenerId);
+      }
     },
 
     /**

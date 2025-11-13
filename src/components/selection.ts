@@ -155,17 +155,14 @@ export default class SelectionUtils {
     /**
      * Something selected on document
      */
-    let selectedNode = selection.anchorNode || selection.focusNode;
+    const initialNode = selection.anchorNode || selection.focusNode;
+    const selectedNode = initialNode && initialNode.nodeType === Node.TEXT_NODE
+      ? initialNode.parentNode
+      : initialNode;
 
-    if (selectedNode && selectedNode.nodeType === Node.TEXT_NODE) {
-      selectedNode = selectedNode.parentNode;
-    }
-
-    let editorZone = null;
-
-    if (selectedNode && selectedNode instanceof Element) {
-      editorZone = selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`);
-    }
+    const editorZone = selectedNode && selectedNode instanceof Element
+      ? selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`)
+      : null;
 
     /**
      * SelectionUtils is not out of Editor because Editor's wrapper was found
@@ -183,17 +180,15 @@ export default class SelectionUtils {
       return;
     }
 
-    let selectedNode: Node | null = range.startContainer;
+    const selectedNode: Node | null =
+      range.startContainer && range.startContainer.nodeType === Node.TEXT_NODE
+        ? range.startContainer.parentNode
+        : range.startContainer;
 
-    if (selectedNode && selectedNode.nodeType === Node.TEXT_NODE) {
-      selectedNode = selectedNode.parentNode;
-    }
-
-    let editorZone = null;
-
-    if (selectedNode && selectedNode instanceof Element) {
-      editorZone = selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`);
-    }
+    const editorZone =
+      selectedNode && selectedNode instanceof Element
+        ? selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`)
+        : null;
 
     /**
      * SelectionUtils is not out of Editor because Editor's wrapper was found
@@ -234,19 +229,19 @@ export default class SelectionUtils {
    * @returns {DOMRect}
    */
   public static get rect(): DOMRect {
-    let sel: Selection | MSSelection | undefined | null = (document as Document).selection;
-    let range: TextRange | Range;
+    const ieSel: Selection | MSSelection | undefined | null = (document as Document).selection;
 
-    let rect = {
+    const rect = {
       x: 0,
       y: 0,
       width: 0,
       height: 0,
     } as DOMRect;
 
-    if (sel && sel.type !== 'Control') {
-      sel = sel as MSSelection;
-      range = sel.createRange() as TextRange;
+    if (ieSel && ieSel.type !== 'Control') {
+      const msSel = ieSel as MSSelection;
+      const range = msSel.createRange() as TextRange;
+
       rect.x = range.boundingLeft;
       rect.y = range.boundingTop;
       rect.width = range.boundingWidth;
@@ -255,7 +250,7 @@ export default class SelectionUtils {
       return rect;
     }
 
-    sel = window.getSelection();
+    const sel = window.getSelection();
 
     if (!sel || sel.rangeCount === null || isNaN(sel.rangeCount)) {
       if (!sel) {
@@ -271,18 +266,19 @@ export default class SelectionUtils {
       return rect;
     }
 
-    range = sel.getRangeAt(0).cloneRange() as Range;
+    const range = sel.getRangeAt(0).cloneRange() as Range;
 
-    rect = range.getBoundingClientRect() as DOMRect;
+    const initialRect = range.getBoundingClientRect() as DOMRect;
+
     // Fall back to inserting a temporary element
-    if (rect.x === 0 && rect.y === 0) {
+    if (initialRect.x === 0 && initialRect.y === 0) {
       const span = document.createElement('span');
 
       // Ensure span has dimensions and position by
       // adding a zero-width space character
       span.appendChild(document.createTextNode('\u200b'));
       range.insertNode(span);
-      rect = span.getBoundingClientRect() as DOMRect;
+      const boundingRect = span.getBoundingClientRect() as DOMRect;
 
       const spanParent = span.parentNode;
 
@@ -290,9 +286,11 @@ export default class SelectionUtils {
 
       // Glue any broken text nodes back together
       spanParent?.normalize();
+
+      return boundingRect;
     }
 
-    return rect;
+    return initialRect;
   }
 
   /**
@@ -332,10 +330,13 @@ export default class SelectionUtils {
         return element.getBoundingClientRect();
       }
 
-      element.focus();
-      element.selectionStart = element.selectionEnd = offset;
+      const inputElement = element as HTMLInputElement | HTMLTextAreaElement;
 
-      return element.getBoundingClientRect();
+      inputElement.focus();
+      inputElement.selectionStart = offset;
+      inputElement.selectionEnd = offset;
+
+      return inputElement.getBoundingClientRect();
     }
 
     range.setStart(element, offset);
@@ -636,7 +637,6 @@ export default class SelectionUtils {
    */
   public findParentTag(tagName: string, className?: string, searchDepth = 10): HTMLElement | null {
     const selection = window.getSelection();
-    let parentTag = null;
 
     /**
      * If selection is missing or no anchorNode or focusNode were found then return null
@@ -656,50 +656,48 @@ export default class SelectionUtils {
     ];
 
     /**
-     * For each selection parent Nodes we try to find target tag [with target class name]
-     * It would be saved in parentTag variable
+     * Helper function to find parent tag starting from a given node
+     *
+     * @param {HTMLElement} startNode - node to start searching from
+     * @returns {HTMLElement | null}
      */
-    boundNodes.forEach((parent) => {
-      /** Reset tags limit */
-      let searchDepthIterable = searchDepth;
+    const findTagFromNode = (startNode: HTMLElement): HTMLElement | null => {
+      const searchUpTree = (node: HTMLElement, depth: number): HTMLElement | null => {
+        if (depth <= 0 || !node.parentNode) {
+          return null;
+        }
 
-      while (searchDepthIterable > 0 && parent.parentNode) {
-        /**
-         * Check tag's name
-         */
+        const parent = node.parentNode as HTMLElement;
+
         if (parent.tagName === tagName) {
-          /**
-           * Save the result
-           */
-          parentTag = parent;
+          const hasMatchingClass = !className || (parent.classList && parent.classList.contains(className));
 
-          /**
-           * Optional additional check for class-name mismatching
-           */
-          if (className && parent.classList && !parent.classList.contains(className)) {
-            parentTag = null;
-          }
-
-          /**
-           * If we have found required tag with class then go out from the cycle
-           */
-          if (parentTag) {
-            break;
+          if (hasMatchingClass) {
+            return parent;
           }
         }
 
-        /**
-         * Target tag was not found. Go up to the parent and check it
-         */
-        parent = parent.parentNode as HTMLElement;
-        searchDepthIterable--;
-      }
-    });
+        return searchUpTree(parent, depth - 1);
+      };
+
+      return searchUpTree(startNode, searchDepth);
+    };
 
     /**
-     * Return found tag or null
+     * For each selection parent Nodes we try to find target tag [with target class name]
      */
-    return parentTag;
+    for (const node of boundNodes) {
+      const foundTag = findTagFromNode(node);
+
+      if (foundTag) {
+        return foundTag;
+      }
+    }
+
+    /**
+     * Return null if tag was not found
+     */
+    return null;
   }
 
   /**

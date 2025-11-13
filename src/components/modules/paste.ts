@@ -8,7 +8,6 @@ import type {
   SanitizerConfig,
   SanitizerRule
 } from '../../../types';
-import type Block from '../block';
 import type { SavedData } from '../../../types/data-formats';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import type BlockToolAdapter from '../tools/block';
@@ -183,7 +182,24 @@ export default class Paste extends Module {
 
     const editorJSData = dataTransfer.getData(this.MIME_TYPE);
     const plainData = dataTransfer.getData('text/plain');
-    let htmlData = dataTransfer.getData('text/html');
+    const rawHtmlData = dataTransfer.getData('text/html');
+    const htmlData = (() => {
+      const trimmedPlainData = plainData.trim();
+      const trimmedHtmlData = rawHtmlData.trim();
+
+      if (isDragNDrop && trimmedPlainData.length > 0 && trimmedHtmlData.length > 0) {
+        const contentToWrap = trimmedHtmlData.length > 0 ? rawHtmlData : plainData;
+
+        return `<p>${contentToWrap}</p>`;
+      }
+
+      return rawHtmlData;
+    })();
+
+    const shouldWrapDraggedText = isDragNDrop && plainData.trim() && htmlData.trim();
+    const normalizedHtmlData = shouldWrapDraggedText
+      ? `<p>${htmlData.trim() ? htmlData : plainData}</p>`
+      : htmlData;
 
     /**
      * If EditorJS json is passed, insert it
@@ -199,20 +215,13 @@ export default class Paste extends Module {
     /**
      *  If text was drag'n'dropped, wrap content with P tag to insert it as the new Block
      */
-    if (isDragNDrop && plainData.trim() && htmlData.trim()) {
-      htmlData = '<p>' + (htmlData.trim() ? htmlData : plainData) + '</p>';
-    }
-
     /** Add all tags that can be substituted to sanitizer configuration */
-    const toolsTags = Object.keys(this.toolsTags).reduce((result, tag) => {
-      /**
-       * If Tool explicitly specifies sanitizer configuration for the tag, use it.
-       * Otherwise, remove all attributes
-       */
-      result[tag.toLowerCase()] = this.toolsTags[tag].sanitizationConfig ?? {};
-
-      return result;
-    }, {} as SanitizerConfig);
+    const toolsTags = Object.fromEntries(
+      Object.keys(this.toolsTags).map((tag) => [
+        tag.toLowerCase(),
+        this.toolsTags[tag].sanitizationConfig ?? {},
+      ])
+    ) as SanitizerConfig;
 
     const inlineSanitizeConfig = Tools.getAllInlineToolsSanitizeConfig();
     const customConfig = composeSanitizerConfig(
@@ -221,7 +230,7 @@ export default class Paste extends Module {
       inlineSanitizeConfig,
       { br: {} }
     );
-    const cleanData = clean(htmlData, customConfig);
+    const cleanData = clean(normalizedHtmlData, customConfig);
 
     /** If there is no HTML or HTML string is equal to plain one, process it as plain text */
     if (!cleanData.trim() || cleanData.trim() === plainData || !$.isHTMLString(cleanData)) {
@@ -246,10 +255,12 @@ export default class Paste extends Module {
     }
 
     if (dataToInsert.length === 1) {
-      if (!dataToInsert[0].isBlock) {
-        this.processInlinePaste(dataToInsert[0]);
+      const [ singleItem ] = dataToInsert;
+
+      if (!singleItem.isBlock) {
+        await this.processInlinePaste(singleItem);
       } else {
-        this.processSingleBlock(dataToInsert[0]);
+        await this.processSingleBlock(singleItem);
       }
 
       return;
@@ -258,9 +269,9 @@ export default class Paste extends Module {
     const isCurrentBlockDefault = Boolean(BlockManager.currentBlock?.tool.isDefault);
     const needToReplaceCurrentBlock = isCurrentBlockDefault && Boolean(BlockManager.currentBlock?.isEmpty);
 
-    dataToInsert.map(
-      async (content, i) => this.insertBlock(content, i === 0 && needToReplaceCurrentBlock)
-    );
+    dataToInsert.forEach((content, index) => {
+      this.insertBlock(content, index === 0 && needToReplaceCurrentBlock);
+    });
 
     if (BlockManager.currentBlock) {
       Caret.setToBlock(BlockManager.currentBlock, Caret.positions.END);
@@ -273,7 +284,7 @@ export default class Paste extends Module {
    * @param {Event} event - paste event
    */
   private handlePasteEventWrapper = (event: Event): void => {
-    this.handlePasteEvent(event as ClipboardEvent);
+    void this.handlePasteEvent(event as ClipboardEvent);
   };
 
   /**
@@ -412,24 +423,38 @@ export default class Paste extends Module {
     }
 
     const { files = {} } = tool.pasteConfig;
-    let { extensions, mimeTypes } = files;
+    const { extensions: rawExtensions, mimeTypes: rawMimeTypes } = files;
 
-    if (!extensions && !mimeTypes) {
+    if (!rawExtensions && !rawMimeTypes) {
       return;
     }
 
-    if (extensions && !Array.isArray(extensions)) {
+    const normalizedExtensions = (() => {
+      if (rawExtensions == null) {
+        return [];
+      }
+
+      if (Array.isArray(rawExtensions)) {
+        return rawExtensions;
+      }
+
       _.log(`«extensions» property of the onDrop config for «${tool.name}» Tool should be an array`);
-      extensions = [];
-    }
 
-    if (mimeTypes && !Array.isArray(mimeTypes)) {
-      _.log(`«mimeTypes» property of the onDrop config for «${tool.name}» Tool should be an array`);
-      mimeTypes = [];
-    }
+      return [];
+    })();
 
-    if (mimeTypes) {
-      mimeTypes = mimeTypes.filter((type) => {
+    const normalizedMimeTypes = (() => {
+      if (rawMimeTypes == null) {
+        return [];
+      }
+
+      if (!Array.isArray(rawMimeTypes)) {
+        _.log(`«mimeTypes» property of the onDrop config for «${tool.name}» Tool should be an array`);
+
+        return [];
+      }
+
+      return rawMimeTypes.filter((type) => {
         if (!_.isValidMimeType(type)) {
           _.log(`MIME type value «${type}» for the «${tool.name}» Tool is not a valid MIME type`, 'warn');
 
@@ -438,11 +463,11 @@ export default class Paste extends Module {
 
         return true;
       });
-    }
+    })();
 
     this.toolsFiles[tool.name] = {
-      extensions: extensions || [],
-      mimeTypes: mimeTypes || [],
+      extensions: normalizedExtensions,
+      mimeTypes: normalizedMimeTypes,
     };
   }
 
@@ -516,7 +541,7 @@ export default class Paste extends Module {
 
     event.preventDefault();
     if (event.clipboardData) {
-      this.processDataTransfer(event.clipboardData);
+      await this.processDataTransfer(event.clipboardData);
     }
 
     Toolbar.close();
@@ -614,111 +639,92 @@ export default class Paste extends Module {
 
     return nodes
       .map((node) => {
-        let content: HTMLElement | null | undefined; let tool = Tools.defaultTool; let isBlock = false;
+        const nodeData = (() => {
+          switch (node.nodeType) {
+            case Node.DOCUMENT_FRAGMENT_NODE: {
+              const fragmentWrapper = $.make('div');
 
-        switch (node.nodeType) {
-          /** If node is a document fragment, use temp wrapper to get innerHTML */
-          case Node.DOCUMENT_FRAGMENT_NODE:
-            content = $.make('div');
-            content.appendChild(node);
-            break;
+              fragmentWrapper.appendChild(node);
 
-          /** If node is an element, then there might be a substitution */
-          case Node.ELEMENT_NODE:
-            content = node as HTMLElement;
-            isBlock = true;
-
-            const tagSubstitute = this.toolsTags[content.tagName];
-
-            if (tagSubstitute !== undefined) {
-              tool = tagSubstitute.tool;
+              return {
+                content: fragmentWrapper,
+                tool: Tools.defaultTool,
+                isBlock: false,
+              };
             }
-            break;
-        }
 
-        /**
-         * Skip if content is not an HTMLElement
-         */
-        if (!content || !(content instanceof HTMLElement)) {
+            case Node.ELEMENT_NODE: {
+              const elementContent = node as HTMLElement;
+              const tagSubstitute = this.toolsTags[elementContent.tagName];
+
+              return {
+                content: elementContent,
+                tool: tagSubstitute?.tool ?? Tools.defaultTool,
+                isBlock: true,
+              };
+            }
+
+            default:
+              return null;
+          }
+        })();
+
+        if (!nodeData) {
           return null;
         }
 
-        /**
-         * Returns empty array if there is no paste config
-         */
+        const { content, tool, isBlock } = nodeData;
+
         const tagsOrSanitizeConfigs = tool.pasteConfig === false
           ? []
           : (tool.pasteConfig?.tags || []);
 
-        /**
-         * Reduce the tags or sanitize configs to a single array of sanitize config.
-         * For example:
-         * If sanitize config is
-         * [ 'tbody',
-         *   {
-         *     table: {
-         *       width: true,
-         *       height: true,
-         *     },
-         *   },
-         *   {
-         *      td: {
-         *        colspan: true,
-         *        rowspan: true,
-         *      },
-         *      tr: {  // <-- the second tag
-         *        height: true,
-         *      },
-         *   },
-         * ]
-         * then sanitize config will be
-         * [
-         *  'table':{},
-         *  'tbody':{width: true, height: true}
-         *  'td':{colspan: true, rowspan: true},
-         *  'tr':{height: true}
-         * ]
-         */
-        const toolTags = tagsOrSanitizeConfigs.reduce((result: SanitizerConfig, tagOrSanitizeConfig) => {
+        const toolTags = tagsOrSanitizeConfigs.reduce<SanitizerConfig>((result, tagOrSanitizeConfig) => {
           const tags = this.collectTagNames(tagOrSanitizeConfig);
+          const nextResult: SanitizerConfig = { ...result };
 
           tags.forEach((tag) => {
-            const sanitizationConfig = _.isObject(tagOrSanitizeConfig) ? (tagOrSanitizeConfig as SanitizerConfig)[tag] : null;
+            const sanitizationConfig = _.isObject(tagOrSanitizeConfig)
+              ? (tagOrSanitizeConfig as SanitizerConfig)[tag]
+              : null;
 
-            result[tag.toLowerCase()] = sanitizationConfig ?? {};
+            nextResult[tag.toLowerCase()] = sanitizationConfig ?? {};
           });
 
-          return result;
+          return nextResult;
         }, {} as SanitizerConfig);
 
         const customConfig = Object.assign({}, toolTags, tool.baseSanitizeConfig);
+        const sanitizedContent = (() => {
+          if (content.tagName.toLowerCase() === 'table') {
+            const cleanTableHTML = clean(content.outerHTML, customConfig);
+            const tmpWrapper = $.make('div', undefined, {
+              innerHTML: cleanTableHTML,
+            });
+            const firstChild = tmpWrapper.firstChild;
 
-        /**
-         * A workaround for the HTMLJanitor bug with Tables (incorrect sanitizing of table.innerHTML)
-         * https://github.com/guardian/html-janitor/issues/3
-         */
-        if (content.tagName.toLowerCase() === 'table') {
-          const cleanTableHTML = clean(content.outerHTML, customConfig);
-          const tmpWrapper = $.make('div', undefined, {
-            innerHTML: cleanTableHTML,
-          });
+            if (!firstChild || !(firstChild instanceof HTMLElement)) {
+              return null;
+            }
 
-          const firstChild = tmpWrapper.firstChild;
-
-          if (!firstChild || !(firstChild instanceof HTMLElement)) {
-            return null;
+            return firstChild;
           }
-          content = firstChild;
-        } else {
+
           content.innerHTML = clean(content.innerHTML, customConfig);
+
+          return content;
+        })();
+
+        if (!sanitizedContent) {
+          return null;
         }
 
         const event = this.composePasteEvent('tag', {
-          data: content,
+          data: sanitizedContent,
         });
 
         return {
-          content,
+          content: sanitizedContent,
           isBlock,
           tool: tool.name,
           event,
@@ -881,16 +887,16 @@ export default class Paste extends Module {
   private insertBlock(data: PasteData, canReplaceCurrentBlock = false): void {
     const { BlockManager, Caret } = this.Editor;
     const { currentBlock } = BlockManager;
-    let block: Block;
 
     if (canReplaceCurrentBlock && currentBlock && currentBlock.isEmpty) {
-      block = BlockManager.paste(data.tool, data.event, true);
-      Caret.setToBlock(block, Caret.positions.END);
+      const replacedBlock = BlockManager.paste(data.tool, data.event, true);
+
+      Caret.setToBlock(replacedBlock, Caret.positions.END);
 
       return;
     }
 
-    block = BlockManager.paste(data.tool, data.event);
+    const block = BlockManager.paste(data.tool, data.event);
 
     Caret.setToBlock(block, Caret.positions.END);
   }
@@ -910,13 +916,9 @@ export default class Paste extends Module {
     );
 
     sanitizedBlocks.forEach(({ tool, data }, i) => {
-      let needToReplaceCurrentBlock = false;
-
-      if (i === 0) {
-        const isCurrentBlockDefault = Boolean(BlockManager.currentBlock?.tool.isDefault);
-
-        needToReplaceCurrentBlock = isCurrentBlockDefault && Boolean(BlockManager.currentBlock?.isEmpty);
-      }
+      const needToReplaceCurrentBlock = i === 0 &&
+        Boolean(BlockManager.currentBlock?.tool.isDefault) &&
+        Boolean(BlockManager.currentBlock?.isEmpty);
 
       const block = BlockManager.insert({
         tool,
@@ -981,7 +983,6 @@ export default class Paste extends Module {
    */
   private getNodes(wrapper: Node): Node[] {
     const children = Array.from(wrapper.childNodes);
-    let elementNodeProcessingResult: Node[] | void;
 
     const reducer = (nodes: Node[], node: Node): Node[] => {
       if ($.isEmpty(node) && !$.isSingleTag(node as HTMLElement)) {
@@ -989,41 +990,34 @@ export default class Paste extends Module {
       }
 
       const lastNode = nodes[nodes.length - 1];
+      const isLastNodeFragment = lastNode !== undefined && $.isFragment(lastNode);
+      const { destNode, remainingNodes } = isLastNodeFragment
+        ? {
+          destNode: lastNode,
+          remainingNodes: nodes.slice(0, -1),
+        }
+        : {
+          destNode: new DocumentFragment(),
+          remainingNodes: nodes,
+        };
 
-      let destNode: Node = new DocumentFragment();
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const elementNodeProcessingResult = this.processElementNode(node, remainingNodes, destNode);
 
-      if (lastNode !== undefined && $.isFragment(lastNode)) {
-        destNode = lastNode;
-        nodes.pop();
+        if (elementNodeProcessingResult) {
+          return elementNodeProcessingResult;
+        }
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        destNode.appendChild(node);
+
+        return [...remainingNodes, destNode];
+      } else {
+        return [...remainingNodes, destNode];
       }
 
-      switch (node.nodeType) {
-        /**
-         * If node is HTML element:
-         * 1. Check if it is inline element
-         * 2. Check if it contains another block or substitutable elements
-         */
-        case Node.ELEMENT_NODE:
-          elementNodeProcessingResult = this.processElementNode(node, nodes, destNode);
+      const processedChildNodes = Array.from(node.childNodes).reduce(reducer, []);
 
-          if (elementNodeProcessingResult) {
-            return elementNodeProcessingResult;
-          }
-          break;
-
-        /**
-         * If node is text node, wrap it with DocumentFragment
-         */
-        case Node.TEXT_NODE:
-          destNode.appendChild(node);
-
-          return [...nodes, destNode];
-
-        default:
-          return [...nodes, destNode];
-      }
-
-      return [...nodes, ...Array.from(node.childNodes).reduce(reducer, [])];
+      return [...remainingNodes, ...processedChildNodes];
     };
 
     return children.reduce(reducer, []);

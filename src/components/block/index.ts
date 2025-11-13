@@ -726,8 +726,17 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    *
    * @param {boolean} state - 'true' to enable, 'false' to disable stretched state
    */
-  public set stretched(state: boolean) {
+  public setStretchState(state: boolean): void {
     this.holder.classList.toggle(Block.CSS.wrapperStretched, state);
+  }
+
+  /**
+   * Backward-compatible setter for stretched state
+   *
+   * @param state - true to enable, false to disable stretched state
+   */
+  public set stretched(state: boolean) {
+    this.setStretchState(state);
   }
 
   /**

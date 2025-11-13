@@ -73,7 +73,7 @@ const BlockAPI = function BlockAPI(
      * @param {boolean} state — state to set
      */
     set stretched(state: boolean) {
-      block.stretched = state;
+      block.setStretchState(state);
     },
 
     /**
@@ -140,6 +140,23 @@ const BlockAPI = function BlockAPI(
   };
 
   Object.setPrototypeOf(this, blockAPI);
+
+  Object.defineProperties(this, {
+    id: {
+      get(): string {
+        return block.id;
+      },
+      enumerable: true,
+      configurable: true,
+    },
+    name: {
+      get(): string {
+        return block.name;
+      },
+      enumerable: true,
+      configurable: true,
+    },
+  });
 
   return this;
 };

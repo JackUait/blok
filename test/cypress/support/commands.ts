@@ -17,6 +17,26 @@ import Chainable = Cypress.Chainable;
  * @param editorConfig - config to pass to the editor
  * @returns EditorJS - created instance
  */
+type EditorJSConstructor = new (configuration?: EditorConfig|string) => EditorJS;
+
+const resolveEditorConstructor = (win: Cypress.ApplicationWindow): EditorJSConstructor => {
+  const candidate = (win as Cypress.ApplicationWindow & { EditorJS?: unknown }).EditorJS;
+
+  if (typeof candidate === 'function') {
+    return candidate as EditorJSConstructor;
+  }
+
+  if (candidate && typeof candidate === 'object') {
+    const defaultExport = (candidate as { default?: unknown }).default;
+
+    if (typeof defaultExport === 'function') {
+      return defaultExport as EditorJSConstructor;
+    }
+  }
+
+  throw new Error('EditorJS constructor is not available on window');
+};
+
 Cypress.Commands.add('createEditor', (editorConfig: EditorConfig = {}): Chainable<EditorJS> => {
   return cy.window()
     .then((window) => {
@@ -28,7 +48,8 @@ Cypress.Commands.add('createEditor', (editorConfig: EditorConfig = {}): Chainabl
 
         window.document.body.appendChild(editorContainer);
 
-        const editorInstance: EditorJS = new window.EditorJS(editorConfig);
+        const EditorConstructor = resolveEditorConstructor(window);
+        const editorInstance: EditorJS = new EditorConstructor(editorConfig);
 
         editorInstance.isReady.then(() => {
           resolve(editorInstance);
@@ -55,7 +76,11 @@ Cypress.Commands.add('paste', {
     cancelable: true,
   }), {
     clipboardData: {
-      getData: (type: string): string => data[type],
+      getData: (type: string): string => {
+        const value = data[type];
+
+        return typeof value === 'string' ? value : '';
+      },
       types: Object.keys(data),
     },
   });

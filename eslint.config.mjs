@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FlatCompat } from '@eslint/eslintrc';
 import cypress from 'eslint-plugin-cypress';
+import eslintPluginImport from 'eslint-plugin-import';
 import playwright from 'eslint-plugin-playwright';
 import sonarjs from 'eslint-plugin-sonarjs';
 import jest from 'eslint-plugin-jest';
@@ -70,6 +71,7 @@ export default [
       '@typescript-eslint/member-ordering': 'off',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/consistent-type-exports': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
       'prefer-arrow-callback': 'error',
       'prefer-const': 'error',
       'deprecation/deprecation': 'off',
@@ -120,12 +122,16 @@ export default [
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     plugins: {
       sonarjs,
+      import: eslintPluginImport,
     },
     rules: {
       // Duplicate code detection
       'sonarjs/no-duplicate-string': ['error', { threshold: 3 }],
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-identical-expressions': 'error',
+      // Prevent UMD module patterns
+      'import/no-amd': 'error',
+      'import/no-commonjs': 'error',
     },
   },
   {

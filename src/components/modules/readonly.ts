@@ -52,7 +52,7 @@ export default class ReadOnly extends Module {
       this.throwCriticalError();
     }
 
-    this.toggle(this.config.readOnly, true);
+    await this.toggle(this.config.readOnly, true);
   }
 
   /**

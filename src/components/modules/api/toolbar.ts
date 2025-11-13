@@ -51,7 +51,7 @@ export default class ToolbarAPI extends Module {
 
     if (canOpenBlockSettings) {
       this.Editor.Toolbar.moveAndOpen();
-      this.Editor.BlockSettings.open();
+      void this.Editor.BlockSettings.open();
     } else {
       this.Editor.BlockSettings.close();
     }
@@ -63,7 +63,7 @@ export default class ToolbarAPI extends Module {
    *
    * @param {boolean} openingState - Opening state of toolbox
    */
-  public toggleToolbox(openingState: boolean): void {
+  public toggleToolbox(openingState?: boolean): void {
     if (this.Editor.BlockManager.currentBlockIndex === -1) {
       _.logLabeled('Could\'t toggle the Toolbox because there is no block selected ', 'warn');
 

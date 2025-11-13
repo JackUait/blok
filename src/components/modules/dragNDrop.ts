@@ -75,9 +75,9 @@ export default class DragNDrop extends Module {
 
     dropEvent.preventDefault();
 
-    BlockManager.blocks.forEach((block) => {
+    for (const block of BlockManager.blocks) {
       block.dropTarget = false;
-    });
+    }
 
     if (SelectionUtils.isAtEditor && !SelectionUtils.isCollapsed && this.isStartedAtEditor) {
       document.execCommand('delete');
@@ -89,17 +89,27 @@ export default class DragNDrop extends Module {
      * Try to set current block by drop target.
      * If drop target is not part of the Block, set last Block as current.
      */
-    const targetBlock = BlockManager.setCurrentBlockByChildNode(dropEvent.target as Node);
+    const target = dropEvent.target;
+    const targetBlock = target instanceof Node
+      ? BlockManager.setCurrentBlockByChildNode(target)
+      : undefined;
 
     if (targetBlock) {
       this.Editor.Caret.setToBlock(targetBlock, Caret.positions.END);
     } else {
-      const lastBlock = BlockManager.setCurrentBlockByChildNode(BlockManager.lastBlock.holder);
+      const lastBlock = BlockManager.lastBlock;
+      const blockToSet = BlockManager.setCurrentBlockByChildNode(lastBlock.holder) ?? lastBlock;
 
-      this.Editor.Caret.setToBlock(lastBlock, Caret.positions.END);
+      this.Editor.Caret.setToBlock(blockToSet, Caret.positions.END);
     }
 
-    await Paste.processDataTransfer(dropEvent.dataTransfer, true);
+    const { dataTransfer } = dropEvent;
+
+    if (!dataTransfer) {
+      return;
+    }
+
+    await Paste.processDataTransfer(dataTransfer, true);
   }
 
   /**

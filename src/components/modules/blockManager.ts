@@ -22,6 +22,10 @@ import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitize
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
 import PromiseQueue from '../utils/promise-queue';
 
+type BlocksStore = Blocks & {
+  [index: number]: Block | undefined;
+};
+
 /**
  * @typedef {BlockManager} BlockManager
  * @property {number} currentBlockIndex - Index of current working block
@@ -51,8 +55,8 @@ export default class BlockManager extends Module {
    *
    * @returns {Block}
    */
-  public get firstBlock(): Block {
-    return this._blocks[0];
+  public get firstBlock(): Block | undefined {
+    return this.blocksStore[0];
   }
 
   /**
@@ -60,8 +64,8 @@ export default class BlockManager extends Module {
    *
    * @returns {Block}
    */
-  public get lastBlock(): Block {
-    return this._blocks[this._blocks.length - 1];
+  public get lastBlock(): Block | undefined {
+    return this.blocksStore[this.blocksStore.length - 1];
   }
 
   /**
@@ -70,7 +74,7 @@ export default class BlockManager extends Module {
    * @returns {Block}
    */
   public get currentBlock(): Block | undefined {
-    return this._blocks[this.currentBlockIndex];
+    return this.blocksStore[this.currentBlockIndex];
   }
 
   /**
@@ -78,7 +82,13 @@ export default class BlockManager extends Module {
    *
    * @param block - block to set as a current
    */
-  public set currentBlock(block: Block) {
+  public set currentBlock(block: Block | undefined) {
+    if (block === undefined) {
+      this.unsetCurrentBlock();
+
+      return;
+    }
+
     this.currentBlockIndex = this.getBlockIndex(block);
   }
 
@@ -88,13 +98,15 @@ export default class BlockManager extends Module {
    * @returns {Block|null}
    */
   public get nextBlock(): Block | null {
-    const isLastBlock = this.currentBlockIndex === (this._blocks.length - 1);
+    const isLastBlock = this.currentBlockIndex === (this.blocksStore.length - 1);
 
     if (isLastBlock) {
       return null;
     }
 
-    return this._blocks[this.currentBlockIndex + 1];
+    const nextBlock = this.blocksStore[this.currentBlockIndex + 1];
+
+    return nextBlock ?? null;
   }
 
   /**
@@ -102,7 +114,7 @@ export default class BlockManager extends Module {
    *
    * @returns {Block | undefined}
    */
-  public get nextContentfulBlock(): Block {
+  public get nextContentfulBlock(): Block | undefined {
     const nextBlocks = this.blocks.slice(this.currentBlockIndex + 1);
 
     return nextBlocks.find((block) => !!block.inputs.length);
@@ -113,7 +125,7 @@ export default class BlockManager extends Module {
    *
    * @returns {Block | undefined}
    */
-  public get previousContentfulBlock(): Block {
+  public get previousContentfulBlock(): Block | undefined {
     const previousBlocks = this.blocks.slice(0, this.currentBlockIndex).reverse();
 
     return previousBlocks.find((block) => !!block.inputs.length);
@@ -131,7 +143,9 @@ export default class BlockManager extends Module {
       return null;
     }
 
-    return this._blocks[this.currentBlockIndex - 1];
+    const previousBlock = this.blocksStore[this.currentBlockIndex - 1];
+
+    return previousBlock ?? null;
   }
 
   /**
@@ -140,7 +154,7 @@ export default class BlockManager extends Module {
    * @returns {Block[]} {@link Blocks#array}
    */
   public get blocks(): Block[] {
-    return this._blocks.array;
+    return this.blocksStore.array;
   }
 
   /**
@@ -165,7 +179,7 @@ export default class BlockManager extends Module {
    * @type {Proxy}
    * @private
    */
-  private _blocks: Blocks = null;
+  private _blocks: BlocksStore | null = null;
 
   /**
    * Should be called after Editor.UI preparation
@@ -189,13 +203,15 @@ export default class BlockManager extends Module {
     this._blocks = new Proxy(blocks, {
       set: Blocks.set,
       get: Blocks.get,
-    });
+    }) as BlocksStore;
 
     /** Copy event */
     this.listeners.on(
       document,
       'copy',
-      (e: ClipboardEvent) => this.Editor.BlockEvents.handleCommandC(e)
+      (event: Event) => {
+        this.Editor.BlockEvents.handleCommandC(event as ClipboardEvent);
+      }
     );
   }
 
@@ -235,6 +251,11 @@ export default class BlockManager extends Module {
   }: {tool: string; id?: string; data?: BlockToolData; tunes?: {[name: string]: BlockTuneData}}): Block {
     const readOnly = this.Editor.ReadOnly.isEnabled;
     const tool = this.Editor.Tools.blockTools.get(name);
+
+    if (tool === undefined) {
+      throw new Error(`Could not compose Block. Tool «${name}» not found.`);
+    }
+
     const block = new Block({
       id,
       data,
@@ -267,7 +288,7 @@ export default class BlockManager extends Module {
    */
   public insert({
     id = undefined,
-    tool = this.config.defaultBlock,
+    tool,
     data = {},
     index,
     needToFocus = true,
@@ -282,15 +303,16 @@ export default class BlockManager extends Module {
     replace?: boolean;
     tunes?: {[name: string]: BlockTuneData};
   } = {}): Block {
-    let newIndex = index;
+    const targetIndex = index ?? this.currentBlockIndex + (replace ? 0 : 1);
+    const toolName = tool ?? this.config.defaultBlock;
 
-    if (newIndex === undefined) {
-      newIndex = this.currentBlockIndex + (replace ? 0 : 1);
+    if (toolName === undefined) {
+      throw new Error('Could not insert Block. Tool name is not specified.');
     }
 
     const block = this.composeBlock({
       id,
-      tool,
+      tool: toolName,
       data,
       tunes,
     });
@@ -300,23 +322,29 @@ export default class BlockManager extends Module {
      * we need to dispatch the 'block-removing' event for the replacing block
      */
     if (replace) {
-      this.blockDidMutated(BlockRemovedMutationType, this.getBlockByIndex(newIndex), {
-        index: newIndex,
+      const blockToReplace = this.getBlockByIndex(targetIndex);
+
+      if (blockToReplace === undefined) {
+        throw new Error(`Could not replace Block at index ${targetIndex}. Block not found.`);
+      }
+
+      this.blockDidMutated(BlockRemovedMutationType, blockToReplace, {
+        index: targetIndex,
       });
     }
 
-    this._blocks.insert(newIndex, block, replace);
+    this.blocksStore.insert(targetIndex, block, replace);
 
     /**
      * Force call of didMutated event on Block insertion
      */
     this.blockDidMutated(BlockAddedMutationType, block, {
-      index: newIndex,
+      index: targetIndex,
     });
 
     if (needToFocus) {
-      this.currentBlockIndex = newIndex;
-    } else if (newIndex <= this.currentBlockIndex) {
+      this.currentBlockIndex = targetIndex;
+    } else if (targetIndex <= this.currentBlockIndex) {
       this.currentBlockIndex++;
     }
 
@@ -330,7 +358,7 @@ export default class BlockManager extends Module {
    * @param index - index where to insert
    */
   public insertMany(blocks: Block[], index = 0): void {
-    this._blocks.insertMany(blocks, index);
+    this.blocksStore.insertMany(blocks, index);
   }
 
   /**
@@ -361,7 +389,7 @@ export default class BlockManager extends Module {
 
     const blockIndex = this.getBlockIndex(block);
 
-    this._blocks.replace(blockIndex, newBlock);
+    this.blocksStore.replace(blockIndex, newBlock);
 
     this.blockDidMutated(BlockChangedMutationType, newBlock, {
       index: blockIndex,
@@ -386,6 +414,19 @@ export default class BlockManager extends Module {
       index: blockIndex,
       replace: true,
     });
+  }
+
+  /**
+   * Returns the proxied Blocks storage ensuring it is initialized.
+   *
+   * @throws {Error} if the storage is not prepared.
+   */
+  private get blocksStore(): BlocksStore {
+    if (this._blocks === null) {
+      throw new Error('BlockManager: blocks store is not initialized. Call prepare() before accessing blocks.');
+    }
+
+    return this._blocks;
   }
 
   /**
@@ -433,9 +474,15 @@ export default class BlockManager extends Module {
    * @returns {Block} inserted Block
    */
   public insertDefaultBlockAtIndex(index: number, needToFocus = false): Block {
-    const block = this.composeBlock({ tool: this.config.defaultBlock });
+    const defaultTool = this.config.defaultBlock;
 
-    this._blocks[index] = block;
+    if (defaultTool === undefined) {
+      throw new Error('Could not insert default Block. Default block tool is not defined in the configuration.');
+    }
+
+    const block = this.composeBlock({ tool: defaultTool });
+
+    this.blocksStore[index] = block;
 
     /**
      * Force call of didMutated event on Block insertion
@@ -478,7 +525,11 @@ export default class BlockManager extends Module {
    * @returns {Promise} - the sequence that can be continued
    */
   public async mergeBlocks(targetBlock: Block, blockToMerge: Block): Promise<void> {
-    let blockToMergeData: BlockToolData | undefined;
+    const completeMerge = async (data: BlockToolData): Promise<void> => {
+      await targetBlock.mergeWith(data);
+      await this.removeBlock(blockToMerge);
+      this.currentBlockIndex = this.blocksStore.indexOf(targetBlock);
+    };
 
     /**
      * We can merge:
@@ -499,25 +550,21 @@ export default class BlockManager extends Module {
         this.config.sanitizer as SanitizerConfig
       );
 
-      blockToMergeData = cleanData;
+      await completeMerge(cleanData);
+
+      return;
+    }
 
     /**
      * 2) Blocks with different Tools if they provides conversionConfig
      */
-    } else if (targetBlock.mergeable && isBlockConvertable(blockToMerge, 'export') && isBlockConvertable(targetBlock, 'import')) {
+    if (targetBlock.mergeable && isBlockConvertable(blockToMerge, 'export') && isBlockConvertable(targetBlock, 'import')) {
       const blockToMergeDataStringified = await blockToMerge.exportDataAsString();
       const cleanData = clean(blockToMergeDataStringified, targetBlock.tool.sanitizeConfig);
+      const blockToMergeData = convertStringToBlockData(cleanData, targetBlock.tool.conversionConfig);
 
-      blockToMergeData = convertStringToBlockData(cleanData, targetBlock.tool.conversionConfig);
+      await completeMerge(blockToMergeData);
     }
-
-    if (blockToMergeData === undefined) {
-      return;
-    }
-
-    await targetBlock.mergeWith(blockToMergeData);
-    this.removeBlock(blockToMerge);
-    this.currentBlockIndex = this._blocks.indexOf(targetBlock);
   }
 
   /**
@@ -528,7 +575,7 @@ export default class BlockManager extends Module {
    */
   public removeBlock(block: Block, addLastBlock = true): Promise<void> {
     return new Promise((resolve) => {
-      const index = this._blocks.indexOf(block);
+      const index = this.blocksStore.indexOf(block);
 
       /**
        * If index is not passed and there is no block selected, show a warning
@@ -537,7 +584,7 @@ export default class BlockManager extends Module {
         throw new Error('Can\'t find a Block to remove');
       }
 
-      this._blocks.remove(index);
+      this.blocksStore.remove(index);
       block.destroy();
 
       /**
@@ -575,21 +622,21 @@ export default class BlockManager extends Module {
    * @returns {number|undefined}
    */
   public removeSelectedBlocks(): number | undefined {
-    let firstSelectedBlockIndex;
+    const selectedBlockEntries = this.blocks
+      .map((block, index) => ({
+        block,
+        index,
+      }))
+      .filter(({ block }) => block.selected)
+      .sort((first, second) => second.index - first.index);
 
-    /**
-     * Remove selected Blocks from the end
-     */
-    for (let index = this.blocks.length - 1; index >= 0; index--) {
-      if (!this.blocks[index].selected) {
-        continue;
-      }
+    selectedBlockEntries.forEach(({ block }) => {
+      void this.removeBlock(block);
+    });
 
-      this.removeBlock(this.blocks[index]);
-      firstSelectedBlockIndex = index;
-    }
-
-    return firstSelectedBlockIndex;
+    return selectedBlockEntries.length > 0
+      ? selectedBlockEntries[selectedBlockEntries.length - 1].index
+      : undefined;
   }
 
   /**
@@ -598,13 +645,25 @@ export default class BlockManager extends Module {
    * Removes all blocks
    */
   public removeAllBlocks(): void {
-    for (let index = this.blocks.length - 1; index >= 0; index--) {
-      this._blocks.remove(index);
-    }
+    const removeBlockByIndex = (index: number): void => {
+      if (index < 0) {
+        return;
+      }
+
+      this.blocksStore.remove(index);
+      removeBlockByIndex(index - 1);
+    };
+
+    removeBlockByIndex(this.blocksStore.length - 1);
 
     this.unsetCurrentBlock();
     this.insert();
-    this.currentBlock.firstInput.focus();
+    const currentBlock = this.currentBlock;
+    const firstInput = currentBlock?.firstInput;
+
+    if (firstInput !== undefined) {
+      firstInput.focus();
+    }
   }
 
   /**
@@ -657,11 +716,11 @@ export default class BlockManager extends Module {
    * @returns {Block}
    */
   public getBlockByIndex(index: number): Block | undefined {
-    if (index === -1) {
-      index = this._blocks.length - 1;
-    }
+    const targetIndex = index === -1
+      ? this.blocksStore.length - 1
+      : index;
 
-    return this._blocks[index];
+    return this.blocksStore[targetIndex];
   }
 
   /**
@@ -670,7 +729,7 @@ export default class BlockManager extends Module {
    * @param block - block to find index
    */
   public getBlockIndex(block: Block): number {
-    return this._blocks.indexOf(block);
+    return this.blocksStore.indexOf(block);
   }
 
   /**
@@ -679,8 +738,8 @@ export default class BlockManager extends Module {
    * @param id - id of block to get
    * @returns {Block}
    */
-  public getBlockById(id): Block | undefined {
-    return this._blocks.array.find(block => block.id === id);
+  public getBlockById(id: string): Block | undefined {
+    return this.blocksStore.array.find((block) => block.id === id);
   }
 
   /**
@@ -689,17 +748,26 @@ export default class BlockManager extends Module {
    * @param {Node} element - html element to get Block by
    */
   public getBlock(element: HTMLElement): Block | undefined {
-    if (!$.isElement(element) as boolean) {
-      element = element.parentNode as HTMLElement;
+    const normalizedElement = (($.isElement(element) as boolean) ? element : element.parentNode) as HTMLElement | null;
+
+    if (!normalizedElement) {
+      return undefined;
     }
 
-    const nodes = this._blocks.nodes;
-    const firstLevelBlock = element.closest(`.${Block.CSS.wrapper}`);
+    const nodes = this.blocksStore.nodes;
+    const firstLevelBlock = normalizedElement.closest(`.${Block.CSS.wrapper}`);
+
+    if (!firstLevelBlock) {
+      return undefined;
+    }
+
     const index = nodes.indexOf(firstLevelBlock as HTMLElement);
 
     if (index >= 0) {
-      return this._blocks[index];
+      return this.blocksStore[index];
     }
+
+    return undefined;
   }
 
   /**
@@ -713,14 +781,16 @@ export default class BlockManager extends Module {
     /**
      * If node is Text TextNode
      */
-    if (!$.isElement(childNode)) {
-      childNode = childNode.parentNode;
+    const normalizedChildNode = ($.isElement(childNode) ? childNode : childNode.parentNode) as HTMLElement | null;
+
+    if (!normalizedChildNode) {
+      return undefined;
     }
 
-    const parentFirstLevelBlock = (childNode as HTMLElement).closest(`.${Block.CSS.wrapper}`);
+    const parentFirstLevelBlock = normalizedChildNode.closest(`.${Block.CSS.wrapper}`);
 
     if (!parentFirstLevelBlock) {
-      return;
+      return undefined;
     }
 
     /**
@@ -733,7 +803,7 @@ export default class BlockManager extends Module {
     const isBlockBelongsToCurrentInstance = editorWrapper?.isEqualNode(this.Editor.UI.nodes.wrapper);
 
     if (!isBlockBelongsToCurrentInstance) {
-      return;
+      return undefined;
     }
 
     /**
@@ -741,14 +811,20 @@ export default class BlockManager extends Module {
      *
      * @type {number}
      */
-    this.currentBlockIndex = this._blocks.nodes.indexOf(parentFirstLevelBlock as HTMLElement);
+    if (!(parentFirstLevelBlock instanceof HTMLElement)) {
+      return undefined;
+    }
+
+    this.currentBlockIndex = this.blocksStore.nodes.indexOf(parentFirstLevelBlock);
 
     /**
      * Update current block active input
      */
-    this.currentBlock.updateCurrentInput();
+    const currentBlock = this.currentBlock;
 
-    return this.currentBlock;
+    currentBlock?.updateCurrentInput();
+
+    return currentBlock;
   }
 
   /**
@@ -758,18 +834,24 @@ export default class BlockManager extends Module {
    * @returns {Block}
    */
   public getBlockByChildNode(childNode: Node): Block | undefined {
-    if (!childNode || childNode instanceof Node === false) {
+    if (!(childNode instanceof Node)) {
       return undefined;
     }
 
     /**
      * If node is Text TextNode
      */
-    if (!$.isElement(childNode)) {
-      childNode = childNode.parentNode;
+    const normalizedChildNode = ($.isElement(childNode) ? childNode : childNode.parentNode) as HTMLElement | null;
+
+    if (!normalizedChildNode) {
+      return undefined;
     }
 
-    const firstLevelBlock = (childNode as HTMLElement).closest(`.${Block.CSS.wrapper}`);
+    const firstLevelBlock = normalizedChildNode.closest(`.${Block.CSS.wrapper}`);
+
+    if (!firstLevelBlock) {
+      return undefined;
+    }
 
     return this.blocks.find((block) => block.holder === firstLevelBlock);
   }
@@ -781,9 +863,9 @@ export default class BlockManager extends Module {
    * @param {number} toIndex - index of second block
    * @deprecated — use 'move' instead
    */
-  public swap(fromIndex, toIndex): void {
+  public swap(fromIndex: number, toIndex: number): void {
     /** Move up current Block */
-    this._blocks.swap(fromIndex, toIndex);
+    this.blocksStore.swap(fromIndex, toIndex);
 
     /** Now actual block moved up so that current block index decreased */
     this.currentBlockIndex = toIndex;
@@ -795,7 +877,7 @@ export default class BlockManager extends Module {
    * @param {number} toIndex - index where to move Block
    * @param {number} fromIndex - index of Block to move
    */
-  public move(toIndex, fromIndex = this.currentBlockIndex): void {
+  public move(toIndex: number, fromIndex: number = this.currentBlockIndex): void {
     // make sure indexes are valid and within a valid range
     if (isNaN(toIndex) || isNaN(fromIndex)) {
       _.log(`Warning during 'move' call: incorrect indices provided.`, 'warn');
@@ -810,15 +892,20 @@ export default class BlockManager extends Module {
     }
 
     /** Move up current Block */
-    this._blocks.move(toIndex, fromIndex);
+    this.blocksStore.move(toIndex, fromIndex);
 
     /** Now actual block moved so that current block index changed */
     this.currentBlockIndex = toIndex;
+    const movedBlock = this.currentBlock;
+
+    if (movedBlock === undefined) {
+      throw new Error(`Could not move Block. Block at index ${toIndex} is not available.`);
+    }
 
     /**
      * Force call of didMutated event on Block movement
      */
-    this.blockDidMutated(BlockMovedMutationType, this.currentBlock, {
+    this.blockDidMutated(BlockMovedMutationType, movedBlock, {
       fromIndex,
       toIndex,
     });
@@ -867,15 +954,10 @@ export default class BlockManager extends Module {
     /**
      * Now using Conversion Config "import" we compose a new Block data
      */
-    let newBlockData = convertStringToBlockData(cleanData, replacingTool.conversionConfig, replacingTool.settings);
-
-    /**
-     * Optional data overrides.
-     * Used for example, by the Multiple Toolbox Items feature, where a single Tool provides several Toolbox items with "data" overrides
-     */
-    if (blockDataOverrides) {
-      newBlockData = Object.assign(newBlockData, blockDataOverrides);
-    }
+    const baseBlockData = convertStringToBlockData(cleanData, replacingTool.conversionConfig, replacingTool.settings);
+    const newBlockData = blockDataOverrides
+      ? Object.assign(baseBlockData, blockDataOverrides)
+      : baseBlockData;
 
     return this.replace(blockToConvert, replacingTool.name, newBlockData);
   }
@@ -902,7 +984,7 @@ export default class BlockManager extends Module {
     const blocksToRemove = [ ...this.blocks ];
 
     blocksToRemove.forEach((block) => {
-      queue.add(async () => {
+      void queue.add(async () => {
         await this.removeBlock(block, false);
       });
     });
@@ -939,20 +1021,28 @@ export default class BlockManager extends Module {
   private bindBlockEvents(block: Block): void {
     const { BlockEvents } = this.Editor;
 
-    this.readOnlyMutableListeners.on(block.holder, 'keydown', (event: KeyboardEvent) => {
-      BlockEvents.keydown(event);
+    this.readOnlyMutableListeners.on(block.holder, 'keydown', (event: Event) => {
+      if (event instanceof KeyboardEvent) {
+        BlockEvents.keydown(event);
+      }
     });
 
-    this.readOnlyMutableListeners.on(block.holder, 'keyup', (event: KeyboardEvent) => {
-      BlockEvents.keyup(event);
+    this.readOnlyMutableListeners.on(block.holder, 'keyup', (event: Event) => {
+      if (event instanceof KeyboardEvent) {
+        BlockEvents.keyup(event);
+      }
     });
 
-    this.readOnlyMutableListeners.on(block.holder, 'dragover', (event: DragEvent) => {
-      BlockEvents.dragOver(event);
+    this.readOnlyMutableListeners.on(block.holder, 'dragover', (event: Event) => {
+      if (event instanceof DragEvent) {
+        BlockEvents.dragOver(event);
+      }
     });
 
-    this.readOnlyMutableListeners.on(block.holder, 'dragleave', (event: DragEvent) => {
-      BlockEvents.dragLeave(event);
+    this.readOnlyMutableListeners.on(block.holder, 'dragleave', (event: Event) => {
+      if (event instanceof DragEvent) {
+        BlockEvents.dragLeave(event);
+      }
     });
 
     block.on('didMutated', (affectedBlock: Block) => {
@@ -977,7 +1067,9 @@ export default class BlockManager extends Module {
     this.readOnlyMutableListeners.on(
       document,
       'cut',
-      (e: ClipboardEvent) => this.Editor.BlockEvents.handleCommandX(e)
+      (event: Event) => {
+        this.Editor.BlockEvents.handleCommandX(event as ClipboardEvent);
+      }
     );
 
     this.blocks.forEach((block: Block) => {
@@ -992,7 +1084,7 @@ export default class BlockManager extends Module {
    * @returns {boolean}
    */
   private validateIndex(index: number): boolean {
-    return !(index < 0 || index >= this._blocks.length);
+    return !(index < 0 || index >= this.blocksStore.length);
   }
 
   /**

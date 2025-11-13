@@ -1,0 +1,395 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { Mock, MockInstance } from 'vitest';
+
+import BlockManager from '../../../../src/components/modules/blockManager';
+import EventsDispatcher from '../../../../src/components/utils/events';
+import type { EditorConfig } from '../../../../types';
+import type { EditorModules } from '../../../../src/types-internal/editor-modules';
+import type { EditorEventMap } from '../../../../src/components/events';
+import type Block from '../../../../src/components/block';
+import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
+import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
+import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
+import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
+
+type BlockManagerContext = {
+  blockManager: BlockManager;
+  blocksStub: ReturnType<typeof createBlocksStub>;
+};
+
+type BlocksStub = {
+  proxy: Block[] & Record<PropertyKey, unknown>;
+  insert: Mock<[index: number, block: Block, replace?: boolean], void>;
+  insertMany: Mock<[items: Block[], index?: number], void>;
+  replace: Mock<[index: number, block: Block], void>;
+  move: Mock<[toIndex: number, fromIndex: number], void>;
+  remove: Mock<[index: number], void>;
+  indexOf: Mock<[block: Block], number>;
+  blocks: Block[];
+};
+
+type CreateBlockManagerOptions = {
+  initialBlocks?: Block[];
+  editorOverrides?: Partial<EditorModules>;
+};
+
+const createBlockStub = (options: {
+  id?: string;
+  name?: string;
+  data?: object;
+  tunes?: Record<string, unknown>;
+} = {}): Block => {
+  const holder = document.createElement('div');
+  const inputs = [ document.createElement('div') ];
+  const data = options.data ?? {};
+
+  const block = {
+    id: options.id ?? `block-${Math.random().toString(16)
+      .slice(2)}`,
+    name: options.name ?? 'paragraph',
+    holder,
+    call: vi.fn(),
+    destroy: vi.fn(),
+    tool: {
+      name: options.name ?? 'paragraph',
+      sanitizeConfig: {},
+      conversionConfig: {},
+      settings: {},
+    } as Record<string, unknown>,
+    tunes: options.tunes ?? {},
+    mergeable: false,
+    mergeWith: vi.fn(),
+    exportDataAsString: vi.fn().mockResolvedValue('{}'),
+    inputs,
+    isEmpty: false,
+    updateCurrentInput: vi.fn(),
+    focusable: true,
+    selected: false,
+    dispatchChange: vi.fn(),
+    save: vi.fn().mockResolvedValue(undefined),
+    validate: vi.fn().mockResolvedValue(true),
+    setStretchState: vi.fn(),
+    stretched: false,
+    getActiveToolboxEntry: vi.fn().mockResolvedValue(undefined),
+    config: {},
+  } as Record<string, unknown>;
+
+  Object.defineProperty(block, 'tool', {
+    value: block.tool,
+    writable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(block, 'tunes', {
+    value: block.tunes,
+    writable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(block, 'data', {
+    get: () => Promise.resolve(data),
+  });
+
+  Object.defineProperty(block, 'firstInput', {
+    get: () => inputs[0],
+  });
+
+  return block as unknown as Block;
+};
+
+const createBlocksStub = (initialBlocks: Block[] = []): BlocksStub => {
+  const blocks = [ ...initialBlocks ];
+
+  const stub = {
+    get array(): Block[] {
+      return blocks;
+    },
+    get length(): number {
+      return blocks.length;
+    },
+    get nodes(): HTMLElement[] {
+      return blocks.map((block) => block.holder);
+    },
+    insert: vi.fn((index: number, block: Block, replace = false) => {
+      const targetIndex = index ?? blocks.length;
+
+      if (replace) {
+        blocks.splice(targetIndex, 1, block);
+      } else {
+        blocks.splice(targetIndex, 0, block);
+      }
+    }),
+    insertMany: vi.fn((items: Block[], index = 0) => {
+      blocks.splice(index, 0, ...items);
+    }),
+    replace: vi.fn((index: number, block: Block) => {
+      blocks[index] = block;
+    }),
+    move: vi.fn((toIndex: number, fromIndex: number) => {
+      const [ movedBlock ] = blocks.splice(fromIndex, 1);
+
+      blocks.splice(toIndex, 0, movedBlock);
+    }),
+    remove: vi.fn((index: number) => {
+      blocks.splice(index, 1);
+    }),
+    indexOf: vi.fn((block: Block) => blocks.indexOf(block)),
+    get: vi.fn((index: number) => blocks[index]),
+  };
+
+  const proxy = new Proxy(stub, {
+    get(target, property: string | symbol) {
+      if (typeof property === 'string' && !Number.isNaN(Number(property))) {
+        return blocks[Number(property)];
+      }
+
+      return Reflect.get(target, property);
+    },
+    set(target, property: string | symbol, value: Block) {
+      if (typeof property === 'string' && !Number.isNaN(Number(property))) {
+        blocks[Number(property)] = value;
+
+        return true;
+      }
+
+      Reflect.set(target, property, value);
+
+      return true;
+    },
+  }) as unknown as BlocksStub['proxy'];
+
+  const result: BlocksStub = {
+    proxy,
+    insert: stub.insert,
+    insertMany: stub.insertMany,
+    replace: stub.replace,
+    move: stub.move,
+    remove: stub.remove,
+    indexOf: stub.indexOf,
+    blocks,
+  };
+
+  return result;
+};
+
+const createBlockManager = (
+  options: CreateBlockManagerOptions = {}
+): BlockManagerContext => {
+  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const config = {
+    defaultBlock: 'paragraph',
+    sanitizer: {},
+  } as EditorConfig;
+
+  const blockManager = new BlockManager({
+    config,
+    eventsDispatcher,
+  });
+
+  const defaultEditorState: Partial<EditorModules> = {
+    BlockEvents: {
+      handleCommandC: vi.fn(),
+      handleCommandX: vi.fn(),
+      keydown: vi.fn(),
+      keyup: vi.fn(),
+      dragOver: vi.fn(),
+      dragLeave: vi.fn(),
+    } as unknown as EditorModules['BlockEvents'],
+    ReadOnly: {
+      isEnabled: false,
+    } as unknown as EditorModules['ReadOnly'],
+    UI: {
+      nodes: {
+        holder: document.createElement('div'),
+        redactor: document.createElement('div'),
+        wrapper: document.createElement('div'),
+      },
+      CSS: {
+        editorWrapper: 'codex-editor',
+        editorWrapperNarrow: 'codex-editor--narrow',
+        editorZone: 'codex-editor__redactor',
+        editorZoneHidden: 'codex-editor__redactor--hidden',
+        editorEmpty: 'codex-editor--empty',
+        editorRtlFix: 'codex-editor--rtl',
+      },
+      checkEmptiness: vi.fn(),
+    } as unknown as EditorModules['UI'],
+  };
+
+  blockManager.state = {
+    ...defaultEditorState,
+    ...options.editorOverrides,
+  } as EditorModules;
+
+  const blocksStub = createBlocksStub(options.initialBlocks);
+
+  (blockManager as unknown as { _blocks: unknown })._blocks = blocksStub.proxy;
+
+  if (options.initialBlocks?.length) {
+    blockManager.currentBlockIndex = 0;
+  }
+
+  return {
+    blockManager,
+    blocksStub,
+  };
+};
+
+type BlockDidMutated = BlockManager['blockDidMutated'];
+type ComposeBlock = BlockManager['composeBlock'];
+
+const getBlockDidMutatedSpy = (
+  blockManager: BlockManager
+): MockInstance<Parameters<BlockDidMutated>, ReturnType<BlockDidMutated>> => {
+  return vi.spyOn(
+    blockManager as unknown as { blockDidMutated: BlockDidMutated },
+    'blockDidMutated'
+  );
+};
+
+const getComposeBlockSpy = (
+  blockManager: BlockManager
+): MockInstance<Parameters<ComposeBlock>, ReturnType<ComposeBlock>> => {
+  return vi.spyOn(
+    blockManager as unknown as { composeBlock: ComposeBlock },
+    'composeBlock'
+  );
+};
+
+describe('BlockManager', () => {
+  it('inserts a block and dispatches added mutation', () => {
+    const existingBlock = createBlockStub({ id: 'existing' });
+    const { blockManager, blocksStub } = createBlockManager({
+      initialBlocks: [ existingBlock ],
+    });
+    const newBlock = createBlockStub({ id: 'new-block' });
+    const composeBlockSpy = getComposeBlockSpy(blockManager).mockReturnValue(newBlock);
+    const blockDidMutatedSpy = getBlockDidMutatedSpy(blockManager);
+
+    const result = blockManager.insert({ replace: true,
+      needToFocus: true });
+
+    expect(result).toBe(newBlock);
+    expect(blocksStub.insert).toHaveBeenCalledWith(0, newBlock, true);
+    expect(blockManager.currentBlockIndex).toBe(0);
+    expect(blockDidMutatedSpy).toHaveBeenCalledWith(
+      BlockRemovedMutationType,
+      existingBlock,
+      expect.objectContaining({ index: 0 })
+    );
+    expect(blockDidMutatedSpy).toHaveBeenCalledWith(
+      BlockAddedMutationType,
+      newBlock,
+      expect.objectContaining({ index: 0 })
+    );
+    expect(composeBlockSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ tool: 'paragraph' })
+    );
+  });
+
+  it('removes a block, updates current index, and emits removal mutation', async () => {
+    const firstBlock = createBlockStub({ id: 'block-1' });
+    const secondBlock = createBlockStub({ id: 'block-2' });
+    const { blockManager, blocksStub } = createBlockManager({
+      initialBlocks: [firstBlock, secondBlock],
+    });
+
+    blockManager.currentBlockIndex = 1;
+    const blockDidMutatedSpy = getBlockDidMutatedSpy(blockManager);
+
+    await blockManager.removeBlock(firstBlock, false);
+
+    expect(blocksStub.remove).toHaveBeenCalledWith(0);
+    expect(firstBlock.destroy).toHaveBeenCalledTimes(1);
+    expect(blockManager.currentBlockIndex).toBe(0);
+    expect(blockDidMutatedSpy).toHaveBeenCalledWith(
+      BlockRemovedMutationType,
+      firstBlock,
+      expect.objectContaining({ index: 0 })
+    );
+    expect(blockManager.blocks).toEqual([ secondBlock ]);
+  });
+
+  it('inserts a default block when the last block is removed', async () => {
+    const block = createBlockStub({ id: 'single-block' });
+    const { blockManager, blocksStub } = createBlockManager({
+      initialBlocks: [ block ],
+    });
+    const newBlock = createBlockStub({ id: 'default' });
+    const insertSpy = vi
+      .spyOn(blockManager as unknown as { insert: BlockManager['insert'] }, 'insert')
+      .mockReturnValue(newBlock);
+
+    await blockManager.removeBlock(block);
+
+    expect(blocksStub.remove).toHaveBeenCalledWith(0);
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves a block and emits movement mutation', () => {
+    const firstBlock = createBlockStub({ id: 'block-1' });
+    const secondBlock = createBlockStub({ id: 'block-2' });
+    const { blockManager, blocksStub } = createBlockManager({
+      initialBlocks: [firstBlock, secondBlock],
+    });
+
+    blockManager.currentBlockIndex = 1;
+    const blockDidMutatedSpy = getBlockDidMutatedSpy(blockManager);
+
+    blockManager.move(0, 1);
+
+    expect(blocksStub.move).toHaveBeenCalledWith(0, 1);
+    expect(blockManager.currentBlockIndex).toBe(0);
+    expect(blockManager.currentBlock).toBe(secondBlock);
+    expect(blockDidMutatedSpy).toHaveBeenCalledWith(
+      BlockMovedMutationType,
+      secondBlock,
+      expect.objectContaining({ fromIndex: 1,
+        toIndex: 0 })
+    );
+  });
+
+  it('recreates block with merged data when updating', async () => {
+    const block = createBlockStub({ id: 'block-1',
+      data: { text: 'Hello' },
+      tunes: { alignment: 'left' } });
+    const { blockManager, blocksStub } = createBlockManager({
+      initialBlocks: [ block ],
+    });
+    const newBlock = createBlockStub({ id: 'block-1' });
+    const composeBlockSpy = getComposeBlockSpy(blockManager).mockReturnValue(newBlock);
+    const blockDidMutatedSpy = getBlockDidMutatedSpy(blockManager);
+
+    const result = await blockManager.update(block, { text: 'Updated' }, { alignment: 'center' });
+
+    expect(composeBlockSpy).toHaveBeenCalledWith({
+      id: 'block-1',
+      tool: 'paragraph',
+      data: { text: 'Updated' },
+      tunes: { alignment: 'center' },
+    });
+    expect(blocksStub.replace).toHaveBeenCalledWith(0, newBlock);
+    expect(blockDidMutatedSpy).toHaveBeenCalledWith(
+      BlockChangedMutationType,
+      newBlock,
+      expect.objectContaining({ index: 0 })
+    );
+    expect(result).toBe(newBlock);
+  });
+
+  it('returns original block when neither data nor tunes provided on update', async () => {
+    const block = createBlockStub({ id: 'block-1' });
+    const { blockManager, blocksStub } = createBlockManager({
+      initialBlocks: [ block ],
+    });
+    const composeBlockSpy = getComposeBlockSpy(blockManager);
+    const blockDidMutatedSpy = getBlockDidMutatedSpy(blockManager);
+
+    const result = await blockManager.update(block);
+
+    expect(result).toBe(block);
+    expect(composeBlockSpy).not.toHaveBeenCalled();
+    expect(blocksStub.replace).not.toHaveBeenCalled();
+    expect(blockDidMutatedSpy).not.toHaveBeenCalled();
+  });
+});

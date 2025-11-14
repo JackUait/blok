@@ -8,7 +8,7 @@ import { ensureEditorBundleBuilt } from './helpers/ensure-build';
 import { EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
 const HEADER_TOOL_UMD_PATH = path.resolve(

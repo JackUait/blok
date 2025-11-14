@@ -8,11 +8,12 @@ import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
 import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
-const TOOL_WITH_TWO_INPUTS_SELECTOR = '[data-cy=tool-with-two-inputs] div[contenteditable=true]';
+const TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR = '[data-cy=tool-with-two-inputs-primary]';
+const TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR = '[data-cy=tool-with-two-inputs-secondary]';
 const CONTENTLESS_TOOL_SELECTOR = '[data-cy=contentless-tool]';
 const REGULAR_INPUT_SELECTOR = '[data-cy=regular-input]';
 
@@ -57,7 +58,19 @@ const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<
 const createDefaultEditor = async (page: Page): Promise<void> => {
   await resetEditor(page);
   await page.evaluate(async ({ holderId }) => {
-    const editor = new window.EditorJS({ holder: holderId });
+    const editor = new window.EditorJS({
+      holder: holderId,
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'default paragraph',
+            },
+          },
+        ],
+      },
+    });
 
     window.editorInstance = editor;
     await editor.isReady;
@@ -83,6 +96,8 @@ const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
 
         input1.contentEditable = 'true';
         input2.contentEditable = 'true';
+        input1.dataset.cy = 'tool-with-two-inputs-primary';
+        input2.dataset.cy = 'tool-with-two-inputs-secondary';
 
         wrapper.append(input1, input2);
 
@@ -206,7 +221,7 @@ const addRegularInput = async (page: Page, position: 'before' | 'after'): Promis
     holderId: HOLDER_ID });
 };
 
-test.describe('Tab keydown', () => {
+test.describe('tab keydown', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -219,8 +234,8 @@ test.describe('Tab keydown', () => {
   test('should focus next block when current block has single input', async ({ page }) => {
     await createParagraphEditor(page, ['first paragraph', 'second paragraph']);
 
-    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
-    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'first paragraph' });
+    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'second paragraph' });
 
     await firstParagraph.click();
     await firstParagraph.press('Tab');
@@ -231,8 +246,8 @@ test.describe('Tab keydown', () => {
   test('should focus next input within same block when block has multiple inputs', async ({ page }) => {
     await createEditorWithTwoInputTool(page);
 
-    const firstInput = page.locator(TOOL_WITH_TWO_INPUTS_SELECTOR).first();
-    const secondInput = page.locator(TOOL_WITH_TWO_INPUTS_SELECTOR).last();
+    const firstInput = page.locator(TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR);
+    const secondInput = page.locator(TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR);
 
     await firstInput.click();
     await firstInput.press('Tab');
@@ -243,7 +258,7 @@ test.describe('Tab keydown', () => {
   test('should highlight next block when it is contentless (has no inputs)', async ({ page }) => {
     await createEditorWithContentlessTool(page);
 
-    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'second paragraph' });
 
     await firstParagraph.click();
     await firstParagraph.press('Tab');
@@ -271,7 +286,7 @@ test.describe('Tab keydown', () => {
     await addRegularInput(page, 'after');
     await page.evaluate(() => {
       /**
-       * Hide block tune popovers to keep the tab order identical to the Cypress plugin,
+       * Hide block tune popovers to keep the tab order identical to the previous e2e plugin,
        * which skips hidden elements when emulating native Tab navigation.
        */
       const elements = Array.from(document.querySelectorAll('.ce-popover__items'));
@@ -281,7 +296,7 @@ test.describe('Tab keydown', () => {
       }
     });
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'default paragraph' });
     const regularInput = page.locator(REGULAR_INPUT_SELECTOR);
 
     await lastParagraph.click();
@@ -291,7 +306,7 @@ test.describe('Tab keydown', () => {
   });
 });
 
-test.describe('Shift+Tab keydown', () => {
+test.describe('shift+Tab keydown', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
@@ -300,8 +315,8 @@ test.describe('Shift+Tab keydown', () => {
   test('should focus previous block when current block has single input', async ({ page }) => {
     await createParagraphEditor(page, ['first paragraph', 'second paragraph']);
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
-    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'second paragraph' });
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'first paragraph' });
 
     await lastParagraph.click();
     await lastParagraph.press('Shift+Tab');
@@ -312,8 +327,8 @@ test.describe('Shift+Tab keydown', () => {
   test('should focus previous input within same block when block has multiple inputs', async ({ page }) => {
     await createEditorWithTwoInputTool(page);
 
-    const firstInput = page.locator(TOOL_WITH_TWO_INPUTS_SELECTOR).first();
-    const secondInput = page.locator(TOOL_WITH_TWO_INPUTS_SELECTOR).last();
+    const firstInput = page.locator(TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR);
+    const secondInput = page.locator(TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR);
 
     await secondInput.click();
     await secondInput.press('Shift+Tab');
@@ -324,7 +339,7 @@ test.describe('Shift+Tab keydown', () => {
   test('should highlight previous block when it is contentless (has no inputs)', async ({ page }) => {
     await createEditorWithContentlessTool(page);
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'third paragraph' });
 
     await lastParagraph.click();
     await lastParagraph.press('Shift+Tab');
@@ -350,7 +365,7 @@ test.describe('Shift+Tab keydown', () => {
     await createDefaultEditor(page);
     await addRegularInput(page, 'before');
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'default paragraph' });
     const regularInput = page.locator(REGULAR_INPUT_SELECTOR);
 
     await paragraph.click();

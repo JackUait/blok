@@ -8,12 +8,42 @@ import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
 import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
 const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
 const HOLDER_ID = 'editorjs';
+
+const getPositionalLocator = async (page: Page, selector: string, position: 'first' | 'last'): Promise<Locator> => {
+  const locators = await page.locator(selector).all();
+
+  if (locators.length === 0) {
+    throw new Error(`No elements found for selector: ${selector}`);
+  }
+
+  return position === 'first' ? locators[0] : locators[locators.length - 1];
+};
+
+const getParagraphLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
+  return getPositionalLocator(page, PARAGRAPH_SELECTOR, position);
+};
+
+const getBlockLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
+  return getPositionalLocator(page, BLOCK_SELECTOR, position);
+};
+
+const getQuoteInputLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
+  const quoteInputSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy=quote-tool] div[contenteditable]`;
+
+  return getPositionalLocator(page, quoteInputSelector, position);
+};
+
+const getBlockWrapperLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
+  const blockWrapperSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy=block-wrapper]`;
+
+  return getPositionalLocator(page, blockWrapperSelector, position);
+};
 
 /**
  * Resets the editor instance by destroying any existing instance and clearing the holder.
@@ -393,7 +423,7 @@ const expectToolbarClosed = async (page: Page): Promise<void> => {
   await expect(toolbar).not.toHaveClass(/ce-toolbar--opened/);
 };
 
-test.describe('Backspace keydown', () => {
+test.describe('backspace keydown', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -407,82 +437,94 @@ test.describe('Backspace keydown', () => {
     test('should delete non-breaking space at block start', async ({ page }) => {
       await createParagraphEditor(page, ['1', '&nbsp;2']);
 
-      const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+      const lastParagraph = await getParagraphLocator(page, 'last');
 
       await lastParagraph.click();
       await lastParagraph.press('ArrowLeft');
       await lastParagraph.press('Backspace');
 
-      await expect(page.locator(BLOCK_SELECTOR).last()).toHaveText('2');
+      const lastBlock = await getBlockLocator(page, 'last');
+
+      await expect(lastBlock).toHaveText('2');
     });
 
     test('should merge blocks when invisible space precedes caret at block start', async ({ page }) => {
       await createParagraphEditor(page, ['1', ' 2']);
 
-      const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+      const lastParagraph = await getParagraphLocator(page, 'last');
 
       await lastParagraph.click();
       await lastParagraph.press('ArrowLeft');
       await lastParagraph.press('Backspace');
 
-      await expect(page.locator(BLOCK_SELECTOR).last()).toHaveText('12');
+      const lastBlock = await getBlockLocator(page, 'last');
+
+      await expect(lastBlock).toHaveText('12');
     });
 
     test('should merge blocks when empty tags precede caret at block start', async ({ page }) => {
       await createParagraphEditor(page, ['1', '<b></b>2']);
 
-      const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+      const lastParagraph = await getParagraphLocator(page, 'last');
 
       await lastParagraph.click();
       await lastParagraph.press('ArrowLeft');
       await lastParagraph.press('Backspace');
 
-      await expect(page.locator(BLOCK_SELECTOR).last()).toHaveText('12');
+      const lastBlock = await getBlockLocator(page, 'last');
+
+      await expect(lastBlock).toHaveText('12');
     });
 
     test('should remove non-breaking space and ignore empty tags at block start', async ({ page }) => {
       await createParagraphEditor(page, ['1', '<b></b>&nbsp;2']);
 
-      const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+      const lastParagraph = await getParagraphLocator(page, 'last');
 
       await lastParagraph.click();
       await lastParagraph.press('ArrowLeft');
       await lastParagraph.press('Backspace');
       await lastParagraph.press('Backspace');
 
-      await expect(page.locator(BLOCK_SELECTOR).last()).toHaveText('12');
+      const lastBlock = await getBlockLocator(page, 'last');
+
+      await expect(lastBlock).toHaveText('12');
     });
 
     test('should remove non-breaking space before empty tags at block start', async ({ page }) => {
       await createParagraphEditor(page, ['1', '<b></b>&nbsp;2']);
 
-      const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+      const lastParagraph = await getParagraphLocator(page, 'last');
 
       await lastParagraph.click();
       await lastParagraph.press('ArrowLeft');
       await lastParagraph.press('Backspace');
       await lastParagraph.press('Backspace');
 
-      await expect(page.locator(BLOCK_SELECTOR).last()).toHaveText('12');
+      const lastBlock = await getBlockLocator(page, 'last');
+
+      await expect(lastBlock).toHaveText('12');
     });
 
     test('should remove non-breaking space and regular space at block start', async ({ page }) => {
       await createParagraphEditor(page, ['1', ' &nbsp;2']);
 
-      const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+      const lastParagraph = await getParagraphLocator(page, 'last');
 
       await lastParagraph.click();
       await lastParagraph.press('ArrowLeft');
       await lastParagraph.press('Backspace');
       await lastParagraph.press('Backspace');
 
-      await expect(page.locator(BLOCK_SELECTOR).last()).toHaveText('12');
+      const lastBlock = await getBlockLocator(page, 'last');
+
+      await expect(lastBlock).toHaveText('12');
     });
 
     test('should delete all whitespaces when block contains only whitespace characters', async ({ page }) => {
       await createParagraphEditor(page, ['1', '&nbsp; &nbsp;']);
 
-      const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+      const lastParagraph = await getParagraphLocator(page, 'last');
 
       await lastParagraph.click();
       await lastParagraph.press('ArrowDown');
@@ -490,43 +532,49 @@ test.describe('Backspace keydown', () => {
         await page.keyboard.press('Backspace');
       }
 
-      await expect(page.locator(BLOCK_SELECTOR).last()).toHaveText('1');
+      const lastBlock = await getBlockLocator(page, 'last');
+
+      await expect(lastBlock).toHaveText('1');
     });
   });
 
   test('should delete selected text using native behavior', async ({ page }) => {
     await createParagraphEditor(page, ['The first block', 'The second block']);
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
     await selectText(lastParagraph, 'The ');
     await page.keyboard.press('Backspace');
 
-    await expect(page.locator(BLOCK_SELECTOR).last()).toHaveText('second block');
+    const lastBlock = await getBlockLocator(page, 'last');
+
+    await expect(lastBlock).toHaveText('second block');
   });
 
   test('should delete character using native behavior when caret is not at block start', async ({ page }) => {
     await createParagraphEditor(page, ['The first block', 'The second block']);
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
     await lastParagraph.press('Backspace');
 
-    await expect(page.locator(BLOCK_SELECTOR).last()).toHaveText('The second bloc');
+    const lastBlock = await getBlockLocator(page, 'last');
+
+    await expect(lastBlock).toHaveText('The second bloc');
   });
 
   test('should navigate to previous input when caret is not at first input', async ({ page }) => {
     await createMultiInputToolEditor(page);
 
-    const inputs = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=quote-tool] div[contenteditable]`);
-    const lastInput = inputs.last();
+    const lastInput = await getQuoteInputLocator(page, 'last');
+    const firstInput = await getQuoteInputLocator(page, 'first');
 
     await lastInput.click();
     await lastInput.press('Backspace');
 
-    const caretInfo = await getCaretInfo(inputs.first());
+    const caretInfo = await getCaretInfo(firstInput);
 
     expect(caretInfo?.inside).toBeTruthy();
   });
@@ -545,7 +593,7 @@ test.describe('Backspace keydown', () => {
       },
     ]);
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
     await lastParagraph.press('Home');
@@ -571,7 +619,7 @@ test.describe('Backspace keydown', () => {
       },
     ]);
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
     await lastParagraph.press('Backspace');
@@ -581,7 +629,9 @@ test.describe('Backspace keydown', () => {
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block1');
 
-    await expectCaretAtEnd(page.locator(PARAGRAPH_SELECTOR).first());
+    const firstParagraph = await getParagraphLocator(page, 'first');
+
+    await expectCaretAtEnd(firstParagraph);
     await expectToolbarClosed(page);
   });
 
@@ -599,7 +649,7 @@ test.describe('Backspace keydown', () => {
       },
     ]);
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
     await lastParagraph.press('Home');
@@ -611,7 +661,9 @@ test.describe('Backspace keydown', () => {
     expect(blocks[0].id).toBe('block1');
     expect((blocks[0].data as { text: string }).text).toBe('First blockSecond block');
 
-    await expectCaretOffset(page.locator(PARAGRAPH_SELECTOR).first(), 'First block'.length, { normalize: true });
+    const firstParagraph = await getParagraphLocator(page, 'first');
+
+    await expectCaretOffset(firstParagraph, 'First block'.length, { normalize: true });
     await expectToolbarClosed(page);
   });
 
@@ -629,7 +681,7 @@ test.describe('Backspace keydown', () => {
       },
     ]);
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
     await lastParagraph.press('Home');
@@ -641,7 +693,9 @@ test.describe('Backspace keydown', () => {
     expect(blocks[0].id).toBe('block1');
     expect((blocks[0].data as { text: string }).text).toBe('First block headingSecond block paragraph');
 
-    await expectCaretOffset(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=block-wrapper]`).first(), 'First block heading'.length, { normalize: true });
+    const firstBlockWrapper = await getBlockWrapperLocator(page, 'first');
+
+    await expectCaretOffset(firstBlockWrapper, 'First block heading'.length, { normalize: true });
     await expectToolbarClosed(page);
   });
 
@@ -671,14 +725,16 @@ test.describe('Backspace keydown', () => {
     expect(blocks[0].id).toBe('block1');
     expect((blocks[0].data as { text: string }).text).toBe('First block paragraphSecond block heading');
 
-    await expectCaretOffset(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=block-wrapper]`).first(), 'First block paragraph'.length, { normalize: true });
+    const firstBlockWrapper = await getBlockWrapperLocator(page, 'first');
+
+    await expectCaretOffset(firstBlockWrapper, 'First block paragraph'.length, { normalize: true });
     await expectToolbarClosed(page);
   });
 
   test('should move caret to end of previous block when blocks are not mergeable without merge method', async ({ page }) => {
     await createUnmergeableToolEditor(page, { hasConversionConfig: false });
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
     await lastParagraph.press('Home');
@@ -694,7 +750,7 @@ test.describe('Backspace keydown', () => {
   test('should move caret to end of previous block when blocks are not mergeable despite conversion config', async ({ page }) => {
     await createUnmergeableToolEditor(page, { hasConversionConfig: true });
 
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
     await lastParagraph.press('Home');
@@ -711,7 +767,7 @@ test.describe('Backspace keydown', () => {
     test('should do nothing when block is not empty', async ({ page }) => {
       await createParagraphEditor(page, [ 'The only block. Not empty' ]);
 
-      const onlyParagraph = page.locator(PARAGRAPH_SELECTOR).first();
+      const onlyParagraph = await getParagraphLocator(page, 'first');
 
       await onlyParagraph.click();
       await onlyParagraph.press('Home');

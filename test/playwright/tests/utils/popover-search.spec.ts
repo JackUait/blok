@@ -8,7 +8,7 @@ import { selectionChangeDebounceTimeout, EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';

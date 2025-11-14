@@ -9,7 +9,7 @@ import { BlockChangedMutationType } from '../../../../types/events/block/BlockCh
 import type { BlockMutationEvent } from '../../../../types';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';

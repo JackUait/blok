@@ -1,45 +1,60 @@
+/* eslint-env browser */
+
 /**
- * Module to compose output JSON preview
+ * Module to compose output JSON preview.
+ *
+ * @returns {{show: (output: object, holder: Element) => void}}
  */
-const cPreview = (function (module) {
+const createPreview = () => {
   /**
-   * Shows JSON in pretty preview
-   * @param {object} output - what to show
-   * @param {Element} holder - where to show
+   * Shows JSON in the pretty preview block.
+   *
+   * @param {object} output - data to render.
+   * @param {Element} holder - element to populate with JSON.
+   * @returns {void}
    */
-  module.show = function(output, holder) {
-    /** Make JSON pretty */
-    output = JSON.stringify( output, null, 4 );
-    /** Encode HTML entities */
-    output = encodeHTMLEntities( output );
-    /** Stylize! */
-    output = stylize( output );
-    holder.innerHTML = output;
+  const show = (output, holder) => {
+    const prettyJson = JSON.stringify(output, null, 4);
+    const encodedJson = encodeHTMLEntities(prettyJson);
+    const targetHolder = holder;
+
+    targetHolder.innerHTML = stylize(encodedJson);
   };
 
   /**
-   * Converts '>', '<', '&' symbols to entities
+   * Converts '>', '<', '&' symbols to entities.
+   *
+   * @param {string} value - text to convert.
+   * @returns {string}
    */
-  function encodeHTMLEntities(string) {
-    return string.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  const encodeHTMLEntities = (value) => value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
   /**
-   * Some styling magic
+   * Adds syntax highlighting spans to JSON markup.
+   *
+   * @param {string} value - HTML string to decorate.
+   * @returns {string}
    */
-  function stylize(string) {
+  const stylize = (value) => value
     /** Stylize JSON keys */
-    string = string.replace( /"(\w+)"\s?:/g, '"<span class=sc_key>$1</span>" :');
+    .replace(/"(\w+)"\s?:/g, '"<span class=sc_key>$1</span>" :')
     /** Stylize tool names */
-    string = string.replace( /"(paragraph|quote|list|header|link|code|image|delimiter|raw|checklist|table|embed|warning)"/g, '"<span class=sc_toolname>$1</span>"');
+    .replace(/"(paragraph|quote|list|header|link|code|image|delimiter|raw|checklist|table|embed|warning)"/g, '"<span class=sc_toolname>$1</span>"')
     /** Stylize HTML tags */
-    string = string.replace( /(&lt;[\/a-z]+(&gt;)?)/gi, '<span class=sc_tag>$1</span>' );
+    .replace(/(&lt;[\/a-z]+(&gt;)?)/gi, '<span class=sc_tag>$1</span>')
     /** Stylize strings */
-    string = string.replace( /"([^"]+)"/gi, '"<span class=sc_attr>$1</span>"' );
+    .replace(/"([^"]+)"/gi, '"<span class=sc_attr>$1</span>"')
     /** Boolean/Null */
-    string = string.replace( /\b(true|false|null)\b/gi, '<span class=sc_bool>$1</span>' );
-    return string;
-  }
+    .replace(/\b(true|false|null)\b/gi, '<span class=sc_bool>$1</span>');
 
-  return module;
-})({});
+  return { show };
+};
+
+const cPreview = createPreview();
+
+if (typeof window !== 'undefined') {
+  window.cPreview = cPreview;
+}

@@ -1,11 +1,178 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FlatCompat } from '@eslint/eslintrc';
-import cypress from 'eslint-plugin-cypress';
 import eslintPluginImport from 'eslint-plugin-import';
 import playwright from 'eslint-plugin-playwright';
 import sonarjs from 'eslint-plugin-sonarjs';
 import jest from 'eslint-plugin-jest';
+
+const CLASS_SELECTOR_PATTERN = /(^|\s|[>+~,])\.[_a-zA-Z][_a-zA-Z0-9-]*/;
+const CLASS_SELECTOR_START_PATTERN = /^\s*\.[_a-zA-Z][_a-zA-Z0-9-]*/;
+const CSS_ENGINE_PATTERN = /^css(?::(light|dark))?=\s*.*\.[_a-zA-Z][_a-zA-Z0-9-]*/;
+const SELECTOR_METHODS = new Set([
+  '$',
+  '$$',
+  '$eval',
+  '$$eval',
+  'locator',
+  'click',
+  'dblclick',
+  'hover',
+  'focus',
+  'tap',
+  'press',
+  'fill',
+  'type',
+  'check',
+  'uncheck',
+  'setInputFiles',
+  'selectOption',
+  'waitForSelector',
+  'isVisible',
+  'isHidden',
+  'isEnabled',
+  'isDisabled',
+  'isEditable',
+  'isChecked',
+  'dragTo',
+  'dispatchEvent',
+]);
+const NON_CSS_PREFIXES = [
+  'text=',
+  'role=',
+  'xpath=',
+  'xpath:',
+  'id=',
+  'data-testid=',
+  'data-test=',
+  'data-qa=',
+  'nth=',
+  'aria/',
+];
+
+const internalPlaywrightPlugin = {
+  rules: {
+    'no-classname-selectors': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Disallow CSS class selectors in Playwright E2E tests.',
+        },
+        schema: [],
+        messages: {
+          noClassSelector:
+            'Avoid using CSS class selectors in Playwright tests. Prefer role- or data-based locators.',
+        },
+      },
+      create(context) {
+        const getMethodName = (callee) => {
+          if (!callee) {
+            return null;
+          }
+
+          if (callee.type === 'Identifier') {
+            return callee.name;
+          }
+
+          if (callee.type === 'MemberExpression') {
+            if (callee.computed) {
+              if (callee.property.type === 'Literal' && typeof callee.property.value === 'string') {
+                return callee.property.value;
+              }
+
+              return null;
+            }
+
+            if (callee.property.type === 'Identifier') {
+              return callee.property.name;
+            }
+          }
+
+          return null;
+        };
+
+        const getStaticStringValue = (node) => {
+          if (!node) {
+            return null;
+          }
+
+          if (node.type === 'Literal' && typeof node.value === 'string') {
+            return node.value;
+          }
+
+          if (node.type === 'TemplateLiteral' && node.expressions.length === 0 && node.quasis.length === 1) {
+            return node.quasis[0].value.cooked ?? node.quasis[0].value.raw;
+          }
+
+          return null;
+        };
+
+        const usesClassSelector = (rawSelector) => {
+          if (!rawSelector) {
+            return false;
+          }
+
+          const selector = rawSelector.trim();
+
+          if (!selector) {
+            return false;
+          }
+
+          const segments = selector.split('>>').map((segment) => segment.trim()).filter(Boolean);
+          const segmentsToCheck = segments.length > 0 ? segments : [selector];
+
+          return segmentsToCheck.some((segment) => {
+            const lowered = segment.toLowerCase();
+
+            if (NON_CSS_PREFIXES.some((prefix) => lowered.startsWith(prefix))) {
+              return false;
+            }
+
+            if (CSS_ENGINE_PATTERN.test(segment)) {
+              const cssValue = segment.replace(/^css(?::(light|dark))?=/i, '').trim();
+
+              return (
+                CLASS_SELECTOR_START_PATTERN.test(cssValue) || CLASS_SELECTOR_PATTERN.test(cssValue)
+              );
+            }
+
+            return (
+              CLASS_SELECTOR_START_PATTERN.test(segment) ||
+              CLASS_SELECTOR_PATTERN.test(segment)
+            );
+          });
+        };
+
+        return {
+          CallExpression(node) {
+            const methodName = getMethodName(node.callee);
+
+            if (!methodName || !SELECTOR_METHODS.has(methodName)) {
+              return;
+            }
+
+            if (node.arguments.length === 0) {
+              return;
+            }
+
+            const selectorValue = getStaticStringValue(node.arguments[0]);
+
+            if (!selectorValue) {
+              return;
+            }
+
+            if (usesClassSelector(selectorValue)) {
+              context.report({
+                node: node.arguments[0],
+                messageId: 'noClassSelector',
+              });
+            }
+          },
+        };
+      },
+    },
+  },
+};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,9 +185,11 @@ export default [
   {
     ignores: [
       'node_modules/**',
+      'eslint.config.mjs',
       '**/*.d.ts',
       'src/components/tools/paragraph/**',
       'src/polyfills.ts',
+      'dist'
     ],
   },
   ...compat.config({
@@ -29,6 +198,7 @@ export default [
     plugins: ['deprecation'],
     parser: '@typescript-eslint/parser',
     parserOptions: {
+      project: ['./tsconfig.json'],
       tsconfigRootDir: __dirname,
     },
     globals: {
@@ -71,7 +241,6 @@ export default [
       '@typescript-eslint/member-ordering': 'off',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/consistent-type-exports': 'error',
-      '@typescript-eslint/no-floating-promises': 'error',
       'prefer-arrow-callback': 'error',
       'prefer-const': 'error',
       'deprecation/deprecation': 'off',
@@ -106,12 +275,16 @@ export default [
           project: ['./tsconfig.json'],
           tsconfigRootDir: __dirname,
         },
+        rules: {
+          '@typescript-eslint/no-floating-promises': 'error',
+        },
       },
       {
         files: ['tsconfig.json', 'package.json', 'tsconfig.*.json', 'tslint.json'],
         rules: {
           quotes: [1, 'double'],
           semi: [1, 'never'],
+          'comma-dangle': 'off',
           '@typescript-eslint/consistent-type-imports': 'off',
           '@typescript-eslint/consistent-type-exports': 'off',
         },
@@ -132,37 +305,6 @@ export default [
       // Prevent UMD module patterns
       'import/no-amd': 'error',
       'import/no-commonjs': 'error',
-    },
-  },
-  {
-    files: ['test/cypress/**/*.ts'],
-    plugins: {
-      cypress,
-    },
-    languageOptions: {
-      globals: {
-        // Cypress/Mocha globals
-        describe: 'readonly',
-        it: 'readonly',
-        context: 'readonly',
-        before: 'readonly',
-        after: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-        cy: 'readonly',
-        Cypress: 'readonly',
-        expect: 'readonly',
-        assert: 'readonly',
-        // Custom globals
-        EditorJS: 'readonly',
-      },
-    },
-    rules: {
-      ...cypress.configs.recommended.rules,
-      'cypress/require-data-selectors': 'off',
-      'cypress/no-unnecessary-waiting': 'off',
-      '@typescript-eslint/no-magic-numbers': 'off',
-      'no-restricted-syntax': 'off',
     },
   },
   {
@@ -244,6 +386,7 @@ export default [
     files: ['test/playwright/**/*.ts'],
     plugins: {
       playwright,
+      'internal-playwright': internalPlaywrightPlugin,
     },
     languageOptions: {
       globals: {
@@ -256,6 +399,7 @@ export default [
     },
     rules: {
       ...playwright.configs.recommended.rules,
+      'internal-playwright/no-classname-selectors': 'off',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
       // Prevent anti-patterns

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ToolboxConfig, ToolboxConfigEntry, BlockToolData, OutputData } from '@/types';
@@ -8,7 +8,7 @@ import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants'
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
@@ -18,6 +18,38 @@ const POPOVER_ITEM_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover-item`;
 const POPOVER_ITEM_ICON_SELECTOR = '.ce-popover-item__icon';
 
 const ICON = '<svg width="17" height="15" viewBox="0 0 336 276" xmlns="http://www.w3.org/2000/svg"><path d="M291 150V79c0-19-15-34-34-34H79c-19 0-34 15-34 34v42l67-44 81 72 56-29 42 30zm0 52l-43-30-56 30-81-67-66 39v23c0 19 15 34 34 34h178c17 0 31-13 34-29zM79 0h178c44 0 79 35 79 79v118c0 44-35 79-79 79H79c-44 0-79-35-79-79V79C0 35 35 0 79 0z"></path></svg>';
+
+const getLocatorOrThrow = (locators: Locator[], index: number, errorMessage: string): Locator => {
+  const locator = locators[index];
+
+  if (!locator) {
+    throw new Error(errorMessage);
+  }
+
+  return locator;
+};
+
+const getFirstBlock = async (page: Page): Promise<Locator> => {
+  const blocks = await page.locator(BLOCK_SELECTOR).all();
+  const firstBlock = blocks[0];
+
+  if (!firstBlock) {
+    throw new Error('No editor blocks were rendered');
+  }
+
+  return firstBlock;
+};
+
+const getLastBlock = async (page: Page): Promise<Locator> => {
+  const blocks = await page.locator(BLOCK_SELECTOR).all();
+  const lastBlock = blocks[blocks.length - 1];
+
+  if (!lastBlock) {
+    throw new Error('No editor blocks were rendered');
+  }
+
+  return lastBlock;
+};
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -163,7 +195,7 @@ const saveEditor = async (page: Page): Promise<OutputData> => {
   });
 };
 
-test.describe('Editor Tools Api', () => {
+test.describe('editor Tools Api', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -172,7 +204,7 @@ test.describe('Editor Tools Api', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test.describe('Toolbox', () => {
+  test.describe('toolbox', () => {
     test('should render a toolbox entry for tool if configured', async ({ page }) => {
       /**
        * Tool with single toolbox entry configured
@@ -237,7 +269,7 @@ test.describe('Editor Tools Api', () => {
         { globals: { ICON } }
       );
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = await getFirstBlock(page);
 
       await block.click();
 
@@ -250,7 +282,8 @@ test.describe('Editor Tools Api', () => {
 
       await expect(toolboxItems).toHaveCount(1);
 
-      const icon = toolboxItems.locator(POPOVER_ITEM_ICON_SELECTOR).first();
+      const icons = await toolboxItems.locator(POPOVER_ITEM_ICON_SELECTOR).all();
+      const icon = getLocatorOrThrow(icons, 0, 'Toolbox icon was not rendered');
       const iconHTML = await icon.innerHTML();
 
       expect(iconHTML).toContain(TestTool.toolbox.icon);
@@ -326,7 +359,7 @@ test.describe('Editor Tools Api', () => {
         { globals: { ICON } }
       );
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = await getFirstBlock(page);
 
       await block.click();
 
@@ -341,8 +374,12 @@ test.describe('Editor Tools Api', () => {
 
       const toolboxConfig = TestTool.toolbox as ToolboxConfigEntry[];
 
-      await expect(toolboxItems.first()).toContainText(toolboxConfig[0].title ?? '');
-      await expect(toolboxItems.last()).toContainText(toolboxConfig[1].title ?? '');
+      const toolboxEntries = await toolboxItems.all();
+      const firstEntry = getLocatorOrThrow(toolboxEntries, 0, 'First toolbox entry was not rendered');
+      const secondEntry = getLocatorOrThrow(toolboxEntries, 1, 'Second toolbox entry was not rendered');
+
+      await expect(firstEntry).toContainText(toolboxConfig[0].title ?? '');
+      await expect(secondEntry).toContainText(toolboxConfig[1].title ?? '');
     });
 
     test('should insert block with overridden data on entry click in case toolbox entry provides data overrides', async ({ page }) => {
@@ -417,7 +454,7 @@ test.describe('Editor Tools Api', () => {
         }
       );
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = await getFirstBlock(page);
 
       await block.click();
 
@@ -426,11 +463,18 @@ test.describe('Editor Tools Api', () => {
       await expect(plusButton).toBeVisible();
       await plusButton.click();
 
-      const toolboxItem = page.locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="testTool"]`).first();
+      const toolboxEntryLocators = await page
+        .locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="testTool"]`)
+        .all();
+      const toolboxItem = getLocatorOrThrow(
+        toolboxEntryLocators,
+        0,
+        'Toolbox entry was not rendered'
+      );
 
       await toolboxItem.click();
 
-      const insertedBlock = page.locator(BLOCK_SELECTOR).last();
+      const insertedBlock = await getLastBlock(page);
 
       await insertedBlock.waitFor({ state: 'visible' });
       await insertedBlock.click();
@@ -438,7 +482,7 @@ test.describe('Editor Tools Api', () => {
 
       const editorData = await saveEditor(page);
 
-      expect(editorData.blocks[0].data).toEqual({
+      expect(editorData.blocks[0].data).toStrictEqual({
         ...dataOverrides,
         text,
       });

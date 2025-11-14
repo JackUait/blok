@@ -6,7 +6,7 @@ import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 import { TOOLTIP_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
@@ -78,17 +78,17 @@ const waitForTooltipToHide = async (page: Page): Promise<void> => {
   await expect(tooltip).toBeHidden();
 };
 
-test.beforeAll(() => {
-  ensureEditorBundleBuilt();
-});
+test.describe('tooltip API', () => {
+  test.beforeAll(() => {
+    ensureEditorBundleBuilt();
+  });
 
-test.beforeEach(async ({ page }) => {
-  await page.goto(TEST_PAGE_URL);
-  await resetEditor(page);
-  await createEditor(page);
-});
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+    await resetEditor(page);
+    await createEditor(page);
+  });
 
-test.describe('Tooltip API', () => {
   test.describe('show()', () => {
     test('should show tooltip with text content', async ({ page }) => {
       const testElement = await page.evaluate(({ holderId }) => {
@@ -560,7 +560,7 @@ test.describe('Tooltip API', () => {
     });
   });
 
-  test.describe('Integration', () => {
+  test.describe('integration', () => {
     test('should handle multiple show/hide cycles', async ({ page }) => {
       const testElement = await page.evaluate(({ holderId }) => {
         const container = document.getElementById(holderId);
@@ -851,7 +851,7 @@ test.describe('Tooltip API', () => {
     });
   });
 
-  test.describe('Edge cases', () => {
+  test.describe('edge cases', () => {
     test('should handle calling onHover() multiple times on same element', async ({ page }) => {
       const testElement = await page.evaluate(({ holderId }) => {
         const container = document.getElementById(holderId);
@@ -1452,4 +1452,3 @@ test.describe('Tooltip API', () => {
     });
   });
 });
-

@@ -9,7 +9,7 @@ import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants'
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
 const HEADER_TOOL_UMD_PATH = path.resolve(__dirname, '../../../../node_modules/@editorjs/header/dist/header.umd.js');
@@ -413,7 +413,7 @@ const selectTextByRange = async (locator: Locator, start: number, end: number): 
  * @param page - The Playwright page object
  */
 const openBlockTunes = async (page: Page): Promise<void> => {
-  const block = page.locator(BLOCK_SELECTOR).first();
+  const block = page.locator(BLOCK_SELECTOR);
 
   await block.click();
   await page.locator(SETTINGS_BUTTON_SELECTOR).click();
@@ -421,7 +421,7 @@ const openBlockTunes = async (page: Page): Promise<void> => {
 };
 
 
-test.describe('Popover', () => {
+test.describe('popover', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -744,7 +744,7 @@ test.describe('Popover', () => {
     );
 
     // Open block tunes menu
-    await page.locator(BLOCK_SELECTOR).first()
+    await page.locator(BLOCK_SELECTOR)
       .click();
     await page.locator(SETTINGS_BUTTON_SELECTOR).click();
     await waitForBlockTunesPopover(page);
@@ -821,7 +821,7 @@ test.describe('Popover', () => {
     );
 
     // Open block tunes menu
-    await page.locator(BLOCK_SELECTOR).first()
+    await page.locator(BLOCK_SELECTOR)
       .click();
     await page.locator(SETTINGS_BUTTON_SELECTOR).click();
     await waitForBlockTunesPopover(page);
@@ -1067,7 +1067,7 @@ test.describe('Popover', () => {
     await expect(page.locator('[data-item-name="test-item-2"].ce-popover-item--focused')).toBeVisible();
   });
 
-  test.describe('Inline Popover', () => {
+  test.describe('inline popover', () => {
     test.beforeEach(async ({ page }) => {
       await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
     });
@@ -1089,7 +1089,7 @@ test.describe('Popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`).first();
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "First"
@@ -1124,7 +1124,7 @@ test.describe('Popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`).first();
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "block"
@@ -1168,7 +1168,7 @@ test.describe('Popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`).first();
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "block"

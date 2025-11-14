@@ -6,7 +6,7 @@ import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants'
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
@@ -139,7 +139,7 @@ const NonFocusableBlockTool = class {
 
 const NON_FOCUSABLE_TOOL_SOURCE = NonFocusableBlockTool.toString();
 
-test.describe('Caret API', () => {
+test.describe('caret API', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });

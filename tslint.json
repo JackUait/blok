@@ -16,7 +16,7 @@
     "ordered-imports": [true, {
       "import-sources-order": "any",
       "named-imports-order": "case-insensitive"
-    }],
+    } ],
     "no-string-literal": false,
     "no-empty": false,
     "no-namespace": false,

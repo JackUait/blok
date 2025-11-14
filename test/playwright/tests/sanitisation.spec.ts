@@ -7,11 +7,19 @@ import { ensureEditorBundleBuilt } from './helpers/ensure-build';
 import { EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
+const INITIAL_BLOCK_ID = 'sanitisation-initial-block';
+
+const getBlockById = (page: Page, blockId: string): Locator => {
+  return page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-id="${blockId}"]`);
+};
+
+const getParagraphByBlockId = (page: Page, blockId: string): Locator => {
+  return getBlockById(page, blockId).locator('.ce-paragraph');
+};
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -71,9 +79,20 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
  */
 const createEditor = async (page: Page): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holderId, initialBlockId }) => {
     const editor = new window.EditorJS({
       holder: holderId,
+      data: {
+        blocks: [
+          {
+            id: initialBlockId,
+            type: 'paragraph',
+            data: {
+              text: '',
+            },
+          },
+        ],
+      },
       tools: {
         paragraph: {
           config: {
@@ -85,7 +104,8 @@ const createEditor = async (page: Page): Promise<void> => {
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holderId: HOLDER_ID,
+    initialBlockId: INITIAL_BLOCK_ID });
 };
 
 /**
@@ -201,7 +221,7 @@ const createEditorWithSanitizer = async (page: Page, sanitizerConfig: Record<str
     sanitizer: sanitizerConfig });
 };
 
-test.describe('Sanitizing', () => {
+test.describe('sanitizing', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -211,7 +231,7 @@ test.describe('Sanitizing', () => {
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
   });
 
-  test.describe('Output should save inline formatting', () => {
+  test.describe('output should save inline formatting', () => {
     test('should save initial formatting for paragraph', async ({ page }) => {
       await createEditorWithBlocks(page, [
         {
@@ -228,7 +248,7 @@ test.describe('Sanitizing', () => {
     test('should save formatting for paragraph', async ({ page }) => {
       await createEditor(page);
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await block.type('This text should be bold.');
@@ -253,7 +273,7 @@ test.describe('Sanitizing', () => {
     test('should save formatting for paragraph on paste', async ({ page }) => {
       await createEditor(page);
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
@@ -288,7 +308,7 @@ test.describe('Sanitizing', () => {
       },
     ]);
 
-    const lastParagraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`).last();
+    const lastParagraph = getParagraphByBlockId(page, 'paragraph');
 
     await lastParagraph.click();
     await page.keyboard.press('Home');
@@ -300,7 +320,7 @@ test.describe('Sanitizing', () => {
     expect(blocks[0].data.text).toBe('First blockSecond XSS block');
   });
 
-  test.describe('Other inline tools', () => {
+  test.describe('other inline tools', () => {
     test('should save italic formatting', async ({ page }) => {
       await createEditorWithBlocks(page, [
         {
@@ -317,7 +337,7 @@ test.describe('Sanitizing', () => {
     test('should save italic formatting applied via toolbar', async ({ page }) => {
       await createEditor(page);
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await block.type('This text should be italic.');
@@ -352,7 +372,7 @@ test.describe('Sanitizing', () => {
     test('should save link formatting applied via toolbar', async ({ page }) => {
       await createEditor(page);
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await block.type('Link text');
@@ -375,7 +395,7 @@ test.describe('Sanitizing', () => {
     });
   });
 
-  test.describe('Attribute sanitization', () => {
+  test.describe('attribute sanitization', () => {
     test('should strip unwanted attributes from links', async ({ page }) => {
       await createEditorWithBlocks(page, [
         {
@@ -427,7 +447,7 @@ test.describe('Sanitizing', () => {
     });
   });
 
-  test.describe('XSS prevention', () => {
+  test.describe('xSS prevention', () => {
     test('should remove script tags', async ({ page }) => {
       await createEditorWithBlocks(page, [
         {
@@ -521,7 +541,7 @@ test.describe('Sanitizing', () => {
     });
   });
 
-  test.describe('Nested HTML structures', () => {
+  test.describe('nested HTML structures', () => {
     test('should save nested formatting (bold inside italic)', async ({ page }) => {
       await createEditorWithBlocks(page, [
         {
@@ -571,7 +591,7 @@ test.describe('Sanitizing', () => {
     });
   });
 
-  test.describe('Edge cases', () => {
+  test.describe('edge cases', () => {
     test('should handle empty sanitization config', async ({ page }) => {
       await createEditorWithSanitizer(page, {});
 
@@ -640,7 +660,7 @@ test.describe('Sanitizing', () => {
     });
   });
 
-  test.describe('Editor-level sanitizer config', () => {
+  test.describe('editor-level sanitizer config', () => {
     test('should apply custom sanitizer config', async ({ page }) => {
       await createEditorWithSanitizer(page, {
         b: true,
@@ -702,7 +722,7 @@ test.describe('Sanitizing', () => {
     });
   });
 
-  test.describe('Block merging edge cases', () => {
+  test.describe('block merging edge cases', () => {
     test('should sanitize when merging blocks with different configs', async ({ page }) => {
       await createEditorWithBlocks(page, [
         {
@@ -721,7 +741,7 @@ test.describe('Sanitizing', () => {
         },
       ]);
 
-      const lastParagraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`).last();
+      const lastParagraph = getParagraphByBlockId(page, 'block2');
 
       await lastParagraph.click();
       await page.keyboard.press('Home');
@@ -751,7 +771,7 @@ test.describe('Sanitizing', () => {
         },
       ]);
 
-      const lastParagraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`).last();
+      const lastParagraph = getParagraphByBlockId(page, 'block2');
 
       await lastParagraph.click();
       await page.keyboard.press('Home');
@@ -766,11 +786,11 @@ test.describe('Sanitizing', () => {
     });
   });
 
-  test.describe('Paste sanitization', () => {
+  test.describe('paste sanitization', () => {
     test('should sanitize malicious content on paste', async ({ page }) => {
       await createEditor(page);
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
@@ -788,7 +808,7 @@ test.describe('Sanitizing', () => {
     test('should sanitize mixed allowed/disallowed tags on paste', async ({ page }) => {
       await createEditor(page);
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
@@ -808,7 +828,7 @@ test.describe('Sanitizing', () => {
     test('should sanitize nested structures on paste', async ({ page }) => {
       await createEditor(page);
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
@@ -827,7 +847,7 @@ test.describe('Sanitizing', () => {
     test('should sanitize event handlers on paste', async ({ page }) => {
       await createEditor(page);
 
-      const block = page.locator(BLOCK_SELECTOR).first();
+      const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
@@ -843,7 +863,7 @@ test.describe('Sanitizing', () => {
     });
   });
 
-  test.describe('Deep sanitization', () => {
+  test.describe('deep sanitization', () => {
     test('should sanitize nested objects with HTML strings', async ({ page }) => {
       await resetEditor(page);
 
@@ -1008,7 +1028,7 @@ test.describe('Sanitizing', () => {
     });
   });
 
-  test.describe('Function-based sanitization rules', () => {
+  test.describe('function-based sanitization rules', () => {
     test('should apply function-based sanitization rules', async ({ page }) => {
       await resetEditor(page);
 

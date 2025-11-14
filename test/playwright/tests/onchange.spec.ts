@@ -13,7 +13,7 @@ import { BlockMovedMutationType } from '../../../types/events/block/BlockMoved';
 import { BlockRemovedMutationType } from '../../../types/events/block/BlockRemoved';
 
 const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../cypress/fixtures/test.html')
+  path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
@@ -217,7 +217,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
           if (saveResult && typeof (saveResult as Promise<unknown>).catch === 'function') {
             void (saveResult as Promise<unknown>).catch(() => {
-              // Swallow errors to match Cypress behaviour where Promise rejections were ignored.
+              // Swallow errors to match the previous e2e behaviour where Promise rejections were ignored.
             });
           }
         }

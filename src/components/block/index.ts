@@ -846,9 +846,12 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @private
    */
   private addToolDataAttributes(element: HTMLElement): void {
-    // Add data-block-tool attribute to identify the tool type used for the block
-    if (this.name === 'paragraph' && element.classList.contains('ce-paragraph')) {
-      element.setAttribute('data-block-tool', 'paragraph');
+    /**
+     * Add data-block-tool attribute to identify the tool type used for the block.
+     * Some tools (like Paragraph) add their own class names, but we can rely on the tool name for all cases.
+     */
+    if (!element.hasAttribute('data-block-tool') && this.name) {
+      element.setAttribute('data-block-tool', this.name);
     }
   }
 

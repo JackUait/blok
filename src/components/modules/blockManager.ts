@@ -631,7 +631,7 @@ export default class BlockManager extends Module {
       .sort((first, second) => second.index - first.index);
 
     selectedBlockEntries.forEach(({ block }) => {
-      void this.removeBlock(block);
+      void this.removeBlock(block, false);
     });
 
     return selectedBlockEntries.length > 0

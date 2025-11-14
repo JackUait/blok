@@ -159,17 +159,28 @@ export default class UI extends Module<UINodes> {
      * Prepare components based on read-only state
      */
     if (!readOnlyEnabled) {
-      /**
-       * Postpone events binding to the next tick to make sure all ui elements are ready
-       */
-      window.requestIdleCallback(() => {
+      const bindListeners = (): void => {
         /**
          * Bind events for the UI elements
          */
         this.bindReadOnlySensitiveListeners();
-      }, {
-        timeout: 2000,
-      });
+      };
+
+      /**
+       * Ensure listeners are attached immediately for interactive use.
+       */
+      bindListeners();
+
+      const idleCallback = window.requestIdleCallback;
+
+      if (typeof idleCallback === 'function') {
+        /**
+         * Re-bind on idle to preserve historical behavior when additional nodes appear later.
+         */
+        idleCallback(bindListeners, {
+          timeout: 2000,
+        });
+      }
     } else {
       /**
        * Unbind all events
@@ -574,11 +585,14 @@ export default class UI extends Module<UINodes> {
   private backspacePressed(event: KeyboardEvent): void {
     const { BlockManager, BlockSelection, Caret } = this.Editor;
 
+    const selectionExists = Selection.isSelectionExists;
+    const selectionCollapsed = Selection.isCollapsed;
+
     /**
      * If any block selected and selection doesn't exists on the page (that means no other editable element is focused),
      * remove selected blocks
      */
-    if (BlockSelection.anyBlockSelected && !Selection.isSelectionExists) {
+    if (BlockSelection.anyBlockSelected && (!selectionExists || selectionCollapsed === true)) {
       const selectionPositionIndex = BlockManager.removeSelectedBlocks();
 
       if (selectionPositionIndex === undefined) {
@@ -645,11 +659,14 @@ export default class UI extends Module<UINodes> {
 
     const hasPointerToBlock = BlockManager.currentBlockIndex >= 0;
 
+    const selectionExists = Selection.isSelectionExists;
+    const selectionCollapsed = Selection.isCollapsed;
+
     /**
      * If any block selected and selection doesn't exists on the page (that means no other editable element is focused),
      * remove selected blocks
      */
-    if (BlockSelection.anyBlockSelected && !Selection.isSelectionExists) {
+    if (BlockSelection.anyBlockSelected && (!selectionExists || selectionCollapsed === true)) {
       /** Clear selection */
       BlockSelection.clearSelection(event);
 
@@ -899,7 +916,7 @@ export default class UI extends Module<UINodes> {
        *   to prevent unnecessary tree-walking on Tools with many nodes (for ex. Table)
        * - Or, default-block is not empty
        */
-      if (!BlockManager.lastBlock.tool.isDefault || !BlockManager.lastBlock.isEmpty) {
+      if (!BlockManager.lastBlock?.tool.isDefault || !BlockManager.lastBlock?.isEmpty) {
         BlockManager.insertAtEnd();
       }
 

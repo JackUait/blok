@@ -25,6 +25,32 @@ export default class BlockEvents extends Module {
      */
     this.beforeKeydownProcessing(event);
 
+    const { BlockSelection, BlockManager, Caret } = this.Editor;
+    const isRemoveKey = event.keyCode === _.keyCodes.BACKSPACE || event.keyCode === _.keyCodes.DELETE;
+    const selectionExists = SelectionUtils.isSelectionExists;
+    const selectionCollapsed = SelectionUtils.isCollapsed === true;
+    const shouldHandleSelectionDeletion = isRemoveKey &&
+      BlockSelection.anyBlockSelected &&
+      (!selectionExists || selectionCollapsed);
+
+    if (shouldHandleSelectionDeletion) {
+      const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+
+      if (selectionPositionIndex !== undefined) {
+        const insertedBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
+
+        Caret.setToBlock(insertedBlock, Caret.positions.START);
+      }
+
+      BlockSelection.clearSelection(event);
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+
+      return;
+    }
+
     /**
      * Fire keydown processor by event.keyCode
      */

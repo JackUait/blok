@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
@@ -19,6 +19,34 @@ const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} .cdx-search-field__input`
 const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover-item`;
 const NOTHING_FOUND_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__nothing-found-message`;
 const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
+
+/**
+ * Clear the provided search input and emit an input event so filtering logic reacts
+ *
+ * @param searchInput - locator pointing to the search field
+ */
+const clearSearchInputField = async (searchInput: Locator): Promise<void> => {
+  await searchInput.evaluate((element) => {
+    if (!(element instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const inputElement = element;
+
+    inputElement.value = '';
+
+    if (typeof InputEvent === 'function') {
+      inputElement.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        cancelable: false,
+        data: null,
+        inputType: 'deleteContentBackward',
+      }));
+    } else {
+      inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+};
 
 interface SerializableMenuChildren {
   searchable?: boolean;
@@ -385,7 +413,7 @@ test.describe('popover Search/Filter', () => {
       await expect(page.locator('[data-item-name="second"]')).toBeHidden();
 
       // Clear search input
-      await searchInput.clear();
+      await clearSearchInputField(searchInput);
 
       // All items should be visible again
       await expect(page.locator('[data-item-name="first"]')).toBeVisible();
@@ -465,7 +493,7 @@ test.describe('popover Search/Filter', () => {
       await expect(nothingFound).toBeVisible();
 
       // Clear search to show items again
-      await searchInput.clear();
+      await clearSearchInputField(searchInput);
 
       // "Nothing found" should be hidden
       await expect(nothingFound).toBeHidden();
@@ -678,7 +706,7 @@ test.describe('popover Search/Filter', () => {
       await searchInput.fill('First');
 
       // Clear to empty
-      await searchInput.clear();
+      await clearSearchInputField(searchInput);
 
       // All items should be visible again
       await expect(page.locator('[data-item-name="first"]')).toBeVisible();
@@ -805,7 +833,7 @@ test.describe('popover Search/Filter', () => {
       await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
       await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
 
-      await searchInput.clear();
+      await clearSearchInputField(searchInput);
       await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
       await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
       await expect(page.locator('[data-item-name="delete"]')).toBeVisible();

@@ -210,11 +210,23 @@ export default class Tools extends Module {
    * Calls each Tool reset method to clean up anything set by Tool
    */
   public destroy(): void {
-    Object.values(this.available).forEach(async tool => {
-      if (_.isFunction(tool.reset)) {
-        await tool.reset();
+    for (const tool of this.available.values()) {
+      const resetResult = (() => {
+        try {
+          return tool.reset();
+        } catch (error) {
+          _.log(`Tool "${tool.name}" reset failed`, 'warn', error);
+
+          return undefined;
+        }
+      })();
+
+      if (resetResult instanceof Promise) {
+        resetResult.catch(error => {
+          _.log(`Tool "${tool.name}" reset failed`, 'warn', error);
+        });
       }
-    });
+    }
   }
 
   /**

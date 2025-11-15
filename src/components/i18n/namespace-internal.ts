@@ -12,33 +12,35 @@ const getNamespaces = (dict: object, keyPath?: string): DictNamespaces<typeof de
   const result: Record<string, string | Record<string, unknown>> = {};
 
   Object.entries(dict).forEach(([key, section]) => {
-    if (isObject(section)) {
-      const newPath = keyPath ? `${keyPath}.${key}` : key;
-
-      /**
-       * Check current section values, if all of them are strings, so there is the last section
-       */
-      const isLastSection = Object.values(section).every((sectionValue) => {
-        return isString(sectionValue);
-      });
-
-      /**
-       * In last section, we substitute namespace path instead of object with translates
-       *
-       * ui.toolbar.toolbox – "ui.toolbar.toolbox"
-       * instead of
-       * ui.toolbar.toolbox – {"Add": ""}
-       */
-      if (isLastSection) {
-        result[key] = newPath;
-      } else {
-        result[key] = getNamespaces(section, newPath);
-      }
+    if (!isObject(section)) {
+      result[key] = section;
 
       return;
     }
 
-    result[key] = section;
+    const newPath = keyPath ? `${keyPath}.${key}` : key;
+
+    /**
+     * Check current section values, if all of them are strings, so there is the last section
+     */
+    const isLastSection = Object.values(section).every((sectionValue) => {
+      return isString(sectionValue);
+    });
+
+    /**
+     * In last section, we substitute namespace path instead of object with translates
+     *
+     * ui.toolbar.toolbox – "ui.toolbar.toolbox"
+     * instead of
+     * ui.toolbar.toolbox – {"Add": ""}
+     */
+    if (!isLastSection) {
+      result[key] = getNamespaces(section, newPath);
+
+      return;
+    }
+
+    result[key] = newPath;
   });
 
   return result as DictNamespaces<typeof defaultDictionary>;

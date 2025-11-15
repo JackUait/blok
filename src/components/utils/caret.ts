@@ -29,24 +29,26 @@ export const getCaretNodeAndOffset = (): [ Node | null, number ] => {
    *
    *
    */
-  if (initialFocusNode.nodeType !== Node.TEXT_NODE && initialFocusNode.childNodes.length > 0) {
-    /**
-     * In normal cases, focusOffset is a child index.
-     */
-    if (initialFocusNode.childNodes[initialFocusOffset]) {
-      return [initialFocusNode.childNodes[initialFocusOffset], 0];
-    /**
-     * But in Firefox, focusOffset can be 1 with the single child.
-     */
-    }
-
-    const childNode = initialFocusNode.childNodes[initialFocusOffset - 1];
-    const textContent = childNode.textContent;
-
-    return [childNode, textContent !== null ? textContent.length : 0];
+  if (initialFocusNode.nodeType === Node.TEXT_NODE || initialFocusNode.childNodes.length === 0) {
+    return [initialFocusNode, initialFocusOffset];
   }
 
-  return [initialFocusNode, initialFocusOffset];
+  /**
+   * In normal cases, focusOffset is a child index.
+   */
+  const regularChild = initialFocusNode.childNodes[initialFocusOffset];
+
+  if (regularChild !== undefined) {
+    return [regularChild, 0];
+  }
+
+  /**
+   * But in Firefox, focusOffset can be 1 with the single child.
+   */
+  const fallbackChild = initialFocusNode.childNodes[initialFocusOffset - 1] ?? null;
+  const textContent = fallbackChild?.textContent ?? null;
+
+  return [fallbackChild, textContent !== null ? textContent.length : 0];
 };
 
 /**

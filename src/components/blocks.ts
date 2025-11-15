@@ -208,15 +208,19 @@ export default class Blocks {
       const previousBlock = this.blocks[insertIndex - 1];
 
       this.insertToDOM(block, 'afterend', previousBlock);
-    } else {
-      const nextBlock = this.blocks[insertIndex + 1];
 
-      if (nextBlock !== undefined) {
-        this.insertToDOM(block, 'beforebegin', nextBlock);
-      } else {
-        this.insertToDOM(block);
-      }
+      return;
     }
+
+    const nextBlock = this.blocks[insertIndex + 1];
+
+    if (nextBlock !== undefined) {
+      this.insertToDOM(block, 'beforebegin', nextBlock);
+
+      return;
+    }
+
+    this.insertToDOM(block);
   }
 
   /**
@@ -250,24 +254,30 @@ export default class Blocks {
       fragment.appendChild(block.holder);
     }
 
-    if (this.length > 0) {
-      if (index > 0) {
-        const previousBlockIndex = Math.min(index - 1, this.length - 1);
-        const previousBlock = this.blocks[previousBlockIndex];
-
-        previousBlock.holder.after(fragment);
-      } else if (index === 0) {
-        this.workingArea.prepend(fragment);
-      }
-
-      /**
-       * Insert blocks to the array at the specified index
-       */
-      this.blocks.splice(index, 0, ...blocks);
-    } else {
+    if (!this.length) {
       this.blocks.push(...blocks);
       this.workingArea.appendChild(fragment);
+
+      blocks.forEach((block) => block.call(BlockToolAPI.RENDERED));
+
+      return;
     }
+
+    if (index > 0) {
+      const previousBlockIndex = Math.min(index - 1, this.length - 1);
+      const previousBlock = this.blocks[previousBlockIndex];
+
+      previousBlock.holder.after(fragment);
+    }
+
+    if (index === 0) {
+      this.workingArea.prepend(fragment);
+    }
+
+    /**
+     * Insert blocks to the array at the specified index
+     */
+    this.blocks.splice(index, 0, ...blocks);
 
     /**
      * Call Rendered event for each block

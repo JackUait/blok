@@ -612,23 +612,29 @@ export const throttle = (func: (...args: unknown[]) => unknown, wait: number, op
     state.boundFunc = func.bind(this);
     state.args = restArgs;
 
-    if (remaining <= 0 || remaining > wait) {
-      if (state.timeoutId !== null) {
-        clearTimeout(state.timeoutId);
-        state.timeoutId = null;
-      }
-      state.previous = now;
-      if (state.args !== null && state.boundFunc !== null) {
-        state.result = state.boundFunc(...state.args);
-      }
+    const shouldInvokeNow = remaining <= 0 || remaining > wait;
 
-      if (state.timeoutId === null) {
-        state.boundFunc = null;
-        state.args = null;
-      }
-    } else if (state.timeoutId === null && opts.trailing !== false) {
+    if (!shouldInvokeNow && state.timeoutId === null && opts.trailing !== false) {
       state.timeoutId = setTimeout(later, remaining);
     }
+
+    if (!shouldInvokeNow) {
+      return state.result;
+    }
+
+    if (state.timeoutId !== null) {
+      clearTimeout(state.timeoutId);
+      state.timeoutId = null;
+    }
+
+    state.previous = now;
+
+    if (state.args !== null && state.boundFunc !== null) {
+      state.result = state.boundFunc(...state.args);
+    }
+
+    state.boundFunc = null;
+    state.args = null;
 
     return state.result;
   };
@@ -833,23 +839,13 @@ export const getValidUrl = (url: string): string => {
     // do nothing but handle below
   }
 
-  if (url.substring(0, 2) === '//') {
-    const win = getGlobalWindow();
-
-    if (win) {
-      return win.location.protocol + url;
-    }
-
-    return url;
-  }
-
   const win = getGlobalWindow();
 
-  if (win) {
-    return win.location.origin + url;
+  if (url.substring(0, 2) === '//') {
+    return win ? `${win.location.protocol}${url}` : url;
   }
 
-  return url;
+  return win ? `${win.location.origin}${url}` : url;
 };
 
 /**
@@ -964,67 +960,11 @@ const isStage3DecoratorContext = (context: unknown): context is Stage3DecoratorC
   return 'kind' in context && 'name' in context;
 };
 
-/**
- * Decorator which provides ability to cache method or accessor result.
- * Supports both legacy and TC39 stage 3 decorator semantics.
- *
- * @param args - decorator arguments (legacy: target, propertyKey, descriptor. Stage 3: value, context)
- */
-const cacheableImpl = (...args: unknown[]): unknown => {
-  if (args.length === 2 && isStage3DecoratorContext(args[1])) {
-    const [value, context] = args as [
-      ((...methodArgs: unknown[]) => unknown) | CacheableAccessor<unknown>,
-      Stage3DecoratorContext
-    ];
-    const cacheKey = Symbol(
-      typeof context.name === 'symbol'
-        ? `cache:${context.name.description ?? 'symbol'}`
-        : `cache:${context.name}`
-    );
-
-    if (context.kind === 'method' && typeof value === 'function') {
-      const originalMethod = value as (...methodArgs: unknown[]) => unknown;
-
-      return function (this: object, ...methodArgs: unknown[]): unknown {
-        return ensureCacheValue(this, cacheKey, () => originalMethod.apply(this, methodArgs));
-      } as typeof originalMethod;
-    }
-
-    if (context.kind === 'getter' && typeof value === 'function') {
-      const originalGetter = value as () => unknown;
-
-      return function (this: object): unknown {
-        return ensureCacheValue(this, cacheKey, () => originalGetter.call(this));
-      } as typeof originalGetter;
-    }
-
-    if (context.kind === 'accessor' && typeof value === 'object' && value !== null) {
-      const accessor = value as CacheableAccessor<unknown>;
-      const fallbackGetter = accessor.get ?? context.access?.get;
-      const fallbackSetter = accessor.set ?? context.access?.set;
-
-      return {
-        get(this: object): unknown {
-          if (!fallbackGetter) {
-            return undefined;
-          }
-
-          return ensureCacheValue(this, cacheKey, () => fallbackGetter.call(this));
-        },
-        set(this: object, newValue: unknown): void {
-          clearCacheValue(this, cacheKey);
-          fallbackSetter?.call(this, newValue);
-        },
-        init(initialValue: unknown): unknown {
-          return accessor.init ? accessor.init(initialValue) : initialValue;
-        },
-      } satisfies CacheableAccessor<unknown>;
-    }
-
-    return value;
-  }
-
-  const [target, propertyKey, descriptor] = args as [Record<PropertyKey, unknown>, string | symbol, TypedPropertyDescriptor<unknown> | undefined];
+const buildLegacyCacheableDescriptor = (
+  target: Record<PropertyKey, unknown>,
+  propertyKey: string | symbol,
+  descriptor?: TypedPropertyDescriptor<unknown>
+): TypedPropertyDescriptor<unknown> => {
   const baseDescriptor =
     descriptor ??
     Object.getOwnPropertyDescriptor(target, propertyKey) ??
@@ -1040,43 +980,123 @@ const cacheableImpl = (...args: unknown[]): unknown => {
 
   const descriptorRef = { ...baseDescriptor } as TypedPropertyDescriptor<unknown>;
   const cacheKey: string | symbol = typeof propertyKey === 'symbol' ? propertyKey : `#${propertyKey}Cache`;
+  const hasMethodValue = descriptorRef.value !== undefined && typeof descriptorRef.value === 'function';
+  const shouldWrapGetter = !hasMethodValue && descriptorRef.get !== undefined;
+  const shouldWrapSetter = shouldWrapGetter && descriptorRef.set !== undefined;
 
-  if (descriptorRef.value !== undefined && typeof descriptorRef.value === 'function') {
+  if (hasMethodValue) {
     const originalMethod = descriptorRef.value as (...methodArgs: unknown[]) => unknown;
 
     descriptorRef.value = function (this: object, ...methodArgs: unknown[]): unknown {
       return ensureCacheValue(this, cacheKey, () => originalMethod.apply(this, methodArgs));
     } as typeof originalMethod;
-  } else if (descriptorRef.get !== undefined) {
+  }
+
+  if (shouldWrapGetter && descriptorRef.get !== undefined) {
     const originalGetter = descriptorRef.get as () => unknown;
 
     descriptorRef.get = function (this: object): unknown {
       return ensureCacheValue(this, cacheKey, () => originalGetter.call(this));
     } as typeof originalGetter;
+  }
 
-    if (descriptorRef.set) {
-      const originalSetter = descriptorRef.set;
+  if (shouldWrapSetter && descriptorRef.set !== undefined) {
+    const originalSetter = descriptorRef.set;
 
-      descriptorRef.set = function (this: object, newValue: unknown): void {
-        clearCacheValue(this, cacheKey);
-        originalSetter.call(this, newValue);
-      } as typeof originalSetter;
+    descriptorRef.set = function (this: object, newValue: unknown): void {
+      clearCacheValue(this, cacheKey);
+      originalSetter.call(this, newValue);
+    } as typeof originalSetter;
+  }
+
+  if (!descriptor) {
+    return descriptorRef;
+  }
+
+  Object.keys(descriptor).forEach(propertyName => {
+    if (!(propertyName in descriptorRef)) {
+      Reflect.deleteProperty(descriptor, propertyName as keyof PropertyDescriptor);
     }
+  });
+
+  Object.assign(descriptor, descriptorRef);
+
+  return descriptor;
+};
+
+const applyStage3CacheableDecorator = (
+  value: ((...methodArgs: unknown[]) => unknown) | CacheableAccessor<unknown>,
+  context: Stage3DecoratorContext
+): unknown => {
+  const cacheKey = Symbol(
+    typeof context.name === 'symbol'
+      ? `cache:${context.name.description ?? 'symbol'}`
+      : `cache:${context.name}`
+  );
+
+  if (context.kind === 'method' && typeof value === 'function') {
+    const originalMethod = value as (...methodArgs: unknown[]) => unknown;
+
+    return function (this: object, ...methodArgs: unknown[]): unknown {
+      return ensureCacheValue(this, cacheKey, () => originalMethod.apply(this, methodArgs));
+    } as typeof originalMethod;
   }
 
-  if (descriptor) {
-    Object.keys(descriptor).forEach(propertyName => {
-      if (!(propertyName in descriptorRef)) {
-        Reflect.deleteProperty(descriptor, propertyName as keyof PropertyDescriptor);
-      }
-    });
+  if (context.kind === 'getter' && typeof value === 'function') {
+    const originalGetter = value as () => unknown;
 
-    Object.assign(descriptor, descriptorRef);
-
-    return descriptor;
+    return function (this: object): unknown {
+      return ensureCacheValue(this, cacheKey, () => originalGetter.call(this));
+    } as typeof originalGetter;
   }
 
-  return descriptorRef;
+  if (context.kind === 'accessor' && typeof value === 'object' && value !== null) {
+    const accessor = value as CacheableAccessor<unknown>;
+    const fallbackGetter = accessor.get ?? context.access?.get;
+    const fallbackSetter = accessor.set ?? context.access?.set;
+
+    return {
+      get(this: object): unknown {
+        return fallbackGetter
+          ? ensureCacheValue(this, cacheKey, () => fallbackGetter.call(this))
+          : undefined;
+      },
+      set(this: object, newValue: unknown): void {
+        clearCacheValue(this, cacheKey);
+        fallbackSetter?.call(this, newValue);
+      },
+      init(initialValue: unknown): unknown {
+        return accessor.init ? accessor.init(initialValue) : initialValue;
+      },
+    } satisfies CacheableAccessor<unknown>;
+  }
+
+  return value;
+};
+
+/**
+ * Decorator which provides ability to cache method or accessor result.
+ * Supports both legacy and TC39 stage 3 decorator semantics.
+ *
+ * @param args - decorator arguments (legacy: target, propertyKey, descriptor. Stage 3: value, context)
+ */
+const cacheableImpl = (...args: unknown[]): unknown => {
+  if (args.length === 2 && isStage3DecoratorContext(args[1])) {
+    const [value, context] = args as [
+      ((...methodArgs: unknown[]) => unknown) | CacheableAccessor<unknown>,
+      Stage3DecoratorContext
+    ];
+
+    return applyStage3CacheableDecorator(value, context);
+  }
+
+  const [target, propertyKey, descriptor] = args as [
+    Record<PropertyKey, unknown>,
+    string | symbol,
+    TypedPropertyDescriptor<unknown> | undefined
+  ];
+
+  return buildLegacyCacheableDescriptor(target, propertyKey, descriptor);
 };
 
 export const cacheable = cacheableImpl as CacheableDecorator;
@@ -1127,16 +1147,14 @@ export const isIosDevice = (() => {
 
   // Check for iPad on iOS 13+ (reports as MacIntel with touch support)
   // Only access deprecated platform property when necessary
-  if ((navigatorRef.maxTouchPoints ?? 0) > 1) {
-    // Use platform only if userAgentData is not available
-    // Use bracket notation to access deprecated property to avoid TypeScript warning
-    const platformValue = platform !== undefined && platform !== ''
-      ? platform
-      : (navigatorRef as Navigator & { platform?: string })['platform'];
+  const hasTouchSupport = (navigatorRef.maxTouchPoints ?? 0) > 1;
+  const getLegacyPlatform = (): string | undefined =>
+    (navigatorRef as Navigator & { platform?: string })['platform'];
+  const platformHint = platform !== undefined && platform !== '' ? platform : undefined;
+  const platformValue = hasTouchSupport ? platformHint ?? getLegacyPlatform() : undefined;
 
-    if (platformValue === 'MacIntel') {
-      return true;
-    }
+  if (platformValue === 'MacIntel') {
+    return true;
   }
 
   return false;

@@ -55,27 +55,33 @@ export default class Dom {
     const el = document.createElement(tagName);
 
     if (Array.isArray(classNames)) {
-      const validClassnames = classNames.filter(className => className !== undefined) as string[];
+      const validClassnames = classNames.filter((className): className is string => className !== undefined);
 
       el.classList.add(...validClassnames);
-    } else if (classNames) {
+    }
+
+    if (typeof classNames === 'string') {
       el.classList.add(classNames);
     }
 
     for (const attrName in attributes) {
-      if (Object.prototype.hasOwnProperty.call(attributes, attrName)) {
-        const value = attributes[attrName];
-
-        if (value === undefined || value === null) {
-          continue;
-        }
-
-        if (attrName in el) {
-          (el as unknown as Record<string, unknown>)[attrName] = value;
-        } else {
-          el.setAttribute(attrName, String(value));
-        }
+      if (!Object.prototype.hasOwnProperty.call(attributes, attrName)) {
+        continue;
       }
+
+      const value = attributes[attrName];
+
+      if (value === undefined || value === null) {
+        continue;
+      }
+
+      if (attrName in el) {
+        (el as unknown as Record<string, unknown>)[attrName] = value;
+
+        continue;
+      }
+
+      el.setAttribute(attrName, String(value));
     }
 
     return el;
@@ -548,17 +554,17 @@ export default class Dom {
    * @returns {HTMLElement}
    */
   public static getHolder(element: string | HTMLElement): HTMLElement {
-    if (_.isString(element)) {
-      const holder = document.getElementById(element);
+    if (!_.isString(element)) {
+      return element;
+    }
 
-      if (holder === null) {
-        throw new Error(`Element with id "${element}" not found`);
-      }
+    const holder = document.getElementById(element);
 
+    if (holder !== null) {
       return holder;
     }
 
-    return element;
+    throw new Error(`Element with id "${element}" not found`);
   }
 
   /**
@@ -613,14 +619,7 @@ export default class Dom {
       previousNode: Node | null,
       previousNodeLength: number
     ): { node: Node | null; offset: number } => {
-      if (!nextNode) {
-        if (!previousNode) {
-          return {
-            node: null,
-            offset: 0,
-          };
-        }
-
+      if (!nextNode && previousNode) {
         const baseOffset = accumulatedOffset - previousNodeLength;
         const safeTotalOffset = Math.max(totalOffset - baseOffset, 0);
         const offsetInsidePrevious = Math.min(safeTotalOffset, previousNodeLength);
@@ -628,6 +627,13 @@ export default class Dom {
         return {
           node: previousNode,
           offset: offsetInsidePrevious,
+        };
+      }
+
+      if (!nextNode) {
+        return {
+          node: null,
+          offset: 0,
         };
       }
 

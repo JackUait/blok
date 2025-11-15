@@ -70,12 +70,13 @@ export default class CrossBlockSelection extends Module {
   public toggleBlockSelectedState(next = true): void {
     const { BlockManager, BlockSelection } = this.Editor;
 
-    if (!this.lastSelectedBlock) {
-      const currentBlock = BlockManager.currentBlock;
+    const currentBlock = BlockManager.currentBlock;
 
-      if (!currentBlock) {
-        return;
-      }
+    if (!this.lastSelectedBlock && !currentBlock) {
+      return;
+    }
+
+    if (!this.lastSelectedBlock && currentBlock) {
       this.lastSelectedBlock = this.firstSelectedBlock = currentBlock;
     }
 

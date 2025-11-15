@@ -215,10 +215,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     if (item.hasChildren) {
       this.showNestedItems(item as PopoverItemDefault | PopoverItemHtml);
-
-      if ('handleClick' in item && typeof item.handleClick === 'function') {
-        item.handleClick();
-      }
+      this.callHandleClickIfPresent(item);
 
       return;
     }
@@ -226,9 +223,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     /** Cleanup other items state */
     this.itemsDefault.filter(x => x !== item).forEach(x => x.reset());
 
-    if ('handleClick' in item && typeof item.handleClick === 'function') {
-      item.handleClick();
-    }
+    this.callHandleClickIfPresent(item);
 
     this.toggleItemActivenessIfNeeded(item);
 
@@ -271,20 +266,33 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       clickedItem.toggleActive();
     }
 
-    if (typeof clickedItem.toggle === 'string') {
-      const itemsInToggleGroup = this.itemsDefault.filter(item => item.toggle === clickedItem.toggle);
+    if (typeof clickedItem.toggle !== 'string') {
+      return;
+    }
 
-      /** If there's only one item in toggle group, toggle it */
-      if (itemsInToggleGroup.length === 1) {
-        clickedItem.toggleActive();
+    const itemsInToggleGroup = this.itemsDefault.filter(item => item.toggle === clickedItem.toggle);
 
-        return;
-      }
+    /** If there's only one item in toggle group, toggle it */
+    if (itemsInToggleGroup.length === 1) {
+      clickedItem.toggleActive();
 
-      /** Set clicked item as active and the rest items with same toggle key value as inactive */
-      itemsInToggleGroup.forEach(item => {
-        item.toggleActive(item === clickedItem);
-      });
+      return;
+    }
+
+    /** Set clicked item as active and the rest items with same toggle key value as inactive */
+    itemsInToggleGroup.forEach(item => {
+      item.toggleActive(item === clickedItem);
+    });
+  }
+
+  /**
+   * Executes handleClick if it is present on item.
+   *
+   * @param item - popover item whose handler should be executed
+   */
+  private callHandleClickIfPresent(item: PopoverItem): void {
+    if ('handleClick' in item && typeof item.handleClick === 'function') {
+      item.handleClick();
     }
   }
 

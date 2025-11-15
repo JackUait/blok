@@ -162,35 +162,36 @@ export default class LinkInlineTool implements InlineTool {
    * @param {Range | null} range - range to wrap with link
    */
   public surround(range: Range | null): void {
+    if (!range) {
+      this.toggleActions();
+
+      return;
+    }
+
     /**
-     * Range will be null when user makes second click on the 'link icon' to close opened input
+     * Save selection before change focus to the input
      */
-    if (range) {
-      /**
-       * Save selection before change focus to the input
-       */
-      if (!this.inputOpened) {
-        /** Create blue background instead of selection */
-        this.selection.setFakeBackground();
-        this.selection.save();
-      } else {
-        this.selection.restore();
-        this.selection.removeFakeBackground();
-      }
-      const parentAnchor = this.selection.findParentTag('A');
+    if (!this.inputOpened) {
+      /** Create blue background instead of selection */
+      this.selection.setFakeBackground();
+      this.selection.save();
+    } else {
+      this.selection.restore();
+      this.selection.removeFakeBackground();
+    }
+    const parentAnchor = this.selection.findParentTag('A');
 
-      /**
-       * Unlink icon pressed
-       */
-      if (parentAnchor) {
-        this.selection.expandToTag(parentAnchor);
-        this.unlink();
-        this.closeActions();
-        this.checkState();
-        this.toolbar.close();
+    /**
+     * Unlink icon pressed
+     */
+    if (parentAnchor) {
+      this.selection.expandToTag(parentAnchor);
+      this.unlink();
+      this.closeActions();
+      this.checkState();
+      this.toolbar.close();
 
-        return;
-      }
+      return;
     }
 
     this.toggleActions();

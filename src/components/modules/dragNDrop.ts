@@ -94,16 +94,14 @@ export default class DragNDrop extends Module {
       ? BlockManager.setCurrentBlockByChildNode(target)
       : undefined;
 
-    if (targetBlock) {
-      this.Editor.Caret.setToBlock(targetBlock, Caret.positions.END);
-    } else {
-      const lastBlock = BlockManager.lastBlock;
+    const lastBlock = BlockManager.lastBlock;
+    const fallbackBlock = lastBlock
+      ? BlockManager.setCurrentBlockByChildNode(lastBlock.holder) ?? lastBlock
+      : undefined;
+    const blockForCaret = targetBlock ?? fallbackBlock;
 
-      if (lastBlock) {
-        const blockToSet = BlockManager.setCurrentBlockByChildNode(lastBlock.holder) ?? lastBlock;
-
-        this.Editor.Caret.setToBlock(blockToSet, Caret.positions.END);
-      }
+    if (blockForCaret) {
+      this.Editor.Caret.setToBlock(blockForCaret, Caret.positions.END);
     }
 
     const { dataTransfer } = dropEvent;

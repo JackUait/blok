@@ -113,12 +113,14 @@ export default class Saver extends Module {
       }
 
       /** If it was stub Block, get original data */
+      if (tool === this.Editor.Tools.stubTool && this.isStubSavedData(data)) {
+        blocks.push(data);
+
+        return;
+      }
+
       if (tool === this.Editor.Tools.stubTool) {
-        if (this.isStubSavedData(data)) {
-          blocks.push(data);
-        } else {
-          _.log('Stub block data is malformed and was skipped');
-        }
+        _.log('Stub block data is malformed and was skipped');
 
         return;
       }

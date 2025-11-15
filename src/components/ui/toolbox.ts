@@ -322,13 +322,17 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     return this.toolsToBeDisplayed
       .reduce<PopoverItemParams[]>((result, tool) => {
-        if (Array.isArray(tool.toolbox)) {
-          tool.toolbox.forEach((item, index) => {
-            result.push(toPopoverItem(item, tool, index === 0));
-          });
-        } else if (tool.toolbox !== undefined)  {
-          result.push(toPopoverItem(tool.toolbox, tool));
+        const { toolbox } = tool;
+
+        if (toolbox === undefined) {
+          return result;
         }
+
+        const items = Array.isArray(toolbox) ? toolbox : [ toolbox ];
+
+        items.forEach((item, index) => {
+          result.push(toPopoverItem(item, tool, index === 0));
+        });
 
         return result;
       }, []);

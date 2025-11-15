@@ -275,23 +275,25 @@ export default class Block extends EventsDispatcher<BlockEvents> {
      */
     const method = (this.toolInstance as unknown as Record<string, unknown>)[methodName];
 
-    if (_.isFunction(method)) {
-      if (methodName === BlockToolAPI.APPEND_CALLBACK) {
-        _.log(
-          '`appendCallback` hook is deprecated and will be removed in the next major release. ' +
-              'Use `rendered` hook instead',
-          'warn'
-        );
-      }
+    if (!_.isFunction(method)) {
+      return;
+    }
 
-      try {
-        // eslint-disable-next-line no-useless-call
-        method.call(this.toolInstance, params);
-      } catch (e) {
-        const errorMessage = e instanceof Error ? e.message : String(e);
+    if (methodName === BlockToolAPI.APPEND_CALLBACK) {
+      _.log(
+        '`appendCallback` hook is deprecated and will be removed in the next major release. ' +
+            'Use `rendered` hook instead',
+        'warn'
+      );
+    }
 
-        _.log(`Error during '${methodName}' call: ${errorMessage}`, 'error');
-      }
+    try {
+      // eslint-disable-next-line no-useless-call
+      method.call(this.toolInstance, params);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+
+      _.log(`Error during '${methodName}' call: ${errorMessage}`, 'error');
     }
   }
 
@@ -381,22 +383,38 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       toolTunes: PopoverItemParams[];
       commonTunes: PopoverItemParams[];
       } {
-    const toolTunesPopoverParams: TunesMenuConfigItem[] = [];
-    const commonTunesPopoverParams: TunesMenuConfigItem[] = [];
+    const toolTunesPopoverParams: PopoverItemParams[] = [];
+    const commonTunesPopoverParams: PopoverItemParams[] = [];
+    const pushTuneConfig = (
+      tuneConfig: TunesMenuConfigItem | TunesMenuConfigItem[] | HTMLElement | undefined,
+      target: PopoverItemParams[]
+    ): void => {
+      if (!tuneConfig) {
+        return;
+      }
+
+      if ($.isElement(tuneConfig)) {
+        target.push({
+          type: PopoverItemType.Html,
+          element: tuneConfig,
+        });
+
+        return;
+      }
+
+      if (Array.isArray(tuneConfig)) {
+        target.push(...tuneConfig);
+
+        return;
+      }
+
+      target.push(tuneConfig);
+    };
 
     /** Tool's tunes: may be defined as return value of optional renderSettings method */
     const tunesDefinedInTool = typeof this.toolInstance.renderSettings === 'function' ? this.toolInstance.renderSettings() : [];
 
-    if ($.isElement(tunesDefinedInTool)) {
-      toolTunesPopoverParams.push({
-        type: PopoverItemType.Html,
-        element: tunesDefinedInTool,
-      });
-    } else if (Array.isArray(tunesDefinedInTool)) {
-      toolTunesPopoverParams.push(...tunesDefinedInTool);
-    } else {
-      toolTunesPopoverParams.push(tunesDefinedInTool);
-    }
+    pushTuneConfig(tunesDefinedInTool, toolTunesPopoverParams);
 
     /** Common tunes: combination of default tunes (move up, move down, delete) and third-party tunes connected via tunes api */
     const commonTunes = [
@@ -406,16 +424,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
     /** Separate custom html from Popover items params for common tunes */
     commonTunes.forEach(tuneConfig => {
-      if ($.isElement(tuneConfig)) {
-        commonTunesPopoverParams.push({
-          type: PopoverItemType.Html,
-          element: tuneConfig,
-        });
-      } else if (Array.isArray(tuneConfig)) {
-        commonTunesPopoverParams.push(...tuneConfig);
-      } else {
-        commonTunesPopoverParams.push(tuneConfig);
-      }
+      pushTuneConfig(tuneConfig, commonTunesPopoverParams);
     });
 
     return {
@@ -699,17 +708,21 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     const fakeCursorWillBeAdded = state === true && SelectionUtils.isRangeInsideContainer(this.holder);
     const fakeCursorWillBeRemoved = state === false && SelectionUtils.isFakeCursorInsideContainer(this.holder);
 
-    if (fakeCursorWillBeAdded || fakeCursorWillBeRemoved) {
-      this.editorEventBus?.emit(FakeCursorAboutToBeToggled, { state }); // mutex
-
-      if (fakeCursorWillBeAdded) {
-        SelectionUtils.addFakeCursor();
-      } else {
-        SelectionUtils.removeFakeCursor(this.holder);
-      }
-
-      this.editorEventBus?.emit(FakeCursorHaveBeenSet, { state });
+    if (!fakeCursorWillBeAdded && !fakeCursorWillBeRemoved) {
+      return;
     }
+
+    this.editorEventBus?.emit(FakeCursorAboutToBeToggled, { state }); // mutex
+
+    if (fakeCursorWillBeAdded) {
+      SelectionUtils.addFakeCursor();
+    }
+
+    if (fakeCursorWillBeRemoved) {
+      SelectionUtils.removeFakeCursor(this.holder);
+    }
+
+    this.editorEventBus?.emit(FakeCursorHaveBeenSet, { state });
   }
 
   /**

@@ -321,13 +321,13 @@ export default class BlockManager extends Module {
      * In case of block replacing (Converting OR from Toolbox or Shortcut on empty block OR on-paste to empty block)
      * we need to dispatch the 'block-removing' event for the replacing block
      */
-    if (replace) {
-      const blockToReplace = this.getBlockByIndex(targetIndex);
+    const blockToReplace = replace ? this.getBlockByIndex(targetIndex) : undefined;
 
-      if (blockToReplace === undefined) {
-        throw new Error(`Could not replace Block at index ${targetIndex}. Block not found.`);
-      }
+    if (replace && blockToReplace === undefined) {
+      throw new Error(`Could not replace Block at index ${targetIndex}. Block not found.`);
+    }
 
+    if (replace && blockToReplace !== undefined) {
       this.blockDidMutated(BlockRemovedMutationType, blockToReplace, {
         index: targetIndex,
       });
@@ -344,7 +344,9 @@ export default class BlockManager extends Module {
 
     if (needToFocus) {
       this.currentBlockIndex = targetIndex;
-    } else if (targetIndex <= this.currentBlockIndex) {
+    }
+
+    if (!needToFocus && targetIndex <= this.currentBlockIndex) {
       this.currentBlockIndex++;
     }
 
@@ -493,7 +495,9 @@ export default class BlockManager extends Module {
 
     if (needToFocus) {
       this.currentBlockIndex = index;
-    } else if (index <= this.currentBlockIndex) {
+    }
+
+    if (!needToFocus && index <= this.currentBlockIndex) {
       this.currentBlockIndex++;
     }
 
@@ -535,15 +539,16 @@ export default class BlockManager extends Module {
      * We can merge:
      * 1) Blocks with the same Tool if tool provides merge method
      */
-    if (targetBlock.name === blockToMerge.name && targetBlock.mergeable) {
-      const blockToMergeDataRaw = await blockToMerge.data;
+    const canMergeBlocksDirectly = targetBlock.name === blockToMerge.name && targetBlock.mergeable;
+    const blockToMergeDataRaw = canMergeBlocksDirectly ? await blockToMerge.data : undefined;
 
-      if (_.isEmpty(blockToMergeDataRaw)) {
-        console.error('Could not merge Block. Failed to extract original Block data.');
+    if (canMergeBlocksDirectly && _.isEmpty(blockToMergeDataRaw)) {
+      console.error('Could not merge Block. Failed to extract original Block data.');
 
-        return;
-      }
+      return;
+    }
 
+    if (canMergeBlocksDirectly && blockToMergeDataRaw !== undefined) {
       const [ cleanData ] = sanitizeBlocks(
         [ blockToMergeDataRaw ],
         targetBlock.tool.sanitizeConfig,
@@ -601,13 +606,17 @@ export default class BlockManager extends Module {
       /**
        * If first Block was removed, insert new Initial Block and set focus on it`s first input
        */
-      if (!this.blocks.length) {
-        this.unsetCurrentBlock();
+      const noBlocksLeft = this.blocks.length === 0;
 
-        if (addLastBlock) {
-          this.insert();
-        }
-      } else if (index === 0) {
+      if (noBlocksLeft) {
+        this.unsetCurrentBlock();
+      }
+
+      if (noBlocksLeft && addLastBlock) {
+        this.insert();
+      }
+
+      if (!noBlocksLeft && index === 0) {
         this.currentBlockIndex = 0;
       }
 

@@ -252,12 +252,14 @@ export default class SelectionUtils {
 
     const sel = window.getSelection();
 
-    if (!sel || sel.rangeCount === null || isNaN(sel.rangeCount)) {
-      if (!sel) {
-        _.log('Method window.getSelection returned null', 'warn');
-      } else {
-        _.log('Method SelectionUtils.rangeCount is not supported', 'warn');
-      }
+    if (!sel) {
+      _.log('Method window.getSelection returned null', 'warn');
+
+      return rect;
+    }
+
+    if (sel.rangeCount === null || isNaN(sel.rangeCount)) {
+      _.log('Method SelectionUtils.rangeCount is not supported', 'warn');
 
       return rect;
     }
@@ -324,12 +326,14 @@ export default class SelectionUtils {
     const range = document.createRange();
     const selection = window.getSelection();
 
-    /** if found deepest node is native input */
-    if ($.isNativeInput(element)) {
-      if (!$.canSetCaret(element)) {
-        return element.getBoundingClientRect();
-      }
+    const isNativeInput = $.isNativeInput(element);
 
+    /** if found deepest node is native input */
+    if (isNativeInput && !$.canSetCaret(element)) {
+      return element.getBoundingClientRect();
+    }
+
+    if (isNativeInput) {
       const inputElement = element as HTMLInputElement | HTMLTextAreaElement;
 
       inputElement.focus();
@@ -669,12 +673,11 @@ export default class SelectionUtils {
 
         const parent = node.parentNode as HTMLElement;
 
-        if (parent.tagName === tagName) {
-          const hasMatchingClass = !className || (parent.classList && parent.classList.contains(className));
+        const hasMatchingClass = !className || (parent.classList && parent.classList.contains(className));
+        const hasMatchingTag = parent.tagName === tagName;
 
-          if (hasMatchingClass) {
-            return parent;
-          }
+        if (hasMatchingTag && hasMatchingClass) {
+          return parent;
         }
 
         return searchUpTree(parent, depth - 1);

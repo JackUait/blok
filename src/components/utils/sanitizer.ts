@@ -112,23 +112,25 @@ const deepSanitize = (
      * Array: call sanitize for each item
      */
     return cleanArray(dataToSanitize, rules, globalRules);
-  } else if (_.isObject(dataToSanitize)) {
+  }
+
+  if (_.isObject(dataToSanitize)) {
     /**
      * Objects: just clean object deeper.
      */
     return cleanObject(dataToSanitize, rules, globalRules);
-  } else {
-    /**
-     * Primitives (number|string|boolean): clean this item
-     *
-     * Clean only strings
-     */
-    if (_.isString(dataToSanitize)) {
-      return cleanOneItem(dataToSanitize, rules, globalRules);
-    }
-
-    return dataToSanitize;
   }
+
+  /**
+   * Primitives (number|string|boolean): clean this item
+   *
+   * Clean only strings
+   */
+  if (_.isString(dataToSanitize)) {
+    return cleanOneItem(dataToSanitize, rules, globalRules);
+  }
+
+  return dataToSanitize;
 };
 
 /**
@@ -484,9 +486,15 @@ const applyAttributeOverrides = (html: string, rules: SanitizerConfig): string =
       for (const [attr, attrRule] of Object.entries(ruleResult)) {
         if (attrRule === false) {
           element.removeAttribute(attr);
-        } else if (attrRule === true) {
+
           continue;
-        } else if (_.isString(attrRule)) {
+        }
+
+        if (attrRule === true) {
+          continue;
+        }
+
+        if (_.isString(attrRule)) {
           element.setAttribute(attr, attrRule);
         }
       }

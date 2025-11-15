@@ -209,15 +209,7 @@ class Tooltip {
     }
 
     this.nodes.content.innerHTML = '';
-
-    if (typeof content === 'string') {
-      this.nodes.content.appendChild(document.createTextNode(content));
-    } else if (content instanceof Node) {
-      this.nodes.content.appendChild(content);
-    } else {
-      throw Error('[CodeX Tooltip] Wrong type of «content» passed. It should be an instance of Node or String. ' +
-        'But ' + typeof content + ' given.');
-    }
+    this.nodes.content.appendChild(this.createContentNode(content));
 
     if (!this.nodes.wrapper) {
       return;
@@ -252,13 +244,33 @@ class Tooltip {
         }
         this.showed = true;
       }, showingOptions.delay);
-    } else {
-      if (this.nodes.wrapper) {
-        this.nodes.wrapper.classList.add(this.CSS.tooltipShown);
-        this.updateTooltipVisibility();
-      }
-      this.showed = true;
+
+      return;
     }
+
+    if (this.nodes.wrapper) {
+      this.nodes.wrapper.classList.add(this.CSS.tooltipShown);
+      this.updateTooltipVisibility();
+    }
+    this.showed = true;
+  }
+
+  /**
+   * Prepare tooltip content node
+   *
+   * @param {TooltipContent} content - tooltip content (Node or string)
+   */
+  private createContentNode(content: TooltipContent): Node {
+    if (typeof content === 'string') {
+      return document.createTextNode(content);
+    }
+
+    if (content instanceof Node) {
+      return content;
+    }
+
+    throw Error('[CodeX Tooltip] Wrong type of «content» passed. It should be an instance of Node or String. ' +
+      'But ' + typeof content + ' given.');
   }
 
   /**
@@ -267,12 +279,13 @@ class Tooltip {
    * @param {boolean} skipDelay - forces hiding immediately
    */
   public hide(skipDelay: boolean = false): void {
-    if (this.hidingDelay && !skipDelay) {
-      // debounce
-      if (this.hidingTimeout) {
-        clearTimeout(this.hidingTimeout);
-      }
+    const shouldDelay = Boolean(this.hidingDelay) && !skipDelay;
 
+    if (shouldDelay && this.hidingTimeout) {
+      clearTimeout(this.hidingTimeout);
+    }
+
+    if (shouldDelay) {
       this.hidingTimeout = setTimeout(() => {
         this.hide(true);
       }, this.hidingDelay);
@@ -524,7 +537,9 @@ class Tooltip {
 
     if (Array.isArray(classNames)) {
       el.classList.add(...classNames);
-    } else if (classNames) {
+    }
+
+    if (typeof classNames === 'string') {
       el.classList.add(classNames);
     }
 

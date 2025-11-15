@@ -84,17 +84,17 @@ export class PopoverInline extends PopoverDesktop {
   public override show(): void {
     super.show();
 
-    if (this.nestingLevel === 0) {
-      const containerRect = this.nodes.popoverContainer?.getBoundingClientRect();
+    const containerRect = this.nestingLevel === 0
+      ? this.nodes.popoverContainer?.getBoundingClientRect()
+      : undefined;
 
-      if (containerRect !== undefined) {
-        const width = `${containerRect.width}px`;
-        const height = `${containerRect.height}px`;
+    if (containerRect !== undefined) {
+      const width = `${containerRect.width}px`;
+      const height = `${containerRect.height}px`;
 
-        this.nodes.popover.style.setProperty(CSSVariables.InlinePopoverWidth, width);
-        this.nodes.popover.style.width = width;
-        this.nodes.popover.style.height = height;
-      }
+      this.nodes.popover.style.setProperty(CSSVariables.InlinePopoverWidth, width);
+      this.nodes.popover.style.width = width;
+      this.nodes.popover.style.height = height;
     }
 
     requestAnimationFrame(() => {

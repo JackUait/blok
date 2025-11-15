@@ -173,35 +173,7 @@ export default class Caret extends Module {
       }
 
       if (position === this.positions.END) {
-        const nodeToSet = $.getDeepestNode(el, true);
-
-        if (nodeToSet instanceof HTMLElement && $.isNativeInput(nodeToSet)) {
-          return {
-            node: nodeToSet,
-            offset: $.getContentLength(nodeToSet),
-          };
-        }
-
-        const meaningfulTextNode = findLastMeaningfulTextNode(el);
-
-        if (meaningfulTextNode) {
-          return {
-            node: meaningfulTextNode,
-            offset: meaningfulTextNode.textContent?.length ?? 0,
-          };
-        }
-
-        if (nodeToSet) {
-          return {
-            node: nodeToSet,
-            offset: $.getContentLength(nodeToSet),
-          };
-        }
-
-        return {
-          node: null,
-          offset: 0,
-        };
+        return this.resolveEndPositionNode(el);
       }
 
       const { node, offset: nodeOffset } = $.getNodeByOffset(el, offset);
@@ -231,6 +203,43 @@ export default class Caret extends Module {
     BlockManager.setCurrentBlockByChildNode(block.holder);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     BlockManager.currentBlock!.currentInput = element;
+  }
+
+  /**
+   * Calculates the node and offset when caret should be placed near element's end.
+   *
+   * @param {HTMLElement} el - element to inspect
+   */
+  private resolveEndPositionNode(el: HTMLElement): { node: Node | null; offset: number } {
+    const nodeToSet = $.getDeepestNode(el, true);
+
+    if (nodeToSet instanceof HTMLElement && $.isNativeInput(nodeToSet)) {
+      return {
+        node: nodeToSet,
+        offset: $.getContentLength(nodeToSet),
+      };
+    }
+
+    const meaningfulTextNode = findLastMeaningfulTextNode(el);
+
+    if (meaningfulTextNode) {
+      return {
+        node: meaningfulTextNode,
+        offset: meaningfulTextNode.textContent?.length ?? 0,
+      };
+    }
+
+    if (nodeToSet) {
+      return {
+        node: nodeToSet,
+        offset: $.getContentLength(nodeToSet),
+      };
+    }
+
+    return {
+      node: null,
+      offset: 0,
+    };
   }
 
   /**
@@ -283,7 +292,11 @@ export default class Caret extends Module {
      */
     if (top < 0) {
       window.scrollBy(0, top - scrollOffset);
-    } else if (bottom > innerHeight) {
+
+      return;
+    }
+
+    if (bottom > innerHeight) {
       window.scrollBy(0, bottom - innerHeight + scrollOffset);
     }
   }

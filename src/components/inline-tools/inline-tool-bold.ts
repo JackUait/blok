@@ -566,20 +566,13 @@ export default class BoldInlineTool implements InlineTool {
     const range = selection.getRangeAt(0);
     const boldElement = BoldInlineTool.findBoldElement(range.startContainer) ?? BoldInlineTool.getBoundaryBold(range);
 
-    if (boldElement) {
-      const caretRange = BoldInlineTool.exitCollapsedBold(selection, boldElement);
+    const updatedRange = boldElement
+      ? BoldInlineTool.exitCollapsedBold(selection, boldElement)
+      : this.startCollapsedBold(range);
 
-      if (caretRange) {
-        selection.removeAllRanges();
-        selection.addRange(caretRange);
-      }
-    } else {
-      const newRange = this.startCollapsedBold(range);
-
-      if (newRange) {
-        selection.removeAllRanges();
-        selection.addRange(newRange);
-      }
+    if (updatedRange) {
+      selection.removeAllRanges();
+      selection.addRange(updatedRange);
     }
 
     BoldInlineTool.normalizeBoldTagsWithinEditor(selection);
@@ -607,35 +600,21 @@ export default class BoldInlineTool implements InlineTool {
     const container = range.startContainer;
     const offset = range.startOffset;
 
-    if (container.nodeType === Node.TEXT_NODE) {
-      const text = container as Text;
-      const parent = text.parentNode;
-
-      if (!parent) {
-        return;
+    const insertionSucceeded = (() => {
+      if (container.nodeType === Node.TEXT_NODE) {
+        return this.insertCollapsedBoldIntoText(container as Text, strong, offset);
       }
 
-      const content = text.textContent ?? '';
-      const before = content.slice(0, offset);
-      const after = content.slice(offset);
+      if (container.nodeType === Node.ELEMENT_NODE) {
+        this.insertCollapsedBoldIntoElement(container as Element, strong, offset);
 
-      text.textContent = before;
-
-      const afterNode = after.length ? document.createTextNode(after) : null;
-
-      if (afterNode) {
-        parent.insertBefore(afterNode, text.nextSibling);
+        return true;
       }
 
-      parent.insertBefore(strong, afterNode ?? text.nextSibling);
-      strong.setAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH, before.length.toString());
-    } else if (container.nodeType === Node.ELEMENT_NODE) {
-      const element = container as Element;
-      const referenceNode = element.childNodes[offset] ?? null;
+      return false;
+    })();
 
-      element.insertBefore(strong, referenceNode);
-      strong.setAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH, '0');
-    } else {
+    if (!insertionSucceeded) {
       return;
     }
 
@@ -645,6 +624,54 @@ export default class BoldInlineTool implements InlineTool {
     newRange.collapse(true);
 
     return newRange;
+  }
+
+  /**
+   * Insert a collapsed bold wrapper when the caret resides inside a text node
+   *
+   * @param text - Text node containing the caret
+   * @param strong - Strong element to insert
+   * @param offset - Caret offset within the text node
+   * @returns true when insertion succeeded
+   */
+  private insertCollapsedBoldIntoText(text: Text, strong: HTMLElement, offset: number): boolean {
+    const textNode = text;
+    const parent = textNode.parentNode;
+
+    if (!parent) {
+      return false;
+    }
+
+    const content = textNode.textContent ?? '';
+    const before = content.slice(0, offset);
+    const after = content.slice(offset);
+
+    textNode.textContent = before;
+
+    const afterNode = after.length ? document.createTextNode(after) : null;
+
+    if (afterNode) {
+      parent.insertBefore(afterNode, textNode.nextSibling);
+    }
+
+    parent.insertBefore(strong, afterNode ?? textNode.nextSibling);
+    strong.setAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH, before.length.toString());
+
+    return true;
+  }
+
+  /**
+   * Insert a collapsed bold wrapper directly into an element container
+   *
+   * @param element - Container element
+   * @param strong - Strong element to insert
+   * @param offset - Index at which to insert the strong element
+   */
+  private insertCollapsedBoldIntoElement(element: Element, strong: HTMLElement, offset: number): void {
+    const referenceNode = element.childNodes[offset] ?? null;
+
+    element.insertBefore(strong, referenceNode);
+    strong.setAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH, '0');
   }
 
   /**
@@ -984,37 +1011,55 @@ export default class BoldInlineTool implements InlineTool {
     const container = range.startContainer;
 
     if (container.nodeType === Node.TEXT_NODE) {
-      const textNode = container as Text;
-      const textLength = textNode.textContent?.length ?? 0;
-      const previous = textNode.previousSibling;
-
-      if (range.startOffset === 0 && BoldInlineTool.isBoldElement(previous)) {
-        return previous as HTMLElement;
-      }
-
-      if (range.startOffset !== textLength) {
-        return null;
-      }
-
-      const next = textNode.nextSibling;
-
-      return BoldInlineTool.isBoldElement(next) ? next as HTMLElement : null;
+      return BoldInlineTool.getBoldAdjacentToText(range, container as Text);
     }
 
     if (container.nodeType === Node.ELEMENT_NODE) {
-      const element = container as Element;
-      const previous = range.startOffset > 0 ? element.childNodes[range.startOffset - 1] ?? null : null;
-
-      if (BoldInlineTool.isBoldElement(previous)) {
-        return previous as HTMLElement;
-      }
-
-      const next = element.childNodes[range.startOffset] ?? null;
-
-      return BoldInlineTool.isBoldElement(next) ? next as HTMLElement : null;
+      return BoldInlineTool.getBoldAdjacentToElement(range, container as Element);
     }
 
     return null;
+  }
+
+  /**
+   * Get bold element adjacent to a text node container
+   *
+   * @param range - Current collapsed range
+   * @param textNode - Text node hosting the caret
+   */
+  private static getBoldAdjacentToText(range: Range, textNode: Text): HTMLElement | null {
+    const textLength = textNode.textContent?.length ?? 0;
+    const previous = textNode.previousSibling;
+
+    if (range.startOffset === 0 && BoldInlineTool.isBoldElement(previous)) {
+      return previous as HTMLElement;
+    }
+
+    if (range.startOffset !== textLength) {
+      return null;
+    }
+
+    const next = textNode.nextSibling;
+
+    return BoldInlineTool.isBoldElement(next) ? next as HTMLElement : null;
+  }
+
+  /**
+   * Get bold element adjacent to an element container
+   *
+   * @param range - Current collapsed range
+   * @param element - Element containing the caret
+   */
+  private static getBoldAdjacentToElement(range: Range, element: Element): HTMLElement | null {
+    const previous = range.startOffset > 0 ? element.childNodes[range.startOffset - 1] ?? null : null;
+
+    if (BoldInlineTool.isBoldElement(previous)) {
+      return previous as HTMLElement;
+    }
+
+    const next = element.childNodes[range.startOffset] ?? null;
+
+    return BoldInlineTool.isBoldElement(next) ? next as HTMLElement : null;
   }
 
   /**
@@ -1059,19 +1104,49 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const element = range.startContainer as Element;
-    const beforeNode = range.startOffset > 0 ? element.childNodes[range.startOffset - 1] ?? null : null;
+    const movedAfterPrevious = BoldInlineTool.moveCaretAfterPreviousBold(selection, element, range.startOffset);
 
-    if (BoldInlineTool.isBoldElement(beforeNode)) {
-      const textNode = BoldInlineTool.ensureFollowingTextNode(beforeNode as Element, beforeNode.nextSibling);
-
-      if (textNode) {
-        BoldInlineTool.setCaret(selection, textNode, 0);
-
-        return true;
-      }
+    if (movedAfterPrevious) {
+      return true;
     }
 
-    const nextNode = element.childNodes[range.startOffset] ?? null;
+    return BoldInlineTool.moveCaretBeforeNextBold(selection, element, range.startOffset);
+  }
+
+  /**
+   * Move caret after the bold node that precedes the caret when possible
+   *
+   * @param selection - Current selection
+   * @param element - Container element
+   * @param offset - Caret offset within the container
+   */
+  private static moveCaretAfterPreviousBold(selection: Selection, element: Element, offset: number): boolean {
+    const beforeNode = offset > 0 ? element.childNodes[offset - 1] ?? null : null;
+
+    if (!BoldInlineTool.isBoldElement(beforeNode)) {
+      return false;
+    }
+
+    const textNode = BoldInlineTool.ensureFollowingTextNode(beforeNode as Element, beforeNode.nextSibling);
+
+    if (!textNode) {
+      return false;
+    }
+
+    BoldInlineTool.setCaret(selection, textNode, 0);
+
+    return true;
+  }
+
+  /**
+   * Move caret before the bold node that follows the caret, ensuring there's a text node to receive input
+   *
+   * @param selection - Current selection
+   * @param element - Container element
+   * @param offset - Caret offset within the container
+   */
+  private static moveCaretBeforeNextBold(selection: Selection, element: Element, offset: number): boolean {
+    const nextNode = element.childNodes[offset] ?? null;
 
     if (!BoldInlineTool.isBoldElement(nextNode)) {
       return false;
@@ -1079,13 +1154,13 @@ export default class BoldInlineTool implements InlineTool {
 
     const textNode = BoldInlineTool.ensureFollowingTextNode(nextNode as Element, nextNode.nextSibling);
 
-    if (textNode) {
-      BoldInlineTool.setCaret(selection, textNode, 0);
+    if (!textNode) {
+      BoldInlineTool.setCaretAfterNode(selection, nextNode);
 
       return true;
     }
 
-    BoldInlineTool.setCaretAfterNode(selection, nextNode);
+    BoldInlineTool.setCaret(selection, textNode, 0);
 
     return true;
   }
@@ -1226,56 +1301,31 @@ export default class BoldInlineTool implements InlineTool {
       }
 
       const shouldRemoveCurrentLength = currentText.length > allowedLength;
-
-      const newTextNodeAfterSplit: Text | null = (() => {
-        if (shouldRemoveCurrentLength) {
-          const preserved = currentText.slice(0, allowedLength);
-          const extra = currentText.slice(allowedLength);
-
-          boldEl.textContent = preserved;
-
-          const textNode = document.createTextNode(extra);
-
-          if (boldEl.parentNode) {
-            boldEl.parentNode.insertBefore(textNode, boldEl.nextSibling);
-
-            return textNode;
-          }
-        }
-
-        return null;
-      })();
+      const newTextNodeAfterSplit = shouldRemoveCurrentLength
+        ? BoldInlineTool.splitCollapsedBoldText(boldEl, allowedLength, currentText)
+        : null;
 
       const prevLengthAttr = boldEl.getAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
+      const prevLength = prevLengthAttr ? Number(prevLengthAttr) : NaN;
+      const prevNode = boldEl.previousSibling;
+      const previousTextNode = prevNode?.nodeType === Node.TEXT_NODE ? prevNode as Text : null;
+      const prevText = previousTextNode?.textContent ?? '';
+      const shouldRemovePrevLength = Boolean(
+        prevLengthAttr &&
+        Number.isFinite(prevLength) &&
+        previousTextNode &&
+        prevText.length > prevLength
+      );
 
-      const shouldRemovePrevLength = (() => {
-        if (!prevLengthAttr) {
-          return false;
-        }
-
-        const prevLength = Number(prevLengthAttr);
-        const prevNode = boldEl.previousSibling;
-
-        if (!prevNode || prevNode.nodeType !== Node.TEXT_NODE || !Number.isFinite(prevLength)) {
-          return false;
-        }
-
-        const prevText = prevNode.textContent ?? '';
-
-        if (prevText.length <= prevLength) {
-          return false;
-        }
-
+      if (shouldRemovePrevLength && previousTextNode) {
         const preservedPrev = prevText.slice(0, prevLength);
         const extraPrev = prevText.slice(prevLength);
 
-        prevNode.textContent = preservedPrev;
+        previousTextNode.textContent = preservedPrev;
         const extraNode = document.createTextNode(extraPrev);
 
         boldEl.parentNode?.insertBefore(extraNode, boldEl.nextSibling);
-
-        return true;
-      })();
+      }
 
       if (shouldRemovePrevLength) {
         boldEl.removeAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
@@ -1296,6 +1346,33 @@ export default class BoldInlineTool implements InlineTool {
         boldEl.removeAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH);
       }
     });
+  }
+
+  /**
+   * Split text content exceeding the allowed collapsed bold length and move the excess outside
+   *
+   * @param boldEl - Bold element hosting the collapsed selection
+   * @param allowedLength - Maximum allowed length for the collapsed bold
+   * @param currentText - Current text content inside the bold element
+   */
+  private static splitCollapsedBoldText(boldEl: HTMLElement, allowedLength: number, currentText: string): Text | null {
+    const targetBoldElement = boldEl;
+    const parent = targetBoldElement.parentNode;
+
+    if (!parent) {
+      return null;
+    }
+
+    const preserved = currentText.slice(0, allowedLength);
+    const extra = currentText.slice(allowedLength);
+
+    targetBoldElement.textContent = preserved;
+
+    const textNode = document.createTextNode(extra);
+
+    parent.insertBefore(textNode, targetBoldElement.nextSibling);
+
+    return textNode;
   }
 
   /**
@@ -1340,34 +1417,51 @@ export default class BoldInlineTool implements InlineTool {
    * @param boldElement - The bold element to exit from
    */
   private static exitCollapsedBold(selection: Selection, boldElement: HTMLElement): Range | undefined {
-    if (BoldInlineTool.isElementEmpty(boldElement)) {
-      const newRange = document.createRange();
-      const parent = boldElement.parentNode;
-
-      if (!parent) {
-        return;
-      }
-
-      newRange.setStartBefore(boldElement);
-      newRange.collapse(true);
-
-      parent.removeChild(boldElement);
-
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-
-      return newRange;
-    }
-
-    boldElement.setAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH, (boldElement.textContent?.length ?? 0).toString());
-    boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
-    boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE);
-
     const parent = boldElement.parentNode;
 
     if (!parent) {
       return;
     }
+
+    if (BoldInlineTool.isElementEmpty(boldElement)) {
+      return BoldInlineTool.removeEmptyBoldElement(selection, boldElement, parent);
+    }
+
+    return BoldInlineTool.exitCollapsedBoldWithContent(selection, boldElement, parent);
+  }
+
+  /**
+   * Remove an empty bold element and place the caret before its position
+   *
+   * @param selection - Current selection
+   * @param boldElement - Bold element to remove
+   * @param parent - Parent node that hosts the bold element
+   */
+  private static removeEmptyBoldElement(selection: Selection, boldElement: HTMLElement, parent: ParentNode): Range {
+    const newRange = document.createRange();
+
+    newRange.setStartBefore(boldElement);
+    newRange.collapse(true);
+
+    parent.removeChild(boldElement);
+
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+
+    return newRange;
+  }
+
+  /**
+   * Exit a collapsed bold state when the bold element still contains text
+   *
+   * @param selection - Current selection
+   * @param boldElement - Bold element currently wrapping the caret
+   * @param parent - Parent node that hosts the bold element
+   */
+  private static exitCollapsedBoldWithContent(selection: Selection, boldElement: HTMLElement, parent: ParentNode): Range {
+    boldElement.setAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH, (boldElement.textContent?.length ?? 0).toString());
+    boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
+    boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE);
 
     const initialNextSibling = boldElement.nextSibling;
     const needsNewNode = !initialNextSibling || initialNextSibling.nodeType !== Node.TEXT_NODE;
@@ -1377,12 +1471,10 @@ export default class BoldInlineTool implements InlineTool {
       parent.insertBefore(newNode, initialNextSibling);
     }
 
-    const nextSibling = newNode ?? initialNextSibling;
-
-    const textNode = nextSibling as Text;
+    const nextSibling = (newNode ?? initialNextSibling) as Text;
     const newRange = document.createRange();
 
-    newRange.setStart(textNode, 0);
+    newRange.setStart(nextSibling, 0);
     newRange.collapse(true);
 
     selection.removeAllRanges();
@@ -1400,32 +1492,52 @@ export default class BoldInlineTool implements InlineTool {
     const container = range.startContainer;
 
     if (container.nodeType === Node.TEXT_NODE) {
-      const textNode = container as Text;
-      const length = textNode.textContent?.length ?? 0;
-
-      if (range.startOffset === length) {
-        return BoldInlineTool.findBoldElement(textNode);
-      }
-
-      const previous = range.startOffset === 0 ? textNode.previousSibling : null;
-
-      if (previous?.nodeType === Node.ELEMENT_NODE && BoldInlineTool.isBoldTag(previous as Element)) {
-        return previous as HTMLElement;
-      }
-
-      return null;
+      return BoldInlineTool.getBoundaryBoldForText(range, container as Text);
     }
 
-    if (container.nodeType === Node.ELEMENT_NODE && range.startOffset > 0) {
-      const element = container as Element;
-      const previous = element.childNodes[range.startOffset - 1];
-
-      if (previous && previous.nodeType === Node.ELEMENT_NODE && BoldInlineTool.isBoldTag(previous as Element)) {
-        return previous as HTMLElement;
-      }
+    if (container.nodeType === Node.ELEMENT_NODE) {
+      return BoldInlineTool.getBoundaryBoldForElement(range, container as Element);
     }
 
     return null;
+  }
+
+  /**
+   * Get boundary bold when caret resides inside a text node
+   *
+   * @param range - Collapsed range
+   * @param textNode - Text container
+   */
+  private static getBoundaryBoldForText(range: Range, textNode: Text): HTMLElement | null {
+    const length = textNode.textContent?.length ?? 0;
+
+    if (range.startOffset === length) {
+      return BoldInlineTool.findBoldElement(textNode);
+    }
+
+    if (range.startOffset !== 0) {
+      return null;
+    }
+
+    const previous = textNode.previousSibling;
+
+    return BoldInlineTool.isBoldElement(previous) ? previous as HTMLElement : null;
+  }
+
+  /**
+   * Get boundary bold when caret container is an element
+   *
+   * @param range - Collapsed range
+   * @param element - Element container
+   */
+  private static getBoundaryBoldForElement(range: Range, element: Element): HTMLElement | null {
+    if (range.startOffset <= 0) {
+      return null;
+    }
+
+    const previous = element.childNodes[range.startOffset - 1];
+
+    return BoldInlineTool.isBoldElement(previous) ? previous as HTMLElement : null;
   }
 
   /**

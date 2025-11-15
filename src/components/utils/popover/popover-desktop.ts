@@ -83,26 +83,28 @@ export class PopoverDesktop extends PopoverAbstract {
       this.addSearch();
     }
 
-    if (params.flippable !== false) {
-      if (params.flipper !== undefined) {
-        params.flipper.deactivate();
-        params.flipper.removeOnFlip(this.onFlip);
-        this.flipper = params.flipper;
-      } else {
-        this.flipper = new Flipper({
-          items: this.flippableElements,
-          focusedItemClass: popoverItemCls.focused,
-          allowedKeys: [
-            keyCodes.TAB,
-            keyCodes.UP,
-            keyCodes.DOWN,
-            keyCodes.ENTER,
-          ],
-        });
-      }
-
-      this.flipper.onFlip(this.onFlip);
+    if (params.flippable === false) {
+      return;
     }
+
+    if (params.flipper !== undefined) {
+      params.flipper.deactivate();
+      params.flipper.removeOnFlip(this.onFlip);
+      this.flipper = params.flipper;
+    } else {
+      this.flipper = new Flipper({
+        items: this.flippableElements,
+        focusedItemClass: popoverItemCls.focused,
+        allowedKeys: [
+          keyCodes.TAB,
+          keyCodes.UP,
+          keyCodes.DOWN,
+          keyCodes.ENTER,
+        ],
+      });
+    }
+
+    this.flipper.onFlip(this.onFlip);
   }
 
   /**
@@ -370,21 +372,17 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   protected get flippableElements(): HTMLElement[] {
     const result = this.items.flatMap(item => {
-      if (item instanceof PopoverItemDefault) {
-        if (item.isDisabled) {
-          return [];
-        }
-
-        const element = item.getElement();
-
-        return element ? [ element ] : [];
+      if (!(item instanceof PopoverItemDefault)) {
+        return item instanceof PopoverItemHtml ? item.getControls() : [];
       }
 
-      if (item instanceof PopoverItemHtml) {
-        return item.getControls();
+      if (item.isDisabled) {
+        return [];
       }
 
-      return [];
+      const element = item.getElement();
+
+      return element ? [ element ] : [];
     }).filter((item): item is HTMLElement => item !== undefined && item !== null);
 
     return result;

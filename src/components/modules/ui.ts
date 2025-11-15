@@ -158,36 +158,40 @@ export default class UI extends Module<UINodes> {
     /**
      * Prepare components based on read-only state
      */
-    if (!readOnlyEnabled) {
-      const bindListeners = (): void => {
-        /**
-         * Bind events for the UI elements
-         */
-        this.bindReadOnlySensitiveListeners();
-      };
-
-      /**
-       * Ensure listeners are attached immediately for interactive use.
-       */
-      bindListeners();
-
-      const idleCallback = window.requestIdleCallback;
-
-      if (typeof idleCallback === 'function') {
-        /**
-         * Re-bind on idle to preserve historical behavior when additional nodes appear later.
-         */
-        idleCallback(bindListeners, {
-          timeout: 2000,
-        });
-      }
-    } else {
+    if (readOnlyEnabled) {
       /**
        * Unbind all events
        *
        */
       this.unbindReadOnlySensitiveListeners();
+
+      return;
     }
+
+    const bindListeners = (): void => {
+      /**
+       * Bind events for the UI elements
+       */
+      this.bindReadOnlySensitiveListeners();
+    };
+
+    /**
+     * Ensure listeners are attached immediately for interactive use.
+     */
+    bindListeners();
+
+    const idleCallback = window.requestIdleCallback;
+
+    if (typeof idleCallback !== 'function') {
+      return;
+    }
+
+    /**
+     * Re-bind on idle to preserve historical behavior when additional nodes appear later.
+     */
+    idleCallback(bindListeners, {
+      timeout: 2000,
+    });
   }
 
   /**
@@ -592,29 +596,33 @@ export default class UI extends Module<UINodes> {
      * If any block selected and selection doesn't exists on the page (that means no other editable element is focused),
      * remove selected blocks
      */
-    if (BlockSelection.anyBlockSelected && (!selectionExists || selectionCollapsed === true)) {
-      const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+    const shouldRemoveSelection = BlockSelection.anyBlockSelected && (!selectionExists || selectionCollapsed === true);
 
-      if (selectionPositionIndex === undefined) {
-        return;
-      }
-
-      const newBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
-
-      Caret.setToBlock(newBlock, Caret.positions.START);
-
-      /** Clear selection */
-      BlockSelection.clearSelection(event);
-
-      /**
-       * Stop propagations
-       * Manipulation with BlockSelections is handled in global backspacePress because they may occur
-       * with CMD+A or RectangleSelection and they can be handled on document event
-       */
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
+    if (!shouldRemoveSelection) {
+      return;
     }
+
+    const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+
+    if (selectionPositionIndex === undefined) {
+      return;
+    }
+
+    const newBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
+
+    Caret.setToBlock(newBlock, Caret.positions.START);
+
+    /** Clear selection */
+    BlockSelection.clearSelection(event);
+
+    /**
+     * Stop propagations
+     * Manipulation with BlockSelections is handled in global backspacePress because they may occur
+     * with CMD+A or RectangleSelection and they can be handled on document event
+     */
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
   }
 
   /**
@@ -631,18 +639,25 @@ export default class UI extends Module<UINodes> {
 
     if (this.Editor.Toolbar.toolbox.opened) {
       this.Editor.Toolbar.toolbox.close();
-      const { currentBlock } = this.Editor.BlockManager;
+      this.Editor.BlockManager.currentBlock &&
+        this.Editor.Caret.setToBlock(this.Editor.BlockManager.currentBlock, this.Editor.Caret.positions.END);
 
-      if (currentBlock) {
-        this.Editor.Caret.setToBlock(currentBlock, this.Editor.Caret.positions.END);
-      }
-    } else if (this.Editor.BlockSettings.opened) {
-      this.Editor.BlockSettings.close();
-    } else if (this.Editor.InlineToolbar.opened) {
-      this.Editor.InlineToolbar.close();
-    } else {
-      this.Editor.Toolbar.close();
+      return;
     }
+
+    if (this.Editor.BlockSettings.opened) {
+      this.Editor.BlockSettings.close();
+
+      return;
+    }
+
+    if (this.Editor.InlineToolbar.opened) {
+      this.Editor.InlineToolbar.close();
+
+      return;
+    }
+
+    this.Editor.Toolbar.close();
   }
 
   /**
@@ -733,19 +748,14 @@ export default class UI extends Module<UINodes> {
     const clickedInsideToolbar = this.Editor.Toolbar.nodes.wrapper?.contains(target) ?? false;
     const clickedInsideEditorSurface = clickedInsideOfEditor || clickedInsideToolbar;
 
-    if (!clickedInsideEditorSurface) {
+    const shouldClearCurrentBlock = !clickedInsideEditorSurface || (!clickedInsideRedactor && !clickedInsideToolbar);
+
+    if (shouldClearCurrentBlock) {
       /**
        * Clear pointer on BlockManager
        *
        * Current page might contain several instances
        * Click between instances MUST clear focus, pointers and close toolbars
-       */
-      this.Editor.BlockManager.unsetCurrentBlock();
-      this.Editor.Toolbar.close();
-    } else if (!clickedInsideRedactor && !clickedInsideToolbar) {
-      /**
-       * Clicks inside the holder but outside of the redactor should also clear any focused blocks
-       * and hide the Toolbar.
        */
       this.Editor.BlockManager.unsetCurrentBlock();
       this.Editor.Toolbar.close();
@@ -761,14 +771,16 @@ export default class UI extends Module<UINodes> {
     const isClickedInsideBlockSettingsToggler = this.Editor.Toolbar.nodes.settingsToggler?.contains(target);
     const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler;
 
-    if (this.Editor.BlockSettings.opened && !doNotProcess) {
+    const shouldCloseBlockSettings = this.Editor.BlockSettings.opened && !doNotProcess;
+
+    if (shouldCloseBlockSettings) {
       this.Editor.BlockSettings.close();
+    }
 
-      if (clickedInsideRedactor) {
-        const clickedBlock = this.Editor.BlockManager.getBlockByChildNode(target);
+    if (shouldCloseBlockSettings && clickedInsideRedactor) {
+      const clickedBlock = this.Editor.BlockManager.getBlockByChildNode(target);
 
-        this.Editor.Toolbar.moveAndOpen(clickedBlock);
-      }
+      this.Editor.Toolbar.moveAndOpen(clickedBlock);
     }
 
     /**
@@ -858,25 +870,26 @@ export default class UI extends Module<UINodes> {
      */
     const element = event.target as Element;
     const ctrlKey = event.metaKey || event.ctrlKey;
+    const shouldOpenAnchorInNewTab = $.isAnchor(element) && ctrlKey;
 
-    if ($.isAnchor(element) && ctrlKey) {
-      event.stopImmediatePropagation();
-      event.stopPropagation();
-
-      const href = element.getAttribute('href');
-
-      if (!href) {
-        return;
-      }
-
-      const validUrl = _.getValidUrl(href);
-
-      _.openTab(validUrl);
+    if (!shouldOpenAnchorInNewTab) {
+      this.processBottomZoneClick(event);
 
       return;
     }
 
-    this.processBottomZoneClick(event);
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+
+    const href = element.getAttribute('href');
+
+    if (!href) {
+      return;
+    }
+
+    const validUrl = _.getValidUrl(href);
+
+    _.openTab(validUrl);
   }
 
   /**
@@ -904,28 +917,30 @@ export default class UI extends Module<UINodes> {
        */
       lastBlockBottomCoord < clickedCoord;
 
-    if (isClickedBottom) {
-      event.stopImmediatePropagation();
-      event.stopPropagation();
-
-      const { BlockManager, Caret, Toolbar } = this.Editor;
-
-      /**
-       * Insert a default-block at the bottom if:
-       * - last-block is not a default-block (Text)
-       *   to prevent unnecessary tree-walking on Tools with many nodes (for ex. Table)
-       * - Or, default-block is not empty
-       */
-      if (!BlockManager.lastBlock?.tool.isDefault || !BlockManager.lastBlock?.isEmpty) {
-        BlockManager.insertAtEnd();
-      }
-
-      /**
-       * Set the caret and toolbar to empty Block
-       */
-      Caret.setToTheLastBlock();
-      Toolbar.moveAndOpen(BlockManager.lastBlock);
+    if (!isClickedBottom) {
+      return;
     }
+
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+
+    const { BlockManager, Caret, Toolbar } = this.Editor;
+
+    /**
+     * Insert a default-block at the bottom if:
+     * - last-block is not a default-block (Text)
+     *   to prevent unnecessary tree-walking on Tools with many nodes (for ex. Table)
+     * - Or, default-block is not empty
+     */
+    if (!BlockManager.lastBlock?.tool.isDefault || !BlockManager.lastBlock?.isEmpty) {
+      BlockManager.insertAtEnd();
+    }
+
+    /**
+     * Set the caret and toolbar to empty Block
+     */
+    Caret.setToTheLastBlock();
+    Toolbar.moveAndOpen(BlockManager.lastBlock);
   }
 
   /**
@@ -936,26 +951,24 @@ export default class UI extends Module<UINodes> {
     const { CrossBlockSelection, BlockSelection } = this.Editor;
     const focusedElement = Selection.anchorElement;
 
-    if (CrossBlockSelection.isCrossBlockSelectionStarted) {
+    if (CrossBlockSelection.isCrossBlockSelectionStarted && BlockSelection.anyBlockSelected) {
       // Removes all ranges when any Block is selected
-      if (BlockSelection.anyBlockSelected) {
-        Selection.get()?.removeAllRanges();
-      }
+      Selection.get()?.removeAllRanges();
     }
 
     /**
      * Usual clicks on some controls, for example, Block Tunes Toggler
      */
-    if (!focusedElement) {
+    if (!focusedElement && !Selection.range) {
       /**
        * If there is no selected range, close inline toolbar
        *
        * @todo Make this method more straightforward
        */
-      if (!Selection.range) {
-        this.Editor.InlineToolbar.close();
-      }
+      this.Editor.InlineToolbar.close();
+    }
 
+    if (!focusedElement) {
       return;
     }
 
@@ -967,24 +980,23 @@ export default class UI extends Module<UINodes> {
     const closestBlock = focusedElement.closest(`.${Block.CSS.content}`);
     const clickedOutsideBlockContent = closestBlock === null || (closestBlock.closest(`.${Selection.CSS.editorWrapper}`) !== this.nodes.wrapper);
 
-    if (clickedOutsideBlockContent) {
+    const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).dataset.inlineToolbar === 'true';
+    const shouldCloseInlineToolbar = clickedOutsideBlockContent && !this.Editor.InlineToolbar.containsNode(focusedElement);
+
+    if (shouldCloseInlineToolbar) {
       /**
        * If new selection is not on Inline Toolbar, we need to close it
        */
-      if (!this.Editor.InlineToolbar.containsNode(focusedElement)) {
-        this.Editor.InlineToolbar.close();
-      }
+      this.Editor.InlineToolbar.close();
+    }
 
+    if (clickedOutsideBlockContent && !inlineToolbarEnabledForExternalTool) {
       /**
        * Case when we click on external tool elements,
        * for example some Block Tune element.
        * If this external content editable element has data-inline-toolbar="true"
        */
-      const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).dataset.inlineToolbar === 'true';
-
-      if (!inlineToolbarEnabledForExternalTool) {
-        return;
-      }
+      return;
     }
 
     /**

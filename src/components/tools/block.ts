@@ -100,10 +100,10 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * config. This is made to allow user to override default tool's toolbox representation (single/multiple entries)
    */
   public get toolbox(): ToolboxConfigEntry[] | undefined {
-    const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox] as ToolboxConfig;
+    const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox] as ToolboxConfig | undefined;
     const userToolboxSettings = this.config[UserSettings.Toolbox];
 
-    if (_.isEmpty(toolToolboxSettings)) {
+    if (!toolToolboxSettings || _.isEmpty(toolToolboxSettings)) {
       return;
     }
     if (userToolboxSettings === false) {
@@ -112,35 +112,18 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
     /**
      * Return tool's toolbox settings if user settings are not defined
      */
-    if (!userToolboxSettings) {
+    if (userToolboxSettings === undefined || userToolboxSettings === null) {
       return Array.isArray(toolToolboxSettings) ? toolToolboxSettings : [ toolToolboxSettings ];
     }
 
     /**
      * Otherwise merge user settings with tool's settings
      */
-    if (Array.isArray(toolToolboxSettings)) {
-      if (Array.isArray(userToolboxSettings)) {
-        return userToolboxSettings.map((item, i) => {
-          const toolToolboxEntry = toolToolboxSettings[i];
-
-          if (toolToolboxEntry) {
-            return {
-              ...toolToolboxEntry,
-              ...item,
-            };
-          }
-
-          return item;
-        });
-      }
-
+    if (!Array.isArray(userToolboxSettings) && Array.isArray(toolToolboxSettings)) {
       return [ userToolboxSettings ];
-    } else {
-      if (Array.isArray(userToolboxSettings)) {
-        return userToolboxSettings;
-      }
+    }
 
+    if (!Array.isArray(userToolboxSettings)) {
       return [
         {
           ...toolToolboxSettings,
@@ -148,6 +131,23 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
         },
       ];
     }
+
+    if (!Array.isArray(toolToolboxSettings)) {
+      return userToolboxSettings;
+    }
+
+    return userToolboxSettings.map((item, i) => {
+      const toolToolboxEntry = toolToolboxSettings[i];
+
+      if (toolToolboxEntry) {
+        return {
+          ...toolToolboxEntry,
+          ...item,
+        };
+      }
+
+      return item;
+    });
   }
 
   /**

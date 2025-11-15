@@ -254,28 +254,29 @@ export default class Paste extends Module {
       return;
     }
 
-    if (dataToInsert.length === 1) {
-      const [ singleItem ] = dataToInsert;
+    if (dataToInsert.length > 1) {
+      const isCurrentBlockDefault = Boolean(BlockManager.currentBlock?.tool.isDefault);
+      const needToReplaceCurrentBlock = isCurrentBlockDefault && Boolean(BlockManager.currentBlock?.isEmpty);
 
-      if (!singleItem.isBlock) {
-        await this.processInlinePaste(singleItem);
-      } else {
-        await this.processSingleBlock(singleItem);
-      }
+      dataToInsert.forEach((content, index) => {
+        this.insertBlock(content, index === 0 && needToReplaceCurrentBlock);
+      });
+
+      BlockManager.currentBlock &&
+        Caret.setToBlock(BlockManager.currentBlock, Caret.positions.END);
 
       return;
     }
 
-    const isCurrentBlockDefault = Boolean(BlockManager.currentBlock?.tool.isDefault);
-    const needToReplaceCurrentBlock = isCurrentBlockDefault && Boolean(BlockManager.currentBlock?.isEmpty);
+    const [ singleItem ] = dataToInsert;
 
-    dataToInsert.forEach((content, index) => {
-      this.insertBlock(content, index === 0 && needToReplaceCurrentBlock);
-    });
+    if (singleItem.isBlock) {
+      await this.processSingleBlock(singleItem);
 
-    if (BlockManager.currentBlock) {
-      Caret.setToBlock(BlockManager.currentBlock, Caret.positions.END);
+      return;
     }
+
+    await this.processInlinePaste(singleItem);
   }
 
   /**
@@ -696,23 +697,23 @@ export default class Paste extends Module {
 
         const customConfig = Object.assign({}, toolTags, tool.baseSanitizeConfig);
         const sanitizedContent = (() => {
-          if (content.tagName.toLowerCase() === 'table') {
-            const cleanTableHTML = clean(content.outerHTML, customConfig);
-            const tmpWrapper = $.make('div', undefined, {
-              innerHTML: cleanTableHTML,
-            });
-            const firstChild = tmpWrapper.firstChild;
+          if (content.tagName.toLowerCase() !== 'table') {
+            content.innerHTML = clean(content.innerHTML, customConfig);
 
-            if (!firstChild || !(firstChild instanceof HTMLElement)) {
-              return null;
-            }
-
-            return firstChild;
+            return content;
           }
 
-          content.innerHTML = clean(content.innerHTML, customConfig);
+          const cleanTableHTML = clean(content.outerHTML, customConfig);
+          const tmpWrapper = $.make('div', undefined, {
+            innerHTML: cleanTableHTML,
+          });
+          const firstChild = tmpWrapper.firstChild;
 
-          return content;
+          if (!firstChild || !(firstChild instanceof HTMLElement)) {
+            return null;
+          }
+
+          return firstChild;
         })();
 
         if (!sanitizedContent) {
@@ -817,20 +818,24 @@ export default class Paste extends Module {
     const currentBlockIsDefault = BlockManager.currentBlock?.tool.isDefault ?? false;
     const textContent = content.textContent;
 
-    if (currentBlockIsDefault && textContent !== null && textContent.length < Paste.PATTERN_PROCESSING_MAX_LENGTH) {
-      const blockData = await this.processPattern(textContent);
+    const canProcessPattern = currentBlockIsDefault &&
+      textContent !== null &&
+      textContent.length < Paste.PATTERN_PROCESSING_MAX_LENGTH;
 
-      if (blockData) {
-        const needToReplaceCurrentBlock = BlockManager.currentBlock &&
-          BlockManager.currentBlock.tool.isDefault &&
-          BlockManager.currentBlock.isEmpty;
+    const blockData = canProcessPattern && textContent !== null
+      ? await this.processPattern(textContent)
+      : undefined;
 
-        const insertedBlock = BlockManager.paste(blockData.tool, blockData.event, needToReplaceCurrentBlock);
+    if (blockData) {
+      const needToReplaceCurrentBlock = BlockManager.currentBlock &&
+        BlockManager.currentBlock.tool.isDefault &&
+        BlockManager.currentBlock.isEmpty;
 
-        Caret.setToBlock(insertedBlock, Caret.positions.END);
+      const insertedBlock = BlockManager.paste(blockData.tool, blockData.event, needToReplaceCurrentBlock);
 
-        return;
-      }
+      Caret.setToBlock(insertedBlock, Caret.positions.END);
+
+      return;
     }
 
     /** If there is no pattern substitute - insert string as it is */
@@ -1001,18 +1006,20 @@ export default class Paste extends Module {
           remainingNodes: nodes,
         };
 
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const elementNodeProcessingResult = this.processElementNode(node, remainingNodes, destNode);
-
-        if (elementNodeProcessingResult) {
-          return elementNodeProcessingResult;
-        }
-      } else if (node.nodeType === Node.TEXT_NODE) {
+      if (node.nodeType === Node.TEXT_NODE) {
         destNode.appendChild(node);
 
         return [...remainingNodes, destNode];
-      } else {
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) {
         return [...remainingNodes, destNode];
+      }
+
+      const elementNodeProcessingResult = this.processElementNode(node, remainingNodes, destNode);
+
+      if (elementNodeProcessingResult) {
+        return elementNodeProcessingResult;
       }
 
       const processedChildNodes = Array.from(node.childNodes).reduce(reducer, []);
@@ -1035,4 +1042,3 @@ export default class Paste extends Module {
     }) as PasteEvent;
   }
 }
-

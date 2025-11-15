@@ -25,29 +25,7 @@ export default class BlockEvents extends Module {
      */
     this.beforeKeydownProcessing(event);
 
-    const { BlockSelection, BlockManager, Caret } = this.Editor;
-    const isRemoveKey = event.keyCode === _.keyCodes.BACKSPACE || event.keyCode === _.keyCodes.DELETE;
-    const selectionExists = SelectionUtils.isSelectionExists;
-    const selectionCollapsed = SelectionUtils.isCollapsed === true;
-    const shouldHandleSelectionDeletion = isRemoveKey &&
-      BlockSelection.anyBlockSelected &&
-      (!selectionExists || selectionCollapsed);
-
-    if (shouldHandleSelectionDeletion) {
-      const selectionPositionIndex = BlockManager.removeSelectedBlocks();
-
-      if (selectionPositionIndex !== undefined) {
-        const insertedBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
-
-        Caret.setToBlock(insertedBlock, Caret.positions.START);
-      }
-
-      BlockSelection.clearSelection(event);
-
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      event.stopPropagation();
-
+    if (this.handleSelectedBlocksDeletion(event)) {
       return;
     }
 
@@ -102,6 +80,42 @@ export default class BlockEvents extends Module {
   }
 
   /**
+   * Tries to delete selected blocks when remove keys pressed.
+   *
+   * @param event - keyboard event
+   * @returns true if event was handled
+   */
+  private handleSelectedBlocksDeletion(event: KeyboardEvent): boolean {
+    const { BlockSelection, BlockManager, Caret } = this.Editor;
+    const isRemoveKey = event.keyCode === _.keyCodes.BACKSPACE || event.keyCode === _.keyCodes.DELETE;
+    const selectionExists = SelectionUtils.isSelectionExists;
+    const selectionCollapsed = SelectionUtils.isCollapsed === true;
+    const shouldHandleSelectionDeletion = isRemoveKey &&
+      BlockSelection.anyBlockSelected &&
+      (!selectionExists || selectionCollapsed);
+
+    if (!shouldHandleSelectionDeletion) {
+      return false;
+    }
+
+    const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+
+    if (selectionPositionIndex !== undefined) {
+      const insertedBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
+
+      Caret.setToBlock(insertedBlock, Caret.positions.START);
+    }
+
+    BlockSelection.clearSelection(event);
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+
+    return true;
+  }
+
+  /**
    * Fires on keydown before event processing
    *
    * @param {KeyboardEvent} event - keydown
@@ -119,20 +133,24 @@ export default class BlockEvents extends Module {
      *  - close Toolbar
      *  - clear block highlighting
      */
-    if (_.isPrintableKey(event.keyCode)) {
-      this.Editor.Toolbar.close();
-
-      /**
-       * Allow to use shortcuts with selected blocks
-       *
-       * @type {boolean}
-       */
-      const isShortcut = event.ctrlKey || event.metaKey || event.altKey || event.shiftKey;
-
-      if (!isShortcut) {
-        this.Editor.BlockSelection.clearSelection(event);
-      }
+    if (!_.isPrintableKey(event.keyCode)) {
+      return;
     }
+
+    this.Editor.Toolbar.close();
+
+    /**
+     * Allow to use shortcuts with selected blocks
+     *
+     * @type {boolean}
+     */
+    const isShortcut = event.ctrlKey || event.metaKey || event.altKey || event.shiftKey;
+
+    if (isShortcut) {
+      return;
+    }
+
+    this.Editor.BlockSelection.clearSelection(event);
   }
 
   /**
@@ -448,11 +466,7 @@ export default class BlockEvents extends Module {
 
       const newCurrentBlock = BlockManager.currentBlock;
 
-      if (newCurrentBlock === undefined) {
-        return;
-      }
-
-      Caret.setToBlock(newCurrentBlock, Caret.positions.END);
+      newCurrentBlock && Caret.setToBlock(newCurrentBlock, Caret.positions.END);
 
       return;
     }
@@ -610,13 +624,15 @@ export default class BlockEvents extends Module {
     const caretAtEnd = currentBlock?.currentInput !== undefined ? caretUtils.isCaretAtEndOfInput(currentBlock.currentInput) : undefined;
     const shouldEnableCBS = caretAtEnd || this.Editor.BlockSelection.anyBlockSelected;
 
-    if (event.shiftKey && event.keyCode === _.keyCodes.DOWN) {
-      if (shouldEnableCBS) {
-        this.Editor.CrossBlockSelection.toggleBlockSelectedState();
+    const isShiftDownKey = event.shiftKey && event.keyCode === _.keyCodes.DOWN;
 
-        return;
-      }
+    if (isShiftDownKey && shouldEnableCBS) {
+      this.Editor.CrossBlockSelection.toggleBlockSelectedState();
 
+      return;
+    }
+
+    if (isShiftDownKey) {
       void this.Editor.InlineToolbar.tryToShow();
     }
 
@@ -659,11 +675,13 @@ export default class BlockEvents extends Module {
      * Arrows might be handled on toolbars by flipper
      * Check for Flipper.usedKeys to allow navigate by UP and disallow by LEFT
      */
-    if (this.Editor.UI.someToolbarOpened) {
-      if (Flipper.usedKeys.includes(event.keyCode) && (!event.shiftKey || event.keyCode === _.keyCodes.TAB)) {
-        return;
-      }
+    const toolbarOpened = this.Editor.UI.someToolbarOpened;
 
+    if (toolbarOpened && Flipper.usedKeys.includes(event.keyCode) && (!event.shiftKey || event.keyCode === _.keyCodes.TAB)) {
+      return;
+    }
+
+    if (toolbarOpened) {
       this.Editor.UI.closeAllToolbars();
     }
 
@@ -678,13 +696,15 @@ export default class BlockEvents extends Module {
     const caretAtStart = currentBlock?.currentInput !== undefined ? caretUtils.isCaretAtStartOfInput(currentBlock.currentInput) : undefined;
     const shouldEnableCBS = caretAtStart || this.Editor.BlockSelection.anyBlockSelected;
 
-    if (event.shiftKey && event.keyCode === _.keyCodes.UP) {
-      if (shouldEnableCBS) {
-        this.Editor.CrossBlockSelection.toggleBlockSelectedState(false);
+    const isShiftUpKey = event.shiftKey && event.keyCode === _.keyCodes.UP;
 
-        return;
-      }
+    if (isShiftUpKey && shouldEnableCBS) {
+      this.Editor.CrossBlockSelection.toggleBlockSelectedState(false);
 
+      return;
+    }
+
+    if (isShiftUpKey) {
       void this.Editor.InlineToolbar.tryToShow();
     }
 

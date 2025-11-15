@@ -283,24 +283,28 @@ export default class Tools extends Module {
   private toolPrepareMethodSuccess(data: { toolName: string }): void {
     const tool = this.getFactory().get(data.toolName);
 
-    if (tool.isInline()) {
-      /**
-       * Some Tools validation
-       */
-      const inlineToolRequiredMethods = [ 'render' ];
-      const notImplementedMethods = tool.getMissingMethods(inlineToolRequiredMethods);
+    if (!tool.isInline()) {
+      this.toolsAvailable.set(tool.name, tool);
 
-      if (notImplementedMethods.length) {
-        _.log(
-          `Incorrect Inline Tool: ${tool.name}. Some of required methods is not implemented %o`,
-          'warn',
-          notImplementedMethods
-        );
+      return;
+    }
 
-        this.toolsUnavailable.set(tool.name, tool);
+    /**
+     * Some Tools validation
+     */
+    const inlineToolRequiredMethods = [ 'render' ];
+    const notImplementedMethods = tool.getMissingMethods(inlineToolRequiredMethods);
 
-        return;
-      }
+    if (notImplementedMethods.length) {
+      _.log(
+        `Incorrect Inline Tool: ${tool.name}. Some of required methods is not implemented %o`,
+        'warn',
+        notImplementedMethods
+      );
+
+      this.toolsUnavailable.set(tool.name, tool);
+
+      return;
     }
 
     this.toolsAvailable.set(tool.name, tool);

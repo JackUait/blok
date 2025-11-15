@@ -269,17 +269,8 @@ export default class Flipper {
   private onKeyDown = (event: KeyboardEvent): void => {
     const target = event.target as HTMLElement | null;
 
-    if (target) {
-      const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
-      const shouldHandleNativeInput = target.dataset?.flipperTabTarget === 'true' && event.key === 'Tab';
-      const isContentEditable = target.isContentEditable;
-      const isInlineToolInput = target.closest('[data-link-tool-input-opened="true"]') !== null;
-
-      const shouldSkipContentEditable = isContentEditable && !this.handleContentEditableTargets;
-
-      if ((isNativeInput && !shouldHandleNativeInput) || shouldSkipContentEditable || isInlineToolInput) {
-        return;
-      }
+    if (this.shouldSkipTarget(target, event)) {
+      return;
     }
 
     const keyCode = this.getKeyCode(event);
@@ -429,5 +420,26 @@ export default class Flipper {
     }
 
     this.flipCallbacks.forEach(cb => cb());
+  }
+
+  /**
+   * Determine if keyboard events coming from a target should be skipped
+   *
+   * @param target - event target element
+   * @param event - keyboard event being handled
+   */
+  private shouldSkipTarget(target: HTMLElement | null, event: KeyboardEvent): boolean {
+    if (!target) {
+      return false;
+    }
+
+    const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+    const shouldHandleNativeInput = target.dataset?.flipperTabTarget === 'true' && event.key === 'Tab';
+    const isContentEditable = target.isContentEditable;
+    const isInlineToolInput = target.closest('[data-link-tool-input-opened="true"]') !== null;
+
+    const shouldSkipContentEditable = isContentEditable && !this.handleContentEditableTargets;
+
+    return (isNativeInput && !shouldHandleNativeInput) || shouldSkipContentEditable || isInlineToolInput;
   }
 }

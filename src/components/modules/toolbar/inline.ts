@@ -383,15 +383,15 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     const blockHolder = currentBlock.holder;
+    const holderContenteditable = blockHolder &&
+      (
+        blockHolder.matches(contenteditableSelector)
+          ? blockHolder
+          : blockHolder.closest(contenteditableSelector)
+      );
 
-    if (blockHolder) {
-      const holderContenteditable = blockHolder.matches(contenteditableSelector)
-        ? blockHolder
-        : blockHolder.closest(contenteditableSelector);
-
-      if (holderContenteditable) {
-        return true;
-      }
+    if (holderContenteditable) {
+      return true;
     }
 
     if (this.Editor.ReadOnly.isEnabled) {
@@ -555,7 +555,11 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
     if ($.isElement(item)) {
       this.processElementItem(item, instance, commonPopoverItemParams, popoverItems);
-    } else if (item.type === PopoverItemType.Html) {
+
+      return;
+    }
+
+    if (item.type === PopoverItemType.Html) {
       /**
        * Actual way to add custom html elements to the Inline Toolbar
        */
@@ -564,16 +568,22 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
         ...item,
         type: PopoverItemType.Html,
       });
-    } else if (item.type === PopoverItemType.Separator) {
+
+      return;
+    }
+
+    if (item.type === PopoverItemType.Separator) {
       /**
        * Separator item
        */
       popoverItems.push({
         type: PopoverItemType.Separator,
       });
-    } else {
-      this.processDefaultItem(item, commonPopoverItemParams, popoverItems, index);
+
+      return;
     }
+
+    this.processDefaultItem(item, commonPopoverItemParams, popoverItems, index);
   }
 
   /**

@@ -121,20 +121,22 @@ export default class EditorJS {
     };
 
     fieldsToExport.forEach((field) => {
-      if (field === 'configuration') {
-        const coreConfiguration = (editor as unknown as { configuration?: EditorConfig|string|undefined }).configuration;
-        const configurationToExport = _.isObject(this.initialConfiguration)
-          ? this.initialConfiguration
-          : coreConfiguration ?? this.initialConfiguration;
-
-        if (configurationToExport !== undefined) {
-          (this as Record<string, unknown>)[field] = configurationToExport as EditorConfig|string;
-        }
+      if (field !== 'configuration') {
+        (this as Record<string, unknown>)[field] = (editor as unknown as Record<string, unknown>)[field];
 
         return;
       }
 
-      (this as Record<string, unknown>)[field] = (editor as unknown as Record<string, unknown>)[field];
+      const coreConfiguration = (editor as unknown as { configuration?: EditorConfig|string|undefined }).configuration;
+      const configurationToExport = _.isObject(this.initialConfiguration)
+        ? this.initialConfiguration
+        : coreConfiguration ?? this.initialConfiguration;
+
+      if (configurationToExport === undefined) {
+        return;
+      }
+
+      (this as Record<string, unknown>)[field] = configurationToExport as EditorConfig|string;
     });
 
     this.destroy = destroy;

@@ -35,20 +35,20 @@ export default class SaverAPI extends Module {
 
     const savedData = await this.Editor.Saver.save();
 
-    if (savedData === undefined) {
-      const lastError = this.Editor.Saver.getLastSaveError?.();
-
-      if (lastError instanceof Error) {
-        throw lastError;
-      }
-
-      const errorMessage = lastError !== undefined
-        ? String(lastError)
-        : 'Editor\'s content can not be saved because collecting data failed';
-
-      throw new Error(errorMessage);
+    if (savedData !== undefined) {
+      return savedData;
     }
 
-    return savedData;
+    const lastError = this.Editor.Saver.getLastSaveError?.();
+
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+
+    const errorMessage = lastError !== undefined
+      ? String(lastError)
+      : 'Editor\'s content can not be saved because collecting data failed';
+
+    throw new Error(errorMessage);
   }
 }

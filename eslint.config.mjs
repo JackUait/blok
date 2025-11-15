@@ -236,6 +236,23 @@ export default [
       globalThis: true,
     },
     rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'IfStatement > BlockStatement > IfStatement',
+          message:
+            'Nested if statements are not allowed. Consider using early returns or combining conditions.',
+        },
+        {
+          selector: 'IfStatement > IfStatement',
+          message:
+            'Nested if statements are not allowed. Consider using early returns or combining conditions.',
+        },
+        {
+          selector: 'VariableDeclaration[kind="let"]',
+          message: 'Use const instead of let. If reassignment is needed, refactor to avoid mutation.',
+        },
+      ],
       'jsdoc/require-returns-type': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/member-ordering': 'off',
@@ -244,14 +261,7 @@ export default [
       '@typescript-eslint/consistent-type-exports': 'error',
       'prefer-arrow-callback': 'error',
       'prefer-const': 'error',
-      'deprecation/deprecation': 'off',
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'VariableDeclaration[kind="let"]',
-          message: 'Use const instead of let. If reassignment is needed, refactor to avoid mutation.',
-        },
-      ],
+      'deprecation/deprecation': 'error',
       'no-param-reassign': ['error', { props: true }],
       'no-global-assign': 'error',
       'no-implicit-globals': 'error',
@@ -332,6 +342,7 @@ export default [
       ...jest.configs.recommended.rules,
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
+      'deprecation/deprecation': 'off',
       // Disable rules that require Jest to be installed (we use Vitest)
       'jest/no-deprecated-functions': 'off',
       // Disable require-hook: vi.mock() MUST be top-level in Vitest (hoisting requirement)
@@ -403,6 +414,7 @@ export default [
       'internal-playwright/no-classname-selectors': 'off',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
+      'deprecation/deprecation': 'off',
       // Prevent anti-patterns
       'playwright/no-wait-for-timeout': 'error',
       'playwright/no-wait-for-selector': 'error',
@@ -456,6 +468,17 @@ export default [
       // Code quality
       'playwright/no-unused-locators': 'warn',
       'playwright/expect-expect': 'error',
+    },
+  },
+  {
+    files: [
+      '**/*.test.{ts,tsx,js,jsx}',
+      '**/*.spec.{ts,tsx,js,jsx}',
+      'test/**/*.ts',
+      'tests/**/*.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': 'off',
     },
   },
 ];

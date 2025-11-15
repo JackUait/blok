@@ -450,22 +450,28 @@ export default class BlockSelection extends Module {
        */
       this.needToSelectAll = false;
       this.readyToBlockSelection = false;
-    } else if (this.readyToBlockSelection) {
-      /**
-       * prevent default selection when we use custom selection
-       */
-      event.preventDefault();
 
-      /**
-       * select working Block
-       */
-      this.selectBlock(workingBlock);
-
-      /**
-       * Enable all Blocks selection if current Block is selected
-       */
-      this.needToSelectAll = true;
+      return;
     }
+
+    if (!this.readyToBlockSelection) {
+      return;
+    }
+
+    /**
+     * prevent default selection when we use custom selection
+     */
+    event.preventDefault();
+
+    /**
+     * select working Block
+     */
+    this.selectBlock(workingBlock);
+
+    /**
+     * Enable all Blocks selection if current Block is selected
+     */
+    this.needToSelectAll = true;
   }
 
   /**

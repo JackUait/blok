@@ -23,7 +23,9 @@
       "@editorjs/editorjs/*": [ "./types/*" ],
     },
     "esModuleInterop": true,
-    "allowArbitraryExtensions": true
+    "skipLibCheck": true,
+    "allowArbitraryExtensions": true,
+    "noEmit": true
   },
   "include": [
     "**/*.ts",
@@ -31,5 +33,9 @@
     "**/*.js",
     "**/*.json",
     "vite.config*.mjs"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
   ]
 }

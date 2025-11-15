@@ -17,7 +17,7 @@
     "serve": "vite --no-open",
     "build": "vite build --mode production",
     "build:test": "vite build --mode test",
-    "lint": "eslint . && tsc --noEmit",
+    "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
     "lint:fix": "eslint . --fix",
     "lint:tests": "eslint test/",
     "lint:types": "tsc --noEmit",

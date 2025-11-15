@@ -24,15 +24,31 @@ export default class SaverAPI extends Module {
    *
    * @returns {OutputData}
    */
-  public save(): Promise<OutputData> {
+  public async save(): Promise<OutputData> {
     const errorText = 'Editor\'s content can not be saved in read-only mode';
 
     if (this.Editor.ReadOnly.isEnabled) {
       _.logLabeled(errorText, 'warn');
 
-      return Promise.reject(new Error(errorText));
+      throw new Error(errorText);
     }
 
-    return this.Editor.Saver.save();
+    const savedData = await this.Editor.Saver.save();
+
+    if (savedData === undefined) {
+      const lastError = this.Editor.Saver.getLastSaveError?.();
+
+      if (lastError instanceof Error) {
+        throw lastError;
+      }
+
+      const errorMessage = lastError !== undefined
+        ? String(lastError)
+        : 'Editor\'s content can not be saved because collecting data failed';
+
+      throw new Error(errorMessage);
+    }
+
+    return savedData;
   }
 }

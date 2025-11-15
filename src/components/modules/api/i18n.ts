@@ -13,7 +13,7 @@ export default class I18nAPI extends Module {
    * @param toolName - tool name
    * @param isTune - is tool a block tune
    */
-  private static getNamespace(toolName, isTune): string {
+  private static getNamespace(toolName: string, isTune: boolean): string {
     if (isTune) {
       return `blockTunes.${toolName}`;
     }
@@ -26,10 +26,10 @@ export default class I18nAPI extends Module {
    */
   public get methods(): I18n {
     return {
-      t: (): string | undefined => {
+      t: (_dictKey?: string): string => {
         logLabeled('I18n.t() method can be accessed only from Tools', 'warn');
 
-        return undefined;
+        return '';
       },
     };
   }

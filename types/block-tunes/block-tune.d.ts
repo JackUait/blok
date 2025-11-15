@@ -1,6 +1,6 @@
-import {API, BlockAPI, SanitizerConfig, ToolConfig} from '../index';
+import {API, BlockAPI, ToolConfig} from '../index';
 import { BlockTuneData } from './block-tune-data';
-import { MenuConfig } from '../tools';
+import { BaseToolConstructable, MenuConfig } from '../tools';
 
 /**
  * Describes BLockTune blueprint
@@ -33,22 +33,12 @@ export interface BlockTune {
 /**
  * Describes BlockTune class constructor function
  */
-export interface BlockTuneConstructable {
+export interface BlockTuneConstructable extends BaseToolConstructable {
 
   /**
    * Flag show Tool is Block Tune
    */
   isTune: boolean;
-
-  /**
-   * Tune's sanitize configuration
-   */
-  sanitize?: SanitizerConfig;
-
-  /**
-   * Shortcut for Tool
-   */
-  shortcut?: string;
 
   /**
    * @constructor
@@ -66,10 +56,5 @@ export interface BlockTuneConstructable {
    * Tune`s prepare method. Can be async
    * @param data
    */
-  prepare?(): Promise<void> | void;
-
-  /**
-   * Tune`s reset method to clean up anything set by prepare. Can be async
-   */
-  reset?(): void | Promise<void>;
+  prepare?(data: { toolName: string; config: ToolConfig }): Promise<void> | void;
 }

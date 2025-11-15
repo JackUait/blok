@@ -113,6 +113,12 @@ export default class ReadOnly extends Module {
      */
     const savedBlocks = await this.Editor.Saver.save();
 
+    if (savedBlocks === undefined) {
+      this.Editor.ModificationsObserver.enable();
+
+      return this.readOnlyEnabled;
+    }
+
     await this.Editor.BlockManager.clear();
     await this.Editor.Renderer.render(savedBlocks.blocks);
 

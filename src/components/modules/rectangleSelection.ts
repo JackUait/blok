@@ -485,8 +485,8 @@ export default class RectangleSelection extends Module {
     const centerOfRedactor = widthOfRedactor / 2;
     const y = this.mouseY - window.pageYOffset;
     const elementUnderMouse = document.elementFromPoint(centerOfRedactor, y);
-    const lastBlockHolder = this.Editor.BlockManager.lastBlock.holder;
-    const contentElement = lastBlockHolder.querySelector('.' + Block.CSS.content);
+    const lastBlockHolder = this.Editor.BlockManager.lastBlock?.holder;
+    const contentElement = lastBlockHolder?.querySelector('.' + Block.CSS.content);
     const contentWidth = contentElement ? Number.parseInt(window.getComputedStyle(contentElement).width, 10) : 0;
     const centerOfBlock = contentWidth / 2;
     const leftPos = centerOfRedactor - centerOfBlock;

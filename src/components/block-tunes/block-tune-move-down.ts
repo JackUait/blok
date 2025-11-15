@@ -37,7 +37,7 @@ export default class MoveDownTune implements BlockTune {
    *
    * @param {API} api — Editor's API
    */
-  constructor({ api }) {
+  constructor({ api }: { api: API }) {
     this.api = api;
   }
 
@@ -68,15 +68,9 @@ export default class MoveDownTune implements BlockTune {
     const nextBlockElement = nextBlock.holder;
     const nextBlockCoords = nextBlockElement.getBoundingClientRect();
 
-    let scrollOffset = Math.abs(window.innerHeight - nextBlockElement.offsetHeight);
-
-    /**
-     * Next block ends on screen.
-     * Increment scroll by next block's height to save element onscreen-position
-     */
-    if (nextBlockCoords.top < window.innerHeight) {
-      scrollOffset = window.scrollY + nextBlockElement.offsetHeight;
-    }
+    const scrollOffset = nextBlockCoords.top < window.innerHeight
+      ? window.scrollY + nextBlockElement.offsetHeight
+      : Math.abs(window.innerHeight - nextBlockElement.offsetHeight);
 
     window.scrollTo(0, scrollOffset);
 

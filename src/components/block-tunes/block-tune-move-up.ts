@@ -35,7 +35,7 @@ export default class MoveUpTune implements BlockTune {
    *
    * @param {API} api - Editor's API
    */
-  constructor({ api }) {
+  constructor({ api }: { api: API }) {
     this.api = api;
   }
 
@@ -77,13 +77,9 @@ export default class MoveUpTune implements BlockTune {
     const currentBlockCoords = currentBlockElement.getBoundingClientRect();
     const previousBlockCoords = previousBlockElement.getBoundingClientRect();
 
-    let scrollUpOffset;
-
-    if (previousBlockCoords.top > 0) {
-      scrollUpOffset = Math.abs(currentBlockCoords.top) - Math.abs(previousBlockCoords.top);
-    } else {
-      scrollUpOffset = Math.abs(currentBlockCoords.top) + previousBlockCoords.height;
-    }
+    const scrollUpOffset = previousBlockCoords.top > 0
+      ? Math.abs(currentBlockCoords.top) - Math.abs(previousBlockCoords.top)
+      : Math.abs(currentBlockCoords.top) + previousBlockCoords.height;
 
     window.scrollBy(0, -1 * scrollUpOffset);
 

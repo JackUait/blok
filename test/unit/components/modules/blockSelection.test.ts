@@ -7,6 +7,8 @@ import type { EditorModules } from '../../../../src/types-internal/editor-module
 import type { EditorConfig } from '../../../../types';
 import SelectionUtils from '../../../../src/components/selection';
 import Shortcuts from '../../../../src/components/utils/shortcuts';
+import * as utils from '../../../../src/components/utils';
+import type { SanitizerConfig } from '../../../../types/configs';
 import type Block from '../../../../src/components/block';
 
 type ModuleOverrides = Partial<EditorModules>;
@@ -189,6 +191,17 @@ describe('BlockSelection', () => {
     });
   });
 
+  describe('selectedBlocks', () => {
+    it('returns only the blocks marked as selected', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+
+      blocks[0].selected = true;
+      blocks[2].selected = true;
+
+      expect(blockSelection.selectedBlocks).toEqual([blocks[0], blocks[2]]);
+    });
+  });
+
   describe('selectBlock', () => {
     it('saves selection, clears native selection and selects block', () => {
       const { blockSelection, blocks, modules, selectionSpy } = createBlockSelection();
@@ -232,6 +245,21 @@ describe('BlockSelection', () => {
       blockSelection.unSelectBlockByIndex(undefined);
 
       expect(blocks[1].selected).toBe(false);
+    });
+  });
+
+  describe('unselectBlock', () => {
+    it('clears selection on provided block and resets cache', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const cacheAware = blockSelection as unknown as { anyBlockSelectedCache: boolean | null };
+
+      cacheAware.anyBlockSelectedCache = true;
+      blocks[1].selected = true;
+
+      blockSelection.unselectBlock(blocks[1]);
+
+      expect(blocks[1].selected).toBe(false);
+      expect(cacheAware.anyBlockSelectedCache).toBeNull();
     });
   });
 
@@ -298,6 +326,27 @@ describe('BlockSelection', () => {
       expect(selectionAccessor.needToSelectAll).toBe(false);
       expect(selectionAccessor.readyToBlockSelection).toBe(false);
     });
+
+    it('replaces selected blocks with printable keys when applicable', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const replacerHost = blockSelection as unknown as {
+        replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
+      };
+      const replaceSpy = vi.spyOn(replacerHost, 'replaceSelectedBlocksWithPrintableKey');
+
+      blocks[0].selected = true;
+
+      vi.spyOn(utils, 'isPrintableKey').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isSelectionExists', 'get').mockReturnValue(false);
+
+      const event = new KeyboardEvent('keydown', { key: 'x' });
+
+      Object.defineProperty(event, 'keyCode', { value: 88 });
+
+      blockSelection.clearSelection(event);
+
+      expect(replaceSpy).toHaveBeenCalledWith(event);
+    });
   });
 
   describe('copySelectedBlocks', () => {
@@ -330,6 +379,43 @@ describe('BlockSelection', () => {
       );
       expect(firstBlock.save).toHaveBeenCalledTimes(1);
       expect(secondBlock.save).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('sanitizerConfig', () => {
+    it('provides default tag white-list when no overrides supplied', () => {
+      const { blockSelection } = createBlockSelection();
+      const config = (blockSelection as unknown as { sanitizerConfig: SanitizerConfig }).sanitizerConfig;
+
+      expect(config).toMatchObject({
+        p: {},
+        img: {
+          src: true,
+          width: true,
+          height: true,
+        },
+        a: { href: true },
+      });
+    });
+
+    it('merges provided sanitizer overrides with defaults', () => {
+      const { blockSelection } = createBlockSelection();
+      const override: SanitizerConfig = {
+        a: { rel: 'nofollow' },
+      };
+      const internals = blockSelection as unknown as { config: EditorConfig };
+
+      internals.config = {
+        ...internals.config,
+        sanitizer: override,
+      };
+
+      const config = (blockSelection as unknown as { sanitizerConfig: SanitizerConfig }).sanitizerConfig;
+
+      expect(config.a).toMatchObject({
+        href: true,
+        rel: 'nofollow',
+      });
     });
   });
 
@@ -406,6 +492,96 @@ describe('BlockSelection', () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(selectBlockSpy).toHaveBeenCalledWith(targetBlock);
     });
+
+    it('defers to native input selection before enabling block selection', () => {
+      const { blockSelection, modules } = createBlockSelection();
+      const rectangleSelection = modules.RectangleSelection as unknown as { clearSelection: ReturnType<typeof vi.fn> };
+      const handler = blockSelection as unknown as {
+        handleCommandA: (event: KeyboardEvent) => void;
+        readyToBlockSelection: boolean;
+      };
+      const event = {
+        target: document.createElement('input'),
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+
+      handler.handleCommandA(event);
+
+      expect(rectangleSelection.clearSelection).toHaveBeenCalledTimes(1);
+      expect(handler.readyToBlockSelection).toBe(true);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('replaceSelectedBlocksWithPrintableKey', () => {
+    it('inserts new block and types printable character', () => {
+      const { blockSelection, modules } = createBlockSelection();
+      const blockManager = modules.BlockManager as unknown as {
+        removeSelectedBlocks: ReturnType<typeof vi.fn>;
+        insertDefaultBlockAtIndex: ReturnType<typeof vi.fn>;
+        currentBlock: Block | null;
+      };
+      const caret = modules.Caret as unknown as {
+        setToBlock: ReturnType<typeof vi.fn>;
+        insertContentAtCaretPosition: ReturnType<typeof vi.fn>;
+      };
+      const insertedBlock = createBlockStub();
+      const delaySpy = vi.spyOn(utils, 'delay').mockImplementation((fn) => {
+        return () => fn();
+      });
+
+      blockManager.currentBlock = null;
+      blockManager.removeSelectedBlocks = vi.fn().mockReturnValue(1);
+      blockManager.insertDefaultBlockAtIndex = vi.fn().mockImplementation(() => {
+        blockManager.currentBlock = insertedBlock;
+      });
+
+      const host = blockSelection as unknown as {
+        replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
+      };
+
+      host.replaceSelectedBlocksWithPrintableKey({ key: 'x' } as KeyboardEvent);
+
+      expect(blockManager.removeSelectedBlocks).toHaveBeenCalledTimes(1);
+      expect(blockManager.insertDefaultBlockAtIndex).toHaveBeenCalledWith(1, true);
+      expect(caret.setToBlock).toHaveBeenCalledWith(insertedBlock);
+      expect(caret.insertContentAtCaretPosition).toHaveBeenCalledWith('x');
+      expect(delaySpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('inserts empty string for non-printable keys', () => {
+      const { blockSelection, modules } = createBlockSelection();
+      const blockManager = modules.BlockManager as unknown as {
+        removeSelectedBlocks: ReturnType<typeof vi.fn>;
+        insertDefaultBlockAtIndex: ReturnType<typeof vi.fn>;
+        currentBlock: Block | null;
+      };
+      const caret = modules.Caret as unknown as {
+        setToBlock: ReturnType<typeof vi.fn>;
+        insertContentAtCaretPosition: ReturnType<typeof vi.fn>;
+      };
+      const insertedBlock = createBlockStub();
+
+      vi.spyOn(utils, 'delay').mockImplementation((fn) => {
+        return () => fn();
+      });
+
+      blockManager.currentBlock = null;
+      blockManager.removeSelectedBlocks = vi.fn().mockReturnValue(2);
+      blockManager.insertDefaultBlockAtIndex = vi.fn().mockImplementation(() => {
+        blockManager.currentBlock = insertedBlock;
+      });
+
+      const host = blockSelection as unknown as {
+        replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
+      };
+
+      host.replaceSelectedBlocksWithPrintableKey({ key: 'Enter' } as KeyboardEvent);
+
+      expect(blockManager.insertDefaultBlockAtIndex).toHaveBeenCalledWith(2, true);
+      expect(caret.setToBlock).toHaveBeenCalledWith(insertedBlock);
+      expect(caret.insertContentAtCaretPosition).toHaveBeenCalledWith('');
+    });
   });
 
   describe('prepare', () => {
@@ -421,7 +597,42 @@ describe('BlockSelection', () => {
       );
       expect((blockSelection as unknown as { selection: SelectionUtils }).selection).toBeInstanceOf(SelectionUtils);
     });
+
+    it('handles read-only mode by selecting all blocks via shortcut handler', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      Object.defineProperty(modules.ReadOnly, 'isEnabled', {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const shortcutsAdd = vi.spyOn(Shortcuts, 'add').mockImplementation(() => undefined);
+
+      blockSelection.prepare();
+
+      expect(shortcutsAdd).toHaveBeenCalledTimes(1);
+
+      const handler = (shortcutsAdd.mock.calls[0]?.[0] as { handler: (event: KeyboardEvent) => void }).handler;
+      const event = {
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+
+      handler(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('destroy', () => {
+    it('removes the CMD+A shortcut', () => {
+      const { blockSelection, modules } = createBlockSelection();
+      const shortcutsRemove = vi.spyOn(Shortcuts, 'remove').mockImplementation(() => undefined);
+
+      blockSelection.destroy();
+
+      expect(shortcutsRemove).toHaveBeenCalledWith(modules.UI.nodes.redactor, 'CMD+A');
+    });
   });
 });
-
-

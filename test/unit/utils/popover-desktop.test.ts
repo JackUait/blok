@@ -157,10 +157,12 @@ import { css as popoverItemCss } from '../../../src/components/utils/popover/com
 import { css as separatorCss } from '../../../src/components/utils/popover/components/popover-item/popover-item-separator/popover-item-separator.const';
 import { PopoverItemDefault, PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item';
 import Flipper from '../../../src/components/flipper';
+import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
 
-type PopoverDesktopInternal = PopoverDesktop & {
+type PopoverDesktopInternal = Omit<PopoverDesktop, 'shouldOpenBottom' | 'shouldOpenRight'> & {
   flippableElements: HTMLElement[];
   size: { height: number; width: number };
+  setTriggerItemPosition: (nestedPopoverEl: HTMLElement, item: PopoverItemDefault) => void;
   showNestedPopoverForItem: (item: PopoverItemDefault) => PopoverDesktop;
   destroyNestedPopoverIfExists: () => void;
   handleHover: (event: Event) => void;
@@ -175,6 +177,19 @@ type PopoverDesktopInternal = PopoverDesktop & {
   nestedPopover: PopoverDesktop | null | undefined;
   nestedPopoverTriggerItem: PopoverItemDefault | null;
 };
+
+const createRect = (overrides: Partial<DOMRect>): DOMRect => ({
+  x: 0,
+  y: 0,
+  width: 0,
+  height: 0,
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+  toJSON: () => ({}),
+  ...overrides,
+});
 
 const createDefaultItems = (): PopoverParams['items'] => [
   {
@@ -254,10 +269,293 @@ describe('PopoverDesktop', () => {
     });
   });
 
+  describe('accessors', () => {
+    it('reflects flipper focus state when available', () => {
+      const popover = createPopover();
+      const flipper = getMockFlipper();
+
+      expect(popover.hasFocus()).toBe(false);
+
+      flipper.activate();
+
+      expect(popover.hasFocus()).toBe(true);
+
+      const nonFlippablePopover = createPopover({ flippable: false });
+
+      expect(nonFlippablePopover.hasFocus()).toBe(false);
+    });
+
+    it('exposes scroll position of the items container', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      instance.nodes.items.scrollTop = 24;
+
+      expect(popover.scrollTop).toBe(24);
+
+      instance.nodes.items = null as unknown as HTMLElement;
+
+      expect(popover.scrollTop).toBe(0);
+    });
+
+    it('returns zero offset when popover container is missing', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const container = document.createElement('div');
+
+      Object.defineProperty(container, 'offsetTop', {
+        configurable: true,
+        get: () => 120,
+      });
+
+      instance.nodes.popoverContainer = container;
+
+      expect(popover.offsetTop).toBe(120);
+
+      instance.nodes.popoverContainer = null as unknown as HTMLElement;
+
+      expect(popover.offsetTop).toBe(0);
+    });
+  });
+
+  describe('destroy', () => {
+    it('calls hide before delegating to base destroy logic', () => {
+      const popover = createPopover();
+      const hideSpy = vi.spyOn(popover, 'hide');
+      const superDestroySpy = vi.spyOn(PopoverAbstract.prototype, 'destroy');
+
+      popover.destroy();
+
+      expect(hideSpy).toHaveBeenCalled();
+      expect(superDestroySpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('setTriggerItemPosition', () => {
+    it('calculates trigger position relative to scroll offset', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const nestedElement = document.createElement('div');
+      const triggerItem = instance.itemsDefault[0];
+      const triggerElement = triggerItem.getElement();
+
+      expect(triggerElement).not.toBeNull();
+
+      Object.defineProperty(triggerElement!, 'offsetTop', {
+        configurable: true,
+        get: () => 75,
+      });
+
+      instance.nodes.items.scrollTop = 25;
+
+      Object.defineProperty(instance.nodes.popoverContainer, 'offsetTop', {
+        configurable: true,
+        get: () => 100,
+      });
+
+      instance.setTriggerItemPosition(nestedElement, triggerItem);
+
+      expect(nestedElement.style.getPropertyValue(CSSVariables.TriggerItemTop)).toBe('150px');
+    });
+  });
+
+  describe('position helpers', () => {
+    it('determines when popover should stay below the trigger', () => {
+      const scopeElement = document.createElement('div');
+      const popover = createPopover({ scopeElement });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 150,
+        width: 100 });
+      vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 50 }) as DOMRect
+      );
+      vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 40,
+          bottom: 500 }) as DOMRect
+      );
+
+      expect((instance as unknown as { shouldOpenBottom: boolean }).shouldOpenBottom).toBe(true);
+    });
+
+    it('opens upward when there is not enough space below', () => {
+      const scopeElement = document.createElement('div');
+      const popover = createPopover({ scopeElement });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 300,
+        width: 100 });
+      vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 400 }) as DOMRect
+      );
+      vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 0,
+          bottom: 600 }) as DOMRect
+      );
+
+      const originalInnerHeight = window.innerHeight;
+
+      Object.defineProperty(window, 'innerHeight', {
+        configurable: true,
+        value: 600,
+        writable: true,
+      });
+
+      try {
+        expect((instance as unknown as { shouldOpenBottom: boolean }).shouldOpenBottom).toBe(false);
+      } finally {
+        Object.defineProperty(window, 'innerHeight', {
+          configurable: true,
+          value: originalInnerHeight,
+          writable: true,
+        });
+      }
+    });
+
+    it('chooses opening to the right when there is no space on the left', () => {
+      const scopeElement = document.createElement('div');
+      const popover = createPopover({ scopeElement });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100,
+        width: 200 });
+      vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 50,
+          right: 150 }) as DOMRect
+      );
+      vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 0,
+          right: 600 }) as DOMRect
+      );
+
+      expect((instance as unknown as { shouldOpenRight: boolean }).shouldOpenRight).toBe(true);
+    });
+
+    it('opens to the left when the right side is constrained', () => {
+      const scopeElement = document.createElement('div');
+      const popover = createPopover({ scopeElement });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100,
+        width: 300 });
+      vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 400,
+          right: 500 }) as DOMRect
+      );
+      vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 0,
+          right: 650 }) as DOMRect
+      );
+
+      const originalInnerWidth = window.innerWidth;
+
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: 600,
+        writable: true,
+      });
+
+      try {
+        expect((instance as unknown as { shouldOpenRight: boolean }).shouldOpenRight).toBe(false);
+      } finally {
+        Object.defineProperty(window, 'innerWidth', {
+          configurable: true,
+          value: originalInnerWidth,
+          writable: true,
+        });
+      }
+    });
+  });
+
+  describe('size', () => {
+    it('clones popover to measure dimensions and caches the result', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const clonePopover = document.createElement('div');
+
+      clonePopover.classList.add(css.popover);
+
+      const nested = document.createElement('div');
+
+      nested.classList.add(css.popoverNested);
+
+      const container = document.createElement('div');
+
+      container.classList.add(css.popoverContainer);
+
+      Object.defineProperty(container, 'offsetHeight', {
+        configurable: true,
+        get: () => 180,
+      });
+      Object.defineProperty(container, 'offsetWidth', {
+        configurable: true,
+        get: () => 90,
+      });
+
+      clonePopover.appendChild(nested);
+      clonePopover.appendChild(container);
+
+      const cloneSpy = vi.spyOn(instance.nodes.popover, 'cloneNode').mockReturnValue(clonePopover);
+
+      const firstSize = instance.size;
+      const secondSize = instance.size;
+
+      expect(firstSize).toEqual({ height: 180,
+        width: 90 });
+      expect(secondSize).toBe(firstSize);
+      expect(cloneSpy).toHaveBeenCalledTimes(1);
+      expect(clonePopover.isConnected).toBe(false);
+      expect(clonePopover.classList.contains(css.popoverOpened)).toBe(true);
+      expect(clonePopover.querySelector(`.${css.popoverNested}`)).toBeNull();
+    });
+  });
+
+  describe('flippableElements', () => {
+    it('includes only enabled default items and controls from HTML items', () => {
+      const htmlElement = document.createElement('div');
+      const htmlButton = document.createElement('button');
+      const htmlInput = document.createElement('input');
+
+      htmlElement.append(htmlButton, htmlInput);
+
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Enabled',
+            name: 'enabled',
+            onActivate: vi.fn(),
+          },
+          {
+            title: 'Disabled',
+            name: 'disabled',
+            onActivate: vi.fn(),
+            isDisabled: true,
+          },
+          {
+            type: PopoverItemType.Separator,
+          },
+          {
+            type: PopoverItemType.Html,
+            name: 'custom-html',
+            element: htmlElement,
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const defaultElement = instance.itemsDefault[0].getElement();
+
+      expect(defaultElement).not.toBeNull();
+
+      const elements = instance.flippableElements;
+
+      expect(elements).toEqual([defaultElement!, htmlButton, htmlInput]);
+    });
+  });
+
   describe('show', () => {
     it('applies position classes, sets height variable and activates flipper', () => {
       const popover = createPopover();
-      const instance = popover as PopoverDesktopInternal;
+      const instance = popover as unknown as PopoverDesktopInternal;
       const sizeSpy = vi.spyOn(instance, 'size', 'get').mockReturnValue({
         height: 120,
         width: 80,
@@ -300,9 +598,9 @@ describe('PopoverDesktop', () => {
           },
         ],
       });
-      const instance = popover as PopoverDesktopInternal;
+      const instance = popover as unknown as PopoverDesktopInternal;
       const parentItem = instance.items.find(
-        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+        (item: PopoverItemDefault | PopoverItemSeparator): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
       );
 
       expect(parentItem).toBeDefined();
@@ -345,9 +643,9 @@ describe('PopoverDesktop', () => {
           },
         ],
       });
-      const instance = popover as PopoverDesktopInternal;
+      const instance = popover as unknown as PopoverDesktopInternal;
       const parentItem = instance.items.find(
-        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+        (item: PopoverItemDefault | PopoverItemSeparator): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
       );
       const parentElement = parentItem?.getElement();
 
@@ -399,7 +697,7 @@ describe('PopoverDesktop', () => {
           },
         ],
       });
-      const instance = popover as PopoverDesktopInternal;
+      const instance = popover as unknown as PopoverDesktopInternal;
 
       popover.show();
 
@@ -409,8 +707,8 @@ describe('PopoverDesktop', () => {
       expect(searchInput).toBeDefined();
 
       const items = instance.items;
-      const defaultItems = items.filter((item): item is PopoverItemDefault => item instanceof PopoverItemDefault);
-      const separator = items.find((item): item is PopoverItemSeparator => item instanceof PopoverItemSeparator);
+      const defaultItems = items.filter((item: PopoverItemDefault | PopoverItemSeparator): item is PopoverItemDefault => item instanceof PopoverItemDefault);
+      const separator = items.find((item: PopoverItemDefault | PopoverItemSeparator): item is PopoverItemSeparator => item instanceof PopoverItemSeparator);
 
       searchInput.emitSearch({
         query: 'Beta',
@@ -432,7 +730,7 @@ describe('PopoverDesktop', () => {
       });
 
       expect(instance.nodes.nothingFoundMessage.classList.contains(css.nothingFoundMessageDisplayed)).toBe(true);
-      defaultItems.forEach(item => {
+      defaultItems.forEach((item: PopoverItemDefault) => {
         expect(item.getElement()?.classList.contains(popoverItemCss.hidden)).toBe(true);
       });
       expect(separator?.getElement().classList.contains(separatorCss.hidden)).toBe(true);
@@ -442,7 +740,7 @@ describe('PopoverDesktop', () => {
   describe('onFlip', () => {
     it('focuses popover items when flipper emits flip event', () => {
       const popover = createPopover();
-      const instance = popover as PopoverDesktopInternal;
+      const instance = popover as unknown as PopoverDesktopInternal;
 
       popover.show();
 
@@ -477,7 +775,7 @@ describe('PopoverDesktop', () => {
           },
         ],
       });
-      const instance = popover as PopoverDesktopInternal;
+      const instance = popover as unknown as PopoverDesktopInternal;
       const hideSpy = vi.spyOn(popover, 'hide');
 
       const parentItem = instance.items[0] as PopoverItemDefault;
@@ -490,4 +788,3 @@ describe('PopoverDesktop', () => {
     });
   });
 });
-

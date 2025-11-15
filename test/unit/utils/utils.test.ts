@@ -24,6 +24,7 @@ import {
   debounce,
   throttle,
   sequence,
+  getEditorVersion,
   getFileExtension,
   isValidMimeType,
   capitalize,
@@ -37,6 +38,7 @@ import {
   openTab,
   deprecationAssert,
   cacheable,
+  mobileScreenBreakpoint,
   isMobileScreen,
   isIosDevice,
   equals,
@@ -61,6 +63,31 @@ describe('utils', () => {
   beforeEach(() => {
     // Reset log level to VERBOSE before each test
     setLogLevel(LogLevels.VERBOSE);
+  });
+
+  describe('getEditorVersion', () => {
+    const versionHolder = globalThis as { VERSION?: string };
+    const initialVersion = versionHolder.VERSION;
+
+    afterEach(() => {
+      if (initialVersion === undefined) {
+        delete versionHolder.VERSION;
+      } else {
+        versionHolder.VERSION = initialVersion;
+      }
+    });
+
+    it('should return injected VERSION when defined', () => {
+      versionHolder.VERSION = '9.9.9';
+
+      expect(getEditorVersion()).toBe('9.9.9');
+    });
+
+    it('should fallback to default version when VERSION is not set', () => {
+      delete versionHolder.VERSION;
+
+      expect(getEditorVersion()).toBe('dev');
+    });
   });
 
   describe('typeOf', () => {
@@ -705,6 +732,10 @@ describe('utils', () => {
     it('should handle already capitalized string', () => {
       expect(capitalize('Hello')).toBe('Hello');
     });
+
+    it('should throw when called with empty string', () => {
+      expect(() => capitalize('')).toThrow(TypeError);
+    });
   });
 
   describe('deepMerge', () => {
@@ -1110,6 +1141,12 @@ describe('utils', () => {
     });
   });
 
+  describe('mobileScreenBreakpoint', () => {
+    it('should equal 650 pixels', () => {
+      expect(mobileScreenBreakpoint).toBe(650);
+    });
+  });
+
   describe('isMobileScreen', () => {
     beforeEach(() => {
       Object.defineProperty(window, 'matchMedia', {
@@ -1263,4 +1300,3 @@ describe('utils', () => {
     });
   });
 });
-

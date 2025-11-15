@@ -447,7 +447,7 @@ class Tooltip {
 
     const elementCoords = element.getBoundingClientRect();
     const left = elementCoords.left + element.clientWidth / 2 - this.nodes.wrapper.offsetWidth / 2;
-    const top = elementCoords.bottom + window.pageYOffset + this.offsetTop + (showingOptions.marginTop ?? 0);
+    const top = elementCoords.bottom + this.getScrollTop() + this.offsetTop + (showingOptions.marginTop ?? 0);
 
     this.applyPlacement('bottom', left, top);
   }
@@ -465,7 +465,7 @@ class Tooltip {
 
     const elementCoords = element.getBoundingClientRect();
     const left = elementCoords.left + element.clientWidth / 2 - this.nodes.wrapper.offsetWidth / 2;
-    const top = elementCoords.top + window.pageYOffset - this.nodes.wrapper.clientHeight - this.offsetTop;
+    const top = elementCoords.top + this.getScrollTop() - this.nodes.wrapper.clientHeight - this.offsetTop;
 
     this.applyPlacement('top', left, top);
   }
@@ -483,7 +483,7 @@ class Tooltip {
 
     const elementCoords = element.getBoundingClientRect();
     const left = elementCoords.left - this.nodes.wrapper.offsetWidth - this.offsetLeft - (showingOptions.marginLeft ?? 0);
-    const top = elementCoords.top + window.pageYOffset + element.clientHeight / 2 - this.nodes.wrapper.offsetHeight / 2;
+    const top = elementCoords.top + this.getScrollTop() + element.clientHeight / 2 - this.nodes.wrapper.offsetHeight / 2;
 
     this.applyPlacement('left', left, top);
   }
@@ -501,7 +501,7 @@ class Tooltip {
 
     const elementCoords = element.getBoundingClientRect();
     const left = elementCoords.right + this.offsetRight + (showingOptions.marginRight ?? 0);
-    const top = elementCoords.top + window.pageYOffset + element.clientHeight / 2 - this.nodes.wrapper.offsetHeight / 2;
+    const top = elementCoords.top + this.getScrollTop() + element.clientHeight / 2 - this.nodes.wrapper.offsetHeight / 2;
 
     this.applyPlacement('right', left, top);
   }
@@ -522,6 +522,17 @@ class Tooltip {
 
     this.nodes.wrapper.style.left = `${left}px`;
     this.nodes.wrapper.style.top = `${top}px`;
+  }
+
+  /**
+   * Get current page vertical scroll offset
+   */
+  private getScrollTop(): number {
+    if (typeof window.scrollY === 'number') {
+      return window.scrollY;
+    }
+
+    return document.documentElement?.scrollTop ?? document.body.scrollTop ?? 0;
   }
 
   /**

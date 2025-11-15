@@ -48,11 +48,11 @@ export default class ReadOnly extends Module {
 
     this.toolsDontSupportReadOnly = toolsDontSupportReadOnly;
 
-    if (this.config.readOnly && toolsDontSupportReadOnly.length > 0) {
+    if (this.config.readOnly === true && toolsDontSupportReadOnly.length > 0) {
       this.throwCriticalError();
     }
 
-    this.toggle(this.config.readOnly, true);
+    await this.toggle(this.config.readOnly, true);
   }
 
   /**
@@ -71,18 +71,22 @@ export default class ReadOnly extends Module {
 
     this.readOnlyEnabled = state;
 
-    for (const name in this.Editor) {
+    for (const module of Object.values(this.Editor)) {
       /**
        * Verify module has method `toggleReadOnly` method
        */
-      if (!this.Editor[name].toggleReadOnly) {
+      if (module === null || module === undefined) {
+        continue;
+      }
+
+      if (typeof (module as { toggleReadOnly?: unknown }).toggleReadOnly !== 'function') {
         continue;
       }
 
       /**
        * set or toggle read-only state
        */
-      this.Editor[name].toggleReadOnly(state);
+      (module as { toggleReadOnly: (state: boolean) => void }).toggleReadOnly(state);
     }
 
     /**
@@ -108,6 +112,12 @@ export default class ReadOnly extends Module {
      * Save current Editor Blocks and render again
      */
     const savedBlocks = await this.Editor.Saver.save();
+
+    if (savedBlocks === undefined) {
+      this.Editor.ModificationsObserver.enable();
+
+      return this.readOnlyEnabled;
+    }
 
     await this.Editor.BlockManager.clear();
     await this.Editor.Renderer.render(savedBlocks.blocks);

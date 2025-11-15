@@ -14,7 +14,7 @@ export interface SearchableItem {
  */
 export enum SearchInputEvent {
   /**
-   * When search quert applied
+   * When search query is applied
    */
   Search = 'search'
 }
@@ -24,7 +24,7 @@ export enum SearchInputEvent {
  */
 export interface SearchInputEventMap {
   /**
-   * Fired when search quert applied
+   * Fired when search query is applied
    */
   [SearchInputEvent.Search]: { query: string; items: SearchableItem[]};
 }

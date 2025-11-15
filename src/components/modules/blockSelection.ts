@@ -12,7 +12,7 @@ import Shortcuts from '../utils/shortcuts';
 
 import SelectionUtils from '../selection';
 import type { SanitizerConfig } from '../../../types/configs';
-import { clean } from '../utils/sanitizer';
+import { clean, composeSanitizerConfig } from '../utils/sanitizer';
 
 /**
  *
@@ -33,7 +33,7 @@ export default class BlockSelection extends Module {
    * @returns {SanitizerConfig}
    */
   private get sanitizerConfig(): SanitizerConfig {
-    return {
+    const baseConfig: SanitizerConfig = {
       p: {},
       h1: {},
       h2: {},
@@ -57,6 +57,8 @@ export default class BlockSelection extends Module {
       i: {},
       u: {},
     };
+
+    return composeSanitizerConfig(this.config.sanitizer as SanitizerConfig, baseConfig);
   }
 
   /**
@@ -78,9 +80,9 @@ export default class BlockSelection extends Module {
   public set allBlocksSelected(state: boolean) {
     const { BlockManager } = this.Editor;
 
-    BlockManager.blocks.forEach((block) => {
+    for (const block of BlockManager.blocks) {
       block.selected = state;
-    });
+    }
 
     this.clearCache();
   }
@@ -138,7 +140,7 @@ export default class BlockSelection extends Module {
    *
    * @type {SelectionUtils}
    */
-  private selection: SelectionUtils;
+  private selection: SelectionUtils = new SelectionUtils();
 
   /**
    * Module Preparation
@@ -146,6 +148,9 @@ export default class BlockSelection extends Module {
    * to select all and copy them
    */
   public prepare(): void {
+    /**
+     * Re-create SelectionUtils instance to ensure fresh state.
+     */
     this.selection = new SelectionUtils();
 
     /**
@@ -153,7 +158,7 @@ export default class BlockSelection extends Module {
      */
     Shortcuts.add({
       name: 'CMD+A',
-      handler: (event) => {
+      handler: (event: KeyboardEvent) => {
         const { BlockManager, ReadOnly } = this.Editor;
 
         /**
@@ -191,8 +196,9 @@ export default class BlockSelection extends Module {
    *  - Unselect all Blocks
    */
   public toggleReadOnly(): void {
-    SelectionUtils.get()
-      .removeAllRanges();
+    const selection = SelectionUtils.get();
+
+    selection?.removeAllRanges();
 
     this.allBlocksSelected = false;
   }
@@ -202,15 +208,15 @@ export default class BlockSelection extends Module {
    *
    * @param {number?} index - Block index according to the BlockManager's indexes
    */
-  public unSelectBlockByIndex(index?): void {
+  public unSelectBlockByIndex(index?: number): void {
     const { BlockManager } = this.Editor;
 
-    let block;
+    const block = typeof index === 'number'
+      ? BlockManager.getBlockByIndex(index)
+      : BlockManager.currentBlock;
 
-    if (isNaN(index)) {
-      block = BlockManager.currentBlock;
-    } else {
-      block = BlockManager.getBlockByIndex(index);
+    if (!block) {
+      return;
     }
 
     block.selected = false;
@@ -225,7 +231,7 @@ export default class BlockSelection extends Module {
    * @param {boolean} restoreSelection - if true, restore saved selection
    */
   public clearSelection(reason?: Event, restoreSelection = false): void {
-    const { BlockManager, Caret, RectangleSelection } = this.Editor;
+    const { RectangleSelection } = this.Editor;
 
     this.needToSelectAll = false;
     this.nativeInputSelected = false;
@@ -239,31 +245,10 @@ export default class BlockSelection extends Module {
      * remove selected blocks and insert pressed key
      */
     if (this.anyBlockSelected && isKeyboard && isPrintableKey && !SelectionUtils.isSelectionExists) {
-      const indexToInsert = BlockManager.removeSelectedBlocks();
-
-      BlockManager.insertDefaultBlockAtIndex(indexToInsert, true);
-      Caret.setToBlock(BlockManager.currentBlock);
-      _.delay(() => {
-        const eventKey = (reason as KeyboardEvent).key;
-
-        /**
-         * If event.key length >1 that means key is special (e.g. Enter or Dead or Unidentified).
-         * So we use empty string
-         *
-         * @see https://developer.mozilla.org/ru/docs/Web/API/KeyboardEvent/key
-         */
-        Caret.insertContentAtCaretPosition(eventKey.length > 1 ? '' : eventKey);
-      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-      }, 20)();
+      this.replaceSelectedBlocksWithPrintableKey(reason as KeyboardEvent);
     }
 
     this.Editor.CrossBlockSelection.clear(reason);
-
-    if (!this.anyBlockSelected || RectangleSelection.isRectActivated()) {
-      this.Editor.RectangleSelection.clearSelection();
-
-      return;
-    }
 
     /**
      * Restore selection when Block is already selected
@@ -271,6 +256,12 @@ export default class BlockSelection extends Module {
      */
     if (restoreSelection) {
       this.selection.restore();
+    }
+
+    if (!this.anyBlockSelected || RectangleSelection.isRectActivated()) {
+      this.Editor.RectangleSelection.clearSelection();
+
+      return;
     }
 
     /** Now all blocks cleared */
@@ -283,41 +274,59 @@ export default class BlockSelection extends Module {
    * @param {ClipboardEvent} e - copy/cut event
    * @returns {Promise<void>}
    */
-  public copySelectedBlocks(e: ClipboardEvent): Promise<void> {
+  public async copySelectedBlocks(e: ClipboardEvent): Promise<void> {
     /**
      * Prevent default copy
      */
     e.preventDefault();
 
+    const clipboardData = e.clipboardData;
+
+    if (!clipboardData) {
+      return;
+    }
+
     const fakeClipboard = $.make('div');
+    const textPlainChunks: string[] = [];
 
     this.selectedBlocks.forEach((block) => {
-      /**
-       * Make <p> tag that holds clean HTML
-       */
       const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
-      const fragment = $.make('p');
+      const wrapper = $.make('div');
 
-      fragment.innerHTML = cleanHTML;
-      fakeClipboard.appendChild(fragment);
+      wrapper.innerHTML = cleanHTML;
+
+      const textContent = wrapper.textContent ?? '';
+
+      textPlainChunks.push(textContent);
+
+      const hasElementChildren = Array.from(wrapper.childNodes).some((node) => node.nodeType === Node.ELEMENT_NODE);
+      const shouldWrapWithParagraph = !hasElementChildren && textContent.trim().length > 0;
+
+      if (shouldWrapWithParagraph) {
+        const paragraph = $.make('p');
+
+        paragraph.innerHTML = wrapper.innerHTML;
+        fakeClipboard.appendChild(paragraph);
+      } else {
+        while (wrapper.firstChild) {
+          fakeClipboard.appendChild(wrapper.firstChild);
+        }
+      }
     });
 
-    const textPlain = Array.from(fakeClipboard.childNodes).map((node) => node.textContent)
-      .join('\n\n');
+    const textPlain = textPlainChunks.join('\n\n');
     const textHTML = fakeClipboard.innerHTML;
 
-    e.clipboardData.setData('text/plain', textPlain);
-    e.clipboardData.setData('text/html', textHTML);
+    clipboardData.setData('text/plain', textPlain);
+    clipboardData.setData('text/html', textHTML);
 
-    return Promise
-      .all(this.selectedBlocks.map((block) => block.save()))
-      .then(savedData => {
-        try {
-          e.clipboardData.setData(this.Editor.Paste.MIME_TYPE, JSON.stringify(savedData));
-        } catch (err) {
-          // In Firefox we can't set data in async function
-        }
-      });
+    try {
+      const savedData = await Promise.all(this.selectedBlocks.map((block) => block.save()));
+
+      clipboardData.setData(this.Editor.Paste.MIME_TYPE, JSON.stringify(savedData));
+    } catch {
+      // In Firefox we can't set data in async function
+    }
   }
 
   /**
@@ -345,10 +354,13 @@ export default class BlockSelection extends Module {
   public selectBlock(block: Block): void {
     /** Save selection */
     this.selection.save();
-    SelectionUtils.get()
-      .removeAllRanges();
+    const selection = SelectionUtils.get();
 
-    block.selected = true;
+    selection?.removeAllRanges();
+
+    const blockToSelect = block;
+
+    blockToSelect.selected = true;
 
     this.clearCache();
 
@@ -362,7 +374,9 @@ export default class BlockSelection extends Module {
    * @param {Block} block - Block to unselect
    */
   public unselectBlock(block: Block): void {
-    block.selected = false;
+    const blockToUnselect = block;
+
+    blockToUnselect.selected = false;
 
     this.clearCache();
   }
@@ -400,6 +414,11 @@ export default class BlockSelection extends Module {
     }
 
     const workingBlock = this.Editor.BlockManager.getBlock(event.target as HTMLElement);
+
+    if (!workingBlock) {
+      return;
+    }
+
     const inputs = workingBlock.inputs;
 
     /**
@@ -431,22 +450,28 @@ export default class BlockSelection extends Module {
        */
       this.needToSelectAll = false;
       this.readyToBlockSelection = false;
-    } else if (this.readyToBlockSelection) {
-      /**
-       * prevent default selection when we use custom selection
-       */
-      event.preventDefault();
 
-      /**
-       * select working Block
-       */
-      this.selectBlock(workingBlock);
-
-      /**
-       * Enable all Blocks selection if current Block is selected
-       */
-      this.needToSelectAll = true;
+      return;
     }
+
+    if (!this.readyToBlockSelection) {
+      return;
+    }
+
+    /**
+     * prevent default selection when we use custom selection
+     */
+    event.preventDefault();
+
+    /**
+     * select working Block
+     */
+    this.selectBlock(workingBlock);
+
+    /**
+     * Enable all Blocks selection if current Block is selected
+     */
+    this.needToSelectAll = true;
   }
 
   /**
@@ -463,12 +488,48 @@ export default class BlockSelection extends Module {
     /**
      * Remove Ranges from Selection
      */
-    SelectionUtils.get()
-      .removeAllRanges();
+    const selection = SelectionUtils.get();
+
+    selection?.removeAllRanges();
 
     this.allBlocksSelected = true;
 
     /** close InlineToolbar if we selected all Blocks */
     this.Editor.InlineToolbar.close();
+  }
+
+  /**
+   * Remove selected blocks and insert pressed printable key
+   *
+   * @param event - keyboard event that triggers replacement
+   */
+  private replaceSelectedBlocksWithPrintableKey(event: KeyboardEvent): void {
+    const { BlockManager, Caret } = this.Editor;
+    const indexToInsert = BlockManager.removeSelectedBlocks();
+
+    if (indexToInsert === undefined) {
+      return;
+    }
+
+    BlockManager.insertDefaultBlockAtIndex(indexToInsert, true);
+
+    const currentBlock = BlockManager.currentBlock;
+
+    if (currentBlock) {
+      Caret.setToBlock(currentBlock);
+    }
+
+    _.delay(() => {
+      const eventKey = event.key;
+
+      /**
+       * If event.key length >1 that means key is special (e.g. Enter or Dead or Unidentified).
+       * So we use empty string
+       *
+       * @see https://developer.mozilla.org/ru/docs/Web/API/KeyboardEvent/key
+       */
+      Caret.insertContentAtCaretPosition(eventKey.length > 1 ? '' : eventKey);
+    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+    }, 20)();
   }
 }

@@ -16,11 +16,6 @@ export default class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBl
   public type: ToolType.Tune = ToolType.Tune;
 
   /**
-   * Tool's constructable blueprint
-   */
-  protected readonly constructable: BlockTuneConstructable;
-
-  /**
    * Constructs new BlockTune instance from constructable
    *
    * @param data - Tune data
@@ -28,7 +23,9 @@ export default class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBl
    */
   public create(data: BlockTuneData, block: BlockAPI): IBlockTune {
     // eslint-disable-next-line new-cap
-    return new this.constructable({
+    const BlockTuneClass = this.constructable as BlockTuneConstructable;
+
+    return new BlockTuneClass({
       api: this.api,
       config: this.settings,
       block,

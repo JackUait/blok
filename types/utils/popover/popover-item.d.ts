@@ -109,7 +109,7 @@ export interface PopoverItemHtmlParams {
 
   /**
    * Item name
-   * Used in data attributes needed for cypress tests
+   * Used in data attributes needed for automated end-to-end tests
    */
   name?: string;
 }
@@ -155,7 +155,7 @@ export interface PopoverItemDefaultBaseParams {
 
   /**
    * Item name
-   * Used in data attributes needed for shortcuts work and for cypress tests
+   * Used in data attributes needed for shortcuts work and automated end-to-end tests
    */
   name?: string;
 

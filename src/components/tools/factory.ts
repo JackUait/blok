@@ -49,10 +49,15 @@ export default class ToolsFactory {
    * @param name - tool name
    */
   public get(name: string): InlineToolAdapter | BlockToolAdapter | BlockTuneAdapter {
-    const { class: constructable, isInternal = false, ...config } = this.config[name];
+    const { class: constructableCandidate, isInternal = false, ...config } = this.config[name];
+    const constructable = constructableCandidate as ToolConstructable | undefined;
+
+    if (constructable === undefined) {
+      throw new Error(`Tool "${name}" does not provide a class.`);
+    }
 
     const Constructor = this.getConstructor(constructable);
-    const isTune = constructable[InternalTuneSettings.IsTune];
+    const isTune = Boolean(Reflect.get(constructable, InternalTuneSettings.IsTune));
 
     return new Constructor({
       name,
@@ -72,9 +77,9 @@ export default class ToolsFactory {
    */
   private getConstructor(constructable: ToolConstructable): ToolConstructor {
     switch (true) {
-      case constructable[InternalInlineToolSettings.IsInline]:
+      case Boolean(Reflect.get(constructable, InternalInlineToolSettings.IsInline)):
         return InlineToolAdapter;
-      case constructable[InternalTuneSettings.IsTune]:
+      case Boolean(Reflect.get(constructable, InternalTuneSettings.IsTune)):
         return BlockTuneAdapter;
       default:
         return BlockToolAdapter;

@@ -14,9 +14,9 @@ import { isToolConvertable } from './tools';
  * @param block - block to check
  * @param direction - export for block to merge from, import for block to merge to
  */
-export function isBlockConvertable(block: Block, direction: 'export' | 'import'): boolean {
+export const isBlockConvertable = (block: Block, direction: 'export' | 'import'): boolean => {
   return isToolConvertable(block.tool, direction);
-}
+};
 
 /**
  * Checks that all the properties of the first block data exist in second block data with the same values.
@@ -35,11 +35,11 @@ export function isBlockConvertable(block: Block, direction: 'export' | 'import')
  * @param data1 – first block data
  * @param data2 – second block data
  */
-export function isSameBlockData(data1: BlockToolData, data2: BlockToolData): boolean {
+export const isSameBlockData = (data1: BlockToolData, data2: BlockToolData): boolean => {
   return Object.entries(data1).some((([propName, propValue]) => {
     return data2[propName] && equals(data2[propName], propValue);
   }));
-}
+};
 
 /**
  * Returns list of tools you can convert specified block to
@@ -47,7 +47,7 @@ export function isSameBlockData(data1: BlockToolData, data2: BlockToolData): boo
  * @param block - block to get conversion items for
  * @param allBlockTools - all block tools available in the editor
  */
-export async function getConvertibleToolsForBlock(block: BlockAPI, allBlockTools: BlockToolAdapter[]): Promise<BlockToolAdapter[]> {
+export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools: BlockToolAdapter[]): Promise<BlockToolAdapter[]> => {
   const savedData = await block.save() as SavedData;
   const blockData = savedData.data;
 
@@ -84,15 +84,17 @@ export async function getConvertibleToolsForBlock(block: BlockAPI, allBlockTools
         return false;
       }
 
-      if (toolboxItem.data !== undefined) {
-        /**
-         * When a tool has several toolbox entries, we need to make sure we do not add
-         * toolbox item with the same data to the resulting array. This helps exclude duplicates
-         */
-        if (isSameBlockData(toolboxItem.data, blockData)) {
-          return false;
-        }
-      } else if (tool.name === block.name) {
+      const hasToolboxData = toolboxItem.data !== undefined;
+
+      /**
+       * When a tool has several toolbox entries, we need to make sure we do not add
+       * toolbox item with the same data to the resulting array. This helps exclude duplicates
+       */
+      if (hasToolboxData && isSameBlockData(toolboxItem.data, blockData)) {
+        return false;
+      }
+
+      if (!hasToolboxData && tool.name === block.name) {
         return false;
       }
 
@@ -106,7 +108,7 @@ export async function getConvertibleToolsForBlock(block: BlockAPI, allBlockTools
 
     return result;
   }, [] as BlockToolAdapter[]);
-}
+};
 
 
 /**
@@ -120,7 +122,7 @@ export async function getConvertibleToolsForBlock(block: BlockAPI, allBlockTools
  * @param targetBlock - block to merge to
  * @param blockToMerge - block to merge from
  */
-export function areBlocksMergeable(targetBlock: Block, blockToMerge: Block): boolean {
+export const areBlocksMergeable = (targetBlock: Block, blockToMerge: Block): boolean => {
   /**
    * If target block has not 'merge' method, we can't merge blocks.
    *
@@ -141,7 +143,7 @@ export function areBlocksMergeable(targetBlock: Block, blockToMerge: Block): boo
    * We can merge blocks if they have valid conversion config
    */
   return isBlockConvertable(blockToMerge, 'export') && isBlockConvertable(targetBlock, 'import');
-}
+};
 
 /**
  * Using conversionConfig, convert block data to string.
@@ -149,25 +151,27 @@ export function areBlocksMergeable(targetBlock: Block, blockToMerge: Block): boo
  * @param blockData - block data to convert
  * @param conversionConfig - tool's conversion config
  */
-export function convertBlockDataToString(blockData: BlockToolData, conversionConfig?: ConversionConfig ): string {
+export const convertBlockDataToString = (blockData: BlockToolData, conversionConfig?: ConversionConfig ): string => {
   const exportProp = conversionConfig?.export;
 
   if (isFunction(exportProp)) {
     return exportProp(blockData);
-  } else if (isString(exportProp)) {
-    return blockData[exportProp];
-  } else {
-    /**
-     * Tool developer provides 'export' property, but it is not correct. Warn him.
-     */
-    if (exportProp !== undefined) {
-      log('Conversion «export» property must be a string or function. ' +
-      'String means key of saved data object to export. Function should export processed string to export.');
-    }
-
-    return '';
   }
-}
+
+  if (isString(exportProp)) {
+    return blockData[exportProp];
+  }
+
+  /**
+   * Tool developer provides 'export' property, but it is not correct. Warn him.
+   */
+  if (exportProp !== undefined) {
+    log('Conversion «export» property must be a string or function. ' +
+    'String means key of saved data object to export. Function should export processed string to export.');
+  }
+
+  return '';
+};
 
 /**
  * Using conversionConfig, convert string to block data.
@@ -176,25 +180,26 @@ export function convertBlockDataToString(blockData: BlockToolData, conversionCon
  * @param conversionConfig - tool's conversion config
  * @param targetToolConfig - target tool config, used in conversionConfig.import method
  */
-export function convertStringToBlockData(stringToImport: string, conversionConfig?: ConversionConfig, targetToolConfig?: ToolConfig): BlockToolData {
+export const convertStringToBlockData = (stringToImport: string, conversionConfig?: ConversionConfig, targetToolConfig?: ToolConfig): BlockToolData => {
   const importProp = conversionConfig?.import;
 
   if (isFunction(importProp)) {
     return importProp(stringToImport, targetToolConfig);
-  } else if (isString(importProp)) {
+  }
+
+  if (isString(importProp)) {
     return {
       [importProp]: stringToImport,
     };
-  } else {
-    /**
-     * Tool developer provides 'import' property, but it is not correct. Warn him.
-     */
-    if (importProp !== undefined) {
-      log('Conversion «import» property must be a string or function. ' +
-      'String means key of tool data to import. Function accepts a imported string and return composed tool data.');
-    }
-
-    return {};
   }
-}
 
+  /**
+   * Tool developer provides 'import' property, but it is not correct. Warn him.
+   */
+  if (importProp !== undefined) {
+    log('Conversion «import» property must be a string or function. ' +
+    'String means key of tool data to import. Function accepts a imported string and return composed tool data.');
+  }
+
+  return {};
+};

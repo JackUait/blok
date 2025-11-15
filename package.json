@@ -14,15 +14,20 @@
     "wysiwyg"
   ],
   "scripts": {
-    "dev": "vite",
+    "serve": "vite --no-open",
     "build": "vite build --mode production",
     "build:test": "vite build --mode test",
-    "lint": "eslint src/ --ext .ts && yarn lint:tests",
-    "lint:errors": "eslint src/ --ext .ts --quiet",
-    "lint:fix": "eslint src/ --ext .ts --fix",
-    "lint:tests": "eslint test/ --ext .ts",
-    "test:e2e": "yarn build:test && cypress run",
-    "test:e2e:open": "yarn build:test && cypress open"
+    "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
+    "lint:fix": "eslint . --fix",
+    "lint:tests": "eslint test/",
+    "lint:types": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
+    "jscpd": "jscpd src/ test/",
+    "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report"
   },
   "author": "CodeX",
   "license": "Apache-2.0",
@@ -31,28 +36,31 @@
     "url": "git+https://github.com/codex-team/editor.js.git"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@babel/register": "^7.21.0",
     "@codexteam/icons": "0.3.2",
     "@codexteam/shortcuts": "^1.1.1",
-    "@cypress/code-coverage": "^3.10.3",
     "@editorjs/code": "^2.7.0",
     "@editorjs/delimiter": "^1.2.0",
     "@editorjs/header": "^2.8.8",
     "@editorjs/paragraph": "^2.11.6",
     "@editorjs/simple-image": "^1.4.1",
+    "@eslint/eslintrc": "^3.1.0",
+    "@playwright/test": "^1.56.1",
     "@types/node": "^18.15.11",
-    "chai-subset": "^1.6.0",
+    "@vitest/ui": "^1.0.0",
     "core-js": "3.30.0",
-    "cypress": "^13.13.3",
-    "cypress-intellij-reporter": "^0.0.7",
-    "cypress-plugin-tab": "^1.0.5",
-    "cypress-terminal-report": "^5.3.2",
-    "cypress-vite": "^1.5.0",
     "eslint": "^8.37.0",
     "eslint-config-codex": "^1.7.1",
     "eslint-plugin-chai-friendly": "^0.7.2",
-    "eslint-plugin-cypress": "2.12.1",
+    "eslint-plugin-deprecation": "^1.5.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jest": "^29.1.0",
+    "eslint-plugin-playwright": "^2.3.0",
+    "eslint-plugin-sonarjs": "^3.0.5",
     "html-janitor": "^2.0.4",
+    "jscpd": "^4.0.5",
+    "jsdom": "^23.0.0",
     "nanoid": "^4.0.2",
     "postcss-apply": "^0.12.0",
     "postcss-nested": "4.1.2",
@@ -62,7 +70,8 @@
     "tslint": "^6.1.1",
     "typescript": "5.0.3",
     "vite": "^4.2.1",
-    "vite-plugin-css-injected-by-js": "^3.1.0"
+    "vite-plugin-css-injected-by-js": "^3.1.0",
+    "vitest": "^1.0.0"
   },
   "collective": {
     "type": "opencollective",
@@ -70,7 +79,19 @@
   },
   "dependencies": {
     "@editorjs/caret": "^1.0.1",
+    "@types/lodash": "^4.17.20",
     "codex-notifier": "^1.1.2",
-    "codex-tooltip": "^1.0.5"
+    "lodash": "^4.17.21"
+  },
+  "resolutions": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@typescript-eslint/typescript-estree": "^6.0.0",
+    "@typescript-eslint/scope-manager": "^6.0.0",
+    "@typescript-eslint/types": "^6.0.0",
+    "@typescript-eslint/utils": "^6.0.0",
+    "@typescript-eslint/visitor-keys": "^6.0.0",
+    "@typescript-eslint/type-utils": "^6.0.0",
+    "eslint-plugin-jsdoc": "^48.0.0"
   }
 }

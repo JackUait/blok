@@ -13,6 +13,11 @@ export interface FlipperOptions {
   focusedItemClass?: string;
 
   /**
+   * Allow handling keyboard events dispatched from contenteditable elements
+   */
+  handleContentEditableTargets?: boolean;
+
+  /**
    * If flipping items are the same for all Block (for ex. Toolbox), ypu can pass it on constructing
    */
   items?: HTMLElement[];
@@ -58,6 +63,16 @@ export default class Flipper {
   private activated = false;
 
   /**
+   * Skip moving focus on the next Tab press when initial focus was pre-set
+   */
+  private skipNextTabFocus = false;
+
+  /**
+   * True if flipper should handle events coming from contenteditable elements
+   */
+  private handleContentEditableTargets: boolean;
+
+  /**
    * List codes of the keys allowed for handling
    */
   private readonly allowedKeys: number[];
@@ -65,7 +80,7 @@ export default class Flipper {
   /**
    * Call back for button click/enter
    */
-  private readonly activateCallback: (item: HTMLElement) => void;
+  private readonly activateCallback?: (item: HTMLElement) => void;
 
   /**
    * Contains list of callbacks to be executed on each flip
@@ -76,9 +91,10 @@ export default class Flipper {
    * @param options - different constructing settings
    */
   constructor(options: FlipperOptions) {
-    this.iterator = new DomIterator(options.items, options.focusedItemClass);
+    this.iterator = new DomIterator(options.items || [], options.focusedItemClass ?? '');
     this.activateCallback = options.activateCallback;
     this.allowedKeys = options.allowedKeys || Flipper.usedKeys;
+    this.handleContentEditableTargets = options.handleContentEditableTargets ?? false;
   }
 
   /**
@@ -107,11 +123,11 @@ export default class Flipper {
   public activate(items?: HTMLElement[], cursorPosition?: number): void {
     this.activated = true;
     if (items) {
-      this.iterator.setItems(items);
+      this.iterator?.setItems(items);
     }
 
     if (cursorPosition !== undefined) {
-      this.iterator.setCursor(cursorPosition);
+      this.iterator?.setCursor(cursorPosition);
     }
 
     /**
@@ -124,6 +140,7 @@ export default class Flipper {
      * - otherwise this handler will be called at the moment it is attached which causes false flipper firing (see https://techread.me/js-addeventlistener-fires-for-past-events/)
      */
     document.addEventListener('keydown', this.onKeyDown, true);
+    window.addEventListener('keydown', this.onKeyDown, true);
   }
 
   /**
@@ -132,8 +149,10 @@ export default class Flipper {
   public deactivate(): void {
     this.activated = false;
     this.dropCursor();
+    this.skipNextTabFocus = false;
 
-    document.removeEventListener('keydown', this.onKeyDown);
+    document.removeEventListener('keydown', this.onKeyDown, true);
+    window.removeEventListener('keydown', this.onKeyDown, true);
   }
 
   /**
@@ -145,10 +164,39 @@ export default class Flipper {
   }
 
   /**
+   * Focus item at specified position without triggering flip callbacks
+   *
+   * @param position - index of item to focus. Negative value clears focus.
+   */
+  public focusItem(position: number): void {
+    const iterator = this.iterator;
+
+    if (!iterator) {
+      return;
+    }
+
+    if (!iterator.hasItems()) {
+      return;
+    }
+
+    if (position < 0) {
+      iterator.dropCursor();
+
+      return;
+    }
+
+    if (!iterator.currentItem && position === 0) {
+      this.skipNextTabFocus = true;
+    }
+
+    iterator.setCursor(position);
+  }
+
+  /**
    * Focuses previous flipper iterator item
    */
   public flipLeft(): void {
-    this.iterator.previous();
+    this.iterator?.previous();
     this.flipCallback();
   }
 
@@ -156,7 +204,7 @@ export default class Flipper {
    * Focuses next flipper iterator item
    */
   public flipRight(): void {
-    this.iterator.next();
+    this.iterator?.next();
     this.flipCallback();
   }
 
@@ -164,11 +212,11 @@ export default class Flipper {
    * Return true if some button is focused
    */
   public hasFocus(): boolean {
-    return !!this.iterator.currentItem;
+    return !!this.iterator?.currentItem;
   }
 
   /**
-   * Registeres function that should be executed on each navigation action
+   * Registers a function that should be executed on each navigation action
    *
    * @param cb - function to execute
    */
@@ -177,7 +225,7 @@ export default class Flipper {
   }
 
   /**
-   * Unregisteres function that is executed on each navigation action
+   * Unregisters a function that is executed on each navigation action
    *
    * @param cb - function to stop executing
    */
@@ -191,7 +239,26 @@ export default class Flipper {
    * @see DomIterator#dropCursor
    */
   private dropCursor(): void {
-    this.iterator.dropCursor();
+    this.iterator?.dropCursor();
+  }
+
+  /**
+   * Get numeric keyCode from KeyboardEvent.key for backward compatibility
+   *
+   * @param event - keyboard event
+   * @returns numeric keyCode or null if not recognized
+   */
+  private getKeyCode(event: KeyboardEvent): number | null {
+    const keyToCodeMap: Record<string, number> = {
+      'Tab': _.keyCodes.TAB,
+      'Enter': _.keyCodes.ENTER,
+      'ArrowLeft': _.keyCodes.LEFT,
+      'ArrowRight': _.keyCodes.RIGHT,
+      'ArrowUp': _.keyCodes.UP,
+      'ArrowDown': _.keyCodes.DOWN,
+    };
+
+    return keyToCodeMap[event.key] ?? null;
   }
 
   /**
@@ -200,31 +267,52 @@ export default class Flipper {
    * @param event - keydown event
    */
   private onKeyDown = (event: KeyboardEvent): void => {
+    const target = event.target as HTMLElement | null;
+
+    if (this.shouldSkipTarget(target, event)) {
+      return;
+    }
+
+    const keyCode = this.getKeyCode(event);
+    const isDirectionalArrow = keyCode === _.keyCodes.LEFT
+      || keyCode === _.keyCodes.RIGHT
+      || keyCode === _.keyCodes.UP
+      || keyCode === _.keyCodes.DOWN;
+
+    /**
+     * Allow selecting text with Shift combined with arrow keys by delegating handling to the browser.
+     * Other Shift-based combinations (for example Shift+Tab) are still handled by Flipper.
+     */
+    if (event.shiftKey && isDirectionalArrow) {
+      return;
+    }
+
     const isReady = this.isEventReadyForHandling(event);
 
     if (!isReady) {
       return;
     }
 
-    const isShiftKey = event.shiftKey;
-
     /**
-     * If shift key is pressed, do nothing
-     * Allows to select next/prev lines of text using keyboard
+     * Stop propagation to prevent plugin-level handlers from being called
+     * while Flipper manages keyboard navigation.
      */
-    if (isShiftKey === true) {
-      return;
-    }
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    // eslint-disable-next-line no-param-reassign
+    event.cancelBubble = true;
+    // eslint-disable-next-line no-param-reassign
+    event.returnValue = false;
 
     /**
      * Prevent only used keys default behaviour
      * (allows to navigate by ARROW DOWN, for example)
      */
-    if (Flipper.usedKeys.includes(event.keyCode)) {
+    if (keyCode !== null && Flipper.usedKeys.includes(keyCode)) {
       event.preventDefault();
     }
 
-    switch (event.keyCode) {
+    switch (keyCode) {
       case _.keyCodes.TAB:
         this.handleTabPress(event);
         break;
@@ -250,7 +338,18 @@ export default class Flipper {
    * @returns {boolean}
    */
   private isEventReadyForHandling(event: KeyboardEvent): boolean {
-    return this.activated && this.allowedKeys.includes(event.keyCode);
+    const keyCode = this.getKeyCode(event);
+
+    return this.activated && keyCode !== null && this.allowedKeys.includes(keyCode);
+  }
+
+  /**
+   * Enables or disables handling events dispatched from contenteditable elements
+   *
+   * @param value - true if events from contenteditable elements should be handled
+   */
+  public setHandleContentEditableTargets(value: boolean): void {
+    this.handleContentEditableTargets = value;
   }
 
   /**
@@ -260,8 +359,14 @@ export default class Flipper {
    */
   private handleTabPress(event: KeyboardEvent): void {
     /** this property defines leaf direction */
-    const shiftKey = event.shiftKey,
-        direction = shiftKey ? DomIterator.directions.LEFT : DomIterator.directions.RIGHT;
+    const shiftKey = event.shiftKey;
+    const direction = shiftKey ? DomIterator.directions.LEFT : DomIterator.directions.RIGHT;
+
+    if (this.skipNextTabFocus) {
+      this.skipNextTabFocus = false;
+
+      return;
+    }
 
     switch (direction) {
       case DomIterator.directions.RIGHT:
@@ -274,6 +379,15 @@ export default class Flipper {
   }
 
   /**
+   * Delegates external keyboard events to the flipper handler.
+   *
+   * @param event - keydown event captured outside the flipper
+   */
+  public handleExternalKeydown(event: KeyboardEvent): void {
+    this.onKeyDown(event);
+  }
+
+  /**
    * Enter press will click current item if flipper is activated
    *
    * @param {KeyboardEvent} event - enter keydown event
@@ -283,7 +397,7 @@ export default class Flipper {
       return;
     }
 
-    if (this.iterator.currentItem) {
+    if (this.iterator?.currentItem) {
       /**
        * Stop Enter propagation only if flipper is ready to select focused item
        */
@@ -292,7 +406,7 @@ export default class Flipper {
       this.iterator.currentItem.click();
     }
 
-    if (_.isFunction(this.activateCallback)) {
+    if (_.isFunction(this.activateCallback) && this.iterator?.currentItem) {
       this.activateCallback(this.iterator.currentItem);
     }
   }
@@ -301,10 +415,31 @@ export default class Flipper {
    * Fired after flipping in any direction
    */
   private flipCallback(): void {
-    if (this.iterator.currentItem) {
+    if (this.iterator?.currentItem) {
       this.iterator.currentItem.scrollIntoViewIfNeeded();
     }
 
     this.flipCallbacks.forEach(cb => cb());
+  }
+
+  /**
+   * Determine if keyboard events coming from a target should be skipped
+   *
+   * @param target - event target element
+   * @param event - keyboard event being handled
+   */
+  private shouldSkipTarget(target: HTMLElement | null, event: KeyboardEvent): boolean {
+    if (!target) {
+      return false;
+    }
+
+    const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+    const shouldHandleNativeInput = target.dataset?.flipperTabTarget === 'true' && event.key === 'Tab';
+    const isContentEditable = target.isContentEditable;
+    const isInlineToolInput = target.closest('[data-link-tool-input-opened="true"]') !== null;
+
+    const shouldSkipContentEditable = isContentEditable && !this.handleContentEditableTargets;
+
+    return (isNativeInput && !shouldHandleNativeInput) || shouldSkipContentEditable || isInlineToolInput;
   }
 }

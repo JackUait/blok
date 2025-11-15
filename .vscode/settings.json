@@ -1,41 +1,17 @@
 {
-    "cSpell.words": [
-      "autofocused",
-      "Behaviour",
-      "cacheable",
-      "childs",
-      "codexteam",
-      "colspan",
-      "contenteditable",
-      "contentless",
-      "Convertable",
-      "cssnano",
-      "cssnext",
-      "Debouncer",
-      "devserver",
-      "editorjs",
-      "entrypoints",
-      "Flippable",
-      "GRAMMARLY",
-      "hsablonniere",
-      "intellij",
-      "keydown",
-      "keydowns",
-      "Kilian",
-      "mergeable",
-      "movetostart",
-      "nofollow",
-      "opencollective",
-      "preconfigured",
-      "resetors",
-      "rowspan",
-      "selectall",
-      "sometool",
-      "stylelint",
-      "textareas",
-      "twitterwidget",
-      "typeof",
-      "Unmergeable",
-      "viewports"
-    ]
+  "eslint.enable": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always"
+  },
+  "eslint.useFlatConfig": true,
+
 }

@@ -38,8 +38,8 @@ export default class DragNDrop extends Module {
   private enableModuleBindings(): void {
     const { UI } = this.Editor;
 
-    this.readOnlyMutableListeners.on(UI.nodes.holder, 'drop', async (dropEvent: DragEvent) => {
-      await this.processDrop(dropEvent);
+    this.readOnlyMutableListeners.on(UI.nodes.holder, 'drop', (dropEvent: Event) => {
+      void this.processDrop(dropEvent as DragEvent);
     }, true);
 
     this.readOnlyMutableListeners.on(UI.nodes.holder, 'dragstart', () => {
@@ -49,8 +49,8 @@ export default class DragNDrop extends Module {
     /**
      * Prevent default browser behavior to allow drop on non-contenteditable elements
      */
-    this.readOnlyMutableListeners.on(UI.nodes.holder, 'dragover', (dragEvent: DragEvent) => {
-      this.processDragOver(dragEvent);
+    this.readOnlyMutableListeners.on(UI.nodes.holder, 'dragover', (dragEvent: Event) => {
+      this.processDragOver(dragEvent as DragEvent);
     }, true);
   }
 
@@ -75,9 +75,9 @@ export default class DragNDrop extends Module {
 
     dropEvent.preventDefault();
 
-    BlockManager.blocks.forEach((block) => {
+    for (const block of BlockManager.blocks) {
       block.dropTarget = false;
-    });
+    }
 
     if (SelectionUtils.isAtEditor && !SelectionUtils.isCollapsed && this.isStartedAtEditor) {
       document.execCommand('delete');
@@ -89,17 +89,28 @@ export default class DragNDrop extends Module {
      * Try to set current block by drop target.
      * If drop target is not part of the Block, set last Block as current.
      */
-    const targetBlock = BlockManager.setCurrentBlockByChildNode(dropEvent.target as Node);
+    const target = dropEvent.target;
+    const targetBlock = target instanceof Node
+      ? BlockManager.setCurrentBlockByChildNode(target)
+      : undefined;
 
-    if (targetBlock) {
-      this.Editor.Caret.setToBlock(targetBlock, Caret.positions.END);
-    } else {
-      const lastBlock = BlockManager.setCurrentBlockByChildNode(BlockManager.lastBlock.holder);
+    const lastBlock = BlockManager.lastBlock;
+    const fallbackBlock = lastBlock
+      ? BlockManager.setCurrentBlockByChildNode(lastBlock.holder) ?? lastBlock
+      : undefined;
+    const blockForCaret = targetBlock ?? fallbackBlock;
 
-      this.Editor.Caret.setToBlock(lastBlock, Caret.positions.END);
+    if (blockForCaret) {
+      this.Editor.Caret.setToBlock(blockForCaret, Caret.positions.END);
     }
 
-    await Paste.processDataTransfer(dropEvent.dataTransfer, true);
+    const { dataTransfer } = dropEvent;
+
+    if (!dataTransfer) {
+      return;
+    }
+
+    await Paste.processDataTransfer(dataTransfer, true);
   }
 
   /**

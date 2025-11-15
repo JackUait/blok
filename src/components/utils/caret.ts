@@ -7,17 +7,17 @@ import $, { isCollapsedWhitespaces } from '../dom';
  * Handles a case when focusNode is an ElementNode and focusOffset is a child index,
  * returns child node with focusOffset index as a new focusNode
  */
-export function getCaretNodeAndOffset(): [ Node | null, number ] {
+export const getCaretNodeAndOffset = (): [ Node | null, number ] => {
   const selection = window.getSelection();
 
   if (selection === null) {
     return [null, 0];
   }
 
-  let focusNode = selection.focusNode;
-  let focusOffset = selection.focusOffset;
+  const initialFocusNode = selection.focusNode;
+  const initialFocusOffset = selection.focusOffset;
 
-  if (focusNode === null) {
+  if (initialFocusNode === null) {
     return [null, 0];
   }
 
@@ -29,24 +29,27 @@ export function getCaretNodeAndOffset(): [ Node | null, number ] {
    *
    *
    */
-  if (focusNode.nodeType !== Node.TEXT_NODE && focusNode.childNodes.length > 0) {
-    /**
-     * In normal cases, focusOffset is a child index.
-     */
-    if (focusNode.childNodes[focusOffset]) {
-      focusNode = focusNode.childNodes[focusOffset];
-      focusOffset = 0;
-    /**
-     * But in Firefox, focusOffset can be 1 with the single child.
-     */
-    } else {
-      focusNode = focusNode.childNodes[focusOffset - 1];
-      focusOffset = focusNode.textContent.length;
-    }
+  if (initialFocusNode.nodeType === Node.TEXT_NODE || initialFocusNode.childNodes.length === 0) {
+    return [initialFocusNode, initialFocusOffset];
   }
 
-  return [focusNode, focusOffset];
-}
+  /**
+   * In normal cases, focusOffset is a child index.
+   */
+  const regularChild = initialFocusNode.childNodes[initialFocusOffset];
+
+  if (regularChild !== undefined) {
+    return [regularChild, 0];
+  }
+
+  /**
+   * But in Firefox, focusOffset can be 1 with the single child.
+   */
+  const fallbackChild = initialFocusNode.childNodes[initialFocusOffset - 1] ?? null;
+  const textContent = fallbackChild?.textContent ?? null;
+
+  return [fallbackChild, textContent !== null ? textContent.length : 0];
+};
 
 /**
  * Checks content at left or right of the passed node for emptiness.
@@ -57,7 +60,7 @@ export function getCaretNodeAndOffset(): [ Node | null, number ] {
  * @param direction - The direction to check ('left' or 'right').
  * @returns true if adjacent content is empty, false otherwise.
  */
-export function checkContenteditableSliceForEmptiness(contenteditable: HTMLElement, fromNode: Node, offsetInsideNode: number, direction: 'left' | 'right'): boolean {
+export const checkContenteditableSliceForEmptiness = (contenteditable: HTMLElement, fromNode: Node, offsetInsideNode: number, direction: 'left' | 'right'): boolean => {
   const range = document.createRange();
 
   /**
@@ -95,7 +98,7 @@ export function checkContenteditableSliceForEmptiness(contenteditable: HTMLEleme
    * If text contains only invisible whitespaces, it is considered to be empty
    */
   return isCollapsedWhitespaces(textContent);
-}
+};
 
 /**
  * Checks if caret is at the start of the passed input
@@ -111,7 +114,7 @@ export function checkContenteditableSliceForEmptiness(contenteditable: HTMLEleme
  *
  * @param input - input where caret should be checked
  */
-export function isCaretAtStartOfInput(input: HTMLElement): boolean {
+export const isCaretAtStartOfInput = (input: HTMLElement): boolean => {
   const firstNode = $.getDeepestNode(input);
 
   if (firstNode === null || $.isEmpty(input)) {
@@ -142,7 +145,7 @@ export function isCaretAtStartOfInput(input: HTMLElement): boolean {
    * If there is nothing visible to the left of the caret, it is considered to be at the start
    */
   return checkContenteditableSliceForEmptiness(input, caretNode, caretOffset, 'left');
-}
+};
 
 /**
  * Checks if caret is at the end of the passed input
@@ -158,7 +161,7 @@ export function isCaretAtStartOfInput(input: HTMLElement): boolean {
  *
  * @param input - input where caret should be checked
  */
-export function isCaretAtEndOfInput(input: HTMLElement): boolean {
+export const isCaretAtEndOfInput = (input: HTMLElement): boolean => {
   const lastNode = $.getDeepestNode(input, true);
 
   if (lastNode === null) {
@@ -185,4 +188,4 @@ export function isCaretAtEndOfInput(input: HTMLElement): boolean {
    * If there is nothing visible to the right of the caret, it is considered to be at the end
    */
   return checkContenteditableSliceForEmptiness(input, caretNode, caretOffset, 'right');
-}
+};

@@ -6,18 +6,23 @@
  * @param obj - object with aliases to be resolved
  * @param aliases - object with aliases info where key is an alias property name and value is an aliased property name
  */
-export function resolveAliases<ObjectType>(obj: ObjectType, aliases: { [alias: string]: string }): ObjectType {
+export const resolveAliases = <ObjectType extends object>(
+  obj: ObjectType,
+  aliases: Partial<Record<string, keyof ObjectType>>
+): ObjectType => {
   const result = {} as ObjectType;
 
-  Object.keys(obj).forEach(property => {
-    const aliasedProperty = aliases[property];
+  (Object.keys(obj) as Array<keyof ObjectType | string>).forEach((property) => {
+    const propertyKey = property as keyof ObjectType;
+    const propertyString = String(property);
+    const aliasedProperty = aliases[propertyString];
 
     if (aliasedProperty !== undefined) {
-      result[aliasedProperty] = obj[property];
+      result[aliasedProperty] = obj[propertyKey];
     } else {
-      result[property] = obj[property];
+      result[propertyKey] = obj[propertyKey];
     }
   });
 
   return result;
-}
+};

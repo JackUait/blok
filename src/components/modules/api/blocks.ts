@@ -28,7 +28,7 @@ export default class BlocksAPI extends Module {
       getBlockByIndex: (index: number): BlockAPIInterface | undefined => this.getBlockByIndex(index),
       getById: (id: string): BlockAPIInterface | null => this.getById(id),
       getCurrentBlockIndex: (): number => this.getCurrentBlockIndex(),
-      getBlockIndex: (id: string): number => this.getBlockIndex(id),
+      getBlockIndex: (id: string): number | undefined => this.getBlockIndex(id),
       getBlocksCount: (): number => this.getBlocksCount(),
       getBlockByElement: (element: HTMLElement) => this.getBlockByElement(element),
       stretchBlock: (index: number, status = true): void => this.stretchBlock(index, status),
@@ -160,12 +160,18 @@ export default class BlocksAPI extends Module {
    * @param {number} blockIndex - index of Block to delete
    */
   public delete(blockIndex: number = this.Editor.BlockManager.currentBlockIndex): void {
-    try {
-      const block = this.Editor.BlockManager.getBlockByIndex(blockIndex);
+    const block = this.Editor.BlockManager.getBlockByIndex(blockIndex);
 
-      this.Editor.BlockManager.removeBlock(block);
-    } catch (e) {
-      _.logLabeled(e, 'warn');
+    if (block === undefined) {
+      _.logLabeled(`There is no block at index \`${blockIndex}\``, 'warn');
+
+      return;
+    }
+
+    try {
+      void this.Editor.BlockManager.removeBlock(block);
+    } catch (error: unknown) {
+      _.logLabeled(error as unknown as string, 'warn');
 
       return;
     }
@@ -258,25 +264,26 @@ export default class BlocksAPI extends Module {
    *
    * @param {string} type — Tool name
    * @param {BlockToolData} data — Tool data to insert
-   * @param {ToolConfig} config — Tool config
+   * @param {ToolConfig} _config — Tool config
    * @param {number?} index — index where to insert new Block
    * @param {boolean?} needToFocus - flag to focus inserted Block
    * @param replace - pass true to replace the Block existed under passed index
    * @param {string} id — An optional id for the new block. If omitted then the new id will be generated
    */
   public insert = (
-    type: string = this.config.defaultBlock,
+    type?: string,
     data: BlockToolData = {},
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
-    config: ToolConfig = {},
+    _config: ToolConfig = {},
     index?: number,
     needToFocus?: boolean,
     replace?: boolean,
     id?: string
   ): BlockAPIInterface => {
+    const tool = type ?? (this.config.defaultBlock as string | undefined);
+
     const insertedBlock = this.Editor.BlockManager.insert({
       id,
-      tool: type,
+      tool,
       data,
       index,
       needToFocus,
@@ -293,6 +300,11 @@ export default class BlocksAPI extends Module {
    */
   public composeBlockData = async (toolName: string): Promise<BlockToolData> => {
     const tool = this.Editor.Tools.blockTools.get(toolName);
+
+    if (tool === undefined) {
+      throw new Error(`Block Tool with type "${toolName}" not found`);
+    }
+
     const block = new Block({
       tool,
       api: this.Editor.API,
@@ -334,9 +346,7 @@ export default class BlocksAPI extends Module {
 
     const updatedBlock = await BlockManager.update(block, data, tunes);
 
-    // we cast to any because our BlockAPI has no "new" signature
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return new (BlockAPI as any)(updatedBlock);
+    return new BlockAPI(updatedBlock);
   };
 
   /**
@@ -402,9 +412,7 @@ export default class BlocksAPI extends Module {
 
     this.Editor.BlockManager.insertMany(blocksToInsert, index);
 
-    // we cast to any because our BlockAPI has no "new" signature
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return blocksToInsert.map((block) => new (BlockAPI as any)(block));
+    return blocksToInsert.map((block) => new BlockAPI(block));
   };
 
   /**

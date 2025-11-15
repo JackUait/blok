@@ -67,7 +67,7 @@ interface BlockConstructorOptions {
 /**
  * @class Block
  * @classdesc This class describes editor`s block, including block`s HTMLElement, data and tool
- * @property {BlockTool} tool — current block tool (Paragraph, for example)
+ * @property {BlockToolAdapter} tool — current block tool (Paragraph, for example)
  * @property {object} CSS — block`s css classes
  */
 
@@ -98,7 +98,7 @@ interface BlockEvents {
 
 /**
  * @classdesc Abstract Block class that contains Block information, Tool name and Tool class instance
- * @property {BlockTool} tool - Tool instance
+ * @property {BlockToolAdapter} tool - Tool instance
  * @property {HTMLElement} holder - Div element that wraps block content with Tool's content. Has `ce-block` CSS class
  * @property {HTMLElement} pluginsContent - HTML content that returns by Tool's render function
  */
@@ -197,11 +197,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private readonly editorEventBus: EventsDispatcher<EditorEventMap> | null = null;
 
   /**
-   * Link to editor dom change callback. Used to remove listener on remove
-   */
-  private redactorDomChangedCallback: (payload: RedactorDomChangedPayload) => void;
-
-  /**
    * Current block API interface
    */
   private readonly blockAPI: BlockAPIInterface;
@@ -226,9 +221,10 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     this.name = tool.name;
     this.id = id;
     this.settings = tool.settings;
-    this.config = tool.settings.config || {};
+    this.config = tool.settings.config ?? {};
     this.editorEventBus = eventBus || null;
     this.blockAPI = new BlockAPI(this);
+
 
     this.tool = tool;
     this.toolInstance = tool.create(data, this.blockAPI, readOnly);
@@ -264,6 +260,276 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       this.toggleInputsEmptyMark();
     });
   }
+
+  /**
+   * Calls Tool's method
+   *
+   * Method checks tool property {MethodName}. Fires method with passes params If it is instance of Function
+   *
+   * @param {string} methodName - method to call
+   * @param {object} params - method argument
+   */
+  public call(methodName: string, params?: object): void {
+    /**
+     * call Tool's method with the instance context
+     */
+    const method = (this.toolInstance as unknown as Record<string, unknown>)[methodName];
+
+    if (!_.isFunction(method)) {
+      return;
+    }
+
+    if (methodName === BlockToolAPI.APPEND_CALLBACK) {
+      _.log(
+        '`appendCallback` hook is deprecated and will be removed in the next major release. ' +
+            'Use `rendered` hook instead',
+        'warn'
+      );
+    }
+
+    try {
+      // eslint-disable-next-line no-useless-call
+      method.call(this.toolInstance, params);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+
+      _.log(`Error during '${methodName}' call: ${errorMessage}`, 'error');
+    }
+  }
+
+  /**
+   * Call plugins merge method
+   *
+   * @param {BlockToolData} data - data to merge
+   */
+  public async mergeWith(data: BlockToolData): Promise<void> {
+    if (!_.isFunction(this.toolInstance.merge)) {
+      throw new Error(`Block tool "${this.name}" does not support merging`);
+    }
+
+    await this.toolInstance.merge(data);
+  }
+
+  /**
+   * Extracts data from Block
+   * Groups Tool's save processing time
+   *
+   * @returns {object}
+   */
+  public async save(): Promise<undefined | SavedData> {
+    const extractedBlock = await this.toolInstance.save(this.pluginsContent as HTMLElement);
+    const tunesData: { [name: string]: BlockTuneData } = this.unavailableTunesData;
+
+    [
+      ...this.tunesInstances.entries(),
+      ...this.defaultTunesInstances.entries(),
+    ]
+      .forEach(([name, tune]) => {
+        if (_.isFunction(tune.save)) {
+          try {
+            tunesData[name] = tune.save();
+          } catch (e) {
+            _.log(`Tune ${tune.constructor.name} save method throws an Error %o`, 'warn', e);
+          }
+        }
+      });
+
+    /**
+     * Measuring execution time
+     */
+    const measuringStart = window.performance.now();
+
+    return Promise.resolve(extractedBlock)
+      .then((finishedExtraction) => {
+        /** measure promise execution */
+        const measuringEnd = window.performance.now();
+
+        return {
+          id: this.id,
+          tool: this.name,
+          data: finishedExtraction,
+          tunes: tunesData,
+          time: measuringEnd - measuringStart,
+        };
+      })
+      .catch((error) => {
+        _.log(`Saving process for ${this.name} tool failed due to the ${error}`, 'log', 'red');
+
+        return undefined;
+      });
+  }
+
+  /**
+   * Uses Tool's validation method to check the correctness of output data
+   * Tool's validation method is optional
+   *
+   * @description Method returns true|false whether data passed the validation or not
+   * @param {BlockToolData} data - data to validate
+   * @returns {Promise<boolean>} valid
+   */
+  public async validate(data: BlockToolData): Promise<boolean> {
+    if (this.toolInstance.validate instanceof Function) {
+      return await this.toolInstance.validate(data);
+    }
+
+    return true;
+  }
+
+  /**
+   * Returns data to render in Block Tunes menu.
+   * Splits block tunes into 2 groups: block specific tunes and common tunes
+   */
+  public getTunes(): {
+      toolTunes: PopoverItemParams[];
+      commonTunes: PopoverItemParams[];
+      } {
+    const toolTunesPopoverParams: PopoverItemParams[] = [];
+    const commonTunesPopoverParams: PopoverItemParams[] = [];
+    const pushTuneConfig = (
+      tuneConfig: TunesMenuConfigItem | TunesMenuConfigItem[] | HTMLElement | undefined,
+      target: PopoverItemParams[]
+    ): void => {
+      if (!tuneConfig) {
+        return;
+      }
+
+      if ($.isElement(tuneConfig)) {
+        target.push({
+          type: PopoverItemType.Html,
+          element: tuneConfig,
+        });
+
+        return;
+      }
+
+      if (Array.isArray(tuneConfig)) {
+        target.push(...tuneConfig);
+
+        return;
+      }
+
+      target.push(tuneConfig);
+    };
+
+    /** Tool's tunes: may be defined as return value of optional renderSettings method */
+    const tunesDefinedInTool = typeof this.toolInstance.renderSettings === 'function' ? this.toolInstance.renderSettings() : [];
+
+    pushTuneConfig(tunesDefinedInTool, toolTunesPopoverParams);
+
+    /** Common tunes: combination of default tunes (move up, move down, delete) and third-party tunes connected via tunes api */
+    const commonTunes = [
+      ...this.tunesInstances.values(),
+      ...this.defaultTunesInstances.values(),
+    ].map(tuneInstance => tuneInstance.render());
+
+    /** Separate custom html from Popover items params for common tunes */
+    commonTunes.forEach(tuneConfig => {
+      pushTuneConfig(tuneConfig, commonTunesPopoverParams);
+    });
+
+    return {
+      toolTunes: toolTunesPopoverParams,
+      commonTunes: commonTunesPopoverParams,
+    };
+  }
+
+  /**
+   * Update current input index with selection anchor node
+   */
+  public updateCurrentInput(): void {
+    /**
+     * If activeElement is native input, anchorNode points to its parent.
+     * So if it is native input use it instead of anchorNode
+     *
+     * If anchorNode is undefined, also use activeElement
+     */
+    const anchorNode = SelectionUtils.anchorNode;
+    const activeElement = document.activeElement;
+
+    if ($.isNativeInput(activeElement) || !anchorNode) {
+      this.currentInput = activeElement instanceof HTMLElement ? activeElement : undefined;
+    } else {
+      this.currentInput = anchorNode instanceof HTMLElement ? anchorNode : undefined;
+    }
+  }
+
+  /**
+   * Allows to say Editor that Block was changed. Used to manually trigger Editor's 'onChange' callback
+   * Can be useful for block changes invisible for editor core.
+   */
+  public dispatchChange(): void {
+    this.didMutated();
+  }
+
+  /**
+   * Call Tool instance destroy method
+   */
+  public destroy(): void {
+    this.unwatchBlockMutations();
+    this.removeInputEvents();
+
+    super.destroy();
+
+    if (_.isFunction(this.toolInstance.destroy)) {
+      this.toolInstance.destroy();
+    }
+  }
+
+  /**
+   * Tool could specify several entries to be displayed at the Toolbox (for example, "Heading 1", "Heading 2", "Heading 3")
+   * This method returns the entry that is related to the Block (depended on the Block data)
+   */
+  public async getActiveToolboxEntry(): Promise<ToolboxConfigEntry | undefined> {
+    const toolboxSettings = this.tool.toolbox;
+
+    if (!toolboxSettings) {
+      return undefined;
+    }
+
+    /**
+     * If Tool specifies just the single entry, treat it like an active
+     */
+    if (toolboxSettings.length === 1) {
+      return Promise.resolve(toolboxSettings[0]);
+    }
+
+    /**
+     * If we have several entries with their own data overrides,
+     * find those who matches some current data property
+     *
+     * Example:
+     *  Tools' toolbox: [
+     *    {title: "Heading 1", data: {level: 1} },
+     *    {title: "Heading 2", data: {level: 2} }
+     *  ]
+     *
+     *  the Block data: {
+     *    text: "Heading text",
+     *    level: 2
+     *  }
+     *
+     *  that means that for the current block, the second toolbox item (matched by "{level: 2}") is active
+     */
+    const blockData = await this.data;
+
+    return toolboxSettings.find((item) => {
+      return isSameBlockData(item.data, blockData);
+    });
+  }
+
+  /**
+   * Exports Block data as string using conversion config
+   */
+  public async exportDataAsString(): Promise<string> {
+    const blockData = await this.data;
+
+    return convertBlockDataToString(blockData, this.tool.conversionConfig);
+  }
+
+  /**
+   * Link to editor dom change callback. Used to remove listener on remove
+   */
+  private redactorDomChangedCallback: (payload: RedactorDomChangedPayload) => void = () => {};
 
   /**
    * Find and return all editable elements (contenteditable and native inputs) in the Tool HTML
@@ -306,7 +572,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    *
    * @param element - HTML Element to set as current input
    */
-  public set currentInput(element: HTMLElement) {
+  public set currentInput(element: HTMLElement | undefined) {
+    if (element === undefined) {
+      return;
+    }
+
     const index = this.inputs.findIndex((input) => input === element || input.contains(element));
 
     if (index !== -1) {
@@ -438,17 +708,21 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     const fakeCursorWillBeAdded = state === true && SelectionUtils.isRangeInsideContainer(this.holder);
     const fakeCursorWillBeRemoved = state === false && SelectionUtils.isFakeCursorInsideContainer(this.holder);
 
-    if (fakeCursorWillBeAdded || fakeCursorWillBeRemoved) {
-      this.editorEventBus?.emit(FakeCursorAboutToBeToggled, { state }); // mutex
-
-      if (fakeCursorWillBeAdded) {
-        SelectionUtils.addFakeCursor();
-      } else {
-        SelectionUtils.removeFakeCursor(this.holder);
-      }
-
-      this.editorEventBus?.emit(FakeCursorHaveBeenSet, { state });
+    if (!fakeCursorWillBeAdded && !fakeCursorWillBeRemoved) {
+      return;
     }
+
+    this.editorEventBus?.emit(FakeCursorAboutToBeToggled, { state }); // mutex
+
+    if (fakeCursorWillBeAdded) {
+      SelectionUtils.addFakeCursor();
+    }
+
+    if (fakeCursorWillBeRemoved) {
+      SelectionUtils.removeFakeCursor(this.holder);
+    }
+
+    this.editorEventBus?.emit(FakeCursorHaveBeenSet, { state });
   }
 
   /**
@@ -465,8 +739,17 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    *
    * @param {boolean} state - 'true' to enable, 'false' to disable stretched state
    */
-  public set stretched(state: boolean) {
+  public setStretchState(state: boolean): void {
     this.holder.classList.toggle(Block.CSS.wrapperStretched, state);
+  }
+
+  /**
+   * Backward-compatible setter for stretched state
+   *
+   * @param state - true to enable, false to disable stretched state
+   */
+  public set stretched(state: boolean) {
+    this.setStretchState(state);
   }
 
   /**
@@ -483,7 +766,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    *
    * @param {boolean} state - 'true' if block is drop target, false otherwise
    */
-  public set dropTarget(state) {
+  public set dropTarget(state: boolean) {
     this.holder.classList.toggle(Block.CSS.dropTarget, state);
   }
 
@@ -493,248 +776,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {HTMLElement}
    */
   public get pluginsContent(): HTMLElement {
+    if (this.toolRenderedElement === null) {
+      throw new Error('Block pluginsContent is not yet initialized');
+    }
+
     return this.toolRenderedElement;
-  }
-
-  /**
-   * Calls Tool's method
-   *
-   * Method checks tool property {MethodName}. Fires method with passes params If it is instance of Function
-   *
-   * @param {string} methodName - method to call
-   * @param {object} params - method argument
-   */
-  public call(methodName: string, params?: object): void {
-    /**
-     * call Tool's method with the instance context
-     */
-    if (_.isFunction(this.toolInstance[methodName])) {
-      if (methodName === BlockToolAPI.APPEND_CALLBACK) {
-        _.log(
-          '`appendCallback` hook is deprecated and will be removed in the next major release. ' +
-          'Use `rendered` hook instead',
-          'warn'
-        );
-      }
-
-      try {
-        // eslint-disable-next-line no-useless-call
-        this.toolInstance[methodName].call(this.toolInstance, params);
-      } catch (e) {
-        _.log(`Error during '${methodName}' call: ${e.message}`, 'error');
-      }
-    }
-  }
-
-  /**
-   * Call plugins merge method
-   *
-   * @param {BlockToolData} data - data to merge
-   */
-  public async mergeWith(data: BlockToolData): Promise<void> {
-    await this.toolInstance.merge(data);
-  }
-
-  /**
-   * Extracts data from Block
-   * Groups Tool's save processing time
-   *
-   * @returns {object}
-   */
-  public async save(): Promise<undefined | SavedData> {
-    const extractedBlock = await this.toolInstance.save(this.pluginsContent as HTMLElement);
-    const tunesData: { [name: string]: BlockTuneData } = this.unavailableTunesData;
-
-    [
-      ...this.tunesInstances.entries(),
-      ...this.defaultTunesInstances.entries(),
-    ]
-      .forEach(([name, tune]) => {
-        if (_.isFunction(tune.save)) {
-          try {
-            tunesData[name] = tune.save();
-          } catch (e) {
-            _.log(`Tune ${tune.constructor.name} save method throws an Error %o`, 'warn', e);
-          }
-        }
-      });
-
-    /**
-     * Measuring execution time
-     */
-    const measuringStart = window.performance.now();
-    let measuringEnd;
-
-    return Promise.resolve(extractedBlock)
-      .then((finishedExtraction) => {
-        /** measure promise execution */
-        measuringEnd = window.performance.now();
-
-        return {
-          id: this.id,
-          tool: this.name,
-          data: finishedExtraction,
-          tunes: tunesData,
-          time: measuringEnd - measuringStart,
-        };
-      })
-      .catch((error) => {
-        _.log(`Saving process for ${this.name} tool failed due to the ${error}`, 'log', 'red');
-      });
-  }
-
-  /**
-   * Uses Tool's validation method to check the correctness of output data
-   * Tool's validation method is optional
-   *
-   * @description Method returns true|false whether data passed the validation or not
-   * @param {BlockToolData} data - data to validate
-   * @returns {Promise<boolean>} valid
-   */
-  public async validate(data: BlockToolData): Promise<boolean> {
-    let isValid = true;
-
-    if (this.toolInstance.validate instanceof Function) {
-      isValid = await this.toolInstance.validate(data);
-    }
-
-    return isValid;
-  }
-
-  /**
-   * Returns data to render in Block Tunes menu.
-   * Splits block tunes into 2 groups: block specific tunes and common tunes
-   */
-  public getTunes(): {
-    toolTunes: PopoverItemParams[];
-    commonTunes: PopoverItemParams[];
-    } {
-    const toolTunesPopoverParams: TunesMenuConfigItem[] = [];
-    const commonTunesPopoverParams: TunesMenuConfigItem[] = [];
-
-    /** Tool's tunes: may be defined as return value of optional renderSettings method */
-    const tunesDefinedInTool = typeof this.toolInstance.renderSettings === 'function' ? this.toolInstance.renderSettings() : [];
-
-    if ($.isElement(tunesDefinedInTool)) {
-      toolTunesPopoverParams.push({
-        type: PopoverItemType.Html,
-        element: tunesDefinedInTool,
-      });
-    } else if (Array.isArray(tunesDefinedInTool)) {
-      toolTunesPopoverParams.push(...tunesDefinedInTool);
-    } else {
-      toolTunesPopoverParams.push(tunesDefinedInTool);
-    }
-
-    /** Common tunes: combination of default tunes (move up, move down, delete) and third-party tunes connected via tunes api */
-    const commonTunes = [
-      ...this.tunesInstances.values(),
-      ...this.defaultTunesInstances.values(),
-    ].map(tuneInstance => tuneInstance.render());
-
-    /** Separate custom html from Popover items params for common tunes */
-    commonTunes.forEach(tuneConfig => {
-      if ($.isElement(tuneConfig)) {
-        commonTunesPopoverParams.push({
-          type: PopoverItemType.Html,
-          element: tuneConfig,
-        });
-      } else if (Array.isArray(tuneConfig)) {
-        commonTunesPopoverParams.push(...tuneConfig);
-      } else {
-        commonTunesPopoverParams.push(tuneConfig);
-      }
-    });
-
-    return {
-      toolTunes: toolTunesPopoverParams,
-      commonTunes: commonTunesPopoverParams,
-    };
-  }
-
-  /**
-   * Update current input index with selection anchor node
-   */
-  public updateCurrentInput(): void {
-    /**
-     * If activeElement is native input, anchorNode points to its parent.
-     * So if it is native input use it instead of anchorNode
-     *
-     * If anchorNode is undefined, also use activeElement
-     */
-    this.currentInput = $.isNativeInput(document.activeElement) || !SelectionUtils.anchorNode
-      ? document.activeElement
-      : SelectionUtils.anchorNode;
-  }
-
-  /**
-   * Allows to say Editor that Block was changed. Used to manually trigger Editor's 'onChange' callback
-   * Can be useful for block changes invisible for editor core.
-   */
-  public dispatchChange(): void {
-    this.didMutated();
-  }
-
-  /**
-   * Call Tool instance destroy method
-   */
-  public destroy(): void {
-    this.unwatchBlockMutations();
-    this.removeInputEvents();
-
-    super.destroy();
-
-    if (_.isFunction(this.toolInstance.destroy)) {
-      this.toolInstance.destroy();
-    }
-  }
-
-  /**
-   * Tool could specify several entries to be displayed at the Toolbox (for example, "Heading 1", "Heading 2", "Heading 3")
-   * This method returns the entry that is related to the Block (depended on the Block data)
-   */
-  public async getActiveToolboxEntry(): Promise<ToolboxConfigEntry | undefined> {
-    const toolboxSettings = this.tool.toolbox;
-
-    /**
-     * If Tool specifies just the single entry, treat it like an active
-     */
-    if (toolboxSettings.length === 1) {
-      return Promise.resolve(this.tool.toolbox[0]);
-    }
-
-    /**
-     * If we have several entries with their own data overrides,
-     * find those who matches some current data property
-     *
-     * Example:
-     *  Tools' toolbox: [
-     *    {title: "Heading 1", data: {level: 1} },
-     *    {title: "Heading 2", data: {level: 2} }
-     *  ]
-     *
-     *  the Block data: {
-     *    text: "Heading text",
-     *    level: 2
-     *  }
-     *
-     *  that means that for the current block, the second toolbox item (matched by "{level: 2}") is active
-     */
-    const blockData = await this.data;
-    const toolboxItems = toolboxSettings;
-
-    return toolboxItems?.find((item) => {
-      return isSameBlockData(item.data, blockData);
-    });
-  }
-
-  /**
-   * Exports Block data as string using conversion config
-   */
-  public async exportDataAsString(): Promise<string> {
-    const blockData = await this.data;
-
-    return convertBlockDataToString(blockData, this.tool.conversionConfig);
   }
 
   /**
@@ -743,9 +789,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {HTMLDivElement}
    */
   private compose(): HTMLDivElement {
-    const wrapper = $.make('div', Block.CSS.wrapper) as HTMLDivElement,
-        contentNode = $.make('div', Block.CSS.content),
-        pluginsContent = this.toolInstance.render();
+    const wrapper = $.make('div', Block.CSS.wrapper) as HTMLDivElement;
+    const contentNode = $.make('div', Block.CSS.content);
+    const pluginsContent = this.toolInstance.render();
 
     if (import.meta.env.MODE === 'test') {
       wrapper.setAttribute('data-cy', 'block-wrapper');
@@ -759,10 +805,23 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
     /**
      * Saving a reference to plugin's content element for guaranteed accessing it later
+     * Handle both synchronous HTMLElement and Promise<HTMLElement> cases
      */
-    this.toolRenderedElement = pluginsContent;
-
-    contentNode.appendChild(this.toolRenderedElement);
+    if (pluginsContent instanceof Promise) {
+      // Handle async render: resolve the promise and update DOM when ready
+      pluginsContent.then((resolvedElement) => {
+        this.toolRenderedElement = resolvedElement;
+        this.addToolDataAttributes(resolvedElement);
+        contentNode.appendChild(resolvedElement);
+      }).catch((error) => {
+        _.log(`Tool render promise rejected: %o`, 'error', error);
+      });
+    } else {
+      // Handle synchronous render
+      this.toolRenderedElement = pluginsContent;
+      this.addToolDataAttributes(pluginsContent);
+      contentNode.appendChild(pluginsContent);
+    }
 
     /**
      * Block Tunes might wrap Block's content node to provide any UI changes
@@ -773,22 +832,40 @@ export default class Block extends EventsDispatcher<BlockEvents> {
      *   </tune1wrapper>
      * </tune2wrapper>
      */
-    let wrappedContentNode: HTMLElement = contentNode;
-
-    [...this.tunesInstances.values(), ...this.defaultTunesInstances.values()]
-      .forEach((tune) => {
+    const wrappedContentNode: HTMLElement = [...this.tunesInstances.values(), ...this.defaultTunesInstances.values()]
+      .reduce((acc, tune) => {
         if (_.isFunction(tune.wrap)) {
           try {
-            wrappedContentNode = tune.wrap(wrappedContentNode);
+            return tune.wrap(acc);
           } catch (e) {
             _.log(`Tune ${tune.constructor.name} wrap method throws an Error %o`, 'warn', e);
+
+            return acc;
           }
         }
-      });
+
+        return acc;
+      }, contentNode);
 
     wrapper.appendChild(wrappedContentNode);
 
     return wrapper;
+  }
+
+  /**
+   * Add data attributes to tool-rendered element based on tool name
+   *
+   * @param element - The tool-rendered element
+   * @private
+   */
+  private addToolDataAttributes(element: HTMLElement): void {
+    /**
+     * Add data-block-tool attribute to identify the tool type used for the block.
+     * Some tools (like Paragraph) add their own class names, but we can rely on the tool name for all cases.
+     */
+    if (!element.hasAttribute('data-block-tool') && this.name) {
+      element.setAttribute('data-block-tool', this.name);
+    }
   }
 
   /**
@@ -866,7 +943,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    *   - InputEvent — <input> change
    *   - undefined — manual triggering of block.dispatchChange()
    */
-  private readonly didMutated = (mutationsOrInputEvent: MutationRecord[] | InputEvent = undefined): void => {
+  private readonly didMutated = (mutationsOrInputEvent: MutationRecord[] | InputEvent | undefined = undefined): void => {
     /**
      * Block API have dispatchChange() method. In this case, mutations list will be undefined.
      */
@@ -887,13 +964,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     /**
      * We won't fire a Block mutation event if mutation contain only nodes marked with 'data-mutation-free' attributes
      */
-    let shouldFireUpdate;
+    const shouldFireUpdate = (() => {
+      if (isManuallyDispatched || isInputEventHandler) {
+        return true;
+      }
 
-    if (isManuallyDispatched) {
-      shouldFireUpdate = true;
-    } else if (isInputEventHandler) {
-      shouldFireUpdate = true;
-    } else {
       /**
        * Update from 2023, Feb 17:
        *    Changed mutationsOrInputEvent.some() to mutationsOrInputEvent.every()
@@ -910,19 +985,20 @@ export default class Block extends EventsDispatcher<BlockEvents> {
         ];
 
         return changedNodes.some((node) => {
-          if (!$.isElement(node)) {
-            /**
-             * "characterData" mutation record has Text node as a target, so we need to get parent element to check it for mutation-free attribute
-             */
-            node = node.parentElement;
+          const elementToCheck: Element | null = !$.isElement(node)
+            ? node.parentElement ?? null
+            : node;
+
+          if (elementToCheck === null) {
+            return false;
           }
 
-          return node && (node as HTMLElement).closest('[data-mutation-free="true"]') !== null;
+          return elementToCheck.closest('[data-mutation-free="true"]') !== null;
         });
       });
 
-      shouldFireUpdate = !everyRecordIsMutationFree;
-    }
+      return !everyRecordIsMutationFree;
+    })();
 
     /**
      * In case some mutation free elements are added or removed, do not trigger didMutated event
@@ -964,7 +1040,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     this.redactorDomChangedCallback = (payload) => {
       const { mutations } = payload;
 
-      const mutationBelongsToBlock = mutations.some(record => isMutationBelongsToElement(record, this.toolRenderedElement));
+      const toolElement = this.toolRenderedElement;
+      const mutationBelongsToBlock = toolElement !== null
+        && mutations.some(record => isMutationBelongsToElement(record, toolElement));
 
       if (mutationBelongsToBlock) {
         this.didMutated(mutations);
@@ -988,8 +1066,14 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @param mutations - records of block content mutations
    */
   private detectToolRootChange(mutations: MutationRecord[]): void {
+    const toolElement = this.toolRenderedElement;
+
+    if (toolElement === null) {
+      return;
+    }
+
     mutations.forEach(record => {
-      const toolRootHasBeenUpdated = Array.from(record.removedNodes).includes(this.toolRenderedElement);
+      const toolRootHasBeenUpdated = Array.from(record.removedNodes).includes(toolElement);
 
       if (toolRootHasBeenUpdated) {
         const newToolElement = record.addedNodes[record.addedNodes.length - 1];

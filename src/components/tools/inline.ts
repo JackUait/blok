@@ -1,4 +1,4 @@
-import BaseToolAdapter, { InternalInlineToolSettings } from './base';
+import BaseToolAdapter from './base';
 import type { InlineTool as IInlineTool, InlineToolConstructable } from '@/types';
 import type { InlineToolAdapter as InlineToolAdapterInterface } from '@/types/tools/adapters/inline-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
@@ -13,15 +13,28 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
   public type: ToolType.Inline = ToolType.Inline;
 
   /**
-   * Tool's constructable blueprint
+   * Returns list of required methods that are missing on the inline tool prototype
+   *
+   * @param requiredMethods - method names that must be implemented
    */
-  protected constructable: InlineToolConstructable;
+  public getMissingMethods(requiredMethods: string[]): string[] {
+    const constructable = this.constructable as InlineToolConstructable | undefined;
+    const prototype = constructable?.prototype as Record<string, unknown> | undefined;
+
+    if (!prototype) {
+      return [ ...requiredMethods ];
+    }
+
+    return requiredMethods.filter((methodName) => typeof prototype[methodName] !== 'function');
+  }
 
   /**
    * Returns title for Inline Tool if specified by user
    */
   public get title(): string {
-    return this.constructable[InternalInlineToolSettings.Title];
+    const constructable = this.constructable as InlineToolConstructable | undefined;
+
+    return constructable?.title ?? '';
   }
 
   /**
@@ -29,7 +42,9 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
    */
   public create(): IInlineTool {
     // eslint-disable-next-line new-cap
-    return new this.constructable({
+    const InlineToolClass = this.constructable as InlineToolConstructable;
+
+    return new InlineToolClass({
       api: this.api,
       config: this.settings,
     }) as IInlineTool;
@@ -40,6 +55,8 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
    * Can be used, for example, by comments tool
    */
   public get isReadOnlySupported(): boolean {
-    return this.constructable[InternalInlineToolSettings.IsReadOnlySupported] ?? false;
+    const constructable = this.constructable as InlineToolConstructable | undefined;
+
+    return constructable?.isReadOnlySupported ?? false;
   }
 }

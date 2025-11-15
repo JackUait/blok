@@ -193,8 +193,8 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * @param toolName - tool type to be activated
    * @param blockDataOverrides - Block data predefined by the activated Toolbox item
    */
-  public toolButtonActivated(toolName: string, blockDataOverrides: BlockToolData): void {
-    this.insertNewBlock(toolName, blockDataOverrides);
+  public async toolButtonActivated(toolName: string, blockDataOverrides?: BlockToolData): Promise<void> {
+    await this.insertNewBlock(toolName, blockDataOverrides);
   }
 
   /**
@@ -314,7 +314,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         title: I18n.t(I18nInternalNS.toolNames, toolboxItem.title || _.capitalize(tool.name)),
         name: tool.name,
         onActivate: (): void => {
-          this.toolButtonActivated(tool.name, toolboxItem.data);
+          void this.toolButtonActivated(tool.name, toolboxItem.data);
         },
         secondaryLabel: (tool.shortcut && displaySecondaryLabel) ? _.beautifyShortcut(tool.shortcut) : '',
       };
@@ -322,13 +322,17 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     return this.toolsToBeDisplayed
       .reduce<PopoverItemParams[]>((result, tool) => {
-        if (Array.isArray(tool.toolbox)) {
-          tool.toolbox.forEach((item, index) => {
-            result.push(toPopoverItem(item, tool, index === 0));
-          });
-        } else if (tool.toolbox !== undefined)  {
-          result.push(toPopoverItem(tool.toolbox, tool));
+        const { toolbox } = tool;
+
+        if (toolbox === undefined) {
+          return result;
         }
+
+        const items = Array.isArray(toolbox) ? toolbox : [ toolbox ];
+
+        items.forEach((item, index) => {
+          result.push(toPopoverItem(item, tool, index === 0));
+        });
 
         return result;
       }, []);
@@ -377,7 +381,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
           } catch (error) {}
         }
 
-        this.insertNewBlock(toolName);
+        await this.insertNewBlock(toolName);
       },
     });
   }
@@ -417,16 +421,11 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      */
     const index = currentBlock.isEmpty ? currentBlockIndex : currentBlockIndex + 1;
 
-    let blockData;
+    const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides as Record<string, unknown>).length > 0;
 
-    if (blockDataOverrides) {
-      /**
-       * Merge real tool's data with data overrides
-       */
-      const defaultBlockData = await this.api.blocks.composeBlockData(toolName);
-
-      blockData = Object.assign(defaultBlockData, blockDataOverrides);
-    }
+    const blockData: BlockToolData | undefined = hasBlockDataOverrides
+      ? Object.assign(await this.api.blocks.composeBlockData(toolName), blockDataOverrides)
+      : undefined;
 
     const newBlock = this.api.blocks.insert(
       toolName,

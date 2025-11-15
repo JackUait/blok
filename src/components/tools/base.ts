@@ -1,5 +1,5 @@
 import type { Tool, ToolConstructable, ToolSettings } from '@/types/tools';
-import type { SanitizerConfig, API as ApiMethods } from '@/types';
+import type { SanitizerConfig, API as ApiMethods, ToolConfig } from '@/types';
 import * as _ from '../utils';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 import type { BaseToolAdapter as BaseToolAdapterInterface } from '@/types/tools/adapters/base-tool-adapter';
@@ -106,6 +106,11 @@ export enum InternalTuneSettings {
 
 export type ToolOptions = Omit<ToolSettings, 'class'>;
 
+type ToolPreparePayload = {
+  toolName: string;
+  config: ToolConfig;
+};
+
 interface ConstructorOptions {
   name: string;
   constructable: ToolConstructable;
@@ -123,7 +128,7 @@ export default abstract class BaseToolAdapter<Type extends ToolType = ToolType, 
   /**
    * Tool type: Block, Inline or Tune
    */
-  public type: Type;
+  public abstract type: Type;
 
   /**
    * Tool name specified in EditorJS config
@@ -185,8 +190,8 @@ export default abstract class BaseToolAdapter<Type extends ToolType = ToolType, 
   /**
    * Returns Tool user configuration
    */
-  public get settings(): ToolOptions {
-    const config = this.config[UserSettings.Config] || {};
+  public get settings(): ToolConfig {
+    const config = (this.config[UserSettings.Config] ?? {}) as ToolConfig;
 
     if (this.isDefault && !('placeholder' in config) && this.defaultPlaceholder) {
       config.placeholder = this.defaultPlaceholder;
@@ -208,12 +213,18 @@ export default abstract class BaseToolAdapter<Type extends ToolType = ToolType, 
    * Calls Tool's prepare method
    */
   public prepare(): void | Promise<void> {
-    if (_.isFunction(this.constructable.prepare)) {
-      return this.constructable.prepare({
-        toolName: this.name,
-        config: this.settings,
-      });
+    const prepare = this.constructable.prepare;
+
+    if (!_.isFunction(prepare)) {
+      return;
     }
+
+    const payload: ToolPreparePayload = {
+      toolName: this.name,
+      config: this.settings,
+    };
+
+    return (prepare as (data: ToolPreparePayload) => void | Promise<void>).call(this.constructable, payload);
   }
 
   /**

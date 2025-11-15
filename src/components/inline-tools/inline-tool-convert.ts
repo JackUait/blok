@@ -7,6 +7,7 @@ import SelectionUtils from '../selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
 import I18nInternal from '../i18n';
 import { I18nInternalNS } from '../i18n/namespace-internal';
+import type BlockToolAdapter from '../tools/block';
 
 /**
  * Inline tools for converting blocks
@@ -58,13 +59,18 @@ export default class ConvertInlineTool implements InlineTool {
    */
   public async render(): Promise<MenuConfig> {
     const currentSelection = SelectionUtils.get();
+
+    if (currentSelection === null) {
+      return [];
+    }
+
     const currentBlock = this.blocksAPI.getBlockByElement(currentSelection.anchorNode as HTMLElement);
 
     if (currentBlock === undefined) {
       return [];
     }
 
-    const allBlockTools = this.toolsAPI.getBlockTools();
+    const allBlockTools = this.toolsAPI.getBlockTools() as BlockToolAdapter[];
     const convertibleTools = await getConvertibleToolsForBlock(currentBlock, allBlockTools);
 
     if (convertibleTools.length === 0) {
@@ -73,6 +79,10 @@ export default class ConvertInlineTool implements InlineTool {
 
     const convertToItems = convertibleTools.reduce<MenuConfigItem[]>((result, tool) => {
       tool.toolbox?.forEach((toolboxItem) => {
+        if (toolboxItem.title === undefined) {
+          return;
+        }
+
         result.push({
           icon: toolboxItem.icon,
           title: I18nInternal.t(I18nInternalNS.toolNames, toolboxItem.title),
@@ -97,7 +107,7 @@ export default class ConvertInlineTool implements InlineTool {
       icon,
       name: 'convert-to',
       hint: {
-        title: this.i18nAPI.t('Convert to'),
+        title: I18nInternal.ui(I18nInternalNS.ui.inlineToolbar.converter, 'Convert to'),
       },
       children: {
         searchable: isDesktop,

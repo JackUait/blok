@@ -10,12 +10,12 @@ export default class CrossBlockSelection extends Module {
   /**
    * Block where selection is started
    */
-  private firstSelectedBlock: Block;
+  private firstSelectedBlock: Block | null = null;
 
   /**
    * Last selected Block
    */
-  private lastSelectedBlock: Block;
+  private lastSelectedBlock: Block | null = null;
 
   /**
    * Module preparation
@@ -23,8 +23,8 @@ export default class CrossBlockSelection extends Module {
    * @returns {Promise}
    */
   public async prepare(): Promise<void> {
-    this.listeners.on(document, 'mousedown', (event: MouseEvent) => {
-      this.enableCrossBlockSelection(event);
+    this.listeners.on(document, 'mousedown', (event: Event) => {
+      this.enableCrossBlockSelection(event as MouseEvent);
     });
   }
 
@@ -40,8 +40,14 @@ export default class CrossBlockSelection extends Module {
 
     const { BlockManager } = this.Editor;
 
-    this.firstSelectedBlock = BlockManager.getBlock(event.target as HTMLElement);
-    this.lastSelectedBlock = this.firstSelectedBlock;
+    const block = BlockManager.getBlock(event.target as HTMLElement);
+
+    if (!block) {
+      return;
+    }
+
+    this.firstSelectedBlock = block;
+    this.lastSelectedBlock = block;
 
     this.listeners.on(document, 'mouseover', this.onMouseOver);
     this.listeners.on(document, 'mouseup', this.onMouseUp);
@@ -64,15 +70,30 @@ export default class CrossBlockSelection extends Module {
   public toggleBlockSelectedState(next = true): void {
     const { BlockManager, BlockSelection } = this.Editor;
 
-    if (!this.lastSelectedBlock) {
-      this.lastSelectedBlock = this.firstSelectedBlock = BlockManager.currentBlock;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!this.lastSelectedBlock && !currentBlock) {
+      return;
     }
 
-    if (this.firstSelectedBlock === this.lastSelectedBlock) {
+    if (!this.lastSelectedBlock && currentBlock) {
+      this.lastSelectedBlock = this.firstSelectedBlock = currentBlock;
+    }
+
+    if (this.firstSelectedBlock === this.lastSelectedBlock && this.firstSelectedBlock) {
       this.firstSelectedBlock.selected = true;
 
       BlockSelection.clearCache();
-      SelectionUtils.get().removeAllRanges();
+      SelectionUtils.get()?.removeAllRanges();
+
+      /**
+       * Hide the Toolbar when cross-block selection starts.
+       */
+      this.Editor.Toolbar.close();
+    }
+
+    if (!this.lastSelectedBlock) {
+      return;
     }
 
     const nextBlockIndex = BlockManager.blocks.indexOf(this.lastSelectedBlock) + (next ? 1 : -1);
@@ -86,10 +107,12 @@ export default class CrossBlockSelection extends Module {
       nextBlock.selected = true;
 
       BlockSelection.clearCache();
+      this.Editor.Toolbar.close();
     } else {
       this.lastSelectedBlock.selected = false;
 
       BlockSelection.clearCache();
+      this.Editor.Toolbar.close();
     }
 
     this.lastSelectedBlock = nextBlock;
@@ -109,27 +132,36 @@ export default class CrossBlockSelection extends Module {
    */
   public clear(reason?: Event): void {
     const { BlockManager, BlockSelection, Caret } = this.Editor;
+
+    if (!this.firstSelectedBlock || !this.lastSelectedBlock) {
+      return;
+    }
+
     const fIndex = BlockManager.blocks.indexOf(this.firstSelectedBlock);
     const lIndex = BlockManager.blocks.indexOf(this.lastSelectedBlock);
 
-    if (BlockSelection.anyBlockSelected && fIndex > -1 && lIndex > -1) {
-      if (reason && reason instanceof KeyboardEvent) {
-        /**
-         * Set caret depending on pressed key if pressed key is an arrow.
-         */
-        switch (reason.keyCode) {
-          case _.keyCodes.DOWN:
-          case _.keyCodes.RIGHT:
-            Caret.setToBlock(BlockManager.blocks[Math.max(fIndex, lIndex)], Caret.positions.END);
-            break;
+    if (!BlockSelection.anyBlockSelected || fIndex === -1 || lIndex === -1) {
+      this.firstSelectedBlock = this.lastSelectedBlock = null;
 
-          case _.keyCodes.UP:
-          case _.keyCodes.LEFT:
-            Caret.setToBlock(BlockManager.blocks[Math.min(fIndex, lIndex)], Caret.positions.START);
-            break;
-          default:
-            Caret.setToBlock(BlockManager.blocks[Math.max(fIndex, lIndex)], Caret.positions.END);
-        }
+      return;
+    }
+
+    if (reason && reason instanceof KeyboardEvent) {
+      /**
+       * Set caret depending on pressed key if pressed key is an arrow.
+       */
+      switch (reason.key) {
+        case 'ArrowDown':
+        case 'ArrowRight':
+          Caret.setToBlock(BlockManager.blocks[Math.max(fIndex, lIndex)], Caret.positions.END);
+          break;
+
+        case 'ArrowUp':
+        case 'ArrowLeft':
+          Caret.setToBlock(BlockManager.blocks[Math.min(fIndex, lIndex)], Caret.positions.START);
+          break;
+        default:
+          Caret.setToBlock(BlockManager.blocks[Math.max(fIndex, lIndex)], Caret.positions.END);
       }
     }
 
@@ -177,20 +209,21 @@ export default class CrossBlockSelection extends Module {
    * Mouse over event handler
    * Gets target and related blocks and change selected state for blocks in between
    *
-   * @param {MouseEvent} event - mouse over event
+   * @param {Event} event - mouse over event
    */
-  private onMouseOver = (event: MouseEvent): void => {
+  private onMouseOver = (event: Event): void => {
+    const mouseEvent = event as MouseEvent;
     const { BlockManager, BlockSelection } = this.Editor;
 
     /**
      * Probably, editor is not initialized yet
      */
-    if (event.relatedTarget === null && event.target === null) {
+    if (mouseEvent.relatedTarget === null && mouseEvent.target === null) {
       return;
     }
 
-    const relatedBlock = BlockManager.getBlockByChildNode(event.relatedTarget as Node) || this.lastSelectedBlock;
-    const targetBlock = BlockManager.getBlockByChildNode(event.target as Node);
+    const relatedBlock = BlockManager.getBlockByChildNode(mouseEvent.relatedTarget as Node) || this.lastSelectedBlock;
+    const targetBlock = BlockManager.getBlockByChildNode(mouseEvent.target as Node);
 
     if (!relatedBlock || !targetBlock) {
       return;
@@ -200,8 +233,8 @@ export default class CrossBlockSelection extends Module {
       return;
     }
 
-    if (relatedBlock === this.firstSelectedBlock) {
-      SelectionUtils.get().removeAllRanges();
+    if (this.firstSelectedBlock && relatedBlock === this.firstSelectedBlock) {
+      SelectionUtils.get()?.removeAllRanges();
 
       relatedBlock.selected = true;
       targetBlock.selected = true;
@@ -211,7 +244,7 @@ export default class CrossBlockSelection extends Module {
       return;
     }
 
-    if (targetBlock === this.firstSelectedBlock) {
+    if (this.firstSelectedBlock && targetBlock === this.firstSelectedBlock) {
       relatedBlock.selected = false;
       targetBlock.selected = false;
 
@@ -244,7 +277,10 @@ export default class CrossBlockSelection extends Module {
      */
     const shouldntSelectFirstBlock = firstBlock.selected !== lastBlock.selected;
 
-    for (let i = Math.min(fIndex, lIndex); i <= Math.max(fIndex, lIndex); i++) {
+    const startIndex = Math.min(fIndex, lIndex);
+    const endIndex = Math.max(fIndex, lIndex);
+
+    for (const i of Array.from({ length: endIndex - startIndex + 1 }, (unused, idx) => startIndex + idx)) {
       const block = BlockManager.blocks[i];
 
       if (
@@ -256,5 +292,10 @@ export default class CrossBlockSelection extends Module {
         BlockSelection.clearCache();
       }
     }
+
+    /**
+     * Do not keep the Toolbar visible while range selection is active.
+     */
+    this.Editor.Toolbar.close();
   }
 }

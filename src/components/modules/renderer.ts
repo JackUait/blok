@@ -14,7 +14,7 @@ export default class Renderer extends Module {
    *
    * @param blocksData - blocks to render
    */
-  public async render(blocksData: OutputBlockData[]): Promise<void> {
+  public render(blocksData: OutputBlockData[]): Promise<void> {
     return new Promise((resolve) => {
       const { Tools, BlockManager } = this.Editor;
 
@@ -24,44 +24,54 @@ export default class Renderer extends Module {
         /**
          * Create Blocks instances
          */
-        const blocks = blocksData.map(({ type: tool, data, tunes, id }) => {
-          if (Tools.available.has(tool) === false) {
-            _.logLabeled(`Tool «${tool}» is not found. Check 'tools' property at the Editor.js config.`, 'warn');
+        const blocks = blocksData.map((blockData) => {
+          const { tunes, id } = blockData;
+          const originalTool = blockData.type;
+          const availabilityResult = (() => {
+            if (Tools.available.has(originalTool)) {
+              return {
+                tool: originalTool,
+                data: blockData.data,
+              };
+            }
 
-            data = this.composeStubDataForTool(tool, data, id);
-            tool = Tools.stubTool;
-          }
+            _.logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Editor.js config.`, 'warn');
 
-          let block: Block;
+            return {
+              tool: Tools.stubTool,
+              data: this.composeStubDataForTool(originalTool, blockData.data, id),
+            };
+          })();
 
-          try {
-            block = BlockManager.composeBlock({
-              id,
-              tool,
-              data,
-              tunes,
-            });
-          } catch (error) {
-            _.log(`Block «${tool}» skipped because of plugins error`, 'error', {
-              data,
-              error,
-            });
+          const buildBlock = (tool: string, data: BlockToolData): Block => {
+            try {
+              return BlockManager.composeBlock({
+                id,
+                tool,
+                data,
+                tunes,
+              });
+            } catch (error) {
+              _.log(`Block «${tool}» skipped because of plugins error`, 'error', {
+                data,
+                error,
+              });
 
-            /**
-             * If tool throws an error during render, we should render stub instead of it
-             */
-            data = this.composeStubDataForTool(tool, data, id);
-            tool = Tools.stubTool;
+              /**
+               * If tool throws an error during render, we should render stub instead of it
+               */
+              const stubData = this.composeStubDataForTool(tool, data, id);
 
-            block = BlockManager.composeBlock({
-              id,
-              tool,
-              data,
-              tunes,
-            });
-          }
+              return BlockManager.composeBlock({
+                id,
+                tool: Tools.stubTool,
+                data: stubData,
+                tunes,
+              });
+            }
+          };
 
-          return block;
+          return buildBlock(availabilityResult.tool, availabilityResult.data);
         });
 
         /**
@@ -89,15 +99,19 @@ export default class Renderer extends Module {
   private composeStubDataForTool(tool: string, data: BlockToolData, id?: BlockId): StubData {
     const { Tools } = this.Editor;
 
-    let title = tool;
+    const title = (() => {
+      if (!Tools.unavailable.has(tool)) {
+        return tool;
+      }
 
-    if (Tools.unavailable.has(tool)) {
       const toolboxSettings = (Tools.unavailable.get(tool) as BlockToolAdapter).toolbox;
 
       if (toolboxSettings !== undefined && toolboxSettings[0].title !== undefined) {
-        title = toolboxSettings[0].title;
+        return toolboxSettings[0].title;
       }
-    }
+
+      return tool;
+    })();
 
     return {
       savedData: {

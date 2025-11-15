@@ -24,3 +24,8 @@ export const css = {
   iconChevronRight: className('icon', 'chevron-right'),
   wobbleAnimation: bem('wobble')(),
 };
+
+/**
+ * Data attribute name for active state
+ */
+export const DATA_ATTRIBUTE_ACTIVE = 'data-popover-item-active';

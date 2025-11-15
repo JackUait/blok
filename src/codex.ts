@@ -1,6 +1,7 @@
 'use strict';
 
-import type { EditorConfig } from '../types';
+import type { EditorConfig, API } from '../types';
+import type { EditorModules } from './types-internal/editor-modules';
 
 /**
  * Apply polyfills
@@ -12,8 +13,6 @@ import Core from './components/core';
 import * as _ from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 
-declare const VERSION: string;
-
 /**
  * Editor.js
  *
@@ -22,6 +21,11 @@ declare const VERSION: string;
  * @author CodeX Team <https://codex.so>
  */
 export default class EditorJS {
+  /**
+   * Store user-provided configuration for later export
+   */
+  private readonly initialConfiguration: EditorConfig|string|undefined;
+
   /**
    * Promise that resolves when core modules are ready and UI is rendered on the page
    */
@@ -35,30 +39,35 @@ export default class EditorJS {
 
   /** Editor version */
   public static get version(): string {
-    return VERSION;
+    return _.getEditorVersion();
   }
 
   /**
    * @param {EditorConfig|string|undefined} [configuration] - user configuration
    */
   constructor(configuration?: EditorConfig|string) {
-    /**
-     * Set default onReady function
-     */
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    let onReady = (): void => {};
+    this.initialConfiguration = _.isObject(configuration)
+      ? { ...configuration }
+      : configuration;
 
     /**
-     * If `onReady` was passed in `configuration` then redefine onReady function
+     * Set default onReady function or use the one from configuration if provided
      */
-    if (_.isObject(configuration) && _.isFunction(configuration.onReady)) {
-      onReady = configuration.onReady;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    const onReady = (_.isObject(configuration) && _.isFunction(configuration.onReady))
+      ? configuration.onReady
+      : () => {};
 
     /**
      * Create a Editor.js instance
      */
     const editor = new Core(configuration);
+
+    /**
+     * Initialize destroy with a no-op function that will be replaced in exportAPI
+     */
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    this.destroy = (): void => {};
 
     /**
      * We need to export isReady promise in the constructor
@@ -85,19 +94,26 @@ export default class EditorJS {
     const destroy = (): void => {
       Object.values(editor.moduleInstances)
         .forEach((moduleInstance) => {
-          if (_.isFunction(moduleInstance.destroy)) {
-            moduleInstance.destroy();
+          if (moduleInstance === undefined || moduleInstance === null) {
+            return;
           }
-          moduleInstance.listeners.removeAll();
+
+          if (_.isFunction((moduleInstance as { destroy?: () => void }).destroy)) {
+            (moduleInstance as { destroy: () => void }).destroy();
+          }
+
+          const listeners = (moduleInstance as { listeners?: { removeAll?: () => void } }).listeners;
+
+          if (listeners && _.isFunction(listeners.removeAll)) {
+            listeners.removeAll();
+          }
         });
 
       destroyTooltip();
 
-      editor = null;
-
       for (const field in this) {
         if (Object.prototype.hasOwnProperty.call(this, field)) {
-          delete this[field];
+          delete (this as Record<string, unknown>)[field];
         }
       }
 
@@ -105,14 +121,81 @@ export default class EditorJS {
     };
 
     fieldsToExport.forEach((field) => {
-      this[field] = editor[field];
+      if (field !== 'configuration') {
+        (this as Record<string, unknown>)[field] = (editor as unknown as Record<string, unknown>)[field];
+
+        return;
+      }
+
+      const coreConfiguration = (editor as unknown as { configuration?: EditorConfig|string|undefined }).configuration;
+      const configurationToExport = _.isObject(this.initialConfiguration)
+        ? this.initialConfiguration
+        : coreConfiguration ?? this.initialConfiguration;
+
+      if (configurationToExport === undefined) {
+        return;
+      }
+
+      (this as Record<string, unknown>)[field] = configurationToExport as EditorConfig|string;
     });
 
     this.destroy = destroy;
 
-    Object.setPrototypeOf(this, editor.moduleInstances.API.methods);
+    const apiMethods = editor.moduleInstances.API.methods;
 
-    delete this.exportAPI;
+    if (Object.getPrototypeOf(apiMethods) !== EditorJS.prototype) {
+      Object.setPrototypeOf(apiMethods, EditorJS.prototype);
+    }
+
+    Object.setPrototypeOf(this, apiMethods);
+
+    const moduleAliases = Object.create(null) as Record<string, unknown>;
+    const moduleInstances = editor.moduleInstances as Partial<EditorModules>;
+    const moduleInstancesRecord = moduleInstances as unknown as Record<string, unknown>;
+
+    const getAliasName = (name: string): string => (
+      /^[A-Z]+$/.test(name)
+        ? name.toLowerCase()
+        : name.charAt(0).toLowerCase() + name.slice(1)
+    );
+
+    Object.keys(moduleInstancesRecord)
+      .forEach((name) => {
+        const alias = getAliasName(name);
+
+        Object.defineProperty(moduleAliases, alias, {
+          configurable: true,
+          enumerable: true,
+          get: () => moduleInstancesRecord[name],
+        });
+      });
+
+    type ToolbarModuleWithSettings = {
+      blockSettings?: unknown;
+      inlineToolbar?: unknown;
+    };
+
+    const toolbarModule = moduleInstances.Toolbar as unknown as ToolbarModuleWithSettings | undefined;
+    const blockSettingsModule = moduleInstances.BlockSettings;
+
+    if (toolbarModule !== undefined && blockSettingsModule !== undefined && toolbarModule.blockSettings === undefined) {
+      toolbarModule.blockSettings = blockSettingsModule;
+    }
+
+    const inlineToolbarModule = moduleInstances.InlineToolbar;
+
+    if (toolbarModule !== undefined && inlineToolbarModule !== undefined && toolbarModule.inlineToolbar === undefined) {
+      toolbarModule.inlineToolbar = inlineToolbarModule;
+    }
+
+    Object.defineProperty(this, 'module', {
+      value: moduleAliases,
+      configurable: true,
+      enumerable: false,
+      writable: false,
+    });
+
+    delete (this as Partial<EditorJS>).exportAPI;
 
     const shorthands = {
       blocks: {
@@ -136,7 +219,10 @@ export default class EditorJS {
       .forEach(([key, methods]) => {
         Object.entries(methods)
           .forEach(([name, alias]) => {
-            this[alias] = editor.moduleInstances.API.methods[key][name];
+            const apiKey = key as keyof API;
+            const apiMethodGroup = editor.moduleInstances.API.methods[apiKey] as unknown as Record<string, unknown>;
+
+            (this as Record<string, unknown>)[alias] = apiMethodGroup[name];
           });
       });
   }

@@ -39,15 +39,15 @@ export default class SelectionUtils {
    *
    * @todo Check if this is still relevant
    */
-  public instance: Selection = null;
-  public selection: Selection = null;
+  public instance: Selection | null = null;
+  public selection: Selection | null = null;
 
   /**
    * This property can store SelectionUtils's range for restoring later
    *
    * @type {Range|null}
    */
-  public savedSelectionRange: Range = null;
+  public savedSelectionRange: Range | null = null;
 
   /**
    * Fake background is active
@@ -57,10 +57,9 @@ export default class SelectionUtils {
   public isFakeBackgroundEnabled = false;
 
   /**
-   * Native Document's commands for fake background
+   * Elements that currently imitate the selection highlight
    */
-  private readonly commandBackground: string = 'backColor';
-  private readonly commandRemoveFormat: string = 'removeFormat';
+  private fakeBackgroundElements: HTMLElement[] = [];
 
   /**
    * Editor styles
@@ -148,7 +147,7 @@ export default class SelectionUtils {
    *
    * @param selection - Selection object to check
    */
-  public static isSelectionAtEditor(selection: Selection): boolean {
+  public static isSelectionAtEditor(selection: Selection | null): boolean {
     if (!selection) {
       return false;
     }
@@ -156,17 +155,14 @@ export default class SelectionUtils {
     /**
      * Something selected on document
      */
-    let selectedNode = (selection.anchorNode || selection.focusNode) as HTMLElement;
+    const initialNode = selection.anchorNode || selection.focusNode;
+    const selectedNode = initialNode && initialNode.nodeType === Node.TEXT_NODE
+      ? initialNode.parentNode
+      : initialNode;
 
-    if (selectedNode && selectedNode.nodeType === Node.TEXT_NODE) {
-      selectedNode = selectedNode.parentNode as HTMLElement;
-    }
-
-    let editorZone = null;
-
-    if (selectedNode && selectedNode instanceof Element) {
-      editorZone = selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`);
-    }
+    const editorZone = selectedNode && selectedNode instanceof Element
+      ? selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`)
+      : null;
 
     /**
      * SelectionUtils is not out of Editor because Editor's wrapper was found
@@ -179,22 +175,20 @@ export default class SelectionUtils {
    *
    * @param range - range to check
    */
-  public static isRangeAtEditor(range: Range): boolean {
+  public static isRangeAtEditor(range: Range): boolean | void {
     if (!range) {
       return;
     }
 
-    let selectedNode = range.startContainer as HTMLElement;
+    const selectedNode: Node | null =
+      range.startContainer && range.startContainer.nodeType === Node.TEXT_NODE
+        ? range.startContainer.parentNode
+        : range.startContainer;
 
-    if (selectedNode && selectedNode.nodeType === Node.TEXT_NODE) {
-      selectedNode = selectedNode.parentNode as HTMLElement;
-    }
-
-    let editorZone = null;
-
-    if (selectedNode && selectedNode instanceof Element) {
-      editorZone = selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`);
-    }
+    const editorZone =
+      selectedNode && selectedNode instanceof Element
+        ? selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`)
+        : null;
 
     /**
      * SelectionUtils is not out of Editor because Editor's wrapper was found
@@ -208,7 +202,7 @@ export default class SelectionUtils {
   public static get isSelectionExists(): boolean {
     const selection = SelectionUtils.get();
 
-    return !!selection.anchorNode;
+    return !!selection?.anchorNode;
   }
 
   /**
@@ -225,29 +219,29 @@ export default class SelectionUtils {
    *
    * @param selection - Selection object to get Range from
    */
-  public static getRangeFromSelection(selection: Selection): Range | null {
+  public static getRangeFromSelection(selection: Selection | null): Range | null {
     return selection && selection.rangeCount ? selection.getRangeAt(0) : null;
   }
 
   /**
    * Calculates position and size of selected text
    *
-   * @returns {DOMRect | ClientRect}
+   * @returns {DOMRect}
    */
-  public static get rect(): DOMRect | ClientRect {
-    let sel: Selection | MSSelection = (document as Document).selection,
-        range: TextRange | Range;
+  public static get rect(): DOMRect {
+    const ieSel: Selection | MSSelection | undefined | null = (document as Document).selection;
 
-    let rect = {
+    const rect = {
       x: 0,
       y: 0,
       width: 0,
       height: 0,
     } as DOMRect;
 
-    if (sel && sel.type !== 'Control') {
-      sel = sel as MSSelection;
-      range = sel.createRange() as TextRange;
+    if (ieSel && ieSel.type !== 'Control') {
+      const msSel = ieSel as MSSelection;
+      const range = msSel.createRange() as TextRange;
+
       rect.x = range.boundingLeft;
       rect.y = range.boundingTop;
       rect.width = range.boundingWidth;
@@ -256,13 +250,13 @@ export default class SelectionUtils {
       return rect;
     }
 
-    if (!window.getSelection) {
-      _.log('Method window.getSelection is not supported', 'warn');
+    const sel = window.getSelection();
+
+    if (!sel) {
+      _.log('Method window.getSelection returned null', 'warn');
 
       return rect;
     }
-
-    sel = window.getSelection();
 
     if (sel.rangeCount === null || isNaN(sel.rangeCount)) {
       _.log('Method SelectionUtils.rangeCount is not supported', 'warn');
@@ -274,32 +268,31 @@ export default class SelectionUtils {
       return rect;
     }
 
-    range = sel.getRangeAt(0).cloneRange() as Range;
+    const range = sel.getRangeAt(0).cloneRange() as Range;
 
-    if (range.getBoundingClientRect) {
-      rect = range.getBoundingClientRect() as DOMRect;
-    }
+    const initialRect = range.getBoundingClientRect() as DOMRect;
+
     // Fall back to inserting a temporary element
-    if (rect.x === 0 && rect.y === 0) {
+    if (initialRect.x === 0 && initialRect.y === 0) {
       const span = document.createElement('span');
 
-      if (span.getBoundingClientRect) {
-        // Ensure span has dimensions and position by
-        // adding a zero-width space character
-        span.appendChild(document.createTextNode('\u200b'));
-        range.insertNode(span);
-        rect = span.getBoundingClientRect() as DOMRect;
+      // Ensure span has dimensions and position by
+      // adding a zero-width space character
+      span.appendChild(document.createTextNode('\u200b'));
+      range.insertNode(span);
+      const boundingRect = span.getBoundingClientRect() as DOMRect;
 
-        const spanParent = span.parentNode;
+      const spanParent = span.parentNode;
 
-        spanParent.removeChild(span);
+      spanParent?.removeChild(span);
 
-        // Glue any broken text nodes back together
-        spanParent.normalize();
-      }
+      // Glue any broken text nodes back together
+      spanParent?.normalize();
+
+      return boundingRect;
     }
 
-    return rect;
+    return initialRect;
   }
 
   /**
@@ -308,7 +301,9 @@ export default class SelectionUtils {
    * @returns {string}
    */
   public static get text(): string {
-    return window.getSelection ? window.getSelection().toString() : '';
+    const selection = window.getSelection();
+
+    return selection?.toString() ?? '';
   }
 
   /**
@@ -331,20 +326,29 @@ export default class SelectionUtils {
     const range = document.createRange();
     const selection = window.getSelection();
 
+    const isNativeInput = $.isNativeInput(element);
+
     /** if found deepest node is native input */
-    if ($.isNativeInput(element)) {
-      if (!$.canSetCaret(element)) {
-        return;
-      }
-
-      element.focus();
-      element.selectionStart = element.selectionEnd = offset;
-
+    if (isNativeInput && !$.canSetCaret(element)) {
       return element.getBoundingClientRect();
+    }
+
+    if (isNativeInput) {
+      const inputElement = element as HTMLInputElement | HTMLTextAreaElement;
+
+      inputElement.focus();
+      inputElement.selectionStart = offset;
+      inputElement.selectionEnd = offset;
+
+      return inputElement.getBoundingClientRect();
     }
 
     range.setStart(element, offset);
     range.setEnd(element, offset);
+
+    if (!selection) {
+      return element.getBoundingClientRect();
+    }
 
     selection.removeAllRanges();
     selection.addRange(range);
@@ -413,21 +417,168 @@ export default class SelectionUtils {
    * Removes fake background
    */
   public removeFakeBackground(): void {
-    if (!this.isFakeBackgroundEnabled) {
+    if (!this.fakeBackgroundElements.length) {
+      this.isFakeBackgroundEnabled = false;
+
       return;
     }
 
+    this.fakeBackgroundElements.forEach((element) => {
+      this.unwrapFakeBackground(element);
+    });
+
+    this.fakeBackgroundElements = [];
     this.isFakeBackgroundEnabled = false;
-    document.execCommand(this.commandRemoveFormat);
   }
 
   /**
    * Sets fake background
    */
   public setFakeBackground(): void {
-    document.execCommand(this.commandBackground, false, '#a8d6ff');
+    this.removeFakeBackground();
+
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    if (range.collapsed) {
+      return;
+    }
+
+    const textNodes = this.collectTextNodes(range);
+
+    if (textNodes.length === 0) {
+      return;
+    }
+
+    const anchorStartNode = range.startContainer;
+    const anchorStartOffset = range.startOffset;
+    const anchorEndNode = range.endContainer;
+    const anchorEndOffset = range.endOffset;
+
+    this.fakeBackgroundElements = [];
+
+    textNodes.forEach((textNode) => {
+      const segmentRange = document.createRange();
+      const isStartNode = textNode === anchorStartNode;
+      const isEndNode = textNode === anchorEndNode;
+      const startOffset = isStartNode ? anchorStartOffset : 0;
+      const nodeTextLength = textNode.textContent?.length ?? 0;
+      const endOffset = isEndNode ? anchorEndOffset : nodeTextLength;
+
+      if (startOffset === endOffset) {
+        return;
+      }
+
+      segmentRange.setStart(textNode, startOffset);
+      segmentRange.setEnd(textNode, endOffset);
+
+      const wrapper = this.wrapRangeWithFakeBackground(segmentRange);
+
+      if (wrapper) {
+        this.fakeBackgroundElements.push(wrapper);
+      }
+    });
+
+    if (!this.fakeBackgroundElements.length) {
+      return;
+    }
+
+    const visualRange = document.createRange();
+
+    visualRange.setStartBefore(this.fakeBackgroundElements[0]);
+    visualRange.setEndAfter(this.fakeBackgroundElements[this.fakeBackgroundElements.length - 1]);
+
+    selection.removeAllRanges();
+    selection.addRange(visualRange);
 
     this.isFakeBackgroundEnabled = true;
+  }
+
+  /**
+   * Collects text nodes that intersect with the passed range
+   *
+   * @param range - selection range
+   */
+  private collectTextNodes(range: Range): Text[] {
+    const nodes: Text[] = [];
+    const walker = document.createTreeWalker(
+      range.commonAncestorContainer,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node: Node): number => {
+          if (!range.intersectsNode(node)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          return node.textContent && node.textContent.length > 0
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_REJECT;
+        },
+      }
+    );
+
+    while (walker.nextNode()) {
+      nodes.push(walker.currentNode as Text);
+    }
+
+    return nodes;
+  }
+
+  /**
+   * Wraps passed range (that belongs to the single text node) with fake background element
+   *
+   * @param range - range to wrap
+   */
+  private wrapRangeWithFakeBackground(range: Range): HTMLElement | null {
+    if (range.collapsed) {
+      return null;
+    }
+
+    const wrapper = $.make('span', 'codex-editor__fake-background');
+
+    wrapper.dataset.fakeBackground = 'true';
+    wrapper.dataset.mutationFree = 'true';
+    wrapper.style.backgroundColor = '#a8d6ff';
+    wrapper.style.color = 'inherit';
+    wrapper.style.display = 'inline';
+    wrapper.style.padding = '0';
+    wrapper.style.margin = '0';
+
+    const contents = range.extractContents();
+
+    if (contents.childNodes.length === 0) {
+      return null;
+    }
+
+    wrapper.appendChild(contents);
+    range.insertNode(wrapper);
+
+    return wrapper;
+  }
+
+  /**
+   * Removes fake background wrapper
+   *
+   * @param element - wrapper element
+   */
+  private unwrapFakeBackground(element: HTMLElement): void {
+    const parent = element.parentNode;
+
+    if (!parent) {
+      return;
+    }
+
+    while (element.firstChild) {
+      parent.insertBefore(element.firstChild, element);
+    }
+
+    parent.removeChild(element);
+    parent.normalize();
   }
 
   /**
@@ -447,6 +598,10 @@ export default class SelectionUtils {
 
     const sel = window.getSelection();
 
+    if (!sel) {
+      return;
+    }
+
     sel.removeAllRanges();
     sel.addRange(this.savedSelectionRange);
   }
@@ -463,6 +618,11 @@ export default class SelectionUtils {
    */
   public collapseToEnd(): void {
     const sel = window.getSelection();
+
+    if (!sel || !sel.focusNode) {
+      return;
+    }
+
     const range = document.createRange();
 
     range.selectNodeContents(sel.focusNode);
@@ -481,7 +641,6 @@ export default class SelectionUtils {
    */
   public findParentTag(tagName: string, className?: string, searchDepth = 10): HTMLElement | null {
     const selection = window.getSelection();
-    let parentTag = null;
 
     /**
      * If selection is missing or no anchorNode or focusNode were found then return null
@@ -501,50 +660,47 @@ export default class SelectionUtils {
     ];
 
     /**
-     * For each selection parent Nodes we try to find target tag [with target class name]
-     * It would be saved in parentTag variable
+     * Helper function to find parent tag starting from a given node
+     *
+     * @param {HTMLElement} startNode - node to start searching from
+     * @returns {HTMLElement | null}
      */
-    boundNodes.forEach((parent) => {
-      /** Reset tags limit */
-      let searchDepthIterable = searchDepth;
-
-      while (searchDepthIterable > 0 && parent.parentNode) {
-        /**
-         * Check tag's name
-         */
-        if (parent.tagName === tagName) {
-          /**
-           * Save the result
-           */
-          parentTag = parent;
-
-          /**
-           * Optional additional check for class-name mismatching
-           */
-          if (className && parent.classList && !parent.classList.contains(className)) {
-            parentTag = null;
-          }
-
-          /**
-           * If we have found required tag with class then go out from the cycle
-           */
-          if (parentTag) {
-            break;
-          }
+    const findTagFromNode = (startNode: HTMLElement): HTMLElement | null => {
+      const searchUpTree = (node: HTMLElement, depth: number): HTMLElement | null => {
+        if (depth <= 0 || !node.parentNode) {
+          return null;
         }
 
-        /**
-         * Target tag was not found. Go up to the parent and check it
-         */
-        parent = parent.parentNode as HTMLElement;
-        searchDepthIterable--;
-      }
-    });
+        const parent = node.parentNode as HTMLElement;
+
+        const hasMatchingClass = !className || (parent.classList && parent.classList.contains(className));
+        const hasMatchingTag = parent.tagName === tagName;
+
+        if (hasMatchingTag && hasMatchingClass) {
+          return parent;
+        }
+
+        return searchUpTree(parent, depth - 1);
+      };
+
+      return searchUpTree(startNode, searchDepth);
+    };
 
     /**
-     * Return found tag or null
+     * For each selection parent Nodes we try to find target tag [with target class name]
      */
-    return parentTag;
+    for (const node of boundNodes) {
+      const foundTag = findTagFromNode(node);
+
+      if (foundTag) {
+        return foundTag;
+      }
+    }
+
+    /**
+     * Return null if tag was not found
+     */
+    return null;
   }
 
   /**
@@ -554,6 +710,10 @@ export default class SelectionUtils {
    */
   public expandToTag(element: HTMLElement): void {
     const selection = window.getSelection();
+
+    if (!selection) {
+      return;
+    }
 
     selection.removeAllRanges();
     const range = document.createRange();

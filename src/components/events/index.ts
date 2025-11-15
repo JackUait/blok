@@ -9,6 +9,10 @@ import type { FakeCursorHaveBeenSetPayload } from './FakeCursorHaveBeenSet';
 import { FakeCursorHaveBeenSet } from './FakeCursorHaveBeenSet';
 import type { EditorMobileLayoutToggledPayload } from './EditorMobileLayoutToggled';
 import { EditorMobileLayoutToggled } from './EditorMobileLayoutToggled';
+import type { BlockSettingsOpenedPayload } from './BlockSettingsOpened';
+import { BlockSettingsOpened } from './BlockSettingsOpened';
+import type { BlockSettingsClosedPayload } from './BlockSettingsClosed';
+import { BlockSettingsClosed } from './BlockSettingsClosed';
 
 /**
  * Events fired by Editor Event Dispatcher
@@ -18,7 +22,9 @@ export {
   BlockChanged,
   FakeCursorAboutToBeToggled,
   FakeCursorHaveBeenSet,
-  EditorMobileLayoutToggled
+  EditorMobileLayoutToggled,
+  BlockSettingsOpened,
+  BlockSettingsClosed
 };
 
 /**
@@ -30,5 +36,7 @@ export interface EditorEventMap {
   [BlockChanged]: BlockChangedPayload;
   [FakeCursorAboutToBeToggled]: FakeCursorAboutToBeToggledPayload;
   [FakeCursorHaveBeenSet]: FakeCursorHaveBeenSetPayload;
-  [EditorMobileLayoutToggled]: EditorMobileLayoutToggledPayload
+  [EditorMobileLayoutToggled]: EditorMobileLayoutToggledPayload;
+  [BlockSettingsOpened]: BlockSettingsOpenedPayload;
+  [BlockSettingsClosed]: BlockSettingsClosedPayload;
 }

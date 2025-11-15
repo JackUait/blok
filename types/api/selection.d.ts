@@ -18,10 +18,10 @@ export interface Selection {
 
   /**
    * Sets fake background.
-   * Allows to immitate selection while focus moved away
+   * Allows to imitate selection while focus moved away
   */
   setFakeBackground(): void;
-  
+
   /**
    * Removes fake background
    */
@@ -30,7 +30,7 @@ export interface Selection {
   /**
    * Save selection range.
    * Allows to save selection to be able to temporally move focus away.
-   * Might be usefull for inline tools
+   * Might be useful for inline tools
    */
   save(): void;
 

@@ -1,6 +1,7 @@
 import Paragraph from '@editorjs/paragraph';
 import Module from '../__module';
 import * as _ from '../utils';
+import type { ChainData } from '../utils';
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
 import BoldInlineTool from '../inline-tools/inline-tool-bold';
 import ItalicInlineTool from '../inline-tools/inline-tool-italic';
@@ -15,6 +16,25 @@ import MoveDownTune from '../block-tunes/block-tune-move-down';
 import DeleteTune from '../block-tunes/block-tune-delete';
 import MoveUpTune from '../block-tunes/block-tune-move-up';
 import ToolsCollection from '../tools/collection';
+
+const cacheableSanitizer = _.cacheable as (
+  target: object,
+  propertyKey: string | symbol,
+  descriptor: TypedPropertyDescriptor<() => SanitizerConfig>
+) => void;
+
+type ToolPrepareData = {
+  toolName: string;
+  config: ToolConfig;
+};
+
+const toToolConstructable = (constructable: unknown): ToolConstructable => {
+  if (!_.isFunction(constructable)) {
+    throw new Error('Tool constructable must be a function');
+  }
+
+  return constructable as unknown as ToolConstructable;
+};
 
 /**
  * @module Editor.js Tools Submodule
@@ -75,13 +95,25 @@ export default class Tools extends Module {
    * Returns default Tool object
    */
   public get defaultTool(): BlockToolAdapter {
-    return this.blockTools.get(this.config.defaultBlock);
+    const defaultBlockName = this.config.defaultBlock;
+
+    if (!defaultBlockName) {
+      throw new Error('Default block tool name is not configured');
+    }
+
+    const tool = this.blockTools.get(defaultBlockName);
+
+    if (!tool) {
+      throw new Error(`Default block tool "${defaultBlockName}" not found in available block tools`);
+    }
+
+    return tool;
   }
 
   /**
    * Tools objects factory
    */
-  private factory: ToolsFactory;
+  private factory: ToolsFactory | null = null;
 
   /**
    * Tools` classes available to use
@@ -111,13 +143,17 @@ export default class Tools extends Module {
     /**
      * Assign internal tools
      */
-    this.config.tools = _.deepMerge({}, this.internalTools, this.config.tools);
+    const userTools = this.config.tools ?? {};
 
-    if (!Object.prototype.hasOwnProperty.call(this.config, 'tools') || Object.keys(this.config.tools).length === 0) {
+    this.config.tools = _.deepMerge({}, this.internalTools, userTools);
+
+    const toolsConfig = this.config.tools;
+
+    if (!toolsConfig || Object.keys(toolsConfig).length === 0) {
       throw Error('Can\'t start without tools');
     }
 
-    const config = this.prepareConfig();
+    const config = this.prepareConfig(toolsConfig);
 
     this.factory = new ToolsFactory(config, this.config, this.Editor.API);
 
@@ -133,14 +169,24 @@ export default class Tools extends Module {
       return Promise.resolve();
     }
 
-    /**
-     * to see how it works {@link '../utils.ts#sequence'}
-     */
-    await _.sequence(sequenceData, (data: { toolName: string }) => {
-      this.toolPrepareMethodSuccess(data);
-    }, (data: { toolName: string }) => {
-      this.toolPrepareMethodFallback(data);
-    });
+    /* to see how it works {@link '../utils.ts#sequence'} */
+    const handlePrepareSuccess = (data: object): void => {
+      if (!this.isToolPrepareData(data)) {
+        return;
+      }
+
+      this.toolPrepareMethodSuccess({ toolName: data.toolName });
+    };
+
+    const handlePrepareFallback = (data: object): void => {
+      if (!this.isToolPrepareData(data)) {
+        return;
+      }
+
+      this.toolPrepareMethodFallback({ toolName: data.toolName });
+    };
+
+    await _.sequence(sequenceData, handlePrepareSuccess, handlePrepareFallback);
 
     this.prepareBlockTools();
   }
@@ -148,7 +194,7 @@ export default class Tools extends Module {
   /**
    * Return general Sanitizer config for all inline tools
    */
-  @_.cacheable
+  @cacheableSanitizer
   public getAllInlineToolsSanitizeConfig(): SanitizerConfig {
     const config: SanitizerConfig = {} as SanitizerConfig;
 
@@ -164,11 +210,23 @@ export default class Tools extends Module {
    * Calls each Tool reset method to clean up anything set by Tool
    */
   public destroy(): void {
-    Object.values(this.available).forEach(async tool => {
-      if (_.isFunction(tool.reset)) {
-        await tool.reset();
+    for (const tool of this.available.values()) {
+      const resetResult = (() => {
+        try {
+          return tool.reset();
+        } catch (error) {
+          _.log(`Tool "${tool.name}" reset failed`, 'warn', error);
+
+          return undefined;
+        }
+      })();
+
+      if (resetResult instanceof Promise) {
+        resetResult.catch(error => {
+          _.log(`Tool "${tool.name}" reset failed`, 'warn', error);
+        });
       }
-    });
+    }
   }
 
   /**
@@ -178,40 +236,40 @@ export default class Tools extends Module {
   private get internalTools(): { [toolName: string]: ToolConstructable | ToolSettings & { isInternal?: boolean } } {
     return {
       convertTo: {
-        class: ConvertInlineTool,
+        class: toToolConstructable(ConvertInlineTool),
         isInternal: true,
       },
       link: {
-        class: LinkInlineTool,
+        class: toToolConstructable(LinkInlineTool),
         isInternal: true,
       },
       bold: {
-        class: BoldInlineTool,
+        class: toToolConstructable(BoldInlineTool),
         isInternal: true,
       },
       italic: {
-        class: ItalicInlineTool,
+        class: toToolConstructable(ItalicInlineTool),
         isInternal: true,
       },
       paragraph: {
-        class: Paragraph,
+        class: toToolConstructable(Paragraph),
         inlineToolbar: true,
         isInternal: true,
       },
       stub: {
-        class: Stub,
+        class: toToolConstructable(Stub),
         isInternal: true,
       },
       moveUp: {
-        class: MoveUpTune,
+        class: toToolConstructable(MoveUpTune),
         isInternal: true,
       },
       delete: {
-        class: DeleteTune,
+        class: toToolConstructable(DeleteTune),
         isInternal: true,
       },
       moveDown: {
-        class: MoveDownTune,
+        class: toToolConstructable(MoveDownTune),
         isInternal: true,
       },
     };
@@ -223,26 +281,30 @@ export default class Tools extends Module {
    * @param {object} data - append tool to available list
    */
   private toolPrepareMethodSuccess(data: { toolName: string }): void {
-    const tool = this.factory.get(data.toolName);
+    const tool = this.getFactory().get(data.toolName);
 
-    if (tool.isInline()) {
-      /**
-       * Some Tools validation
-       */
-      const inlineToolRequiredMethods = [ 'render' ];
-      const notImplementedMethods = inlineToolRequiredMethods.filter((method) => !tool.create()[method]);
+    if (!tool.isInline()) {
+      this.toolsAvailable.set(tool.name, tool);
 
-      if (notImplementedMethods.length) {
-        _.log(
-          `Incorrect Inline Tool: ${tool.name}. Some of required methods is not implemented %o`,
-          'warn',
-          notImplementedMethods
-        );
+      return;
+    }
 
-        this.toolsUnavailable.set(tool.name, tool);
+    /**
+     * Some Tools validation
+     */
+    const inlineToolRequiredMethods = [ 'render' ];
+    const notImplementedMethods = tool.getMissingMethods(inlineToolRequiredMethods);
 
-        return;
-      }
+    if (notImplementedMethods.length) {
+      _.log(
+        `Incorrect Inline Tool: ${tool.name}. Some of required methods is not implemented %o`,
+        'warn',
+        notImplementedMethods
+      );
+
+      this.toolsUnavailable.set(tool.name, tool);
+
+      return;
     }
 
     this.toolsAvailable.set(tool.name, tool);
@@ -254,7 +316,9 @@ export default class Tools extends Module {
    * @param {object} data - append tool to unavailable list
    */
   private toolPrepareMethodFallback(data: { toolName: string }): void {
-    this.toolsUnavailable.set(data.toolName, this.factory.get(data.toolName));
+    const factory = this.getFactory();
+
+    this.toolsUnavailable.set(data.toolName, factory.get(data.toolName));
   }
 
   /**
@@ -263,29 +327,36 @@ export default class Tools extends Module {
    * @returns {Array} list of functions that needs to be fired sequentially
    * @param config - tools config
    */
-  private getListOfPrepareFunctions(config: {[name: string]: ToolSettings}): {
-    function: (data: { toolName: string; config: ToolConfig }) => void | Promise<void>;
-    data: { toolName: string; config: ToolConfig };
-  }[] {
-    const toolPreparationList: {
-      function: (data: { toolName: string }) => void | Promise<void>;
-      data: { toolName: string; config: ToolConfig };
-    }[] = [];
-
-    Object
+  private getListOfPrepareFunctions(config: Record<string, ToolSettings>): ChainData[] {
+    return Object
       .entries(config)
-      .forEach(([toolName, settings]) => {
-        toolPreparationList.push({
-          // eslint-disable-next-line @typescript-eslint/no-empty-function
-          function: _.isFunction(settings.class.prepare) ? settings.class.prepare : (): void => {},
-          data: {
-            toolName,
-            config: settings.config,
-          },
-        });
-      });
+      .map(([toolName, settings]): ChainData => {
+        const toolData: ToolPrepareData = {
+          toolName,
+          config: (settings.config ?? {}) as ToolConfig,
+        };
 
-    return toolPreparationList;
+        const prepareFunction: ChainData['function'] = async (payload?: unknown) => {
+          const constructable = settings.class;
+
+          if (!constructable || !_.isFunction(constructable.prepare)) {
+            return;
+          }
+
+          const data = (payload ?? toolData) as ToolPrepareData;
+          const prepareMethod = constructable.prepare as unknown as (
+            this: typeof constructable,
+            payload: ToolPrepareData
+          ) => void | Promise<void>;
+
+          return prepareMethod.call(constructable, data);
+        };
+
+        return {
+          function: prepareFunction,
+          data: toolData,
+        };
+      });
   }
 
   /**
@@ -304,6 +375,8 @@ export default class Tools extends Module {
    * @param tool - Block Tool
    */
   private assignInlineToolsToBlockTool(tool: BlockToolAdapter): void {
+    const blockTool = tool;
+
     /**
      * If common inlineToolbar property is false no Inline Tools should be assigned
      */
@@ -316,15 +389,15 @@ export default class Tools extends Module {
      * - if common settings is an array, use it
      * - if common settings is 'true' or not specified, get default order
      */
-    if (tool.enabledInlineTools === true) {
-      tool.inlineTools = new ToolsCollection<InlineToolAdapter>(
-        Array.isArray(this.config.inlineToolbar)
-          ? this.config.inlineToolbar.map(name => [name, this.inlineTools.get(name)])
-          /**
-           * If common settings is 'true' or not specified (will be set as true at core.ts), get the default order
-           */
-          : Array.from(this.inlineTools.entries())
-      );
+    if (blockTool.enabledInlineTools === true) {
+      const inlineTools = Array.isArray(this.config.inlineToolbar)
+        ? this.createInlineToolsCollection(this.config.inlineToolbar)
+        /**
+         * If common settings is 'true' or not specified (will be set as true at core.ts), get the default order
+         */
+        : new ToolsCollection<InlineToolAdapter>(Array.from(this.inlineTools.entries()));
+
+      blockTool.inlineTools = inlineTools;
 
       return;
     }
@@ -332,11 +405,11 @@ export default class Tools extends Module {
     /**
      * If user pass the list of inline tools for the particular tool, return it.
      */
-    if (Array.isArray(tool.enabledInlineTools)) {
-      tool.inlineTools = new ToolsCollection<InlineToolAdapter>(
-        /** Prepend ConvertTo Inline Tool */
-        ['convertTo', ...tool.enabledInlineTools].map(name => [name, this.inlineTools.get(name)])
-      );
+    if (Array.isArray(blockTool.enabledInlineTools)) {
+      /** Prepend ConvertTo Inline Tool */
+      const inlineTools = this.createInlineToolsCollection(['convertTo', ...blockTool.enabledInlineTools]);
+
+      blockTool.inlineTools = inlineTools;
     }
   }
 
@@ -346,78 +419,179 @@ export default class Tools extends Module {
    * @param tool — Block Tool
    */
   private assignBlockTunesToBlockTool(tool: BlockToolAdapter): void {
-    if (tool.enabledBlockTunes === false) {
+    const blockTool = tool;
+
+    if (blockTool.enabledBlockTunes === false) {
       return;
     }
 
-    if (Array.isArray(tool.enabledBlockTunes)) {
-      const userTunes = new ToolsCollection<BlockTuneAdapter>(
-        tool.enabledBlockTunes.map(name => [name, this.blockTunes.get(name)])
-      );
+    if (Array.isArray(blockTool.enabledBlockTunes)) {
+      const userTunes = this.createBlockTunesCollection(blockTool.enabledBlockTunes);
+      const combinedEntries = [
+        ...Array.from(userTunes.entries()),
+        ...Array.from(this.blockTunes.internalTools.entries()),
+      ];
 
-      tool.tunes = new ToolsCollection<BlockTuneAdapter>([...userTunes, ...this.blockTunes.internalTools]);
+      blockTool.tunes = new ToolsCollection<BlockTuneAdapter>(combinedEntries);
 
       return;
     }
 
     if (Array.isArray(this.config.tunes)) {
-      const userTunes = new ToolsCollection<BlockTuneAdapter>(
-        this.config.tunes.map(name => [name, this.blockTunes.get(name)])
-      );
+      const userTunes = this.createBlockTunesCollection(this.config.tunes);
+      const combinedEntries = [
+        ...Array.from(userTunes.entries()),
+        ...Array.from(this.blockTunes.internalTools.entries()),
+      ];
 
-      tool.tunes = new ToolsCollection<BlockTuneAdapter>([...userTunes, ...this.blockTunes.internalTools]);
+      blockTool.tunes = new ToolsCollection<BlockTuneAdapter>(combinedEntries);
 
       return;
     }
 
-    tool.tunes = this.blockTunes.internalTools;
+    blockTool.tunes = new ToolsCollection<BlockTuneAdapter>(
+      Array.from(this.blockTunes.internalTools.entries())
+    );
   }
 
   /**
    * Validate Tools configuration objects and throw Error for user if it is invalid
    */
   private validateTools(): void {
+    const toolsConfig = this.config.tools;
+
+    if (!toolsConfig) {
+      return;
+    }
+
+    const internalTools = this.internalTools;
+
     /**
      * Check Tools for a class containing
      */
-    for (const toolName in this.config.tools) {
-      if (Object.prototype.hasOwnProperty.call(this.config.tools, toolName)) {
-        if (toolName in this.internalTools) {
-          return;
-        }
+    for (const toolName in toolsConfig) {
+      if (!Object.prototype.hasOwnProperty.call(toolsConfig, toolName)) {
+        continue;
+      }
 
-        const tool = this.config.tools[toolName];
+      if (toolName in internalTools) {
+        continue;
+      }
 
-        if (!_.isFunction(tool) && !_.isFunction((tool as ToolSettings).class)) {
-          throw Error(
-            `Tool «${toolName}» must be a constructor function or an object with function in the «class» property`
-          );
-        }
+      const tool = toolsConfig[toolName];
+      const isConstructorFunction = _.isFunction(tool);
+      const toolSettings = tool as ToolSettings;
+      const hasToolClass = _.isFunction(toolSettings.class);
+
+      if (!isConstructorFunction && !hasToolClass) {
+        throw Error(
+          `Tool «${toolName}» must be a constructor function or an object with function in the «class» property`
+        );
       }
     }
   }
 
   /**
    * Unify tools config
+   *
+   * @param toolsConfig - raw tools configuration
    */
-  private prepareConfig(): {[name: string]: ToolSettings} {
-    const config: {[name: string]: ToolSettings} = {};
+  private prepareConfig(toolsConfig: Record<string, ToolConstructable | ToolSettings>): Record<string, ToolSettings> {
+    const config: Record<string, ToolSettings> = {};
 
     /**
      * Save Tools settings to a map
      */
-    for (const toolName in this.config.tools) {
+    for (const toolName in toolsConfig) {
       /**
        * If Tool is an object not a Tool's class then
        * save class and settings separately
        */
-      if (_.isObject(this.config.tools[toolName])) {
-        config[toolName] = this.config.tools[toolName] as ToolSettings;
-      } else {
-        config[toolName] = { class: this.config.tools[toolName] as ToolConstructable };
+      if (!Object.prototype.hasOwnProperty.call(toolsConfig, toolName)) {
+        continue;
       }
+
+      const tool = toolsConfig[toolName];
+
+      if (_.isObject(tool)) {
+        config[toolName] = tool as ToolSettings;
+
+        continue;
+      }
+
+      config[toolName] = { class: tool as ToolConstructable };
     }
 
     return config;
+  }
+
+  /**
+   * Type guard that ensures provided data contains tool preparation metadata.
+   *
+   * @param data - data passed to prepare sequence callbacks
+   */
+  private isToolPrepareData(data: object): data is ToolPrepareData {
+    const candidate = data as Partial<ToolPrepareData>;
+
+    return typeof candidate?.toolName === 'string';
+  }
+
+  /**
+   * Returns initialized tools factory instance.
+   *
+   * @returns tools factory
+   */
+  private getFactory(): ToolsFactory {
+    if (this.factory === null) {
+      throw new Error('Tools factory is not initialized');
+    }
+
+    return this.factory;
+  }
+
+  /**
+   * Builds inline tools collection for provided tool names, skipping unavailable ones.
+   *
+   * @param toolNames - inline tool names to include
+   * @returns tools collection containing available inline tools
+   */
+  private createInlineToolsCollection(toolNames: Iterable<string>): ToolsCollection<InlineToolAdapter> {
+    const entries: [string, InlineToolAdapter][] = [];
+
+    for (const name of toolNames) {
+      const inlineTool = this.inlineTools.get(name);
+
+      if (!inlineTool) {
+        _.log(`Inline tool "${name}" is not available and will be skipped`, 'warn');
+        continue;
+      }
+
+      entries.push([name, inlineTool]);
+    }
+
+    return new ToolsCollection<InlineToolAdapter>(entries);
+  }
+
+  /**
+   * Builds block tunes collection for provided tune names, skipping unavailable ones.
+   *
+   * @param tuneNames - block tune names to include
+   * @returns tools collection containing available block tunes
+   */
+  private createBlockTunesCollection(tuneNames: Iterable<string>): ToolsCollection<BlockTuneAdapter> {
+    const entries: [string, BlockTuneAdapter][] = [];
+
+    for (const name of tuneNames) {
+      const tune = this.blockTunes.get(name);
+
+      if (!tune) {
+        _.log(`Block tune "${name}" is not available and will be skipped`, 'warn');
+        continue;
+      }
+
+      entries.push([name, tune]);
+    }
+
+    return new ToolsCollection<BlockTuneAdapter>(entries);
   }
 }

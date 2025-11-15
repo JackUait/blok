@@ -9,9 +9,10 @@ import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
  * @class
  * @param {Block} block - Block to expose
  */
-function BlockAPI(
+const BlockAPI = function BlockAPI(
+  this: BlockAPIInterface,
   block: Block
-): void {
+): BlockAPIInterface {
   const blockAPI: BlockAPIInterface = {
     /**
      * Block id
@@ -72,7 +73,7 @@ function BlockAPI(
      * @param {boolean} state — state to set
      */
     set stretched(state: boolean) {
-      block.stretched = state;
+      block.setStretchState(state);
     },
 
     /**
@@ -139,6 +140,28 @@ function BlockAPI(
   };
 
   Object.setPrototypeOf(this, blockAPI);
-}
 
-export default BlockAPI;
+  Object.defineProperties(this, {
+    id: {
+      get(): string {
+        return block.id;
+      },
+      enumerable: true,
+      configurable: true,
+    },
+    name: {
+      get(): string {
+        return block.name;
+      },
+      enumerable: true,
+      configurable: true,
+    },
+  });
+
+  return this;
+};
+
+// Export BlockAPI with proper constructor type
+export default BlockAPI as unknown as {
+  new (block: Block): BlockAPIInterface;
+};

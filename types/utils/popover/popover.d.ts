@@ -1,4 +1,5 @@
 import { PopoverItemParams } from './popover-item';
+import type Flipper from '../../../src/components/flipper';
 import { PopoverEvent } from './popover-event';
 
 /**
@@ -26,6 +27,11 @@ export interface PopoverParams {
    * True by default
    */
   flippable?: boolean;
+
+  /**
+   * Optional flipper instance to reuse for keyboard navigation
+   */
+  flipper?: Flipper;
 
   /**
    * Popover texts overrides

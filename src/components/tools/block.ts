@@ -2,8 +2,8 @@ import BaseToolAdapter, { InternalBlockToolSettings, UserSettings } from './base
 import type {
   BlockAPI,
   BlockTool as IBlockTool,
-  BlockToolConstructable,
   BlockToolData,
+  BlockToolConstructable,
   ConversionConfig,
   PasteConfig, SanitizerConfig, ToolboxConfig,
   ToolboxConfigEntry
@@ -14,6 +14,26 @@ import type BlockTuneAdapter from './tune';
 import ToolsCollection from './collection';
 import type { BlockToolAdapter as BlockToolAdapterInterface } from '@/types/tools/adapters/block-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
+
+type SanitizerConfigCacheableDecorator = {
+  (target: object, propertyKey: string | symbol, descriptor?: TypedPropertyDescriptor<SanitizerConfig>): TypedPropertyDescriptor<SanitizerConfig> | void;
+  (value: () => SanitizerConfig, context: {
+    kind: 'getter' | 'accessor';
+    name: string | symbol;
+    static?: boolean;
+    private?: boolean;
+    access?: {
+      get?: () => SanitizerConfig;
+      set?: (value: SanitizerConfig) => void;
+    };
+  }): (() => SanitizerConfig) | {
+    get?: () => SanitizerConfig;
+    set?: (value: SanitizerConfig) => void;
+    init?: (value: SanitizerConfig) => SanitizerConfig;
+  };
+};
+
+const cacheSanitizerConfig = _.cacheable as SanitizerConfigCacheableDecorator;
 
 /**
  * Class to work with Block tools constructables
@@ -33,11 +53,6 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * BlockTune collection for current Block Tool
    */
   public tunes: ToolsCollection<BlockTuneAdapter> = new ToolsCollection<BlockTuneAdapter>();
-
-  /**
-   * Tool's constructable blueprint
-   */
-  protected constructable: BlockToolConstructable;
 
   /**
    * Creates new Tool instance
@@ -61,14 +76,14 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * Returns true if read-only mode is supported by Tool
    */
   public get isReadOnlySupported(): boolean {
-    return this.constructable[InternalBlockToolSettings.IsReadOnlySupported] === true;
+    return (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.IsReadOnlySupported] === true;
   }
 
   /**
    * Returns true if Tool supports linebreaks
    */
   public get isLineBreaksEnabled(): boolean {
-    return this.constructable[InternalBlockToolSettings.IsEnabledLineBreaks];
+    return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.IsEnabledLineBreaks] ?? false;
   }
 
   /**
@@ -85,10 +100,10 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * config. This is made to allow user to override default tool's toolbox representation (single/multiple entries)
    */
   public get toolbox(): ToolboxConfigEntry[] | undefined {
-    const toolToolboxSettings = this.constructable[InternalBlockToolSettings.Toolbox] as ToolboxConfig;
+    const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox] as ToolboxConfig | undefined;
     const userToolboxSettings = this.config[UserSettings.Toolbox];
 
-    if (_.isEmpty(toolToolboxSettings)) {
+    if (!toolToolboxSettings || _.isEmpty(toolToolboxSettings)) {
       return;
     }
     if (userToolboxSettings === false) {
@@ -97,35 +112,18 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
     /**
      * Return tool's toolbox settings if user settings are not defined
      */
-    if (!userToolboxSettings) {
+    if (userToolboxSettings === undefined || userToolboxSettings === null) {
       return Array.isArray(toolToolboxSettings) ? toolToolboxSettings : [ toolToolboxSettings ];
     }
 
     /**
      * Otherwise merge user settings with tool's settings
      */
-    if (Array.isArray(toolToolboxSettings)) {
-      if (Array.isArray(userToolboxSettings)) {
-        return userToolboxSettings.map((item, i) => {
-          const toolToolboxEntry = toolToolboxSettings[i];
-
-          if (toolToolboxEntry) {
-            return {
-              ...toolToolboxEntry,
-              ...item,
-            };
-          }
-
-          return item;
-        });
-      }
-
+    if (!Array.isArray(userToolboxSettings) && Array.isArray(toolToolboxSettings)) {
       return [ userToolboxSettings ];
-    } else {
-      if (Array.isArray(userToolboxSettings)) {
-        return userToolboxSettings;
-      }
+    }
 
+    if (!Array.isArray(userToolboxSettings)) {
       return [
         {
           ...toolToolboxSettings,
@@ -133,13 +131,30 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
         },
       ];
     }
+
+    if (!Array.isArray(toolToolboxSettings)) {
+      return userToolboxSettings;
+    }
+
+    return userToolboxSettings.map((item, i) => {
+      const toolToolboxEntry = toolToolboxSettings[i];
+
+      if (toolToolboxEntry) {
+        return {
+          ...toolToolboxEntry,
+          ...item,
+        };
+      }
+
+      return item;
+    });
   }
 
   /**
    * Returns Tool conversion configuration
    */
   public get conversionConfig(): ConversionConfig | undefined {
-    return this.constructable[InternalBlockToolSettings.ConversionConfig];
+    return (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.ConversionConfig];
   }
 
   /**
@@ -152,7 +167,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
   /**
    * Returns enabled tunes for Tool
    */
-  public get enabledBlockTunes(): boolean | string[] {
+  public get enabledBlockTunes(): boolean | string[] | undefined {
     return this.config[UserSettings.EnabledBlockTunes];
   }
 
@@ -160,13 +175,13 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * Returns Tool paste configuration
    */
   public get pasteConfig(): PasteConfig {
-    return this.constructable[InternalBlockToolSettings.PasteConfig] ?? {};
+    return (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.PasteConfig] ?? {};
   }
 
   /**
    * Returns sanitize configuration for Block Tool including configs from related Inline Tools and Block Tunes
    */
-  @_.cacheable
+  @cacheSanitizerConfig
   public get sanitizeConfig(): SanitizerConfig {
     const toolRules = super.sanitizeConfig;
     const baseConfig = this.baseSanitizeConfig;
@@ -178,19 +193,21 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
     const toolConfig = {} as SanitizerConfig;
 
     for (const fieldName in toolRules) {
-      if (Object.prototype.hasOwnProperty.call(toolRules, fieldName)) {
-        const rule = toolRules[fieldName];
+      if (!Object.prototype.hasOwnProperty.call(toolRules, fieldName)) {
+        continue;
+      }
 
-        /**
-         * If rule is object, merge it with Inline Tools configuration
-         *
-         * Otherwise pass as it is
-         */
-        if (_.isObject(rule)) {
-          toolConfig[fieldName] = Object.assign({}, baseConfig, rule);
-        } else {
-          toolConfig[fieldName] = rule;
-        }
+      const rule = toolRules[fieldName];
+
+      /**
+       * If rule is object, merge it with Inline Tools configuration
+       *
+       * Otherwise pass as it is
+       */
+      if (_.isObject(rule)) {
+        toolConfig[fieldName] = Object.assign({}, baseConfig, rule);
+      } else {
+        toolConfig[fieldName] = rule;
       }
     }
 
@@ -200,7 +217,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
   /**
    * Returns sanitizer configuration composed from sanitize config of Inline Tools enabled for Tool
    */
-  @_.cacheable
+  @cacheSanitizerConfig
   public get baseSanitizeConfig(): SanitizerConfig {
     const baseConfig = {};
 

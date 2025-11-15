@@ -1,5 +1,6 @@
 import Module from '../../__module';
 import type { Events } from '../../../../types/api';
+import type { EditorEventMap } from '../../events';
 
 /**
  * @class EventsAPI
@@ -13,9 +14,9 @@ export default class EventsAPI extends Module {
    */
   public get methods(): Events {
     return {
-      emit: (eventName: string, data: object): void => this.emit(eventName, data),
-      off: (eventName: string, callback: () => void): void => this.off(eventName, callback),
-      on: (eventName: string, callback: () => void): void => this.on(eventName, callback),
+      emit: (eventName: keyof EditorEventMap, data: EditorEventMap[keyof EditorEventMap] | undefined): void => this.emit(eventName, data),
+      off: (eventName: keyof EditorEventMap, callback: (data?: unknown) => void): void => this.off(eventName, callback),
+      on: (eventName: keyof EditorEventMap, callback: () => void): void => this.on(eventName, callback),
     };
   }
 
@@ -25,7 +26,7 @@ export default class EventsAPI extends Module {
    * @param {string} eventName - event name to subscribe
    * @param {Function} callback - event handler
    */
-  public on(eventName, callback): void {
+  public on(eventName: keyof EditorEventMap, callback: (data?: unknown) => void): void {
     this.eventsDispatcher.on(eventName, callback);
   }
 
@@ -35,8 +36,11 @@ export default class EventsAPI extends Module {
    * @param {string} eventName - event to emit
    * @param {object} data - event's data
    */
-  public emit(eventName, data): void {
-    this.eventsDispatcher.emit(eventName, data);
+  public emit(eventName: keyof EditorEventMap, data: EditorEventMap[keyof EditorEventMap] | undefined): void {
+    this.eventsDispatcher.emit(
+      eventName,
+      data
+    );
   }
 
   /**
@@ -45,7 +49,7 @@ export default class EventsAPI extends Module {
    * @param {string} eventName - event to unsubscribe
    * @param {Function} callback - event handler
    */
-  public off(eventName, callback): void {
+  public off(eventName: keyof EditorEventMap, callback: (data?: unknown) => void): void {
     this.eventsDispatcher.off(eventName, callback);
   }
 }

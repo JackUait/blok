@@ -3,7 +3,6 @@
  */
 
 import { nanoid } from 'nanoid';
-import Dom from './dom';
 
 /**
  * Possible log levels
@@ -20,6 +19,27 @@ export enum LogLevels {
  */
 declare const VERSION: string;
 
+const fallbackEditorVersion = 'dev';
+
+/**
+ * Returns Editor.js version injected by bundler or a globally provided fallback.
+ */
+export const getEditorVersion = (): string => {
+  if (typeof VERSION !== 'undefined') {
+    return VERSION;
+  }
+
+  const globalVersion = (typeof globalThis === 'object' && globalThis !== null)
+    ? (globalThis as { VERSION?: unknown }).VERSION
+    : undefined;
+
+  if (typeof globalVersion === 'string' && globalVersion.trim() !== '') {
+    return globalVersion;
+  }
+
+  return fallbackEditorVersion;
+};
+
 /**
  * @typedef {object} ChainData
  * @property {object} data - data that will be passed to the success or fallback
@@ -28,8 +48,7 @@ declare const VERSION: string;
  */
 export interface ChainData {
   data?: object;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function: (...args: any[]) => any;
+  function: (...args: unknown[]) => unknown;
 }
 
 /**
@@ -55,7 +74,24 @@ export const keyCodes = {
   DOWN: 40,
   RIGHT: 39,
   DELETE: 46,
+  // Number keys range (0-9)
+  NUMBER_KEY_MIN: 47,
+  NUMBER_KEY_MAX: 58,
+  // Letter keys range (A-Z)
+  LETTER_KEY_MIN: 64,
+  LETTER_KEY_MAX: 91,
   META: 91,
+  // Numpad keys range
+  NUMPAD_KEY_MIN: 95,
+  NUMPAD_KEY_MAX: 112,
+  // Punctuation keys range (;=,-./`)
+  PUNCTUATION_KEY_MIN: 185,
+  PUNCTUATION_KEY_MAX: 193,
+  // Bracket keys range ([\]')
+  BRACKET_KEY_MIN: 218,
+  BRACKET_KEY_MAX: 223,
+  // Processing key input for certain languages (Chinese, Japanese, etc.)
+  PROCESSING_KEY: 229,
   SLASH: 191,
 };
 
@@ -71,6 +107,72 @@ export const mouseButtons = {
 };
 
 /**
+ * Constants for ID generation
+ */
+const ID_RANDOM_MULTIPLIER = 100_000_000; // 1e8
+const HEXADECIMAL_RADIX = 16;
+
+type UniversalScope = {
+  window?: Window;
+  document?: Document;
+  navigator?: Navigator;
+};
+
+const globalScope: UniversalScope | undefined = (() => {
+  try {
+    return Function('return this')() as UniversalScope;
+  } catch {
+    return undefined;
+  }
+})();
+
+if (globalScope && typeof globalScope.window === 'undefined') {
+  (globalScope as Record<string, unknown>).window = globalScope;
+}
+
+/**
+ * Returns globally available window object if it exists.
+ */
+const getGlobalWindow = (): Window | undefined => {
+  if (globalScope?.window) {
+    return globalScope.window;
+  }
+
+  return undefined;
+};
+
+/**
+ * Returns globally available document object if it exists.
+ */
+const getGlobalDocument = (): Document | undefined => {
+  if (globalScope?.document) {
+    return globalScope.document;
+  }
+
+  return undefined;
+};
+
+/**
+ * Returns globally available navigator object if it exists.
+ */
+const getGlobalNavigator = (): Navigator | undefined => {
+  if (globalScope?.navigator) {
+    return globalScope.navigator;
+  }
+
+  const win = getGlobalWindow();
+
+  return win?.navigator;
+};
+
+/**
+ * Type representing callable console methods
+ */
+type ConsoleMethod = {
+  [K in keyof Console]: Console[K] extends (...args: unknown[]) => unknown ? K : never;
+}[keyof Console];
+
+/**
  * Custom logger
  *
  * @param {boolean} labeled — if true, Editor.js label is shown
@@ -79,20 +181,21 @@ export const mouseButtons = {
  * @param {*} [args]      - argument to log with a message
  * @param {string} style  - additional styling to message
  */
-function _log(
+const _log = (
   labeled: boolean,
   msg: string,
-  type = 'log',
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args?: any,
+  type: ConsoleMethod = 'log',
+  args?: unknown,
   style = 'color: inherit'
-): void {
-  if (!('console' in window) || !window.console[type]) {
+): void => {
+  const consoleRef: Console | undefined = typeof console === 'undefined' ? undefined : console;
+
+  if (!consoleRef || typeof consoleRef[type] !== 'function') {
     return;
   }
 
   const isSimpleType = ['info', 'log', 'warn', 'error'].includes(type);
-  const argsToPass = [];
+  const argsToPass: unknown[] = [];
 
   switch (_log.logLevel) {
     case LogLevels.ERROR:
@@ -118,7 +221,7 @@ function _log(
     argsToPass.push(args);
   }
 
-  const editorLabelText = `Editor.js ${VERSION}`;
+  const editorLabelText = `Editor.js ${getEditorVersion()}`;
   const editorLabelStyle = `line-height: 1em;
             color: #006FEA;
             display: inline-block;
@@ -130,25 +233,36 @@ function _log(
             border: 1px solid rgba(56, 138, 229, 0.16);
             margin: 4px 5px 4px 0;`;
 
-  if (labeled) {
+  const formattedMessage = (() => {
+    if (!labeled) {
+      return msg;
+    }
+
     if (isSimpleType) {
       argsToPass.unshift(editorLabelStyle, style);
-      msg = `%c${editorLabelText}%c ${msg}`;
-    } else {
-      msg = `( ${editorLabelText} )${msg}`;
+
+      return `%c${editorLabelText}%c ${msg}`;
     }
-  }
+
+    return `( ${editorLabelText} )${msg}`;
+  })();
+
+  const callArguments = (() => {
+    if (!isSimpleType) {
+      return [ formattedMessage ];
+    }
+
+    if (args !== undefined) {
+      return [`${formattedMessage} %o`, ...argsToPass];
+    }
+
+    return [formattedMessage, ...argsToPass];
+  })();
 
   try {
-    if (!isSimpleType) {
-      console[type](msg);
-    } else if (args) {
-      console[type](`${msg} %o`, ...argsToPass);
-    } else {
-      console[type](msg, ...argsToPass);
-    }
+    consoleRef[type](...callArguments);
   } catch (ignored) {}
-}
+};
 
 /**
  * Current log level
@@ -160,19 +274,43 @@ _log.logLevel = LogLevels.VERBOSE;
  *
  * @param {LogLevels} logLevel - log level to set
  */
-export function setLogLevel(logLevel: LogLevels): void {
+export const setLogLevel = (logLevel: LogLevels): void => {
   _log.logLevel = logLevel;
-}
+};
 
 /**
  * _log method proxy without Editor.js label
+ *
+ * @param msg - message to log
+ * @param type - console method name
+ * @param args - optional payload to pass to console
+ * @param style - optional css style for the first argument
  */
-export const log = _log.bind(window, false);
+export const log = (
+  msg: string,
+  type: ConsoleMethod = 'log',
+  args?: unknown,
+  style?: string
+): void => {
+  _log(false, msg, type, args, style);
+};
 
 /**
  * _log method proxy with Editor.js label
+ *
+ * @param msg - message to log
+ * @param type - console method name
+ * @param args - optional payload to pass to console
+ * @param style - optional css style for the first argument
  */
-export const logLabeled = _log.bind(window, true);
+export const logLabeled = (
+  msg: string,
+  type: ConsoleMethod = 'log',
+  args?: unknown,
+  style?: string
+): void => {
+  _log(true, msg, type, args, style);
+};
 
 /**
  * Return string representation of the object type
@@ -180,10 +318,11 @@ export const logLabeled = _log.bind(window, true);
  * @param {*} object - object to get type
  * @returns {string}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function typeOf(object: any): string {
-  return Object.prototype.toString.call(object).match(/\s([a-zA-Z]+)/)[1].toLowerCase();
-}
+export const typeOf = (object: unknown): string => {
+  const match = Object.prototype.toString.call(object).match(/\s([a-zA-Z]+)/);
+
+  return match ? match[1].toLowerCase() : 'unknown';
+};
 
 /**
  * Check if passed variable is a function
@@ -191,10 +330,9 @@ export function typeOf(object: any): string {
  * @param {*} fn - function to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isFunction(fn: any): fn is (...args: any[]) => any {
+export const isFunction = (fn: unknown): fn is (...args: unknown[]) => unknown => {
   return typeOf(fn) === 'function' || typeOf(fn) === 'asyncfunction';
-}
+};
 
 /**
  * Checks if passed argument is an object
@@ -202,10 +340,9 @@ export function isFunction(fn: any): fn is (...args: any[]) => any {
  * @param {*} v - object to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isObject(v: any): v is object {
+export const isObject = (v: unknown): v is object => {
   return typeOf(v) === 'object';
-}
+};
 
 /**
  * Checks if passed argument is a string
@@ -213,10 +350,9 @@ export function isObject(v: any): v is object {
  * @param {*} v - variable to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isString(v: any): v is string {
+export const isString = (v: unknown): v is string => {
   return typeOf(v) === 'string';
-}
+};
 
 /**
  * Checks if passed argument is boolean
@@ -224,10 +360,9 @@ export function isString(v: any): v is string {
  * @param {*} v - variable to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isBoolean(v: any): v is boolean {
+export const isBoolean = (v: unknown): v is boolean => {
   return typeOf(v) === 'boolean';
-}
+};
 
 /**
  * Checks if passed argument is number
@@ -235,10 +370,9 @@ export function isBoolean(v: any): v is boolean {
  * @param {*} v - variable to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isNumber(v: any): v is number {
+export const isNumber = (v: unknown): v is number => {
   return typeOf(v) === 'number';
-}
+};
 
 /**
  * Checks if passed argument is undefined
@@ -246,10 +380,9 @@ export function isNumber(v: any): v is number {
  * @param {*} v - variable to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isUndefined(v: any): v is undefined {
+export const isUndefined = function (v: unknown): v is undefined {
   return typeOf(v) === 'undefined';
-}
+};
 
 /**
  * Check if passed function is a class
@@ -257,10 +390,9 @@ export function isUndefined(v: any): v is undefined {
  * @param {Function} fn - function to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isClass(fn: any): boolean {
+export const isClass = (fn: unknown): boolean => {
   return isFunction(fn) && /^\s*class\s+/.test(fn.toString());
-}
+};
 
 /**
  * Checks if object is empty
@@ -268,13 +400,13 @@ export function isClass(fn: any): boolean {
  * @param {object} object - object to check
  * @returns {boolean}
  */
-export function isEmpty(object: object): boolean {
+export const isEmpty = (object: object | null | undefined): boolean => {
   if (!object) {
     return true;
   }
 
   return Object.keys(object).length === 0 && object.constructor === Object;
-}
+};
 
 /**
  * Check if passed object is a Promise
@@ -282,28 +414,25 @@ export function isEmpty(object: object): boolean {
  * @param  {*}  object - object to check
  * @returns {boolean}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isPromise(object: any): object is Promise<any> {
+export const isPromise = (object: unknown): object is Promise<unknown> => {
   return Promise.resolve(object) === object;
-}
+};
 
-/* eslint-disable @typescript-eslint/no-magic-numbers */
 /**
  * Returns true if passed key code is printable (a-Z, 0-9, etc) character.
  *
  * @param {number} keyCode - key code
  * @returns {boolean}
  */
-export function isPrintableKey(keyCode: number): boolean {
-  return (keyCode > 47 && keyCode < 58) || // number keys
-    keyCode === 32 || keyCode === 13 || // Space bar & return key(s)
-    keyCode === 229 || // processing key input for certain languages — Chinese, Japanese, etc.
-    (keyCode > 64 && keyCode < 91) || // letter keys
-    (keyCode > 95 && keyCode < 112) || // Numpad keys
-    (keyCode > 185 && keyCode < 193) || // ;=,-./` (in order)
-    (keyCode > 218 && keyCode < 223); // [\]' (in order)
-}
-/* eslint-enable @typescript-eslint/no-magic-numbers */
+export const isPrintableKey = (keyCode: number): boolean => {
+  return (keyCode > keyCodes.NUMBER_KEY_MIN && keyCode < keyCodes.NUMBER_KEY_MAX) || // number keys
+    keyCode === keyCodes.SPACE || keyCode === keyCodes.ENTER || // Space bar & return key(s)
+    keyCode === keyCodes.PROCESSING_KEY || // processing key input for certain languages — Chinese, Japanese, etc.
+    (keyCode > keyCodes.LETTER_KEY_MIN && keyCode < keyCodes.LETTER_KEY_MAX) || // letter keys
+    (keyCode > keyCodes.NUMPAD_KEY_MIN && keyCode < keyCodes.NUMPAD_KEY_MAX) || // Numpad keys
+    (keyCode > keyCodes.PUNCTUATION_KEY_MIN && keyCode < keyCodes.PUNCTUATION_KEY_MAX) || // ;=,-./` (in order)
+    (keyCode > keyCodes.BRACKET_KEY_MIN && keyCode < keyCodes.BRACKET_KEY_MAX); // [\]' (in order)
+};
 
 /**
  * Fires a promise sequence asynchronously
@@ -314,13 +443,11 @@ export function isPrintableKey(keyCode: number): boolean {
  * @returns {Promise}
  * @deprecated use PromiseQueue.ts instead
  */
-export async function sequence(
+export const sequence = async (
   chains: ChainData[],
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   success: (data: object) => void = (): void => {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   fallback: (data: object) => void = (): void => {}
-): Promise<void> {
+): Promise<void> => {
   /**
    * Decorator
    *
@@ -329,18 +456,18 @@ export async function sequence(
    * @param {Function} fallbackCallback - fail callback
    * @returns {Promise}
    */
-  async function waitNextBlock(
+  const waitNextBlock = async (
     chainData: ChainData,
     successCallback: (data: object) => void,
     fallbackCallback: (data: object) => void
-  ): Promise<void> {
+  ): Promise<void> => {
     try {
       await chainData.function(chainData.data);
       await successCallback(!isUndefined(chainData.data) ? chainData.data : {});
     } catch (e) {
       fallbackCallback(!isUndefined(chainData.data) ? chainData.data : {});
     }
-  }
+  };
 
   /**
    * pluck each element from queue
@@ -354,7 +481,7 @@ export async function sequence(
 
     return waitNextBlock(currentValue, success, fallback);
   }, Promise.resolve());
-}
+};
 
 /**
  * Make array from array-like collection
@@ -363,9 +490,9 @@ export async function sequence(
  * @returns {Array}
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function array(collection: ArrayLike<any>): any[] {
+export const array = (collection: ArrayLike<any>): any[] => {
   return Array.prototype.slice.call(collection);
-}
+};
 
 /**
  * Delays method execution
@@ -373,17 +500,11 @@ export function array(collection: ArrayLike<any>): any[] {
  * @param {Function} method - method to execute
  * @param {number} timeout - timeout in ms
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function delay(method: (...args: any[]) => any, timeout: number) {
-  return function (): void {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const context = this,
-        // eslint-disable-next-line prefer-rest-params
-        args = arguments;
-
-    window.setTimeout(() => method.apply(context, args), timeout);
+export const delay = (method: (...args: unknown[]) => unknown, timeout: number) => {
+  return function (this: unknown, ...args: unknown[]): void {
+    setTimeout(() => method.apply(this, args), timeout);
   };
-}
+};
 
 /**
  * Get file extension
@@ -391,9 +512,9 @@ export function delay(method: (...args: any[]) => any, timeout: number) {
  * @param {File} file - file
  * @returns {string}
  */
-export function getFileExtension(file: File): string {
-  return file.name.split('.').pop();
-}
+export const getFileExtension = (file: File): string => {
+  return file.name.split('.').pop() ?? '';
+};
 
 /**
  * Check if string is MIME type
@@ -401,9 +522,9 @@ export function getFileExtension(file: File): string {
  * @param {string} type - string to check
  * @returns {boolean}
  */
-export function isValidMimeType(type: string): boolean {
+export const isValidMimeType = (type: string): boolean => {
   return /^[-\w]+\/([-+\w]+|\*)$/.test(type);
-}
+};
 
 /**
  * Debouncing method
@@ -416,30 +537,30 @@ export function isValidMimeType(type: string): boolean {
  * @param {boolean} immediate - call now
  * @returns {Function}
  */
-export function debounce(func: (...args: unknown[]) => void, wait?: number, immediate?: boolean): () => void {
-  let timeout;
+export const debounce = (func: (...args: unknown[]) => void, wait?: number, immediate?: boolean): (...args: unknown[]) => void => {
+  const state = {
+    timeoutId: null as ReturnType<typeof setTimeout> | null,
+  };
 
-  return (...args: unknown[]): void => {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const context = this;
-
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    const later = () => {
-      timeout = null;
-      if (!immediate) {
-        func.apply(context, args);
+  return function (this: unknown, ...args: unknown[]): void {
+    const later = (): void => {
+      state.timeoutId = null;
+      if (immediate !== true) {
+        func.apply(this, args);
       }
     };
 
-    const callNow = immediate && !timeout;
+    const callNow = immediate === true && state.timeoutId === null;
 
-    window.clearTimeout(timeout);
-    timeout = window.setTimeout(later, wait);
+    if (state.timeoutId !== null) {
+      clearTimeout(state.timeoutId);
+    }
+    state.timeoutId = setTimeout(later, wait);
     if (callNow) {
-      func.apply(context, args);
+      func.apply(this, args);
     }
   };
-}
+};
 
 /**
  * Returns a function, that, when invoked, will only be triggered at most once during a given window of time.
@@ -451,104 +572,155 @@ export function debounce(func: (...args: unknown[]) => void, wait?: number, imme
  *                  but if you'd like to disable the execution on the leading edge, pass
  *                  `{leading: false}`. To disable execution on the trailing edge, ditto.
  */
-export function throttle(func, wait, options: {leading?: boolean; trailing?: boolean} = undefined): () => void {
-  let context, args, result;
-  let timeout = null;
-  let previous = 0;
+export const throttle = (func: (...args: unknown[]) => unknown, wait: number, options?: {leading?: boolean; trailing?: boolean}): (...args: unknown[]) => unknown => {
+  const state: {
+    args: unknown[] | null;
+    result: unknown;
+    timeoutId: ReturnType<typeof setTimeout> | null;
+    previous: number;
+    boundFunc: ((...boundArgs: unknown[]) => unknown) | null;
+  } = {
+    args: null,
+    result: undefined,
+    timeoutId: null,
+    previous: 0,
+    boundFunc: null,
+  };
 
-  if (!options) {
-    options = {};
-  }
+  const opts = options || {};
 
   const later = function (): void {
-    previous = options.leading === false ? 0 : Date.now();
-    timeout = null;
-    result = func.apply(context, args);
-
-    if (!timeout) {
-      context = args = null;
+    state.previous = opts.leading === false ? 0 : Date.now();
+    state.timeoutId = null;
+    if (state.args !== null && state.boundFunc !== null) {
+      state.result = state.boundFunc(...state.args);
     }
+
+    state.boundFunc = null;
+    state.args = null;
   };
 
-  return function (): unknown {
+  return function (this: unknown, ...restArgs: unknown[]): unknown {
     const now = Date.now();
 
-    if (!previous && options.leading === false) {
-      previous = now;
+    if (!state.previous && opts.leading === false) {
+      state.previous = now;
     }
 
-    const remaining = wait - (now - previous);
+    const remaining = wait - (now - state.previous);
 
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    context = this;
+    state.boundFunc = func.bind(this);
+    state.args = restArgs;
 
-    // eslint-disable-next-line prefer-rest-params
-    args = arguments;
+    const shouldInvokeNow = remaining <= 0 || remaining > wait;
 
-    if (remaining <= 0 || remaining > wait) {
-      if (timeout) {
-        clearTimeout(timeout);
-        timeout = null;
-      }
-      previous = now;
-      result = func.apply(context, args);
-
-      if (!timeout) {
-        context = args = null;
-      }
-    } else if (!timeout && options.trailing !== false) {
-      timeout = setTimeout(later, remaining);
+    if (!shouldInvokeNow && state.timeoutId === null && opts.trailing !== false) {
+      state.timeoutId = setTimeout(later, remaining);
     }
 
-    return result;
+    if (!shouldInvokeNow) {
+      return state.result;
+    }
+
+    if (state.timeoutId !== null) {
+      clearTimeout(state.timeoutId);
+      state.timeoutId = null;
+    }
+
+    state.previous = now;
+
+    if (state.args !== null && state.boundFunc !== null) {
+      state.result = state.boundFunc(...state.args);
+    }
+
+    state.boundFunc = null;
+    state.args = null;
+
+    return state.result;
   };
-}
+};
+
+/**
+ * Legacy fallback method for copying text to clipboard
+ *
+ * @param text - text to copy
+ */
+const fallbackCopyTextToClipboard = (text: string): void => {
+  const win = getGlobalWindow();
+  const doc = getGlobalDocument();
+
+  if (!win || !doc || !doc.body) {
+    return;
+  }
+
+  const el = doc.createElement('div');
+
+  el.className = 'codex-editor-clipboard';
+  el.innerHTML = text;
+
+  doc.body.appendChild(el);
+
+  const selection = win.getSelection();
+  const range = doc.createRange();
+
+  range.selectNode(el);
+
+  win.getSelection()?.removeAllRanges();
+  selection?.addRange(range);
+
+  if (typeof doc.execCommand === 'function') {
+    doc.execCommand('copy');
+  }
+
+  doc.body.removeChild(el);
+};
 
 /**
  * Copies passed text to the clipboard
  *
  * @param text - text to copy
  */
-export function copyTextToClipboard(text): void {
-  const el = Dom.make('div', 'codex-editor-clipboard', {
-    innerHTML: text,
-  });
+export const copyTextToClipboard = (text: string): void => {
+  const win = getGlobalWindow();
+  const navigatorRef = getGlobalNavigator();
 
-  document.body.appendChild(el);
+  // Use modern Clipboard API if available
+  if (win?.isSecureContext && navigatorRef?.clipboard) {
+    navigatorRef.clipboard.writeText(text).catch(() => {
+      // Fallback to legacy method if Clipboard API fails
+      fallbackCopyTextToClipboard(text);
+    });
 
-  const selection = window.getSelection();
-  const range = document.createRange();
+    return;
+  }
 
-  range.selectNode(el);
-
-  window.getSelection().removeAllRanges();
-  selection.addRange(range);
-
-  document.execCommand('copy');
-  document.body.removeChild(el);
-}
+  // Fallback to legacy method for older browsers
+  fallbackCopyTextToClipboard(text);
+};
 
 /**
  * Returns object with os name as key and boolean as value. Shows current user OS
  */
-export function getUserOS(): {[key: string]: boolean} {
-  const OS = {
+export const getUserOS = (): {[key: string]: boolean} => {
+  const OS: {[key: string]: boolean} = {
     win: false,
     mac: false,
     x11: false,
     linux: false,
   };
 
-  const userOS = Object.keys(OS).find((os: string) => window.navigator.appVersion.toLowerCase().indexOf(os) !== -1);
+  const navigatorRef = getGlobalNavigator();
+  const userAgent = navigatorRef?.appVersion?.toLowerCase() ?? '';
+  const userOS = userAgent ? Object.keys(OS).find((os: string) => userAgent.indexOf(os) !== -1) : undefined;
 
-  if (userOS) {
+  if (userOS !== undefined) {
     OS[userOS] = true;
 
     return OS;
   }
 
   return OS;
-}
+};
 
 /**
  * Capitalizes first letter of the string
@@ -556,9 +728,9 @@ export function getUserOS(): {[key: string]: boolean} {
  * @param {string} text - text to capitalize
  * @returns {string}
  */
-export function capitalize(text: string): string {
+export const capitalize = (text: string): string => {
   return text[0].toUpperCase() + text.slice(1);
-}
+};
 
 /**
  * Merge to objects recursively
@@ -567,28 +739,47 @@ export function capitalize(text: string): string {
  * @param {object[]} sources - merge sources
  * @returns {object}
  */
-export function deepMerge<T extends object>(target, ...sources): T {
-  if (!sources.length) {
+export const deepMerge = <T extends object> (target: T, ...sources: Partial<T>[]): T => {
+  if (sources.length === 0) {
     return target;
   }
-  const source = sources.shift();
 
-  if (isObject(target) && isObject(source)) {
-    for (const key in source) {
-      if (isObject(source[key])) {
-        if (!target[key]) {
-          Object.assign(target, { [key]: {} });
-        }
+  const [source, ...rest] = sources;
 
-        deepMerge(target[key], source[key]);
-      } else {
-        Object.assign(target, { [key]: source[key] });
-      }
-    }
+  if (!isObject(target) || !isObject(source)) {
+    return deepMerge(target, ...rest);
   }
 
-  return deepMerge(target, ...sources);
-}
+  const targetRecord = target as Record<string, unknown>;
+
+  Object.entries(source).forEach(([key, value]) => {
+    if (value === null || value === undefined) {
+      targetRecord[key] = value as unknown;
+
+      return;
+    }
+
+    if (typeof value !== 'object') {
+      targetRecord[key] = value;
+
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      targetRecord[key] = value;
+
+      return;
+    }
+
+    if (!isObject(targetRecord[key])) {
+      targetRecord[key] = {};
+    }
+
+    deepMerge(targetRecord[key] as object, value as object);
+  });
+
+  return deepMerge(target, ...rest);
+};
 
 /**
  * Return true if current device supports touch events
@@ -599,17 +790,20 @@ export function deepMerge<T extends object>(target, ...sources): T {
  * @see http://www.stucox.com/blog/you-cant-detect-a-touchscreen/
  * @returns {boolean}
  */
-export const isTouchSupported: boolean = 'ontouchstart' in document.documentElement;
+export const isTouchSupported: boolean = (() => {
+  const doc = getGlobalDocument();
+
+  return Boolean(doc?.documentElement && 'ontouchstart' in doc.documentElement);
+})();
 
 /**
  * Make shortcut command more human-readable
  *
  * @param {string} shortcut — string like 'CMD+B'
  */
-export function beautifyShortcut(shortcut: string): string {
+export const beautifyShortcut = (shortcut: string): string => {
   const OS = getUserOS();
-
-  shortcut = shortcut
+  const normalizedShortcut = shortcut
     .replace(/shift/gi, '⇧')
     .replace(/backspace/gi, '⌫')
     .replace(/enter/gi, '⏎')
@@ -623,13 +817,11 @@ export function beautifyShortcut(shortcut: string): string {
     .replace(/\+/gi, ' + ');
 
   if (OS.mac) {
-    shortcut = shortcut.replace(/ctrl|cmd/gi, '⌘').replace(/alt/gi, '⌥');
-  } else {
-    shortcut = shortcut.replace(/cmd/gi, 'Ctrl').replace(/windows/gi, 'WIN');
+    return normalizedShortcut.replace(/ctrl|cmd/gi, '⌘').replace(/alt/gi, '⌥');
   }
 
-  return shortcut;
-}
+  return normalizedShortcut.replace(/cmd/gi, 'Ctrl').replace(/windows/gi, 'WIN');
+};
 
 /**
  * Returns valid URL. If it is going outside and valid, it returns itself
@@ -638,7 +830,7 @@ export function beautifyShortcut(shortcut: string): string {
  *
  * @param {string} url - url to prettify
  */
-export function getValidUrl(url: string): string {
+export const getValidUrl = (url: string): string => {
   try {
     const urlObject = new URL(url);
 
@@ -647,32 +839,40 @@ export function getValidUrl(url: string): string {
     // do nothing but handle below
   }
 
+  const win = getGlobalWindow();
+
   if (url.substring(0, 2) === '//') {
-    return window.location.protocol + url;
-  } else {
-    return window.location.origin + url;
+    return win ? `${win.location.protocol}${url}` : url;
   }
-}
+
+  return win ? `${win.location.origin}${url}` : url;
+};
 
 /**
  * Create a block id
  *
  * @returns {string}
  */
-export function generateBlockId(): string {
+export const generateBlockId = (): string => {
   const idLen = 10;
 
   return nanoid(idLen);
-}
+};
 
 /**
  * Opens new Tab with passed URL
  *
  * @param {string} url - URL address to redirect
  */
-export function openTab(url: string): void {
-  window.open(url, '_blank');
-}
+export const openTab = (url: string): void => {
+  const win = getGlobalWindow();
+
+  if (!win) {
+    return;
+  }
+
+  win.open(url, '_blank');
+};
 
 /**
  * Returns random generated identifier
@@ -680,10 +880,9 @@ export function openTab(url: string): void {
  * @param {string} prefix - identifier prefix
  * @returns {string}
  */
-export function generateId(prefix = ''): string {
-  // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-  return `${prefix}${(Math.floor(Math.random() * 1e8)).toString(16)}`;
-}
+export const generateId = (prefix = ''): string => {
+  return `${prefix}${(Math.floor(Math.random() * ID_RANDOM_MULTIPLIER)).toString(HEXADECIMAL_RADIX)}`;
+};
 
 /**
  * Common method for printing a warning about the usage of deprecated property or method.
@@ -692,63 +891,215 @@ export function generateId(prefix = ''): string {
  * @param oldProperty - deprecated property.
  * @param newProperty - the property that should be used instead.
  */
-export function deprecationAssert(condition: boolean, oldProperty: string, newProperty: string): void {
+export const deprecationAssert = (condition: boolean, oldProperty: string, newProperty: string): void => {
   const message = `«${oldProperty}» is deprecated and will be removed in the next major release. Please use the «${newProperty}» instead.`;
 
   if (condition) {
     logLabeled(message, 'warn');
   }
-}
+};
 
-/**
- * Decorator which provides ability to cache method or accessor result
- *
- * @param target - target instance or constructor function
- * @param propertyKey - method or accessor name
- * @param descriptor - property descriptor
- */
-export function cacheable<Target, Value, Arguments extends unknown[] = unknown[]>(
-  target: Target,
-  propertyKey: string,
-  descriptor: PropertyDescriptor
-): PropertyDescriptor {
-  const propertyToOverride = descriptor.value ? 'value' : 'get';
-  const originalMethod = descriptor[propertyToOverride];
-  const cacheKey = `#${propertyKey}Cache`;
+type CacheableAccessor<Value> = {
+  get?: () => Value;
+  set?: (value: Value) => void;
+  init?: (value: Value) => Value;
+};
 
-  /**
-   * Override get or value descriptor property to cache return value
-   *
-   * @param args - method args
-   */
-  descriptor[propertyToOverride] = function (...args: Arguments): Value {
-    /**
-     * If there is no cache, create it
-     */
-    if (this[cacheKey] === undefined) {
-      this[cacheKey] = originalMethod.apply(this, ...args);
-    }
-
-    return this[cacheKey];
+type Stage3DecoratorContext = {
+  kind: 'method' | 'getter' | 'setter' | 'accessor';
+  name: string | symbol;
+  static?: boolean;
+  private?: boolean;
+  access?: {
+    get?: () => unknown;
+    set?: (value: unknown) => void;
   };
+};
 
-  /**
-   * If get accessor has been overridden, we need to override set accessor to clear cache
-   *
-   * @param value - value to set
-   */
-  if (propertyToOverride === 'get' && descriptor.set) {
-    const originalSet = descriptor.set;
+type CacheableDecorator = {
+  <Member>(
+    target: object,
+    propertyKey: string | symbol,
+    descriptor?: TypedPropertyDescriptor<Member>
+  ): TypedPropertyDescriptor<Member> | void;
+  <Value = unknown, Arguments extends unknown[] = unknown[]>(
+    value: ((...args: Arguments) => Value) | CacheableAccessor<Value>,
+    context: Stage3DecoratorContext
+  ):
+    | ((...args: Arguments) => Value)
+    | CacheableAccessor<Value>;
+};
 
-    descriptor.set = function (value: unknown): void {
-      delete target[cacheKey];
-
-      originalSet.apply(this, value);
-    };
+const ensureCacheValue = <Value>(
+  holder: object,
+  cacheKey: string | symbol,
+  compute: () => Value
+): Value => {
+  if (!Reflect.has(holder, cacheKey)) {
+    Object.defineProperty(holder, cacheKey, {
+      configurable: true,
+      writable: true,
+      value: compute(),
+    });
   }
 
+  return Reflect.get(holder, cacheKey) as Value;
+};
+
+const clearCacheValue = (holder: object, cacheKey: string | symbol): void => {
+  if (Reflect.has(holder, cacheKey)) {
+    Reflect.deleteProperty(holder, cacheKey);
+  }
+};
+
+const isStage3DecoratorContext = (context: unknown): context is Stage3DecoratorContext => {
+  if (typeof context !== 'object' || context === null) {
+    return false;
+  }
+
+  return 'kind' in context && 'name' in context;
+};
+
+const buildLegacyCacheableDescriptor = (
+  target: Record<PropertyKey, unknown>,
+  propertyKey: string | symbol,
+  descriptor?: TypedPropertyDescriptor<unknown>
+): TypedPropertyDescriptor<unknown> => {
+  const baseDescriptor =
+    descriptor ??
+    Object.getOwnPropertyDescriptor(target, propertyKey) ??
+    (typeof target === 'function'
+      ? Object.getOwnPropertyDescriptor((target as unknown as { prototype?: object }).prototype ?? {}, propertyKey)
+      : undefined) ??
+    {
+      configurable: true,
+      enumerable: false,
+      writable: true,
+      value: Reflect.get(target, propertyKey),
+    };
+
+  const descriptorRef = { ...baseDescriptor } as TypedPropertyDescriptor<unknown>;
+  const cacheKey: string | symbol = typeof propertyKey === 'symbol' ? propertyKey : `#${propertyKey}Cache`;
+  const hasMethodValue = descriptorRef.value !== undefined && typeof descriptorRef.value === 'function';
+  const shouldWrapGetter = !hasMethodValue && descriptorRef.get !== undefined;
+  const shouldWrapSetter = shouldWrapGetter && descriptorRef.set !== undefined;
+
+  if (hasMethodValue) {
+    const originalMethod = descriptorRef.value as (...methodArgs: unknown[]) => unknown;
+
+    descriptorRef.value = function (this: object, ...methodArgs: unknown[]): unknown {
+      return ensureCacheValue(this, cacheKey, () => originalMethod.apply(this, methodArgs));
+    } as typeof originalMethod;
+  }
+
+  if (shouldWrapGetter && descriptorRef.get !== undefined) {
+    const originalGetter = descriptorRef.get as () => unknown;
+
+    descriptorRef.get = function (this: object): unknown {
+      return ensureCacheValue(this, cacheKey, () => originalGetter.call(this));
+    } as typeof originalGetter;
+  }
+
+  if (shouldWrapSetter && descriptorRef.set !== undefined) {
+    const originalSetter = descriptorRef.set;
+
+    descriptorRef.set = function (this: object, newValue: unknown): void {
+      clearCacheValue(this, cacheKey);
+      originalSetter.call(this, newValue);
+    } as typeof originalSetter;
+  }
+
+  if (!descriptor) {
+    return descriptorRef;
+  }
+
+  Object.keys(descriptor).forEach(propertyName => {
+    if (!(propertyName in descriptorRef)) {
+      Reflect.deleteProperty(descriptor, propertyName as keyof PropertyDescriptor);
+    }
+  });
+
+  Object.assign(descriptor, descriptorRef);
+
   return descriptor;
-}
+};
+
+const applyStage3CacheableDecorator = (
+  value: ((...methodArgs: unknown[]) => unknown) | CacheableAccessor<unknown>,
+  context: Stage3DecoratorContext
+): unknown => {
+  const cacheKey = Symbol(
+    typeof context.name === 'symbol'
+      ? `cache:${context.name.description ?? 'symbol'}`
+      : `cache:${context.name}`
+  );
+
+  if (context.kind === 'method' && typeof value === 'function') {
+    const originalMethod = value as (...methodArgs: unknown[]) => unknown;
+
+    return function (this: object, ...methodArgs: unknown[]): unknown {
+      return ensureCacheValue(this, cacheKey, () => originalMethod.apply(this, methodArgs));
+    } as typeof originalMethod;
+  }
+
+  if (context.kind === 'getter' && typeof value === 'function') {
+    const originalGetter = value as () => unknown;
+
+    return function (this: object): unknown {
+      return ensureCacheValue(this, cacheKey, () => originalGetter.call(this));
+    } as typeof originalGetter;
+  }
+
+  if (context.kind === 'accessor' && typeof value === 'object' && value !== null) {
+    const accessor = value as CacheableAccessor<unknown>;
+    const fallbackGetter = accessor.get ?? context.access?.get;
+    const fallbackSetter = accessor.set ?? context.access?.set;
+
+    return {
+      get(this: object): unknown {
+        return fallbackGetter
+          ? ensureCacheValue(this, cacheKey, () => fallbackGetter.call(this))
+          : undefined;
+      },
+      set(this: object, newValue: unknown): void {
+        clearCacheValue(this, cacheKey);
+        fallbackSetter?.call(this, newValue);
+      },
+      init(initialValue: unknown): unknown {
+        return accessor.init ? accessor.init(initialValue) : initialValue;
+      },
+    } satisfies CacheableAccessor<unknown>;
+  }
+
+  return value;
+};
+
+/**
+ * Decorator which provides ability to cache method or accessor result.
+ * Supports both legacy and TC39 stage 3 decorator semantics.
+ *
+ * @param args - decorator arguments (legacy: target, propertyKey, descriptor. Stage 3: value, context)
+ */
+const cacheableImpl = (...args: unknown[]): unknown => {
+  if (args.length === 2 && isStage3DecoratorContext(args[1])) {
+    const [value, context] = args as [
+      ((...methodArgs: unknown[]) => unknown) | CacheableAccessor<unknown>,
+      Stage3DecoratorContext
+    ];
+
+    return applyStage3CacheableDecorator(value, context);
+  }
+
+  const [target, propertyKey, descriptor] = args as [
+    Record<PropertyKey, unknown>,
+    string | symbol,
+    TypedPropertyDescriptor<unknown> | undefined
+  ];
+
+  return buildLegacyCacheableDescriptor(target, propertyKey, descriptor);
+};
+
+export const cacheable = cacheableImpl as CacheableDecorator;
 
 /**
  * All screens below this width will be treated as mobile;
@@ -758,19 +1109,56 @@ export const mobileScreenBreakpoint = 650;
 /**
  * True if screen has mobile size
  */
-export function isMobileScreen(): boolean {
-  return window.matchMedia(`(max-width: ${mobileScreenBreakpoint}px)`).matches;
-}
+export const isMobileScreen = (): boolean => {
+  const win = getGlobalWindow();
+
+  if (!win || typeof win.matchMedia !== 'function') {
+    return false;
+  }
+
+  return win.matchMedia(`(max-width: ${mobileScreenBreakpoint}px)`).matches;
+};
 
 /**
  * True if current device runs iOS
  */
-export const isIosDevice =
-  typeof window !== 'undefined' &&
-  window.navigator &&
-  window.navigator.platform &&
-  (/iP(ad|hone|od)/.test(window.navigator.platform) ||
-    (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1));
+export const isIosDevice = (() => {
+  const navigatorRef = getGlobalNavigator();
+
+  if (!navigatorRef) {
+    return false;
+  }
+
+  const userAgent = navigatorRef.userAgent || '';
+
+  // Use modern User-Agent Client Hints API if available
+  const userAgentData = (navigatorRef as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
+  const platform = userAgentData?.platform;
+
+  // Check userAgent string first (most reliable method)
+  if (/iP(ad|hone|od)/.test(userAgent)) {
+    return true;
+  }
+
+  // Check platform from User-Agent Client Hints API if available
+  if (platform !== undefined && platform !== '' && /iP(ad|hone|od)/.test(platform)) {
+    return true;
+  }
+
+  // Check for iPad on iOS 13+ (reports as MacIntel with touch support)
+  // Only access deprecated platform property when necessary
+  const hasTouchSupport = (navigatorRef.maxTouchPoints ?? 0) > 1;
+  const getLegacyPlatform = (): string | undefined =>
+    (navigatorRef as Navigator & { platform?: string })['platform'];
+  const platformHint = platform !== undefined && platform !== '' ? platform : undefined;
+  const platformValue = hasTouchSupport ? platformHint ?? getLegacyPlatform() : undefined;
+
+  if (platformValue === 'MacIntel') {
+    return true;
+  }
+
+  return false;
+})();
 
 /**
  * Compares two values with unknown type
@@ -779,7 +1167,7 @@ export const isIosDevice =
  * @param var2 - value to compare with
  * @returns {boolean} true if they are equal
  */
-export function equals(var1: unknown, var2: unknown): boolean {
+export const equals = (var1: unknown, var2: unknown): boolean => {
   const isVar1NonPrimitive = Array.isArray(var1) || isObject(var1);
   const isVar2NonPrimitive = Array.isArray(var2) || isObject(var2);
 
@@ -788,4 +1176,4 @@ export function equals(var1: unknown, var2: unknown): boolean {
   }
 
   return var1 === var2;
-}
+};

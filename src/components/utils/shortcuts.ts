@@ -23,7 +23,7 @@ export interface ShortcutData {
   /**
    * Shortcut handler
    */
-  handler(event): void;
+  handler(event: KeyboardEvent): void;
 
   /**
    * Element handler should be added for
@@ -41,9 +41,9 @@ class Shortcuts {
   /**
    * All registered shortcuts
    *
-   * @type {Map<Element, Shortcut[]>}
+   * @type {Map<HTMLElement | Document, Shortcut[]>}
    */
-  private registeredShortcuts: Map<Element, Shortcut[]> = new Map();
+  private registeredShortcuts: Map<HTMLElement | Document, Shortcut[]> = new Map();
 
   /**
    * Register shortcut
@@ -75,7 +75,7 @@ class Shortcuts {
    * @param element - Element shortcut is set for
    * @param name - shortcut name
    */
-  public remove(element: Element, name: string): void {
+  public remove(element: HTMLElement | Document, name: string): void {
     const shortcut = this.findShortcut(element, name);
 
     if (!shortcut) {
@@ -85,6 +85,10 @@ class Shortcuts {
     shortcut.remove();
 
     const shortcuts = this.registeredShortcuts.get(element);
+
+    if (!shortcuts) {
+      return;
+    }
 
     const filteredShortcuts = shortcuts.filter(el => el !== shortcut);
 
@@ -104,7 +108,7 @@ class Shortcuts {
    * @param shortcut - shortcut name
    * @returns {number} index - shortcut index if exist
    */
-  private findShortcut(element: Element, shortcut: string): Shortcut | void {
+  private findShortcut(element: HTMLElement | Document, shortcut: string): Shortcut | void {
     const shortcuts = this.registeredShortcuts.get(element) || [];
 
     return shortcuts.find(({ name }) => name === shortcut);

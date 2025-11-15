@@ -57,6 +57,7 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
     });
 
     this.input = Dom.make('input', css.input, {
+      type: 'search',
       placeholder,
       /**
        * Used to prevent focusing on the input by Tab key
@@ -65,17 +66,17 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
        */
       tabIndex: -1,
     }) as HTMLInputElement;
+    this.input.dataset.flipperTabTarget = 'true';
 
     this.wrapper.appendChild(iconWrapper);
     this.wrapper.appendChild(this.input);
 
-    this.listeners.on(this.input, 'input', () => {
-      this.searchQuery = this.input.value;
+    this.overrideValueProperty();
 
-      this.emit(SearchInputEvent.Search, {
-        query: this.searchQuery,
-        items: this.foundItems,
-      });
+    const eventsToHandle = ['input', 'keyup', 'search', 'change'] as const;
+
+    eventsToHandle.forEach((eventName) => {
+      this.listeners.on(this.input, eventName, this.handleValueChange);
     });
   }
 
@@ -98,11 +99,56 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
    */
   public clear(): void {
     this.input.value = '';
-    this.searchQuery = '';
+  }
+
+  /**
+   * Handles value changes for the input element
+   */
+  private handleValueChange = (): void => {
+    this.applySearch(this.input.value);
+  };
+
+  /**
+   * Applies provided query to the search state and notifies listeners
+   *
+   * @param query - search query to apply
+   */
+  private applySearch(query: string): void {
+    if (this.searchQuery === query) {
+      return;
+    }
+
+    this.searchQuery = query;
 
     this.emit(SearchInputEvent.Search, {
-      query: '',
+      query,
       items: this.foundItems,
+    });
+  }
+
+  /**
+   * Overrides value property setter to catch programmatic changes
+   */
+  private overrideValueProperty(): void {
+    const prototype = Object.getPrototypeOf(this.input);
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+
+    if (descriptor?.set === undefined || descriptor.get === undefined) {
+      return;
+    }
+
+    const applySearch = this.applySearch.bind(this);
+
+    Object.defineProperty(this.input, 'value', {
+      configurable: descriptor.configurable ?? true,
+      enumerable: descriptor.enumerable ?? false,
+      get(): string {
+        return descriptor.get?.call(this) ?? '';
+      },
+      set(value: string): void {
+        descriptor.set?.call(this, value);
+        applySearch(value);
+      },
     });
   }
 

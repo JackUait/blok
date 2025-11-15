@@ -13,7 +13,7 @@ export default class Dom {
    * @returns {boolean}
    */
   public static isSingleTag(tag: HTMLElement): boolean {
-    return tag.tagName && [
+    return Boolean(tag.tagName) && [
       'AREA',
       'BASE',
       'BR',
@@ -40,10 +40,7 @@ export default class Dom {
    * @returns {boolean}
    */
   public static isLineBreakTag(element: HTMLElement): element is HTMLBRElement {
-    return element && element.tagName && [
-      'BR',
-      'WBR',
-    ].includes(element.tagName);
+    return !!element && ['BR', 'WBR'].includes(element.tagName);
   }
 
   /**
@@ -54,21 +51,37 @@ export default class Dom {
    * @param  {object} [attributes] - any attributes
    * @returns {HTMLElement}
    */
-  public static make(tagName: string, classNames: string | (string | undefined)[] | null = null, attributes: object = {}): HTMLElement {
+  public static make(tagName: string, classNames: string | (string | undefined)[] | null = null, attributes: Record<string, string | number | boolean | null | undefined> = {}): HTMLElement {
     const el = document.createElement(tagName);
 
     if (Array.isArray(classNames)) {
-      const validClassnames = classNames.filter(className => className !== undefined) as string[];
+      const validClassnames = classNames.filter((className): className is string => className !== undefined);
 
       el.classList.add(...validClassnames);
-    } else if (classNames) {
+    }
+
+    if (typeof classNames === 'string') {
       el.classList.add(classNames);
     }
 
     for (const attrName in attributes) {
-      if (Object.prototype.hasOwnProperty.call(attributes, attrName)) {
-        el[attrName] = attributes[attrName];
+      if (!Object.prototype.hasOwnProperty.call(attributes, attrName)) {
+        continue;
       }
+
+      const value = attributes[attrName];
+
+      if (value === undefined || value === null) {
+        continue;
+      }
+
+      if (attrName in el) {
+        (el as unknown as Record<string, unknown>)[attrName] = value;
+
+        continue;
+      }
+
+      el.setAttribute(attrName, String(value));
     }
 
     return el;
@@ -109,8 +122,9 @@ export default class Dom {
    */
   public static prepend(parent: Element, elements: Element | Element[]): void {
     if (Array.isArray(elements)) {
-      elements = elements.reverse();
-      elements.forEach((el) => parent.prepend(el));
+      const reversedElements = [ ...elements ].reverse();
+
+      reversedElements.forEach((el) => parent.prepend(el));
     } else {
       parent.prepend(elements);
     }
@@ -125,19 +139,19 @@ export default class Dom {
    */
   public static swap(el1: HTMLElement, el2: HTMLElement): void {
     // create marker element and insert it where el1 is
-    const temp = document.createElement('div'),
-        parent = el1.parentNode;
+    const temp = document.createElement('div');
+    const parent = el1.parentNode;
 
-    parent.insertBefore(temp, el1);
+    parent?.insertBefore(temp, el1);
 
     // move el1 to right before el2
-    parent.insertBefore(el1, el2);
+    parent?.insertBefore(el1, el2);
 
     // move el2 to right before where el1 used to be
-    parent.insertBefore(el2, temp);
+    parent?.insertBefore(el2, temp);
 
     // remove temporary marker node
-    parent.removeChild(temp);
+    parent?.removeChild(temp);
   }
 
   /**
@@ -216,50 +230,49 @@ export default class Dom {
    * @returns - it can be text Node or Element Node, so that caret will able to work with it
    *            Can return null if node is Document or DocumentFragment, or node is not attached to the DOM
    */
-  public static getDeepestNode(node: Node, atLast = false): Node | null {
+  public static getDeepestNode(node: Node | null, atLast = false): Node | null {
     /**
      * Current function have two directions:
-     *  - starts from first child and every time gets first or nextSibling in special cases
-     *  - starts from last child and gets last or previousSibling
+     * - starts from first child and every time gets first or nextSibling in special cases
+     * - starts from last child and gets last or previousSibling
      *
      * @type {string}
      */
-    const child = atLast ? 'lastChild' : 'firstChild',
-        sibling = atLast ? 'previousSibling' : 'nextSibling';
+    const child: 'lastChild' | 'firstChild' = atLast ? 'lastChild' : 'firstChild';
+    const sibling: 'previousSibling' | 'nextSibling' = atLast ? 'previousSibling' : 'nextSibling';
 
-    if (node && node.nodeType === Node.ELEMENT_NODE && node[child]) {
-      let nodeChild = node[child] as Node;
+    if (node === null || node.nodeType !== Node.ELEMENT_NODE) {
+      return node;
+    }
 
-      /**
-       * special case when child is single tag that can't contain any content
-       */
-      if (
-        Dom.isSingleTag(nodeChild as HTMLElement) &&
-        !Dom.isNativeInput(nodeChild) &&
-        !Dom.isLineBreakTag(nodeChild as HTMLElement)
-      ) {
-        /**
-         * 1) We need to check the next sibling. If it is Node Element then continue searching for deepest
-         * from sibling
-         *
-         * 2) If single tag's next sibling is null, then go back to parent and check his sibling
-         * In case of Node Element continue searching
-         *
-         * 3) If none of conditions above happened return parent Node Element
-         */
-        if (nodeChild[sibling]) {
-          nodeChild = nodeChild[sibling];
-        } else if (nodeChild.parentNode[sibling]) {
-          nodeChild = nodeChild.parentNode[sibling];
-        } else {
-          return nodeChild.parentNode;
-        }
-      }
+    const nodeChildProperty = node[child];
 
+    if (nodeChildProperty === null) {
+      return node;
+    }
+
+    const nodeChild = nodeChildProperty as Node;
+    const shouldSkipChild = Dom.isSingleTag(nodeChild as HTMLElement) &&
+      !Dom.isNativeInput(nodeChild) &&
+      !Dom.isLineBreakTag(nodeChild as HTMLElement);
+
+    if (!shouldSkipChild) {
       return this.getDeepestNode(nodeChild, atLast);
     }
 
-    return node;
+    const siblingNode = nodeChild[sibling];
+
+    if (siblingNode) {
+      return this.getDeepestNode(siblingNode, atLast);
+    }
+
+    const parentSiblingNode = nodeChild.parentNode?.[sibling];
+
+    if (parentSiblingNode) {
+      return this.getDeepestNode(parentSiblingNode, atLast);
+    }
+
+    return nodeChild.parentNode;
   }
 
   /**
@@ -274,7 +287,7 @@ export default class Dom {
       return false;
     }
 
-    return node && node.nodeType && node.nodeType === Node.ELEMENT_NODE;
+    return node != null && node.nodeType != null && node.nodeType === Node.ELEMENT_NODE;
   }
 
   /**
@@ -289,7 +302,7 @@ export default class Dom {
       return false;
     }
 
-    return node && node.nodeType && node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
+    return node != null && node.nodeType != null && node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
   }
 
   /**
@@ -315,7 +328,7 @@ export default class Dom {
       'TEXTAREA',
     ];
 
-    return target && target.tagName ? nativeInputs.includes(target.tagName) : false;
+    return target != null && typeof target.tagName === 'string' ? nativeInputs.includes(target.tagName) : false;
   }
 
   /**
@@ -325,26 +338,22 @@ export default class Dom {
    * @returns {boolean}
    */
   public static canSetCaret(target: HTMLElement): boolean {
-    let result = true;
-
     if (Dom.isNativeInput(target)) {
-      switch (target.type) {
-        case 'file':
-        case 'checkbox':
-        case 'radio':
-        case 'hidden':
-        case 'submit':
-        case 'button':
-        case 'image':
-        case 'reset':
-          result = false;
-          break;
-      }
-    } else {
-      result = Dom.isContentEditable(target);
+      const disallowedTypes = new Set([
+        'file',
+        'checkbox',
+        'radio',
+        'hidden',
+        'submit',
+        'button',
+        'image',
+        'reset',
+      ]);
+
+      return !disallowedTypes.has(target.type);
     }
 
-    return result;
+    return Dom.isContentEditable(target);
   }
 
   /**
@@ -357,23 +366,18 @@ export default class Dom {
    * @returns {boolean} true if it is empty
    */
   public static isNodeEmpty(node: Node, ignoreChars?: string): boolean {
-    let nodeText;
-
     if (this.isSingleTag(node as HTMLElement) && !this.isLineBreakTag(node as HTMLElement)) {
       return false;
     }
 
-    if (this.isElement(node) && this.isNativeInput(node)) {
-      nodeText = (node as HTMLInputElement).value;
-    } else {
-      nodeText = node.textContent.replace('\u200B', '');
-    }
+    const baseText = this.isElement(node) && this.isNativeInput(node)
+      ? (node as HTMLInputElement).value
+      : node.textContent?.replace('\u200B', '');
+    const normalizedText = ignoreChars
+      ? baseText?.replace(new RegExp(ignoreChars, 'g'), '')
+      : baseText;
 
-    if (ignoreChars) {
-      nodeText = nodeText.replace(new RegExp(ignoreChars, 'g'), '');
-    }
-
-    return nodeText.length === 0;
+    return (normalizedText?.length ?? 0) === 0;
   }
 
   /**
@@ -403,18 +407,18 @@ export default class Dom {
     const treeWalker = [ node ];
 
     while (treeWalker.length > 0) {
-      node = treeWalker.shift();
+      const currentNode = treeWalker.shift();
 
-      if (!node) {
+      if (!currentNode) {
         continue;
       }
 
-      if (this.isLeaf(node) && !this.isNodeEmpty(node, ignoreChars)) {
+      if (this.isLeaf(currentNode) && !this.isNodeEmpty(currentNode, ignoreChars)) {
         return false;
       }
 
-      if (node.childNodes) {
-        treeWalker.push(...Array.from(node.childNodes));
+      if (currentNode.childNodes) {
+        treeWalker.push(...Array.from(currentNode.childNodes));
       }
     }
 
@@ -450,7 +454,7 @@ export default class Dom {
       return (node as Text).length;
     }
 
-    return node.textContent.length;
+    return node.textContent?.length ?? 0;
   }
 
   /**
@@ -509,16 +513,17 @@ export default class Dom {
    * @returns {boolean}
    */
   public static containsOnlyInlineElements(data: string | HTMLElement): boolean {
-    let wrapper: HTMLElement;
+    const wrapper = _.isString(data)
+      ? (() => {
+        const container = document.createElement('div');
 
-    if (_.isString(data)) {
-      wrapper = document.createElement('div');
-      wrapper.innerHTML = data;
-    } else {
-      wrapper = data;
-    }
+        container.innerHTML = data;
 
-    const check = (element: HTMLElement): boolean => {
+        return container;
+      })()
+      : data;
+
+    const check = (element: Element): boolean => {
       return !Dom.blockElements.includes(element.tagName.toLowerCase()) &&
         Array.from(element.children).every(check);
     };
@@ -539,7 +544,7 @@ export default class Dom {
 
     return Array.from(parent.children).reduce((result, element) => {
       return [...result, ...Dom.getDeepestBlockElements(element as HTMLElement)];
-    }, []);
+    }, [] as HTMLElement[]);
   }
 
   /**
@@ -549,11 +554,17 @@ export default class Dom {
    * @returns {HTMLElement}
    */
   public static getHolder(element: string | HTMLElement): HTMLElement {
-    if (_.isString(element)) {
-      return document.getElementById(element);
+    if (!_.isString(element)) {
+      return element;
     }
 
-    return element;
+    const holder = document.getElementById(element);
+
+    if (holder !== null) {
+      return holder;
+    }
+
+    throw new Error(`Element with id "${element}" not found`);
   }
 
   /**
@@ -572,7 +583,7 @@ export default class Dom {
    * @todo handle case when editor initialized in scrollable popup
    * @param el - element to compute offset
    */
-  public static offset(el): { top: number; left: number; right: number; bottom: number } {
+  public static offset(el: Element): { top: number; left: number; right: number; bottom: number } {
     const rect = el.getBoundingClientRect();
     const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -596,58 +607,77 @@ export default class Dom {
    * @returns {{node: Node | null, offset: number}} - node and offset inside node
    */
   public static getNodeByOffset(root: Node, totalOffset: number): {node: Node | null; offset: number} {
-    let currentOffset = 0;
-    let lastTextNode: Node | null = null;
-
     const walker = document.createTreeWalker(
       root,
       NodeFilter.SHOW_TEXT,
       null
     );
 
-    let node: Node | null = walker.nextNode();
+    const findNode = (
+      nextNode: Node | null,
+      accumulatedOffset: number,
+      previousNode: Node | null,
+      previousNodeLength: number
+    ): { node: Node | null; offset: number } => {
+      if (!nextNode && previousNode) {
+        const baseOffset = accumulatedOffset - previousNodeLength;
+        const safeTotalOffset = Math.max(totalOffset - baseOffset, 0);
+        const offsetInsidePrevious = Math.min(safeTotalOffset, previousNodeLength);
 
-    while (node) {
-      const textContent = node.textContent;
-      const nodeLength = textContent === null ? 0 : textContent.length;
-
-      lastTextNode = node;
-
-      if (currentOffset + nodeLength >= totalOffset) {
-        break;
+        return {
+          node: previousNode,
+          offset: offsetInsidePrevious,
+        };
       }
 
-      currentOffset += nodeLength;
-      node = walker.nextNode();
-    }
+      if (!nextNode) {
+        return {
+          node: null,
+          offset: 0,
+        };
+      }
 
-    /**
-     * If no node found or last node is empty, return null
-     */
-    if (!lastTextNode) {
+      const textContent = nextNode.textContent ?? '';
+      const nodeLength = textContent.length;
+      const hasReachedOffset = accumulatedOffset + nodeLength >= totalOffset;
+
+      if (hasReachedOffset) {
+        return {
+          node: nextNode,
+          offset: Math.min(totalOffset - accumulatedOffset, nodeLength),
+        };
+      }
+
+      return findNode(
+        walker.nextNode(),
+        accumulatedOffset + nodeLength,
+        nextNode,
+        nodeLength
+      );
+    };
+
+    const initialNode = walker.nextNode();
+    const { node, offset } = findNode(initialNode, 0, null, 0);
+
+    if (!node) {
       return {
         node: null,
         offset: 0,
       };
     }
 
-    const textContent = lastTextNode.textContent;
+    const textContent = node.textContent;
 
-    if (textContent === null || textContent.length === 0) {
+    if (!textContent || textContent.length === 0) {
       return {
         node: null,
         offset: 0,
       };
     }
-
-    /**
-     * Calculate offset inside found node
-     */
-    const nodeOffset = Math.min(totalOffset - currentOffset, textContent.length);
 
     return {
-      node: lastTextNode,
-      offset: nodeOffset,
+      node,
+      offset,
     };
   }
 }
@@ -665,7 +695,7 @@ export default class Dom {
  * @param textContent — any string, for ex a textContent of a node
  * @returns True if passed text content is whitespace which is collapsed (invisible) in browser
  */
-export function isCollapsedWhitespaces(textContent: string): boolean {
+export const isCollapsedWhitespaces = (textContent: string): boolean => {
   /**
    *  Throughout, whitespace is defined as one of the characters
    *  "\t" TAB \u0009
@@ -674,7 +704,7 @@ export function isCollapsedWhitespaces(textContent: string): boolean {
    *  " "  SPC \u0020
    */
   return !/[^\t\n\r ]/.test(textContent);
-}
+};
 
 /**
  * Calculates the Y coordinate of the text baseline from the top of the element's margin box,
@@ -682,18 +712,18 @@ export function isCollapsedWhitespaces(textContent: string): boolean {
  * The calculation formula is as follows:
  *
  * 1. Calculate the baseline offset:
- *    - Typically, the baseline is about 80% of the `fontSize` from the top of the text, as this is a common average for many fonts.
+ * - Typically, the baseline is about 80% of the `fontSize` from the top of the text, as this is a common average for many fonts.
  *
  * 2. Calculate the additional space due to `lineHeight`:
- *    - If the `lineHeight` is greater than the `fontSize`, the extra space is evenly distributed above and below the text. This extra space is `(lineHeight - fontSize) / 2`.
+ * - If the `lineHeight` is greater than the `fontSize`, the extra space is evenly distributed above and below the text. This extra space is `(lineHeight - fontSize) / 2`.
  *
  * 3. Calculate the total baseline Y coordinate:
- *    - Sum of `marginTop`, `borderTopWidth`, `paddingTop`, the extra space due to `lineHeight`, and the baseline offset.
+ * - Sum of `marginTop`, `borderTopWidth`, `paddingTop`, the extra space due to `lineHeight`, and the baseline offset.
  *
  * @param element - The element to calculate the baseline for.
  * @returns {number} - The Y coordinate of the text baseline from the top of the element's margin box.
  */
-export function calculateBaseline(element: Element): number {
+export const calculateBaseline = (element: Element): number => {
   const style = window.getComputedStyle(element);
   const fontSize = parseFloat(style.fontSize);
   // eslint-disable-next-line @typescript-eslint/no-magic-numbers
@@ -719,7 +749,7 @@ export function calculateBaseline(element: Element): number {
   const baselineY = marginTop + borderTopWidth + paddingTop + extraLineHeight + baselineOffset;
 
   return baselineY;
-}
+};
 
 /**
  * Toggles the [data-empty] attribute on element depending on its emptiness
@@ -727,6 +757,8 @@ export function calculateBaseline(element: Element): number {
  *
  * @param element - The element to toggle the [data-empty] attribute on
  */
-export function toggleEmptyMark(element: HTMLElement): void {
-  element.dataset.empty = Dom.isEmpty(element) ? 'true' : 'false';
-}
+export const toggleEmptyMark = (element: HTMLElement): void => {
+  const { dataset } = element;
+
+  dataset.empty = Dom.isEmpty(element) ? 'true' : 'false';
+};

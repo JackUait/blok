@@ -4,6 +4,81 @@ import type Block from '../block';
 import * as caretUtils from '../utils/caret';
 import $  from '../dom';
 
+const ASCII_MAX_CODE_POINT = 0x7f;
+
+/**
+ * Determines whether the provided text is comprised only of punctuation and whitespace characters.
+ *
+ * @param text - text to check
+ */
+const isPunctuationOnly = (text: string): boolean => {
+  for (const character of text) {
+    if (character.trim().length === 0) {
+      continue;
+    }
+
+    if (character >= '0' && character <= '9') {
+      return false;
+    }
+
+    if (character.toLowerCase() !== character.toUpperCase()) {
+      return false;
+    }
+
+    const codePoint = character.codePointAt(0);
+
+    if (typeof codePoint === 'number' && codePoint > ASCII_MAX_CODE_POINT) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const collectTextNodes = (node: Node): Text[] => {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return [ node as Text ];
+  }
+
+  if (!node.hasChildNodes?.()) {
+    return [];
+  }
+
+  return Array.from(node.childNodes).flatMap((child) => collectTextNodes(child));
+};
+
+/**
+ * Finds last text node suitable for placing caret near the end of the element.
+ *
+ * Prefers nodes that contain more than just punctuation so caret remains inside formatting nodes
+ * whenever possible.
+ *
+ * @param root - element to search within
+ */
+const findLastMeaningfulTextNode = (root: HTMLElement): Text | null => {
+  const textNodes = collectTextNodes(root);
+
+  if (textNodes.length === 0) {
+    return null;
+  }
+
+  const lastTextNode = textNodes[textNodes.length - 1];
+  const lastMeaningfulNode = [ ...textNodes ]
+    .reverse()
+    .find((node) => !isPunctuationOnly(node.textContent ?? '')) ?? null;
+
+  if (
+    lastMeaningfulNode &&
+    lastMeaningfulNode !== lastTextNode &&
+    isPunctuationOnly(lastTextNode.textContent ?? '') &&
+    lastMeaningfulNode.parentNode !== root
+  ) {
+    return lastMeaningfulNode;
+  }
+
+  return lastTextNode;
+};
+
 /**
  * Caret
  * Contains methods for working Caret
@@ -71,42 +146,56 @@ export default class Caret extends Module {
       return;
     }
 
-    let element;
+    const getElement = (): HTMLElement | undefined => {
+      if (position === this.positions.START) {
+        return block.firstInput;
+      }
 
-    switch (position) {
-      case this.positions.START:
-        element = block.firstInput;
-        break;
-      case this.positions.END:
-        element = block.lastInput;
-        break;
-      default:
-        element = block.currentInput;
-    }
+      if (position === this.positions.END) {
+        return block.lastInput;
+      }
+
+      return block.currentInput;
+    };
+
+    const element = getElement();
 
     if (!element) {
       return;
     }
 
-    let nodeToSet: Node;
-    let offsetToSet = offset;
+    const getNodeAndOffset = (el: HTMLElement): { node: Node | null; offset: number } => {
+      if (position === this.positions.START) {
+        return {
+          node: $.getDeepestNode(el, false),
+          offset: 0,
+        };
+      }
 
-    if (position === this.positions.START) {
-      nodeToSet = $.getDeepestNode(element, false) as Node;
-      offsetToSet = 0;
-    } else if (position === this.positions.END) {
-      nodeToSet = $.getDeepestNode(element, true) as Node;
-      offsetToSet = $.getContentLength(nodeToSet);
-    } else {
-      const { node, offset: nodeOffset } = $.getNodeByOffset(element, offset);
+      if (position === this.positions.END) {
+        return this.resolveEndPositionNode(el);
+      }
+
+      const { node, offset: nodeOffset } = $.getNodeByOffset(el, offset);
 
       if (node) {
-        nodeToSet = node;
-        offsetToSet = nodeOffset;
-      } else { // case for empty block's input
-        nodeToSet = $.getDeepestNode(element, false) as Node;
-        offsetToSet = 0;
+        return {
+          node,
+          offset: nodeOffset,
+        };
       }
+
+      // case for empty block's input
+      return {
+        node: $.getDeepestNode(el, false),
+        offset: 0,
+      };
+    };
+
+    const { node: nodeToSet, offset: offsetToSet } = getNodeAndOffset(element);
+
+    if (!nodeToSet) {
+      return;
     }
 
     this.set(nodeToSet as HTMLElement, offsetToSet);
@@ -114,6 +203,43 @@ export default class Caret extends Module {
     BlockManager.setCurrentBlockByChildNode(block.holder);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     BlockManager.currentBlock!.currentInput = element;
+  }
+
+  /**
+   * Calculates the node and offset when caret should be placed near element's end.
+   *
+   * @param {HTMLElement} el - element to inspect
+   */
+  private resolveEndPositionNode(el: HTMLElement): { node: Node | null; offset: number } {
+    const nodeToSet = $.getDeepestNode(el, true);
+
+    if (nodeToSet instanceof HTMLElement && $.isNativeInput(nodeToSet)) {
+      return {
+        node: nodeToSet,
+        offset: $.getContentLength(nodeToSet),
+      };
+    }
+
+    const meaningfulTextNode = findLastMeaningfulTextNode(el);
+
+    if (meaningfulTextNode) {
+      return {
+        node: meaningfulTextNode,
+        offset: meaningfulTextNode.textContent?.length ?? 0,
+      };
+    }
+
+    if (nodeToSet) {
+      return {
+        node: nodeToSet,
+        offset: $.getContentLength(nodeToSet),
+      };
+    }
+
+    return {
+      node: null,
+      offset: 0,
+    };
   }
 
   /**
@@ -134,7 +260,9 @@ export default class Caret extends Module {
         break;
 
       case this.positions.END:
-        this.set(nodeToSet as HTMLElement, $.getContentLength(nodeToSet));
+        if (nodeToSet) {
+          this.set(nodeToSet as HTMLElement, $.getContentLength(nodeToSet));
+        }
         break;
 
       default:
@@ -143,7 +271,9 @@ export default class Caret extends Module {
         }
     }
 
-    currentBlock.currentInput = input;
+    if (currentBlock) {
+      currentBlock.currentInput = input;
+    }
   }
 
   /**
@@ -162,7 +292,11 @@ export default class Caret extends Module {
      */
     if (top < 0) {
       window.scrollBy(0, top - scrollOffset);
-    } else if (bottom > innerHeight) {
+
+      return;
+    }
+
+    if (bottom > innerHeight) {
       window.scrollBy(0, bottom - innerHeight + scrollOffset);
     }
   }
@@ -197,39 +331,50 @@ export default class Caret extends Module {
   public extractFragmentFromCaretPosition(): void|DocumentFragment {
     const selection = Selection.get();
 
-    if (selection.rangeCount) {
-      const selectRange = selection.getRangeAt(0);
-      const currentBlockInput = this.Editor.BlockManager.currentBlock.currentInput;
-
-      selectRange.deleteContents();
-
-      if (currentBlockInput) {
-        if ($.isNativeInput(currentBlockInput)) {
-          /**
-           * If input is native text input we need to use it's value
-           * Text before the caret stays in the input,
-           * while text after the caret is returned as a fragment to be inserted after the block.
-           */
-          const input = currentBlockInput as HTMLInputElement | HTMLTextAreaElement;
-          const newFragment = document.createDocumentFragment();
-
-          const inputRemainingText = input.value.substring(0, input.selectionStart);
-          const fragmentText = input.value.substring(input.selectionStart);
-
-          newFragment.textContent = fragmentText;
-          input.value = inputRemainingText;
-
-          return newFragment;
-        } else {
-          const range = selectRange.cloneRange();
-
-          range.selectNodeContents(currentBlockInput);
-          range.setStart(selectRange.endContainer, selectRange.endOffset);
-
-          return range.extractContents();
-        }
-      }
+    if (!selection || !selection.rangeCount) {
+      return;
     }
+
+    const selectRange = selection.getRangeAt(0);
+    const currentBlock = this.Editor.BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return;
+    }
+
+    const currentBlockInput = currentBlock.currentInput;
+
+    selectRange.deleteContents();
+
+    if (!currentBlockInput) {
+      return;
+    }
+
+    if ($.isNativeInput(currentBlockInput)) {
+      /**
+       * If input is native text input we need to use it's value
+       * Text before the caret stays in the input,
+       * while text after the caret is returned as a fragment to be inserted after the block.
+       */
+      const input = currentBlockInput as HTMLInputElement | HTMLTextAreaElement;
+      const newFragment = document.createDocumentFragment();
+      const selectionStart = input.selectionStart ?? 0;
+
+      const inputRemainingText = input.value.substring(0, selectionStart);
+      const fragmentText = input.value.substring(selectionStart);
+
+      newFragment.textContent = fragmentText;
+      input.value = inputRemainingText;
+
+      return newFragment;
+    }
+
+    const range = selectRange.cloneRange();
+
+    range.selectNodeContents(currentBlockInput);
+    range.setStart(selectRange.endContainer, selectRange.endOffset);
+
+    return range.extractContents();
   }
 
   /**
@@ -250,8 +395,6 @@ export default class Caret extends Module {
     const { nextInput, currentInput } = currentBlock;
     const isAtEnd = currentInput !== undefined ? caretUtils.isCaretAtEndOfInput(currentInput) : undefined;
 
-    let blockToNavigate = nextBlock;
-
     /**
      * We should jump to the next block if:
      * - 'force' is true (Tab-navigation)
@@ -267,7 +410,11 @@ export default class Caret extends Module {
       return true;
     }
 
-    if (blockToNavigate === null) {
+    const getBlockToNavigate = (): Block | null => {
+      if (nextBlock !== null) {
+        return nextBlock;
+      }
+
       /**
        * This code allows to exit from the last non-initial tool:
        * https://github.com/codex-team/editor.js/issues/1103
@@ -279,17 +426,19 @@ export default class Caret extends Module {
        *    (https://github.com/codex-team/editor.js/issues/1414)
        */
       if (currentBlock.tool.isDefault || !navigationAllowed) {
-        return false;
+        return null;
       }
 
       /**
        * If there is no nextBlock, but currentBlock is not default,
        * insert new default block at the end and navigate to it
        */
-      blockToNavigate = BlockManager.insertAtEnd() as Block;
-    }
+      return BlockManager.insertAtEnd() as Block;
+    };
 
-    if (navigationAllowed) {
+    const blockToNavigate = getBlockToNavigate();
+
+    if (blockToNavigate !== null && navigationAllowed) {
       this.setToBlock(blockToNavigate, this.positions.START);
 
       return true;
@@ -391,6 +540,10 @@ export default class Caret extends Module {
     const wrapper = document.createElement('div');
     const selection = Selection.get();
     const range = Selection.range;
+
+    if (!selection || !range) {
+      return;
+    }
 
     wrapper.innerHTML = content;
 

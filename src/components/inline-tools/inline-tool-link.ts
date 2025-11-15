@@ -62,13 +62,21 @@ export default class LinkInlineTool implements InlineTool {
     input: 'ce-inline-tool-input',
     inputShowed: 'ce-inline-tool-input--showed',
   };
+  /**
+   * Data attributes for e2e selectors
+   */
+  private readonly DATA_ATTRIBUTES = {
+    buttonActive: 'data-link-tool-active',
+    buttonUnlink: 'data-link-tool-unlink',
+    inputOpened: 'data-link-tool-input-opened',
+  } as const;
 
   /**
    * Elements
    */
   private nodes: {
-    button: HTMLButtonElement;
-    input: HTMLInputElement;
+    button: HTMLButtonElement | null;
+    input: HTMLInputElement | null;
   } = {
       button: null,
       input: null,
@@ -122,6 +130,8 @@ export default class LinkInlineTool implements InlineTool {
     this.nodes.button = document.createElement('button') as HTMLButtonElement;
     this.nodes.button.type = 'button';
     this.nodes.button.classList.add(this.CSS.button, this.CSS.buttonModifier);
+    this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonActive, false);
+    this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonUnlink, false);
 
     this.nodes.button.innerHTML = IconLink;
 
@@ -136,6 +146,7 @@ export default class LinkInlineTool implements InlineTool {
     this.nodes.input.placeholder = this.i18n.t('Add a link');
     this.nodes.input.enterKeyHint = 'done';
     this.nodes.input.classList.add(this.CSS.input);
+    this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, false);
     this.nodes.input.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.keyCode === this.ENTER_KEY) {
         this.enterPressed(event);
@@ -148,38 +159,39 @@ export default class LinkInlineTool implements InlineTool {
   /**
    * Handle clicks on the Inline Toolbar icon
    *
-   * @param {Range} range - range to wrap with link
+   * @param {Range | null} range - range to wrap with link
    */
-  public surround(range: Range): void {
+  public surround(range: Range | null): void {
+    if (!range) {
+      this.toggleActions();
+
+      return;
+    }
+
     /**
-     * Range will be null when user makes second click on the 'link icon' to close opened input
+     * Save selection before change focus to the input
      */
-    if (range) {
-      /**
-       * Save selection before change focus to the input
-       */
-      if (!this.inputOpened) {
-        /** Create blue background instead of selection */
-        this.selection.setFakeBackground();
-        this.selection.save();
-      } else {
-        this.selection.restore();
-        this.selection.removeFakeBackground();
-      }
-      const parentAnchor = this.selection.findParentTag('A');
+    if (!this.inputOpened) {
+      /** Create blue background instead of selection */
+      this.selection.setFakeBackground();
+      this.selection.save();
+    } else {
+      this.selection.restore();
+      this.selection.removeFakeBackground();
+    }
+    const parentAnchor = this.selection.findParentTag('A');
 
-      /**
-       * Unlink icon pressed
-       */
-      if (parentAnchor) {
-        this.selection.expandToTag(parentAnchor);
-        this.unlink();
-        this.closeActions();
-        this.checkState();
-        this.toolbar.close();
+    /**
+     * Unlink icon pressed
+     */
+    if (parentAnchor) {
+      this.selection.expandToTag(parentAnchor);
+      this.unlink();
+      this.closeActions();
+      this.checkState();
+      this.toolbar.close();
 
-        return;
-      }
+      return;
     }
 
     this.toggleActions();
@@ -191,10 +203,16 @@ export default class LinkInlineTool implements InlineTool {
   public checkState(): boolean {
     const anchorTag = this.selection.findParentTag('A');
 
+    if (!this.nodes.button || !this.nodes.input) {
+      return !!anchorTag;
+    }
+
     if (anchorTag) {
       this.nodes.button.innerHTML = IconUnlink;
       this.nodes.button.classList.add(this.CSS.buttonUnlink);
       this.nodes.button.classList.add(this.CSS.buttonActive);
+      this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonUnlink, true);
+      this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonActive, true);
       this.openActions();
 
       /**
@@ -202,13 +220,15 @@ export default class LinkInlineTool implements InlineTool {
        */
       const hrefAttr = anchorTag.getAttribute('href');
 
-      this.nodes.input.value = hrefAttr !== 'null' ? hrefAttr : '';
+      this.nodes.input.value = hrefAttr !== null ? hrefAttr : '';
 
       this.selection.save();
     } else {
       this.nodes.button.innerHTML = IconLink;
       this.nodes.button.classList.remove(this.CSS.buttonUnlink);
       this.nodes.button.classList.remove(this.CSS.buttonActive);
+      this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonUnlink, false);
+      this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonActive, false);
     }
 
     return !!anchorTag;
@@ -243,7 +263,11 @@ export default class LinkInlineTool implements InlineTool {
    * @param {boolean} needFocus - on link creation we need to focus input. On editing - nope.
    */
   private openActions(needFocus = false): void {
+    if (!this.nodes.input) {
+      return;
+    }
     this.nodes.input.classList.add(this.CSS.inputShowed);
+    this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, true);
     if (needFocus) {
       this.nodes.input.focus();
     }
@@ -270,7 +294,11 @@ export default class LinkInlineTool implements InlineTool {
       currentSelection.restore();
     }
 
+    if (!this.nodes.input) {
+      return;
+    }
     this.nodes.input.classList.remove(this.CSS.inputShowed);
+    this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, false);
     this.nodes.input.value = '';
     if (clearSavedSelection) {
       this.selection.clearSaved();
@@ -284,7 +312,10 @@ export default class LinkInlineTool implements InlineTool {
    * @param {KeyboardEvent} event - enter keydown event
    */
   private enterPressed(event: KeyboardEvent): void {
-    let value = this.nodes.input.value || '';
+    if (!this.nodes.input) {
+      return;
+    }
+    const value = this.nodes.input.value || '';
 
     if (!value.trim()) {
       this.selection.restore();
@@ -306,12 +337,12 @@ export default class LinkInlineTool implements InlineTool {
       return;
     }
 
-    value = this.prepareLink(value);
+    const preparedValue = this.prepareLink(value);
 
     this.selection.restore();
     this.selection.removeFakeBackground();
 
-    this.insertLink(value);
+    this.insertLink(preparedValue);
 
     /**
      * Preventing events that will be able to happen
@@ -344,10 +375,7 @@ export default class LinkInlineTool implements InlineTool {
    * @param {string} link - raw user input
    */
   private prepareLink(link: string): string {
-    link = link.trim();
-    link = this.addProtocol(link);
-
-    return link;
+    return this.addProtocol(link.trim());
   }
 
   /**
@@ -369,12 +397,12 @@ export default class LinkInlineTool implements InlineTool {
      *     2) Anchors looks like "#results"
      *     3) Protocol-relative URLs like "//google.com"
      */
-    const isInternal = /^\/[^/\s]/.test(link),
-        isAnchor = link.substring(0, 1) === '#',
-        isProtocolRelative = /^\/\/[^/\s]/.test(link);
+    const isInternal = /^\/[^/\s]/.test(link);
+    const isAnchor = link.substring(0, 1) === '#';
+    const isProtocolRelative = /^\/\/[^/\s]/.test(link);
 
     if (!isInternal && !isAnchor && !isProtocolRelative) {
-      link = 'http://' + link;
+      return 'http://' + link;
     }
 
     return link;
@@ -403,5 +431,20 @@ export default class LinkInlineTool implements InlineTool {
    */
   private unlink(): void {
     document.execCommand(this.commandUnlink);
+  }
+
+  /**
+   * Persist state as data attributes for testing hooks
+   *
+   * @param element - The HTML element to set the attribute on, or null
+   * @param attributeName - The name of the attribute to set
+   * @param state - The boolean state value to persist
+   */
+  private setBooleanStateAttribute(element: HTMLElement | null, attributeName: string, state: boolean): void {
+    if (!element) {
+      return;
+    }
+
+    element.setAttribute(attributeName, state ? 'true' : 'false');
   }
 }

@@ -50,7 +50,7 @@ export default class ItalicInlineTool implements InlineTool {
   /**
    * Elements
    */
-  private nodes: {button: HTMLButtonElement} = {
+  private nodes: {button: HTMLButtonElement | null} = {
     button: null,
   };
 
@@ -58,12 +58,15 @@ export default class ItalicInlineTool implements InlineTool {
    * Create button for Inline Toolbar
    */
   public render(): HTMLElement {
-    this.nodes.button = document.createElement('button') as HTMLButtonElement;
-    this.nodes.button.type = 'button';
-    this.nodes.button.classList.add(this.CSS.button, this.CSS.buttonModifier);
-    this.nodes.button.innerHTML = IconItalic;
+    const button = document.createElement('button');
 
-    return this.nodes.button;
+    button.type = 'button';
+    button.classList.add(this.CSS.button, this.CSS.buttonModifier);
+    button.innerHTML = IconItalic;
+
+    this.nodes.button = button;
+
+    return button;
   }
 
   /**
@@ -79,7 +82,9 @@ export default class ItalicInlineTool implements InlineTool {
   public checkState(): boolean {
     const isActive = document.queryCommandState(this.commandName);
 
-    this.nodes.button.classList.toggle(this.CSS.buttonActive, isActive);
+    if (this.nodes.button) {
+      this.nodes.button.classList.toggle(this.CSS.buttonActive, isActive);
+    }
 
     return isActive;
   }

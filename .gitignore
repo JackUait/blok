@@ -10,11 +10,11 @@ node_modules/*
 npm-debug.log
 yarn-error.log
 
-test/cypress/screenshots
-test/cypress/videos
+test-results
 
 dist/
 
 coverage/
 .nyc_output/
 .vscode/launch.json
+jscpd-report/

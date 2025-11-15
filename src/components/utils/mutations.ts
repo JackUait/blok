@@ -4,7 +4,7 @@
  * @param mutationRecord - mutation to check
  * @param element - element that is expected to contain mutation
  */
-export function isMutationBelongsToElement(mutationRecord: MutationRecord, element: Element): boolean {
+export const isMutationBelongsToElement = (mutationRecord: MutationRecord, element: Element): boolean => {
   const { type, target, addedNodes, removedNodes } = mutationRecord;
 
   /**
@@ -24,19 +24,17 @@ export function isMutationBelongsToElement(mutationRecord: MutationRecord, eleme
   /**
    * In case of removing/adding the element itself, mutation type will be 'childList' and 'removedNodes'/'addedNodes' will contain the element.
    */
-  if (type === 'childList') {
-    const elementAddedItself = Array.from(addedNodes).some(node => node === element);
-
-    if (elementAddedItself) {
-      return true;
-    }
-
-    const elementRemovedItself = Array.from(removedNodes).some(node => node === element);
-
-    if (elementRemovedItself) {
-      return true;
-    }
+  if (type !== 'childList') {
+    return false;
   }
 
-  return false;
-}
+  const elementAddedItself = Array.from(addedNodes).some(node => node === element);
+
+  if (elementAddedItself) {
+    return true;
+  }
+
+  const elementRemovedItself = Array.from(removedNodes).some(node => node === element);
+
+  return elementRemovedItself;
+};

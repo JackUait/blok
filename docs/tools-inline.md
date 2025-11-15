@@ -1,11 +1,11 @@
 # Tools for the Inline Toolbar
 
-Similar with [Tools](tools.md) represented Blocks, you can create Tools for the Inline Toolbar. It will work with 
+Similar with [Tools](tools.md) represented Blocks, you can create Tools for the Inline Toolbar. It will work with
 selected fragment of text. The simplest example is `bold` or `italic` Tools.
 
 ## Base structure
 
-First of all, Tool's class should have a `isInline` property (static getter) set as `true`. 
+First of all, Tool's class should have a `isInline` property (static getter) set as `true`.
 
 After that Inline Tool should implement next methods.
 
@@ -33,7 +33,7 @@ Method does not accept any parameters
 
 #### Return value
 
-type | description | 
+type | description |
 -- | -- |
 `HTMLElement` | element that will be added to the Inline Toolbar |
 
@@ -45,7 +45,7 @@ Method that accepts selected range and wrap it somehow
 
 #### Parameters
 
-name | type | description | 
+name | type | description |
 -- |-- | -- |
 range | Range | first range of current Selection |
 
@@ -61,13 +61,13 @@ Get Selection and detect if Tool was applied. For example, after that Tool can h
 
 #### Parameters
 
-name | type | description | 
+name | type | description |
 -- |-- | -- |
 selection | Selection | current Selection |
 
 #### Return value
 
-type | description | 
+type | description |
 -- | -- |
 `Boolean` | `true` if Tool is active, otherwise `false` |
 
@@ -75,8 +75,8 @@ type | description |
 
 ### renderActions()
 
-Optional method that returns additional Element with actions. 
-For example, input for the 'link' tool or textarea for the 'comment' tool. 
+Optional method that returns additional Element with actions.
+For example, input for the 'link' tool or textarea for the 'comment' tool.
 It will be places below the buttons list at Inline Toolbar.
 
 #### Parameters
@@ -85,7 +85,7 @@ Method does not accept any parameters
 
 #### Return value
 
-type | description | 
+type | description |
 -- | -- |
 `HTMLElement` | element that will be added to the Inline Toolbar |
 
@@ -93,7 +93,7 @@ type | description |
 
 ### clear()
 
-Optional method that will be called on opening/closing of Inline Toolbar. 
+Optional method that will be called on opening/closing of Inline Toolbar.
 Can contain logic for clearing Tool's stuff, such as inputs, states and other.
 
 #### Parameters
@@ -102,17 +102,17 @@ Method does not accept any parameters
 
 #### Return value
 
-Method should not return a value. 
+Method should not return a value.
 
 ### static get sanitize()
 
-We recommend to specify the Sanitizer config that corresponds with inline tags that is used by your Tool. 
-In that case, your config will be merged with sanitizer configuration of Block Tool 
+We recommend to specify the Sanitizer config that corresponds with inline tags that is used by your Tool.
+In that case, your config will be merged with sanitizer configuration of Block Tool
 that is using the Inline Toolbar with your Tool.
 
 Example:
 
-If your Tool wrapps selected text with `<b>` tag, the sanitizer config should looks like this:
+If your Tool wraps selected text with `<b>` tag, the sanitizer config should looks like this:
 
 ```js
 static get sanitize() {
@@ -120,14 +120,14 @@ static get sanitize() {
     b: {} // {} means clean all attributes. true — leave all attributes
   }
 }
-``` 
+```
 
 Read more about Sanitizer configuration at the [Tools#sanitize](tools.md#sanitize)
 
 ### Specifying a title
 
-You can pass your Tool's title via `title` static getter. It can be used, for example, in the Tooltip with 
-icon description that appears by hover. 
+You can pass your Tool's title via `title` static getter. It can be used, for example, in the Tooltip with
+icon description that appears by hover.
 
 ```ts
 export default class BoldInlineTool implements InlineTool {

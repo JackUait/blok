@@ -4,8 +4,10 @@
     "sourceMap": true,
     "target": "es2017",
     "declaration": false,
-    "moduleResolution": "node", // This resolution strategy attempts to mimic the Node.js module resolution mechanism at runtime
+    "module": "esnext",
+    "moduleResolution": "bundler", // This resolution strategy handles package.json exports and is suitable for modern bundlers
     "lib": ["dom", "es2017", "es2018", "es2019"],
+    "allowJs": true,
 
     // allows to import .json files for i18n
     "resolveJsonModule": true,
@@ -17,10 +19,23 @@
     "paths": {
       "@/types": [ "./types/" ],
       "@/types/*": [ "./types/*" ],
+      "@editorjs/editorjs": [ "./types" ],
+      "@editorjs/editorjs/*": [ "./types/*" ],
     },
-
-    // @todo move to cypress/tsconfig.json when cypress will support overriding tsconfig path
-    // @see https://github.com/cypress-io/cypress/issues/23045
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowArbitraryExtensions": true,
+    "noEmit": true
   },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.json",
+    "vite.config*.mjs"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
 }

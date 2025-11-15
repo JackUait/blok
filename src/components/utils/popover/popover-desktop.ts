@@ -83,7 +83,15 @@ export class PopoverDesktop extends PopoverAbstract {
       this.addSearch();
     }
 
-    if (params.flippable !== false) {
+    if (params.flippable === false) {
+      return;
+    }
+
+    if (params.flipper !== undefined) {
+      params.flipper.deactivate();
+      params.flipper.removeOnFlip(this.onFlip);
+      this.flipper = params.flipper;
+    } else {
       this.flipper = new Flipper({
         items: this.flippableElements,
         focusedItemClass: popoverItemCls.focused,
@@ -94,9 +102,9 @@ export class PopoverDesktop extends PopoverAbstract {
           keyCodes.ENTER,
         ],
       });
-
-      this.flipper.onFlip(this.onFlip);
     }
+
+    this.flipper.onFlip(this.onFlip);
   }
 
   /**
@@ -242,6 +250,10 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedPopover.getElement().remove();
     this.nestedPopover = null;
     this.flipper?.activate(this.flippableElements);
+    // Use requestAnimationFrame to ensure DOM is updated before focusing
+    requestAnimationFrame(() => {
+      this.flipper?.focusFirst();
+    });
 
     this.nestedPopoverTriggerItem?.onChildrenClose();
   }
@@ -358,20 +370,22 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Returns list of elements available for keyboard navigation.
    */
-  private get flippableElements(): HTMLElement[] {
-    const result = this.items
-      .map(item => {
-        if (item instanceof PopoverItemDefault) {
-          return item.getElement();
-        }
-        if (item instanceof PopoverItemHtml) {
-          return item.getControls();
-        }
-      })
-      .flat()
-      .filter(item => item !== undefined && item !== null);
+  protected get flippableElements(): HTMLElement[] {
+    const result = this.items.flatMap(item => {
+      if (!(item instanceof PopoverItemDefault)) {
+        return item instanceof PopoverItemHtml ? item.getControls() : [];
+      }
 
-    return result as HTMLElement[];
+      if (item.isDisabled) {
+        return [];
+      }
+
+      const element = item.getElement();
+
+      return element ? [ element ] : [];
+    }).filter((item): item is HTMLElement => item !== undefined && item !== null);
+
+    return result;
   }
 
   /**
@@ -414,14 +428,12 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.items
       .forEach((item) => {
-        let isHidden = false;
+        const isDefaultItem = item instanceof PopoverItemDefault;
+        const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
+        const isHidden = isDefaultItem
+          ? !data.items.includes(item)
+          : isSeparatorOrHtml && (isNothingFound || !isEmptyQuery);
 
-        if (item instanceof PopoverItemDefault) {
-          isHidden = !data.items.includes(item);
-        } else if (item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml) {
-          /** Should hide separators if nothing found message displayed or if there is some search query applied */
-          isHidden = isNothingFound || !isEmptyQuery;
-        }
         item.toggleHidden(isHidden);
       });
     this.toggleNothingFoundMessage(isNothingFound);

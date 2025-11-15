@@ -7,7 +7,7 @@ import { isFunction, isString } from '../utils';
  * @param tool - tool to check
  * @param direction - export for tool to merge from, import for tool to merge to
  */
-export function isToolConvertable(tool: BlockToolAdapter, direction: 'export' | 'import'): boolean {
+export const isToolConvertable = (tool: BlockToolAdapter, direction: 'export' | 'import'): boolean => {
   if (!tool.conversionConfig) {
     return false;
   }
@@ -15,4 +15,4 @@ export function isToolConvertable(tool: BlockToolAdapter, direction: 'export' | 
   const conversionProp = tool.conversionConfig[direction];
 
   return isFunction(conversionProp) || isString(conversionProp);
-}
+};

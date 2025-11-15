@@ -28,7 +28,7 @@ export default class DeleteTune implements BlockTune {
    *
    * @param {API} api - Editor's API
    */
-  constructor({ api }) {
+  constructor({ api }: { api: API }) {
     this.api = api;
   }
 

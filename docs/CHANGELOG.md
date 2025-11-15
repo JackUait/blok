@@ -12,7 +12,7 @@
 - `Fix` - codex-notifier and codex-tooltip moved from devDependencies to dependencies in package.json to solve type errors
 - `Fix` - Handle whitespace input in empty placeholder elements to prevent caret from moving unexpectedly to the end of the placeholder
 - `Fix` - Fix the memory leak issue in `Shortcuts` class
-- `Fix` - Fix when / overides selected text outside of the editor
+- `Fix` - Fix when / overrides selected text outside of the editor
 - `DX` - Tools submodules removed from the repository
 - `Improvement` - Shift + Down/Up will allow to select next/previous line instead of Inline Toolbar flipping
 - `Improvement` - The API `caret.setToBlock()` offset now works across the entire block content, not just the first or last node.
@@ -63,7 +63,7 @@
 - `New` – Inline Toolbar has new look 💅
 - `New` – Inline Tool's `render()` now supports [Menu Config](https://editorjs.io/menu-config/) format
 - `New` – *ToolsAPI* – All installed block tools now accessible via ToolsAPI `getBlockTools()` method
-- `New` – *SelectionAPI* – Exposed methods `save()` and `restore()` that allow to save selection to be able to temporally move focus away, methods `setFakeBackground()` and `removeFakeBackground()` that allow to immitate selection while focus moved away
+- `New` – *SelectionAPI* – Exposed methods `save()` and `restore()` that allow to save selection to be able to temporally move focus away, methods `setFakeBackground()` and `removeFakeBackground()` that allow to imitate selection while focus moved away
 - `New` – *BlocksAPI* – Exposed `getBlockByElement()` method that helps find block by any child html element
 - `New` – "Convert to" control is now also available in Block Tunes
 - `New` — Editor.js now supports contenteditable placeholders out of the box. Just add `data-placeholder` or `data-placeholder-active` attribute to make it work. The first one will work like native placeholder while the second one will show placeholder only when block is current.
@@ -85,7 +85,7 @@
 - `Fix` – Unwanted scroll on first typing on iOS devices
 - `Fix` - Unwanted soft line break on Enter press after period and space (". |") on iOS devices
 - `Fix` - Caret lost after block conversion on mobile devices.
-- `Fix` - Caret lost after Backspace at the start of block when previoius block is not convertable
+- `Fix` - Caret lost after Backspace at the start of block when previous block is not convertable
 – `Fix` — Deleting whitespaces at the start/end of the block
 - `Fix` — The problem caused by missed "import type" in block mutation event types resolved
 

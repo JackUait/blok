@@ -134,7 +134,9 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
       this.header.destroy();
       this.header = null;
     }
-    if (title !== undefined) {
+    const shouldRenderHeader = title !== undefined;
+
+    if (shouldRenderHeader) {
       this.header = new PopoverHeader({
         text: title,
         onBackButtonClick: () => {
@@ -143,11 +145,12 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
           this.updateItemsAndHeader(this.history.currentItems, this.history.currentTitle);
         },
       });
-      const headerEl = this.header.getElement();
+    }
 
-      if (headerEl !== null) {
-        this.nodes.popoverContainer.insertBefore(headerEl, this.nodes.popoverContainer.firstChild);
-      }
+    const headerElement = this.header?.getElement() ?? null;
+
+    if (shouldRenderHeader && headerElement !== null) {
+      this.nodes.popoverContainer.insertBefore(headerElement, this.nodes.popoverContainer.firstChild);
     }
 
     /** Re-render items */

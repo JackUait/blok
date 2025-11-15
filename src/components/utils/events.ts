@@ -80,8 +80,8 @@ export default class EventsDispatcher<EventMap> {
       return;
     }
 
-    this.subscribers[eventName].reduce((previousData, currentHandler) => {
-      const newData = currentHandler(previousData);
+    this.subscribers[eventName].reduce<EventMap[Name] | undefined>((previousData, currentHandler) => {
+      const newData = currentHandler(previousData as EventMap[Name]);
 
       return newData !== undefined ? newData : previousData;
     }, data);
@@ -94,18 +94,21 @@ export default class EventsDispatcher<EventMap> {
    * @param callback - event handler
    */
   public off<Name extends keyof EventMap>(eventName: Name, callback: Listener<EventMap[Name]>): void {
-    if (this.subscribers[eventName] === undefined) {
+    const subscribers = this.subscribers[eventName];
+
+    if (subscribers === undefined) {
       console.warn(`EventDispatcher .off(): there is no subscribers for event "${eventName.toString()}". Probably, .off() called before .on()`);
 
       return;
     }
 
-    for (let i = 0; i < this.subscribers[eventName].length; i++) {
-      if (this.subscribers[eventName][i] === callback) {
-        delete this.subscribers[eventName][i];
-        break;
-      }
+    const indexOfCallback = subscribers.indexOf(callback);
+
+    if (indexOfCallback === -1) {
+      return;
     }
+
+    subscribers.splice(indexOfCallback, 1);
   }
 
   /**

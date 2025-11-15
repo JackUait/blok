@@ -4,14 +4,16 @@ import SelectionUtils from '../../selection';
 import type Block from '../../block';
 import I18n from '../../i18n';
 import { I18nInternalNS } from '../../i18n/namespace-internal';
-import type Flipper from '../../flipper';
+import Flipper from '../../flipper';
 import type { MenuConfigItem } from '../../../../types/tools';
 import { resolveAliases } from '../../utils/resolve-aliases';
-import type { PopoverItemParams } from '../../utils/popover';
+import type { PopoverItemParams, PopoverItemDefaultBaseParams } from '../../utils/popover';
 import { type Popover, PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
+import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { isMobileScreen } from '../../utils';
-import { EditorMobileLayoutToggled } from '../../events';
+import { isMobileScreen, keyCodes } from '../../utils';
+import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
+import { BlockSettingsClosed, BlockSettingsOpened, EditorMobileLayoutToggled } from '../../events';
 import { IconReplace } from '@codexteam/icons';
 import { getConvertibleToolsForBlock } from '../../utils/blocks';
 
@@ -34,10 +36,10 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
   /**
    * Module Events
    */
-  public get events(): { opened: string; closed: string } {
+  public get events(): { opened: typeof BlockSettingsOpened; closed: typeof BlockSettingsClosed } {
     return {
-      opened: 'block-settings-opened',
-      closed: 'block-settings-closed',
+      opened: BlockSettingsOpened,
+      closed: BlockSettingsClosed,
     };
   }
 
@@ -60,12 +62,8 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    *
    * @todo remove once BlockSettings becomes standalone non-module class
    */
-  public get flipper(): Flipper | undefined {
-    if (this.popover === null) {
-      return;
-    }
-
-    return 'flipper' in this.popover ? this.popover?.flipper : undefined;
+  public get flipper(): Flipper {
+    return this.flipperInstance;
   }
 
   /**
@@ -78,6 +76,29 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    * Null until popover is not initialized
    */
   private popover: Popover | null = null;
+
+  /**
+   * Shared flipper instance used for keyboard navigation in block settings popover
+   */
+  private readonly flipperInstance: Flipper = new Flipper({
+    focusedItemClass: popoverItemCls.focused,
+    allowedKeys: [
+      keyCodes.TAB,
+      keyCodes.UP,
+      keyCodes.DOWN,
+      keyCodes.ENTER,
+    ],
+  });
+
+  /**
+   * Stored keydown handler reference to detach when block tunes are closed
+   */
+  private flipperKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
+
+  /**
+   * Element that listens for keydown events while block tunes are opened
+   */
+  private flipperKeydownSource: HTMLElement | null = null;
 
   /**
    * Panel with block settings with 2 sections:
@@ -98,6 +119,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    * Destroys module
    */
   public destroy(): void {
+    this.detachFlipperKeydownListener();
     this.removeAllNodes();
     this.listeners.destroy();
     this.eventsDispatcher.off(EditorMobileLayoutToggled, this.close);
@@ -108,7 +130,13 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    *
    * @param targetBlock - near which Block we should open BlockSettings
    */
-  public async open(targetBlock: Block = this.Editor.BlockManager.currentBlock): Promise<void> {
+  public async open(targetBlock?: Block): Promise<void> {
+    const block = targetBlock ?? this.Editor.BlockManager.currentBlock;
+
+    if (block === undefined) {
+      return;
+    }
+
     this.opened = true;
 
     /**
@@ -120,32 +148,41 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     /**
      * Highlight content of a Block we are working with
      */
-    this.Editor.BlockSelection.selectBlock(targetBlock);
+    this.Editor.BlockSelection.selectBlock(block);
     this.Editor.BlockSelection.clearCache();
 
     /** Get tool's settings data */
-    const { toolTunes, commonTunes } = targetBlock.getTunes();
+    const { toolTunes, commonTunes } = block.getTunes();
 
     /** Tell to subscribers that block settings is opened */
     this.eventsDispatcher.emit(this.events.opened);
 
     const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
-
-    this.popover = new PopoverClass({
+    const popoverParams: PopoverParams & { flipper?: Flipper } = {
       searchable: true,
-      items: await this.getTunesItems(targetBlock, commonTunes, toolTunes),
+      items: await this.getTunesItems(block, commonTunes, toolTunes),
       scopeElement: this.Editor.API.methods.ui.nodes.redactor,
       messages: {
         nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
         search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
       },
-    });
+    };
+
+    if (PopoverClass === PopoverDesktop) {
+      popoverParams.flipper = this.flipperInstance;
+    }
+
+    this.popover = new PopoverClass(popoverParams);
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
 
     this.nodes.wrapper?.append(this.popover.getElement());
 
     this.popover.show();
+    if (PopoverClass === PopoverDesktop) {
+      this.flipperInstance.focusItem(0);
+    }
+    this.attachFlipperKeydownListener(block);
   }
 
   /**
@@ -177,6 +214,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     this.selection.clearSaved();
+    this.detachFlipperKeydownListener();
 
     /**
      * Remove highlighted content of a Block we are working with
@@ -216,11 +254,17 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
     const allBlockTools = Array.from(this.Editor.Tools.blockTools.values());
     const convertibleTools = await getConvertibleToolsForBlock(currentBlock, allBlockTools);
-    const convertToItems = convertibleTools.reduce((result, tool) => {
+    const convertToItems = convertibleTools.reduce<PopoverItemParams[]>((result, tool) => {
+      if (tool.toolbox === undefined) {
+        return result;
+      }
+
       tool.toolbox.forEach((toolboxItem) => {
+        const titleKey = toolboxItem.title ?? tool.name;
+
         result.push({
           icon: toolboxItem.icon,
-          title: I18n.t(I18nInternalNS.toolNames, toolboxItem.title),
+          title: I18n.t(I18nInternalNS.toolNames, titleKey),
           name: tool.name,
           closeOnActivate: true,
           onActivate: async () => {
@@ -274,12 +318,69 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     if (item.type === PopoverItemType.Separator || item.type === PopoverItemType.Html) {
       return item;
     }
-    const result = resolveAliases(item, { label: 'title' });
 
-    if (item.confirmation) {
-      result.confirmation = this.resolveTuneAliases(item.confirmation);
+    const baseItem = resolveAliases(item, { label: 'title' }) as MenuConfigItem;
+
+    const itemWithConfirmation = ('confirmation' in item && item.confirmation !== undefined)
+      ? {
+        ...baseItem,
+        confirmation: resolveAliases(item.confirmation, { label: 'title' }) as PopoverItemDefaultBaseParams,
+      }
+      : baseItem;
+
+    if (!('children' in item) || item.children === undefined) {
+      return itemWithConfirmation as PopoverItemParams;
     }
 
-    return result;
+    const { onActivate: _onActivate, ...itemWithoutOnActivate } = itemWithConfirmation as MenuConfigItem & { onActivate?: undefined };
+    const childrenItems = item.children.items?.map((childItem) => {
+      return this.resolveTuneAliases(childItem as MenuConfigItem);
+    });
+
+    return {
+      ...itemWithoutOnActivate,
+      children: {
+        ...item.children,
+        items: childrenItems,
+      },
+    } as PopoverItemParams;
+  }
+
+  /**
+   * Attaches keydown listener to delegate navigation events to the shared flipper
+   *
+   * @param block - block that owns the currently focused content
+   */
+  private attachFlipperKeydownListener(block: Block): void {
+    this.detachFlipperKeydownListener();
+
+    const pluginsContent = block?.pluginsContent;
+
+    if (!(pluginsContent instanceof HTMLElement)) {
+      return;
+    }
+
+    this.flipperInstance.setHandleContentEditableTargets(true);
+
+    this.flipperKeydownHandler = (event: KeyboardEvent) => {
+      this.flipperInstance.handleExternalKeydown(event);
+    };
+
+    pluginsContent.addEventListener('keydown', this.flipperKeydownHandler, true);
+    this.flipperKeydownSource = pluginsContent;
+  }
+
+  /**
+   * Removes keydown listener from the previously active block
+   */
+  private detachFlipperKeydownListener(): void {
+    if (this.flipperKeydownSource !== null && this.flipperKeydownHandler !== null) {
+      this.flipperKeydownSource.removeEventListener('keydown', this.flipperKeydownHandler, true);
+    }
+
+    this.flipperInstance.setHandleContentEditableTargets(false);
+
+    this.flipperKeydownSource = null;
+    this.flipperKeydownHandler = null;
   }
 }

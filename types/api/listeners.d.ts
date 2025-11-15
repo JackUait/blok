@@ -10,7 +10,7 @@ export interface Listeners {
    * @param {(event: Event) => void}handler
    * @param {boolean} useCapture
    */
-  on(element: Element, eventType: string, handler: (event?: Event) => void, useCapture?: boolean): string;
+  on(element: Element, eventType: string, handler: (event?: Event) => void, useCapture?: boolean): string | undefined;
 
   /**
    * Unsubscribe from event dispatched on passed element

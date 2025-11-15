@@ -19,15 +19,6 @@ import { getKeyboardKeyForCode } from '../../utils/keyboard';
  *         press Tab, flip to the Checkbox. press Enter (block will be added), Press Tab
  *         (Block Tunes will be opened with Move up focused), press Enter, press Tab ———— both Block Tunes and Toolbox will be opened
  * @todo TEST CASE - show toggler after opening and closing the Inline Toolbar
- * @todo TEST CASE - Click outside Editor holder should close Toolbar and Clear Focused blocks
- * @todo TEST CASE - Click inside Editor holder should close Toolbar and Clear Focused blocks
- * @todo TEST CASE - Click inside Redactor zone when Block Settings are opened:
- *                  - should close Block Settings
- *                  - should not close Toolbar
- *                  - should move Toolbar to the clicked Block
- * @todo TEST CASE - Toolbar should be closed on the Cross Block Selection
- * @todo TEST CASE - Toolbar should be closed on the Rectangle Selection
- * @todo TEST CASE - If Block Settings or Toolbox are opened, the Toolbar should not be moved by Bocks hovering
  */
 
 /**
@@ -43,39 +34,38 @@ interface ToolbarNodes {
 }
 /**
  *
- * «Toolbar» is the node that moves up/down over current block
+ *«Toolbar» is the node that moves up/down over current block
  *
- *  ______________________________________ Toolbar ____________________________________________
- * |                                                                                           |
- * |  ..................... Content .........................................................  |
- * |  .                                                   ........ Block Actions ...........   |
- * |  .                                                   .        [Open Settings]         .   |
- * |  .  [Plus Button]  [Toolbox: {Tool1}, {Tool2}]       .                                .   |
- * |  .                                                   .        [Settings Panel]        .   |
- * |  .                                                   ..................................   |
- * |  .......................................................................................  |
- * |                                                                                           |
- * |___________________________________________________________________________________________|
- *
- *
- * Toolbox — its an Element contains tools buttons. Can be shown by Plus Button.
- *
- *  _______________ Toolbox _______________
- * |                                       |
- * | [Header] [Image] [List] [Quote] ...   |
- * |_______________________________________|
+ *______________________________________ Toolbar ____________________________________________
+ *|                                                                                           |
+ *|  ..................... Content .........................................................  |
+ *|  .                                                   ........ Block Actions ...........   |
+ *|  .                                                   .        [Open Settings]         .   |
+ *|  .  [Plus Button]  [Toolbox: {Tool1}, {Tool2}]       .                                .   |
+ *|  .                                                   .        [Settings Panel]        .   |
+ *|  .                                                   ..................................   |
+ *|  .......................................................................................  |
+ *|                                                                                           |
+ *|___________________________________________________________________________________________|
  *
  *
- * Settings Panel — is an Element with block settings:
+ *Toolbox — its an Element contains tools buttons. Can be shown by Plus Button.
  *
- *   ____ Settings Panel ____
- *  | ...................... |
- *  | .   Tool Settings    . |
- *  | ...................... |
- *  | .  Default Settings  . |
- *  | ...................... |
- *  |________________________|
+ *_______________ Toolbox _______________
+ *|                                       |
+ *| [Header] [Image] [List] [Quote] ...   |
+ *|_______________________________________|
  *
+ *
+ *Settings Panel — is an Element with block settings:
+ *
+ *____ Settings Panel ____
+ *| ...................... |
+ *| .   Tool Settings    . |
+ *| ...................... |
+ *| .  Default Settings  . |
+ *| ...................... |
+ *|________________________|
  *
  * @class
  * @classdesc Toolbar module
@@ -96,7 +86,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
   /**
    * Block near which we display the Toolbox
    */
-  private hoveredBlock: Block;
+  private hoveredBlock: Block | null = null;
 
   /**
    * Toolbox class instance
@@ -145,7 +135,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * @returns {boolean}
    */
   public get opened(): boolean {
-    return this.nodes.wrapper.classList.contains(this.CSS.toolbarOpened);
+    return this.nodes.wrapper?.classList.contains(this.CSS.toolbarOpened) ?? false;
   }
 
   /**
@@ -176,7 +166,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
         /**
          * Set current block to cover the case when the Toolbar showed near hovered Block but caret is set to another Block.
          */
-        this.Editor.BlockManager.currentBlock = this.hoveredBlock;
+        if (this.hoveredBlock) {
+          this.Editor.BlockManager.currentBlock = this.hoveredBlock;
+        }
 
         this.toolboxInstance.open();
       },
@@ -202,10 +194,10 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private get blockActions(): { hide: () => void; show: () => void } {
     return {
       hide: (): void => {
-        this.nodes.actions.classList.remove(this.CSS.actionsOpened);
+        this.nodes.actions?.classList.remove(this.CSS.actionsOpened);
       },
       show: (): void => {
-        this.nodes.actions.classList.add(this.CSS.actionsOpened);
+        this.nodes.actions?.classList.add(this.CSS.actionsOpened);
       },
     };
   }
@@ -215,8 +207,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private get blockTunesToggler(): { hide: () => void; show: () => void } {
     return {
-      hide: (): void => this.nodes.settingsToggler.classList.add(this.CSS.settingsTogglerHidden),
-      show: (): void => this.nodes.settingsToggler.classList.remove(this.CSS.settingsTogglerHidden),
+      hide: (): void => this.nodes.settingsToggler?.classList.add(this.CSS.settingsTogglerHidden),
+      show: (): void => this.nodes.settingsToggler?.classList.remove(this.CSS.settingsTogglerHidden),
     };
   }
 
@@ -244,7 +236,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    *
    * @param block - block to move Toolbar near it
    */
-  public moveAndOpen(block: Block = this.Editor.BlockManager.currentBlock): void {
+  public moveAndOpen(block?: Block | null): void {
     /**
      * Some UI elements creates inside requestIdleCallback, so the can be not ready yet
      */
@@ -268,13 +260,21 @@ export default class Toolbar extends Module<ToolbarNodes> {
     /**
      * If no one Block selected as a Current
      */
-    if (!block) {
+    const targetBlock = block ?? this.Editor.BlockManager.currentBlock;
+
+    if (!targetBlock) {
       return;
     }
 
-    this.hoveredBlock = block;
+    this.hoveredBlock = targetBlock;
 
-    const targetBlockHolder = block.holder;
+    const { wrapper, plusButton } = this.nodes;
+
+    if (!wrapper || !plusButton) {
+      return;
+    }
+
+    const targetBlockHolder = targetBlock.holder;
     const { isMobile } = this.Editor.UI;
 
 
@@ -290,13 +290,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
      *      2.2 Toolbar is moved to the baseline of the first input
      *       - when the first input is close to the top of the block
      */
-    let toolbarY;
     const MAX_OFFSET = 20;
 
     /**
      * Compute first input position
      */
-    const firstInput = block.firstInput;
+    const firstInput = targetBlock.firstInput;
     const targetBlockHolderRect = targetBlockHolder.getBoundingClientRect();
     const firstInputRect = firstInput !== undefined ? firstInput.getBoundingClientRect() : null;
 
@@ -305,59 +304,57 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     const firstInputOffset = firstInputRect !== null ? firstInputRect.top - targetBlockHolderRect.top : null;
 
-    /**
-     * Check if the first input is far from the top of the block
-     */
-    const isFirstInputFarFromTop = firstInputOffset !== null ? firstInputOffset > MAX_OFFSET : undefined;
+    const toolbarY = (() => {
+      /**
+       * Case 1.
+       * On mobile — Toolbar at the bottom of Block
+       */
+      if (isMobile) {
+        return targetBlockHolder.offsetTop + targetBlockHolder.offsetHeight;
+      }
 
-    /**
-     * Case 1.
-     * On mobile — Toolbar at the bottom of Block
-     */
-    if (isMobile) {
-      toolbarY = targetBlockHolder.offsetTop + targetBlockHolder.offsetHeight;
+      const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
 
-    /**
-     * Case 2.1
-     * On Desktop — without inputs or with the first input far from the top of the block
-     *            Toolbar should be moved to the top of the block
-     */
-    } else if (firstInput === undefined || isFirstInputFarFromTop) {
-      const pluginContentOffset = parseInt(window.getComputedStyle(block.pluginsContent).paddingTop);
+      /**
+       * Case 2.1
+       * On Desktop — without inputs or with the first input far from the top of the block
+       *            Toolbar should be moved to the top of the block
+       */
+      if (firstInput === undefined) {
+        return targetBlockHolder.offsetTop + pluginContentOffset;
+      }
 
-      const paddingTopBasedY = targetBlockHolder.offsetTop + pluginContentOffset;
+      if (firstInputOffset === null || firstInputOffset > MAX_OFFSET) {
+        return targetBlockHolder.offsetTop + pluginContentOffset;
+      }
 
-      toolbarY = paddingTopBasedY;
-
-    /**
-     * Case 2.2
-     * On Desktop — Toolbar should be moved to the baseline of the first input
-     */
-    } else {
+      /**
+       * Case 2.2
+       * On Desktop — Toolbar should be moved to the baseline of the first input
+       */
       const baseline = calculateBaseline(firstInput);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const toolbarActionsHeight =  parseInt(window.getComputedStyle(this.nodes.plusButton!).height, 10);
+      const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
       /**
        * Visual padding inside the SVG icon
        */
       const toolbarActionsPaddingBottom = 8;
+      const baselineBasedY = targetBlockHolder.offsetTop + baseline - toolbarActionsHeight + toolbarActionsPaddingBottom + firstInputOffset;
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const baselineBasedY = targetBlockHolder.offsetTop + baseline - toolbarActionsHeight + toolbarActionsPaddingBottom + firstInputOffset!;
-
-      toolbarY = baselineBasedY;
-    }
+      return baselineBasedY;
+    })();
 
     /**
      * Move Toolbar to the Top coordinate of Block
      */
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    this.nodes.wrapper!.style.top = `${Math.floor(toolbarY)}px`;
+    wrapper.style.top = `${Math.floor(toolbarY)}px`;
 
     /**
      * Do not show Block Tunes Toggler near single and empty block
      */
-    if (this.Editor.BlockManager.blocks.length === 1 && block.isEmpty) {
+    const tunes = targetBlock.getTunes();
+    const hasAnyTunes = tunes.toolTunes.length > 0 || tunes.commonTunes.length > 0;
+
+    if (this.Editor.BlockManager.blocks.length === 1 && targetBlock.isEmpty && !hasAnyTunes) {
       this.blockTunesToggler.hide();
     } else {
       this.blockTunesToggler.show();
@@ -387,7 +384,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Reset the Toolbar position to prevent DOM height growth, for example after blocks deletion
    */
   private reset(): void {
-    this.nodes.wrapper.style.top = 'unset';
+    if (this.nodes.wrapper) {
+      this.nodes.wrapper.style.top = 'unset';
+    }
   }
 
   /**
@@ -397,7 +396,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    *                                     This flag allows to open Toolbar without Actions.
    */
   private open(withBlockActions = true): void {
-    this.nodes.wrapper.classList.add(this.CSS.toolbarOpened);
+    this.nodes.wrapper?.classList.add(this.CSS.toolbarOpened);
 
     if (withBlockActions) {
       this.blockActions.show();
@@ -410,7 +409,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Draws Toolbar elements
    */
   private async make(): Promise<void> {
-    this.nodes.wrapper = $.make('div', this.CSS.toolbar);
+    const wrapper = $.make('div', this.CSS.toolbar);
+
+    this.nodes.wrapper = wrapper;
     /**
      * @todo detect test environment and add data-cy="toolbar" to use it in tests instead of class name
      */
@@ -418,27 +419,32 @@ export default class Toolbar extends Module<ToolbarNodes> {
     /**
      * Make Content Zone and Actions Zone
      */
-    ['content', 'actions'].forEach((el) => {
-      this.nodes[el] = $.make('div', this.CSS[el]);
-    });
+    const content = $.make('div', this.CSS.content);
+    const actions = $.make('div', this.CSS.actions);
+
+    this.nodes.content = content;
+
+    this.nodes.actions = actions;
 
     /**
      * Actions will be included to the toolbar content so we can align in to the right of the content
      */
-    $.append(this.nodes.wrapper, this.nodes.content);
-    $.append(this.nodes.content, this.nodes.actions);
+    $.append(wrapper, content);
+    $.append(content, actions);
 
     /**
      * Fill Content Zone:
      *  - Plus Button
      *  - Toolbox
      */
-    this.nodes.plusButton = $.make('div', this.CSS.plusButton, {
+    const plusButton = $.make('div', this.CSS.plusButton, {
       innerHTML: IconPlus,
     });
-    $.append(this.nodes.actions, this.nodes.plusButton);
 
-    this.readOnlyMutableListeners.on(this.nodes.plusButton, 'click', () => {
+    this.nodes.plusButton = plusButton;
+    $.append(actions, plusButton);
+
+    this.readOnlyMutableListeners.on(plusButton, 'click', () => {
       tooltip.hide(true);
       this.plusButtonClicked();
     }, false);
@@ -453,7 +459,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
       textContent: '/',
     }));
 
-    tooltip.onHover(this.nodes.plusButton, tooltipContent, {
+    tooltip.onHover(plusButton, tooltipContent, {
       hidingDelay: 400,
     });
 
@@ -463,11 +469,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
      *  - Remove Block Button
      *  - Settings Panel
      */
-    this.nodes.settingsToggler = $.make('span', this.CSS.settingsToggler, {
+    const settingsToggler = $.make('span', this.CSS.settingsToggler, {
       innerHTML: IconMenu,
     });
 
-    $.append(this.nodes.actions, this.nodes.settingsToggler);
+    this.nodes.settingsToggler = settingsToggler;
+
+    $.append(actions, settingsToggler);
 
     const blockTunesTooltip = $.make('div');
     const blockTunesTooltipEl = $.text(I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to tune'));
@@ -478,20 +486,27 @@ export default class Toolbar extends Module<ToolbarNodes> {
       textContent: beautifyShortcut(`CMD + ${slashRealKey}`),
     }));
 
-    tooltip.onHover(this.nodes.settingsToggler, blockTunesTooltip, {
+    tooltip.onHover(settingsToggler, blockTunesTooltip, {
       hidingDelay: 400,
     });
 
     /**
      * Appending Toolbar components to itself
      */
-    $.append(this.nodes.actions, this.makeToolbox());
-    $.append(this.nodes.actions, this.Editor.BlockSettings.getElement());
+    $.append(actions, this.makeToolbox());
+
+    const blockSettingsElement = this.Editor.BlockSettings.getElement();
+
+    if (!blockSettingsElement) {
+      throw new Error('Block Settings element was not created');
+    }
+
+    $.append(actions, blockSettingsElement);
 
     /**
      * Append toolbar to the Editor
      */
-    $.append(this.Editor.UI.nodes.wrapper, this.nodes.wrapper);
+    $.append(this.Editor.UI.nodes.wrapper, wrapper);
   }
 
   /**
@@ -522,20 +537,38 @@ export default class Toolbar extends Module<ToolbarNodes> {
       const { BlockManager, Caret } = this.Editor;
       const newBlock = BlockManager.getBlockById(block.id);
 
+      if (!newBlock) {
+        return;
+      }
+
+      if (newBlock.inputs.length !== 0) {
+        return;
+      }
+
       /**
        * If the new block doesn't contain inputs, insert the new paragraph below
        */
-      if (newBlock.inputs.length === 0) {
-        if (newBlock === BlockManager.lastBlock) {
-          BlockManager.insertAtEnd();
-          Caret.setToBlock(BlockManager.lastBlock);
-        } else {
-          Caret.setToBlock(BlockManager.nextBlock);
-        }
+      if (newBlock === BlockManager.lastBlock) {
+        BlockManager.insertAtEnd();
+        Caret.setToBlock(BlockManager.lastBlock);
+
+        return;
+      }
+
+      const nextBlock = BlockManager.nextBlock;
+
+      if (nextBlock) {
+        Caret.setToBlock(nextBlock);
       }
     });
 
-    return this.toolboxInstance.getElement();
+    const element = this.toolboxInstance.getElement();
+
+    if (element === null) {
+      throw new Error('Toolbox element was not created');
+    }
+
+    return element;
   }
 
 
@@ -547,7 +580,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
      * We need to update Current Block because user can click on the Plus Button (thanks to appearing by hover) without any clicks on editor
      * In this case currentBlock will point last block
      */
-    this.Editor.BlockManager.currentBlock = this.hoveredBlock;
+    if (this.hoveredBlock) {
+      this.Editor.BlockManager.currentBlock = this.hoveredBlock;
+    }
 
     this.toolboxInstance?.toggle();
   }
@@ -561,22 +596,26 @@ export default class Toolbar extends Module<ToolbarNodes> {
      *
      * mousedown is used because on click selection is lost in Safari and FF
      */
-    this.readOnlyMutableListeners.on(this.nodes.settingsToggler, 'mousedown', (e) => {
-      /**
-       * Stop propagation to prevent block selection clearance
-       *
-       * @see UI.documentClicked
-       */
-      e.stopPropagation();
+    const settingsToggler = this.nodes.settingsToggler;
 
-      this.settingsTogglerClicked();
+    if (settingsToggler) {
+      this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
+        /**
+         * Stop propagation to prevent block selection clearance
+         *
+         * @see UI.documentClicked
+         */
+        e.stopPropagation();
 
-      if (this.toolboxInstance?.opened) {
-        this.toolboxInstance.close();
-      }
+        this.settingsTogglerClicked();
 
-      tooltip.hide(true);
-    }, true);
+        if (this.toolboxInstance?.opened) {
+          this.toolboxInstance.close();
+        }
+
+        tooltip.hide(true);
+      }, true);
+    }
 
     /**
      * Subscribe to the 'block-hovered' event if current view is not mobile
@@ -615,12 +654,18 @@ export default class Toolbar extends Module<ToolbarNodes> {
      * We need to update Current Block because user can click on toggler (thanks to appearing by hover) without any clicks on editor
      * In this case currentBlock will point last block
      */
-    this.Editor.BlockManager.currentBlock = this.hoveredBlock;
+    const hoveredBlock = this.hoveredBlock;
+
+    if (!hoveredBlock) {
+      return;
+    }
+
+    this.Editor.BlockManager.currentBlock = hoveredBlock;
 
     if (this.Editor.BlockSettings.opened) {
       this.Editor.BlockSettings.close();
     } else {
-      this.Editor.BlockSettings.open(this.hoveredBlock);
+      void this.Editor.BlockSettings.open(hoveredBlock);
     }
   }
 

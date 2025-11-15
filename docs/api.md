@@ -197,7 +197,7 @@ It makes following steps:
 
 3. Delete all properties from instance object and set it\`s prototype to `null`
 
-After executing the `destroy` method, editor inctance becomes an empty object. This way you will free occupied JS Heap on your page.
+After executing the `destroy` method, editor instance becomes an empty object. This way you will free occupied JS Heap on your page.
 
 ### Tooltip API
 

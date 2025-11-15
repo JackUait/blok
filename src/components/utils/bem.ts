@@ -10,7 +10,7 @@ const MODIFIER_DELIMITER = '--';
  * @example bem('ce-popover)(null, 'hidden') -> 'ce-popover--hidden'
  * @param blockName - string with block name
  */
-export function bem(blockName: string) {
+export const bem = (blockName: string) => {
   /**
    * @param elementName - string with element name
    * @param modifier - modifier to be appended
@@ -24,4 +24,4 @@ export function bem(blockName: string) {
       .filter(x => !!x)
       .join(MODIFIER_DELIMITER);
   };
-}
+};

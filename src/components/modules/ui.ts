@@ -15,7 +15,7 @@ import { mobileScreenBreakpoint } from '../utils';
 
 import styles from '../../styles/main.css?inline';
 import { BlockHovered } from '../events/BlockHovered';
-import { selectionChangeDebounceTimeout } from '../constants';
+import { DATA_INTERFACE_ATTRIBUTE, EDITOR_INTERFACE_VALUE, selectionChangeDebounceTimeout } from '../constants';
 import { EditorMobileLayoutToggled } from '../events';
 /**
  * HTML Elements used for UI
@@ -158,25 +158,40 @@ export default class UI extends Module<UINodes> {
     /**
      * Prepare components based on read-only state
      */
-    if (!readOnlyEnabled) {
-      /**
-       * Postpone events binding to the next tick to make sure all ui elements are ready
-       */
-      window.requestIdleCallback(() => {
-        /**
-         * Bind events for the UI elements
-         */
-        this.bindReadOnlySensitiveListeners();
-      }, {
-        timeout: 2000,
-      });
-    } else {
+    if (readOnlyEnabled) {
       /**
        * Unbind all events
        *
        */
       this.unbindReadOnlySensitiveListeners();
+
+      return;
     }
+
+    const bindListeners = (): void => {
+      /**
+       * Bind events for the UI elements
+       */
+      this.bindReadOnlySensitiveListeners();
+    };
+
+    /**
+     * Ensure listeners are attached immediately for interactive use.
+     */
+    bindListeners();
+
+    const idleCallback = window.requestIdleCallback;
+
+    if (typeof idleCallback !== 'function') {
+      return;
+    }
+
+    /**
+     * Re-bind on idle to preserve historical behavior when additional nodes appear later.
+     */
+    idleCallback(bindListeners, {
+      timeout: 2000,
+    });
   }
 
   /**
@@ -279,7 +294,13 @@ export default class UI extends Module<UINodes> {
      *
      * @type {Element}
      */
-    this.nodes.holder = $.getHolder(this.config.holder);
+    const holder = this.config.holder;
+
+    if (!holder) {
+      throw new Error('Editor holder is not specified in the configuration.');
+    }
+
+    this.nodes.holder = $.getHolder(holder);
 
     /**
      * Create and save main UI elements
@@ -288,6 +309,7 @@ export default class UI extends Module<UINodes> {
       this.CSS.editorWrapper,
       ...(this.isRtl ? [ this.CSS.editorRtlFix ] : []),
     ]);
+    this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, EDITOR_INTERFACE_VALUE);
     this.nodes.redactor = $.make('div', this.CSS.editorZone);
 
     /**
@@ -386,16 +408,22 @@ export default class UI extends Module<UINodes> {
    * Adds listeners that should work only in read-only mode
    */
   private bindReadOnlySensitiveListeners(): void {
-    this.readOnlyMutableListeners.on(this.nodes.redactor, 'click', (event: MouseEvent) => {
-      this.redactorClicked(event);
+    this.readOnlyMutableListeners.on(this.nodes.redactor, 'click', (event: Event) => {
+      if (event instanceof MouseEvent) {
+        this.redactorClicked(event);
+      }
     }, false);
 
-    this.readOnlyMutableListeners.on(document, 'keydown', (event: KeyboardEvent) => {
-      this.documentKeydown(event);
+    this.readOnlyMutableListeners.on(document, 'keydown', (event: Event) => {
+      if (event instanceof KeyboardEvent) {
+        this.documentKeydown(event);
+      }
     }, true);
 
-    this.readOnlyMutableListeners.on(document, 'mousedown', (event: MouseEvent) => {
-      this.documentClicked(event);
+    this.readOnlyMutableListeners.on(document, 'mousedown', (event: Event) => {
+      if (event instanceof MouseEvent) {
+        this.documentClicked(event);
+      }
     }, true);
 
     /**
@@ -418,10 +446,16 @@ export default class UI extends Module<UINodes> {
     /**
      * Used to not emit the same block multiple times to the 'block-hovered' event on every mousemove
      */
-    let blockHoveredEmitted;
+    const blockHoveredState: { lastHovered: Element | null } = {
+      lastHovered: null,
+    };
 
-    this.readOnlyMutableListeners.on(this.nodes.redactor, 'mousemove', _.throttle((event: MouseEvent | TouchEvent) => {
-      const hoveredBlock = (event.target as Element).closest('.ce-block');
+    const handleBlockHovered = (event: Event): void => {
+      if (!(event instanceof MouseEvent) && !(event instanceof TouchEvent)) {
+        return;
+      }
+
+      const hoveredBlock = (event.target as Element | null)?.closest('.ce-block');
 
       /**
        * Do not trigger 'block-hovered' for cross-block selection
@@ -434,17 +468,32 @@ export default class UI extends Module<UINodes> {
         return;
       }
 
-      if (blockHoveredEmitted === hoveredBlock) {
+      if (blockHoveredState.lastHovered === hoveredBlock) {
         return;
       }
 
-      blockHoveredEmitted = hoveredBlock;
+      blockHoveredState.lastHovered = hoveredBlock;
+
+      const block = this.Editor.BlockManager.getBlockByChildNode(hoveredBlock);
+
+      if (!block) {
+        return;
+      }
 
       this.eventsDispatcher.emit(BlockHovered, {
-        block: this.Editor.BlockManager.getBlockByChildNode(hoveredBlock),
+        block,
       });
-    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-    }, 20), {
+    };
+
+    const throttledHandleBlockHovered = _.throttle(
+      handleBlockHovered as (...args: unknown[]) => unknown,
+      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+      20
+    );
+
+    this.readOnlyMutableListeners.on(this.nodes.redactor, 'mousemove', (event: Event) => {
+      throttledHandleBlockHovered(event);
+    }, {
       passive: true,
     });
   }
@@ -540,29 +589,40 @@ export default class UI extends Module<UINodes> {
   private backspacePressed(event: KeyboardEvent): void {
     const { BlockManager, BlockSelection, Caret } = this.Editor;
 
+    const selectionExists = Selection.isSelectionExists;
+    const selectionCollapsed = Selection.isCollapsed;
+
     /**
      * If any block selected and selection doesn't exists on the page (that means no other editable element is focused),
      * remove selected blocks
      */
-    if (BlockSelection.anyBlockSelected && !Selection.isSelectionExists) {
-      const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+    const shouldRemoveSelection = BlockSelection.anyBlockSelected && (!selectionExists || selectionCollapsed === true);
 
-      const newBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
-
-      Caret.setToBlock(newBlock, Caret.positions.START);
-
-      /** Clear selection */
-      BlockSelection.clearSelection(event);
-
-      /**
-       * Stop propagations
-       * Manipulation with BlockSelections is handled in global backspacePress because they may occur
-       * with CMD+A or RectangleSelection and they can be handled on document event
-       */
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
+    if (!shouldRemoveSelection) {
+      return;
     }
+
+    const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+
+    if (selectionPositionIndex === undefined) {
+      return;
+    }
+
+    const newBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
+
+    Caret.setToBlock(newBlock, Caret.positions.START);
+
+    /** Clear selection */
+    BlockSelection.clearSelection(event);
+
+    /**
+     * Stop propagations
+     * Manipulation with BlockSelections is handled in global backspacePress because they may occur
+     * with CMD+A or RectangleSelection and they can be handled on document event
+     */
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
   }
 
   /**
@@ -571,7 +631,7 @@ export default class UI extends Module<UINodes> {
    *
    * @param {Event} event - escape keydown event
    */
-  private escapePressed(event): void {
+  private escapePressed(event: KeyboardEvent): void {
     /**
      * Clear blocks selection by ESC
      */
@@ -579,14 +639,25 @@ export default class UI extends Module<UINodes> {
 
     if (this.Editor.Toolbar.toolbox.opened) {
       this.Editor.Toolbar.toolbox.close();
-      this.Editor.Caret.setToBlock(this.Editor.BlockManager.currentBlock, this.Editor.Caret.positions.END);
-    } else if (this.Editor.BlockSettings.opened) {
-      this.Editor.BlockSettings.close();
-    } else if (this.Editor.InlineToolbar.opened) {
-      this.Editor.InlineToolbar.close();
-    } else {
-      this.Editor.Toolbar.close();
+      this.Editor.BlockManager.currentBlock &&
+        this.Editor.Caret.setToBlock(this.Editor.BlockManager.currentBlock, this.Editor.Caret.positions.END);
+
+      return;
     }
+
+    if (this.Editor.BlockSettings.opened) {
+      this.Editor.BlockSettings.close();
+
+      return;
+    }
+
+    if (this.Editor.InlineToolbar.opened) {
+      this.Editor.InlineToolbar.close();
+
+      return;
+    }
+
+    this.Editor.Toolbar.close();
   }
 
   /**
@@ -603,11 +674,14 @@ export default class UI extends Module<UINodes> {
 
     const hasPointerToBlock = BlockManager.currentBlockIndex >= 0;
 
+    const selectionExists = Selection.isSelectionExists;
+    const selectionCollapsed = Selection.isCollapsed;
+
     /**
      * If any block selected and selection doesn't exists on the page (that means no other editable element is focused),
      * remove selected blocks
      */
-    if (BlockSelection.anyBlockSelected && !Selection.isSelectionExists) {
+    if (BlockSelection.anyBlockSelected && (!selectionExists || selectionCollapsed === true)) {
       /** Clear selection */
       BlockSelection.clearSelection(event);
 
@@ -670,8 +744,13 @@ export default class UI extends Module<UINodes> {
      */
     const target = event.target as HTMLElement;
     const clickedInsideOfEditor = this.nodes.holder.contains(target) || Selection.isAtEditor;
+    const clickedInsideRedactor = this.nodes.redactor.contains(target);
+    const clickedInsideToolbar = this.Editor.Toolbar.nodes.wrapper?.contains(target) ?? false;
+    const clickedInsideEditorSurface = clickedInsideOfEditor || clickedInsideToolbar;
 
-    if (!clickedInsideOfEditor) {
+    const shouldClearCurrentBlock = !clickedInsideEditorSurface || (!clickedInsideRedactor && !clickedInsideToolbar);
+
+    if (shouldClearCurrentBlock) {
       /**
        * Clear pointer on BlockManager
        *
@@ -692,9 +771,13 @@ export default class UI extends Module<UINodes> {
     const isClickedInsideBlockSettingsToggler = this.Editor.Toolbar.nodes.settingsToggler?.contains(target);
     const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler;
 
-    if (this.Editor.BlockSettings.opened && !doNotProcess) {
-      this.Editor.BlockSettings.close();
+    const shouldCloseBlockSettings = this.Editor.BlockSettings.opened && !doNotProcess;
 
+    if (shouldCloseBlockSettings) {
+      this.Editor.BlockSettings.close();
+    }
+
+    if (shouldCloseBlockSettings && clickedInsideRedactor) {
       const clickedBlock = this.Editor.BlockManager.getBlockByChildNode(target);
 
       this.Editor.Toolbar.moveAndOpen(clickedBlock);
@@ -718,17 +801,31 @@ export default class UI extends Module<UINodes> {
    * @param event - touch or mouse event
    */
   private documentTouched(event: Event): void {
-    let clickedNode = event.target as HTMLElement;
+    const initialTarget = event.target as HTMLElement;
 
     /**
      * If click was fired on Editor`s wrapper, try to get clicked node by elementFromPoint method
      */
-    if (clickedNode === this.nodes.redactor) {
-      const clientX = event instanceof MouseEvent ? event.clientX : (event as TouchEvent).touches[0].clientX;
-      const clientY = event instanceof MouseEvent ? event.clientY : (event as TouchEvent).touches[0].clientY;
+    const clickedNode = (() => {
+      if (initialTarget !== this.nodes.redactor) {
+        return initialTarget;
+      }
 
-      clickedNode = document.elementFromPoint(clientX, clientY) as HTMLElement;
-    }
+      if (event instanceof MouseEvent) {
+        const nodeFromPoint = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
+
+        return nodeFromPoint ?? initialTarget;
+      }
+
+      if (event instanceof TouchEvent && event.touches.length > 0) {
+        const { clientX, clientY } = event.touches[0];
+        const nodeFromPoint = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
+
+        return nodeFromPoint ?? initialTarget;
+      }
+
+      return initialTarget;
+    })();
 
     /**
      * Select clicked Block as Current
@@ -773,20 +870,26 @@ export default class UI extends Module<UINodes> {
      */
     const element = event.target as Element;
     const ctrlKey = event.metaKey || event.ctrlKey;
+    const shouldOpenAnchorInNewTab = $.isAnchor(element) && ctrlKey;
 
-    if ($.isAnchor(element) && ctrlKey) {
-      event.stopImmediatePropagation();
-      event.stopPropagation();
-
-      const href = element.getAttribute('href');
-      const validUrl = _.getValidUrl(href);
-
-      _.openTab(validUrl);
+    if (!shouldOpenAnchorInNewTab) {
+      this.processBottomZoneClick(event);
 
       return;
     }
 
-    this.processBottomZoneClick(event);
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+
+    const href = element.getAttribute('href');
+
+    if (!href) {
+      return;
+    }
+
+    const validUrl = _.getValidUrl(href);
+
+    _.openTab(validUrl);
   }
 
   /**
@@ -814,28 +917,30 @@ export default class UI extends Module<UINodes> {
        */
       lastBlockBottomCoord < clickedCoord;
 
-    if (isClickedBottom) {
-      event.stopImmediatePropagation();
-      event.stopPropagation();
-
-      const { BlockManager, Caret, Toolbar } = this.Editor;
-
-      /**
-       * Insert a default-block at the bottom if:
-       * - last-block is not a default-block (Text)
-       *   to prevent unnecessary tree-walking on Tools with many nodes (for ex. Table)
-       * - Or, default-block is not empty
-       */
-      if (!BlockManager.lastBlock.tool.isDefault || !BlockManager.lastBlock.isEmpty) {
-        BlockManager.insertAtEnd();
-      }
-
-      /**
-       * Set the caret and toolbar to empty Block
-       */
-      Caret.setToTheLastBlock();
-      Toolbar.moveAndOpen(BlockManager.lastBlock);
+    if (!isClickedBottom) {
+      return;
     }
+
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+
+    const { BlockManager, Caret, Toolbar } = this.Editor;
+
+    /**
+     * Insert a default-block at the bottom if:
+     * - last-block is not a default-block (Text)
+     *   to prevent unnecessary tree-walking on Tools with many nodes (for ex. Table)
+     * - Or, default-block is not empty
+     */
+    if (!BlockManager.lastBlock?.tool.isDefault || !BlockManager.lastBlock?.isEmpty) {
+      BlockManager.insertAtEnd();
+    }
+
+    /**
+     * Set the caret and toolbar to empty Block
+     */
+    Caret.setToTheLastBlock();
+    Toolbar.moveAndOpen(BlockManager.lastBlock);
   }
 
   /**
@@ -846,26 +951,24 @@ export default class UI extends Module<UINodes> {
     const { CrossBlockSelection, BlockSelection } = this.Editor;
     const focusedElement = Selection.anchorElement;
 
-    if (CrossBlockSelection.isCrossBlockSelectionStarted) {
+    if (CrossBlockSelection.isCrossBlockSelectionStarted && BlockSelection.anyBlockSelected) {
       // Removes all ranges when any Block is selected
-      if (BlockSelection.anyBlockSelected) {
-        Selection.get().removeAllRanges();
-      }
+      Selection.get()?.removeAllRanges();
     }
 
     /**
      * Usual clicks on some controls, for example, Block Tunes Toggler
      */
-    if (!focusedElement) {
+    if (!focusedElement && !Selection.range) {
       /**
        * If there is no selected range, close inline toolbar
        *
        * @todo Make this method more straightforward
        */
-      if (!Selection.range) {
-        this.Editor.InlineToolbar.close();
-      }
+      this.Editor.InlineToolbar.close();
+    }
 
+    if (!focusedElement) {
       return;
     }
 
@@ -877,24 +980,23 @@ export default class UI extends Module<UINodes> {
     const closestBlock = focusedElement.closest(`.${Block.CSS.content}`);
     const clickedOutsideBlockContent = closestBlock === null || (closestBlock.closest(`.${Selection.CSS.editorWrapper}`) !== this.nodes.wrapper);
 
-    if (clickedOutsideBlockContent) {
+    const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).dataset.inlineToolbar === 'true';
+    const shouldCloseInlineToolbar = clickedOutsideBlockContent && !this.Editor.InlineToolbar.containsNode(focusedElement);
+
+    if (shouldCloseInlineToolbar) {
       /**
        * If new selection is not on Inline Toolbar, we need to close it
        */
-      if (!this.Editor.InlineToolbar.containsNode(focusedElement)) {
-        this.Editor.InlineToolbar.close();
-      }
+      this.Editor.InlineToolbar.close();
+    }
 
+    if (clickedOutsideBlockContent && !inlineToolbarEnabledForExternalTool) {
       /**
        * Case when we click on external tool elements,
        * for example some Block Tune element.
        * If this external content editable element has data-inline-toolbar="true"
        */
-      const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).dataset.inlineToolbar === 'true';
-
-      if (!inlineToolbarEnabledForExternalTool) {
-        return;
-      }
+      return;
     }
 
     /**
@@ -904,7 +1006,7 @@ export default class UI extends Module<UINodes> {
       this.Editor.BlockManager.setCurrentBlockByChildNode(focusedElement);
     }
 
-    this.Editor.InlineToolbar.tryToShow(true);
+    void this.Editor.InlineToolbar.tryToShow(true);
   }
 
   /**
@@ -920,11 +1022,11 @@ export default class UI extends Module<UINodes> {
      *
      * @param event - input or focus event
      */
-    function handleInputOrFocusChange(event: Event): void {
+    const handleInputOrFocusChange = (event: Event): void => {
       const input = event.target as HTMLElement;
 
       toggleEmptyMark(input);
-    }
+    };
 
     this.readOnlyMutableListeners.on(this.nodes.wrapper, 'input', handleInputOrFocusChange);
     this.readOnlyMutableListeners.on(this.nodes.wrapper, 'focusin', handleInputOrFocusChange);

@@ -40,46 +40,40 @@ export default class Core {
     /**
      * Ready promise. Resolved if Editor.js is ready to work, rejected otherwise
      */
-    let onReady: (value?: void | PromiseLike<void>) => void;
-    let onFail: (reason?: unknown) => void;
-
-    this.isReady = new Promise((resolve, reject) => {
-      onReady = resolve;
-      onFail = reject;
-    });
-
     // Initialize config to satisfy TypeScript's definite assignment check
     // The setter will properly assign and process the config
     this.config = {};
 
-    Promise.resolve()
-      .then(async () => {
-        this.configuration = config;
+    this.isReady = new Promise((resolve, reject) => {
+      Promise.resolve()
+        .then(async () => {
+          this.configuration = config;
 
-        this.validate();
-        this.init();
-        await this.start();
-        await this.render();
+          this.validate();
+          this.init();
+          await this.start();
+          await this.render();
 
-        const { BlockManager, Caret, UI, ModificationsObserver } = this.moduleInstances;
+          const { BlockManager, Caret, UI, ModificationsObserver } = this.moduleInstances;
 
-        UI.checkEmptiness();
-        ModificationsObserver.enable();
+          UI.checkEmptiness();
+          ModificationsObserver.enable();
 
-        if ((this.configuration as EditorConfig).autofocus === true && this.configuration.readOnly !== true) {
-          Caret.setToBlock(BlockManager.blocks[0], Caret.positions.START);
-        }
+          if ((this.configuration as EditorConfig).autofocus === true && this.configuration.readOnly !== true) {
+            Caret.setToBlock(BlockManager.blocks[0], Caret.positions.START);
+          }
 
-        onReady();
-      })
-      .catch((error) => {
-        _.log(`Editor.js is not ready because of ${error}`, 'error');
+          resolve();
+        })
+        .catch((error) => {
+          _.log(`Editor.js is not ready because of ${error}`, 'error');
 
-        /**
-         * Reject this.isReady promise
-         */
-        onFail(error);
-      });
+          /**
+           * Reject this.isReady promise
+           */
+          reject(error);
+        });
+    });
   }
 
   /**

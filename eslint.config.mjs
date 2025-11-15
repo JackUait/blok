@@ -239,6 +239,7 @@ export default [
       'jsdoc/require-returns-type': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/member-ordering': 'off',
+      '@typescript-eslint/naming-convention': 'off',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/consistent-type-exports': 'error',
       'prefer-arrow-callback': 'error',

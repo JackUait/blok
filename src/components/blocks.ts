@@ -1,5 +1,4 @@
 import * as _ from './utils';
-import $ from './dom';
 import type Block from './block';
 import { BlockToolAPI } from './block';
 import type { MoveEvent } from '../../types/tools';
@@ -117,28 +116,6 @@ export default class Blocks {
   public push(block: Block): void {
     this.blocks.push(block);
     this.insertToDOM(block);
-  }
-
-  /**
-   * Swaps blocks with indexes first and second
-   *
-   * @param {number} first - first block index
-   * @param {number} second - second block index
-   * @deprecated — use 'move' instead
-   */
-  public swap(first: number, second: number): void {
-    const secondBlock = this.blocks[second];
-
-    /**
-     * Change in DOM
-     */
-    $.swap(this.blocks[first].holder, secondBlock.holder);
-
-    /**
-     * Change in array
-     */
-    this.blocks[second] = this.blocks[first];
-    this.blocks[first] = secondBlock;
   }
 
   /**

@@ -35,14 +35,6 @@ export interface Blocks {
   delete(index?: number): void;
 
   /**
-   * Swaps two Blocks
-   * @param {number} fromIndex - block to swap
-   * @param {number} toIndex - block to swap with
-   * @deprecated — use 'move' instead
-   */
-  swap(fromIndex: number, toIndex: number): void;
-
-  /**
    * Moves a block to a new index
    * @param {number} toIndex - index where the block is moved to
    * @param {number} fromIndex - block to move

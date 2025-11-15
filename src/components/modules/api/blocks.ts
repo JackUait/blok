@@ -23,7 +23,6 @@ export default class BlocksAPI extends Module {
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),
       delete: (index?: number): void => this.delete(index),
-      swap: (fromIndex: number, toIndex: number): void => this.swap(fromIndex, toIndex),
       move: (toIndex: number, fromIndex?: number): void => this.move(toIndex, fromIndex),
       getBlockByIndex: (index: number): BlockAPIInterface | undefined => this.getBlockByIndex(index),
       getById: (id: string): BlockAPIInterface | null => this.getById(id),
@@ -125,23 +124,6 @@ export default class BlocksAPI extends Module {
     }
 
     return new BlockAPI(block);
-  }
-
-  /**
-   * Call Block Manager method that swap Blocks
-   *
-   * @param {number} fromIndex - position of first Block
-   * @param {number} toIndex - position of second Block
-   * @deprecated — use 'move' instead
-   */
-  public swap(fromIndex: number, toIndex: number): void {
-    _.log(
-      '`blocks.swap()` method is deprecated and will be removed in the next major release. ' +
-      'Use `block.move()` method instead',
-      'info'
-    );
-
-    this.Editor.BlockManager.swap(fromIndex, toIndex);
   }
 
   /**

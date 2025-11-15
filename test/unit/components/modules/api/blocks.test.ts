@@ -69,7 +69,6 @@ type BlockManagerMock = {
   getBlockById: ReturnType<typeof vi.fn>;
   getBlockIndex: ReturnType<typeof vi.fn>;
   getBlock: ReturnType<typeof vi.fn>;
-  swap: ReturnType<typeof vi.fn>;
   move: ReturnType<typeof vi.fn>;
   removeBlock: ReturnType<typeof vi.fn>;
   insert: ReturnType<typeof vi.fn>;
@@ -97,7 +96,6 @@ const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub()
     getBlock: vi.fn((element: HTMLElement) => {
       return blockManager.blocks.find((block) => block.holder === element);
     }) as ReturnType<typeof vi.fn>,
-    swap: vi.fn() as ReturnType<typeof vi.fn>,
     move: vi.fn() as ReturnType<typeof vi.fn>,
     removeBlock: vi.fn((block?: BlockStub) => {
       if (!block) {
@@ -437,22 +435,6 @@ describe('BlocksAPI', () => {
   });
 
   describe('block ordering', () => {
-    it('delegates swap to BlockManager and logs deprecation notice', () => {
-      const { blocksApi, blockManager } = createBlocksApi();
-      const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => {});
-
-      blocksApi.swap(1, 2);
-
-      expect(blockManager.swap).toHaveBeenCalledWith(1, 2);
-      expect(logSpy).toHaveBeenCalledWith(
-        '`blocks.swap()` method is deprecated and will be removed in the next major release. ' +
-        'Use `block.move()` method instead',
-        'info'
-      );
-
-      logSpy.mockRestore();
-    });
-
     it('delegates move to BlockManager', () => {
       const { blocksApi, blockManager } = createBlocksApi();
 

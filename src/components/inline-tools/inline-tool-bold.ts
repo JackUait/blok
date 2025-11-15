@@ -1575,8 +1575,8 @@ export default class BoldInlineTool implements InlineTool {
    * @param event - The keyboard event to check
    */
   private static isBoldShortcut(event: KeyboardEvent): boolean {
-    const platform = typeof navigator !== 'undefined' ? navigator.platform : '';
-    const isMac = platform.toUpperCase().includes('MAC');
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+    const isMac = userAgent.includes('mac');
     const primaryModifier = isMac ? event.metaKey : event.ctrlKey;
 
     if (!primaryModifier || event.altKey) {

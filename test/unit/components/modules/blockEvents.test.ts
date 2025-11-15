@@ -16,6 +16,18 @@ import * as caretUtils from '../../../../src/components/utils/caret';
 import * as blocksUtils from '../../../../src/components/utils/blocks';
 import { keyCodes } from '../../../../src/components/utils';
 
+const KEY_CODE_TO_KEY_MAP: Record<number, string> = {
+  [keyCodes.BACKSPACE]: 'Backspace',
+  [keyCodes.DELETE]: 'Delete',
+  [keyCodes.DOWN]: 'ArrowDown',
+  [keyCodes.ENTER]: 'Enter',
+  [keyCodes.LEFT]: 'ArrowLeft',
+  [keyCodes.RIGHT]: 'ArrowRight',
+  [keyCodes.SLASH]: '/',
+  [keyCodes.TAB]: 'Tab',
+  [keyCodes.UP]: 'ArrowUp',
+};
+
 const createBlockEvents = (overrides: Partial<EditorModules> = {}): BlockEvents => {
   const blockEvents = new BlockEvents({
     config: {} as EditorConfig,
@@ -109,10 +121,22 @@ const createBlockEvents = (overrides: Partial<EditorModules> = {}): BlockEvents 
 };
 
 const createKeyboardEvent = (options: Partial<KeyboardEvent>): KeyboardEvent => {
+  let derivedKey: string;
+
+  if (options.key !== undefined) {
+    derivedKey = options.key;
+  } else if (options.keyCode !== undefined) {
+    derivedKey = KEY_CODE_TO_KEY_MAP[options.keyCode] ?? String.fromCharCode(options.keyCode);
+  } else {
+    derivedKey = '';
+  }
+  const derivedCode = options.code !== undefined ? options.code : derivedKey;
+  const derivedKeyCode = options.keyCode ?? 0;
+
   return {
-    keyCode: 0,
-    key: '',
-    code: '',
+    keyCode: derivedKeyCode,
+    key: derivedKey,
+    code: derivedCode,
     ctrlKey: false,
     metaKey: false,
     altKey: false,
@@ -1113,4 +1137,3 @@ describe('BlockEvents', () => {
     });
   });
 });
-

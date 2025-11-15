@@ -5,7 +5,7 @@
  */
 import type { API, BlockTune } from '../../../types';
 import { IconChevronUp } from '@codexteam/icons';
-import type { TunesMenuConfig } from '../../../types/tools';
+import type { MenuConfig } from '../../../types/tools';
 
 /**
  *
@@ -42,7 +42,7 @@ export default class MoveUpTune implements BlockTune {
   /**
    * Tune's appearance in block settings menu
    */
-  public render(): TunesMenuConfig {
+  public render(): MenuConfig {
     return {
       icon: IconChevronUp,
       title: this.api.i18n.t('Move up'),

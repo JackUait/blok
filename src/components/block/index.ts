@@ -21,7 +21,7 @@ import type BlockTuneAdapter from '../tools/tune';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type ToolsCollection from '../tools/collection';
 import EventsDispatcher from '../utils/events';
-import type { TunesMenuConfigItem } from '../../../types/tools';
+import type { MenuConfigItem } from '../../../types/tools';
 import { isMutationBelongsToElement } from '../utils/mutations';
 import type { EditorEventMap } from '../events';
 import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../events';
@@ -386,7 +386,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     const toolTunesPopoverParams: PopoverItemParams[] = [];
     const commonTunesPopoverParams: PopoverItemParams[] = [];
     const pushTuneConfig = (
-      tuneConfig: TunesMenuConfigItem | TunesMenuConfigItem[] | HTMLElement | undefined,
+      tuneConfig: MenuConfigItem | MenuConfigItem[] | HTMLElement | undefined,
       target: PopoverItemParams[]
     ): void => {
       if (!tuneConfig) {

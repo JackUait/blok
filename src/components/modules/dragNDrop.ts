@@ -14,6 +14,11 @@ export default class DragNDrop extends Module {
   private isStartedAtEditor = false;
 
   /**
+   * Holds listener identifiers that prevent native drops in read-only mode
+   */
+  private guardListenerIds: string[] = [];
+
+  /**
    * Toggle read-only state
    *
    * if state is true:
@@ -27,7 +32,9 @@ export default class DragNDrop extends Module {
   public toggleReadOnly(readOnlyEnabled: boolean): void {
     if (readOnlyEnabled) {
       this.disableModuleBindings();
+      this.bindPreventDropHandlers();
     } else {
+      this.clearGuardListeners();
       this.enableModuleBindings();
     }
   }
@@ -59,6 +66,62 @@ export default class DragNDrop extends Module {
    */
   private disableModuleBindings(): void {
     this.readOnlyMutableListeners.clearAll();
+    this.clearGuardListeners();
+  }
+
+  /**
+   * Prevents native drag-and-drop insertions while editor is locked
+   */
+  private bindPreventDropHandlers(): void {
+    const { UI } = this.Editor;
+
+    this.addGuardListener(UI.nodes.holder, 'dragover', this.preventNativeDrop, true);
+    this.addGuardListener(UI.nodes.holder, 'drop', this.preventNativeDrop, true);
+  }
+
+  /**
+   * Cancels browser default drag/drop behavior
+   *
+   * @param event - drag-related event dispatched on the holder
+   */
+  private preventNativeDrop = (event: Event): void => {
+    event.preventDefault();
+
+    if (event instanceof DragEvent) {
+      event.stopPropagation();
+      event.dataTransfer?.clearData();
+    }
+  };
+
+  /**
+   * Registers a listener to be cleaned up when unlocking editor
+   *
+   * @param element - target to bind listener to
+   * @param eventType - event type to listen for
+   * @param handler - event handler
+   * @param options - listener options
+   */
+  private addGuardListener(
+    element: EventTarget,
+    eventType: string,
+    handler: (event: Event) => void,
+    options: boolean | AddEventListenerOptions = false
+  ): void {
+    const listenerId = this.listeners.on(element, eventType, handler, options);
+
+    if (listenerId) {
+      this.guardListenerIds.push(listenerId);
+    }
+  }
+
+  /**
+   * Removes guard listeners bound for read-only mode
+   */
+  private clearGuardListeners(): void {
+    this.guardListenerIds.forEach((id) => {
+      this.listeners.offById(id);
+    });
+    this.guardListenerIds = [];
   }
 
   /**
@@ -75,12 +138,22 @@ export default class DragNDrop extends Module {
 
     dropEvent.preventDefault();
 
+    if (this.Editor.ReadOnly?.isEnabled) {
+      this.preventNativeDrop(dropEvent);
+
+      return;
+    }
+
     for (const block of BlockManager.blocks) {
       block.dropTarget = false;
     }
 
-    if (SelectionUtils.isAtEditor && !SelectionUtils.isCollapsed && this.isStartedAtEditor) {
-      document.execCommand('delete');
+    const blockSelection = this.Editor.BlockSelection;
+    const hasBlockSelection = Boolean(blockSelection?.anyBlockSelected);
+    const hasTextSelection = SelectionUtils.isAtEditor && !SelectionUtils.isCollapsed;
+
+    if (this.isStartedAtEditor && (hasTextSelection || hasBlockSelection)) {
+      this.removeDraggedSelection();
     }
 
     this.isStartedAtEditor = false;
@@ -111,6 +184,65 @@ export default class DragNDrop extends Module {
     }
 
     await Paste.processDataTransfer(dataTransfer, true);
+  }
+
+  /**
+   * Removes currently selected content when drag originated from Editor
+   */
+  private removeDraggedSelection(): void {
+    const { BlockSelection, BlockManager } = this.Editor;
+
+    if (!BlockSelection?.anyBlockSelected) {
+      this.removeTextSelection();
+
+      return;
+    }
+
+    const removedIndex = BlockManager.removeSelectedBlocks();
+
+    if (removedIndex === undefined) {
+      return;
+    }
+
+    BlockSelection.clearSelection();
+  }
+
+  /**
+   * Removes current text selection produced within the editor
+   */
+  private removeTextSelection(): void {
+    const selection = SelectionUtils.get();
+
+    if (!selection) {
+      return;
+    }
+
+    if (selection.rangeCount === 0) {
+      this.deleteCurrentSelection(selection);
+
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    if (!range.collapsed) {
+      range.deleteContents();
+
+      return;
+    }
+
+    this.deleteCurrentSelection(selection);
+  }
+
+  /**
+   * Removes current selection using browser API if available
+   *
+   * @param selection - current document selection
+   */
+  private deleteCurrentSelection(selection: Selection): void {
+    if (typeof selection.deleteFromDocument === 'function') {
+      selection.deleteFromDocument();
+    }
   }
 
   /**

@@ -148,7 +148,9 @@ export default class Core {
       data: {},
     };
 
-    this.config.placeholder = this.config.placeholder ?? false;
+    if (this.config.placeholder === undefined) {
+      this.config.placeholder = false;
+    }
     this.config.sanitizer = this.config.sanitizer ?? {} as SanitizerConfig;
 
     this.config.hideToolbar = this.config.hideToolbar ?? false;

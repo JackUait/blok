@@ -919,7 +919,7 @@ export default class BlockManager extends Module {
      */
     const savedBlock = await blockToConvert.save();
 
-    if (!savedBlock) {
+    if (!savedBlock || savedBlock.data === undefined) {
       throw new Error('Could not convert Block. Failed to extract original Block data.');
     }
 

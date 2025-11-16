@@ -1,7 +1,7 @@
 ---
-alwaysApply: true
-globs: tests/**/*.spec.ts,tests/**/*.ts
+trigger: always_on
 description: Playwright end-to-end testing patterns and expectations
+globs: tests/**/*.spec.ts,tests/**/*.ts
 ---
 # Playwright E2E Tests
 

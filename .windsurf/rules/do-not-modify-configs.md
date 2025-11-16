@@ -1,5 +1,7 @@
 ---
-alwaysApply: true
+trigger: always_on
+description:
+globs:
 ---
 
 # Rule: DO NOT MODIFY configuration files unless explicitly instructed

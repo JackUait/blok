@@ -1,7 +1,7 @@
 ---
-alwaysApply: true
-globs: *.ts,*.tsx
+trigger: always_on
 description: Enforce fixing TypeScript errors by improving code quality, not suppressing them
+globs: *.ts,*.tsx
 ---
 
 # Fix TypeScript Errors Policy

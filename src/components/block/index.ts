@@ -154,9 +154,19 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   public readonly config: ToolConfig;
 
   /**
+   * Stores last successfully extracted block data
+   */
+  private lastSavedData: BlockToolData;
+
+  /**
    * Cached inputs
    */
   private cachedInputs: HTMLElement[] = [];
+
+  /**
+   * Stores last successfully extracted tunes data
+   */
+  private lastSavedTunes: { [name: string]: BlockTuneData } = {};
 
   /**
    * We'll store a reference to the tool's rendered element to access it later
@@ -221,9 +231,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     this.name = tool.name;
     this.id = id;
     this.settings = tool.settings;
-    this.config = tool.settings.config ?? {};
+    this.config = this.settings;
     this.editorEventBus = eventBus || null;
     this.blockAPI = new BlockAPI(this);
+    this.lastSavedData = data ?? {};
+    this.lastSavedTunes = tunesData ?? {};
 
 
     this.tool = tool;
@@ -318,7 +330,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   public async save(): Promise<undefined | SavedData> {
     const extractedBlock = await this.toolInstance.save(this.pluginsContent as HTMLElement);
-    const tunesData: { [name: string]: BlockTuneData } = this.unavailableTunesData;
+    const tunesData: { [name: string]: BlockTuneData } = { ...this.unavailableTunesData };
 
     [
       ...this.tunesInstances.entries(),
@@ -341,6 +353,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
     return Promise.resolve(extractedBlock)
       .then((finishedExtraction) => {
+        if (finishedExtraction !== undefined) {
+          this.lastSavedData = finishedExtraction;
+          this.lastSavedTunes = { ...tunesData };
+        }
+
         /** measure promise execution */
         const measuringEnd = window.performance.now();
 
@@ -634,6 +651,20 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
+   * Returns last successfully extracted block data
+   */
+  public get preservedData(): BlockToolData {
+    return this.lastSavedData ?? {};
+  }
+
+  /**
+   * Returns last successfully extracted tune data
+   */
+  public get preservedTunes(): { [name: string]: BlockTuneData } {
+    return this.lastSavedTunes ?? {};
+  }
+
+  /**
    * Returns tool's sanitizer config
    *
    * @returns {object}
@@ -865,6 +896,20 @@ export default class Block extends EventsDispatcher<BlockEvents> {
      */
     if (!element.hasAttribute('data-block-tool') && this.name) {
       element.setAttribute('data-block-tool', this.name);
+    }
+
+    const placeholderAttribute = 'data-placeholder';
+    const placeholder = this.config?.placeholder;
+    const placeholderText = typeof placeholder === 'string' ? placeholder.trim() : '';
+
+    if (placeholderText.length > 0) {
+      element.setAttribute(placeholderAttribute, placeholderText);
+
+      return;
+    }
+
+    if (placeholder === false && element.hasAttribute(placeholderAttribute)) {
+      element.removeAttribute(placeholderAttribute);
     }
   }
 

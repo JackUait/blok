@@ -1,7 +1,7 @@
 ---
-title: Frontend ESLint Code Style
-alwaysApply: true
+trigger: always_on
 description: Defer all code style decisions to the project's ESLint configuration; do not invent new style rules
+globs:
 ---
 
 ### Code Style Source of Truth

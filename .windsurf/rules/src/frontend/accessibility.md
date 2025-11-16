@@ -1,6 +1,7 @@
 ---
-alwaysApply: true
+trigger: always_on
 description: Enforce accessibility best practices so all users can use the application
+globs:
 ---
 
 ### Accessibility guidance (must follow)

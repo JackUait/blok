@@ -1,6 +1,7 @@
 ---
-alwaysApply: true
+trigger: always_on
 description: Policy for handling ESLint issues by preferring autofix with yarn lint:fix
+globs:
 ---
 
 # Lint Fix Policy

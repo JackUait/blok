@@ -29,6 +29,25 @@ interface TagSubstitute {
   sanitizationConfig?: SanitizerRule;
 }
 
+const SAFE_STRUCTURAL_TAGS = new Set([
+  'table',
+  'thead',
+  'tbody',
+  'tfoot',
+  'tr',
+  'th',
+  'td',
+  'caption',
+  'colgroup',
+  'col',
+  'ul',
+  'ol',
+  'li',
+  'dl',
+  'dt',
+  'dd',
+]);
+
 /**
  * Pattern substitute object.
  */
@@ -145,6 +164,56 @@ export default class Paste extends Module {
   }
 
   /**
+   * Determines whether current block should be replaced by the pasted file tool.
+   *
+   * @param toolName - tool that is going to handle the file
+   */
+  private shouldReplaceCurrentBlockForFile(toolName?: string): boolean {
+    const { BlockManager } = this.Editor;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return false;
+    }
+
+    if (toolName && currentBlock.name === toolName) {
+      return true;
+    }
+
+    const isCurrentBlockDefault = Boolean(currentBlock.tool.isDefault);
+
+    return isCurrentBlockDefault && currentBlock.isEmpty;
+  }
+
+  /**
+   * Builds sanitize config that keeps structural tags such as tables and lists intact.
+   *
+   * @param node - root node to inspect
+   */
+  private getStructuralTagsSanitizeConfig(node: HTMLElement): SanitizerConfig {
+    const config: SanitizerConfig = {} as SanitizerConfig;
+    const nodesToProcess: Element[] = [ node ];
+
+    while (nodesToProcess.length > 0) {
+      const current = nodesToProcess.pop();
+
+      if (!current) {
+        continue;
+      }
+
+      const tagName = current.tagName.toLowerCase();
+
+      if (SAFE_STRUCTURAL_TAGS.has(tagName)) {
+        config[tagName] = config[tagName] ?? {};
+      }
+
+      nodesToProcess.push(...Array.from(current.children));
+    }
+
+    return config;
+  }
+
+  /**
    * Set read-only state
    *
    * @param {boolean} readOnlyEnabled - read only flag value
@@ -158,6 +227,41 @@ export default class Paste extends Module {
   }
 
   /**
+   * Determines whether provided DataTransfer contains file-like entries
+   *
+   * @param dataTransfer - drag/drop payload to inspect
+   */
+  private containsFiles(dataTransfer: DataTransfer): boolean {
+    const types = Array.from(dataTransfer.types);
+
+    /**
+     * Common case: browser exposes explicit "Files" entry
+     */
+    if (types.includes('Files')) {
+      return true;
+    }
+
+    /**
+     * Drag/drop uploads sometimes omit `types` and set files directly
+     */
+    if (dataTransfer.files?.length) {
+      return true;
+    }
+
+    try {
+      const legacyList = dataTransfer.types as unknown as DOMStringList;
+
+      if (typeof legacyList?.contains === 'function' && legacyList.contains('Files')) {
+        return true;
+      }
+    } catch {
+      // ignore and fallthrough
+    }
+
+    return false;
+  }
+
+  /**
    * Handle pasted or dropped data transfer object
    *
    * @param {DataTransfer} dataTransfer - pasted or dropped data transfer object
@@ -165,14 +269,7 @@ export default class Paste extends Module {
    */
   public async processDataTransfer(dataTransfer: DataTransfer, isDragNDrop = false): Promise<void> {
     const { Tools } = this.Editor;
-    const types = dataTransfer.types;
-
-    /**
-     * In Microsoft Edge types is DOMStringList. So 'contains' is used to check if 'Files' type included
-     */
-    const includesFiles = typeof types.includes === 'function'
-      ? types.includes('Files')
-      : (types as unknown as DOMStringList).contains('Files');
+    const includesFiles = this.containsFiles(dataTransfer);
 
     if (includesFiles && !_.isEmpty(this.toolsFiles)) {
       await this.processFiles(dataTransfer.files);
@@ -563,14 +660,15 @@ export default class Paste extends Module {
     );
     const dataToInsert = processedFiles.filter((data): data is { type: string; event: PasteEvent } => data != null);
 
-    const isCurrentBlockDefault = Boolean(BlockManager.currentBlock?.tool.isDefault);
-    const needToReplaceCurrentBlock = isCurrentBlockDefault && Boolean(BlockManager.currentBlock?.isEmpty);
+    if (dataToInsert.length === 0) {
+      return;
+    }
 
-    dataToInsert.forEach(
-      (data, i) => {
-        BlockManager.paste(data.type, data.event, i === 0 && needToReplaceCurrentBlock);
-      }
-    );
+    const shouldReplaceCurrentBlock = this.shouldReplaceCurrentBlockForFile(dataToInsert[0]?.type);
+
+    dataToInsert.forEach((data, index) => {
+      BlockManager.paste(data.type, data.event, index === 0 && shouldReplaceCurrentBlock);
+    });
   }
 
   /**
@@ -695,7 +793,8 @@ export default class Paste extends Module {
           return nextResult;
         }, {} as SanitizerConfig);
 
-        const customConfig = Object.assign({}, toolTags, tool.baseSanitizeConfig);
+        const structuralSanitizeConfig = this.getStructuralTagsSanitizeConfig(content);
+        const customConfig = Object.assign({}, structuralSanitizeConfig, toolTags, tool.baseSanitizeConfig);
         const sanitizedContent = (() => {
           if (content.tagName.toLowerCase() !== 'table') {
             content.innerHTML = clean(content.innerHTML, customConfig);
@@ -953,6 +1052,7 @@ export default class Paste extends Module {
 
     const isSubstitutable = tags.includes(element.tagName);
     const isBlockElement = $.blockElements.includes(element.tagName.toLowerCase());
+    const isStructuralElement = SAFE_STRUCTURAL_TAGS.has(element.tagName.toLowerCase());
     const containsAnotherToolTags = Array
       .from(element.children)
       .some(
@@ -972,7 +1072,8 @@ export default class Paste extends Module {
 
     if (
       (isSubstitutable && !containsAnotherToolTags) ||
-      (isBlockElement && !containsBlockElements && !containsAnotherToolTags)
+      (isBlockElement && !containsBlockElements && !containsAnotherToolTags) ||
+      (isStructuralElement && !containsAnotherToolTags)
     ) {
       return [...nodes, destNode, element];
     }

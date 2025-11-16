@@ -598,7 +598,11 @@ export default class UI extends Module<UINodes> {
      * If any block selected and selection doesn't exists on the page (that means no other editable element is focused),
      * remove selected blocks
      */
-    const shouldRemoveSelection = BlockSelection.anyBlockSelected && (!selectionExists || selectionCollapsed === true);
+    const shouldRemoveSelection = BlockSelection.anyBlockSelected && (
+      !selectionExists ||
+      selectionCollapsed === true ||
+      this.Editor.CrossBlockSelection.isCrossBlockSelectionStarted
+    );
 
     if (!shouldRemoveSelection) {
       return;

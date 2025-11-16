@@ -34,6 +34,7 @@ type SerializableTuneRenderConfig =
 declare global {
   interface Window {
     editorInstance?: EditorJS;
+    __editorBundleInjectionRequested?: boolean;
   }
 }
 
@@ -62,6 +63,34 @@ const resetEditor = async (page: Page): Promise<void> => {
 };
 
 /**
+ * Ensure the Editor bundle is available on the page.
+ *
+ * Some tests were flaking because the fixture page occasionally loads before the UMD bundle is ready,
+ * leaving window.EditorJS undefined. As a fallback we inject the bundle manually once per run.
+ *
+ * @param page - The Playwright page object
+ */
+const ensureEditorBundleLoaded = async (page: Page): Promise<void> => {
+  await page.waitForFunction(() => {
+    if (typeof window.EditorJS === 'function') {
+      return true;
+    }
+
+    if (!window.__editorBundleInjectionRequested) {
+      window.__editorBundleInjectionRequested = true;
+
+      const script = document.createElement('script');
+
+      script.src = new URL('../../../dist/editorjs.umd.js', window.location.href).href;
+      script.dataset.testEditorBundle = 'injected';
+      document.head.appendChild(script);
+    }
+
+    return false;
+  });
+};
+
+/**
  * Create an Editor instance configured with a tune that returns the provided render config.
  *
  * @param page - The Playwright page object
@@ -72,8 +101,7 @@ const createEditorWithTune = async (
   renderConfig: SerializableTuneRenderConfig
 ): Promise<void> => {
   await resetEditor(page);
-
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await ensureEditorBundleLoaded(page);
 
   await page.evaluate(
     async ({

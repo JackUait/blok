@@ -230,6 +230,118 @@ test.describe('api.blocks', () => {
     });
   });
 
+  test.describe('.renderFromHTML()', () => {
+    test('should clear existing content and render provided HTML string', async ({ page }) => {
+      await createEditor(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'initial content' },
+            },
+          ],
+        },
+      });
+
+      await page.evaluate(async () => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        await window.editorInstance.blocks.renderFromHTML('<p>Rendered from HTML</p>');
+      });
+
+      const blocks = page.locator(BLOCK_WRAPPER_SELECTOR);
+
+      await expect(blocks).toHaveCount(1);
+      await expect(blocks).toHaveText([ 'Rendered from HTML' ]);
+
+      const savedData = await page.evaluate(async () => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        return await window.editorInstance.save();
+      });
+
+      expect(savedData.blocks).toHaveLength(1);
+      expect(savedData.blocks[0].type).toBe('paragraph');
+      expect(savedData.blocks[0].data.text).toBe('Rendered from HTML');
+    });
+  });
+
+  test.describe('.composeBlockData()', () => {
+    const PREFILLED_TOOL_SOURCE = `class PrefilledTool {
+      constructor({ data }) {
+        this.initialData = {
+          text: data.text ?? 'Composed paragraph',
+        };
+      }
+
+      static get toolbox() {
+        return {
+          icon: 'P',
+          title: 'Prefilled',
+        };
+      }
+
+      render() {
+        const element = document.createElement('div');
+        element.contentEditable = 'true';
+        element.innerHTML = this.initialData.text;
+
+        return element;
+      }
+
+      save() {
+        return this.initialData;
+      }
+    }`;
+
+    test('should compose default block data for an existing tool', async ({ page }) => {
+      await createEditor(page, {
+        tools: [
+          {
+            name: 'prefilled',
+            classSource: PREFILLED_TOOL_SOURCE,
+          },
+        ],
+      });
+
+      const data = await page.evaluate(async () => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        return await window.editorInstance.blocks.composeBlockData('prefilled');
+      });
+
+      expect(data).toStrictEqual({ text: 'Composed paragraph' });
+    });
+
+    test('should throw when tool is not registered', async ({ page }) => {
+      await createEditor(page);
+
+      const error = await page.evaluate(async () => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        try {
+          await window.editorInstance.blocks.composeBlockData('missing-tool');
+
+          return null;
+        } catch (err) {
+          return {
+            message: (err as Error).message,
+          };
+        }
+      });
+
+      expect(error?.message).toBe('Block Tool with type "missing-tool" not found');
+    });
+  });
+
   /**
    * api.blocks.update(id, newData)
    */
@@ -851,6 +963,282 @@ test.describe('api.blocks', () => {
        * Check that tool converted returned config as a result of import
        */
       expect(blocks[0].data.text).toBe(JSON.stringify(conversionTargetToolConfig));
+    });
+
+    test('should apply provided data overrides when converting a Block', async ({ page }) => {
+      const SOURCE_TOOL_SOURCE = `class SourceTool {
+        constructor({ data }) {
+          this.data = data;
+        }
+
+        static get conversionConfig() {
+          return {
+            export: 'text',
+          };
+        }
+
+        static get toolbox() {
+          return {
+            icon: 'S',
+            title: 'Source',
+          };
+        }
+
+        render() {
+          const element = document.createElement('div');
+
+          element.contentEditable = 'true';
+          element.classList.add('cdx-block');
+          element.innerHTML = this.data?.text ?? '';
+
+          return element;
+        }
+
+        save(block) {
+          return {
+            text: block.innerHTML,
+          };
+        }
+      }`;
+
+      const TARGET_TOOL_SOURCE = `class TargetTool {
+        constructor({ data, config }) {
+          this.data = data ?? {};
+          this.config = config ?? {};
+        }
+
+        static get conversionConfig() {
+          return {
+            import: (text, config) => ({
+              text: (config?.prefix ?? '') + text,
+              level: config?.defaultLevel ?? 1,
+            }),
+          };
+        }
+
+        static get toolbox() {
+          return {
+            icon: 'T',
+            title: 'Target',
+          };
+        }
+
+        render() {
+          const element = document.createElement('div');
+
+          element.contentEditable = 'true';
+          element.classList.add('cdx-block');
+          element.innerHTML = this.data?.text ?? '';
+
+          return element;
+        }
+
+        save(block) {
+          return {
+            ...this.data,
+            text: block.innerHTML,
+          };
+        }
+      }`;
+
+      const blockId = 'convert-source-block';
+      const initialText = 'Source tool content';
+      const dataOverrides = {
+        level: 4,
+        customStyle: 'attention',
+      };
+
+      await createEditor(page, {
+        tools: [
+          {
+            name: 'sourceTool',
+            classSource: SOURCE_TOOL_SOURCE,
+          },
+          {
+            name: 'targetTool',
+            classSource: TARGET_TOOL_SOURCE,
+            config: {
+              prefix: '[Converted] ',
+              defaultLevel: 1,
+            },
+          },
+        ],
+        data: {
+          blocks: [
+            {
+              id: blockId,
+              type: 'sourceTool',
+              data: {
+                text: initialText,
+              },
+            },
+          ],
+        },
+      });
+
+      await page.evaluate(async ({ targetBlockId, overrides }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const { convert } = window.editorInstance.blocks;
+
+        await convert(targetBlockId, 'targetTool', overrides);
+      }, { targetBlockId: blockId,
+        overrides: dataOverrides });
+
+      await page.waitForFunction(async () => {
+        if (!window.editorInstance) {
+          return false;
+        }
+
+        const saved = await window.editorInstance.save();
+
+        return saved.blocks.length > 0 && saved.blocks[0].type === 'targetTool';
+      });
+
+      const savedData = await page.evaluate(async () => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        return await window.editorInstance.save();
+      });
+
+      expect(savedData.blocks).toHaveLength(1);
+      expect(savedData.blocks[0].type).toBe('targetTool');
+      expect(savedData.blocks[0].data).toStrictEqual({
+        text: `${'[Converted] '}${initialText}`,
+        level: dataOverrides.level,
+        customStyle: dataOverrides.customStyle,
+      });
+    });
+
+    test('should throw when block data cannot be extracted before conversion', async ({ page }) => {
+      const NON_SAVABLE_TOOL_SOURCE = `class NonSavableTool {
+        constructor({ data }) {
+          this.data = data;
+        }
+
+        static get conversionConfig() {
+          return {
+            export: 'text',
+          };
+        }
+
+        static get toolbox() {
+          return {
+            icon: 'N',
+            title: 'Non savable',
+          };
+        }
+
+        render() {
+          const element = document.createElement('div');
+
+          element.contentEditable = 'true';
+          element.classList.add('cdx-block');
+          element.innerHTML = this.data?.text ?? '';
+
+          return element;
+        }
+
+        save() {
+          return undefined;
+        }
+      }`;
+
+      const TARGET_TOOL_SOURCE = `class ConvertibleTargetTool {
+        constructor({ data }) {
+          this.data = data ?? {};
+        }
+
+        static get conversionConfig() {
+          return {
+            import: 'text',
+          };
+        }
+
+        static get toolbox() {
+          return {
+            icon: 'T',
+            title: 'Target',
+          };
+        }
+
+        render() {
+          const element = document.createElement('div');
+
+          element.contentEditable = 'true';
+          element.classList.add('cdx-block');
+          element.innerHTML = this.data?.text ?? '';
+
+          return element;
+        }
+
+        save(block) {
+          return {
+            text: block.innerHTML,
+          };
+        }
+      }`;
+
+      const blockId = 'non-savable-block';
+
+      await createEditor(page, {
+        tools: [
+          {
+            name: 'nonSavable',
+            classSource: NON_SAVABLE_TOOL_SOURCE,
+          },
+          {
+            name: 'convertibleTarget',
+            classSource: TARGET_TOOL_SOURCE,
+          },
+        ],
+        data: {
+          blocks: [
+            {
+              id: blockId,
+              type: 'nonSavable',
+              data: {
+                text: 'Broken block',
+              },
+            },
+          ],
+        },
+      });
+
+      const error = await page.evaluate(async ({ targetBlockId }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const { convert } = window.editorInstance.blocks;
+
+        try {
+          await convert(targetBlockId, 'convertibleTarget');
+
+          return null;
+        } catch (err) {
+          return {
+            message: (err as Error).message,
+          };
+        }
+      }, { targetBlockId: blockId });
+
+      expect(error?.message).toBe('Could not convert Block. Failed to extract original Block data.');
+
+      const savedData = await page.evaluate(async () => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        return await window.editorInstance.save();
+      });
+
+      expect(savedData.blocks).toHaveLength(1);
+      expect(savedData.blocks[0].type).toBe('nonSavable');
     });
   });
 

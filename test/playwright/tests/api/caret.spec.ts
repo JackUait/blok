@@ -684,5 +684,357 @@ test.describe('caret API', () => {
       expect(result.firstBlockSelected).toBe(false);
     });
   });
+
+  test.describe('.setToFirstBlock', () => {
+    test('moves caret to the first block and places it at the start', async ({ page }) => {
+      const blocks = [
+        createParagraphBlock('first-block', 'First block content'),
+        createParagraphBlock('second-block', 'Second block content'),
+      ];
+
+      await createEditor(page, {
+        data: {
+          blocks,
+        },
+      });
+
+      await clearSelection(page);
+
+      const result = await page.evaluate(({ blockSelector }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const returnedValue = window.editorInstance.caret.setToFirstBlock('start');
+        const selection = window.getSelection();
+        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        const firstBlock = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
+
+        return {
+          returnedValue,
+          rangeExists: !!range,
+          selectionInFirstBlock: !!(range && firstBlock && firstBlock.contains(range.startContainer)),
+          startOffset: range?.startOffset ?? null,
+        };
+      }, { blockSelector: BLOCK_SELECTOR });
+
+      expect(result.returnedValue).toBe(true);
+      expect(result.rangeExists).toBe(true);
+      expect(result.selectionInFirstBlock).toBe(true);
+      expect(result.startOffset).toBe(0);
+    });
+  });
+
+  test.describe('.setToLastBlock', () => {
+    test('moves caret to the last block and places it at the end', async ({ page }) => {
+      const blocks = [
+        createParagraphBlock('first-block', 'First block content'),
+        createParagraphBlock('last-block', 'Last block text'),
+      ];
+
+      await createEditor(page, {
+        data: {
+          blocks,
+        },
+      });
+
+      await clearSelection(page);
+
+      const result = await page.evaluate(({ blockSelector }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const returnedValue = window.editorInstance.caret.setToLastBlock('end');
+        const selection = window.getSelection();
+        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        const blocksCollection = document.querySelectorAll(blockSelector);
+        const lastBlock = blocksCollection.item(blocksCollection.length - 1) as HTMLElement | null;
+
+        return {
+          returnedValue,
+          rangeExists: !!range,
+          selectionInLastBlock: !!(range && lastBlock && lastBlock.contains(range.startContainer)),
+          startContainerTextLength: range?.startContainer?.textContent?.length ?? null,
+          startOffset: range?.startOffset ?? null,
+        };
+      }, { blockSelector: BLOCK_SELECTOR });
+
+      expect(result.returnedValue).toBe(true);
+      expect(result.rangeExists).toBe(true);
+      expect(result.selectionInLastBlock).toBe(true);
+      expect(result.startOffset).toBe(result.startContainerTextLength);
+    });
+  });
+
+  test.describe('.setToPreviousBlock', () => {
+    test('moves caret to the previous block relative to the current one', async ({ page }) => {
+      const blocks = [
+        createParagraphBlock('first-block', 'First block'),
+        createParagraphBlock('middle-block', 'Middle block'),
+        createParagraphBlock('last-block', 'Last block'),
+      ];
+
+      await createEditor(page, {
+        data: {
+          blocks,
+        },
+      });
+
+      const result = await page.evaluate(({ blockSelector }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const currentSet = window.editorInstance.caret.setToBlock(2);
+
+        if (!currentSet) {
+          throw new Error('Failed to set initial caret position');
+        }
+
+        const returnedValue = window.editorInstance.caret.setToPreviousBlock('default');
+        const selection = window.getSelection();
+        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        const middleBlock = document.querySelectorAll(blockSelector).item(1) as HTMLElement | null;
+
+        const currentBlockIndex = window.editorInstance.blocks.getCurrentBlockIndex();
+        const currentBlockId = currentBlockIndex !== undefined
+          ? window.editorInstance.blocks.getBlockByIndex(currentBlockIndex)?.id ?? null
+          : null;
+
+        return {
+          returnedValue,
+          rangeExists: !!range,
+          selectionInMiddleBlock: !!(range && middleBlock && middleBlock.contains(range.startContainer)),
+          currentBlockId,
+        };
+      }, { blockSelector: BLOCK_SELECTOR });
+
+      expect(result.returnedValue).toBe(true);
+      expect(result.rangeExists).toBe(true);
+      expect(result.selectionInMiddleBlock).toBe(true);
+      expect(result.currentBlockId).toBe('middle-block');
+    });
+  });
+
+  test.describe('.setToNextBlock', () => {
+    test('moves caret to the next block relative to the current one', async ({ page }) => {
+      const blocks = [
+        createParagraphBlock('first-block', 'First block'),
+        createParagraphBlock('middle-block', 'Middle block'),
+        createParagraphBlock('last-block', 'Last block'),
+      ];
+
+      await createEditor(page, {
+        data: {
+          blocks,
+        },
+      });
+
+      const result = await page.evaluate(({ blockSelector }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const currentSet = window.editorInstance.caret.setToBlock(0);
+
+        if (!currentSet) {
+          throw new Error('Failed to set initial caret position');
+        }
+
+        const returnedValue = window.editorInstance.caret.setToNextBlock('default');
+        const selection = window.getSelection();
+        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        const middleBlock = document.querySelectorAll(blockSelector).item(1) as HTMLElement | null;
+
+        const currentBlockIndex = window.editorInstance.blocks.getCurrentBlockIndex();
+        const currentBlockId = currentBlockIndex !== undefined
+          ? window.editorInstance.blocks.getBlockByIndex(currentBlockIndex)?.id ?? null
+          : null;
+
+        return {
+          returnedValue,
+          rangeExists: !!range,
+          selectionInMiddleBlock: !!(range && middleBlock && middleBlock.contains(range.startContainer)),
+          currentBlockId,
+        };
+      }, { blockSelector: BLOCK_SELECTOR });
+
+      expect(result.returnedValue).toBe(true);
+      expect(result.rangeExists).toBe(true);
+      expect(result.selectionInMiddleBlock).toBe(true);
+      expect(result.currentBlockId).toBe('middle-block');
+    });
+  });
+
+  test.describe('.focus', () => {
+    test('focuses the first block when called without arguments', async ({ page }) => {
+      const blocks = [
+        createParagraphBlock('focus-first', 'First block content'),
+        createParagraphBlock('focus-second', 'Second block content'),
+      ];
+
+      await createEditor(page, {
+        data: {
+          blocks,
+        },
+      });
+
+      await clearSelection(page);
+
+      const result = await page.evaluate(({ blockSelector }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const returnedValue = window.editorInstance.focus();
+        const selection = window.getSelection();
+        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        const firstBlock = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
+
+        return {
+          returnedValue,
+          rangeExists: !!range,
+          selectionInFirstBlock: !!(range && firstBlock && firstBlock.contains(range.startContainer)),
+          startOffset: range?.startOffset ?? null,
+        };
+      }, { blockSelector: BLOCK_SELECTOR });
+
+      expect(result.returnedValue).toBe(true);
+      expect(result.rangeExists).toBe(true);
+      expect(result.selectionInFirstBlock).toBe(true);
+      expect(result.startOffset).toBe(0);
+    });
+
+    test('focuses the last block when called with atEnd = true', async ({ page }) => {
+      const blocks = [
+        createParagraphBlock('focus-first', 'First block'),
+        createParagraphBlock('focus-last', 'Last block content'),
+      ];
+
+      await createEditor(page, {
+        data: {
+          blocks,
+        },
+      });
+
+      await clearSelection(page);
+
+      const result = await page.evaluate(({ blockSelector }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const returnedValue = window.editorInstance.focus(true);
+        const selection = window.getSelection();
+        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        const blocksCollection = document.querySelectorAll(blockSelector);
+        const lastBlock = blocksCollection.item(blocksCollection.length - 1) as HTMLElement | null;
+
+        return {
+          returnedValue,
+          rangeExists: !!range,
+          selectionInLastBlock: !!(range && lastBlock && lastBlock.contains(range.startContainer)),
+          startContainerTextLength: range?.startContainer?.textContent?.length ?? null,
+          startOffset: range?.startOffset ?? null,
+        };
+      }, { blockSelector: BLOCK_SELECTOR });
+
+      expect(result.returnedValue).toBe(true);
+      expect(result.rangeExists).toBe(true);
+      expect(result.selectionInLastBlock).toBe(true);
+      expect(result.startOffset).toBe(result.startContainerTextLength);
+    });
+
+    test('autofocus configuration moves caret to the first block after initialization', async ({ page }) => {
+      const blocks = [ createParagraphBlock('autofocus-block', 'Autofocus content') ];
+
+      await createEditor(page, {
+        data: {
+          blocks,
+        },
+        config: {
+          autofocus: true,
+        },
+      });
+
+      const result = await page.evaluate(({ blockSelector }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const selection = window.getSelection();
+        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        const firstBlock = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
+
+        const currentBlockIndex = window.editorInstance.blocks.getCurrentBlockIndex();
+        const currentBlockId = currentBlockIndex !== undefined
+          ? window.editorInstance.blocks.getBlockByIndex(currentBlockIndex)?.id ?? null
+          : null;
+
+        return {
+          rangeExists: !!range,
+          selectionInFirstBlock: !!(range && firstBlock && firstBlock.contains(range.startContainer)),
+          currentBlockId,
+        };
+      }, { blockSelector: BLOCK_SELECTOR });
+
+      expect(result.rangeExists).toBe(true);
+      expect(result.selectionInFirstBlock).toBe(true);
+      expect(result.currentBlockId).toBe('autofocus-block');
+    });
+
+    test('focus can be restored after editor operations clear the selection', async ({ page }) => {
+      const blocks = [
+        createParagraphBlock('restore-first', 'First block'),
+        createParagraphBlock('restore-second', 'Second block'),
+      ];
+
+      await createEditor(page, {
+        data: {
+          blocks,
+        },
+      });
+
+      const result = await page.evaluate(({ blockSelector }) => {
+        if (!window.editorInstance) {
+          throw new Error('Editor instance not found');
+        }
+
+        const initialFocusResult = window.editorInstance.focus();
+        const initialSelection = window.getSelection();
+        const initialRangeCount = initialSelection?.rangeCount ?? 0;
+
+        window.editorInstance.blocks.insert('paragraph', { text: 'Inserted block' }, undefined, 1, false);
+        window.getSelection()?.removeAllRanges();
+
+        const selectionAfterOperation = window.getSelection();
+        const afterRangeCount = selectionAfterOperation?.rangeCount ?? 0;
+
+        const returnedValue = window.editorInstance.focus();
+        const selection = window.getSelection();
+        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        const firstBlock = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
+
+        return {
+          initialFocusResult,
+          initialRangeCount,
+          afterRangeCount,
+          returnedValue,
+          rangeExists: !!range,
+          selectionInFirstBlock: !!(range && firstBlock && firstBlock.contains(range.startContainer)),
+          blocksCount: window.editorInstance.blocks.getBlocksCount(),
+        };
+      }, { blockSelector: BLOCK_SELECTOR });
+
+      expect(result.initialFocusResult).toBe(true);
+      expect(result.initialRangeCount).toBeGreaterThan(0);
+      expect(result.afterRangeCount).toBe(0);
+      expect(result.returnedValue).toBe(true);
+      expect(result.rangeExists).toBe(true);
+      expect(result.selectionInFirstBlock).toBe(true);
+      expect(result.blocksCount).toBe(3);
+    });
+  });
 });
 

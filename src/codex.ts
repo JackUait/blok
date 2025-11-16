@@ -142,6 +142,23 @@ export default class EditorJS {
     this.destroy = destroy;
 
     const apiMethods = editor.moduleInstances.API.methods;
+    const eventsDispatcherApi = editor.moduleInstances.EventsAPI?.methods ?? apiMethods.events;
+
+    if (eventsDispatcherApi !== undefined) {
+      const defineDispatcher = (target: object): void => {
+        if (!Object.prototype.hasOwnProperty.call(target, 'eventsDispatcher')) {
+          Object.defineProperty(target, 'eventsDispatcher', {
+            value: eventsDispatcherApi,
+            configurable: true,
+            enumerable: true,
+            writable: false,
+          });
+        }
+      };
+
+      defineDispatcher(apiMethods);
+      defineDispatcher(this as Record<string, unknown>);
+    }
 
     if (Object.getPrototypeOf(apiMethods) !== EditorJS.prototype) {
       Object.setPrototypeOf(apiMethods, EditorJS.prototype);

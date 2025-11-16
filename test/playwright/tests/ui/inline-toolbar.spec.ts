@@ -610,6 +610,78 @@ test.describe('inline toolbar', () => {
     expect(submitCount).toBe(0);
   });
 
+  test('allows controlling inline toolbar visibility via API', async ({ page }) => {
+    await createEditor(page, {
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Inline toolbar API control test',
+            },
+          },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await selectText(paragraph, 'toolbar');
+
+    const toolbarContainer = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    await expect(toolbarContainer).toBeVisible();
+
+    await page.evaluate(() => {
+      window.editorInstance?.inlineToolbar?.close();
+    });
+
+    await expect(toolbarContainer).toHaveCount(0);
+
+    await selectText(paragraph, 'toolbar');
+
+    await page.evaluate(() => {
+      window.editorInstance?.inlineToolbar?.open();
+    });
+
+    await expect(page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR)).toBeVisible();
+  });
+
+  test('reflects inline tool state changes based on current selection', async ({ page }) => {
+    await createEditor(page, {
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Bold part and plain part',
+            },
+          },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await selectText(paragraph, 'Bold part');
+
+    const boldButton = page.locator(`${INLINE_TOOL_SELECTOR}[data-item-name="bold"]`);
+
+    await expect(boldButton).not.toHaveClass(/ce-popover-item--active/);
+
+    await boldButton.click();
+
+    await expect(boldButton).toHaveClass(/ce-popover-item--active/);
+
+    await selectText(paragraph, 'plain part');
+
+    await page.evaluate(() => {
+      window.editorInstance?.inlineToolbar?.open();
+    });
+
+    await expect(boldButton).not.toHaveClass(/ce-popover-item--active/);
+  });
+
   test('should restore caret after converting a block', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 

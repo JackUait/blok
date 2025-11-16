@@ -17,6 +17,7 @@ import MoveDownTune from '../block-tunes/block-tune-move-down';
 import DeleteTune from '../block-tunes/block-tune-delete';
 import MoveUpTune from '../block-tunes/block-tune-move-up';
 import ToolsCollection from '../tools/collection';
+import { CriticalError } from '../errors/critical';
 
 const cacheableSanitizer = _.cacheable as (
   target: object,
@@ -139,14 +140,14 @@ export default class Tools extends Module {
    * @returns {Promise<void>}
    */
   public async prepare(): Promise<void> {
-    this.validateTools();
-
     /**
-     * Assign internal tools
+     * Assign internal tools before validation so required fallbacks (like stub) are always present
      */
     const userTools = this.config.tools ?? {};
 
     this.config.tools = _.deepMerge({}, this.internalTools, userTools);
+
+    this.validateTools();
 
     const toolsConfig = this.config.tools;
 
@@ -500,7 +501,7 @@ export default class Tools extends Module {
       const hasToolClass = _.isFunction(toolSettings.class);
 
       if (!isConstructorFunction && !hasToolClass) {
-        throw Error(
+        throw new CriticalError(
           `Tool «${toolName}» must be a constructor function or an object with function in the «class» property`
         );
       }

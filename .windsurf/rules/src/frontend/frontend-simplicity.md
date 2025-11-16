@@ -1,7 +1,7 @@
 ---
-alwaysApply: true
-globs: "*.ts","*.tsx","*.js","*.jsx","src/frontend/**"
+trigger: always_on
 description: "Frontend development principle: Keep solutions simple and avoid overengineering"
+globs: "*.ts","*.tsx","*.js","*.jsx","src/frontend/**"
 ---
 
 # Frontend Simplicity Principle

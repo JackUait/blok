@@ -7,7 +7,7 @@ declare global {
      *
      * @param centerIfNeeded - true, if the element should be aligned so it is centered within the visible area of the scrollable ancestor.
      */
-    scrollIntoViewIfNeeded(centerIfNeeded?: boolean): void;
+    scrollIntoViewIfNeeded?(centerIfNeeded?: boolean): void;
   }
 }
 

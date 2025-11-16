@@ -12,12 +12,12 @@ VERY IMPORTANT: When encountering ANY problem in the code—such as TypeScript e
 - **Investigate root causes**: Use tools like debugging, logging, or code searches to understand why the problem occurs before fixing it.
 - **Align with existing rules**: Follow related policies such as the Fix TypeScript Errors Policy (adapt for other languages), ESLint configurations, and accessibility guidelines.
 - **Test the fix**: After fixing, verify with tests, linting runs (e.g., `yarn lint:fix`), or manual checks to ensure the problem is truly resolved without introducing new issues.
-- **Terminal commands**: if you run a command in the terminal make sure to set timeout so the command is not being executed indefinitely
 
 ## When to Apply
 - During any code editing, reviewing, or generation task.
 - Proactively scan for and fix problems in affected files using available tools (e.g., read_lints, grep, codebase_search).
 - If a problem persists after reasonable efforts, document it clearly and suggest next steps rather than suppressing it.
+- **Terminal commands**: if you run a command in the terminal make sure to set timeout so the command is not being executed indefinitely
 
 ## Notes
 - This policy promotes robust, high-quality code that is easier to maintain and less prone to future issues.

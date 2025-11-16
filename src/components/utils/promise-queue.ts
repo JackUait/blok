@@ -8,21 +8,38 @@
  */
 export default class PromiseQueue {
   /**
-   * Queue of promises to be executed
+   * Tail promise representing the queued operations chain
    */
-  public completed = Promise.resolve();
+  private tail: Promise<void> = Promise.resolve();
+
+  /**
+   * Stored failure that should be propagated to consumers
+   */
+  private failure: unknown;
+
+  /**
+   * Expose completion promise that rejects if any queued task failed
+   */
+  public get completed(): Promise<void> {
+    return this.failure ? Promise.reject(this.failure) : this.tail;
+  }
 
   /**
    * Add new promise to queue
    *
    * @param operation - promise should be added to queue
    */
-  public add(operation: (value: void) => void | PromiseLike<void>): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.completed = this.completed
-        .then(operation)
-        .then(resolve)
-        .catch(reject);
+  public add(operation: () => void | PromiseLike<void>): Promise<void> {
+    if (this.failure) {
+      return Promise.reject(this.failure);
+    }
+
+    const task = this.tail.then(() => operation());
+
+    this.tail = task.catch((error) => {
+      this.failure = error;
     });
+
+    return task;
   }
 }

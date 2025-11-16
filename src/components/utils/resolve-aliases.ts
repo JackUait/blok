@@ -17,10 +17,14 @@ export const resolveAliases = <ObjectType extends object>(
     const propertyString = String(property);
     const aliasedProperty = aliases[propertyString];
 
-    if (aliasedProperty !== undefined) {
-      result[aliasedProperty] = obj[propertyKey];
-    } else {
+    if (aliasedProperty === undefined) {
       result[propertyKey] = obj[propertyKey];
+
+      return;
+    }
+
+    if (!(aliasedProperty in obj)) {
+      result[aliasedProperty] = obj[propertyKey];
     }
   });
 

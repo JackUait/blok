@@ -28,9 +28,9 @@ export default class Notifier {
    *
    * @returns {Promise<CodexNotifierModule>} loaded notifier module
    */
-  private async loadNotifierModule(): Promise<CodexNotifierModule> {
+  private loadNotifierModule(): Promise<CodexNotifierModule> {
     if (this.notifierModule !== null) {
-      return this.notifierModule;
+      return Promise.resolve(this.notifierModule);
     }
 
     if (this.loadingPromise === null) {

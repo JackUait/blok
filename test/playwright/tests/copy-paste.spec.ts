@@ -31,6 +31,17 @@ const getParagraphByIndex = (page: Page, index: number): Locator => {
   return getBlockByIndex(page, index).locator('.ce-paragraph');
 };
 
+const getCommandModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
+  const isMac = await page.evaluate(() => {
+    const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+    const platform = (nav.userAgentData?.platform ?? nav.platform ?? '').toLowerCase();
+
+    return platform.includes('mac');
+  });
+
+  return isMac ? 'Meta' : 'Control';
+};
+
 type SerializableToolConfig = {
   className?: string;
   classCode?: string;
@@ -252,22 +263,31 @@ const withClipboardEvent = async (
 ): Promise<Record<string, string>> => {
   return await locator.evaluate((element, type) => {
     return new Promise<Record<string, string>>((resolve) => {
-      const clipboardData: Record<string, string> = {};
-      const event = Object.assign(new Event(type, {
+      const clipboardStore: Record<string, string> = {};
+      const isClipboardEventSupported = typeof ClipboardEvent === 'function';
+      const isDataTransferSupported = typeof DataTransfer === 'function';
+
+      if (!isClipboardEventSupported || !isDataTransferSupported) {
+        resolve(clipboardStore);
+
+        return;
+      }
+
+      const dataTransfer = new DataTransfer();
+      const event = new ClipboardEvent(type, {
         bubbles: true,
         cancelable: true,
-      }), {
-        clipboardData: {
-          setData: (format: string, value: string) => {
-            clipboardData[format] = value;
-          },
-        },
+        clipboardData: dataTransfer,
       });
 
       element.dispatchEvent(event);
 
       setTimeout(() => {
-        resolve(clipboardData);
+        Array.from(dataTransfer.types).forEach((format) => {
+          clipboardStore[format] = dataTransfer.getData(format);
+        });
+
+        resolve(clipboardStore);
       }, 0);
     });
   }, eventName);
@@ -708,21 +728,23 @@ test.describe('copy and paste', () => {
     });
 
     test('should copy several blocks', async ({ page }) => {
-      await createEditor(page);
-
-      const firstParagraph = getParagraphByIndex(page, 0);
-
-      await firstParagraph.click();
-      await firstParagraph.type('First block');
-      await page.keyboard.press('Enter');
-
+      await createEditorWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second block' },
+        },
+      ]);
       const secondParagraph = getParagraphByIndex(page, 1);
 
-      await secondParagraph.type('Second block');
-      await page.keyboard.press('Home');
-      await page.keyboard.down('Shift');
-      await page.keyboard.press('ArrowUp');
-      await page.keyboard.up('Shift');
+      await secondParagraph.click();
+      const commandModifier = await getCommandModifierKey(page);
+
+      await page.keyboard.press(`${commandModifier}+A`);
+      await page.keyboard.press(`${commandModifier}+A`);
 
       const clipboardData = await copyFromElement(secondParagraph);
 
@@ -770,10 +792,10 @@ test.describe('copy and paste', () => {
       const secondParagraph = getParagraphByIndex(page, 1);
 
       await secondParagraph.click();
-      await page.keyboard.press('Home');
-      await page.keyboard.down('Shift');
-      await page.keyboard.press('ArrowUp');
-      await page.keyboard.up('Shift');
+      const commandModifier = await getCommandModifierKey(page);
+
+      await page.keyboard.press(`${commandModifier}+A`);
+      await page.keyboard.press(`${commandModifier}+A`);
 
       const clipboardData = await cutFromElement(secondParagraph);
 

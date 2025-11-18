@@ -716,9 +716,9 @@ test.describe('sanitizing', () => {
       const output = await saveEditor(page);
       const text = output.blocks[0].data.text;
 
-      // Custom config should allow span and div
-      expect(text).toContain('<span>');
-      expect(text).toContain('<div>');
+      // Custom config should allow span and div, even when editor adds safe attributes
+      expect(text).toMatch(/<span\b[^>]*>Span<\/span>/);
+      expect(text).toMatch(/<div\b[^>]*>Div<\/div>/);
     });
   });
 

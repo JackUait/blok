@@ -22,6 +22,7 @@ const KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP: Record<string, number> = {
 };
 
 const PRINTABLE_SPECIAL_KEYS = new Set(['Enter', 'Process', 'Spacebar', 'Space', 'Dead']);
+const EDITABLE_INPUT_SELECTOR = '[contenteditable="true"], textarea, input';
 
 /**
  *
@@ -189,35 +190,6 @@ export default class BlockEvents extends Module {
     this.Editor.UI.checkEmptiness();
   }
 
-  /**
-   * Add drop target styles
-   *
-   * @param {DragEvent} event - drag over event
-   */
-  public dragOver(event: DragEvent): void {
-    const block = this.Editor.BlockManager.getBlockByChildNode(event.target as Node);
-
-    if (!block) {
-      return;
-    }
-
-    block.dropTarget = true;
-  }
-
-  /**
-   * Remove drop target style
-   *
-   * @param {DragEvent} event - drag leave event
-   */
-  public dragLeave(event: DragEvent): void {
-    const block = this.Editor.BlockManager.getBlockByChildNode(event.target as Node);
-
-    if (!block) {
-      return;
-    }
-
-    block.dropTarget = false;
-  }
 
   /**
    * Copying selected blocks
@@ -642,7 +614,18 @@ export default class BlockEvents extends Module {
     }
 
     const { currentBlock } = this.Editor.BlockManager;
-    const caretAtEnd = currentBlock?.currentInput !== undefined ? caretUtils.isCaretAtEndOfInput(currentBlock.currentInput) : undefined;
+    const eventTarget = event.target as HTMLElement | null;
+    const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const fallbackInputCandidates: Array<HTMLElement | undefined | null> = [
+      currentBlock?.inputs.find((input) => eventTarget !== null && input.contains(eventTarget)),
+      currentBlock?.inputs.find((input) => activeElement !== null && input.contains(activeElement)),
+      eventTarget?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+      activeElement?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+    ];
+    const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find((candidate): candidate is HTMLElement => {
+      return candidate instanceof HTMLElement;
+    });
+    const caretAtEnd = caretInput !== undefined ? caretUtils.isCaretAtEndOfInput(caretInput) : undefined;
     const shouldEnableCBS = caretAtEnd || this.Editor.BlockSelection.anyBlockSelected;
 
     const isShiftDownKey = event.shiftKey && keyCode === _.keyCodes.DOWN;
@@ -720,7 +703,18 @@ export default class BlockEvents extends Module {
     }
 
     const { currentBlock } = this.Editor.BlockManager;
-    const caretAtStart = currentBlock?.currentInput !== undefined ? caretUtils.isCaretAtStartOfInput(currentBlock.currentInput) : undefined;
+    const eventTarget = event.target as HTMLElement | null;
+    const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const fallbackInputCandidates: Array<HTMLElement | undefined | null> = [
+      currentBlock?.inputs.find((input) => eventTarget !== null && input.contains(eventTarget)),
+      currentBlock?.inputs.find((input) => activeElement !== null && input.contains(activeElement)),
+      eventTarget?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+      activeElement?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+    ];
+    const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find((candidate): candidate is HTMLElement => {
+      return candidate instanceof HTMLElement;
+    });
+    const caretAtStart = caretInput !== undefined ? caretUtils.isCaretAtStartOfInput(caretInput) : undefined;
     const shouldEnableCBS = caretAtStart || this.Editor.BlockSelection.anyBlockSelected;
 
     const isShiftUpKey = event.shiftKey && keyCode === _.keyCodes.UP;

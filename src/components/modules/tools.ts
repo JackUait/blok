@@ -271,6 +271,9 @@ export default class Tools extends Module {
       paragraph: {
         class: toToolConstructable(Paragraph),
         inlineToolbar: true,
+        config: {
+          preserveBlank: true,
+        },
         isInternal: true,
       },
       stub: {

@@ -2,8 +2,7 @@
   "ui": {
     "blockTunes": {
       "toggler": {
-        "Click to tune": "",
-        "or drag to move": ""
+        "Click to tune": ""
       }
     },
     "inlineToolbar": {

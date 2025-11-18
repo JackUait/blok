@@ -201,10 +201,16 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       this.initialize();
     };
 
-    if ('requestIdleCallback' in window) {
-      window.requestIdleCallback(callback, { timeout: 2000 });
-    } else {
+    const scheduleWithTimeout = (): void => {
       window.setTimeout(callback, 0);
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(() => {
+        scheduleWithTimeout();
+      }, { timeout: 2000 });
+    } else {
+      scheduleWithTimeout();
     }
   }
 

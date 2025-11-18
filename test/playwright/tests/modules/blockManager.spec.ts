@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -14,7 +14,6 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
 
 type SerializableToolConfig = {
   className?: string;
@@ -72,7 +71,9 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
   await page.evaluate(
     async ({ holderId, data: initialData, serializedTools: toolsConfig, config: editorConfigOverrides }) => {
-      const resolveToolClass = (toolConfig: { className: string | null; classCode: string | null }): unknown => {
+      const resolveToolClass = (
+        toolConfig: { name?: string; className: string | null; classCode: string | null }
+      ): unknown => {
         if (toolConfig.className) {
           const toolClass = (window as unknown as Record<string, unknown>)[toolConfig.className];
 
@@ -82,8 +83,15 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
         }
 
         if (toolConfig.classCode) {
-          // eslint-disable-next-line no-new-func -- evaluated in browser context to revive tool class
-          return new Function(`return (${toolConfig.classCode});`)();
+          const revivedClassCode = toolConfig.classCode.trim().replace(/;+\s*$/, '');
+
+          try {
+            return window.eval?.(revivedClassCode) ?? eval(revivedClassCode);
+          } catch (error) {
+            throw new Error(
+              `Failed to evaluate class code for tool "${toolConfig.name ?? 'unknown'}": ${(error as Error).message}`
+            );
+          }
         }
 
         return null;
@@ -146,10 +154,6 @@ const saveEditor = async (page: Page): Promise<OutputData> => {
 
     return await window.editorInstance.save();
   });
-};
-
-const getParagraphByIndex = (page: Page, index: number): Locator => {
-  return page.locator(`:nth-match(${PARAGRAPH_SELECTOR}, ${index + 1})`);
 };
 
 const focusBlockByIndex = async (page: Page, index: number): Promise<void> => {
@@ -366,7 +370,7 @@ test.describe('modules/blockManager', () => {
 
         static get conversionConfig() {
           return {
-            export: (data) => data.text ?? '';
+            export: (data) => data.text ?? '',
           };
         }
 
@@ -511,14 +515,25 @@ test.describe('modules/blockManager', () => {
   test('generates unique ids for newly inserted blocks', async ({ page }) => {
     await createEditor(page);
 
-    const firstParagraph = getParagraphByIndex(page, 0);
+    const blockCount = await page.evaluate(async () => {
+      if (!window.editorInstance) {
+        throw new Error('Editor instance not found');
+      }
 
-    await firstParagraph.click();
-    await page.keyboard.type('First block');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('Second block');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('Third block');
+      const firstBlock = window.editorInstance.blocks.getBlockByIndex?.(0);
+
+      if (!firstBlock) {
+        throw new Error('Initial block not found');
+      }
+
+      await window.editorInstance.blocks.update(firstBlock.id, { text: 'First block' });
+      window.editorInstance.blocks.insert('paragraph', { text: 'Second block' });
+      window.editorInstance.blocks.insert('paragraph', { text: 'Third block' });
+
+      return window.editorInstance.blocks.getBlocksCount?.() ?? 0;
+    });
+
+    expect(blockCount).toBe(3);
 
     const { blocks } = await saveEditor(page);
     const ids = blocks.map((block) => block.id);

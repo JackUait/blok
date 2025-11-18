@@ -16,8 +16,6 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const HOLDER_SELECTOR = `#${HOLDER_ID}`;
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
 const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
 const SETTINGS_BUTTON_SELECTOR = `${TOOLBAR_SELECTOR} .ce-toolbar__settings-btn`;
@@ -262,48 +260,6 @@ const paste = async (page: Page, locator: Locator, data: Record<string, string>)
   });
 };
 
-type DropPayload = {
-  types?: Record<string, string>;
-  files?: Array<{ name: string; type: string; content: string }>;
-};
-
-const dispatchDrop = async (page: Page, payload: DropPayload): Promise<void> => {
-  await page.evaluate(({ selector, payload: data }) => {
-    const holder = document.querySelector(selector);
-
-    if (!holder) {
-      throw new Error('Drop target not found');
-    }
-
-    const dataTransfer = new DataTransfer();
-
-    if (data.types) {
-      Object.entries(data.types).forEach(([type, value]) => {
-        dataTransfer.setData(type, value);
-      });
-    }
-
-    if (data.files) {
-      data.files.forEach(({ name, type, content }) => {
-        const file = new File([ content ], name, { type });
-
-        dataTransfer.items.add(file);
-      });
-    }
-
-    const dropEvent = new DragEvent('drop', {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer,
-    });
-
-    holder.dispatchEvent(dropEvent);
-  }, {
-    selector: HOLDER_SELECTOR,
-    payload,
-  });
-};
-
 const expectSettingsButtonToDisappear = async (page: Page): Promise<void> => {
   await page.waitForFunction((selector) => document.querySelector(selector) === null, SETTINGS_BUTTON_SELECTOR);
 };
@@ -476,56 +432,6 @@ test.describe('read-only mode', () => {
     });
 
     await expect(paragraph).toContainText('Original content + pasted text');
-  });
-
-  test('blocks drag-and-drop insertions while read-only is enabled', async ({ page }) => {
-    await createEditor(page, {
-      readOnly: true,
-      data: {
-        blocks: [
-          {
-            type: 'paragraph',
-            data: {
-              text: 'Initial block',
-            },
-          },
-        ],
-      },
-    });
-
-    await dispatchDrop(page, {
-      types: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'text/plain': 'Dropped text',
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'text/html': '<p>Dropped text</p>',
-      },
-    });
-
-    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
-
-    await toggleReadOnly(page, false);
-    await waitForReadOnlyState(page, false);
-
-    await dispatchDrop(page, {
-      types: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'text/plain': 'Dropped text',
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'text/html': '<p>Dropped text</p>',
-      },
-    });
-
-    const blocks = page.locator(BLOCK_SELECTOR);
-
-    await expect(async () => {
-      const count = await blocks.count();
-
-      expect(count).toBeGreaterThanOrEqual(2);
-    }).toPass();
-
-    await expect(blocks).toHaveCount(2);
-    await expect(blocks.filter({ hasText: 'Dropped text' })).toHaveCount(1);
   });
 
   test('throws descriptive error when enabling read-only with unsupported tools', async ({ page }) => {

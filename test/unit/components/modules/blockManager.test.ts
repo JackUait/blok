@@ -195,8 +195,6 @@ const createBlockManager = (
       handleCommandX: vi.fn(),
       keydown: vi.fn(),
       keyup: vi.fn(),
-      dragOver: vi.fn(),
-      dragLeave: vi.fn(),
     } as unknown as EditorModules['BlockEvents'],
     ReadOnly: {
       isEnabled: false,

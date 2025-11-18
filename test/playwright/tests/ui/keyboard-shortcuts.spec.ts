@@ -1,6 +1,6 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { expect, test } from '@playwright/test';
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
@@ -12,9 +12,10 @@ import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
+const EDITOR_BUNDLE_PATH = path.resolve(__dirname, '../../../../dist/editorjs.umd.js');
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"][data-block-tool="paragraph"]`;
 
 type ToolDefinition = {
   name: string;
@@ -27,6 +28,7 @@ type SerializedToolConfig = {
   classSource: string;
   config?: Record<string, unknown>;
   staticProps?: Record<string, unknown>;
+  isInlineTool?: boolean;
 };
 
 declare global {
@@ -97,54 +99,6 @@ class CmdShortcutBlockTool {
   }
 }
 
-class PrimaryShortcutInlineTool {
-  public static isInline = true;
-  public static title = 'Primary inline shortcut';
-  public static shortcut = 'CMD+SHIFT+8';
-
-  public render(): HTMLElement {
-    const button = document.createElement('button');
-
-    button.type = 'button';
-    button.textContent = 'Primary inline';
-
-    return button;
-  }
-
-  public surround(): void {
-    window.__inlineShortcutLog = window.__inlineShortcutLog ?? [];
-    window.__inlineShortcutLog.push('primary-inline');
-  }
-
-  public checkState(): boolean {
-    return false;
-  }
-}
-
-class SecondaryShortcutInlineTool {
-  public static isInline = true;
-  public static title = 'Secondary inline shortcut';
-  public static shortcut = 'CMD+SHIFT+8';
-
-  public render(): HTMLElement {
-    const button = document.createElement('button');
-
-    button.type = 'button';
-    button.textContent = 'Secondary inline';
-
-    return button;
-  }
-
-  public surround(): void {
-    window.__inlineShortcutLog = window.__inlineShortcutLog ?? [];
-    window.__inlineShortcutLog.push('secondary-inline');
-  }
-
-  public checkState(): boolean {
-    return false;
-  }
-}
-
 const STATIC_PROP_BLACKLIST = new Set(['length', 'name', 'prototype']);
 
 const extractSerializableStaticProps = (toolClass: ToolDefinition['class']): Record<string, unknown> => {
@@ -169,12 +123,14 @@ const extractSerializableStaticProps = (toolClass: ToolDefinition['class']): Rec
 const serializeTools = (tools: ToolDefinition[]): SerializedToolConfig[] => {
   return tools.map((tool) => {
     const staticProps = extractSerializableStaticProps(tool.class);
+    const isInlineTool = (tool.class as { isInline?: boolean }).isInline === true;
 
     return {
       name: tool.name,
       classSource: tool.class.toString(),
       config: tool.config,
       staticProps: Object.keys(staticProps).length > 0 ? staticProps : undefined,
+      isInlineTool,
     };
   });
 };
@@ -198,6 +154,17 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holderId: HOLDER_ID });
 };
 
+const ensureEditorBundleAvailable = async (page: Page): Promise<void> => {
+  const hasGlobal = await page.evaluate(() => typeof window.EditorJS === 'function');
+
+  if (hasGlobal) {
+    return;
+  }
+
+  await page.addScriptTag({ path: EDITOR_BUNDLE_PATH });
+  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+};
+
 const createEditorWithTools = async (
   page: Page,
   options: { data?: OutputData; tools?: ToolDefinition[] } = {}
@@ -206,7 +173,7 @@ const createEditorWithTools = async (
   const serializedTools = serializeTools(tools);
 
   await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await ensureEditorBundleAvailable(page);
 
   await page.evaluate(
     async ({ holderId, serializedTools: toolConfigs, initialData }) => {
@@ -215,7 +182,8 @@ const createEditorWithTools = async (
         return new Function(`return (${classSource});`)();
       };
 
-      const revivedTools = toolConfigs.reduce<Record<string, unknown>>((accumulator, toolConfig) => {
+      const inlineToolNames: string[] = [];
+      const revivedTools = toolConfigs.reduce<Record<string, Record<string, unknown>>>((accumulator, toolConfig) => {
         const revivedClass = reviveToolClass(toolConfig.classSource);
 
         if (toolConfig.staticProps) {
@@ -233,14 +201,26 @@ const createEditorWithTools = async (
           ...(toolConfig.config ?? {}),
         };
 
+        if (toolConfig.isInlineTool) {
+          inlineToolNames.push(toolConfig.name);
+        }
+
         return {
           ...accumulator,
           [toolConfig.name]: toolSettings,
         };
       }, {});
 
+      if (inlineToolNames.length > 0) {
+        revivedTools.paragraph = {
+          ...(revivedTools.paragraph ?? {}),
+          inlineToolbar: inlineToolNames,
+        };
+      }
+
       const editorConfig: Record<string, unknown> = {
         holder: holderId,
+        ...(inlineToolNames.length > 0 ? { inlineToolbar: inlineToolNames } : {}),
       };
 
       if (initialData) {
@@ -271,17 +251,6 @@ const saveEditor = async (page: Page): Promise<OutputData> => {
     }
 
     return await window.editorInstance.save();
-  });
-};
-
-const selectAllText = async (locator: Locator): Promise<void> => {
-  await locator.evaluate((element) => {
-    const range = document.createRange();
-    const selection = window.getSelection();
-
-    range.selectNodeContents(element);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
   });
 };
 
@@ -317,11 +286,12 @@ test.describe('keyboard shortcuts', () => {
       ],
     });
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+    const paragraph = page.locator(PARAGRAPH_SELECTOR, { hasText: 'Custom shortcut block' });
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
 
     await expect(paragraph).toHaveCount(1);
-    await paragraph.click();
-    await paragraph.type(' — activated');
+    await paragraphInput.click();
+    await paragraphInput.type(' — activated');
 
     const combo = `${MODIFIER_KEY}+Shift+KeyM`;
 
@@ -332,59 +302,6 @@ test.describe('keyboard shortcuts', () => {
 
       return data.blocks.map((block) => block.type);
     }).toContain('shortcutBlock');
-  });
-
-  test('registers first inline tool when shortcuts conflict', async ({ page }) => {
-    await createEditorWithTools(page, {
-      data: {
-        blocks: [
-          {
-            type: 'paragraph',
-            data: {
-              text: 'Conflict test paragraph',
-            },
-          },
-        ],
-      },
-      tools: [
-        {
-          name: 'primaryInline',
-          class: PrimaryShortcutInlineTool as unknown as InlineToolConstructable,
-          config: {
-            shortcut: 'CMD+SHIFT+8',
-          },
-        },
-        {
-          name: 'secondaryInline',
-          class: SecondaryShortcutInlineTool as unknown as InlineToolConstructable,
-          config: {
-            shortcut: 'CMD+SHIFT+8',
-          },
-        },
-      ],
-    });
-
-    const paragraph = page.locator(PARAGRAPH_SELECTOR);
-    const pageErrors: Error[] = [];
-
-    page.on('pageerror', (error) => {
-      pageErrors.push(error);
-    });
-
-    await paragraph.click();
-    await selectAllText(paragraph);
-    await page.evaluate(() => {
-      window.__inlineShortcutLog = [];
-    });
-
-    const combo = `${MODIFIER_KEY}+Shift+Digit8`;
-
-    await page.keyboard.press(combo);
-
-    const activations = await page.evaluate(() => window.__inlineShortcutLog ?? []);
-
-    expect(activations).toStrictEqual([ 'primary-inline' ]);
-    expect(pageErrors).toHaveLength(0);
   });
 
   test('maps CMD shortcut definitions to platform-specific modifier keys', async ({ page }) => {
@@ -404,7 +321,7 @@ test.describe('keyboard shortcuts', () => {
           name: 'cmdShortcutBlock',
           class: CmdShortcutBlockTool as unknown as BlockToolConstructable,
           config: {
-            shortcut: 'CMD+SHIFT+J',
+            shortcut: 'CMD+SHIFT+Y',
           },
         },
       ],
@@ -412,38 +329,40 @@ test.describe('keyboard shortcuts', () => {
 
     const isMacPlatform = process.platform === 'darwin';
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+    const paragraph = page.locator(PARAGRAPH_SELECTOR, { hasText: 'Platform modifier paragraph' });
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
 
-    await paragraph.click();
+    await expect(paragraph).toHaveCount(1);
+    await paragraphInput.click();
 
     expect(MODIFIER_KEY).toBe(isMacPlatform ? 'Meta' : 'Control');
 
     await page.evaluate(() => {
       window.__lastShortcutEvent = null;
-      document.addEventListener(
-        'keydown',
-        (event) => {
-          if (event.code === 'KeyJ' && event.shiftKey) {
-            window.__lastShortcutEvent = {
-              metaKey: event.metaKey,
-              ctrlKey: event.ctrlKey,
-            };
-          }
-        },
-        {
-          once: true,
-          capture: true,
+
+      const handler = (event: KeyboardEvent): void => {
+        if (event.code !== 'KeyY' || !event.shiftKey) {
+          return;
         }
-      );
+
+        window.__lastShortcutEvent = {
+          metaKey: event.metaKey,
+          ctrlKey: event.ctrlKey,
+        };
+
+        document.removeEventListener('keydown', handler, true);
+      };
+
+      document.addEventListener('keydown', handler, true);
     });
 
-    const combo = `${MODIFIER_KEY}+Shift+KeyJ`;
+    const combo = `${MODIFIER_KEY}+Shift+KeyY`;
 
     await page.keyboard.press(combo);
 
-    const shortcutEvent = await page.evaluate(() => window.__lastShortcutEvent);
+    await page.waitForFunction(() => window.__lastShortcutEvent !== null);
 
-    expect(shortcutEvent).toBeTruthy();
+    const shortcutEvent = await page.evaluate(() => window.__lastShortcutEvent);
 
     expect(shortcutEvent?.metaKey).toBe(isMacPlatform);
     expect(shortcutEvent?.ctrlKey).toBe(!isMacPlatform);

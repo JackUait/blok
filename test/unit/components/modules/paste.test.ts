@@ -384,7 +384,7 @@ describe('Paste module', () => {
       mimeTypes: [ 'image/png' ],
     });
     expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('«extensions» property of the onDrop config for «files» Tool should be an array')
+      expect.stringContaining('«extensions» property of the paste config for «files» Tool should be an array')
     );
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('MIME type value «invalid» for the «files» Tool is not a valid MIME type'),

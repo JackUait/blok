@@ -90,6 +90,15 @@ export const checkContenteditableSliceForEmptiness = (contenteditable: HTMLEleme
 
   const textContent = tempDiv.textContent || '';
 
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test' && typeof window !== 'undefined') {
+    // eslint-disable-next-line no-console
+    console.log('checkContenteditableSliceForEmptiness', {
+      direction,
+      textContent,
+      charCodes: Array.from(textContent).map((char) => char.codePointAt(0)),
+    });
+  }
+
   /**
    * In HTML there are two types of whitespaces:
    * - visible (&nbsp;)

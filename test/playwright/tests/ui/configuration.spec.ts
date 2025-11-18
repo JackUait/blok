@@ -19,7 +19,7 @@ const TEST_PAGE_URL = pathToFileURL(
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
 const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .codex-editor__redactor`;
-const TOOLBOX_POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover`;
+const TOOLBOX_POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover[data-popover-opened="true"]:not(.ce-popover--inline)`;
 const FAILING_TOOL_SOURCE = `
   class FailingTool {
     render() {
@@ -187,7 +187,7 @@ const openToolbox = async (page: Page): Promise<void> => {
   await plusButton.waitFor({ state: 'visible' });
   await plusButton.click();
 
-  await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+  await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toHaveCount(1);
 };
 
 const insertFailingToolAndTriggerSave = async (page: Page): Promise<void> => {
@@ -895,7 +895,7 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('configurableTool');
     });
 
-    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="configurableTool"]`;
+    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"][data-block-tool="configurableTool"]`;
     const blockCount = await page.locator(configurableSelector).count();
 
     expect(blockCount).toBeGreaterThan(0);
@@ -970,10 +970,14 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('inlineToggleTool');
     });
 
-    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="inlineToggleTool"]`;
-    const customBlock = page.locator(`${inlineToggleSelector}:last-of-type`);
-    const blockContent = customBlock.locator('[contenteditable="true"]');
+    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"][data-block-tool="inlineToggleTool"]`;
+    const inlineToggleBlocks = page.locator(inlineToggleSelector);
 
+    await expect(inlineToggleBlocks).toHaveCount(1);
+
+    const blockContent = page.locator(`${inlineToggleSelector} [contenteditable="true"]`);
+
+    await expect(blockContent).toBeVisible();
     await blockContent.click();
     await blockContent.type('inline toolbar disabled');
     await blockContent.selectText();

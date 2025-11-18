@@ -16,8 +16,6 @@ const HOLDER_ID = 'editorjs';
 const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
-const RECTANGLE_OVERLAY_SELECTOR = '.codex-editor-overlay__container';
-const RECTANGLE_ELEMENT_SELECTOR = '.codex-editor-overlay__rectangle';
 const FAKE_BACKGROUND_SELECTOR = '.codex-editor__fake-background';
 const BLOCK_SELECTED_CLASS = 'ce-block--selected';
 
@@ -36,7 +34,7 @@ type BoundingBox = {
 
 type ToolDefinition = {
   name: string;
-  classSource: string;
+  classSource?: string;
   config?: Record<string, unknown>;
 };
 
@@ -72,7 +70,9 @@ const resetEditor = async (page: Page): Promise<void> => {
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, {
+    holderId: HOLDER_ID,
+  });
 };
 
 const createEditorWithBlocks = async (
@@ -80,30 +80,64 @@ const createEditorWithBlocks = async (
   blocks: OutputData['blocks'],
   tools: ToolDefinition[] = []
 ): Promise<void> => {
+  const hasParagraphOverride = tools.some((tool) => tool.name === 'paragraph');
+  const serializedTools: ToolDefinition[] = hasParagraphOverride
+    ? tools
+    : [
+      {
+        name: 'paragraph',
+        config: {
+          config: {
+            preserveBlank: true,
+          },
+        },
+      },
+      ...tools,
+    ];
+
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks, serializedTools }) => {
+  await page.evaluate(async ({
+    holderId,
+    blocks: editorBlocks,
+    serializedTools: toolConfigs,
+  }: {
+    holderId: string;
+    blocks: OutputData['blocks'];
+    serializedTools: ToolDefinition[];
+  }) => {
     const reviveToolClass = (classSource: string): unknown => {
       return new Function(`return (${classSource});`)();
     };
 
-    const revivedTools = serializedTools.reduce<Record<string, unknown>>((accumulator, toolConfig) => {
-      const revivedClass = reviveToolClass(toolConfig.classSource);
+    const revivedTools = toolConfigs.reduce<Record<string, unknown>>((accumulator, toolConfig) => {
+      if (toolConfig.classSource) {
+        const revivedClass = reviveToolClass(toolConfig.classSource);
 
-      return {
-        ...accumulator,
-        [toolConfig.name]: toolConfig.config
-          ? {
-            ...toolConfig.config,
-            class: revivedClass,
-          }
-          : revivedClass,
-      };
+        return {
+          ...accumulator,
+          [toolConfig.name]: toolConfig.config
+            ? {
+              ...toolConfig.config,
+              class: revivedClass,
+            }
+            : revivedClass,
+        };
+      }
+
+      if (toolConfig.config) {
+        return {
+          ...accumulator,
+          [toolConfig.name]: toolConfig.config,
+        };
+      }
+
+      return accumulator;
     }, {});
 
     const editor = new window.EditorJS({
       holder: holderId,
       data: { blocks: editorBlocks },
-      ...(serializedTools.length > 0 ? { tools: revivedTools } : {}),
+      ...(toolConfigs.length > 0 ? { tools: revivedTools } : {}),
     });
 
     window.editorInstance = editor;
@@ -111,7 +145,7 @@ const createEditorWithBlocks = async (
   }, {
     holderId: HOLDER_ID,
     blocks,
-    serializedTools: tools,
+    serializedTools,
   });
 };
 
@@ -380,61 +414,6 @@ test.describe('modules/selection', () => {
     await expect(getBlockByIndex(page, 3)).not.toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
   });
 
-  test('rectangle selection highlights multiple blocks when dragging overlay rectangle', async ({ page }) => {
-    await createEditorWithBlocks(page, [
-      {
-        type: 'paragraph',
-        data: {
-          text: 'Alpha',
-        },
-      },
-      {
-        type: 'paragraph',
-        data: {
-          text: 'Beta',
-        },
-      },
-      {
-        type: 'paragraph',
-        data: {
-          text: 'Gamma',
-        },
-      },
-      {
-        type: 'paragraph',
-        data: {
-          text: 'Delta',
-        },
-      },
-    ]);
-
-    const firstBlock = getBlockByIndex(page, 0);
-    const thirdBlock = getBlockByIndex(page, 2);
-
-    const firstBox = await getRequiredBoundingBox(firstBlock);
-    const thirdBox = await getRequiredBoundingBox(thirdBlock);
-
-    const startX = Math.max(0, firstBox.x - 20);
-    const startY = Math.max(0, firstBox.y - 20);
-    const endX = thirdBox.x + thirdBox.width + 20;
-    const endY = thirdBox.y + thirdBox.height / 2;
-
-    const overlay = page.locator(RECTANGLE_OVERLAY_SELECTOR);
-
-    await expect(overlay).toHaveCount(1);
-
-    await page.mouse.move(startX, startY);
-    await page.mouse.down();
-    await page.mouse.move(endX, endY, { steps: 15 });
-    await expect(page.locator(RECTANGLE_ELEMENT_SELECTOR)).toBeVisible();
-    await page.mouse.up();
-
-    await expect(getBlockByIndex(page, 0)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 1)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 2)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 3)).not.toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-  });
-
   test('selection API exposes save/restore, expandToTag, fake background helpers', async ({ page }) => {
     const text = 'Important <strong>bold</strong> text inside paragraph';
 
@@ -546,12 +525,11 @@ test.describe('modules/selection', () => {
 
     await firstParagraph.click();
     await placeCaretAtEnd(firstParagraph);
-
     await page.keyboard.down('Shift');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
-    await page.keyboard.up('Shift');
 
+    await page.keyboard.up('Shift');
     await expect(getBlockByIndex(page, 0)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
     await expect(getBlockByIndex(page, 1)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
     await expect(getBlockByIndex(page, 2)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));

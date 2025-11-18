@@ -147,11 +147,6 @@ const createKeyboardEvent = (options: Partial<KeyboardEvent>): KeyboardEvent => 
   } as KeyboardEvent;
 };
 
-const createDragEvent = (options: Partial<DragEvent>): DragEvent => {
-  return {
-    ...options,
-  } as DragEvent;
-};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -190,39 +185,6 @@ describe('BlockEvents', () => {
     });
   });
 
-  describe('drag events', () => {
-    it('sets dropTarget to true on dragOver', () => {
-      const block = { dropTarget: false } as unknown as Block;
-      const getBlockByChildNode = vi.fn().mockReturnValue(block);
-      const blockEvents = createBlockEvents({
-        BlockManager: {
-          getBlockByChildNode,
-        } as unknown as EditorModules['BlockManager'],
-      });
-      const target = document.createElement('div');
-
-      blockEvents.dragOver(createDragEvent({ target }));
-
-      expect(getBlockByChildNode).toHaveBeenCalledWith(target);
-      expect(block.dropTarget).toBe(true);
-    });
-
-    it('sets dropTarget to false on dragLeave', () => {
-      const block = { dropTarget: true } as unknown as Block;
-      const getBlockByChildNode = vi.fn().mockReturnValue(block);
-      const blockEvents = createBlockEvents({
-        BlockManager: {
-          getBlockByChildNode,
-        } as unknown as EditorModules['BlockManager'],
-      });
-      const target = document.createElement('div');
-
-      blockEvents.dragLeave(createDragEvent({ target }));
-
-      expect(getBlockByChildNode).toHaveBeenCalledWith(target);
-      expect(block.dropTarget).toBe(false);
-    });
-  });
 
   describe('handleCommandC', () => {
     it('copies selected blocks when any block is selected', () => {

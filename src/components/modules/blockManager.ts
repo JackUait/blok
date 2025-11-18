@@ -289,11 +289,11 @@ export default class BlockManager extends Module {
   public insert({
     id = undefined,
     tool,
-    data = {},
+    data,
     index,
     needToFocus = true,
     replace = false,
-    tunes = {},
+    tunes,
   }: {
     id?: string;
     tool?: string;
@@ -310,12 +310,28 @@ export default class BlockManager extends Module {
       throw new Error('Could not insert Block. Tool name is not specified.');
     }
 
-    const block = this.composeBlock({
-      id,
+    const composeOptions: {
+      tool: string;
+      id?: string;
+      data?: BlockToolData;
+      tunes?: {[name: string]: BlockTuneData};
+    } = {
       tool: toolName,
-      data,
-      tunes,
-    });
+    };
+
+    if (id !== undefined) {
+      composeOptions.id = id;
+    }
+
+    if (data !== undefined) {
+      composeOptions.data = data;
+    }
+
+    if (tunes !== undefined) {
+      composeOptions.tunes = tunes;
+    }
+
+    const block = this.composeBlock(composeOptions);
 
     /**
      * In case of block replacing (Converting OR from Toolbox or Shortcut on empty block OR on-paste to empty block)
@@ -482,26 +498,11 @@ export default class BlockManager extends Module {
       throw new Error('Could not insert default Block. Default block tool is not defined in the configuration.');
     }
 
-    const block = this.composeBlock({ tool: defaultTool });
-
-    this.blocksStore[index] = block;
-
-    /**
-     * Force call of didMutated event on Block insertion
-     */
-    this.blockDidMutated(BlockAddedMutationType, block, {
+    return this.insert({
+      tool: defaultTool,
       index,
+      needToFocus,
     });
-
-    if (needToFocus) {
-      this.currentBlockIndex = index;
-    }
-
-    if (!needToFocus && index <= this.currentBlockIndex) {
-      this.currentBlockIndex++;
-    }
-
-    return block;
   }
 
   /**
@@ -1027,17 +1028,6 @@ export default class BlockManager extends Module {
       }
     });
 
-    this.readOnlyMutableListeners.on(block.holder, 'dragover', (event: Event) => {
-      if (event instanceof DragEvent) {
-        BlockEvents.dragOver(event);
-      }
-    });
-
-    this.readOnlyMutableListeners.on(block.holder, 'dragleave', (event: Event) => {
-      if (event instanceof DragEvent) {
-        BlockEvents.dragLeave(event);
-      }
-    });
 
     block.on('didMutated', (affectedBlock: Block) => {
       return this.blockDidMutated(BlockChangedMutationType, affectedBlock, {

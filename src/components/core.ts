@@ -129,6 +129,37 @@ export default class Core {
     _.deprecationAssert(Boolean(this.config.initialBlock), 'config.initialBlock', 'config.defaultBlock');
     this.config.defaultBlock = this.config.defaultBlock ?? this.config.initialBlock ?? 'paragraph';
 
+    const toolsConfig = this.config.tools;
+    const defaultBlockName = this.config.defaultBlock;
+    const hasDefaultBlockTool = toolsConfig != null &&
+      Object.prototype.hasOwnProperty.call(toolsConfig, defaultBlockName ?? '');
+    const initialBlocks = this.config.data?.blocks;
+    const hasInitialBlocks = Array.isArray(initialBlocks) && initialBlocks.length > 0;
+
+    if (
+      defaultBlockName &&
+      defaultBlockName !== 'paragraph' &&
+      !hasDefaultBlockTool &&
+      !hasInitialBlocks
+    ) {
+      _.log(
+        `Default block "${defaultBlockName}" is not configured. Falling back to "paragraph" tool.`,
+        'warn'
+      );
+
+      this.config.defaultBlock = 'paragraph';
+
+      const existingTools = this.config.tools as Record<string, unknown> | undefined;
+      const updatedTools: Record<string, unknown> = {
+        ...(existingTools ?? {}),
+      };
+      const paragraphEntry = updatedTools.paragraph;
+
+      updatedTools.paragraph = this.createParagraphToolConfig(paragraphEntry);
+
+      this.config.tools = updatedTools as EditorConfig['tools'];
+    }
+
     /**
      * Height of Editor's bottom area that allows to set focus on the last Block
      *
@@ -323,6 +354,50 @@ export default class Core {
         this.moduleInstances[name as keyof EditorModules].state = this.getModulesDiff(name);
       }
     }
+  }
+
+  /**
+   * Creates paragraph tool configuration with preserveBlank setting
+   *
+   * @param {unknown} paragraphEntry - existing paragraph entry from tools config
+   * @returns {Record<string, unknown>} paragraph tool configuration
+   */
+  private createParagraphToolConfig(paragraphEntry: unknown): Record<string, unknown> {
+    if (paragraphEntry === undefined) {
+      return {
+        config: {
+          preserveBlank: true,
+        },
+      };
+    }
+
+    if (_.isFunction(paragraphEntry)) {
+      return {
+        class: paragraphEntry,
+        config: {
+          preserveBlank: true,
+        },
+      };
+    }
+
+    if (_.isObject(paragraphEntry)) {
+      const paragraphSettings = paragraphEntry as Record<string, unknown>;
+      const existingConfig = paragraphSettings.config;
+
+      return {
+        ...paragraphSettings,
+        config: {
+          ...(_.isObject(existingConfig) ? existingConfig as Record<string, unknown> : {}),
+          preserveBlank: true,
+        },
+      };
+    }
+
+    return {
+      config: {
+        preserveBlank: true,
+      },
+    };
   }
 
   /**

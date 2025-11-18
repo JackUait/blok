@@ -309,9 +309,31 @@ const wrapFunctionRule = (rule: SanitizerFunctionRule): SanitizerFunctionRule =>
   };
 };
 
+const SAFE_ATTRIBUTES = new Set(['class', 'id', 'title', 'role', 'dir', 'lang']);
+
+const isSafeAttribute = (attribute: string): boolean => {
+  const lowerName = attribute.toLowerCase();
+
+  return lowerName.startsWith('data-') || lowerName.startsWith('aria-') || SAFE_ATTRIBUTES.has(lowerName);
+};
+
+const preserveExistingAttributesRule: SanitizerFunctionRule = (element) => {
+  const preserved: TagConfig = {};
+
+  Array.from(element.attributes).forEach((attribute) => {
+    if (!isSafeAttribute(attribute.name)) {
+      return;
+    }
+
+    preserved[attribute.name] = true;
+  });
+
+  return preserved;
+};
+
 const cloneTagConfig = (rule: SanitizerRule): SanitizerRule => {
   if (rule === true) {
-    return {};
+    return wrapFunctionRule(preserveExistingAttributesRule);
   }
 
   if (rule === false) {
@@ -441,6 +463,20 @@ export const composeSanitizerConfig = (
 
       if (_.isFunction(sourceValue)) {
         base[tag] = sourceValue;
+
+        continue;
+      }
+
+      if (sourceValue === true && _.isFunction(targetValue)) {
+        continue;
+      }
+
+      if (sourceValue === true) {
+        const targetIsPlainObject = _.isObject(targetValue) && !_.isFunction(targetValue);
+
+        base[tag] = targetIsPlainObject
+          ? _.deepMerge({}, targetValue as SanitizerConfig)
+          : cloneTagConfig(sourceValue as SanitizerRule);
 
         continue;
       }

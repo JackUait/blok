@@ -5,21 +5,39 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { INLINE_TOOLBAR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
+import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = '[data-block-tool="paragraph"]';
+const PARAGRAPH_CONTENT_SELECTOR = '[data-block-tool="paragraph"] .ce-paragraph';
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-item-name="link"] button`;
 const LINK_INPUT_SELECTOR = `input[data-link-tool-input-opened]`;
 const NOTIFIER_SELECTOR = '.cdx-notifies';
 
 const getParagraphByText = (page: Page, text: string): Locator => {
-  return page.locator(PARAGRAPH_SELECTOR, { hasText: text });
+  return page.locator(PARAGRAPH_CONTENT_SELECTOR, { hasText: text });
+};
+
+const ensureLinkInputOpen = async (page: Page): Promise<Locator> => {
+  await expect(page.locator(INLINE_TOOLBAR_SELECTOR)).toBeVisible();
+
+  const linkInput = page.locator(LINK_INPUT_SELECTOR);
+
+  if (await linkInput.isVisible()) {
+    return linkInput;
+  }
+
+  const linkButton = page.locator(LINK_BUTTON_SELECTOR);
+
+  await expect(linkButton).toBeVisible();
+  await linkButton.click();
+  await expect(linkInput).toBeVisible();
+
+  return linkInput;
 };
 
 const selectAll = async (locator: Locator): Promise<void> => {
@@ -110,36 +128,74 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
  * @param text - The text string to select within the element
  */
 const selectText = async (locator: Locator, text: string): Promise<void> => {
-  // Get the full text content to find the position
-  const fullText = await locator.textContent();
+  await locator.evaluate((element, targetText) => {
+    const root = element as HTMLElement;
+    const doc = root.ownerDocument;
 
-  if (!fullText || !fullText.includes(text)) {
-    throw new Error(`Text "${text}" was not found in element`);
-  }
+    if (!doc) {
+      throw new Error('Unable to access ownerDocument for selection');
+    }
 
-  const startIndex = fullText.indexOf(text);
-  const endIndex = startIndex + text.length;
+    const fullText = root.textContent ?? '';
 
-  // Click on the element to focus it
-  await locator.click();
+    if (!fullText.includes(targetText)) {
+      throw new Error(`Text "${targetText}" was not found in element`);
+    }
 
-  // Get the page from the locator to use keyboard API
-  const page = locator.page();
+    const selection = doc.getSelection();
 
-  // Move cursor to the start of the element
-  await page.keyboard.press('Home');
+    if (!selection) {
+      throw new Error('Selection is not available');
+    }
 
-  // Navigate to the start position of the target text
-  for (let i = 0; i < startIndex; i++) {
-    await page.keyboard.press('ArrowRight');
-  }
+    const startIndex = fullText.indexOf(targetText);
+    const endIndex = startIndex + targetText.length;
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 
-  // Select the target text by holding Shift and moving right
-  await page.keyboard.down('Shift');
-  for (let i = startIndex; i < endIndex; i++) {
-    await page.keyboard.press('ArrowRight');
-  }
-  await page.keyboard.up('Shift');
+    let accumulatedLength = 0;
+    let startNode: Node | null = null;
+    let startOffset = 0;
+    let endNode: Node | null = null;
+    let endOffset = 0;
+
+    while (walker.nextNode()) {
+      const currentNode = walker.currentNode;
+      const nodeText = currentNode.textContent ?? '';
+      const nodeStart = accumulatedLength;
+      const nodeEnd = nodeStart + nodeText.length;
+
+      if (!startNode && startIndex >= nodeStart && startIndex < nodeEnd) {
+        startNode = currentNode;
+        startOffset = startIndex - nodeStart;
+      }
+
+      if (!endNode && endIndex <= nodeEnd) {
+        endNode = currentNode;
+        endOffset = endIndex - nodeStart;
+        break;
+      }
+
+      accumulatedLength = nodeEnd;
+    }
+
+    if (!startNode || !endNode) {
+      throw new Error('Failed to locate text nodes for selection');
+    }
+
+    const range = doc.createRange();
+
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    if (root instanceof HTMLElement) {
+      root.focus();
+    }
+
+    doc.dispatchEvent(new Event('selectionchange'));
+  }, text);
 };
 
 /**
@@ -179,8 +235,7 @@ test.describe('inline tool link', () => {
     const paragraph = getParagraphByText(page, 'First block text');
 
     await selectText(paragraph, 'First block text');
-    await page.keyboard.press(`${MODIFIER_KEY}+k`);
-
+    await ensureLinkInputOpen(page);
     await submitLink(page, 'https://codex.so');
 
     await expect(paragraph.locator('a')).toHaveAttribute('href', 'https://codex.so');
@@ -200,11 +255,7 @@ test.describe('inline tool link', () => {
 
     await selectText(paragraph, 'Link me');
 
-    const linkButton = page.locator(LINK_BUTTON_SELECTOR);
-
-    await expect(linkButton).toBeVisible();
-    await linkButton.click();
-
+    await ensureLinkInputOpen(page);
     await submitLink(page, 'example.com');
 
     const anchor = paragraph.locator('a');
@@ -226,9 +277,7 @@ test.describe('inline tool link', () => {
     const paragraph = getParagraphByText(page, 'Invalid URL test');
 
     await selectText(paragraph, 'Invalid URL test');
-    await page.keyboard.press(`${MODIFIER_KEY}+k`);
-
-    const linkInput = page.locator(LINK_INPUT_SELECTOR);
+    const linkInput = await ensureLinkInputOpen(page);
 
     await linkInput.fill('https://example .com');
     await linkInput.press('Enter');
@@ -257,13 +306,8 @@ test.describe('inline tool link', () => {
     const paragraph = getParagraphByText(page, 'First block text');
 
     await selectAll(paragraph);
-    // Use keyboard shortcut to trigger the link tool (this will open the toolbar and input)
-    await page.keyboard.press(`${MODIFIER_KEY}+k`);
+    const linkInput = await ensureLinkInputOpen(page);
 
-    const linkInput = page.locator(LINK_INPUT_SELECTOR);
-
-    // Wait for the input to appear (it should open automatically when a link is detected)
-    await expect(linkInput).toBeVisible();
     await expect(linkInput).toHaveValue('https://codex.so');
 
     // Verify button state - find button by data attributes directly
@@ -289,8 +333,7 @@ test.describe('inline tool link', () => {
     const paragraph = getParagraphByText(page, 'Link to remove');
 
     await selectAll(paragraph);
-    // Use keyboard shortcut to trigger the link tool
-    await page.keyboard.press(`${MODIFIER_KEY}+k`);
+    await ensureLinkInputOpen(page);
 
     // Find the unlink button by its data attributes
     const linkButton = page.locator('button[data-link-tool-unlink="true"]');
@@ -314,7 +357,7 @@ test.describe('inline tool link', () => {
     const paragraph = getParagraphByText(page, 'Persist me');
 
     await selectText(paragraph, 'Persist me');
-    await page.keyboard.press(`${MODIFIER_KEY}+k`);
+    await ensureLinkInputOpen(page);
     await submitLink(page, 'https://codex.so');
 
     const savedData = await page.evaluate<OutputData | undefined>(async () => {
@@ -342,7 +385,7 @@ test.describe('inline tool link', () => {
 
     // Create a link
     await selectText(paragraph, 'Clickable link');
-    await page.keyboard.press(`${MODIFIER_KEY}+k`);
+    await ensureLinkInputOpen(page);
     await submitLink(page, 'https://example.com');
 
     // Verify link was created

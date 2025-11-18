@@ -229,7 +229,7 @@ export default class Paste extends Module {
   /**
    * Determines whether provided DataTransfer contains file-like entries
    *
-   * @param dataTransfer - drag/drop payload to inspect
+   * @param dataTransfer - data transfer payload to inspect
    */
   private containsFiles(dataTransfer: DataTransfer): boolean {
     const types = Array.from(dataTransfer.types);
@@ -242,7 +242,7 @@ export default class Paste extends Module {
     }
 
     /**
-     * Drag/drop uploads sometimes omit `types` and set files directly
+     * File uploads sometimes omit `types` and set files directly
      */
     if (dataTransfer.files?.length) {
       return true;
@@ -262,12 +262,11 @@ export default class Paste extends Module {
   }
 
   /**
-   * Handle pasted or dropped data transfer object
+   * Handle pasted data transfer object
    *
-   * @param {DataTransfer} dataTransfer - pasted or dropped data transfer object
-   * @param {boolean} isDragNDrop - true if data transfer comes from drag'n'drop events
+   * @param {DataTransfer} dataTransfer - pasted data transfer object
    */
-  public async processDataTransfer(dataTransfer: DataTransfer, isDragNDrop = false): Promise<void> {
+  public async processDataTransfer(dataTransfer: DataTransfer): Promise<void> {
     const { Tools } = this.Editor;
     const includesFiles = this.containsFiles(dataTransfer);
 
@@ -280,23 +279,7 @@ export default class Paste extends Module {
     const editorJSData = dataTransfer.getData(this.MIME_TYPE);
     const plainData = dataTransfer.getData('text/plain');
     const rawHtmlData = dataTransfer.getData('text/html');
-    const htmlData = (() => {
-      const trimmedPlainData = plainData.trim();
-      const trimmedHtmlData = rawHtmlData.trim();
-
-      if (isDragNDrop && trimmedPlainData.length > 0 && trimmedHtmlData.length > 0) {
-        const contentToWrap = trimmedHtmlData.length > 0 ? rawHtmlData : plainData;
-
-        return `<p>${contentToWrap}</p>`;
-      }
-
-      return rawHtmlData;
-    })();
-
-    const shouldWrapDraggedText = isDragNDrop && plainData.trim() && htmlData.trim();
-    const normalizedHtmlData = shouldWrapDraggedText
-      ? `<p>${htmlData.trim() ? htmlData : plainData}</p>`
-      : htmlData;
+    const normalizedHtmlData = rawHtmlData;
 
     /**
      * If EditorJS json is passed, insert it
@@ -309,9 +292,6 @@ export default class Paste extends Module {
       } catch (e) { } // Do nothing and continue execution as usual if error appears
     }
 
-    /**
-     *  If text was drag'n'dropped, wrap content with P tag to insert it as the new Block
-     */
     /** Add all tags that can be substituted to sanitizer configuration */
     const toolsTags = Object.fromEntries(
       Object.keys(this.toolsTags).map((tag) => [
@@ -328,9 +308,11 @@ export default class Paste extends Module {
       { br: {} }
     );
     const cleanData = clean(normalizedHtmlData, customConfig);
+    const cleanDataIsHtml = $.isHTMLString(cleanData);
+    const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);
 
     /** If there is no HTML or HTML string is equal to plain one, process it as plain text */
-    if (!cleanData.trim() || cleanData.trim() === plainData || !$.isHTMLString(cleanData)) {
+    if (shouldProcessAsPlain) {
       await this.processText(plainData);
     } else {
       await this.processText(cleanData, true);
@@ -536,7 +518,7 @@ export default class Paste extends Module {
         return rawExtensions;
       }
 
-      _.log(`«extensions» property of the onDrop config for «${tool.name}» Tool should be an array`);
+      _.log(`«extensions» property of the paste config for «${tool.name}» Tool should be an array`);
 
       return [];
     })();
@@ -547,7 +529,7 @@ export default class Paste extends Module {
       }
 
       if (!Array.isArray(rawMimeTypes)) {
-        _.log(`«mimeTypes» property of the onDrop config for «${tool.name}» Tool should be an array`);
+        _.log(`«mimeTypes» property of the paste config for «${tool.name}» Tool should be an array`);
 
         return [];
       }
@@ -648,7 +630,7 @@ export default class Paste extends Module {
   /**
    * Get files from data transfer object and insert related Tools
    *
-   * @param {FileList} items - pasted or dropped items
+   * @param {FileList} items - pasted items
    */
   private async processFiles(items: FileList): Promise<void> {
     const { BlockManager } = this.Editor;

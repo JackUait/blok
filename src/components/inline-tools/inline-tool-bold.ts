@@ -1,6 +1,7 @@
 import type { InlineTool, SanitizerConfig } from '../../../types';
 import { IconBold } from '@codexteam/icons';
 import type { MenuConfig } from '../../../types/tools';
+import { EDITOR_INTERFACE_SELECTOR } from '../constants';
 import SelectionUtils from '../selection';
 
 /**
@@ -36,10 +37,59 @@ export default class BoldInlineTool implements InlineTool {
     } as SanitizerConfig;
   }
 
+  /**
+   * Normalize any remaining legacy <b> tags within the editor wrapper
+   */
+  private static normalizeAllBoldTags(): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const editorWrapperClass = SelectionUtils.CSS.editorWrapper;
+    const selector = `${EDITOR_INTERFACE_SELECTOR} b, .${editorWrapperClass} b`;
+
+    document.querySelectorAll(selector).forEach((boldNode) => {
+      BoldInlineTool.ensureStrongElement(boldNode as HTMLElement);
+    });
+  }
+
+  /**
+   * Normalize bold tags within a mutated node if it belongs to the editor
+   *
+   * @param node - The node affected by mutation
+   */
+  private static normalizeBoldInNode(node: Node): void {
+    const element = node.nodeType === Node.ELEMENT_NODE
+      ? node as Element
+      : node.parentElement;
+
+    if (!element || typeof element.closest !== 'function') {
+      return;
+    }
+
+    const editorWrapperClass = SelectionUtils.CSS.editorWrapper;
+    const editorRoot = element.closest(`${EDITOR_INTERFACE_SELECTOR}, .${editorWrapperClass}`);
+
+    if (!editorRoot) {
+      return;
+    }
+
+    if (element.tagName === 'B') {
+      BoldInlineTool.ensureStrongElement(element as HTMLElement);
+    }
+
+    element.querySelectorAll?.('b').forEach((boldNode) => {
+      BoldInlineTool.ensureStrongElement(boldNode as HTMLElement);
+    });
+  }
+
   private static shortcutListenerRegistered = false;
   private static selectionListenerRegistered = false;
   private static inputListenerRegistered = false;
+  private static beforeInputListenerRegistered = false;
   private static markerSequence = 0;
+  private static mutationObserver?: MutationObserver;
+  private static isProcessingMutation = false;
   private static readonly DATA_ATTR_COLLAPSED_LENGTH = 'data-bold-collapsed-length';
   private static readonly DATA_ATTR_COLLAPSED_ACTIVE = 'data-bold-collapsed-active';
   private static readonly DATA_ATTR_PREV_LENGTH = 'data-bold-prev-length';
@@ -69,6 +119,13 @@ export default class BoldInlineTool implements InlineTool {
       document.addEventListener('input', BoldInlineTool.handleGlobalInput, true);
       BoldInlineTool.inputListenerRegistered = true;
     }
+
+    if (!BoldInlineTool.beforeInputListenerRegistered) {
+      document.addEventListener('beforeinput', BoldInlineTool.handleBeforeInput, true);
+      BoldInlineTool.beforeInputListenerRegistered = true;
+    }
+
+    BoldInlineTool.ensureMutationObserver();
   }
 
   /**
@@ -99,7 +156,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     if (node.nodeType === Node.ELEMENT_NODE && BoldInlineTool.isBoldTag(node as Element)) {
-      return node as HTMLElement;
+      return BoldInlineTool.ensureStrongElement(node as HTMLElement);
     }
 
     return BoldInlineTool.findBoldElement(node.parentNode);
@@ -238,6 +295,8 @@ export default class BoldInlineTool implements InlineTool {
       selection.removeAllRanges();
       selection.addRange(insertedRange);
     }
+
+    BoldInlineTool.normalizeAllBoldTags();
 
     const boldElement = selection ? BoldInlineTool.findBoldElement(selection.focusNode) : null;
 
@@ -570,6 +629,8 @@ export default class BoldInlineTool implements InlineTool {
       ? BoldInlineTool.exitCollapsedBold(selection, boldElement)
       : this.startCollapsedBold(range);
 
+    document.dispatchEvent(new Event('selectionchange'));
+
     if (updatedRange) {
       selection.removeAllRanges();
       selection.addRange(updatedRange);
@@ -618,12 +679,33 @@ export default class BoldInlineTool implements InlineTool {
       return;
     }
 
+    const selection = window.getSelection();
     const newRange = document.createRange();
 
     newRange.setStart(textNode, 0);
     newRange.collapse(true);
 
-    return newRange;
+    const merged = this.mergeAdjacentBold(strong);
+
+    BoldInlineTool.normalizeBoldTagsWithinEditor(selection);
+    BoldInlineTool.replaceNbspInBlock(selection);
+    BoldInlineTool.removeEmptyBoldElements(selection);
+
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
+
+    this.notifySelectionChange();
+
+    return merged.firstChild instanceof Text ? (() => {
+      const caretRange = document.createRange();
+
+      caretRange.setStart(merged.firstChild, merged.firstChild.textContent?.length ?? 0);
+      caretRange.collapse(true);
+
+      return caretRange;
+    })() : newRange;
   }
 
   /**
@@ -888,6 +970,10 @@ export default class BoldInlineTool implements InlineTool {
     while (walker.nextNode()) {
       BoldInlineTool.replaceNbspWithSpace(walker.currentNode);
     }
+
+    block.querySelectorAll('b').forEach((boldNode) => {
+      BoldInlineTool.ensureStrongElement(boldNode as HTMLElement);
+    });
   }
 
   /**
@@ -912,6 +998,13 @@ export default class BoldInlineTool implements InlineTool {
     const focusNode = selection?.focusNode ?? null;
 
     block.querySelectorAll('strong').forEach((strong) => {
+      const isCollapsedPlaceholder = strong.getAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE) === 'true';
+      const hasTrackedLength = strong.hasAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH);
+
+      if (isCollapsedPlaceholder || hasTrackedLength) {
+        return;
+      }
+
       if ((strong.textContent ?? '').length === 0 && !BoldInlineTool.isNodeWithin(focusNode, strong)) {
         strong.remove();
       }
@@ -964,18 +1057,24 @@ export default class BoldInlineTool implements InlineTool {
         ? boldElement.firstChild as Text
         : boldElement.appendChild(document.createTextNode('')) as Text;
 
-      boldTextNode.textContent = (boldTextNode.textContent ?? '') + extra;
-
-      if (selection?.isCollapsed && BoldInlineTool.isNodeWithin(selection.focusNode, prevTextNode)) {
-        const newRange = document.createRange();
-        const caretOffset = boldTextNode.textContent?.length ?? 0;
-
-        newRange.setStart(boldTextNode, caretOffset);
-        newRange.collapse(true);
-
-        selection.removeAllRanges();
-        selection.addRange(newRange);
+      if (extra.length === 0) {
+        return;
       }
+
+      boldTextNode.textContent = extra + (boldTextNode.textContent ?? '');
+
+      if (!selection?.isCollapsed || !BoldInlineTool.isNodeWithin(selection.focusNode, prevTextNode)) {
+        return;
+      }
+
+      const newRange = document.createRange();
+      const caretOffset = boldTextNode.textContent?.length ?? 0;
+
+      newRange.setStart(boldTextNode, caretOffset);
+      newRange.collapse(true);
+
+      selection.removeAllRanges();
+      selection.addRange(newRange);
     });
   }
 
@@ -992,6 +1091,12 @@ export default class BoldInlineTool implements InlineTool {
     const range = selection.getRangeAt(0);
 
     if (!range.collapsed) {
+      return;
+    }
+
+    const activePlaceholder = BoldInlineTool.findBoldElement(range.startContainer);
+
+    if (activePlaceholder?.getAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE) === 'true') {
       return;
     }
 
@@ -1393,16 +1498,103 @@ export default class BoldInlineTool implements InlineTool {
    *
    */
   private static handleGlobalSelectionChange(): void {
-    BoldInlineTool.enforceCollapsedBoldLengths(window.getSelection());
-    BoldInlineTool.synchronizeCollapsedBold(window.getSelection());
+    BoldInlineTool.refreshSelectionState('selectionchange');
   }
 
   /**
    *
    */
   private static handleGlobalInput(): void {
-    BoldInlineTool.enforceCollapsedBoldLengths(window.getSelection());
-    BoldInlineTool.synchronizeCollapsedBold(window.getSelection());
+    BoldInlineTool.refreshSelectionState('input');
+  }
+
+  /**
+   * Normalize selection state after editor input or selection updates
+   *
+   * @param source - The event source triggering the refresh
+   */
+  private static refreshSelectionState(source: 'selectionchange' | 'input'): void {
+    const selection = window.getSelection();
+
+    BoldInlineTool.enforceCollapsedBoldLengths(selection);
+    BoldInlineTool.synchronizeCollapsedBold(selection);
+    BoldInlineTool.normalizeBoldTagsWithinEditor(selection);
+    BoldInlineTool.replaceNbspInBlock(selection);
+    BoldInlineTool.removeEmptyBoldElements(selection);
+
+    if (source === 'input' && selection) {
+      BoldInlineTool.moveCaretAfterBoundaryBold(selection);
+    }
+
+    BoldInlineTool.normalizeAllBoldTags();
+  }
+
+  /**
+   * Ensure mutation observer is registered to convert legacy <b> tags
+   */
+  private static ensureMutationObserver(): void {
+    if (typeof MutationObserver === 'undefined') {
+      return;
+    }
+
+    if (BoldInlineTool.mutationObserver) {
+      return;
+    }
+
+    const observer = new MutationObserver((mutations) => {
+      if (BoldInlineTool.isProcessingMutation) {
+        return;
+      }
+
+      BoldInlineTool.isProcessingMutation = true;
+
+      try {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            BoldInlineTool.normalizeBoldInNode(node);
+          });
+
+          if (mutation.type === 'characterData' && mutation.target) {
+            BoldInlineTool.normalizeBoldInNode(mutation.target);
+          }
+        });
+      } finally {
+        BoldInlineTool.isProcessingMutation = false;
+      }
+    });
+
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+
+    BoldInlineTool.mutationObserver = observer;
+  }
+
+  /**
+   * Prevent the browser's native bold command to avoid <b> wrappers
+   *
+   * @param event - BeforeInput event fired by the browser
+   */
+  private static handleBeforeInput(event: InputEvent): void {
+    if (event.inputType !== 'formatBold') {
+      return;
+    }
+
+    const selection = window.getSelection();
+    const isSelectionInside = Boolean(selection && BoldInlineTool.isSelectionInsideEditor(selection));
+    const isTargetInside = BoldInlineTool.isEventTargetInsideEditor(event.target);
+
+    if (!isSelectionInside && !isTargetInside) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    BoldInlineTool.normalizeAllBoldTags();
   }
 
   /**
@@ -1601,6 +1793,45 @@ export default class BoldInlineTool implements InlineTool {
     const element = anchor.nodeType === Node.ELEMENT_NODE ? anchor as Element : anchor.parentElement;
 
     return Boolean(element?.closest(`.${SelectionUtils.CSS.editorWrapper}`));
+  }
+
+  /**
+   * Check if an event target resides inside the editor wrapper
+   *
+   * @param target - Event target to inspect
+   */
+  private static isEventTargetInsideEditor(target: EventTarget | null): boolean {
+    if (!target || typeof Node === 'undefined') {
+      return false;
+    }
+
+    if (target instanceof Element) {
+      return Boolean(target.closest(`.${SelectionUtils.CSS.editorWrapper}`));
+    }
+
+    if (target instanceof Text) {
+      return Boolean(target.parentElement?.closest(`.${SelectionUtils.CSS.editorWrapper}`));
+    }
+
+    if (typeof ShadowRoot !== 'undefined' && target instanceof ShadowRoot) {
+      return BoldInlineTool.isEventTargetInsideEditor(target.host);
+    }
+
+    if (!(target instanceof Node)) {
+      return false;
+    }
+
+    const parentNode = target.parentNode;
+
+    if (!parentNode) {
+      return false;
+    }
+
+    if (parentNode instanceof Element) {
+      return Boolean(parentNode.closest(`.${SelectionUtils.CSS.editorWrapper}`));
+    }
+
+    return BoldInlineTool.isEventTargetInsideEditor(parentNode);
   }
 
   /**

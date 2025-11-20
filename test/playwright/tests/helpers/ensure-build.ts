@@ -10,7 +10,7 @@ let didBuild = false;
  * Without rebuilding we might exercise stale code that doesn't match the current TypeScript sources.
  */
 export const ensureEditorBundleBuilt = (): void => {
-  if (didBuild) {
+  if (didBuild || process.env.EDITOR_JS_BUILT === 'true') {
     return;
   }
 

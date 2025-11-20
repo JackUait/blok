@@ -412,6 +412,7 @@ export default class BlockEvents extends Module {
     if (!currentBlock.currentInput || !caretUtils.isCaretAtStartOfInput(currentBlock.currentInput)) {
       return;
     }
+
     /**
      * All the cases below have custom behaviour, so we don't need a native one
      */
@@ -613,6 +614,12 @@ export default class BlockEvents extends Module {
       this.Editor.Toolbar.close();
     }
 
+    const selection = SelectionUtils.get();
+
+    if (selection?.anchorNode && !this.Editor.BlockSelection.anyBlockSelected) {
+      this.Editor.BlockManager.setCurrentBlockByChildNode(selection.anchorNode);
+    }
+
     const { currentBlock } = this.Editor.BlockManager;
     const eventTarget = event.target as HTMLElement | null;
     const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -640,7 +647,21 @@ export default class BlockEvents extends Module {
       void this.Editor.InlineToolbar.tryToShow();
     }
 
+    const isPlainRightKey = keyCode === _.keyCodes.RIGHT && !event.shiftKey && !this.isRtl;
+
+    const nbpsTarget = isPlainRightKey && caretInput instanceof HTMLElement
+      ? caretUtils.findNbspAfterEmptyInline(caretInput)
+      : null;
+
+    if (nbpsTarget !== null) {
+      SelectionUtils.setCursor(nbpsTarget.node as unknown as HTMLElement, nbpsTarget.offset);
+      event.preventDefault();
+
+      return;
+    }
+
     const navigateNext = keyCode === _.keyCodes.DOWN || (keyCode === _.keyCodes.RIGHT && !this.isRtl);
+
     const isNavigated = navigateNext ? this.Editor.Caret.navigateNext() : this.Editor.Caret.navigatePrevious();
 
     if (isNavigated) {
@@ -660,7 +681,7 @@ export default class BlockEvents extends Module {
       if (this.Editor.BlockManager.currentBlock) {
         this.Editor.BlockManager.currentBlock.updateCurrentInput();
       }
-    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
     }, 20)();
 
     /**
@@ -700,6 +721,12 @@ export default class BlockEvents extends Module {
      */
     if (!event.shiftKey) {
       this.Editor.Toolbar.close();
+    }
+
+    const selection = window.getSelection();
+
+    if (selection?.anchorNode && !this.Editor.BlockSelection.anyBlockSelected) {
+      this.Editor.BlockManager.setCurrentBlockByChildNode(selection.anchorNode);
     }
 
     const { currentBlock } = this.Editor.BlockManager;
@@ -749,7 +776,7 @@ export default class BlockEvents extends Module {
       if (this.Editor.BlockManager.currentBlock) {
         this.Editor.BlockManager.currentBlock.updateCurrentInput();
       }
-    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
     }, 20)();
 
     /**

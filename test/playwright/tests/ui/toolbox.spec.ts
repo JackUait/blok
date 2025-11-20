@@ -308,8 +308,9 @@ test.describe('toolbox', () => {
 
       await expect(paragraphBlock).toHaveCount(1);
 
-      await paragraphBlock.click();
-      await paragraphBlock.type('Some text');
+      const paragraphContent = paragraphBlock.locator('[contenteditable]');
+
+      await paragraphContent.fill('Some text');
 
       await runShortcutBehaviour(page, 'convertableTool');
 

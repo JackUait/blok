@@ -87,13 +87,24 @@ export default class BoldInlineTool implements InlineTool {
   private static selectionListenerRegistered = false;
   private static inputListenerRegistered = false;
   private static beforeInputListenerRegistered = false;
+  private static readonly globalListenersInitialized = BoldInlineTool.initializeGlobalListeners();
+  private static readonly collapsedExitRecords = new Set<{
+    boundary: Text;
+    boldElement: HTMLElement;
+    allowedLength: number;
+    hasLeadingSpace: boolean;
+    hasTypedContent: boolean;
+    leadingWhitespace: string;
+  }>();
   private static markerSequence = 0;
   private static mutationObserver?: MutationObserver;
   private static isProcessingMutation = false;
   private static readonly DATA_ATTR_COLLAPSED_LENGTH = 'data-bold-collapsed-length';
   private static readonly DATA_ATTR_COLLAPSED_ACTIVE = 'data-bold-collapsed-active';
   private static readonly DATA_ATTR_PREV_LENGTH = 'data-bold-prev-length';
+  private static readonly DATA_ATTR_LEADING_WHITESPACE = 'data-bold-leading-ws';
   private static readonly instances = new Set<BoldInlineTool>();
+  private static readonly pendingBoundaryCaretAdjustments = new WeakSet<Text>();
 
   /**
    *
@@ -104,6 +115,17 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     BoldInlineTool.instances.add(this);
+
+    BoldInlineTool.initializeGlobalListeners();
+  }
+
+  /**
+   * Ensure global event listeners are registered once per document
+   */
+  private static initializeGlobalListeners(): boolean {
+    if (typeof document === 'undefined') {
+      return false;
+    }
 
     if (!BoldInlineTool.shortcutListenerRegistered) {
       document.addEventListener('keydown', BoldInlineTool.handleShortcut, true);
@@ -126,6 +148,212 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     BoldInlineTool.ensureMutationObserver();
+
+    return true;
+  }
+
+  /**
+   * Ensure that text typed after exiting a collapsed bold selection stays outside of the bold element
+   */
+  private static maintainCollapsedExitState(): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    for (const record of Array.from(BoldInlineTool.collapsedExitRecords)) {
+      const resolved = BoldInlineTool.resolveBoundary(record);
+
+      if (!resolved) {
+        BoldInlineTool.collapsedExitRecords.delete(record);
+
+        continue;
+      }
+
+      record.boundary = resolved.boundary;
+      record.boldElement = resolved.boldElement;
+
+      const boundary = resolved.boundary;
+      const boldElement = resolved.boldElement;
+      const allowedLength = record.allowedLength;
+      const currentText = boldElement.textContent ?? '';
+
+      if (currentText.length > allowedLength) {
+        const preserved = currentText.slice(0, allowedLength);
+        const extra = currentText.slice(allowedLength);
+
+        boldElement.textContent = preserved;
+        boundary.textContent = (boundary.textContent ?? '') + extra;
+      }
+
+      const boundaryContent = boundary.textContent ?? '';
+
+      if (boundaryContent.length > 1 && boundaryContent.startsWith('\u200B')) {
+        boundary.textContent = boundaryContent.slice(1);
+      }
+
+      const selection = window.getSelection();
+
+      BoldInlineTool.ensureCaretAtBoundary(selection, boundary);
+      BoldInlineTool.scheduleBoundaryCaretAdjustment(boundary);
+
+      const boundaryText = boundary.textContent ?? '';
+      const sanitizedBoundary = boundaryText.replace(/\u200B/g, '');
+      const leadingMatch = sanitizedBoundary.match(/^\s+/);
+      const containsTypedContent = /\S/.test(sanitizedBoundary);
+      const selectionStartsWithZws = boundaryText.startsWith('\u200B');
+
+      if (leadingMatch) {
+        record.hasLeadingSpace = true;
+        record.leadingWhitespace = leadingMatch[0];
+      }
+
+      if (containsTypedContent) {
+        record.hasTypedContent = true;
+      }
+
+      const boundaryHasVisibleLeading = /^\s/.test(sanitizedBoundary);
+      const meetsDeletionCriteria = record.hasTypedContent && !selectionStartsWithZws && (boldElement.textContent ?? '').length <= allowedLength;
+      const shouldRestoreLeadingSpace = record.hasLeadingSpace && record.hasTypedContent && !boundaryHasVisibleLeading;
+
+      if (meetsDeletionCriteria && shouldRestoreLeadingSpace) {
+        const trimmedActual = boundaryText.replace(/^[\u200B\s]+/, '');
+        const leadingWhitespace = record.leadingWhitespace || ' ';
+
+        boundary.textContent = `${leadingWhitespace}${trimmedActual}`;
+        BoldInlineTool.ensureCaretAtBoundary(selection, boundary);
+      }
+
+      if (meetsDeletionCriteria) {
+        BoldInlineTool.collapsedExitRecords.delete(record);
+      }
+    }
+  }
+
+  /**
+   * Ensure the caret remains at the end of the boundary text node when exiting bold
+   *
+   * @param selection - Current document selection
+   * @param boundary - Text node following the bold element
+   */
+  private static ensureCaretAtBoundary(selection: Selection | null, boundary: Text): void {
+    if (!selection || !selection.isCollapsed) {
+      return;
+    }
+
+    BoldInlineTool.setCaretToBoundaryEnd(selection, boundary);
+  }
+
+  /**
+   * Ensure the caret remains at the end of the boundary text node after the current microtask queue is flushed
+   *
+   * @param boundary - Boundary text node that should keep the caret at its end
+   */
+  private static scheduleBoundaryCaretAdjustment(boundary: Text): void {
+    if (BoldInlineTool.pendingBoundaryCaretAdjustments.has(boundary)) {
+      return;
+    }
+
+    BoldInlineTool.pendingBoundaryCaretAdjustments.add(boundary);
+
+    setTimeout(() => {
+      BoldInlineTool.pendingBoundaryCaretAdjustments.delete(boundary);
+
+      const ownerDocument = boundary.ownerDocument ?? (typeof document !== 'undefined' ? document : null);
+
+      if (!ownerDocument) {
+        return;
+      }
+
+      const selection = ownerDocument.getSelection();
+
+      if (!selection || !selection.isCollapsed || selection.anchorNode !== boundary) {
+        return;
+      }
+
+      const targetOffset = boundary.textContent?.length ?? 0;
+
+      if (selection.anchorOffset === targetOffset) {
+        return;
+      }
+
+      BoldInlineTool.setCaret(selection, boundary, targetOffset);
+    }, 0);
+  }
+
+  /**
+   * Ensure there is a text node immediately following the provided bold element.
+   * Creates one when necessary.
+   *
+   * @param boldElement - Bold element that precedes the boundary
+   * @returns The text node following the bold element or null if it cannot be created
+   */
+  private static ensureTextNodeAfter(boldElement: HTMLElement): Text | null {
+    const existingNext = boldElement.nextSibling;
+
+    if (existingNext?.nodeType === Node.TEXT_NODE) {
+      return existingNext as Text;
+    }
+
+    const parent = boldElement.parentNode;
+
+    if (!parent) {
+      return null;
+    }
+
+    const documentRef = boldElement.ownerDocument ?? (typeof document !== 'undefined' ? document : null);
+
+    if (!documentRef) {
+      return null;
+    }
+
+    const newNode = documentRef.createTextNode('');
+
+    parent.insertBefore(newNode, existingNext);
+
+    return newNode;
+  }
+
+  /**
+   * Resolve the boundary text node tracked for a collapsed exit record.
+   *
+   * @param record - Collapsed exit tracking record
+   * @returns The aligned boundary text node or null when it cannot be determined
+   */
+  private static resolveBoundary(record: { boundary: Text; boldElement: HTMLElement }): { boundary: Text; boldElement: HTMLElement } | null {
+    if (!record.boldElement.isConnected) {
+      return null;
+    }
+
+    const strong = BoldInlineTool.ensureStrongElement(record.boldElement);
+    const boundary = record.boundary;
+    const isAligned = boundary.isConnected && boundary.previousSibling === strong;
+    const resolvedBoundary = isAligned ? boundary : BoldInlineTool.ensureTextNodeAfter(strong);
+
+    if (!resolvedBoundary) {
+      return null;
+    }
+
+    return {
+      boundary: resolvedBoundary,
+      boldElement: strong,
+    };
+  }
+
+  /**
+   * Move caret to the end of the provided boundary text node
+   *
+   * @param selection - Current selection to update
+   * @param boundary - Boundary text node that hosts the caret
+   */
+  private static setCaretToBoundaryEnd(selection: Selection, boundary: Text): void {
+    const range = document.createRange();
+    const caretOffset = boundary.textContent?.length ?? 0;
+
+    range.setStart(boundary, caretOffset);
+    range.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
 
   /**
@@ -342,7 +570,7 @@ export default class BoldInlineTool implements InlineTool {
     selection.removeAllRanges();
     selection.addRange(markerRange);
 
-    for (;;) {
+    for (; ;) {
       const currentBold = BoldInlineTool.findBoldElement(marker);
 
       if (!currentBold) {
@@ -623,11 +851,19 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const range = selection.getRangeAt(0);
-    const boldElement = BoldInlineTool.findBoldElement(range.startContainer) ?? BoldInlineTool.getBoundaryBold(range);
+    const insideBold = BoldInlineTool.findBoldElement(range.startContainer);
 
-    const updatedRange = boldElement
-      ? BoldInlineTool.exitCollapsedBold(selection, boldElement)
-      : this.startCollapsedBold(range);
+    const updatedRange = (() => {
+      if (insideBold && insideBold.getAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE) !== 'true') {
+        return BoldInlineTool.exitCollapsedBold(selection, insideBold);
+      }
+
+      const boundaryBold = insideBold ?? BoldInlineTool.getBoundaryBold(range);
+
+      return boundaryBold
+        ? BoldInlineTool.exitCollapsedBold(selection, boundaryBold)
+        : this.startCollapsedBold(range);
+    })();
 
     document.dispatchEvent(new Event('selectionchange'));
 
@@ -1053,24 +1289,37 @@ export default class BoldInlineTool implements InlineTool {
 
       prevTextNode.textContent = preserved;
 
-      const boldTextNode = boldElement.firstChild instanceof Text
-        ? boldElement.firstChild as Text
-        : boldElement.appendChild(document.createTextNode('')) as Text;
+      const leadingMatch = extra.match(/^[\u00A0\s]+/);
+
+      if (leadingMatch && !boldElement.hasAttribute(BoldInlineTool.DATA_ATTR_LEADING_WHITESPACE)) {
+        boldElement.setAttribute(BoldInlineTool.DATA_ATTR_LEADING_WHITESPACE, leadingMatch[0]);
+      }
 
       if (extra.length === 0) {
         return;
       }
 
-      boldTextNode.textContent = extra + (boldTextNode.textContent ?? '');
+      const existingContent = boldElement.textContent ?? '';
+      const newContent = existingContent + extra;
+      const storedLeading = boldElement.getAttribute(BoldInlineTool.DATA_ATTR_LEADING_WHITESPACE) ?? '';
+      const shouldPrefixLeading = storedLeading.length > 0 && existingContent.length === 0 && !newContent.startsWith(storedLeading);
+      const adjustedContent = shouldPrefixLeading ? storedLeading + newContent : newContent;
+      const updatedTextNode = document.createTextNode(adjustedContent);
+
+      while (boldElement.firstChild) {
+        boldElement.removeChild(boldElement.firstChild);
+      }
+
+      boldElement.appendChild(updatedTextNode);
 
       if (!selection?.isCollapsed || !BoldInlineTool.isNodeWithin(selection.focusNode, prevTextNode)) {
         return;
       }
 
       const newRange = document.createRange();
-      const caretOffset = boldTextNode.textContent?.length ?? 0;
+      const caretOffset = updatedTextNode.textContent?.length ?? 0;
 
-      newRange.setStart(boldTextNode, caretOffset);
+      newRange.setStart(updatedTextNode, caretOffset);
       newRange.collapse(true);
 
       selection.removeAllRanges();
@@ -1238,7 +1487,9 @@ export default class BoldInlineTool implements InlineTool {
       return false;
     }
 
-    BoldInlineTool.setCaret(selection, textNode, 0);
+    const textOffset = textNode.textContent?.length ?? 0;
+
+    BoldInlineTool.setCaret(selection, textNode, textOffset);
 
     return true;
   }
@@ -1282,6 +1533,20 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const textNode = range.startContainer as Text;
+    const previousSibling = textNode.previousSibling;
+    const textContent = textNode.textContent ?? '';
+    const startsWithWhitespace = /^\s/.test(textContent);
+
+    if (
+      range.startOffset === 0 &&
+      BoldInlineTool.isBoldElement(previousSibling) &&
+      (textContent.length === 0 || startsWithWhitespace)
+    ) {
+      BoldInlineTool.setCaret(selection, textNode, textContent.length);
+
+      return;
+    }
+
     const boldElement = BoldInlineTool.findBoldElement(textNode);
 
     if (!boldElement || range.startOffset !== (textNode.textContent?.length ?? 0)) {
@@ -1297,6 +1562,54 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     BoldInlineTool.setCaretAfterNode(selection, boldElement);
+  }
+
+  /**
+   * Ensure caret is positioned at the end of a collapsed boundary text node before the browser processes a printable keydown
+   *
+   * @param event - Keydown event fired before browser input handling
+   */
+  private static guardCollapsedBoundaryKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+
+    const key = event.key;
+
+    if (key.length !== 1) {
+      return;
+    }
+
+    const selection = window.getSelection();
+
+    if (!selection || !selection.isCollapsed || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    if (range.startContainer.nodeType !== Node.TEXT_NODE) {
+      return;
+    }
+
+    const textNode = range.startContainer as Text;
+    const textContent = textNode.textContent ?? '';
+
+    if (textContent.length === 0 || range.startOffset !== 0) {
+      return;
+    }
+
+    const previousSibling = textNode.previousSibling;
+
+    if (!BoldInlineTool.isBoldElement(previousSibling)) {
+      return;
+    }
+
+    if (!/^\s/.test(textContent)) {
+      return;
+    }
+
+    BoldInlineTool.setCaret(selection, textNode, textContent.length);
   }
 
   /**
@@ -1517,6 +1830,7 @@ export default class BoldInlineTool implements InlineTool {
     const selection = window.getSelection();
 
     BoldInlineTool.enforceCollapsedBoldLengths(selection);
+    BoldInlineTool.maintainCollapsedExitState();
     BoldInlineTool.synchronizeCollapsedBold(selection);
     BoldInlineTool.normalizeBoldTagsWithinEditor(selection);
     BoldInlineTool.replaceNbspInBlock(selection);
@@ -1609,17 +1923,18 @@ export default class BoldInlineTool implements InlineTool {
    * @param boldElement - The bold element to exit from
    */
   private static exitCollapsedBold(selection: Selection, boldElement: HTMLElement): Range | undefined {
-    const parent = boldElement.parentNode;
+    const normalizedBold = BoldInlineTool.ensureStrongElement(boldElement);
+    const parent = normalizedBold.parentNode;
 
     if (!parent) {
       return;
     }
 
-    if (BoldInlineTool.isElementEmpty(boldElement)) {
-      return BoldInlineTool.removeEmptyBoldElement(selection, boldElement, parent);
+    if (BoldInlineTool.isElementEmpty(normalizedBold)) {
+      return BoldInlineTool.removeEmptyBoldElement(selection, normalizedBold, parent);
     }
 
-    return BoldInlineTool.exitCollapsedBoldWithContent(selection, boldElement, parent);
+    return BoldInlineTool.exitCollapsedBoldWithContent(selection, normalizedBold, parent);
   }
 
   /**
@@ -1654,23 +1969,42 @@ export default class BoldInlineTool implements InlineTool {
     boldElement.setAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH, (boldElement.textContent?.length ?? 0).toString());
     boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
     boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE);
+    boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_LEADING_WHITESPACE);
 
     const initialNextSibling = boldElement.nextSibling;
     const needsNewNode = !initialNextSibling || initialNextSibling.nodeType !== Node.TEXT_NODE;
-    const newNode = needsNewNode ? document.createTextNode('') : null;
+    const newNode = needsNewNode ? document.createTextNode('\u200B') : null;
 
     if (newNode) {
       parent.insertBefore(newNode, initialNextSibling);
     }
 
-    const nextSibling = (newNode ?? initialNextSibling) as Text;
-    const newRange = document.createRange();
+    const boundary = (newNode ?? initialNextSibling) as Text;
 
-    newRange.setStart(nextSibling, 0);
+    if (!needsNewNode && (boundary.textContent ?? '').length === 0) {
+      boundary.textContent = '\u200B';
+    }
+
+    const newRange = document.createRange();
+    const boundaryContent = boundary.textContent ?? '';
+    const caretOffset = boundaryContent.startsWith('\u200B') ? 1 : 0;
+
+    newRange.setStart(boundary, caretOffset);
     newRange.collapse(true);
 
     selection.removeAllRanges();
     selection.addRange(newRange);
+
+    const trackedBold = BoldInlineTool.ensureStrongElement(boldElement);
+
+    BoldInlineTool.collapsedExitRecords.add({
+      boundary,
+      boldElement: trackedBold,
+      allowedLength: trackedBold.textContent?.length ?? 0,
+      hasLeadingSpace: false,
+      hasTypedContent: false,
+      leadingWhitespace: '',
+    });
 
     return newRange;
   }
@@ -1738,6 +2072,8 @@ export default class BoldInlineTool implements InlineTool {
    * @param event - The keyboard event
    */
   private static handleShortcut(event: KeyboardEvent): void {
+    BoldInlineTool.guardCollapsedBoundaryKeydown(event);
+
     if (!BoldInlineTool.isBoldShortcut(event)) {
       return;
     }
@@ -1748,7 +2084,7 @@ export default class BoldInlineTool implements InlineTool {
       return;
     }
 
-    const instance = BoldInlineTool.instances.values().next().value;
+    const instance = BoldInlineTool.instances.values().next().value ?? new BoldInlineTool();
 
     if (!instance) {
       return;

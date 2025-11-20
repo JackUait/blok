@@ -2,7 +2,7 @@ import Selection from '../selection';
 import Module from '../__module';
 import type Block from '../block';
 import * as caretUtils from '../utils/caret';
-import $  from '../dom';
+import $ from '../dom';
 
 const ASCII_MAX_CODE_POINT = 0x7f;
 
@@ -92,7 +92,7 @@ export default class Caret extends Module {
    * @static
    * @returns {{START: string, END: string, DEFAULT: string}}
    */
-  public get positions(): {START: string; END: string; DEFAULT: string} {
+  public get positions(): { START: string; END: string; DEFAULT: string } {
     return {
       START: 'start',
       END: 'end',
@@ -103,7 +103,7 @@ export default class Caret extends Module {
   /**
    * Elements styles that can be useful for Caret Module
    */
-  private static get CSS(): {shadowCaret: string} {
+  private static get CSS(): { shadowCaret: string } {
     return {
       shadowCaret: 'cdx-shadow-caret',
     };
@@ -225,7 +225,7 @@ export default class Caret extends Module {
     if (meaningfulTextNode) {
       return {
         node: meaningfulTextNode,
-        offset: meaningfulTextNode.textContent?.length ?? 0,
+        offset: $.getContentLength(meaningfulTextNode),
       };
     }
 
@@ -328,7 +328,7 @@ export default class Caret extends Module {
   /**
    * Extract content fragment of current Block from Caret position to the end of the Block
    */
-  public extractFragmentFromCaretPosition(): void|DocumentFragment {
+  public extractFragmentFromCaretPosition(): void | DocumentFragment {
     const selection = Selection.get();
 
     if (!selection || !selection.rangeCount) {

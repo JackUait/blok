@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
 const TOOLBOX_CONTAINER_SELECTOR = '[data-cy="toolbox"] .ce-popover__container';
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
   `${EDITOR_INTERFACE_SELECTOR} .ce-popover-item[data-item-name=${itemName}]`;

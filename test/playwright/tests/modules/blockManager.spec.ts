@@ -249,11 +249,34 @@ test.describe('modules/blockManager', () => {
       await window.editorInstance.blocks.delete(0);
     });
 
+    // Check internal state because Saver.save() returns an empty array
+    // if there is only one empty block in the editor.
+    const block = await page.evaluate(async () => {
+      if (!window.editorInstance) {
+        throw new Error('Editor instance not found');
+      }
+
+      const firstBlock = window.editorInstance.blocks.getBlockByIndex(0);
+
+      if (!firstBlock) {
+        return null;
+      }
+
+      const savedData = await firstBlock.save();
+
+      return {
+        id: firstBlock.id,
+        data: savedData?.data,
+      };
+    });
+
+    expect(block).not.toBeNull();
+    expect(block?.id).not.toBe(initialId);
+    expect((block?.data as { text?: string }).text ?? '').toBe('');
+
     const { blocks } = await saveEditor(page);
 
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0]?.id).not.toBe(initialId);
-    expect((blocks[0]?.data as { text?: string }).text ?? '').toBe('');
+    expect(blocks).toHaveLength(0);
   });
 
   test('converts a block to a compatible tool via API', async ({ page }) => {

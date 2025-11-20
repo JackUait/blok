@@ -550,13 +550,14 @@ export default class BlockManager extends Module {
     }
 
     if (canMergeBlocksDirectly && blockToMergeDataRaw !== undefined) {
-      const [ cleanData ] = sanitizeBlocks(
-        [ blockToMergeDataRaw ],
+      const [ cleanBlock ] = sanitizeBlocks(
+        [ { data: blockToMergeDataRaw,
+          tool: blockToMerge.name } ],
         targetBlock.tool.sanitizeConfig,
         this.config.sanitizer as SanitizerConfig
       );
 
-      await completeMerge(cleanData);
+      await completeMerge(cleanBlock.data);
 
       return;
     }
@@ -950,6 +951,7 @@ export default class BlockManager extends Module {
      * Now using Conversion Config "import" we compose a new Block data
      */
     const baseBlockData = convertStringToBlockData(cleanData, replacingTool.conversionConfig, replacingTool.settings);
+
     const newBlockData = blockDataOverrides
       ? Object.assign(baseBlockData, blockDataOverrides)
       : baseBlockData;

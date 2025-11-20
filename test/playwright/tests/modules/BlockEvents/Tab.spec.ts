@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
 const TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR = '[data-cy=tool-with-two-inputs-primary]';
 const TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR = '[data-cy=tool-with-two-inputs-secondary]';
 const CONTENTLESS_TOOL_SELECTOR = '[data-cy=contentless-tool]';

@@ -39,6 +39,18 @@ export default class Saver extends Module {
   public async save(): Promise<OutputData | undefined> {
     const { BlockManager, Tools } = this.Editor;
     const blocks = BlockManager.blocks;
+
+    /**
+     * If there is only one block and it is empty, we should return empty blocks array
+     */
+    if (blocks.length === 1 && blocks[0].isEmpty) {
+      return {
+        time: +new Date(),
+        blocks: [],
+        version: _.getEditorVersion(),
+      };
+    }
+
     const chainData: Array<Promise<SaverValidatedData>> = blocks.map((block: Block) => {
       return this.getSavedData(block);
     });

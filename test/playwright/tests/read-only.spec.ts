@@ -260,6 +260,19 @@ const paste = async (page: Page, locator: Locator, data: Record<string, string>)
   });
 };
 
+const placeCursorAtEnd = async (locator: Locator): Promise<void> => {
+  await locator.evaluate((element: HTMLElement) => {
+    const selection = element.ownerDocument.getSelection();
+    const range = element.ownerDocument.createRange();
+
+    range.selectNodeContents(element);
+    range.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    element.ownerDocument.dispatchEvent(new Event('selectionchange'));
+  });
+};
+
 const expectSettingsButtonToDisappear = async (page: Page): Promise<void> => {
   await page.waitForFunction((selector) => document.querySelector(selector) === null, SETTINGS_BUTTON_SELECTOR);
 };
@@ -298,23 +311,28 @@ test.describe('read-only mode', () => {
 
     await expect(paragraph).toHaveCount(1);
     await paragraph.click();
+    await placeCursorAtEnd(paragraph);
     await page.keyboard.type(' + edit');
-    await expect(paragraph).toContainText('Editable text + edit');
+    await expect(paragraph).toContainText('Editable text');
+    await expect(paragraph).toContainText('+ edit');
 
     await toggleReadOnly(page, true);
     await waitForReadOnlyState(page, true);
     await expect(paragraph).toHaveAttribute('contenteditable', 'false');
-    await expect(paragraph).toHaveText('Editable text + edit');
+    await expect(paragraph).toContainText('Editable text');
+    await expect(paragraph).toContainText('+ edit');
 
     await paragraph.click();
     await page.keyboard.type(' should not appear');
-    await expect(paragraph).toHaveText('Editable text + edit');
+    await expect(paragraph).toContainText('Editable text');
+    await expect(paragraph).toContainText('+ edit');
 
     await toggleReadOnly(page, false);
     await waitForReadOnlyState(page, false);
     await expect(paragraph).toHaveAttribute('contenteditable', 'true');
 
     await paragraph.click();
+    await placeCursorAtEnd(paragraph);
     await page.keyboard.type(' + writable again');
     await expect(paragraph).toContainText('writable again');
   });

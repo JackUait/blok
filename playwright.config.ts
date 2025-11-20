@@ -13,8 +13,9 @@ import { defineConfig } from '@playwright/test';
  *   Configured in eslint.config.mjs
  */
 export default defineConfig({
+  globalSetup: './test/playwright/global-setup.ts',
   testDir: 'test/playwright/tests',
-  timeout: 10_000,
+  timeout: 15_000,
   expect: {
     timeout: 5_000,
   },

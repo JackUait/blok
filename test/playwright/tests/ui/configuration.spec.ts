@@ -645,9 +645,9 @@ test.describe('editor configuration options', () => {
         throw new Error('Editor instance not found');
       }
 
-      const data = await editor.save();
+      const block = editor.blocks.getBlockByIndex(0);
 
-      return data.blocks[0]?.type ?? null;
+      return block?.name ?? null;
     });
 
     expect(firstBlockType).toBe('simple');
@@ -667,9 +667,9 @@ test.describe('editor configuration options', () => {
         throw new Error('Editor instance not found');
       }
 
-      const data = await editor.save();
+      const block = editor.blocks.getBlockByIndex(0);
 
-      return data.blocks[0]?.type ?? null;
+      return block?.name ?? null;
     });
 
     expect(firstBlockType).toBe('paragraph');

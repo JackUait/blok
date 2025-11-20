@@ -337,7 +337,7 @@ test.describe('copy and paste', () => {
         'text/html': '<p><b>Some text</b></p>',
       });
 
-      await expect(block.locator('b')).toHaveText('Some text');
+      await expect(block.locator('strong')).toHaveText('Some text');
     });
 
     test('should paste several blocks if plain text contains new lines', async ({ page }) => {
@@ -644,7 +644,7 @@ test.describe('copy and paste', () => {
       await expect(blocks).toHaveCount(2);
       await expect(getParagraphByIndex(page, 0)).toContainText('Copied from Word');
       await expect(secondParagraph).toContainText('Styled paragraph');
-      await expect(secondParagraph.locator('b')).toHaveText('Styled');
+      await expect(secondParagraph.locator('strong')).toHaveText('Styled');
     });
     test('should not prevent default behaviour if block paste config equals false', async ({ page }) => {
       const blockToolSource = `

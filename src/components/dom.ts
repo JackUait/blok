@@ -561,8 +561,8 @@ export default class Dom {
    */
   public static offset(el: Element): { top: number; left: number; right: number; bottom: number } {
     const rect = el.getBoundingClientRect();
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
 
     const top = rect.top + scrollTop;
     const left = rect.left + scrollLeft;
@@ -582,7 +582,7 @@ export default class Dom {
    * @param {number} totalOffset - offset relative to the root node content
    * @returns {{node: Node | null, offset: number}} - node and offset inside node
    */
-  public static getNodeByOffset(root: Node, totalOffset: number): {node: Node | null; offset: number} {
+  public static getNodeByOffset(root: Node, totalOffset: number): { node: Node | null; offset: number } {
     const walker = document.createTreeWalker(
       root,
       NodeFilter.SHOW_TEXT,
@@ -678,8 +678,10 @@ export const isCollapsedWhitespaces = (textContent: string): boolean => {
    *  "\n" LF  \u000A
    *  "\r" CR  \u000D
    *  " "  SPC \u0020
+   *
+   *  Also \u200B (Zero Width Space) is considered as collapsed whitespace
    */
-  return !/[^\t\n\r ]/.test(textContent);
+  return !/[^\t\n\r \u200B]/.test(textContent);
 };
 
 /**

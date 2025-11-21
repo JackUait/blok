@@ -5,7 +5,7 @@ import I18n from '../../i18n';
 import { I18nInternalNS } from '../../i18n/namespace-internal';
 import * as tooltip from '../../utils/tooltip';
 import type { ModuleConfig } from '../../../types-internal/module-config';
-import type Block from '../../block';
+import Block from '../../block';
 import Toolbox, { ToolboxEvent } from '../../ui/toolbox';
 import { IconMenu, IconPlus } from '@codexteam/icons';
 import { BlockHovered } from '../../events/BlockHovered';
@@ -627,6 +627,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
        * Subscribe to the 'block-hovered' event
        */
       this.eventsDispatcher.on(BlockHovered, (data) => {
+        const hoveredBlock = (data as { block?: Block }).block;
+
+        if (!(hoveredBlock instanceof Block)) {
+          return;
+        }
+
         /**
          * Do not move toolbar if Block Settings or Toolbox opened
          */
@@ -634,7 +640,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
           return;
         }
 
-        this.moveAndOpen(data.block);
+        this.moveAndOpen(hoveredBlock);
       });
     }
   }

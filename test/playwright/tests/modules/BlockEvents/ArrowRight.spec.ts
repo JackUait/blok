@@ -12,7 +12,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
 const CONTENTLESS_TOOL_SELECTOR = '[data-cy-type="contentless-tool"]';
 
 const resetEditor = async (page: Page): Promise<void> => {
@@ -172,8 +172,10 @@ test.describe('arrow right keydown', () => {
   });
 
   test.beforeEach(async ({ page }) => {
+    page.on('console', msg => console.log(msg.text()));
     await page.goto(TEST_PAGE_URL);
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.addStyleTag({ content: '.ce-paragraph { white-space: pre-wrap !important; }' });
   });
 
   test.describe('starting whitespaces handling', () => {
@@ -182,6 +184,15 @@ test.describe('arrow right keydown', () => {
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
+
+      // Explicitly set textContent to ensure NBSP is preserved
+      await firstParagraph.evaluate((node) => {
+        const content = node.querySelector('.ce-paragraph');
+
+        if (content) {
+          content.textContent = '1\\u00A0';
+        }
+      });
 
       await firstParagraph.click();
       await firstParagraph.press('Home');
@@ -207,6 +218,7 @@ test.describe('arrow right keydown', () => {
       await firstParagraph.press('Home');
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('ArrowRight');
 
       const caretInfo = await getCaretInfoOrThrow(secondParagraph);
 
@@ -221,6 +233,15 @@ test.describe('arrow right keydown', () => {
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
+
+      // Explicitly set innerHTML to ensure empty tags are preserved
+      await firstParagraph.evaluate((node) => {
+        const content = node.querySelector('.ce-paragraph');
+
+        if (content) {
+          content.innerHTML = '1<b></b>';
+        }
+      });
 
       await firstParagraph.click();
       await firstParagraph.press('Home');
@@ -240,6 +261,15 @@ test.describe('arrow right keydown', () => {
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
+
+      // Explicitly set innerHTML to ensure empty tags and NBSP are preserved
+      await firstParagraph.evaluate((node) => {
+        const content = node.querySelector('.ce-paragraph');
+
+        if (content) {
+          content.innerHTML = '1&nbsp;<b></b>';
+        }
+      });
 
       await firstParagraph.click();
       await firstParagraph.press('Home');
@@ -261,8 +291,18 @@ test.describe('arrow right keydown', () => {
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
 
+      // Explicitly set innerHTML to ensure empty tags and NBSP are preserved
+      await firstParagraph.evaluate((node) => {
+        const content = node.querySelector('.ce-paragraph');
+
+        if (content) {
+          content.innerHTML = '1<b></b>&nbsp;';
+        }
+      });
+
       await firstParagraph.click();
       await firstParagraph.press('Home');
+      await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
@@ -283,6 +323,7 @@ test.describe('arrow right keydown', () => {
 
       await firstParagraph.click();
       await firstParagraph.press('Home');
+      await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
@@ -329,4 +370,3 @@ declare global {
     EditorJS: new (...args: unknown[]) => EditorJS;
   }
 }
-

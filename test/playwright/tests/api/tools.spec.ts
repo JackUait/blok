@@ -285,7 +285,7 @@ test.describe('api.tools', () => {
     test('should render single tune configured via renderSettings()', async ({ page }) => {
       const singleTuneToolSource = createTuneToolSource(`
         return {
-          label: 'Test tool tune',
+          title: 'Test tool tune',
           icon: '${ICON}',
           name: 'testToolTune',
           onActivate: () => {},
@@ -320,13 +320,13 @@ test.describe('api.tools', () => {
       const multipleTunesToolSource = createTuneToolSource(`
         return [
           {
-            label: 'Test tool tune 1',
+            title: 'Test tool tune 1',
             icon: '${ICON}',
             name: 'testToolTune1',
             onActivate: () => {},
           },
           {
-            label: 'Test tool tune 2',
+            title: 'Test tool tune 2',
             icon: '${ICON}',
             name: 'testToolTune2',
             onActivate: () => {},
@@ -395,49 +395,6 @@ test.describe('api.tools', () => {
           `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-tunes"] .ce-popover[data-popover-opened="true"]`
         )
       ).toContainText(sampleText);
-    });
-
-    test('should support title and label aliases for tune text', async ({ page }) => {
-      const labelAliasToolSource = createTuneToolSource(`
-        return [
-          {
-            icon: '${ICON}',
-            name: 'testToolTune1',
-            onActivate: () => {},
-            title: 'Test tool tune 1',
-          },
-          {
-            icon: '${ICON}',
-            name: 'testToolTune2',
-            onActivate: () => {},
-            label: 'Test tool tune 2',
-          },
-        ];
-      `);
-
-      await createEditor(page, {
-        tools: [
-          {
-            name: 'testTool',
-            classSource: labelAliasToolSource,
-          },
-        ],
-        data: {
-          blocks: [
-            {
-              type: 'testTool',
-              data: {
-                text: 'some text',
-              },
-            },
-          ],
-        },
-      });
-
-      await openBlockSettings(page, 0);
-
-      await expect(page.locator('[data-item-name="testToolTune1"]')).toContainText('Test tool tune 1');
-      await expect(page.locator('[data-item-name="testToolTune2"]')).toContainText('Test tool tune 2');
     });
   });
 

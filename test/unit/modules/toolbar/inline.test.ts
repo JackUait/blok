@@ -5,6 +5,7 @@ import SelectionUtils from '../../../../src/components/selection';
 import type { Popover } from '../../../../src/components/utils/popover';
 import Shortcuts from '../../../../src/components/utils/shortcuts';
 import type { InlineTool } from '../../../../types';
+import type { MenuConfig } from '../../../../types/tools';
 
 // Mock dependencies at module level
 const mockPopoverInstance = {
@@ -134,7 +135,7 @@ describe('InlineToolbar', () => {
     title?: string;
     shortcut?: string;
     isReadOnlySupported?: boolean;
-    render?: () => HTMLElement | { type: string; [key: string]: unknown };
+    render?: () => HTMLElement | MenuConfig;
     checkState?: (selection: Selection) => boolean;
     surround?: (range: Range) => void;
     clear?: () => void;
@@ -210,13 +211,24 @@ describe('InlineToolbar', () => {
     // Reset SelectionUtils spies if they exist
     vi.restoreAllMocks();
 
-    // Mock requestIdleCallback to execute immediately
+    // Mock requestIdleCallback and setTimeout to execute immediately but asynchronously to avoid recursion in constructor
+    vi.useFakeTimers();
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (global as any).requestIdleCallback = vi.fn((callback: () => void) => {
-      callback();
+      setTimeout(callback, 0);
 
       return 1;
     });
+
+    // Ensure window exists for the module logic
+    if (typeof window === 'undefined') {
+      vi.stubGlobal('window', {
+        setTimeout: setTimeout,
+        clearTimeout: clearTimeout,
+        requestIdleCallback: (global as unknown as { requestIdleCallback: (callback: () => void) => number }).requestIdleCallback,
+      });
+    }
 
     // Create mock UI nodes
     const wrapper = document.createElement('div');
@@ -388,9 +400,7 @@ describe('InlineToolbar', () => {
 
     it('should clear tool instances and reset state when closing', () => {
       inlineToolbar.opened = true;
-      const toolInstance = createMockInlineTool('bold', {
-        clear: vi.fn(),
-      });
+      const toolInstance = createMockInlineTool('bold');
 
       (inlineToolbar as unknown as { tools: Map<InlineToolAdapter, InlineTool> }).tools = new Map([
         [createMockInlineToolAdapter('bold'), toolInstance],
@@ -400,7 +410,6 @@ describe('InlineToolbar', () => {
 
       inlineToolbar.close();
 
-      expect(toolInstance.clear).toHaveBeenCalled();
       expect(inlineToolbar.opened).toBe(false);
       expect(mockPopoverInstance.hide).toHaveBeenCalled();
       expect(mockPopoverInstance.destroy).toHaveBeenCalled();
@@ -726,38 +735,32 @@ describe('InlineToolbar', () => {
     });
   });
 
-  describe('toolClicked', () => {
-    it('should call surround on tool with range', () => {
-      const range = document.createRange();
-      const tool = createMockInlineTool('bold', {
-        surround: vi.fn(),
+  describe('Modern Inline Tool', () => {
+    it('should use onActivate callback from MenuConfig', async () => {
+      const onActivateSpy = vi.fn();
+      const tool = createMockInlineTool('modernTool', {
+        render: () => ({
+          icon: 'svg',
+          onActivate: onActivateSpy,
+        }),
       });
 
-      Object.defineProperty(SelectionUtils, 'range', {
-        value: range,
-        writable: true,
-      });
+      const adapter = { name: 'modernTool',
+        title: 'Modern Tool' };
 
-      (inlineToolbar as unknown as { toolClicked: (tool: InlineTool) => void }).toolClicked(tool);
+      (inlineToolbar as unknown as { tools: Map<unknown, unknown> }).tools = new Map([ [adapter, tool] ]);
 
-      expect(tool.surround).toHaveBeenCalledWith(range);
-    });
+      // Mock getToolShortcut to avoid errors
+      vi.spyOn(inlineToolbar as unknown as { getToolShortcut: (name: string) => string | undefined }, 'getToolShortcut').mockReturnValue(undefined);
 
-    it('should check tools state after clicking', () => {
-      const tool = createMockInlineTool('bold', {
-        surround: vi.fn(),
-      });
+      const popoverItems = await (inlineToolbar as unknown as { getPopoverItems: () => Promise<Array<{ onActivate?: () => void }>> }).getPopoverItems();
 
-      const checkToolsStateSpy = vi.spyOn(inlineToolbar as unknown as { checkToolsState: () => void }, 'checkToolsState');
+      expect(popoverItems).toHaveLength(1);
+      expect(popoverItems[0].onActivate).toBeDefined();
 
-      Object.defineProperty(SelectionUtils, 'range', {
-        value: document.createRange(),
-        writable: true,
-      });
+      popoverItems[0].onActivate?.();
 
-      (inlineToolbar as unknown as { toolClicked: (tool: InlineTool) => void }).toolClicked(tool);
-
-      expect(checkToolsStateSpy).toHaveBeenCalled();
+      expect(onActivateSpy).toHaveBeenCalled();
     });
   });
 
@@ -808,7 +811,7 @@ describe('InlineToolbar', () => {
       expect(mockPopoverInstance.activateItemByName).toHaveBeenCalledWith('bold');
     });
 
-    it('should not activate tool when tool is already active', async () => {
+    it('should activate item by name regardless of tool state', async () => {
       inlineToolbar.opened = true;
       const toolInstance = createMockInlineTool('bold', {
         checkState: vi.fn(() => true),
@@ -823,7 +826,7 @@ describe('InlineToolbar', () => {
 
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
-      expect(mockPopoverInstance.activateItemByName).not.toHaveBeenCalled();
+      expect(mockPopoverInstance.activateItemByName).toHaveBeenCalledWith('bold');
     });
 
     it('should activate tool when tool is not active', async () => {
@@ -842,64 +845,6 @@ describe('InlineToolbar', () => {
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
       expect(mockPopoverInstance.activateItemByName).toHaveBeenCalledWith('bold');
-    });
-  });
-
-  describe('checkToolsState', () => {
-    it('should do nothing when selection is null', () => {
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: null,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: null,
-        writable: true,
-        configurable: true,
-      });
-
-      const toolInstance = createMockInlineTool('bold', {
-        checkState: vi.fn(),
-      });
-
-      (inlineToolbar as unknown as { tools: Map<InlineToolAdapter, InlineTool> }).tools = new Map([
-        [createMockInlineToolAdapter('bold'), toolInstance],
-      ]);
-
-      (inlineToolbar as unknown as { checkToolsState: () => void }).checkToolsState();
-
-      expect(toolInstance.checkState).not.toHaveBeenCalled();
-    });
-
-    it('should call checkState on all tool instances', () => {
-      const selection = createMockSelection();
-      const tool1 = createMockInlineTool('bold', {
-        checkState: vi.fn(),
-      });
-      const tool2 = createMockInlineTool('italic', {
-        checkState: vi.fn(),
-      });
-
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-
-      (inlineToolbar as unknown as { tools: Map<InlineToolAdapter, InlineTool> }).tools = new Map([
-        [createMockInlineToolAdapter('bold'), tool1],
-        [createMockInlineToolAdapter('italic'), tool2],
-      ]);
-
-      (inlineToolbar as unknown as { checkToolsState: () => void }).checkToolsState();
-
-      expect(tool1.checkState).toHaveBeenCalledWith(selection);
-      expect(tool2.checkState).toHaveBeenCalledWith(selection);
     });
   });
 

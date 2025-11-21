@@ -7,16 +7,12 @@ selected fragment of text. The simplest example is `bold` or `italic` Tools.
 
 First of all, Tool's class should have a `isInline` property (static getter) set as `true`.
 
-After that Inline Tool should implement next methods.
+After that Inline Tool should implement the `render` method.
 
-- `render()` — create a button
-- `surround()` — works with selected range
-- `checkState()` — get Tool's activated state by selected range
+- `render()` — returns Tool's visual representation and logic
 
-Also, you can provide optional methods
+Also, you can provide optional methods:
 
-- `renderActions()` — create additional element below the buttons
-- `clear()` — clear Tool's stuff on opening/closing of Inline Toolbar
 - `sanitize()` — sanitizer configuration
 
 At the constructor of Tool's class exemplar you will accept an object with the [API](api.md) as a parameter.
@@ -25,7 +21,7 @@ At the constructor of Tool's class exemplar you will accept an object with the [
 
 ### render()
 
-Method that returns button to append at the Inline Toolbar
+Method that returns Menu Config for the Inline Toolbar
 
 #### Parameters
 
@@ -35,74 +31,26 @@ Method does not accept any parameters
 
 type | description |
 -- | -- |
-`HTMLElement` | element that will be added to the Inline Toolbar |
+`MenuConfig` | configuration object for the tool's button and behavior |
+
+#### Example
+
+```typescript
+render(): MenuConfig {
+  return {
+    icon: '<svg>...</svg>',
+    title: 'Bold',
+    isActive: () => {
+        // check if current selection is bold
+    },
+    onActivate: () => {
+        // toggle bold state
+    }
+  };
+}
+```
 
 ---
-
-### surround(range: Range)
-
-Method that accepts selected range and wrap it somehow
-
-#### Parameters
-
-name | type | description |
--- |-- | -- |
-range | Range | first range of current Selection |
-
-#### Return value
-
-There is no return value
-
----
-
-### checkState(selection: Selection)
-
-Get Selection and detect if Tool was applied. For example, after that Tool can highlight button or show some details.
-
-#### Parameters
-
-name | type | description |
--- |-- | -- |
-selection | Selection | current Selection |
-
-#### Return value
-
-type | description |
--- | -- |
-`Boolean` | `true` if Tool is active, otherwise `false` |
-
----
-
-### renderActions()
-
-Optional method that returns additional Element with actions.
-For example, input for the 'link' tool or textarea for the 'comment' tool.
-It will be places below the buttons list at Inline Toolbar.
-
-#### Parameters
-
-Method does not accept any parameters
-
-#### Return value
-
-type | description |
--- | -- |
-`HTMLElement` | element that will be added to the Inline Toolbar |
-
----
-
-### clear()
-
-Optional method that will be called on opening/closing of Inline Toolbar.
-Can contain logic for clearing Tool's stuff, such as inputs, states and other.
-
-#### Parameters
-
-Method does not accept any parameters
-
-#### Return value
-
-Method should not return a value.
 
 ### static get sanitize()
 

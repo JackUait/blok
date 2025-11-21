@@ -1,17 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type {
-  ChainData } from '../../../src/components/utils';
 import {
-  typeOf,
   isFunction,
   isObject,
   isString,
   isBoolean,
   isNumber,
   isUndefined,
-  isClass,
   isEmpty,
-  isPromise,
   isPrintableKey,
   keyCodes,
   mouseButtons,
@@ -23,26 +18,22 @@ import {
   delay,
   debounce,
   throttle,
-  sequence,
   getEditorVersion,
   getFileExtension,
   isValidMimeType,
   capitalize,
   deepMerge,
   getUserOS,
-  isTouchSupported,
   beautifyShortcut,
   getValidUrl,
   generateBlockId,
   generateId,
   openTab,
-  deprecationAssert,
   cacheable,
   mobileScreenBreakpoint,
   isMobileScreen,
   isIosDevice,
-  equals,
-  copyTextToClipboard
+  equals
 } from '../../../src/components/utils';
 
 // Mock VERSION global variable
@@ -87,44 +78,6 @@ describe('utils', () => {
       delete versionHolder.VERSION;
 
       expect(getEditorVersion()).toBe('dev');
-    });
-  });
-
-  describe('typeOf', () => {
-    it('should return correct type for string', () => {
-      expect(typeOf('test')).toBe('string');
-    });
-
-    it('should return correct type for number', () => {
-      expect(typeOf(123)).toBe('number');
-    });
-
-    it('should return correct type for boolean', () => {
-      expect(typeOf(true)).toBe('boolean');
-    });
-
-    it('should return correct type for object', () => {
-      expect(typeOf({})).toBe('object');
-    });
-
-    it('should return correct type for array', () => {
-      expect(typeOf([])).toBe('array');
-    });
-
-    it('should return correct type for function', () => {
-      expect(typeOf(() => {})).toBe('function');
-    });
-
-    it('should return correct type for null', () => {
-      expect(typeOf(null)).toBe('null');
-    });
-
-    it('should return correct type for undefined', () => {
-      expect(typeOf(undefined)).toBe('undefined');
-    });
-
-    it('should return correct type for date', () => {
-      expect(typeOf(new Date())).toBe('date');
     });
   });
 
@@ -282,32 +235,6 @@ describe('utils', () => {
     });
   });
 
-  describe('isClass', () => {
-    it('should return true for class', () => {
-      /**
-       *
-       */
-      class TestClass {}
-      expect(isClass(TestClass)).toBe(true);
-    });
-
-    it('should return false for regular function', () => {
-      const fn = function (): void {};
-
-      expect(isClass(fn)).toBe(false);
-    });
-
-    it('should return false for arrow function', () => {
-      const fn = (): void => {};
-
-      expect(isClass(fn)).toBe(false);
-    });
-
-    it('should return false for object', () => {
-      expect(isClass({})).toBe(false);
-    });
-  });
-
   describe('isEmpty', () => {
     it('should return true for empty object', () => {
       expect(isEmpty({})).toBe(true);
@@ -325,28 +252,11 @@ describe('utils', () => {
       expect(isEmpty(undefined)).toBe(true);
     });
 
-    it('should return false for object created with Object.create (no constructor)', () => {
+    it('should return true for object created with Object.create (no constructor)', () => {
       const obj = Object.create(null);
 
-      expect(isEmpty(obj)).toBe(false);
-    });
-  });
-
-  describe('isPromise', () => {
-    it('should return true for Promise', () => {
-      const promise = Promise.resolve(123);
-
-      expect(isPromise(promise)).toBe(true);
-    });
-
-    it('should return false for non-Promise', () => {
-      expect(isPromise({})).toBe(false);
-    });
-
-    it('should return false for thenable object', () => {
-      const thenable = { then: () => {} };
-
-      expect(isPromise(thenable)).toBe(false);
+      // lodash isEmpty returns true for objects with no enumerable properties
+      expect(isEmpty(obj)).toBe(true);
     });
   });
 
@@ -625,63 +535,6 @@ describe('utils', () => {
     });
   });
 
-  describe('sequence', () => {
-    it('should execute functions in sequence', async () => {
-      const results: number[] = [];
-      const chains: ChainData[] = [
-        {
-          data: { order: 1 },
-          function: async (...args: unknown[]) => {
-            const data = args[0] as { order: number };
-
-            results.push(data.order);
-          },
-        },
-        {
-          data: { order: 2 },
-          function: async (...args: unknown[]) => {
-            const data = args[0] as { order: number };
-
-            results.push(data.order);
-          },
-        },
-      ];
-
-      await sequence(chains);
-
-      expect(results).toEqual([1, 2]);
-    });
-
-    it('should call success callback after each chain', async () => {
-      const successCallback = vi.fn();
-      const chains: ChainData[] = [
-        {
-          data: { test: 'data' },
-          function: async () => {},
-        },
-      ];
-
-      await sequence(chains, successCallback);
-
-      expect(successCallback).toHaveBeenCalledWith({ test: 'data' });
-    });
-
-    it('should call fallback callback on error', async () => {
-      const fallbackCallback = vi.fn();
-      const chains: ChainData[] = [
-        {
-          data: { test: 'data' },
-          function: async () => {
-            throw new Error('test error');
-          },
-        },
-      ];
-
-      await sequence(chains, () => {}, fallbackCallback);
-
-      expect(fallbackCallback).toHaveBeenCalledWith({ test: 'data' });
-    });
-  });
 
   describe('getFileExtension', () => {
     it('should return file extension', () => {
@@ -733,8 +586,8 @@ describe('utils', () => {
       expect(capitalize('Hello')).toBe('Hello');
     });
 
-    it('should throw when called with empty string', () => {
-      expect(() => capitalize('')).toThrow(TypeError);
+    it('should return empty string when called with empty string', () => {
+      expect(capitalize('')).toBe('');
     });
   });
 
@@ -803,13 +656,14 @@ describe('utils', () => {
       expect(result).toEqual({ value: null });
     });
 
-    it('should handle undefined values', () => {
+    it('should skip undefined values', () => {
       const target = { value: 'old' };
       const source = { value: undefined };
 
       const result = deepMerge(target, source);
 
-      expect(result).toEqual({ value: undefined });
+      // lodash mergeWith skips undefined values (treats them as "not provided")
+      expect(result).toEqual({ value: 'old' });
     });
   });
 
@@ -818,7 +672,7 @@ describe('utils', () => {
       const originalNavigator = navigator;
 
       Object.defineProperty(window, 'navigator', {
-        value: { appVersion: '' },
+        value: { userAgent: '' },
         configurable: true,
       });
 
@@ -839,7 +693,7 @@ describe('utils', () => {
       const originalNavigator = navigator;
 
       Object.defineProperty(window, 'navigator', {
-        value: { appVersion: 'Windows' },
+        value: { userAgent: 'Windows' },
         configurable: true,
       });
 
@@ -857,7 +711,7 @@ describe('utils', () => {
       const originalNavigator = navigator;
 
       Object.defineProperty(window, 'navigator', {
-        value: { appVersion: 'Mac' },
+        value: { userAgent: 'Mac' },
         configurable: true,
       });
 
@@ -872,12 +726,6 @@ describe('utils', () => {
     });
   });
 
-  describe('isTouchSupported', () => {
-    it('should be a boolean value', () => {
-      expect(typeof isTouchSupported).toBe('boolean');
-    });
-  });
-
   describe('beautifyShortcut', () => {
     it('should replace shift with ⇧', () => {
       expect(beautifyShortcut('Shift+B')).toContain('⇧');
@@ -887,7 +735,7 @@ describe('utils', () => {
       const originalNavigator = navigator;
 
       Object.defineProperty(window, 'navigator', {
-        value: { appVersion: 'Mac' },
+        value: { userAgent: 'Mac' },
         configurable: true,
       });
 
@@ -905,7 +753,7 @@ describe('utils', () => {
       const originalNavigator = navigator;
 
       Object.defineProperty(window, 'navigator', {
-        value: { appVersion: 'Windows' },
+        value: { userAgent: 'Windows' },
         configurable: true,
       });
 
@@ -1001,31 +849,6 @@ describe('utils', () => {
     });
   });
 
-  describe('deprecationAssert', () => {
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    beforeEach(() => {
-      consoleWarnSpy.mockClear();
-    });
-
-    afterEach(() => {
-      consoleWarnSpy.mockClear();
-    });
-
-    it('should log warning when condition is true', () => {
-      deprecationAssert(true, 'oldProperty', 'newProperty');
-
-      expect(consoleWarnSpy).toHaveBeenCalled();
-      expect(consoleWarnSpy.mock.calls[0]?.[0]).toContain('oldProperty');
-      expect(consoleWarnSpy.mock.calls[0]?.[0]).toContain('newProperty');
-    });
-
-    it('should not log warning when condition is false', () => {
-      deprecationAssert(false, 'oldProperty', 'newProperty');
-
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
-    });
-  });
 
   describe('cacheable', () => {
     it('should cache method result', () => {
@@ -1231,72 +1054,6 @@ describe('utils', () => {
       const arr2 = [1, 2, 4];
 
       expect(equals(arr1, arr2)).toBe(false);
-    });
-  });
-
-  describe('copyTextToClipboard', () => {
-    beforeEach(() => {
-      // Mock clipboard API
-      Object.defineProperty(navigator, 'clipboard', {
-        value: {
-          writeText: vi.fn().mockResolvedValue(undefined),
-        },
-        configurable: true,
-      });
-
-      Object.defineProperty(window, 'isSecureContext', {
-        value: true,
-        configurable: true,
-      });
-    });
-
-    it('should use Clipboard API when available', async () => {
-      const writeTextSpy = vi.spyOn(navigator.clipboard, 'writeText');
-
-      copyTextToClipboard('test text');
-
-      // Wait for promise to resolve
-      await new Promise((resolve) => {
-        setTimeout(resolve, 0);
-      });
-
-      expect(writeTextSpy).toHaveBeenCalledWith('test text');
-    });
-
-    it('should fallback to legacy method when Clipboard API fails', async () => {
-      const writeTextSpy = vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('Clipboard error'));
-
-      // Mock execCommand since it doesn't exist in jsdom
-      const execCommandSpy = vi.fn().mockReturnValue(true);
-
-      Object.defineProperty(document, 'execCommand', {
-        value: execCommandSpy,
-        configurable: true,
-        writable: true,
-      });
-
-      // Mock getSelection and createRange for fallback method
-      const mockRange = {
-        selectNode: vi.fn(),
-      };
-      const mockSelection = {
-        removeAllRanges: vi.fn(),
-        addRange: vi.fn(),
-      };
-
-      vi.spyOn(window, 'getSelection').mockReturnValue(mockSelection as unknown as Selection);
-      vi.spyOn(document, 'createRange').mockReturnValue(mockRange as unknown as Range);
-
-      copyTextToClipboard('test text');
-
-      // Wait for promise to reject and fallback to execute
-      await new Promise((resolve) => {
-        setTimeout(resolve, 10);
-      });
-
-      expect(execCommandSpy).toHaveBeenCalledWith('copy');
-
-      writeTextSpy.mockRestore();
     });
   });
 });

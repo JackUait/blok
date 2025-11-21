@@ -69,18 +69,6 @@ export interface ExternalToolSettings<Config extends object = any> {
 }
 
 /**
- * Tool's tunes configuration.
- * @deprecated use {@link MenuConfig} type instead
- */
-export type TunesMenuConfig = MenuConfig;
-
-/**
- * Single Tunes Menu Config item
- * @deprecated use {@link MenuConfigItem} type instead
- */
-export type TunesMenuConfigItem = MenuConfigItem;
-
-/**
  * For internal Tools 'class' property is optional
  */
 export type InternalToolSettings<Config extends object = any> = Omit<ExternalToolSettings<Config>, 'class'> & Partial<Pick<ExternalToolSettings<Config>, 'class'>>;

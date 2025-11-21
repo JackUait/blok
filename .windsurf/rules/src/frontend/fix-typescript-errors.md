@@ -1,0 +1,22 @@
+---
+trigger: always_on
+description: Enforce fixing TypeScript errors by improving code quality, not suppressing them
+globs: *.ts,*.tsx
+---
+
+# Fix TypeScript Errors Policy
+
+- **Core Principle**: Always resolve TypeScript errors by refactoring code to be type-safe, rather than suppressing them with `any`, `// @ts-ignore`, or similar workarounds.
+- **Preferred Approaches**:
+  - Use precise types, type guards, discriminated unions, and proper narrowing to eliminate errors.
+  - Avoid the non-null assertion operator (`!`) and `any` types as per project guidelines.
+  - Refactor functions, components, and logic to align with TypeScript's type system.
+- **When to Apply**:
+  - For any TypeScript files (`.ts`, `.tsx`), prioritize fixing errors during edits.
+  - After making changes, run `yarn lint:fix` or similar commands to ensure compliance.
+- **Alignment with Existing Rules**:
+  - This reinforces the ESLint Fix-First Policy: Fix issues flagged by TypeScript/ESLint by improving code, not silencing linters.
+  - Ensure accessibility and best practices are maintained while resolving types.
+- **Notes**:
+  - If a TypeScript error persists after reasonable refactoring, consult the ESLint configuration or seek clarification on intended behavior, but do not suppress it locally.
+  - Promote code that is both type-safe and adheres to React/JS best practices.

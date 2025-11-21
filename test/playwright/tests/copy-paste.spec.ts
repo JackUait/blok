@@ -31,6 +31,17 @@ const getParagraphByIndex = (page: Page, index: number): Locator => {
   return getBlockByIndex(page, index).locator('.ce-paragraph');
 };
 
+const getCommandModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
+  const isMac = await page.evaluate(() => {
+    const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+    const platform = (nav.userAgentData?.platform ?? nav.platform ?? '').toLowerCase();
+
+    return platform.includes('mac');
+  });
+
+  return isMac ? 'Meta' : 'Control';
+};
+
 type SerializableToolConfig = {
   className?: string;
   classCode?: string;
@@ -39,6 +50,12 @@ type SerializableToolConfig = {
 
 type CreateEditorOptions = Pick<EditorConfig, 'data' | 'inlineToolbar' | 'placeholder' | 'readOnly'> & {
   tools?: Record<string, SerializableToolConfig>;
+};
+
+type ClipboardFileDescriptor = {
+  name: string;
+  type: string;
+  content: string;
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
@@ -172,6 +189,32 @@ const paste = async (page: Page, locator: Locator, data: Record<string, string>)
   });
 };
 
+const pasteFiles = async (page: Page, locator: Locator, files: ClipboardFileDescriptor[]): Promise<void> => {
+  await locator.evaluate((element: HTMLElement, fileDescriptors: ClipboardFileDescriptor[]) => {
+    const dataTransfer = new DataTransfer();
+
+    fileDescriptors.forEach(({ name, type, content }) => {
+      const file = new File([ content ], name, { type });
+
+      dataTransfer.items.add(file);
+    });
+
+    const pasteEvent = new ClipboardEvent('paste', {
+      bubbles: true,
+      cancelable: true,
+      clipboardData: dataTransfer,
+    });
+
+    element.dispatchEvent(pasteEvent);
+  }, files);
+
+  await page.evaluate(() => {
+    return new Promise((resolve) => {
+      setTimeout(resolve, 200);
+    });
+  });
+};
+
 const selectAllText = async (locator: Locator): Promise<void> => {
   await locator.evaluate((element) => {
     const ownerDocument = element.ownerDocument;
@@ -220,22 +263,31 @@ const withClipboardEvent = async (
 ): Promise<Record<string, string>> => {
   return await locator.evaluate((element, type) => {
     return new Promise<Record<string, string>>((resolve) => {
-      const clipboardData: Record<string, string> = {};
-      const event = Object.assign(new Event(type, {
+      const clipboardStore: Record<string, string> = {};
+      const isClipboardEventSupported = typeof ClipboardEvent === 'function';
+      const isDataTransferSupported = typeof DataTransfer === 'function';
+
+      if (!isClipboardEventSupported || !isDataTransferSupported) {
+        resolve(clipboardStore);
+
+        return;
+      }
+
+      const dataTransfer = new DataTransfer();
+      const event = new ClipboardEvent(type, {
         bubbles: true,
         cancelable: true,
-      }), {
-        clipboardData: {
-          setData: (format: string, value: string) => {
-            clipboardData[format] = value;
-          },
-        },
+        clipboardData: dataTransfer,
       });
 
       element.dispatchEvent(event);
 
       setTimeout(() => {
-        resolve(clipboardData);
+        Array.from(dataTransfer.types).forEach((format) => {
+          clipboardStore[format] = dataTransfer.getData(format);
+        });
+
+        resolve(clipboardStore);
       }, 0);
     });
   }, eventName);
@@ -285,7 +337,7 @@ test.describe('copy and paste', () => {
         'text/html': '<p><b>Some text</b></p>',
       });
 
-      await expect(block.locator('b')).toHaveText('Some text');
+      await expect(block.locator('strong')).toHaveText('Some text');
     });
 
     test('should paste several blocks if plain text contains new lines', async ({ page }) => {
@@ -303,6 +355,21 @@ test.describe('copy and paste', () => {
       const texts = (await blocks.allTextContents()).map((text) => text.trim()).filter(Boolean);
 
       expect(texts).toStrictEqual(['First block', 'Second block']);
+    });
+
+    test('should paste plain text with special characters intact', async ({ page }) => {
+      await createEditor(page);
+
+      const block = getBlockByIndex(page, 0);
+      const specialText = 'Emoji 🚀 — “quotes” — 你好 — نص عربي — ñandú';
+
+      await block.click();
+      await paste(page, block, {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'text/plain': specialText,
+      });
+
+      await expect(block).toHaveText(specialText);
     });
 
     test('should paste several blocks if html contains several paragraphs', async ({ page }) => {
@@ -413,6 +480,172 @@ test.describe('copy and paste', () => {
       });
     });
 
+    test('should sanitize dangerous HTML fragments on paste', async ({ page }) => {
+      await createEditor(page);
+
+      const block = getBlockByIndex(page, 0);
+      const maliciousHtml = `
+        <div>
+          <p>Safe text</p>
+          <script>window.__maliciousPasteExecuted = true;</script>
+          <p>Another line</p>
+        </div>
+      `;
+
+      await block.click();
+      await paste(page, block, {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'text/html': maliciousHtml,
+      });
+
+      const texts = (await page.locator(BLOCK_SELECTOR).allTextContents()).map((text) => text.trim()).filter(Boolean);
+
+      expect(texts).toStrictEqual(['Safe text', 'Another line']);
+
+      const scriptExecuted = await page.evaluate(() => {
+        return window.__maliciousPasteExecuted ?? false;
+      });
+
+      expect(scriptExecuted).toBe(false);
+    });
+
+    test('should fall back to plain text when invalid EditorJS data is pasted', async ({ page }) => {
+      await createEditor(page);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      await paragraph.click();
+      await paste(page, paragraph, {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'application/x-editor-js': '{not-valid-json',
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'text/plain': 'Fallback plain text',
+      });
+
+      await expect(getParagraphByIndex(page, 0)).toContainText('Fallback plain text');
+    });
+
+    test('should handle file pastes via paste config', async ({ page }) => {
+      const fileToolSource = `
+      class FilePasteTool {
+        constructor({ data }) {
+          this.data = data ?? {};
+          this.element = null;
+        }
+
+        static get pasteConfig() {
+          return {
+            files: {
+              extensions: ['png'],
+              mimeTypes: ['image/png'],
+            },
+          };
+        }
+
+        render() {
+          this.element = document.createElement('div');
+          this.element.className = 'file-paste-tool';
+          this.element.contentEditable = 'true';
+          this.element.textContent = this.data.text ?? 'Paste file here';
+
+          return this.element;
+        }
+
+        save(element) {
+          return {
+            text: element.textContent ?? '',
+          };
+        }
+
+        onPaste(event) {
+          const file = event.detail?.file ?? null;
+
+          window.__lastPastedFile = file
+            ? { name: file.name, type: file.type, size: file.size }
+            : null;
+
+          if (file && this.element) {
+            this.element.textContent = 'Pasted file: ' + file.name;
+          }
+        }
+      }
+      `;
+
+      await createEditor(page, {
+        tools: {
+          fileTool: {
+            classCode: fileToolSource,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'fileTool',
+              data: {},
+            },
+          ],
+        },
+      });
+
+      const block = page.locator('.file-paste-tool');
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+
+      await pasteFiles(page, block, [
+        {
+          name: 'pasted-image.png',
+          type: 'image/png',
+          content: 'fake-image-content',
+        },
+      ]);
+
+      await expect(block).toContainText('Pasted file: pasted-image.png');
+
+      const fileMeta = await page.evaluate(() => window.__lastPastedFile);
+
+      expect(fileMeta).toMatchObject({
+        name: 'pasted-image.png',
+        type: 'image/png',
+      });
+    });
+
+    test('should paste content copied from external applications', async ({ page }) => {
+      await createEditor(page);
+
+      const block = getBlockByIndex(page, 0);
+      const externalHtml = `
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <style>p { color: red; }</style>
+          </head>
+          <body>
+            <!--StartFragment-->
+            <p>Copied from Word</p>
+            <p><b>Styled</b> paragraph</p>
+            <!--EndFragment-->
+          </body>
+        </html>
+      `;
+      const plainFallback = 'Copied from Word\n\nStyled paragraph';
+
+      await block.click();
+      await paste(page, block, {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'text/html': externalHtml,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'text/plain': plainFallback,
+      });
+
+      const blocks = page.locator(BLOCK_SELECTOR);
+      const secondParagraph = getParagraphByIndex(page, 1);
+
+      await expect(blocks).toHaveCount(2);
+      await expect(getParagraphByIndex(page, 0)).toContainText('Copied from Word');
+      await expect(secondParagraph).toContainText('Styled paragraph');
+      await expect(secondParagraph.locator('strong')).toHaveText('Styled');
+    });
     test('should not prevent default behaviour if block paste config equals false', async ({ page }) => {
       const blockToolSource = `
       class BlockToolWithPasteHandler {
@@ -495,21 +728,23 @@ test.describe('copy and paste', () => {
     });
 
     test('should copy several blocks', async ({ page }) => {
-      await createEditor(page);
-
-      const firstParagraph = getParagraphByIndex(page, 0);
-
-      await firstParagraph.click();
-      await firstParagraph.type('First block');
-      await page.keyboard.press('Enter');
-
+      await createEditorWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second block' },
+        },
+      ]);
       const secondParagraph = getParagraphByIndex(page, 1);
 
-      await secondParagraph.type('Second block');
-      await page.keyboard.press('Home');
-      await page.keyboard.down('Shift');
-      await page.keyboard.press('ArrowUp');
-      await page.keyboard.up('Shift');
+      await secondParagraph.click();
+      const commandModifier = await getCommandModifierKey(page);
+
+      await page.keyboard.press(`${commandModifier}+A`);
+      await page.keyboard.press(`${commandModifier}+A`);
 
       const clipboardData = await copyFromElement(secondParagraph);
 
@@ -557,10 +792,10 @@ test.describe('copy and paste', () => {
       const secondParagraph = getParagraphByIndex(page, 1);
 
       await secondParagraph.click();
-      await page.keyboard.press('Home');
-      await page.keyboard.down('Shift');
-      await page.keyboard.press('ArrowUp');
-      await page.keyboard.up('Shift');
+      const commandModifier = await getCommandModifierKey(page);
+
+      await page.keyboard.press(`${commandModifier}+A`);
+      await page.keyboard.press(`${commandModifier}+A`);
 
       const clipboardData = await cutFromElement(secondParagraph);
 
@@ -617,6 +852,8 @@ declare global {
     editorInstance?: EditorJS;
     EditorJS: new (...args: unknown[]) => EditorJS;
     blockToolPasteEvents?: Array<{ defaultPrevented: boolean }>;
+    __lastPastedFile?: { name: string; type: string; size: number } | null;
+    __maliciousPasteExecuted?: boolean;
   }
 }
 

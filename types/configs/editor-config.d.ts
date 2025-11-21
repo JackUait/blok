@@ -6,12 +6,6 @@ import { BlockMutationEvent } from '../events/block';
 
 export interface EditorConfig {
   /**
-   * Element where Editor will be append
-   * @deprecated property will be removed in the next major release, use holder instead
-   */
-  holderId?: string | HTMLElement;
-
-  /**
    * Element where Editor will be appended
    */
   holder?: string | HTMLElement;
@@ -28,12 +22,7 @@ export interface EditorConfig {
    */
   defaultBlock?: string;
 
-  /**
-   * @deprecated
-   * This property will be deprecated in the next major release.
-   * Use the 'defaultBlock' property instead.
-   */
-  initialBlock?: string;
+
 
   /**
    * First Block placeholder

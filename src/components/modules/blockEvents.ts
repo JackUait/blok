@@ -10,6 +10,20 @@ import { areBlocksMergeable } from '../utils/blocks';
 import * as caretUtils from '../utils/caret';
 import { focus } from '@editorjs/caret';
 
+const KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP: Record<string, number> = {
+  Backspace: _.keyCodes.BACKSPACE,
+  Delete: _.keyCodes.DELETE,
+  Enter: _.keyCodes.ENTER,
+  Tab: _.keyCodes.TAB,
+  ArrowDown: _.keyCodes.DOWN,
+  ArrowRight: _.keyCodes.RIGHT,
+  ArrowUp: _.keyCodes.UP,
+  ArrowLeft: _.keyCodes.LEFT,
+};
+
+const PRINTABLE_SPECIAL_KEYS = new Set(['Enter', 'Process', 'Spacebar', 'Space', 'Dead']);
+const EDITABLE_INPUT_SELECTOR = '[contenteditable="true"], textarea, input';
+
 /**
  *
  */
@@ -29,10 +43,12 @@ export default class BlockEvents extends Module {
       return;
     }
 
+    const keyCode = this.getKeyCode(event);
+
     /**
-     * Fire keydown processor by event.keyCode
+     * Fire keydown processor by normalized keyboard code
      */
-    switch (event.keyCode) {
+    switch (keyCode) {
       case _.keyCodes.BACKSPACE:
         this.backspace(event);
         break;
@@ -87,7 +103,7 @@ export default class BlockEvents extends Module {
    */
   private handleSelectedBlocksDeletion(event: KeyboardEvent): boolean {
     const { BlockSelection, BlockManager, Caret } = this.Editor;
-    const isRemoveKey = event.keyCode === _.keyCodes.BACKSPACE || event.keyCode === _.keyCodes.DELETE;
+    const isRemoveKey = event.key === 'Backspace' || event.key === 'Delete';
     const selectionExists = SelectionUtils.isSelectionExists;
     const selectionCollapsed = SelectionUtils.isCollapsed === true;
     const shouldHandleSelectionDeletion = isRemoveKey &&
@@ -133,7 +149,7 @@ export default class BlockEvents extends Module {
      *  - close Toolbar
      *  - clear block highlighting
      */
-    if (!_.isPrintableKey(event.keyCode)) {
+    if (!this.isPrintableKeyEvent(event)) {
       return;
     }
 
@@ -174,35 +190,6 @@ export default class BlockEvents extends Module {
     this.Editor.UI.checkEmptiness();
   }
 
-  /**
-   * Add drop target styles
-   *
-   * @param {DragEvent} event - drag over event
-   */
-  public dragOver(event: DragEvent): void {
-    const block = this.Editor.BlockManager.getBlockByChildNode(event.target as Node);
-
-    if (!block) {
-      return;
-    }
-
-    block.dropTarget = true;
-  }
-
-  /**
-   * Remove drop target style
-   *
-   * @param {DragEvent} event - drag leave event
-   */
-  public dragLeave(event: DragEvent): void {
-    const block = this.Editor.BlockManager.getBlockByChildNode(event.target as Node);
-
-    if (!block) {
-      return;
-    }
-
-    block.dropTarget = false;
-  }
 
   /**
    * Copying selected blocks
@@ -425,6 +412,7 @@ export default class BlockEvents extends Module {
     if (!currentBlock.currentInput || !caretUtils.isCaretAtStartOfInput(currentBlock.currentInput)) {
       return;
     }
+
     /**
      * All the cases below have custom behaviour, so we don't need a native one
      */
@@ -601,8 +589,14 @@ export default class BlockEvents extends Module {
    * @param {KeyboardEvent} event - keyboard event
    */
   private arrowRightAndDown(event: KeyboardEvent): void {
-    const isFlipperCombination = Flipper.usedKeys.includes(event.keyCode) &&
-      (!event.shiftKey || event.keyCode === _.keyCodes.TAB);
+    const keyCode = this.getKeyCode(event);
+
+    if (keyCode === null) {
+      return;
+    }
+
+    const isFlipperCombination = Flipper.usedKeys.includes(keyCode) &&
+      (!event.shiftKey || keyCode === _.keyCodes.TAB);
 
     /**
      * Arrows might be handled on toolbars by flipper
@@ -620,11 +614,28 @@ export default class BlockEvents extends Module {
       this.Editor.Toolbar.close();
     }
 
+    const selection = SelectionUtils.get();
+
+    if (selection?.anchorNode && !this.Editor.BlockSelection.anyBlockSelected) {
+      this.Editor.BlockManager.setCurrentBlockByChildNode(selection.anchorNode);
+    }
+
     const { currentBlock } = this.Editor.BlockManager;
-    const caretAtEnd = currentBlock?.currentInput !== undefined ? caretUtils.isCaretAtEndOfInput(currentBlock.currentInput) : undefined;
+    const eventTarget = event.target as HTMLElement | null;
+    const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const fallbackInputCandidates: Array<HTMLElement | undefined | null> = [
+      currentBlock?.inputs.find((input) => eventTarget !== null && input.contains(eventTarget)),
+      currentBlock?.inputs.find((input) => activeElement !== null && input.contains(activeElement)),
+      eventTarget?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+      activeElement?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+    ];
+    const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find((candidate): candidate is HTMLElement => {
+      return candidate instanceof HTMLElement;
+    });
+    const caretAtEnd = caretInput !== undefined ? caretUtils.isCaretAtEndOfInput(caretInput) : undefined;
     const shouldEnableCBS = caretAtEnd || this.Editor.BlockSelection.anyBlockSelected;
 
-    const isShiftDownKey = event.shiftKey && event.keyCode === _.keyCodes.DOWN;
+    const isShiftDownKey = event.shiftKey && keyCode === _.keyCodes.DOWN;
 
     if (isShiftDownKey && shouldEnableCBS) {
       this.Editor.CrossBlockSelection.toggleBlockSelectedState();
@@ -636,7 +647,21 @@ export default class BlockEvents extends Module {
       void this.Editor.InlineToolbar.tryToShow();
     }
 
-    const navigateNext = event.keyCode === _.keyCodes.DOWN || (event.keyCode === _.keyCodes.RIGHT && !this.isRtl);
+    const isPlainRightKey = keyCode === _.keyCodes.RIGHT && !event.shiftKey && !this.isRtl;
+
+    const nbpsTarget = isPlainRightKey && caretInput instanceof HTMLElement
+      ? caretUtils.findNbspAfterEmptyInline(caretInput)
+      : null;
+
+    if (nbpsTarget !== null) {
+      SelectionUtils.setCursor(nbpsTarget.node as unknown as HTMLElement, nbpsTarget.offset);
+      event.preventDefault();
+
+      return;
+    }
+
+    const navigateNext = keyCode === _.keyCodes.DOWN || (keyCode === _.keyCodes.RIGHT && !this.isRtl);
+
     const isNavigated = navigateNext ? this.Editor.Caret.navigateNext() : this.Editor.Caret.navigatePrevious();
 
     if (isNavigated) {
@@ -656,7 +681,7 @@ export default class BlockEvents extends Module {
       if (this.Editor.BlockManager.currentBlock) {
         this.Editor.BlockManager.currentBlock.updateCurrentInput();
       }
-    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
     }, 20)();
 
     /**
@@ -677,7 +702,13 @@ export default class BlockEvents extends Module {
      */
     const toolbarOpened = this.Editor.UI.someToolbarOpened;
 
-    if (toolbarOpened && Flipper.usedKeys.includes(event.keyCode) && (!event.shiftKey || event.keyCode === _.keyCodes.TAB)) {
+    const keyCode = this.getKeyCode(event);
+
+    if (keyCode === null) {
+      return;
+    }
+
+    if (toolbarOpened && Flipper.usedKeys.includes(keyCode) && (!event.shiftKey || keyCode === _.keyCodes.TAB)) {
       return;
     }
 
@@ -692,11 +723,28 @@ export default class BlockEvents extends Module {
       this.Editor.Toolbar.close();
     }
 
+    const selection = window.getSelection();
+
+    if (selection?.anchorNode && !this.Editor.BlockSelection.anyBlockSelected) {
+      this.Editor.BlockManager.setCurrentBlockByChildNode(selection.anchorNode);
+    }
+
     const { currentBlock } = this.Editor.BlockManager;
-    const caretAtStart = currentBlock?.currentInput !== undefined ? caretUtils.isCaretAtStartOfInput(currentBlock.currentInput) : undefined;
+    const eventTarget = event.target as HTMLElement | null;
+    const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const fallbackInputCandidates: Array<HTMLElement | undefined | null> = [
+      currentBlock?.inputs.find((input) => eventTarget !== null && input.contains(eventTarget)),
+      currentBlock?.inputs.find((input) => activeElement !== null && input.contains(activeElement)),
+      eventTarget?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+      activeElement?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+    ];
+    const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find((candidate): candidate is HTMLElement => {
+      return candidate instanceof HTMLElement;
+    });
+    const caretAtStart = caretInput !== undefined ? caretUtils.isCaretAtStartOfInput(caretInput) : undefined;
     const shouldEnableCBS = caretAtStart || this.Editor.BlockSelection.anyBlockSelected;
 
-    const isShiftUpKey = event.shiftKey && event.keyCode === _.keyCodes.UP;
+    const isShiftUpKey = event.shiftKey && keyCode === _.keyCodes.UP;
 
     if (isShiftUpKey && shouldEnableCBS) {
       this.Editor.CrossBlockSelection.toggleBlockSelectedState(false);
@@ -708,7 +756,7 @@ export default class BlockEvents extends Module {
       void this.Editor.InlineToolbar.tryToShow();
     }
 
-    const navigatePrevious = event.keyCode === _.keyCodes.UP || (event.keyCode === _.keyCodes.LEFT && !this.isRtl);
+    const navigatePrevious = keyCode === _.keyCodes.UP || (keyCode === _.keyCodes.LEFT && !this.isRtl);
     const isNavigated = navigatePrevious ? this.Editor.Caret.navigatePrevious() : this.Editor.Caret.navigateNext();
 
     if (isNavigated) {
@@ -728,7 +776,7 @@ export default class BlockEvents extends Module {
       if (this.Editor.BlockManager.currentBlock) {
         this.Editor.BlockManager.currentBlock.updateCurrentInput();
       }
-    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
     }, 20)();
 
     /**
@@ -743,10 +791,13 @@ export default class BlockEvents extends Module {
    * @param {KeyboardEvent} event - keyboard event
    */
   private needToolbarClosing(event: KeyboardEvent): boolean {
-    const toolboxItemSelected = (event.keyCode === _.keyCodes.ENTER && this.Editor.Toolbar.toolbox.opened);
-    const blockSettingsItemSelected = (event.keyCode === _.keyCodes.ENTER && this.Editor.BlockSettings.opened);
-    const inlineToolbarItemSelected = (event.keyCode === _.keyCodes.ENTER && this.Editor.InlineToolbar.opened);
-    const flippingToolbarItems = event.keyCode === _.keyCodes.TAB;
+    const keyCode = this.getKeyCode(event);
+    const isEnter = keyCode === _.keyCodes.ENTER;
+    const isTab = keyCode === _.keyCodes.TAB;
+    const toolboxItemSelected = (isEnter && this.Editor.Toolbar.toolbox.opened);
+    const blockSettingsItemSelected = (isEnter && this.Editor.BlockSettings.opened);
+    const inlineToolbarItemSelected = (isEnter && this.Editor.InlineToolbar.opened);
+    const flippingToolbarItems = isTab;
 
     /**
      * Do not close Toolbar in cases:
@@ -797,5 +848,39 @@ export default class BlockEvents extends Module {
           // Error handling for BlockSettings.open
         });
     }
+  }
+
+  /**
+   * Convert KeyboardEvent.key or code to the legacy numeric keyCode
+   *
+   * @param event - keyboard event
+   */
+  private getKeyCode(event: KeyboardEvent): number | null {
+    const keyFromEvent = event.key && KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP[event.key];
+
+    if (keyFromEvent !== undefined && typeof keyFromEvent === 'number') {
+      return keyFromEvent;
+    }
+
+    const codeFromEvent = event.code && KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP[event.code];
+
+    if (codeFromEvent !== undefined && typeof codeFromEvent === 'number') {
+      return codeFromEvent;
+    }
+
+    return null;
+  }
+
+  /**
+   * Detect whether KeyDown should be treated as printable input
+   *
+   * @param event - keyboard event
+   */
+  private isPrintableKeyEvent(event: KeyboardEvent): boolean {
+    if (!event.key) {
+      return false;
+    }
+
+    return event.key.length === 1 || PRINTABLE_SPECIAL_KEYS.has(event.key);
   }
 }

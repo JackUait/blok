@@ -12,7 +12,6 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
@@ -245,6 +244,23 @@ const openInlineToolbarPopover = async (page: Page): Promise<Locator> => {
   await expect(inlinePopoverContainer).toBeVisible();
 
   return inlinePopover;
+};
+
+const getParagraphLocatorByBlockIndex = async (page: Page, blockIndex = 0): Promise<Locator> => {
+  const blockId = await page.evaluate(
+    ({ index }) => window.editorInstance?.blocks?.getBlockByIndex(index)?.id ?? null,
+    { index: blockIndex }
+  );
+
+  if (!blockId) {
+    throw new Error(`Unable to resolve block id for index ${blockIndex}`);
+  }
+
+  const block = page.locator(`${BLOCK_SELECTOR}[data-id="${blockId}"]`);
+
+  await expect(block).toHaveCount(1);
+
+  return block.locator('[data-block-tool="paragraph"]');
 };
 
 test.describe('editor i18n', () => {
@@ -1053,7 +1069,7 @@ test.describe('editor i18n', () => {
           uiDict: uiDictionary }
       );
 
-      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
 
       await expect(paragraph).toHaveCount(1);
 
@@ -1283,7 +1299,7 @@ test.describe('editor i18n', () => {
           uiDict: uiDictionary }
       );
 
-      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
 
       await expect(paragraph).toHaveCount(1);
 
@@ -1332,7 +1348,7 @@ test.describe('editor i18n', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
 
       await expect(paragraph).toHaveCount(1);
 
@@ -1477,7 +1493,7 @@ test.describe('editor i18n', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
 
       await expect(paragraph).toHaveCount(1);
 

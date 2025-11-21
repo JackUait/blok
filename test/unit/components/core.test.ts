@@ -14,7 +14,6 @@ const mockRegistry = vi.hoisted(() => ({
     isEmpty: vi.fn(),
     setLogLevel: vi.fn(),
     log: vi.fn(),
-    deprecationAssert: vi.fn(),
   },
   i18n: {
     setDictionary: vi.fn(),
@@ -53,7 +52,6 @@ vi.mock('../../../src/components/utils', () => ({
   isEmpty: mockRegistry.utils.isEmpty,
   setLogLevel: mockRegistry.utils.setLogLevel,
   log: mockRegistry.utils.log,
-  deprecationAssert: mockRegistry.utils.deprecationAssert,
   LogLevels: {
     VERBOSE: 'VERBOSE',
     INFO: 'INFO',
@@ -194,7 +192,6 @@ const {
   isObject: mockIsObject,
   isString: mockIsString,
   isEmpty: mockIsEmpty,
-  setLogLevel: mockSetLogLevel,
   log: mockLog,
 } = utils;
 const { setDictionary: mockSetDictionary } = i18n;
@@ -256,19 +253,6 @@ describe('Core', () => {
   });
 
   describe('configuration', () => {
-    it('normalizes holderId and sets default values', async () => {
-      const core = await createReadyCore({ holderId: 'my-holder' });
-
-      expect(core.configuration.holder).toBe('my-holder');
-      expect(core.configuration.holderId).toBeUndefined();
-      expect(core.configuration.defaultBlock).toBe('paragraph');
-      expect(core.configuration.minHeight).toBe(300);
-      expect(core.configuration.data?.blocks).toHaveLength(1);
-      expect(core.configuration.data?.blocks?.[0]?.type).toBe('paragraph');
-      expect(core.configuration.readOnly).toBe(false);
-      expect(mockSetLogLevel).toHaveBeenCalledWith('VERBOSE');
-    });
-
     it('retains provided data and applies i18n dictionary', async () => {
       const config: EditorConfig = {
         holder: 'holder',
@@ -302,17 +286,6 @@ describe('Core', () => {
   });
 
   describe('validate', () => {
-    it('throws when both holder and holderId are provided', async () => {
-      const core = await createReadyCore();
-
-      core.configuration = {
-        holder: 'element',
-        holderId: 'other',
-      } as EditorConfig;
-
-      expect(() => core.validate()).toThrow('«holderId» and «holder» param can\'t assign at the same time.');
-    });
-
     it('throws when holder element is missing', async () => {
       const core = await createReadyCore();
 

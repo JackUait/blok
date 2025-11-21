@@ -1,8 +1,16 @@
 import SelectionUtils from '../selection';
 import * as _ from '../utils';
-import type { InlineTool, SanitizerConfig, API } from '../../../types';
+import type {
+  InlineTool,
+  InlineToolConstructable,
+  InlineToolConstructorOptions,
+  SanitizerConfig
+} from '../../../types';
+import { PopoverItemType } from '../utils/popover';
 import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
-import { IconLink, IconUnlink } from '@codexteam/icons';
+import type { MenuConfig } from '../../../types/tools';
+import { IconLink } from '@codexteam/icons';
+import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../constants';
 
 /**
  * Link Tool
@@ -11,7 +19,7 @@ import { IconLink, IconUnlink } from '@codexteam/icons';
  *
  * Wrap selected text with <a> tag
  */
-export default class LinkInlineTool implements InlineTool {
+const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
    *
@@ -20,7 +28,7 @@ export default class LinkInlineTool implements InlineTool {
   public static isInline = true;
 
   /**
-   * Title for hover-tooltip
+   * Title for the Inline Tool
    */
   public static title = 'Link';
 
@@ -39,17 +47,6 @@ export default class LinkInlineTool implements InlineTool {
       },
     } as SanitizerConfig;
   }
-
-  /**
-   * Native Document's commands for link/unlink
-   */
-  private readonly commandLink: string = 'createLink';
-  private readonly commandUnlink: string = 'unlink';
-
-  /**
-   * Enter key code
-   */
-  private readonly ENTER_KEY: number = 13;
 
   /**
    * Styles
@@ -75,11 +72,11 @@ export default class LinkInlineTool implements InlineTool {
    * Elements
    */
   private nodes: {
-    button: HTMLButtonElement | null;
     input: HTMLInputElement | null;
+    button: HTMLButtonElement | null;
   } = {
-      button: null,
       input: null,
+      button: null,
     };
 
   /**
@@ -91,6 +88,11 @@ export default class LinkInlineTool implements InlineTool {
    * Input opening state
    */
   private inputOpened = false;
+
+  /**
+   * Tracks whether unlink action is available via toolbar button toggle
+   */
+  private unlinkAvailable = false;
 
   /**
    * Available Toolbar methods (open/close)
@@ -115,130 +117,56 @@ export default class LinkInlineTool implements InlineTool {
   /**
    * @param api - Editor.js API
    */
-  constructor({ api }: { api: API }) {
+  constructor({ api }: InlineToolConstructorOptions) {
     this.toolbar = api.toolbar;
     this.inlineToolbar = api.inlineToolbar;
     this.notifier = api.notifier;
     this.i18n = api.i18n;
     this.selection = new SelectionUtils();
+    this.nodes.input = this.createInput();
   }
 
   /**
    * Create button for Inline Toolbar
    */
-  public render(): HTMLElement {
-    this.nodes.button = document.createElement('button') as HTMLButtonElement;
-    this.nodes.button.type = 'button';
-    this.nodes.button.classList.add(this.CSS.button, this.CSS.buttonModifier);
-    this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonActive, false);
-    this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonUnlink, false);
-
-    this.nodes.button.innerHTML = IconLink;
-
-    return this.nodes.button;
+  public render(): MenuConfig {
+    return {
+      icon: IconLink,
+      isActive: () => !!this.selection.findParentTag('A'),
+      children: {
+        items: [
+          {
+            type: PopoverItemType.Html,
+            element: this.nodes.input!,
+          },
+        ],
+        onOpen: () => {
+          this.openActions(true);
+        },
+        onClose: () => {
+          this.closeActions();
+        },
+      },
+    };
   }
 
   /**
    * Input for the link
    */
-  public renderActions(): HTMLElement {
-    this.nodes.input = document.createElement('input') as HTMLInputElement;
-    this.nodes.input.placeholder = this.i18n.t('Add a link');
-    this.nodes.input.enterKeyHint = 'done';
-    this.nodes.input.classList.add(this.CSS.input);
-    this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, false);
-    this.nodes.input.addEventListener('keydown', (event: KeyboardEvent) => {
-      if (event.keyCode === this.ENTER_KEY) {
+  private createInput(): HTMLInputElement {
+    const input = document.createElement('input') as HTMLInputElement;
+
+    input.placeholder = this.i18n.t('Add a link');
+    input.enterKeyHint = 'done';
+    input.classList.add(this.CSS.input);
+    this.setBooleanStateAttribute(input, this.DATA_ATTRIBUTES.inputOpened, false);
+    input.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
         this.enterPressed(event);
       }
     });
 
-    return this.nodes.input;
-  }
-
-  /**
-   * Handle clicks on the Inline Toolbar icon
-   *
-   * @param {Range | null} range - range to wrap with link
-   */
-  public surround(range: Range | null): void {
-    if (!range) {
-      this.toggleActions();
-
-      return;
-    }
-
-    /**
-     * Save selection before change focus to the input
-     */
-    if (!this.inputOpened) {
-      /** Create blue background instead of selection */
-      this.selection.setFakeBackground();
-      this.selection.save();
-    } else {
-      this.selection.restore();
-      this.selection.removeFakeBackground();
-    }
-    const parentAnchor = this.selection.findParentTag('A');
-
-    /**
-     * Unlink icon pressed
-     */
-    if (parentAnchor) {
-      this.selection.expandToTag(parentAnchor);
-      this.unlink();
-      this.closeActions();
-      this.checkState();
-      this.toolbar.close();
-
-      return;
-    }
-
-    this.toggleActions();
-  }
-
-  /**
-   * Check selection and set activated state to button if there are <a> tag
-   */
-  public checkState(): boolean {
-    const anchorTag = this.selection.findParentTag('A');
-
-    if (!this.nodes.button || !this.nodes.input) {
-      return !!anchorTag;
-    }
-
-    if (anchorTag) {
-      this.nodes.button.innerHTML = IconUnlink;
-      this.nodes.button.classList.add(this.CSS.buttonUnlink);
-      this.nodes.button.classList.add(this.CSS.buttonActive);
-      this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonUnlink, true);
-      this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonActive, true);
-      this.openActions();
-
-      /**
-       * Fill input value with link href
-       */
-      const hrefAttr = anchorTag.getAttribute('href');
-
-      this.nodes.input.value = hrefAttr !== null ? hrefAttr : '';
-
-      this.selection.save();
-    } else {
-      this.nodes.button.innerHTML = IconLink;
-      this.nodes.button.classList.remove(this.CSS.buttonUnlink);
-      this.nodes.button.classList.remove(this.CSS.buttonActive);
-      this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonUnlink, false);
-      this.setBooleanStateAttribute(this.nodes.button, this.DATA_ATTRIBUTES.buttonActive, false);
-    }
-
-    return !!anchorTag;
-  }
-
-  /**
-   * Function called with Inline Toolbar closing
-   */
-  public clear(): void {
-    this.closeActions();
+    return input;
   }
 
   /**
@@ -249,30 +177,120 @@ export default class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * Show/close link input
-   */
-  private toggleActions(): void {
-    if (!this.inputOpened) {
-      this.openActions(true);
-    } else {
-      this.closeActions(false);
-    }
-  }
-
-  /**
    * @param {boolean} needFocus - on link creation we need to focus input. On editing - nope.
    */
   private openActions(needFocus = false): void {
     if (!this.nodes.input) {
       return;
     }
+
+    const anchorTag = this.selection.findParentTag('A');
+
+    const hasAnchor = Boolean(anchorTag);
+
+    this.updateButtonStateAttributes(hasAnchor);
+    this.unlinkAvailable = hasAnchor;
+
+    if (anchorTag) {
+      /**
+       * Fill input value with link href
+       */
+      const hrefAttr = anchorTag.getAttribute('href');
+
+      this.nodes.input.value = hrefAttr !== null ? hrefAttr : '';
+    } else {
+      this.nodes.input.value = '';
+    }
+
     this.nodes.input.classList.add(this.CSS.inputShowed);
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, true);
+
+    this.selection.save();
+
     if (needFocus) {
-      this.nodes.input.focus();
+      this.focusInputWithRetry();
     }
     this.inputOpened = true;
   }
+  /**
+   * Ensures the link input receives focus even if other listeners steal it
+   */
+  private focusInputWithRetry(): void {
+    if (!this.nodes.input) {
+      return;
+    }
+
+    this.nodes.input.focus();
+
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (document.activeElement !== this.nodes.input) {
+        this.nodes.input?.focus();
+      }
+    }, 0);
+  }
+
+  /**
+   * Resolve the current inline toolbar button element
+   */
+  private getButtonElement(): HTMLButtonElement | null {
+    if (this.nodes.button && document.contains(this.nodes.button)) {
+      return this.nodes.button;
+    }
+
+    const button = document.querySelector<HTMLButtonElement>(
+      `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-item-name="link"]`
+    );
+
+    if (button) {
+      button.addEventListener('click', this.handleButtonClick, true);
+    }
+
+    this.nodes.button = button ?? null;
+
+    return this.nodes.button;
+  }
+
+  /**
+   * Update button state attributes for e2e hooks
+   *
+   * @param hasAnchor - Optional override for anchor presence
+   */
+  private updateButtonStateAttributes(hasAnchor?: boolean): void {
+    const button = this.getButtonElement();
+
+    if (!button) {
+      return;
+    }
+
+    const anchorPresent = typeof hasAnchor === 'boolean' ? hasAnchor : Boolean(this.selection.findParentTag('A'));
+
+    this.setBooleanStateAttribute(button, this.DATA_ATTRIBUTES.buttonActive, anchorPresent);
+    this.setBooleanStateAttribute(button, this.DATA_ATTRIBUTES.buttonUnlink, anchorPresent);
+  }
+
+  /**
+   * Handles toggling the inline tool button while actions menu is open
+   *
+   * @param event - Click event emitted by the inline tool button
+   */
+  private handleButtonClick = (event: MouseEvent): void => {
+    if (!this.inputOpened || !this.unlinkAvailable) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    this.restoreSelection();
+    this.unlink();
+    this.inlineToolbar.close();
+  };
+
 
   /**
    * Close input
@@ -281,17 +299,11 @@ export default class LinkInlineTool implements InlineTool {
    *                                        on toggle-clicks on the icon of opened Toolbar
    */
   private closeActions(clearSavedSelection = true): void {
-    if (this.selection.isFakeBackgroundEnabled) {
-      // if actions is broken by other selection We need to save new selection
-      const currentSelection = new SelectionUtils();
+    const shouldRestoreSelection = this.selection.isFakeBackgroundEnabled ||
+      (clearSavedSelection && !!this.selection.savedSelectionRange);
 
-      currentSelection.save();
-
-      this.selection.restore();
-      this.selection.removeFakeBackground();
-
-      // and recover new selection after removing fake background
-      currentSelection.restore();
+    if (shouldRestoreSelection) {
+      this.restoreSelection();
     }
 
     if (!this.nodes.input) {
@@ -300,10 +312,52 @@ export default class LinkInlineTool implements InlineTool {
     this.nodes.input.classList.remove(this.CSS.inputShowed);
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, false);
     this.nodes.input.value = '';
+    this.updateButtonStateAttributes(false);
+    this.unlinkAvailable = false;
     if (clearSavedSelection) {
       this.selection.clearSaved();
     }
     this.inputOpened = false;
+  }
+
+  /**
+   * Restore selection after closing actions
+   */
+  private restoreSelection(): void {
+    // if actions is broken by other selection We need to save new selection
+    const currentSelection = new SelectionUtils();
+    const isSelectionInEditor = SelectionUtils.isAtEditor;
+
+    if (isSelectionInEditor) {
+      currentSelection.save();
+    }
+
+    this.selection.removeFakeBackground();
+    this.selection.restore();
+
+    // and recover new selection after removing fake background
+    if (!isSelectionInEditor && this.selection.savedSelectionRange) {
+      const range = this.selection.savedSelectionRange;
+      const container = range.commonAncestorContainer;
+      const element = container.nodeType === Node.ELEMENT_NODE ? container as HTMLElement : container.parentElement;
+
+      element?.focus();
+    }
+
+    if (!isSelectionInEditor) {
+      return;
+    }
+
+    currentSelection.restore();
+
+    const range = currentSelection.savedSelectionRange;
+
+    if (range) {
+      const container = range.commonAncestorContainer;
+      const element = container.nodeType === Node.ELEMENT_NODE ? container as HTMLElement : container.parentElement;
+
+      element?.focus();
+    }
   }
 
   /**
@@ -322,6 +376,8 @@ export default class LinkInlineTool implements InlineTool {
       this.unlink();
       event.preventDefault();
       this.closeActions();
+      // Explicitly close inline toolbar as well, similar to legacy behavior
+      this.inlineToolbar.close();
 
       return;
     }
@@ -339,8 +395,8 @@ export default class LinkInlineTool implements InlineTool {
 
     const preparedValue = this.prepareLink(value);
 
-    this.selection.restore();
     this.selection.removeFakeBackground();
+    this.selection.restore();
 
     this.insertLink(preparedValue);
 
@@ -417,20 +473,63 @@ export default class LinkInlineTool implements InlineTool {
     /**
      * Edit all link, not selected part
      */
-    const anchorTag = this.selection.findParentTag('A');
+    const anchorTag = this.selection.findParentTag('A') as HTMLAnchorElement;
 
     if (anchorTag) {
       this.selection.expandToTag(anchorTag);
+
+      anchorTag.href = link;
+      anchorTag.target = '_blank';
+      anchorTag.rel = 'nofollow';
+
+      return;
     }
 
-    document.execCommand(this.commandLink, false, link);
+    const range = SelectionUtils.range;
+
+    if (!range) {
+      return;
+    }
+
+    const anchor = document.createElement('a');
+
+    anchor.href = link;
+    anchor.target = '_blank';
+    anchor.rel = 'nofollow';
+
+    anchor.appendChild(range.extractContents());
+
+    range.insertNode(anchor);
+
+    this.selection.expandToTag(anchor);
   }
 
   /**
    * Removes <a> tag
    */
   private unlink(): void {
-    document.execCommand(this.commandUnlink);
+    const anchorTag = this.selection.findParentTag('A');
+
+    if (anchorTag) {
+      this.unwrap(anchorTag);
+      this.updateButtonStateAttributes(false);
+      this.unlinkAvailable = false;
+    }
+  }
+
+  /**
+   * Unwrap passed node
+   *
+   * @param term - node to unwrap
+   */
+  private unwrap(term: HTMLElement): void {
+    const docFrag = document.createDocumentFragment();
+
+    while (term.firstChild) {
+      docFrag.appendChild(term.firstChild);
+    }
+
+    term.parentNode?.replaceChild(docFrag, term);
   }
 
   /**
@@ -447,4 +546,6 @@ export default class LinkInlineTool implements InlineTool {
 
     element.setAttribute(attributeName, state ? 'true' : 'false');
   }
-}
+};
+
+export default LinkInlineTool;

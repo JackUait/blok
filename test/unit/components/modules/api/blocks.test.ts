@@ -69,7 +69,6 @@ type BlockManagerMock = {
   getBlockById: ReturnType<typeof vi.fn>;
   getBlockIndex: ReturnType<typeof vi.fn>;
   getBlock: ReturnType<typeof vi.fn>;
-  swap: ReturnType<typeof vi.fn>;
   move: ReturnType<typeof vi.fn>;
   removeBlock: ReturnType<typeof vi.fn>;
   insert: ReturnType<typeof vi.fn>;
@@ -97,7 +96,6 @@ const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub()
     getBlock: vi.fn((element: HTMLElement) => {
       return blockManager.blocks.find((block) => block.holder === element);
     }) as ReturnType<typeof vi.fn>,
-    swap: vi.fn() as ReturnType<typeof vi.fn>,
     move: vi.fn() as ReturnType<typeof vi.fn>,
     removeBlock: vi.fn((block?: BlockStub) => {
       if (!block) {
@@ -437,22 +435,6 @@ describe('BlocksAPI', () => {
   });
 
   describe('block ordering', () => {
-    it('delegates swap to BlockManager and logs deprecation notice', () => {
-      const { blocksApi, blockManager } = createBlocksApi();
-      const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => {});
-
-      blocksApi.swap(1, 2);
-
-      expect(blockManager.swap).toHaveBeenCalledWith(1, 2);
-      expect(logSpy).toHaveBeenCalledWith(
-        '`blocks.swap()` method is deprecated and will be removed in the next major release. ' +
-        'Use `block.move()` method instead',
-        'info'
-      );
-
-      logSpy.mockRestore();
-    });
-
     it('delegates move to BlockManager', () => {
       const { blocksApi, blockManager } = createBlocksApi();
 
@@ -571,39 +553,6 @@ describe('BlocksAPI', () => {
     });
   });
 
-  describe('block stretching', () => {
-    it('sets stretched state on block', () => {
-      const block = createBlockStub({ stretched: false });
-      const { blocksApi, blockManager } = createBlocksApi({ blocks: [ block ] });
-      const assertSpy = vi.spyOn(utils, 'deprecationAssert').mockImplementation(() => {});
-
-      blocksApi.stretchBlock(0, true);
-
-      expect(assertSpy).toHaveBeenCalledWith(
-        true,
-        'blocks.stretchBlock()',
-        'BlockAPI'
-      );
-      expect(blockManager.getBlockByIndex).toHaveBeenCalledWith(0);
-      expect(block.stretched).toBe(true);
-
-      assertSpy.mockRestore();
-    });
-
-    it('does nothing when block for stretch is missing', () => {
-      const { blocksApi, blockManager } = createBlocksApi({ blocks: [] });
-      const assertSpy = vi.spyOn(utils, 'deprecationAssert').mockImplementation(() => {});
-
-      blockManager.getBlockByIndex.mockReturnValueOnce(undefined);
-
-      blocksApi.stretchBlock(0, false);
-
-      expect(assertSpy).toHaveBeenCalled();
-      expect(blockManager.getBlockByIndex).toHaveBeenCalledWith(0);
-
-      assertSpy.mockRestore();
-    });
-  });
 
   describe('block insertion APIs', () => {
     it('inserts a new block and wraps it with BlockAPI', () => {
@@ -634,22 +583,6 @@ describe('BlocksAPI', () => {
       expect(blockManager.insert).toHaveBeenCalledWith(expect.objectContaining({
         tool: 'header',
       }));
-    });
-
-    it('logs deprecation when insertNewBlock is called', () => {
-      const { blocksApi, blockManager } = createBlocksApi();
-      const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => {});
-
-      blocksApi.insertNewBlock();
-
-      expect(logSpy).toHaveBeenCalledWith(
-        'Method blocks.insertNewBlock() is deprecated and it will be removed in the next major release. ' +
-        'Use blocks.insert() instead.',
-        'warn'
-      );
-      expect(blockManager.insert).toHaveBeenCalled();
-
-      logSpy.mockRestore();
     });
 
     it('composes block data through Block constructor', async () => {

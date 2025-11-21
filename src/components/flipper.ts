@@ -299,10 +299,7 @@ export default class Flipper {
      */
     event.stopPropagation();
     event.stopImmediatePropagation();
-    // eslint-disable-next-line no-param-reassign
-    event.cancelBubble = true;
-    // eslint-disable-next-line no-param-reassign
-    event.returnValue = false;
+
 
     /**
      * Prevent only used keys default behaviour
@@ -416,7 +413,7 @@ export default class Flipper {
    */
   private flipCallback(): void {
     if (this.iterator?.currentItem) {
-      this.iterator.currentItem.scrollIntoViewIfNeeded();
+      this.iterator.currentItem.scrollIntoViewIfNeeded?.();
     }
 
     this.flipCallbacks.forEach(cb => cb());

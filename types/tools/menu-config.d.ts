@@ -9,15 +9,7 @@ export type MenuConfig = MenuConfigItem | MenuConfigItem[];
 /**
  * Common parameters for all kinds of default Menu Config items: with or without confirmation
  */
-type MenuConfigDefaultBaseParams = PopoverItemDefaultBaseParams & {
-  /**
-   * Displayed text.
-   * Alias for title property
-   * 
-   * @deprecated - use title property instead
-   */
-  label?: string
-};
+type MenuConfigDefaultBaseParams = PopoverItemDefaultBaseParams;
 
 /**
  * Menu Config item with confirmation
@@ -39,7 +31,7 @@ type MenuConfigItemDefaultWithConfirmationParams = Omit<MenuConfigDefaultBasePar
 /**
  * Default, non-separator and non-html Menu Config items type
  */
-type MenuConfigItemDefaultParams = 
+type MenuConfigItemDefaultParams =
   MenuConfigItemDefaultWithConfirmationParams |
   MenuConfigDefaultBaseParams |
   WithChildren<MenuConfigDefaultBaseParams>;
@@ -47,7 +39,7 @@ type MenuConfigItemDefaultParams =
 /**
  * Single Menu Config item
  */
-type MenuConfigItem = 
+type MenuConfigItem =
   MenuConfigItemDefaultParams |
   PopoverItemSeparatorParams |
   PopoverItemHtmlParams |

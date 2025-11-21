@@ -63,21 +63,6 @@ describe('Dom helper utilities', () => {
 
       expect(Array.from(parent.children)).toEqual([second, first, initial]);
     });
-
-    it('swaps elements in place via swap()', () => {
-      const parent = document.createElement('div');
-      const first = document.createElement('span');
-      const second = document.createElement('span');
-
-      first.id = 'first';
-      second.id = 'second';
-
-      parent.append(first, second);
-
-      Dom.swap(first, second);
-
-      expect(Array.from(parent.children).map((el) => el.id)).toEqual(['second', 'first']);
-    });
   });
 
   describe('selectors', () => {

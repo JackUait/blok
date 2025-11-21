@@ -13,5 +13,5 @@
     "source.fixAll.eslint": "always"
   },
   "eslint.useFlatConfig": true,
-
+  "editor.formatOnSave": false
 }

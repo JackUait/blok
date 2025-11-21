@@ -29,6 +29,25 @@ interface TagSubstitute {
   sanitizationConfig?: SanitizerRule;
 }
 
+const SAFE_STRUCTURAL_TAGS = new Set([
+  'table',
+  'thead',
+  'tbody',
+  'tfoot',
+  'tr',
+  'th',
+  'td',
+  'caption',
+  'colgroup',
+  'col',
+  'ul',
+  'ol',
+  'li',
+  'dl',
+  'dt',
+  'dd',
+]);
+
 /**
  * Pattern substitute object.
  */
@@ -145,6 +164,56 @@ export default class Paste extends Module {
   }
 
   /**
+   * Determines whether current block should be replaced by the pasted file tool.
+   *
+   * @param toolName - tool that is going to handle the file
+   */
+  private shouldReplaceCurrentBlockForFile(toolName?: string): boolean {
+    const { BlockManager } = this.Editor;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return false;
+    }
+
+    if (toolName && currentBlock.name === toolName) {
+      return true;
+    }
+
+    const isCurrentBlockDefault = Boolean(currentBlock.tool.isDefault);
+
+    return isCurrentBlockDefault && currentBlock.isEmpty;
+  }
+
+  /**
+   * Builds sanitize config that keeps structural tags such as tables and lists intact.
+   *
+   * @param node - root node to inspect
+   */
+  private getStructuralTagsSanitizeConfig(node: HTMLElement): SanitizerConfig {
+    const config: SanitizerConfig = {} as SanitizerConfig;
+    const nodesToProcess: Element[] = [ node ];
+
+    while (nodesToProcess.length > 0) {
+      const current = nodesToProcess.pop();
+
+      if (!current) {
+        continue;
+      }
+
+      const tagName = current.tagName.toLowerCase();
+
+      if (SAFE_STRUCTURAL_TAGS.has(tagName)) {
+        config[tagName] = config[tagName] ?? {};
+      }
+
+      nodesToProcess.push(...Array.from(current.children));
+    }
+
+    return config;
+  }
+
+  /**
    * Set read-only state
    *
    * @param {boolean} readOnlyEnabled - read only flag value
@@ -158,21 +227,48 @@ export default class Paste extends Module {
   }
 
   /**
-   * Handle pasted or dropped data transfer object
+   * Determines whether provided DataTransfer contains file-like entries
    *
-   * @param {DataTransfer} dataTransfer - pasted or dropped data transfer object
-   * @param {boolean} isDragNDrop - true if data transfer comes from drag'n'drop events
+   * @param dataTransfer - data transfer payload to inspect
    */
-  public async processDataTransfer(dataTransfer: DataTransfer, isDragNDrop = false): Promise<void> {
-    const { Tools } = this.Editor;
-    const types = dataTransfer.types;
+  private containsFiles(dataTransfer: DataTransfer): boolean {
+    const types = Array.from(dataTransfer.types);
 
     /**
-     * In Microsoft Edge types is DOMStringList. So 'contains' is used to check if 'Files' type included
+     * Common case: browser exposes explicit "Files" entry
      */
-    const includesFiles = typeof types.includes === 'function'
-      ? types.includes('Files')
-      : (types as unknown as DOMStringList).contains('Files');
+    if (types.includes('Files')) {
+      return true;
+    }
+
+    /**
+     * File uploads sometimes omit `types` and set files directly
+     */
+    if (dataTransfer.files?.length) {
+      return true;
+    }
+
+    try {
+      const legacyList = dataTransfer.types as unknown as DOMStringList;
+
+      if (typeof legacyList?.contains === 'function' && legacyList.contains('Files')) {
+        return true;
+      }
+    } catch {
+      // ignore and fallthrough
+    }
+
+    return false;
+  }
+
+  /**
+   * Handle pasted data transfer object
+   *
+   * @param {DataTransfer} dataTransfer - pasted data transfer object
+   */
+  public async processDataTransfer(dataTransfer: DataTransfer): Promise<void> {
+    const { Tools } = this.Editor;
+    const includesFiles = this.containsFiles(dataTransfer);
 
     if (includesFiles && !_.isEmpty(this.toolsFiles)) {
       await this.processFiles(dataTransfer.files);
@@ -183,23 +279,7 @@ export default class Paste extends Module {
     const editorJSData = dataTransfer.getData(this.MIME_TYPE);
     const plainData = dataTransfer.getData('text/plain');
     const rawHtmlData = dataTransfer.getData('text/html');
-    const htmlData = (() => {
-      const trimmedPlainData = plainData.trim();
-      const trimmedHtmlData = rawHtmlData.trim();
-
-      if (isDragNDrop && trimmedPlainData.length > 0 && trimmedHtmlData.length > 0) {
-        const contentToWrap = trimmedHtmlData.length > 0 ? rawHtmlData : plainData;
-
-        return `<p>${contentToWrap}</p>`;
-      }
-
-      return rawHtmlData;
-    })();
-
-    const shouldWrapDraggedText = isDragNDrop && plainData.trim() && htmlData.trim();
-    const normalizedHtmlData = shouldWrapDraggedText
-      ? `<p>${htmlData.trim() ? htmlData : plainData}</p>`
-      : htmlData;
+    const normalizedHtmlData = rawHtmlData;
 
     /**
      * If EditorJS json is passed, insert it
@@ -212,9 +292,6 @@ export default class Paste extends Module {
       } catch (e) { } // Do nothing and continue execution as usual if error appears
     }
 
-    /**
-     *  If text was drag'n'dropped, wrap content with P tag to insert it as the new Block
-     */
     /** Add all tags that can be substituted to sanitizer configuration */
     const toolsTags = Object.fromEntries(
       Object.keys(this.toolsTags).map((tag) => [
@@ -231,9 +308,11 @@ export default class Paste extends Module {
       { br: {} }
     );
     const cleanData = clean(normalizedHtmlData, customConfig);
+    const cleanDataIsHtml = $.isHTMLString(cleanData);
+    const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);
 
     /** If there is no HTML or HTML string is equal to plain one, process it as plain text */
-    if (!cleanData.trim() || cleanData.trim() === plainData || !$.isHTMLString(cleanData)) {
+    if (shouldProcessAsPlain) {
       await this.processText(plainData);
     } else {
       await this.processText(cleanData, true);
@@ -439,7 +518,7 @@ export default class Paste extends Module {
         return rawExtensions;
       }
 
-      _.log(`«extensions» property of the onDrop config for «${tool.name}» Tool should be an array`);
+      _.log(`«extensions» property of the paste config for «${tool.name}» Tool should be an array`);
 
       return [];
     })();
@@ -450,7 +529,7 @@ export default class Paste extends Module {
       }
 
       if (!Array.isArray(rawMimeTypes)) {
-        _.log(`«mimeTypes» property of the onDrop config for «${tool.name}» Tool should be an array`);
+        _.log(`«mimeTypes» property of the paste config for «${tool.name}» Tool should be an array`);
 
         return [];
       }
@@ -551,7 +630,7 @@ export default class Paste extends Module {
   /**
    * Get files from data transfer object and insert related Tools
    *
-   * @param {FileList} items - pasted or dropped items
+   * @param {FileList} items - pasted items
    */
   private async processFiles(items: FileList): Promise<void> {
     const { BlockManager } = this.Editor;
@@ -563,14 +642,15 @@ export default class Paste extends Module {
     );
     const dataToInsert = processedFiles.filter((data): data is { type: string; event: PasteEvent } => data != null);
 
-    const isCurrentBlockDefault = Boolean(BlockManager.currentBlock?.tool.isDefault);
-    const needToReplaceCurrentBlock = isCurrentBlockDefault && Boolean(BlockManager.currentBlock?.isEmpty);
+    if (dataToInsert.length === 0) {
+      return;
+    }
 
-    dataToInsert.forEach(
-      (data, i) => {
-        BlockManager.paste(data.type, data.event, i === 0 && needToReplaceCurrentBlock);
-      }
-    );
+    const shouldReplaceCurrentBlock = this.shouldReplaceCurrentBlockForFile(dataToInsert[0]?.type);
+
+    dataToInsert.forEach((data, index) => {
+      BlockManager.paste(data.type, data.event, index === 0 && shouldReplaceCurrentBlock);
+    });
   }
 
   /**
@@ -695,7 +775,8 @@ export default class Paste extends Module {
           return nextResult;
         }, {} as SanitizerConfig);
 
-        const customConfig = Object.assign({}, toolTags, tool.baseSanitizeConfig);
+        const structuralSanitizeConfig = this.getStructuralTagsSanitizeConfig(content);
+        const customConfig = Object.assign({}, structuralSanitizeConfig, toolTags, tool.baseSanitizeConfig);
         const sanitizedContent = (() => {
           if (content.tagName.toLowerCase() !== 'table') {
             content.innerHTML = clean(content.innerHTML, customConfig);
@@ -953,6 +1034,7 @@ export default class Paste extends Module {
 
     const isSubstitutable = tags.includes(element.tagName);
     const isBlockElement = $.blockElements.includes(element.tagName.toLowerCase());
+    const isStructuralElement = SAFE_STRUCTURAL_TAGS.has(element.tagName.toLowerCase());
     const containsAnotherToolTags = Array
       .from(element.children)
       .some(
@@ -972,7 +1054,8 @@ export default class Paste extends Module {
 
     if (
       (isSubstitutable && !containsAnotherToolTags) ||
-      (isBlockElement && !containsBlockElements && !containsAnotherToolTags)
+      (isBlockElement && !containsBlockElements && !containsAnotherToolTags) ||
+      (isStructuralElement && !containsAnotherToolTags)
     ) {
       return [...nodes, destNode, element];
     }

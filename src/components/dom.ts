@@ -131,30 +131,6 @@ export default class Dom {
   }
 
   /**
-   * Swap two elements in parent
-   *
-   * @param {HTMLElement} el1 - from
-   * @param {HTMLElement} el2 - to
-   * @deprecated
-   */
-  public static swap(el1: HTMLElement, el2: HTMLElement): void {
-    // create marker element and insert it where el1 is
-    const temp = document.createElement('div');
-    const parent = el1.parentNode;
-
-    parent?.insertBefore(temp, el1);
-
-    // move el1 to right before el2
-    parent?.insertBefore(el1, el2);
-
-    // move el2 to right before where el1 used to be
-    parent?.insertBefore(el2, temp);
-
-    // remove temporary marker node
-    parent?.removeChild(temp);
-  }
-
-  /**
    * Selector Decorator
    *
    * Returns first match
@@ -585,8 +561,8 @@ export default class Dom {
    */
   public static offset(el: Element): { top: number; left: number; right: number; bottom: number } {
     const rect = el.getBoundingClientRect();
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
 
     const top = rect.top + scrollTop;
     const left = rect.left + scrollLeft;
@@ -606,7 +582,7 @@ export default class Dom {
    * @param {number} totalOffset - offset relative to the root node content
    * @returns {{node: Node | null, offset: number}} - node and offset inside node
    */
-  public static getNodeByOffset(root: Node, totalOffset: number): {node: Node | null; offset: number} {
+  public static getNodeByOffset(root: Node, totalOffset: number): { node: Node | null; offset: number } {
     const walker = document.createTreeWalker(
       root,
       NodeFilter.SHOW_TEXT,
@@ -702,8 +678,10 @@ export const isCollapsedWhitespaces = (textContent: string): boolean => {
    *  "\n" LF  \u000A
    *  "\r" CR  \u000D
    *  " "  SPC \u0020
+   *
+   *  Also \u200B (Zero Width Space) is considered as collapsed whitespace
    */
-  return !/[^\t\n\r ]/.test(textContent);
+  return !/[^\t\n\r \u200B]/.test(textContent);
 };
 
 /**

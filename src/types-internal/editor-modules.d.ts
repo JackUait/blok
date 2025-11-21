@@ -27,7 +27,6 @@ import BlockManager from '../components/modules/blockManager';
 import BlockSelection from '../components/modules/blockSelection';
 import Caret from '../components/modules/caret';
 import CrossBlockSelection from '../components/modules/crossBlockSelection';
-import DragNDrop from '../components/modules/dragNDrop';
 import ModificationsObserver from '../components/modules/modificationsObserver';
 import Paste from '../components/modules/paste';
 import ReadOnly from '../components/modules/readonly';
@@ -69,7 +68,6 @@ export interface EditorModules {
   BlockSelection: BlockSelection,
   Caret: Caret,
   CrossBlockSelection: CrossBlockSelection,
-  DragNDrop: DragNDrop,
   ModificationsObserver: ModificationsObserver,
   Paste: Paste,
   ReadOnly: ReadOnly,

@@ -1,33 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IconItalic } from '@codexteam/icons';
 
 import ItalicInlineTool from '../../../../src/components/inline-tools/inline-tool-italic';
 
-type DocumentCommandKey = 'execCommand' | 'queryCommandState';
-
-const setDocumentCommand = <K extends DocumentCommandKey>(
-  key: K,
-  implementation: Document[K]
-): void => {
-  Object.defineProperty(document, key, {
-    configurable: true,
-    value: implementation,
-    writable: true,
-  });
-};
-
 describe('ItalicInlineTool', () => {
   let tool: ItalicInlineTool;
-  let execCommandMock: ReturnType<typeof vi.fn<[], boolean>>;
-  let queryCommandStateMock: ReturnType<typeof vi.fn<[], boolean>>;
 
   beforeEach(() => {
-    execCommandMock = vi.fn(() => true);
-    queryCommandStateMock = vi.fn(() => false);
-
-    setDocumentCommand('execCommand', execCommandMock as Document['execCommand']);
-    setDocumentCommand('queryCommandState', queryCommandStateMock as Document['queryCommandState']);
-
     tool = new ItalicInlineTool();
   });
 
@@ -38,45 +18,45 @@ describe('ItalicInlineTool', () => {
   it('exposes inline metadata and sanitizer config', () => {
     expect(ItalicInlineTool.isInline).toBe(true);
     expect(ItalicInlineTool.title).toBe('Italic');
-    expect(ItalicInlineTool.sanitize).toStrictEqual({ i: {} });
+    expect(ItalicInlineTool.sanitize).toStrictEqual({ i: {},
+      em: {} });
   });
 
-  it('renders an inline toolbar button with italic icon', () => {
-    const element = tool.render();
-    const button = element as HTMLButtonElement;
-    const expectedIcon = document.createElement('div');
+  it('renders menu config with italic icon and callbacks', () => {
+    const config = tool.render() as any;
 
-    expectedIcon.innerHTML = IconItalic;
-
-    expect(button).toBeInstanceOf(HTMLButtonElement);
-    expect(button.type).toBe('button');
-    expect(button.classList.contains('ce-inline-tool')).toBe(true);
-    expect(button.classList.contains('ce-inline-tool--italic')).toBe(true);
-    expect(button.innerHTML).toBe(expectedIcon.innerHTML);
-  });
-
-  it('executes italic command when surround is called', () => {
-    tool.surround();
-
-    expect(execCommandMock).toHaveBeenCalledWith('italic');
-  });
-
-  it('synchronizes button active state with document command state', () => {
-    const button = tool.render();
-
-    queryCommandStateMock.mockReturnValue(true);
-
-    expect(tool.checkState()).toBe(true);
-    expect(button.classList.contains('ce-inline-tool--active')).toBe(true);
-
-    queryCommandStateMock.mockReturnValue(false);
-
-    expect(tool.checkState()).toBe(false);
-    expect(button.classList.contains('ce-inline-tool--active')).toBe(false);
+    expect(config).toHaveProperty('icon');
+    expect(config.icon).toBe(IconItalic);
+    expect(config.name).toBe('italic');
+    expect(config.onActivate).toBeInstanceOf(Function);
+    expect(config.isActive).toBeInstanceOf(Function);
   });
 
   it('exposes CMD+I shortcut', () => {
     expect(tool.shortcut).toBe('CMD+I');
+  });
+
+  describe('isActive', () => {
+    it('should return false if no selection', () => {
+      vi.spyOn(window, 'getSelection').mockReturnValue(null);
+
+      const config = tool.render() as any;
+
+      expect(config.isActive && config.isActive()).toBe(false);
+    });
+
+    it('should return false if range count is 0', () => {
+      const mockSelection = {
+        rangeCount: 0,
+        getRangeAt: vi.fn(),
+      } as unknown as Selection;
+
+      vi.spyOn(window, 'getSelection').mockReturnValue(mockSelection);
+
+      const config = tool.render() as any;
+
+      expect(config.isActive && config.isActive()).toBe(false);
+    });
   });
 });
 

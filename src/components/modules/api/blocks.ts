@@ -23,7 +23,6 @@ export default class BlocksAPI extends Module {
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),
       delete: (index?: number): void => this.delete(index),
-      swap: (fromIndex: number, toIndex: number): void => this.swap(fromIndex, toIndex),
       move: (toIndex: number, fromIndex?: number): void => this.move(toIndex, fromIndex),
       getBlockByIndex: (index: number): BlockAPIInterface | undefined => this.getBlockByIndex(index),
       getById: (id: string): BlockAPIInterface | null => this.getById(id),
@@ -31,8 +30,6 @@ export default class BlocksAPI extends Module {
       getBlockIndex: (id: string): number | undefined => this.getBlockIndex(id),
       getBlocksCount: (): number => this.getBlocksCount(),
       getBlockByElement: (element: HTMLElement) => this.getBlockByElement(element),
-      stretchBlock: (index: number, status = true): void => this.stretchBlock(index, status),
-      insertNewBlock: (): void => this.insertNewBlock(),
       insert: this.insert,
       insertMany: this.insertMany,
       update: this.update,
@@ -128,23 +125,6 @@ export default class BlocksAPI extends Module {
   }
 
   /**
-   * Call Block Manager method that swap Blocks
-   *
-   * @param {number} fromIndex - position of first Block
-   * @param {number} toIndex - position of second Block
-   * @deprecated — use 'move' instead
-   */
-  public swap(fromIndex: number, toIndex: number): void {
-    _.log(
-      '`blocks.swap()` method is deprecated and will be removed in the next major release. ' +
-      'Use `block.move()` method instead',
-      'info'
-    );
-
-    this.Editor.BlockManager.swap(fromIndex, toIndex);
-  }
-
-  /**
    * Move block from one index to another
    *
    * @param {number} toIndex - index to move to
@@ -237,29 +217,6 @@ export default class BlocksAPI extends Module {
   }
 
   /**
-   * Stretch Block's content
-   *
-   * @param {number} index - index of Block to stretch
-   * @param {boolean} status - true to enable, false to disable
-   * @deprecated Use BlockAPI interface to stretch Blocks
-   */
-  public stretchBlock(index: number, status = true): void {
-    _.deprecationAssert(
-      true,
-      'blocks.stretchBlock()',
-      'BlockAPI'
-    );
-
-    const block = this.Editor.BlockManager.getBlockByIndex(index);
-
-    if (!block) {
-      return;
-    }
-
-    block.stretched = status;
-  }
-
-  /**
    * Insert new Block and returns it's API
    *
    * @param {string} type — Tool name
@@ -315,19 +272,6 @@ export default class BlocksAPI extends Module {
 
     return block.data;
   };
-
-  /**
-   * Insert new Block
-   * After set caret to this Block
-   *
-   * @todo remove in 3.0.0
-   * @deprecated with insert() method
-   */
-  public insertNewBlock(): void {
-    _.log('Method blocks.insertNewBlock() is deprecated and it will be removed in the next major release. ' +
-      'Use blocks.insert() instead.', 'warn');
-    this.insert();
-  }
 
   /**
    * Updates block data by id

@@ -39,6 +39,18 @@ export default class Saver extends Module {
   public async save(): Promise<OutputData | undefined> {
     const { BlockManager, Tools } = this.Editor;
     const blocks = BlockManager.blocks;
+
+    /**
+     * If there is only one block and it is empty, we should return empty blocks array
+     */
+    if (blocks.length === 1 && blocks[0].isEmpty) {
+      return {
+        time: +new Date(),
+        blocks: [],
+        version: _.getEditorVersion(),
+      };
+    }
+
     const chainData: Array<Promise<SaverValidatedData>> = blocks.map((block: Block) => {
       return this.getSavedData(block);
     });
@@ -74,18 +86,21 @@ export default class Saver extends Module {
   private async getSavedData(block: Block): Promise<SaverValidatedData> {
     const blockData = await block.save();
     const toolName = block.name;
+    const normalizedData = blockData?.data !== undefined
+      ? blockData
+      : this.getPreservedSavedData(block);
 
-    if (blockData === undefined) {
+    if (normalizedData === undefined) {
       return {
         tool: toolName,
         isValid: false,
       };
     }
 
-    const isValid = await block.validate(blockData.data);
+    const isValid = await block.validate(normalizedData.data);
 
     return {
-      ...blockData,
+      ...normalizedData,
       isValid,
     };
   }
@@ -221,5 +236,28 @@ export default class Saver extends Module {
    */
   public getLastSaveError(): unknown {
     return this.lastSaveError;
+  }
+
+  /**
+   * Returns the last successfully extracted data for the provided block, if any.
+   *
+   * @param block - block whose preserved data should be returned
+   */
+  private getPreservedSavedData(block: Block): (SavedData & { tunes?: Record<string, BlockTuneData> }) | undefined {
+    const preservedData = block.preservedData;
+
+    if (_.isEmpty(preservedData)) {
+      return undefined;
+    }
+
+    const preservedTunes = block.preservedTunes;
+
+    return {
+      id: block.id,
+      tool: block.name,
+      data: preservedData,
+      ...( _.isEmpty(preservedTunes) ? {} : { tunes: preservedTunes }),
+      time: 0,
+    };
   }
 }

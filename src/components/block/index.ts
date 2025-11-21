@@ -21,7 +21,7 @@ import type BlockTuneAdapter from '../tools/tune';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type ToolsCollection from '../tools/collection';
 import EventsDispatcher from '../utils/events';
-import type { TunesMenuConfigItem } from '../../../types/tools';
+import type { MenuConfigItem } from '../../../types/tools';
 import { isMutationBelongsToElement } from '../utils/mutations';
 import type { EditorEventMap } from '../events';
 import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../events';
@@ -29,9 +29,13 @@ import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 
+const BLOCK_TOOL_ATTRIBUTE = 'data-block-tool';
+
 /**
  * Interface describes Block class constructor argument
  */
+type BlockSaveResult = SavedData & { tunes: { [name: string]: BlockTuneData } };
+
 interface BlockConstructorOptions {
   /**
    * Block's id. Should be passed for existed block, and omitted for a new one.
@@ -75,12 +79,6 @@ interface BlockConstructorOptions {
  * Available Block Tool API methods
  */
 export enum BlockToolAPI {
-  /**
-   * @todo remove method in 3.0.0
-   * @deprecated — use 'rendered' hook instead
-   */
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  APPEND_CALLBACK = 'appendCallback',
   RENDERED = 'rendered',
   MOVED = 'moved',
   UPDATED = 'updated',
@@ -114,7 +112,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       wrapperStretched: 'ce-block--stretched',
       content: 'ce-block__content',
       selected: 'ce-block--selected',
-      dropTarget: 'ce-block--drop-target',
     };
   }
 
@@ -154,9 +151,19 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   public readonly config: ToolConfig;
 
   /**
+   * Stores last successfully extracted block data
+   */
+  private lastSavedData: BlockToolData;
+
+  /**
    * Cached inputs
    */
   private cachedInputs: HTMLElement[] = [];
+
+  /**
+   * Stores last successfully extracted tunes data
+   */
+  private lastSavedTunes: { [name: string]: BlockTuneData } = {};
 
   /**
    * We'll store a reference to the tool's rendered element to access it later
@@ -221,9 +228,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     this.name = tool.name;
     this.id = id;
     this.settings = tool.settings;
-    this.config = tool.settings.config ?? {};
+    this.config = this.settings;
     this.editorEventBus = eventBus || null;
     this.blockAPI = new BlockAPI(this);
+    this.lastSavedData = data ?? {};
+    this.lastSavedTunes = tunesData ?? {};
 
 
     this.tool = tool;
@@ -236,7 +245,13 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
     this.composeTunes(tunesData);
 
-    this.holder = this.compose();
+    const holderElement = this.compose();
+
+    if (holderElement == null) {
+      throw new Error(`Tool "${this.name}" did not return a block holder element during render()`);
+    }
+
+    this.holder = holderElement;
 
     /**
      * Bind block events in RIC for optimizing of constructing process time
@@ -279,14 +294,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       return;
     }
 
-    if (methodName === BlockToolAPI.APPEND_CALLBACK) {
-      _.log(
-        '`appendCallback` hook is deprecated and will be removed in the next major release. ' +
-            'Use `rendered` hook instead',
-        'warn'
-      );
-    }
-
     try {
       // eslint-disable-next-line no-useless-call
       method.call(this.toolInstance, params);
@@ -316,9 +323,14 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    *
    * @returns {object}
    */
-  public async save(): Promise<undefined | SavedData> {
-    const extractedBlock = await this.toolInstance.save(this.pluginsContent as HTMLElement);
-    const tunesData: { [name: string]: BlockTuneData } = this.unavailableTunesData;
+  public async save(): Promise<undefined | BlockSaveResult> {
+    const extractedBlock = await this.extractToolData();
+
+    if (extractedBlock === undefined) {
+      return undefined;
+    }
+
+    const tunesData: { [name: string]: BlockTuneData } = { ...this.unavailableTunesData };
 
     [
       ...this.tunesInstances.entries(),
@@ -339,24 +351,63 @@ export default class Block extends EventsDispatcher<BlockEvents> {
      */
     const measuringStart = window.performance.now();
 
-    return Promise.resolve(extractedBlock)
-      .then((finishedExtraction) => {
-        /** measure promise execution */
-        const measuringEnd = window.performance.now();
+    this.lastSavedData = extractedBlock;
+    this.lastSavedTunes = { ...tunesData };
 
-        return {
-          id: this.id,
-          tool: this.name,
-          data: finishedExtraction,
-          tunes: tunesData,
-          time: measuringEnd - measuringStart,
-        };
-      })
-      .catch((error) => {
-        _.log(`Saving process for ${this.name} tool failed due to the ${error}`, 'log', 'red');
+    const measuringEnd = window.performance.now();
 
-        return undefined;
-      });
+    return {
+      id: this.id,
+      tool: this.name,
+      data: extractedBlock,
+      tunes: tunesData,
+      time: measuringEnd - measuringStart,
+    };
+  }
+
+  /**
+   * Safely executes tool.save capturing possible errors without breaking the saver pipeline
+   */
+  private async extractToolData(): Promise<BlockToolData | undefined> {
+    try {
+      const extracted = await this.toolInstance.save(this.pluginsContent as HTMLElement);
+
+      if (!this.isEmpty || extracted === undefined || extracted === null || typeof extracted !== 'object') {
+        return extracted;
+      }
+
+      const normalized = { ...extracted } as Record<string, unknown>;
+      const sanitizeField = (field: string): void => {
+        const value = normalized[field];
+
+        if (typeof value !== 'string') {
+          return;
+        }
+
+        const container = document.createElement('div');
+
+        container.innerHTML = value;
+
+        if ($.isEmpty(container)) {
+          normalized[field] = '';
+        }
+      };
+
+      sanitizeField('text');
+      sanitizeField('html');
+
+      return normalized as BlockToolData;
+    } catch (error) {
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+
+      _.log(
+        `Saving process for ${this.name} tool failed due to the ${normalizedError}`,
+        'log',
+        normalizedError
+      );
+
+      return undefined;
+    }
   }
 
   /**
@@ -386,7 +437,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     const toolTunesPopoverParams: PopoverItemParams[] = [];
     const commonTunesPopoverParams: PopoverItemParams[] = [];
     const pushTuneConfig = (
-      tuneConfig: TunesMenuConfigItem | TunesMenuConfigItem[] | HTMLElement | undefined,
+      tuneConfig: MenuConfigItem | MenuConfigItem[] | HTMLElement | undefined,
       target: PopoverItemParams[]
     ): void => {
       if (!tuneConfig) {
@@ -446,10 +497,54 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     const anchorNode = SelectionUtils.anchorNode;
     const activeElement = document.activeElement;
 
-    if ($.isNativeInput(activeElement) || !anchorNode) {
-      this.currentInput = activeElement instanceof HTMLElement ? activeElement : undefined;
-    } else {
-      this.currentInput = anchorNode instanceof HTMLElement ? anchorNode : undefined;
+    const resolveInput = (node: Node | null): HTMLElement | undefined => {
+      if (!node) {
+        return undefined;
+      }
+
+      const element = node instanceof HTMLElement ? node : node.parentElement;
+
+      if (element === null) {
+        return undefined;
+      }
+
+      const directMatch = this.inputs.find((input) => input === element || input.contains(element));
+
+      if (directMatch !== undefined) {
+        return directMatch;
+      }
+
+      const closestEditable = element.closest($.allInputsSelector);
+
+      if (!(closestEditable instanceof HTMLElement)) {
+        return undefined;
+      }
+
+      const closestMatch = this.inputs.find((input) => input === closestEditable);
+
+      if (closestMatch !== undefined) {
+        return closestMatch;
+      }
+
+      return undefined;
+    };
+
+    if ($.isNativeInput(activeElement)) {
+      this.currentInput = activeElement;
+
+      return;
+    }
+
+    const candidateInput = resolveInput(anchorNode) ?? (activeElement instanceof HTMLElement ? resolveInput(activeElement) : undefined);
+
+    if (candidateInput !== undefined) {
+      this.currentInput = candidateInput;
+
+      return;
+    }
+
+    if (activeElement instanceof HTMLElement && this.inputs.includes(activeElement)) {
+      this.currentInput = activeElement;
     }
   }
 
@@ -634,6 +729,20 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
+   * Returns last successfully extracted block data
+   */
+  public get preservedData(): BlockToolData {
+    return this.lastSavedData ?? {};
+  }
+
+  /**
+   * Returns last successfully extracted tune data
+   */
+  public get preservedTunes(): { [name: string]: BlockTuneData } {
+    return this.lastSavedTunes ?? {};
+  }
+
+  /**
    * Returns tool's sanitizer config
    *
    * @returns {object}
@@ -761,14 +870,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     return this.holder.classList.contains(Block.CSS.wrapperStretched);
   }
 
-  /**
-   * Toggle drop target state
-   *
-   * @param {boolean} state - 'true' if block is drop target, false otherwise
-   */
-  public set dropTarget(state: boolean) {
-    this.holder.classList.toggle(Block.CSS.dropTarget, state);
-  }
 
   /**
    * Returns Plugins content
@@ -797,6 +898,10 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       wrapper.setAttribute('data-cy', 'block-wrapper');
     }
 
+    if (this.name && !wrapper.hasAttribute(BLOCK_TOOL_ATTRIBUTE)) {
+      wrapper.setAttribute(BLOCK_TOOL_ATTRIBUTE, this.name);
+    }
+
     /**
      * Export id to the DOM three
      * Useful for standalone modules development. For example, allows to identify Block by some child node. Or scroll to a particular Block by id.
@@ -811,7 +916,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       // Handle async render: resolve the promise and update DOM when ready
       pluginsContent.then((resolvedElement) => {
         this.toolRenderedElement = resolvedElement;
-        this.addToolDataAttributes(resolvedElement);
+        this.addToolDataAttributes(resolvedElement, wrapper);
         contentNode.appendChild(resolvedElement);
       }).catch((error) => {
         _.log(`Tool render promise rejected: %o`, 'error', error);
@@ -819,7 +924,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     } else {
       // Handle synchronous render
       this.toolRenderedElement = pluginsContent;
-      this.addToolDataAttributes(pluginsContent);
+      this.addToolDataAttributes(pluginsContent, wrapper);
       contentNode.appendChild(pluginsContent);
     }
 
@@ -856,15 +961,34 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * Add data attributes to tool-rendered element based on tool name
    *
    * @param element - The tool-rendered element
+   * @param blockWrapper - Block wrapper that hosts the tool render
    * @private
    */
-  private addToolDataAttributes(element: HTMLElement): void {
+  private addToolDataAttributes(element: HTMLElement, blockWrapper: HTMLDivElement): void {
     /**
      * Add data-block-tool attribute to identify the tool type used for the block.
      * Some tools (like Paragraph) add their own class names, but we can rely on the tool name for all cases.
      */
-    if (!element.hasAttribute('data-block-tool') && this.name) {
-      element.setAttribute('data-block-tool', this.name);
+    if (this.name && !blockWrapper.hasAttribute(BLOCK_TOOL_ATTRIBUTE)) {
+      blockWrapper.setAttribute(BLOCK_TOOL_ATTRIBUTE, this.name);
+    }
+
+    if (this.name && !element.hasAttribute(BLOCK_TOOL_ATTRIBUTE)) {
+      element.setAttribute(BLOCK_TOOL_ATTRIBUTE, this.name);
+    }
+
+    const placeholderAttribute = 'data-placeholder';
+    const placeholder = this.config?.placeholder;
+    const placeholderText = typeof placeholder === 'string' ? placeholder.trim() : '';
+
+    if (placeholderText.length > 0) {
+      element.setAttribute(placeholderAttribute, placeholderText);
+
+      return;
+    }
+
+    if (placeholder === false && element.hasAttribute(placeholderAttribute)) {
+      element.removeAttribute(placeholderAttribute);
     }
   }
 

@@ -8,8 +8,9 @@ import I18n from '../../i18n';
 import { I18nInternalNS } from '../../i18n/namespace-internal';
 import Shortcuts from '../../utils/shortcuts';
 import type { ModuleConfig } from '../../../types-internal/module-config';
+import type { EditorModules } from '../../../types-internal/editor-modules';
 import { CommonInternalSettings } from '../../tools/base';
-import type { Popover, PopoverItemHtmlParams, PopoverItemParams, WithChildren } from '../../utils/popover';
+import type { Popover, PopoverItemParams } from '../../utils/popover';
 import { PopoverItemType } from '../../utils/popover';
 import { PopoverInline } from '../../utils/popover/popover-inline';
 import type InlineToolAdapter from 'src/components/tools/inline';
@@ -59,6 +60,11 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   private initialized = false;
 
   /**
+   * Ensures we don't schedule multiple initialization attempts simultaneously
+   */
+  private initializationScheduled = false;
+
+  /**
    * Currently visible tools instances
    */
   private tools: Map<InlineToolAdapter, IInlineTool> = new Map();
@@ -69,9 +75,14 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   private registeredShortcuts: Map<string, string> = new Map();
 
   /**
-   * Range captured before activating an inline tool via shortcut
+   * Tracks whether inline shortcuts have been registered
    */
-  private savedShortcutRange: Range | null = null;
+  private shortcutsRegistered = false;
+
+  /**
+   * Prevents duplicate shortcut registration retries
+   */
+  private shortcutRegistrationScheduled = false;
 
   /**
    * @param moduleConfiguration - Module Configuration
@@ -96,9 +107,16 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       void this.tryToShow();
     }, true);
 
-    window.requestIdleCallback(() => {
-      this.initialize();
-    }, { timeout: 2000 });
+    this.scheduleInitialization();
+    this.tryRegisterShortcuts();
+  }
+
+  /**
+   * Setter for Editor modules that ensures shortcuts registration is retried once dependencies are available
+   */
+  public override set state(Editor: EditorModules) {
+    super.state = Editor;
+    this.tryRegisterShortcuts();
   }
 
   /**
@@ -110,12 +128,85 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     if (!this.Editor?.UI?.nodes?.wrapper || this.Editor.Tools === undefined) {
+      this.scheduleInitialization();
+
       return;
     }
 
     this.make();
-    this.registerInitialShortcuts();
+    this.tryRegisterShortcuts();
     this.initialized = true;
+  }
+
+  /**
+   * Attempts to register inline shortcuts as soon as tools are available
+   */
+  private tryRegisterShortcuts(): void {
+    if (this.shortcutsRegistered) {
+      return;
+    }
+
+    if (this.Editor?.Tools === undefined) {
+      this.scheduleShortcutRegistration();
+
+      return;
+    }
+
+    const shortcutsWereRegistered = this.registerInitialShortcuts();
+
+    if (shortcutsWereRegistered) {
+      this.shortcutsRegistered = true;
+    }
+  }
+
+  /**
+   * Schedules a retry for shortcut registration
+   */
+  private scheduleShortcutRegistration(): void {
+    if (this.shortcutsRegistered || this.shortcutRegistrationScheduled) {
+      return;
+    }
+
+    this.shortcutRegistrationScheduled = true;
+
+    const callback = (): void => {
+      this.shortcutRegistrationScheduled = false;
+      this.tryRegisterShortcuts();
+    };
+
+    if (typeof window !== 'undefined' && typeof window.setTimeout === 'function') {
+      window.setTimeout(callback, 0);
+    } else {
+      callback();
+    }
+  }
+
+  /**
+   * Schedules the next initialization attempt, falling back to setTimeout when requestIdleCallback is unavailable
+   */
+  private scheduleInitialization(): void {
+    if (this.initialized || this.initializationScheduled) {
+      return;
+    }
+
+    this.initializationScheduled = true;
+
+    const callback = (): void => {
+      this.initializationScheduled = false;
+      this.initialize();
+    };
+
+    const scheduleWithTimeout = (): void => {
+      window.setTimeout(callback, 0);
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(() => {
+        scheduleWithTimeout();
+      }, { timeout: 2000 });
+    } else {
+      scheduleWithTimeout();
+    }
   }
 
   /**
@@ -154,9 +245,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     for (const toolInstance of this.tools.values()) {
-      if (_.isFunction(toolInstance.clear)) {
-        toolInstance.clear();
-      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      toolInstance;
     }
 
     this.tools = new Map();
@@ -178,7 +268,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.popover = null;
-    this.savedShortcutRange = null;
   }
 
   /**
@@ -266,8 +355,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.popover.show?.();
-
-    this.checkToolsState();
   }
 
   /**
@@ -544,9 +631,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   ): void {
     const commonPopoverItemParams = {
       name: toolName,
-      onActivate: () => {
-        this.toolClicked(instance);
-      },
       hint: {
         title: toolTitle,
         description: shortcutBeautified,
@@ -554,8 +638,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     } as PopoverItemParams;
 
     if ($.isElement(item)) {
-      this.processElementItem(item, instance, commonPopoverItemParams, popoverItems);
-
       return;
     }
 
@@ -584,71 +666,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.processDefaultItem(item, commonPopoverItemParams, popoverItems, index);
-  }
-
-  /**
-   * Process an element-based popover item (deprecated way)
-   *
-   * @param item - HTML element
-   * @param instance - tool instance
-   * @param commonPopoverItemParams - common parameters for popover item
-   * @param popoverItems - array to add the processed item to
-   */
-  private processElementItem(
-    item: HTMLElement,
-    instance: IInlineTool,
-    commonPopoverItemParams: PopoverItemParams,
-    popoverItems: PopoverItemParams[]
-  ): void {
-    /**
-     * Deprecated way to add custom html elements to the Inline Toolbar
-     */
-
-    const popoverItem = {
-      ...commonPopoverItemParams,
-      element: item,
-      type: PopoverItemType.Html,
-    } as PopoverItemParams;
-
-    /**
-     * If tool specifies actions in deprecated manner, append them as children
-     */
-    if (_.isFunction(instance.renderActions)) {
-      const actions = instance.renderActions();
-      const selection = SelectionUtils.get();
-
-      (popoverItem as WithChildren<PopoverItemHtmlParams>).children = {
-        isOpen: selection ? instance.checkState?.(selection) ?? false : false,
-        /** Disable keyboard navigation in actions, as it might conflict with enter press handling */
-        isFlippable: false,
-        items: [
-          {
-            type: PopoverItemType.Html,
-            element: actions,
-          },
-        ],
-      };
-    } else {
-      this.checkLegacyToolState(instance);
-    }
-
-    popoverItems.push(popoverItem);
-  }
-
-  /**
-   * Check state for legacy inline tools that might perform UI mutating logic
-   *
-   * @param instance - tool instance
-   */
-  private checkLegacyToolState(instance: IInlineTool): void {
-    /**
-     * Legacy inline tools might perform some UI mutating logic in checkState method, so, call it just in case
-     */
-    const selection = this.resolveSelection();
-
-    if (selection) {
-      instance.checkState?.(selection);
-    }
   }
 
   /**
@@ -684,15 +701,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     popoverItems.push(popoverItem);
-
-    /**
-     * Append a separator after the item if it has children and not the last one
-     */
-    if ('children' in popoverItem && index < this.tools.size - 1) {
-      popoverItems.push({
-        type: PopoverItemType.Separator,
-      });
-    }
   }
 
   /**
@@ -733,6 +741,10 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     const registeredShortcut = this.registeredShortcuts.get(toolName);
 
     if (registeredShortcut === shortcut) {
+      return;
+    }
+
+    if (this.isShortcutTakenByAnotherTool(toolName, shortcut)) {
       return;
     }
 
@@ -778,16 +790,15 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
-   * Inline Tool button clicks
+   * Check if shortcut is already registered by another inline tool
    *
-   * @param tool - Tool's instance
+   * @param toolName - tool that is currently being processed
+   * @param shortcut - shortcut to check
    */
-  private toolClicked(tool: IInlineTool): void {
-    const range = SelectionUtils.range ?? this.restoreShortcutRange();
-
-    tool.surround?.(range);
-    this.savedShortcutRange = null;
-    this.checkToolsState();
+  private isShortcutTakenByAnotherTool(toolName: string, shortcut: string): boolean {
+    return Array.from(this.registeredShortcuts.entries()).some(([name, registeredShortcut]) => {
+      return name !== toolName && registeredShortcut === shortcut;
+    });
   }
 
   /**
@@ -796,8 +807,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * @param toolName - tool to activate
    */
   private async activateToolByShortcut(toolName: string): Promise<void> {
-    const initialRange = SelectionUtils.range;
-
     if (!this.opened) {
       await this.tryToShow();
     }
@@ -805,66 +814,12 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     const selection = SelectionUtils.get();
 
     if (!selection) {
-      this.savedShortcutRange = initialRange ? initialRange.cloneRange() : null;
       this.popover?.activateItemByName(toolName);
 
       return;
     }
 
-    const toolEntry = Array.from(this.tools.entries())
-      .find(([ toolAdapter ]) => toolAdapter.name === toolName);
-
-    const toolInstance = toolEntry?.[1];
-    const isToolActive = toolInstance?.checkState?.(selection) ?? false;
-
-    if (isToolActive) {
-      this.savedShortcutRange = null;
-
-      return;
-    }
-
-    const currentRange = SelectionUtils.range ?? initialRange ?? null;
-
-    this.savedShortcutRange = currentRange ? currentRange.cloneRange() : null;
-
     this.popover?.activateItemByName(toolName);
-  }
-
-  /**
-   * Restores selection from the shortcut-captured range if present
-   */
-  private restoreShortcutRange(): Range | null {
-    if (!this.savedShortcutRange) {
-      return null;
-    }
-
-    const selection = SelectionUtils.get();
-
-    if (selection) {
-      selection.removeAllRanges();
-      const restoredRange = this.savedShortcutRange.cloneRange();
-
-      selection.addRange(restoredRange);
-
-      return restoredRange;
-    }
-
-    return this.savedShortcutRange;
-  }
-
-  /**
-   * Check Tools` state by selection
-   */
-  private checkToolsState(): void {
-    const selection = this.resolveSelection();
-
-    if (!selection) {
-      return;
-    }
-
-    this.tools?.forEach((toolInstance) => {
-      toolInstance.checkState?.(selection);
-    });
   }
 
   /**
@@ -886,14 +841,24 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   /**
    * Register shortcuts for inline tools ahead of time so they are available before the toolbar opens
    */
-  private registerInitialShortcuts(): void {
-    const toolNames = Array.from(this.Editor.Tools.inlineTools.keys());
+  private registerInitialShortcuts(): boolean {
+    const inlineTools = this.Editor.Tools?.inlineTools;
+
+    if (!inlineTools) {
+      this.scheduleShortcutRegistration();
+
+      return false;
+    }
+
+    const toolNames = Array.from(inlineTools.keys());
 
     toolNames.forEach((toolName) => {
       const shortcut = this.getToolShortcut(toolName);
 
       this.tryEnableShortcut(toolName, shortcut);
     });
+
+    return true;
   }
 
   /**

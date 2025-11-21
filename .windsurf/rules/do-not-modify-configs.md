@@ -1,0 +1,25 @@
+---
+trigger: always_on
+description:
+globs:
+---
+
+# Rule: DO NOT MODIFY configuration files unless explicitly instructed
+
+## Description
+You MUST **never modify any configuration files** (such as `vite.config.ts`, `tsconfig.json`, `.eslintrc`, `package.json`, `.env`, etc.) **unless explicitly told to do so** in the current request or accompanying instructions.
+
+## Examples
+
+✅ **Allowed**
+- Editing TypeScript source files, tests, or component code.
+- Updating imports, logic, or styles within non-config files.
+- Adding configuration changes **only when explicitly requested** (e.g., “Add a new alias in `vite.config.ts`”).
+
+❌ **Not Allowed**
+- Modifying or creating any config files without explicit instruction.
+- Automatically adding dependencies or changing build/test settings.
+- Altering environment variables or global project settings without being told to.
+
+## Enforcement
+If you believe a configuration change might be required, **ask for confirmation first** before proceeding.

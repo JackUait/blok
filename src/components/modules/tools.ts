@@ -1,7 +1,7 @@
 import Paragraph from '@editorjs/paragraph';
 import Module from '../__module';
 import * as _ from '../utils';
-import type { ChainData } from '../utils';
+import PromiseQueue from '../utils/promise-queue';
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
 import BoldInlineTool from '../inline-tools/inline-tool-bold';
 import ItalicInlineTool from '../inline-tools/inline-tool-italic';
@@ -16,6 +16,18 @@ import MoveDownTune from '../block-tunes/block-tune-move-down';
 import DeleteTune from '../block-tunes/block-tune-delete';
 import MoveUpTune from '../block-tunes/block-tune-move-up';
 import ToolsCollection from '../tools/collection';
+import { CriticalError } from '../errors/critical';
+
+/**
+ * @typedef {object} ChainData
+ * @property {object} data - data that will be passed to the success or fallback
+ * @property {Function} function - function's that must be called asynchronously
+ * @interface ChainData
+ */
+export interface ChainData {
+  data?: object;
+  function: (...args: unknown[]) => unknown;
+}
 
 const cacheableSanitizer = _.cacheable as (
   target: object,
@@ -138,14 +150,14 @@ export default class Tools extends Module {
    * @returns {Promise<void>}
    */
   public async prepare(): Promise<void> {
-    this.validateTools();
-
     /**
-     * Assign internal tools
+     * Assign internal tools before validation so required fallbacks (like stub) are always present
      */
     const userTools = this.config.tools ?? {};
 
     this.config.tools = _.deepMerge({}, this.internalTools, userTools);
+
+    this.validateTools();
 
     const toolsConfig = this.config.tools;
 
@@ -169,7 +181,6 @@ export default class Tools extends Module {
       return Promise.resolve();
     }
 
-    /* to see how it works {@link '../utils.ts#sequence'} */
     const handlePrepareSuccess = (data: object): void => {
       if (!this.isToolPrepareData(data)) {
         return;
@@ -186,7 +197,22 @@ export default class Tools extends Module {
       this.toolPrepareMethodFallback({ toolName: data.toolName });
     };
 
-    await _.sequence(sequenceData, handlePrepareSuccess, handlePrepareFallback);
+    const queue = new PromiseQueue();
+
+    sequenceData.forEach(chainData => {
+      void queue.add(async () => {
+        const callbackData = !_.isUndefined(chainData.data) ? chainData.data : {};
+
+        try {
+          await chainData.function(chainData.data);
+          handlePrepareSuccess(callbackData);
+        } catch (error) {
+          handlePrepareFallback(callbackData);
+        }
+      });
+    });
+
+    await queue.completed;
 
     this.prepareBlockTools();
   }
@@ -254,6 +280,9 @@ export default class Tools extends Module {
       paragraph: {
         class: toToolConstructable(Paragraph),
         inlineToolbar: true,
+        config: {
+          preserveBlank: true,
+        },
         isInternal: true,
       },
       stub: {
@@ -484,7 +513,7 @@ export default class Tools extends Module {
       const hasToolClass = _.isFunction(toolSettings.class);
 
       if (!isConstructorFunction && !hasToolClass) {
-        throw Error(
+        throw new CriticalError(
           `Tool «${toolName}» must be a constructor function or an object with function in the «class» property`
         );
       }

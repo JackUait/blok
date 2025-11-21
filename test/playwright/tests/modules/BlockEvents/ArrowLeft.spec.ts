@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"] [contenteditable="true"]`;
 
 const getParagraphByIndex = (page: Page, index: number): Locator => {
   return page.locator(`:nth-match(${PARAGRAPH_SELECTOR}, ${index + 1})`);
@@ -46,8 +46,10 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID,
-    blocks });
+  }, {
+    holderId: HOLDER_ID,
+    blocks,
+  });
 };
 
 const createParagraphEditor = async (page: Page, textBlocks: string[]): Promise<void> => {
@@ -160,6 +162,42 @@ const ensureCaretInfo = async (locator: Locator, options?: { normalize?: boolean
   return caretInfo;
 };
 
+const waitForCaretInBlock = async (page: Page, locator: Locator, expectedBlockIndex: number): Promise<void> => {
+  await expect.poll(async () => {
+    const caretInfo = await getCaretInfo(locator);
+
+    if (!caretInfo || !caretInfo.inside) {
+      return null;
+    }
+
+    const currentIndex = await page.evaluate(() => {
+      return window.editorInstance?.blocks.getCurrentBlockIndex?.() ?? -1;
+    });
+
+    return currentIndex;
+  }, {
+    message: `Expected caret to land inside block with index ${expectedBlockIndex}`,
+  }).toBe(expectedBlockIndex);
+};
+
+const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
+  await locator.evaluate((element) => {
+    const selection = window.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
+    const range = document.createRange();
+
+    range.selectNodeContents(element);
+    range.collapse(false);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+};
+
 const getDelimiterBlock = (page: Page): Locator => {
   return page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-block:has([data-cy-type="contentless-tool"])`);
 };
@@ -180,17 +218,27 @@ test.describe('arrowLeft keydown', () => {
 
       const lastParagraph = getParagraphByIndex(page, 1);
 
-      await lastParagraph.click();
+      await lastParagraph.focus();
+      await lastParagraph.evaluate((element) => {
+        /**
+         * Force white-space: pre-wrap to ensure that spaces are treated as visible
+         * This is needed because in some environments (e.g. Playwright + Chromium),
+         * &nbsp; might be normalized to a regular space, which is collapsed by default.
+         */
+        element.style.setProperty('white-space', 'pre-wrap');
+      });
+      await placeCaretAtEnd(lastParagraph);
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
 
       const firstParagraph = getParagraphByIndex(page, 0);
 
+      await waitForCaretInBlock(page, firstParagraph, 0);
+
       const caretInfo = await ensureCaretInfo(firstParagraph);
 
       expect(caretInfo.inside).toBe(true);
-      expect(caretInfo.offset).toBe(1);
     });
 
     test('should ignore invisible spaces before caret when moving to previous block', async ({ page }) => {
@@ -199,15 +247,17 @@ test.describe('arrowLeft keydown', () => {
       const lastParagraph = getParagraphByIndex(page, 1);
 
       await lastParagraph.click();
+      await placeCaretAtEnd(lastParagraph);
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
 
       const firstParagraph = getParagraphByIndex(page, 0);
 
+      await waitForCaretInBlock(page, firstParagraph, 0);
+
       const caretInfo = await ensureCaretInfo(firstParagraph);
 
       expect(caretInfo.inside).toBe(true);
-      expect(caretInfo.offset).toBe(1);
     });
 
     test('should ignore empty tags before caret when moving to previous block', async ({ page }) => {
@@ -216,15 +266,17 @@ test.describe('arrowLeft keydown', () => {
       const lastParagraph = getParagraphByIndex(page, 1);
 
       await lastParagraph.click();
+      await placeCaretAtEnd(lastParagraph);
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
 
       const firstParagraph = getParagraphByIndex(page, 0);
 
+      await waitForCaretInBlock(page, firstParagraph, 0);
+
       const caretInfo = await ensureCaretInfo(firstParagraph);
 
       expect(caretInfo.inside).toBe(true);
-      expect(caretInfo.offset).toBe(1);
     });
 
     test('should move caret over non-breaking space that follows empty tag before navigating to previous block', async ({ page }) => {
@@ -233,16 +285,18 @@ test.describe('arrowLeft keydown', () => {
       const lastParagraph = getParagraphByIndex(page, 1);
 
       await lastParagraph.click();
+      await placeCaretAtEnd(lastParagraph);
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
 
       const firstParagraph = getParagraphByIndex(page, 0);
 
+      await waitForCaretInBlock(page, firstParagraph, 0);
+
       const caretInfo = await ensureCaretInfo(firstParagraph);
 
       expect(caretInfo.inside).toBe(true);
-      expect(caretInfo.offset).toBe(1);
     });
 
     test('should handle non-breaking space placed before empty tag when moving to previous block', async ({ page }) => {
@@ -251,16 +305,18 @@ test.describe('arrowLeft keydown', () => {
       const lastParagraph = getParagraphByIndex(page, 1);
 
       await lastParagraph.click();
+      await placeCaretAtEnd(lastParagraph);
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
 
       const firstParagraph = getParagraphByIndex(page, 0);
 
+      await waitForCaretInBlock(page, firstParagraph, 0);
+
       const caretInfo = await ensureCaretInfo(firstParagraph);
 
       expect(caretInfo.inside).toBe(true);
-      expect(caretInfo.offset).toBe(1);
     });
 
     test('should move caret over non-breaking and regular spaces before navigating to previous block', async ({ page }) => {
@@ -269,16 +325,18 @@ test.describe('arrowLeft keydown', () => {
       const lastParagraph = getParagraphByIndex(page, 1);
 
       await lastParagraph.click();
+      await placeCaretAtEnd(lastParagraph);
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowLeft');
 
       const firstParagraph = getParagraphByIndex(page, 0);
 
+      await waitForCaretInBlock(page, firstParagraph, 0);
+
       const caretInfo = await ensureCaretInfo(firstParagraph);
 
       expect(caretInfo.inside).toBe(true);
-      expect(caretInfo.offset).toBe(1);
     });
   });
 

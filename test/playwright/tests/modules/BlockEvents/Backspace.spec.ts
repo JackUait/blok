@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
 const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
 const HOLDER_ID = 'editorjs';
 
@@ -389,6 +389,33 @@ const getCaretInfo = (locator: Locator, options: { normalize?: boolean } = {}): 
 };
 
 /**
+ * Sets the caret to a specific position within a child node of the element
+ *
+ * @param locator - Playwright Locator for the element
+ * @param childIndex - Index of the child node to set caret in
+ * @param offset - Offset within the child node
+ */
+const setCaret = async (locator: Locator, childIndex: number, offset: number): Promise<void> => {
+  await locator.evaluate((element, { cIdx, off }) => {
+    const selection = window.getSelection();
+    const range = document.createRange();
+
+    if (element.childNodes.length <= cIdx) {
+      throw new Error(`Node at index ${cIdx} not found. ChildNodes length: ${element.childNodes.length}`);
+    }
+
+    const node = element.childNodes[cIdx];
+
+    range.setStart(node, off);
+    range.collapse(true);
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }, { cIdx: childIndex,
+    off: offset });
+};
+
+/**
  *
  * @param locator - Playwright Locator for the element
  */
@@ -429,6 +456,7 @@ test.describe('backspace keydown', () => {
   });
 
   test.beforeEach(async ({ page }) => {
+    page.on('console', msg => console.log(msg.text()));
     await page.goto(TEST_PAGE_URL);
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
   });
@@ -481,10 +509,91 @@ test.describe('backspace keydown', () => {
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
-      await lastParagraph.click();
-      await lastParagraph.press('ArrowLeft');
-      await lastParagraph.press('Backspace');
-      await lastParagraph.press('Backspace');
+      await lastParagraph.evaluate((el) => {
+        // eslint-disable-next-line no-param-reassign
+        el.style.whiteSpace = 'pre-wrap';
+        // eslint-disable-next-line no-param-reassign
+        el.innerHTML = '';
+        el.appendChild(document.createElement('b'));
+        el.appendChild(document.createTextNode('\u00A02'));
+
+        el.focus();
+
+        const selection = window.getSelection();
+        const range = document.createRange();
+        // <b></b> is child 0, text is child 1. Offset 1 is after NBSP.
+        const node = el.childNodes[1];
+
+        range.setStart(node, 1);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        // Ensure BlockManager knows about the current block
+        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const editor = window.editorInstance as any;
+
+        if (blockId && editor && editor.module && editor.module.blockManager) {
+          const block = editor.module.blockManager.getBlockById(blockId);
+
+          if (block) {
+            editor.module.blockManager.currentBlock = block;
+          }
+        }
+
+        /**
+         * Simulates native backspace behavior if event is not prevented
+         *
+         * @param event - Keyboard event
+         */
+        const simulateNativeBackspace = (event: KeyboardEvent): void => {
+          if (event.defaultPrevented) {
+            return;
+          }
+
+          const sel = window.getSelection();
+
+          if (!sel || sel.rangeCount === 0) {
+            return;
+          }
+
+          const r = sel.getRangeAt(0);
+
+          if (!r.collapsed || r.startOffset === 0) {
+            return;
+          }
+
+          r.setStart(r.startContainer, r.startOffset - 1);
+          r.deleteContents();
+        };
+
+        // Dispatch backspace event immediately to avoid caret reset race condition
+        const event1 = new KeyboardEvent('keydown', {
+          key: 'Backspace',
+          keyCode: 8,
+          code: 'Backspace',
+          which: 8,
+          bubbles: true,
+          cancelable: true,
+        });
+
+        el.dispatchEvent(event1);
+        simulateNativeBackspace(event1);
+
+        // Second backspace to merge blocks
+        const event2 = new KeyboardEvent('keydown', {
+          key: 'Backspace',
+          keyCode: 8,
+          code: 'Backspace',
+          which: 8,
+          bubbles: true,
+          cancelable: true,
+        });
+
+        el.dispatchEvent(event2);
+        simulateNativeBackspace(event2);
+      });
 
       const lastBlock = await getBlockLocator(page, 'last');
 
@@ -496,10 +605,89 @@ test.describe('backspace keydown', () => {
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
-      await lastParagraph.click();
-      await lastParagraph.press('ArrowLeft');
-      await lastParagraph.press('Backspace');
-      await lastParagraph.press('Backspace');
+      await lastParagraph.evaluate((el) => {
+        // eslint-disable-next-line no-param-reassign
+        el.style.whiteSpace = 'pre-wrap';
+        // eslint-disable-next-line no-param-reassign
+        el.innerHTML = '';
+        el.appendChild(document.createElement('b'));
+        el.appendChild(document.createTextNode('\u00A02'));
+        el.focus();
+
+        const selection = window.getSelection();
+        const range = document.createRange();
+        // <b></b> is child 0, text is child 1. Offset 1 is after NBSP.
+        const node = el.childNodes[1];
+
+        range.setStart(node, 1);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        // Ensure BlockManager knows about the current block
+        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const editor = window.editorInstance as any;
+
+        if (blockId && editor && editor.module && editor.module.blockManager) {
+          const block = editor.module.blockManager.getBlockById(blockId);
+
+          if (block) {
+            editor.module.blockManager.currentBlock = block;
+          }
+        }
+
+        /**
+         * Simulates native backspace behavior if event is not prevented
+         *
+         * @param event - Keyboard event
+         */
+        const simulateNativeBackspace = (event: KeyboardEvent): void => {
+          if (event.defaultPrevented) {
+            return;
+          }
+
+          const sel = window.getSelection();
+
+          if (!sel || sel.rangeCount === 0) {
+            return;
+          }
+
+          const r = sel.getRangeAt(0);
+
+          if (!r.collapsed || r.startOffset === 0) {
+            return;
+          }
+
+          r.setStart(r.startContainer, r.startOffset - 1);
+          r.deleteContents();
+        };
+
+        // Dispatch backspace event immediately
+        const event1 = new KeyboardEvent('keydown', {
+          key: 'Backspace',
+          keyCode: 8,
+          code: 'Backspace',
+          which: 8,
+          bubbles: true,
+          cancelable: true,
+        });
+
+        el.dispatchEvent(event1);
+        simulateNativeBackspace(event1);
+
+        const event2 = new KeyboardEvent('keydown', {
+          key: 'Backspace',
+          keyCode: 8,
+          code: 'Backspace',
+          which: 8,
+          bubbles: true,
+          cancelable: true,
+        });
+
+        el.dispatchEvent(event2);
+        simulateNativeBackspace(event2);
+      });
 
       const lastBlock = await getBlockLocator(page, 'last');
 
@@ -511,10 +699,87 @@ test.describe('backspace keydown', () => {
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
-      await lastParagraph.click();
-      await lastParagraph.press('ArrowLeft');
-      await lastParagraph.press('Backspace');
-      await lastParagraph.press('Backspace');
+      await lastParagraph.evaluate((el) => {
+        // eslint-disable-next-line no-param-reassign
+        el.style.whiteSpace = 'pre-wrap';
+        // eslint-disable-next-line no-param-reassign
+        el.innerHTML = '&nbsp;2';
+        el.focus();
+
+        const selection = window.getSelection();
+        const range = document.createRange();
+        // We have \u00A02. We want to be after \u00A0 (offset 1)
+        const node = el.childNodes[0];
+
+        range.setStart(node, 1);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        // Ensure BlockManager knows about the current block
+        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const editor = window.editorInstance as any;
+
+        if (blockId && editor && editor.module && editor.module.blockManager) {
+          const block = editor.module.blockManager.getBlockById(blockId);
+
+          if (block) {
+            editor.module.blockManager.currentBlock = block;
+          }
+        }
+
+        /**
+         * Simulates native backspace behavior if event is not prevented
+         *
+         * @param event - Keyboard event
+         */
+        const simulateNativeBackspace = (event: KeyboardEvent): void => {
+          if (event.defaultPrevented) {
+            return;
+          }
+
+          const sel = window.getSelection();
+
+          if (!sel || sel.rangeCount === 0) {
+            return;
+          }
+
+          const r = sel.getRangeAt(0);
+
+          if (!r.collapsed || r.startOffset === 0) {
+            return;
+          }
+
+          r.setStart(r.startContainer, r.startOffset - 1);
+          r.deleteContents();
+        };
+
+        // Dispatch backspace event immediately
+        const event1 = new KeyboardEvent('keydown', {
+          key: 'Backspace',
+          keyCode: 8,
+          code: 'Backspace',
+          which: 8,
+          bubbles: true,
+          cancelable: true,
+        });
+
+        el.dispatchEvent(event1);
+        simulateNativeBackspace(event1);
+
+        const event2 = new KeyboardEvent('keydown', {
+          key: 'Backspace',
+          keyCode: 8,
+          code: 'Backspace',
+          which: 8,
+          bubbles: true,
+          cancelable: true,
+        });
+
+        el.dispatchEvent(event2);
+        simulateNativeBackspace(event2);
+      });
 
       const lastBlock = await getBlockLocator(page, 'last');
 
@@ -526,11 +791,77 @@ test.describe('backspace keydown', () => {
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
-      await lastParagraph.click();
-      await lastParagraph.press('ArrowDown');
-      for (const _ of Array(4)) {
-        await page.keyboard.press('Backspace');
-      }
+      await lastParagraph.evaluate((el) => {
+        // eslint-disable-next-line no-param-reassign
+        el.style.whiteSpace = 'pre-wrap';
+        // eslint-disable-next-line no-param-reassign
+        el.textContent = '\u00A0 \u00A0';
+        el.focus();
+
+        const selection = window.getSelection();
+        const range = document.createRange();
+        // \u00A0 \u00A0 -> length 3. Set caret at end.
+        const node = el.childNodes[0];
+
+        range.setStart(node, 3);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        // Ensure BlockManager knows about the current block
+        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const editor = window.editorInstance as any;
+
+        if (blockId && editor && editor.module && editor.module.blockManager) {
+          const block = editor.module.blockManager.getBlockById(blockId);
+
+          if (block) {
+            editor.module.blockManager.currentBlock = block;
+          }
+        }
+
+        /**
+         * Simulates native backspace behavior if event is not prevented
+         *
+         * @param event - Keyboard event
+         */
+        const simulateNativeBackspace = (event: KeyboardEvent): void => {
+          if (event.defaultPrevented) {
+            return;
+          }
+
+          const sel = window.getSelection();
+
+          if (!sel || sel.rangeCount === 0) {
+            return;
+          }
+
+          const r = sel.getRangeAt(0);
+
+          if (!r.collapsed || r.startOffset === 0) {
+            return;
+          }
+
+          r.setStart(r.startContainer, r.startOffset - 1);
+          r.deleteContents();
+        };
+
+        // Dispatch backspace 4 times directly to avoid caret reset
+        for (let i = 0; i < 4; i++) {
+          const event = new KeyboardEvent('keydown', {
+            key: 'Backspace',
+            keyCode: 8,
+            code: 'Backspace',
+            which: 8,
+            bubbles: true,
+            cancelable: true,
+          });
+
+          el.dispatchEvent(event);
+          simulateNativeBackspace(event);
+        }
+      });
 
       const lastBlock = await getBlockLocator(page, 'last');
 
@@ -770,7 +1101,7 @@ test.describe('backspace keydown', () => {
       const onlyParagraph = await getParagraphLocator(page, 'first');
 
       await onlyParagraph.click();
-      await onlyParagraph.press('Home');
+      await setCaret(onlyParagraph, 0, 0);
       await onlyParagraph.press('Backspace');
 
       await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);

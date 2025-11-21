@@ -233,36 +233,6 @@ describe('Blocks', () => {
     });
   });
 
-  describe('swap', () => {
-    it('should swap two blocks', () => {
-      const blocks = createBlocks();
-      const block1 = createMockBlock('block-1');
-      const block2 = createMockBlock('block-2');
-
-      blocks.push(block1);
-      blocks.push(block2);
-
-      blocks.swap(0, 1);
-
-      expect(blocks.blocks[0]).toBe(block2);
-      expect(blocks.blocks[1]).toBe(block1);
-    });
-
-    it('should swap blocks in DOM', () => {
-      const blocks = createBlocks();
-      const block1 = createMockBlock('block-1');
-      const block2 = createMockBlock('block-2');
-
-      blocks.push(block1);
-      blocks.push(block2);
-
-      blocks.swap(0, 1);
-
-      expect(workingArea.children[0]).toBe(block2.holder);
-      expect(workingArea.children[1]).toBe(block1.holder);
-    });
-  });
-
   describe('move', () => {
     it('should move block from one index to another', () => {
       const blocks = createBlocks();

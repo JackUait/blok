@@ -377,6 +377,42 @@ describe('SelectionUtils', () => {
     expect(paragraph.textContent).toBe('Highlighted text');
   });
 
+  it('restores selection correctly after using fake background', () => {
+    const utilsInstance = new SelectionUtils();
+    const { zone, paragraph } = createEditorZone('Text to select');
+
+    // Create a text node and select a part of it
+    const textNode = paragraph.firstChild as Text;
+
+    setSelectionRange(textNode, 0, 4); // Select "Text"
+
+    // Save selection
+    utilsInstance.save();
+
+    // Set fake background
+    utilsInstance.setFakeBackground();
+
+    // Check that fake background is enabled
+    expect(utilsInstance.isFakeBackgroundEnabled).toBe(true);
+    expect(zone.querySelectorAll('.codex-editor__fake-background').length).toBeGreaterThan(0);
+
+    // Remove fake background
+    utilsInstance.removeFakeBackground();
+    expect(utilsInstance.isFakeBackgroundEnabled).toBe(false);
+    expect(paragraph.querySelector('.codex-editor__fake-background')).toBeNull();
+
+    // Clear current selection to simulate focus change or similar
+    window.getSelection()?.removeAllRanges();
+
+    // Restore selection
+    utilsInstance.restore();
+
+    // Verify selection is restored
+    const currentSelection = window.getSelection();
+
+    expect(currentSelection?.toString()).toBe('Text');
+  });
+
   it('does not enable fake background when selection is collapsed', () => {
     const utilsInstance = new SelectionUtils();
     const { paragraph } = createEditorZone('Single word');
@@ -501,5 +537,3 @@ describe('SelectionUtils', () => {
     logSpy.mockRestore();
   });
 });
-
-

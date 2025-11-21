@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]`;
+const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"]`;
 const POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover`;
 const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} .ce-popover-item`;
 const SECONDARY_TITLE_SELECTOR = '.ce-popover-item__secondary-title';
@@ -304,12 +304,13 @@ test.describe('toolbox', () => {
         },
       });
 
-      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR);
+      const paragraphBlock = page.locator(PARAGRAPH_BLOCK_SELECTOR);
 
       await expect(paragraphBlock).toHaveCount(1);
 
-      await paragraphBlock.click();
-      await paragraphBlock.type('Some text');
+      const paragraphContent = paragraphBlock.locator('[contenteditable]');
+
+      await paragraphContent.fill('Some text');
 
       await runShortcutBehaviour(page, 'convertableTool');
 
@@ -395,7 +396,7 @@ test.describe('toolbox', () => {
         },
       });
 
-      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR);
+      const paragraphBlock = page.locator(PARAGRAPH_BLOCK_SELECTOR);
 
       await expect(paragraphBlock).toHaveCount(1);
 
@@ -480,7 +481,7 @@ test.describe('toolbox', () => {
         },
       });
 
-      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR);
+      const paragraphBlock = page.locator(PARAGRAPH_BLOCK_SELECTOR);
 
       await expect(paragraphBlock).toHaveCount(1);
 
@@ -578,7 +579,7 @@ test.describe('toolbox', () => {
         },
       });
 
-      const paragraphBlock = page.locator(PARAGRAPH_SELECTOR);
+      const paragraphBlock = page.locator(PARAGRAPH_BLOCK_SELECTOR);
 
       await expect(paragraphBlock).toHaveCount(1);
 

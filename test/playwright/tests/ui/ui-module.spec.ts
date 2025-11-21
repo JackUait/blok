@@ -142,12 +142,26 @@ test.describe('ui module', () => {
     };
 
     const selectBlocks = async (page: Page): Promise<void> => {
-      const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({
-        hasText: 'The first block',
-      });
+      await page.evaluate(() => {
+        const editor = window.editorInstance as EditorJS & {
+          module?: {
+            blockSelection?: {
+              selectBlockByIndex?: (index: number) => void;
+              clearSelection?: () => void;
+            };
+          };
+        };
 
-      await firstParagraph.click();
-      await page.keyboard.press('Shift+ArrowDown');
+        const blockSelection = editor?.module?.blockSelection;
+
+        if (!blockSelection?.selectBlockByIndex || !blockSelection?.clearSelection) {
+          throw new Error('Block selection module is not available');
+        }
+
+        blockSelection.clearSelection?.();
+        blockSelection.selectBlockByIndex?.(0);
+        blockSelection.selectBlockByIndex?.(1);
+      });
     };
 
     const getSavedBlocksCount = async (page: Page): Promise<number> => {

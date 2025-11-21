@@ -21,11 +21,11 @@
     "lint:fix": "eslint . --fix",
     "lint:tests": "eslint test/",
     "lint:types": "tsc --noEmit",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:unit": "vitest run",
-    "test:unit:watch": "vitest",
-    "test:unit:coverage": "vitest run --coverage",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "jscpd": "jscpd src/ test/",
     "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report"
   },
@@ -48,7 +48,8 @@
     "@eslint/eslintrc": "^3.1.0",
     "@playwright/test": "^1.56.1",
     "@types/node": "^18.15.11",
-    "@vitest/ui": "^1.0.0",
+    "@vitest/coverage-v8": "^1.6.1",
+    "@vitest/ui": "^1.6.1",
     "core-js": "3.30.0",
     "eslint": "^8.37.0",
     "eslint-config-codex": "^1.7.1",
@@ -71,7 +72,7 @@
     "typescript": "5.0.3",
     "vite": "^4.2.1",
     "vite-plugin-css-injected-by-js": "^3.1.0",
-    "vitest": "^1.0.0"
+    "vitest": "^1.6.1"
   },
   "collective": {
     "type": "opencollective",

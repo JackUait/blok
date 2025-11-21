@@ -28,7 +28,6 @@ import BlockManager from './blockManager';
 import BlockSelection from './blockSelection';
 import Caret from './caret';
 import CrossBlockSelection from './crossBlockSelection';
-import DragNDrop from './dragNDrop';
 import ModificationsObserver from './modificationsObserver';
 import Paste from './paste';
 import ReadOnly from './readonly';
@@ -69,7 +68,6 @@ export default {
   BlockSelection,
   Caret,
   CrossBlockSelection,
-  DragNDrop,
   ModificationsObserver,
   Paste,
   ReadOnly,

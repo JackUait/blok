@@ -30,6 +30,7 @@ type ToolbarEditorMock = {
 describe('ToolbarAPI', () => {
   let toolbarApi: ToolbarAPI;
   let editorMock: ToolbarEditorMock;
+  const unspecifiedState = undefined as unknown as boolean;
 
   const createToolbarApi = (overrides?: Partial<ToolbarEditorMock>): void => {
     const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
@@ -71,68 +72,97 @@ describe('ToolbarAPI', () => {
     vi.restoreAllMocks();
   });
 
-  it('opens the toolbar via Editor module', () => {
-    toolbarApi.open();
+  describe('methods getter', () => {
+    it('exposes bound toolbar controls', () => {
+      const openSpy = vi.spyOn(toolbarApi, 'open').mockImplementation(() => {});
+      const closeSpy = vi.spyOn(toolbarApi, 'close').mockImplementation(() => {});
+      const toggleBlockSettingsSpy = vi
+        .spyOn(toolbarApi, 'toggleBlockSettings')
+        .mockImplementation(() => {});
+      const toggleToolboxSpy = vi
+        .spyOn(toolbarApi, 'toggleToolbox')
+        .mockImplementation(() => {});
 
-    expect(editorMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      const { open, close, toggleBlockSettings, toggleToolbox } = toolbarApi.methods;
+
+      open();
+      close();
+      toggleBlockSettings(true);
+      toggleToolbox(false);
+
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+      expect(toggleBlockSettingsSpy).toHaveBeenCalledWith(true);
+      expect(toggleToolboxSpy).toHaveBeenCalledWith(false);
+    });
   });
 
-  it('closes the toolbar via Editor module', () => {
-    toolbarApi.close();
+  describe('open/close', () => {
+    it('opens the toolbar via Editor module', () => {
+      toolbarApi.open();
 
-    expect(editorMock.Toolbar.close).toHaveBeenCalledTimes(1);
+      expect(editorMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the toolbar via Editor module', () => {
+      toolbarApi.close();
+
+      expect(editorMock.Toolbar.close).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it('opens block settings when toggleBlockSettings decides to open', () => {
-    toolbarApi.toggleBlockSettings(undefined as unknown as boolean);
+  describe('toggleBlockSettings', () => {
+    it('opens block settings when state is omitted and block settings are closed', () => {
+      toolbarApi.toggleBlockSettings(unspecifiedState);
 
-    expect(editorMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
-    expect(editorMock.BlockSettings.open).toHaveBeenCalledTimes(1);
-    expect(editorMock.BlockSettings.close).not.toHaveBeenCalled();
-  });
+      expect(editorMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(editorMock.BlockSettings.open).toHaveBeenCalledTimes(1);
+      expect(editorMock.BlockSettings.close).not.toHaveBeenCalled();
+    });
 
-  it('closes block settings when toggleBlockSettings decides to close', () => {
-    editorMock.BlockSettings.opened = true;
+    it('closes block settings when state is omitted and block settings are opened', () => {
+      editorMock.BlockSettings.opened = true;
 
-    toolbarApi.toggleBlockSettings(undefined as unknown as boolean);
+      toolbarApi.toggleBlockSettings(unspecifiedState);
 
-    expect(editorMock.BlockSettings.close).toHaveBeenCalledTimes(1);
-    expect(editorMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
-    expect(editorMock.BlockSettings.open).not.toHaveBeenCalled();
-  });
+      expect(editorMock.BlockSettings.close).toHaveBeenCalledTimes(1);
+      expect(editorMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+      expect(editorMock.BlockSettings.open).not.toHaveBeenCalled();
+    });
 
-  it('forces opening block settings when openingState is true', () => {
-    editorMock.BlockSettings.opened = true;
+    it('forces opening when openingState is true', () => {
+      editorMock.BlockSettings.opened = true;
 
-    toolbarApi.toggleBlockSettings(true);
+      toolbarApi.toggleBlockSettings(true);
 
-    expect(editorMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
-    expect(editorMock.BlockSettings.open).toHaveBeenCalledTimes(1);
-    expect(editorMock.BlockSettings.close).not.toHaveBeenCalled();
-  });
+      expect(editorMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(editorMock.BlockSettings.open).toHaveBeenCalledTimes(1);
+      expect(editorMock.BlockSettings.close).not.toHaveBeenCalled();
+    });
 
-  it('forces closing block settings when openingState is false', () => {
-    toolbarApi.toggleBlockSettings(false);
+    it('forces closing when openingState is false', () => {
+      toolbarApi.toggleBlockSettings(false);
 
-    expect(editorMock.BlockSettings.close).toHaveBeenCalledTimes(1);
-    expect(editorMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
-    expect(editorMock.BlockSettings.open).not.toHaveBeenCalled();
-  });
+      expect(editorMock.BlockSettings.close).toHaveBeenCalledTimes(1);
+      expect(editorMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+      expect(editorMock.BlockSettings.open).not.toHaveBeenCalled();
+    });
 
-  it('logs a warning when no block is selected for toggleBlockSettings', () => {
-    const logSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+    it('logs a warning when no block is selected', () => {
+      const logSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
 
-    editorMock.BlockManager.currentBlockIndex = -1;
+      editorMock.BlockManager.currentBlockIndex = -1;
 
-    toolbarApi.toggleBlockSettings(true);
+      toolbarApi.toggleBlockSettings(true);
 
-    expect(logSpy).toHaveBeenCalledWith(
-      'Could\'t toggle the Toolbar because there is no block selected ',
-      'warn'
-    );
-    expect(editorMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
-    expect(editorMock.BlockSettings.open).not.toHaveBeenCalled();
-    expect(editorMock.BlockSettings.close).not.toHaveBeenCalled();
+      expect(logSpy).toHaveBeenCalledWith(
+        'Could\'t toggle the Toolbar because there is no block selected ',
+        'warn'
+      );
+      expect(editorMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+      expect(editorMock.BlockSettings.open).not.toHaveBeenCalled();
+      expect(editorMock.BlockSettings.close).not.toHaveBeenCalled();
+    });
   });
 
   it('opens toolbox when toggleToolbox receives opening state', () => {
@@ -152,7 +182,7 @@ describe('ToolbarAPI', () => {
   });
 
   it('toggles toolbox when opening state is omitted', () => {
-    toolbarApi.toggleToolbox(undefined as unknown as boolean);
+    toolbarApi.toggleToolbox(unspecifiedState);
 
     expect(editorMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
     expect(editorMock.Toolbar.toolbox.open).toHaveBeenCalledTimes(1);
@@ -160,7 +190,7 @@ describe('ToolbarAPI', () => {
     vi.clearAllMocks();
     editorMock.Toolbar.toolbox.opened = true;
 
-    toolbarApi.toggleToolbox(undefined as unknown as boolean);
+    toolbarApi.toggleToolbox(unspecifiedState);
 
     expect(editorMock.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
     expect(editorMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();

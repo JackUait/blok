@@ -238,7 +238,8 @@ export default class BlockSelection extends Module {
     this.readyToBlockSelection = false;
 
     const isKeyboard = reason && (reason instanceof KeyboardEvent);
-    const isPrintableKey = isKeyboard && _.isPrintableKey((reason as KeyboardEvent).keyCode);
+    const keyboardEvent = reason as KeyboardEvent;
+    const isPrintableKey = isKeyboard && keyboardEvent.key && keyboardEvent.key.length === 1;
 
     /**
      * If reason caused clear of the selection was printable key and any block is selected,

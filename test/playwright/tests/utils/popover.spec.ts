@@ -1142,13 +1142,13 @@ test.describe('popover', () => {
       await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="convert-to"].ce-popover-item--focused`)).toBeVisible();
 
       // Check second item is NOT focused
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="link"] .ce-popover-item--focused`)).toBeHidden();
+      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="link"].ce-popover-item--focused`)).toBeHidden();
 
       // Press Tab
       await page.keyboard.press('Tab');
 
       // Check second item became focused after tab
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="link"] .ce-popover-item--focused`)).toBeVisible();
+      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="link"].ce-popover-item--focused`)).toBeVisible();
     });
 
     test('should allow to reach nested popover via keyboard', async ({ page }) => {
@@ -1196,4 +1196,3 @@ test.describe('popover', () => {
     });
   });
 });
-

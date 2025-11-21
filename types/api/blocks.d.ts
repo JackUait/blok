@@ -35,14 +35,6 @@ export interface Blocks {
   delete(index?: number): void;
 
   /**
-   * Swaps two Blocks
-   * @param {number} fromIndex - block to swap
-   * @param {number} toIndex - block to swap with
-   * @deprecated — use 'move' instead
-   */
-  swap(fromIndex: number, toIndex: number): void;
-
-  /**
    * Moves a block to a new index
    * @param {number} toIndex - index where the block is moved to
    * @param {number} fromIndex - block to move
@@ -80,26 +72,10 @@ export interface Blocks {
   getBlockByElement(element: HTMLElement): BlockAPI | undefined;
 
   /**
-   * Mark Block as stretched
-   * @param {number} index - Block to mark
-   * @param {boolean} status - stretch status
-   *
-   * @deprecated Use BlockAPI interface to stretch Blocks
-   */
-  stretchBlock(index: number, status?: boolean): void;
-
-  /**
    * Returns Blocks count
    * @return {number}
    */
   getBlocksCount(): number;
-
-  /**
-   * Insert new Initial Block after current Block
-   *
-   * @deprecated
-   */
-  insertNewBlock(): void;
 
   /**
    * Insert new Block and return inserted Block API

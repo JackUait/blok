@@ -1,6 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type {
-  ChainData } from '../../../src/components/utils';
 import {
   isFunction,
   isObject,
@@ -20,7 +18,6 @@ import {
   delay,
   debounce,
   throttle,
-  sequence,
   getEditorVersion,
   getFileExtension,
   isValidMimeType,
@@ -32,7 +29,6 @@ import {
   generateBlockId,
   generateId,
   openTab,
-  deprecationAssert,
   cacheable,
   mobileScreenBreakpoint,
   isMobileScreen,
@@ -539,63 +535,6 @@ describe('utils', () => {
     });
   });
 
-  describe('sequence', () => {
-    it('should execute functions in sequence', async () => {
-      const results: number[] = [];
-      const chains: ChainData[] = [
-        {
-          data: { order: 1 },
-          function: async (...args: unknown[]) => {
-            const data = args[0] as { order: number };
-
-            results.push(data.order);
-          },
-        },
-        {
-          data: { order: 2 },
-          function: async (...args: unknown[]) => {
-            const data = args[0] as { order: number };
-
-            results.push(data.order);
-          },
-        },
-      ];
-
-      await sequence(chains);
-
-      expect(results).toEqual([1, 2]);
-    });
-
-    it('should call success callback after each chain', async () => {
-      const successCallback = vi.fn();
-      const chains: ChainData[] = [
-        {
-          data: { test: 'data' },
-          function: async () => {},
-        },
-      ];
-
-      await sequence(chains, successCallback);
-
-      expect(successCallback).toHaveBeenCalledWith({ test: 'data' });
-    });
-
-    it('should call fallback callback on error', async () => {
-      const fallbackCallback = vi.fn();
-      const chains: ChainData[] = [
-        {
-          data: { test: 'data' },
-          function: async () => {
-            throw new Error('test error');
-          },
-        },
-      ];
-
-      await sequence(chains, () => {}, fallbackCallback);
-
-      expect(fallbackCallback).toHaveBeenCalledWith({ test: 'data' });
-    });
-  });
 
   describe('getFileExtension', () => {
     it('should return file extension', () => {
@@ -910,31 +849,6 @@ describe('utils', () => {
     });
   });
 
-  describe('deprecationAssert', () => {
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    beforeEach(() => {
-      consoleWarnSpy.mockClear();
-    });
-
-    afterEach(() => {
-      consoleWarnSpy.mockClear();
-    });
-
-    it('should log warning when condition is true', () => {
-      deprecationAssert(true, 'oldProperty', 'newProperty');
-
-      expect(consoleWarnSpy).toHaveBeenCalled();
-      expect(consoleWarnSpy.mock.calls[0]?.[0]).toContain('oldProperty');
-      expect(consoleWarnSpy.mock.calls[0]?.[0]).toContain('newProperty');
-    });
-
-    it('should not log warning when condition is false', () => {
-      deprecationAssert(false, 'oldProperty', 'newProperty');
-
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
-    });
-  });
 
   describe('cacheable', () => {
     it('should cache method result', () => {

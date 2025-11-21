@@ -6,8 +6,7 @@ import I18n from '../../i18n';
 import { I18nInternalNS } from '../../i18n/namespace-internal';
 import Flipper from '../../flipper';
 import type { MenuConfigItem } from '../../../../types/tools';
-import { resolveAliases } from '../../utils/resolve-aliases';
-import type { PopoverItemParams, PopoverItemDefaultBaseParams } from '../../utils/popover';
+import type { PopoverItemParams } from '../../utils/popover';
 import { type Popover, PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -299,7 +298,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
     items.push(...commonTunes);
 
-    return items.map(tune => this.resolveTuneAliases(tune));
+    return items;
   }
 
   /**
@@ -308,43 +307,6 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
   private onPopoverClose = (): void => {
     this.close();
   };
-
-  /**
-   * Resolves aliases in tunes menu items
-   *
-   * @param item - item with resolved aliases
-   */
-  private resolveTuneAliases(item: MenuConfigItem): PopoverItemParams {
-    if (item.type === PopoverItemType.Separator || item.type === PopoverItemType.Html) {
-      return item;
-    }
-
-    const baseItem = resolveAliases(item, { label: 'title' }) as MenuConfigItem;
-
-    const itemWithConfirmation = ('confirmation' in item && item.confirmation !== undefined)
-      ? {
-        ...baseItem,
-        confirmation: resolveAliases(item.confirmation, { label: 'title' }) as PopoverItemDefaultBaseParams,
-      }
-      : baseItem;
-
-    if (!('children' in item) || item.children === undefined) {
-      return itemWithConfirmation as PopoverItemParams;
-    }
-
-    const { onActivate: _onActivate, ...itemWithoutOnActivate } = itemWithConfirmation as MenuConfigItem & { onActivate?: undefined };
-    const childrenItems = item.children.items?.map((childItem) => {
-      return this.resolveTuneAliases(childItem as MenuConfigItem);
-    });
-
-    return {
-      ...itemWithoutOnActivate,
-      children: {
-        ...item.children,
-        items: childrenItems,
-      },
-    } as PopoverItemParams;
-  }
 
   /**
    * Attaches keydown listener to delegate navigation events to the shared flipper

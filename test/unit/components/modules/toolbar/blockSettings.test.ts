@@ -467,53 +467,6 @@ describe('BlockSettings', () => {
     selectionAtEditorSpy.mockRestore();
   });
 
-  it('resolves tune aliases including nested children', () => {
-    const resolveTuneAliases = (blockSettings as unknown as {
-      resolveTuneAliases: (item: MenuConfigItem) => PopoverItemParams;
-    }).resolveTuneAliases.bind(blockSettings);
-
-    const item: MenuConfigItem = {
-      name: 'duplicate',
-      label: 'Duplicate',
-      confirmation: {
-        label: 'Confirm',
-        onActivate: vi.fn(),
-      },
-      children: {
-        items: [
-          {
-            name: 'child',
-            label: 'Child label',
-            onActivate: vi.fn(),
-          } as MenuConfigItem,
-        ],
-      },
-    };
-
-    const resolved = resolveTuneAliases(item);
-
-    if ('title' in resolved) {
-      expect(resolved.title).toBe('Duplicate');
-    }
-    if ('confirmation' in resolved && resolved.confirmation && 'title' in resolved.confirmation) {
-      expect(resolved.confirmation.title).toBe('Confirm');
-    }
-    if ('children' in resolved && resolved.children?.items?.[0] && 'title' in resolved.children.items[0]) {
-      expect(resolved.children.items[0].title).toBe('Child label');
-    }
-  });
-
-  it('returns separator items unchanged when resolving aliases', () => {
-    const resolveTuneAliases = (blockSettings as unknown as {
-      resolveTuneAliases: (item: MenuConfigItem) => PopoverItemParams;
-    }).resolveTuneAliases.bind(blockSettings);
-
-    const separatorItem: MenuConfigItem = {
-      type: PopoverItemType.Separator,
-    } as MenuConfigItem;
-
-    expect(resolveTuneAliases(separatorItem)).toBe(separatorItem);
-  });
 
   it('merges tool tunes, convert-to menu and common tunes', async () => {
     const block = createBlock();
@@ -525,7 +478,7 @@ describe('BlockSettings', () => {
     const toolTunes: MenuConfigItem[] = [
       {
         name: 'duplicate',
-        label: 'Duplicate',
+        title: 'Duplicate',
         onActivate: vi.fn(),
       },
     ];
@@ -590,17 +543,12 @@ describe('BlockSettings', () => {
 
     getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
 
-    const resolveSpy = vi.spyOn(blockSettings as unknown as { resolveTuneAliases: (item: MenuConfigItem) => PopoverItemParams }, 'resolveTuneAliases');
-
     const items = await (blockSettings as unknown as {
       getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }).getTunesItems(block, commonTunes);
 
     expect(items).toHaveLength(2);
     expect(items.every((item) => item.type !== PopoverItemType.Separator)).toBe(true);
-    expect(resolveSpy).toHaveBeenCalledTimes(commonTunes.length);
-
-    resolveSpy.mockRestore();
   });
 
   it('forwards popover close event to block settings close', () => {

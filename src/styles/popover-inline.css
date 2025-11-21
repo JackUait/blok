@@ -92,6 +92,14 @@
         transform: rotate(90deg);
     }
 
+    /**
+   * Hide chevron for the link tool — it renders a custom input instead of a dropdown list,
+   * so the arrow is misleading here but should stay for other tools like the text style switcher.
+   */
+    [data-item-name="link"] .ce-popover-item__icon--chevron-right {
+        display: none;
+    }
+
     .ce-popover--nested-level-1 {
         .ce-popover__container {
             --offset: 3px;

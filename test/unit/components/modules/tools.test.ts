@@ -117,17 +117,9 @@ describe('tools module', () => {
         /**
          *
          */
-        public render(): void {}
-
-        /**
-         *
-         */
-        public surround(): void {}
-
-        /**
-         *
-         */
-        public checkState(): void {}
+        public render(): object {
+          return {};
+        }
       }
 
       /**
@@ -139,17 +131,9 @@ describe('tools module', () => {
         /**
          *
          */
-        public render(): void {}
-
-        /**
-         *
-         */
-        public surround(): void {}
-
-        /**
-         *
-         */
-        public checkState(): void {}
+        public render(): object {
+          return {};
+        }
       }
 
       /**
@@ -385,17 +369,9 @@ describe('tools module', () => {
         /**
          *
          */
-        public render(): void {}
-
-        /**
-         *
-         */
-        public surround(): void {}
-
-        /**
-         *
-         */
-        public checkState(): void {}
+        public render(): object {
+          return {};
+        }
       }
 
       /**
@@ -413,17 +389,9 @@ describe('tools module', () => {
         /**
          *
          */
-        public render(): void {}
-
-        /**
-         *
-         */
-        public surround(): void {}
-
-        /**
-         *
-         */
-        public checkState(): void {}
+        public render(): object {
+          return {};
+        }
       }
 
       const module = createModule({

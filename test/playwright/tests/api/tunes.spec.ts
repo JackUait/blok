@@ -22,7 +22,6 @@ const SECOND_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(2)`;
 type SerializableTuneMenuItem = {
   icon?: string;
   title?: string;
-  label?: string;
   name: string;
 };
 
@@ -260,36 +259,13 @@ test.describe('api.tunes', () => {
     await expect(page.locator(POPOVER_SELECTOR)).toContainText(sampleText);
   });
 
-  test('supports label alias when rendering tunes', async ({ page }) => {
-    await createEditorWithTune(page, {
-      type: 'multiple',
-      items: [
-        {
-          icon: 'ICON1',
-          title: 'Tune entry 1',
-          name: 'testTune1',
-        },
-        {
-          icon: 'ICON2',
-          label: 'Tune entry 2',
-          name: 'testTune2',
-        },
-      ],
-    });
-
-    await focusBlockAndType(page, 'some text');
-    await openBlockTunes(page);
-
-    await expect(page.locator('[data-item-name="testTune1"]')).toContainText('Tune entry 1');
-    await expect(page.locator('[data-item-name="testTune2"]')).toContainText('Tune entry 2');
-  });
 
   test('displays installed tunes above default tunes', async ({ page }) => {
     await createEditorWithTune(page, {
       type: 'single',
       item: {
         icon: 'ICON',
-        label: 'Tune entry',
+        title: 'Tune entry',
         name: 'test-tune',
       },
     });

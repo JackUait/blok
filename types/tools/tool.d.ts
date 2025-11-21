@@ -10,7 +10,7 @@ export interface BaseTool<RenderReturnType = HTMLElement> {
   /**
    * Tool`s render method
    *
-   * For Inline Tools may return either HTMLElement (deprecated) or {@link MenuConfig}
+   * For Inline Tools returns {@link MenuConfig}
    * @see https://editorjs.io/menu-config
    *
    * For Block Tools returns tool`s wrapper html element

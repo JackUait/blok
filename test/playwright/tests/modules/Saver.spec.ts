@@ -210,7 +210,8 @@ test.describe('saver module', () => {
     await expect(settingsButton).toBeVisible();
     await settingsButton.click();
 
-    const headerLevelOption = page.locator(SETTINGS_ITEM_SELECTOR).filter({ hasText: /^Heading 3$/ });
+    // eslint-disable-next-line playwright/no-nth-methods -- The Header tool settings items do not have distinctive text or attributes, so we rely on the order (Level 1, 2, 3...)
+    const headerLevelOption = page.locator(SETTINGS_ITEM_SELECTOR).nth(2);
 
     await headerLevelOption.waitFor({ state: 'visible' });
     await headerLevelOption.click();

@@ -423,9 +423,23 @@ export default class SelectionUtils {
       return;
     }
 
+    const firstElement = this.fakeBackgroundElements[0];
+    const lastElement = this.fakeBackgroundElements[this.fakeBackgroundElements.length - 1];
+
+    const firstChild = firstElement.firstChild;
+    const lastChild = lastElement.lastChild;
+
     this.fakeBackgroundElements.forEach((element) => {
       this.unwrapFakeBackground(element);
     });
+
+    if (firstChild && lastChild) {
+      const newRange = document.createRange();
+
+      newRange.setStart(firstChild, 0);
+      newRange.setEnd(lastChild, lastChild.textContent?.length || 0);
+      this.savedSelectionRange = newRange;
+    }
 
     this.fakeBackgroundElements = [];
     this.isFakeBackgroundEnabled = false;
@@ -506,8 +520,16 @@ export default class SelectionUtils {
    */
   private collectTextNodes(range: Range): Text[] {
     const nodes: Text[] = [];
+    const { commonAncestorContainer } = range;
+
+    if (commonAncestorContainer.nodeType === Node.TEXT_NODE) {
+      nodes.push(commonAncestorContainer as Text);
+
+      return nodes;
+    }
+
     const walker = document.createTreeWalker(
-      range.commonAncestorContainer,
+      commonAncestorContainer,
       NodeFilter.SHOW_TEXT,
       {
         acceptNode: (node: Node): number => {
@@ -578,7 +600,6 @@ export default class SelectionUtils {
     }
 
     parent.removeChild(element);
-    parent.normalize();
   }
 
   /**

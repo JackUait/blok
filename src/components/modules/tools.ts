@@ -1,7 +1,6 @@
 import Paragraph from '@editorjs/paragraph';
 import Module from '../__module';
 import * as _ from '../utils';
-import type { ChainData } from '../utils';
 import PromiseQueue from '../utils/promise-queue';
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
 import BoldInlineTool from '../inline-tools/inline-tool-bold';
@@ -18,6 +17,17 @@ import DeleteTune from '../block-tunes/block-tune-delete';
 import MoveUpTune from '../block-tunes/block-tune-move-up';
 import ToolsCollection from '../tools/collection';
 import { CriticalError } from '../errors/critical';
+
+/**
+ * @typedef {object} ChainData
+ * @property {object} data - data that will be passed to the success or fallback
+ * @property {Function} function - function's that must be called asynchronously
+ * @interface ChainData
+ */
+export interface ChainData {
+  data?: object;
+  function: (...args: unknown[]) => unknown;
+}
 
 const cacheableSanitizer = _.cacheable as (
   target: object,
@@ -171,7 +181,6 @@ export default class Tools extends Module {
       return Promise.resolve();
     }
 
-    /* to see how it works {@link '../utils.ts#sequence'} */
     const handlePrepareSuccess = (data: object): void => {
       if (!this.isToolPrepareData(data)) {
         return;

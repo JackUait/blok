@@ -99,7 +99,7 @@ describe('polyfills', () => {
           } as unknown as CSSStyleDeclaration)
       );
 
-      child.scrollIntoViewIfNeeded();
+      child.scrollIntoViewIfNeeded?.();
 
       expect(scrollTop).toBe(110);
       expect(scrollLeft).toBe(155);
@@ -165,7 +165,7 @@ describe('polyfills', () => {
           } as unknown as CSSStyleDeclaration)
       );
 
-      child.scrollIntoViewIfNeeded(false);
+      child.scrollIntoViewIfNeeded?.(false);
 
       expect(scrollIntoViewMock).toHaveBeenCalledTimes(1);
       expect(scrollIntoViewMock).toHaveBeenCalledWith(true);

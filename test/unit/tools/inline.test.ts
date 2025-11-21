@@ -78,34 +78,6 @@ describe('InlineToolAdapter', () => {
     });
   });
 
-  describe('.title', () => {
-    it('returns constructable title', () => {
-      const options = createInlineToolOptions();
-      const tool = new InlineToolAdapter(options);
-      const constructable = options.constructable as { title?: string };
-
-      expect(tool.title).toBe(constructable.title);
-    });
-
-    it('returns empty string when constructable is undefined', () => {
-      const tool = new InlineToolAdapter({
-        ...createInlineToolOptions(),
-        constructable: undefined as unknown as InlineToolAdapterOptions['constructable'],
-      });
-
-      expect(tool.title).toBe('');
-    });
-
-    it('returns empty string when constructable title is undefined', () => {
-      const tool = new InlineToolAdapter({
-        ...createInlineToolOptions(),
-        constructable: {} as InlineToolAdapterOptions['constructable'],
-      });
-
-      expect(tool.title).toBe('');
-    });
-  });
-
   describe('.isInternal', () => {
     it('reflects provided value', () => {
       const tool = new InlineToolAdapter(createInlineToolOptions());
@@ -219,7 +191,7 @@ describe('InlineToolAdapter', () => {
         ...createInlineToolOptions(),
         constructable: {} as InlineToolAdapterOptions['constructable'],
       });
-      const requiredMethods = ['render', 'surround'];
+      const requiredMethods = [ 'render' ];
 
       expect(tool.getMissingMethods(requiredMethods)).toStrictEqual(requiredMethods);
     });
@@ -234,16 +206,18 @@ describe('InlineToolAdapter', () => {
         /**
          *
          */
-        public render(): void {}
+        public render(): object {
+          return {};
+        }
       }
 
       const tool = new InlineToolAdapter({
         ...options,
         constructable: ConstructableWithRender as unknown as InlineToolAdapterOptions['constructable'],
       });
-      const requiredMethods = ['render', 'surround'];
+      const requiredMethods = ['render', 'fakeMethod'];
 
-      expect(tool.getMissingMethods(requiredMethods)).toStrictEqual([ 'surround' ]);
+      expect(tool.getMissingMethods(requiredMethods)).toStrictEqual([ 'fakeMethod' ]);
     });
 
     it('returns empty array when all methods are implemented', () => {
@@ -256,7 +230,9 @@ describe('InlineToolAdapter', () => {
         /**
          *
          */
-        public render(): void {}
+        public render(): object {
+          return {};
+        }
 
         /**
          *
@@ -268,7 +244,7 @@ describe('InlineToolAdapter', () => {
         ...options,
         constructable: ConstructableWithAllMethods as unknown as InlineToolAdapterOptions['constructable'],
       });
-      const requiredMethods = ['render', 'surround'];
+      const requiredMethods = [ 'render' ];
 
       expect(tool.getMissingMethods(requiredMethods)).toStrictEqual([]);
     });

@@ -11,7 +11,7 @@ VERY IMPORTANT: When encountering ANY problem in the code—such as TypeScript e
 - **Refactor for correctness**: Resolve issues by improving the code structure, using precise types, type guards, proper error handling, and best practices.
 - **Investigate root causes**: Use tools like debugging, logging, or code searches to understand why the problem occurs before fixing it.
 - **Align with existing rules**: Follow related policies such as the Fix TypeScript Errors Policy (adapt for other languages), ESLint configurations, and accessibility guidelines.
-- **Test the fix**: After fixing, verify with tests, linting runs (e.g., `yarn lint:fix`), or manual checks to ensure the problem is truly resolved without introducing new issues.
+- **Test the fix**: After fixing, verify with tests, linting runs (e.g., `yarn lint:fix`, `yarn test`), or manual checks to ensure the problem is truly resolved without introducing new issues.
 - **Terminal commands**: if you run a command in the terminal make sure to set timeout so the command is not being executed indefinitely
 
 ## When to Apply

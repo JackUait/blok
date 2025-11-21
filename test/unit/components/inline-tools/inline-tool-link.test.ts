@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { IconLink, IconUnlink } from '@codexteam/icons';
+import { IconLink } from '@codexteam/icons';
 
 import LinkInlineTool from '../../../../src/components/inline-tools/inline-tool-link';
 import type SelectionUtils from '../../../../src/components/selection';
@@ -41,11 +41,24 @@ const createSelectionMock = (): SelectionMock => {
 };
 
 type ToolSetup = {
-  tool: LinkInlineTool;
+  tool: InstanceType<typeof LinkInlineTool>;
   toolbar: { close: ReturnType<typeof vi.fn> };
   inlineToolbar: { close: ReturnType<typeof vi.fn> };
   notifier: { show: ReturnType<typeof vi.fn> };
   selection: SelectionMock;
+};
+
+type LinkToolRenderResult = {
+  icon: string;
+  title: string;
+  isActive: () => boolean;
+  children: {
+    items: {
+      element: HTMLElement;
+    }[];
+    onOpen: () => void;
+    onClose: () => void;
+  };
 };
 
 const createTool = (): ToolSetup => {
@@ -103,25 +116,6 @@ const createEnterEventStubs = (): KeyboardEventStub => {
   };
 };
 
-/**
- * Normalizes HTML string by parsing and re-serializing it.
- * This ensures consistent comparison when browsers serialize SVG differently.
- *
- * @param html - The HTML string to normalize
- * @returns The normalized HTML string
- */
-const normalizeHTML = (html: string): string => {
-  const temp = document.createElement('div');
-
-  temp.innerHTML = html;
-
-  return temp.innerHTML;
-};
-
-const expectButtonIcon = (button: HTMLElement, iconHTML: string): void => {
-  expect(normalizeHTML(button.innerHTML)).toBe(normalizeHTML(iconHTML));
-};
-
 describe('LinkInlineTool', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -145,25 +139,23 @@ describe('LinkInlineTool', () => {
     expect(tool.shortcut).toBe('CMD+K');
   });
 
-  it('renders toolbar button with initial state persisted in data attributes', () => {
+  it('renders menu config with correct properties', () => {
     const { tool } = createTool();
 
-    const button = tool.render() as HTMLButtonElement;
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
 
-    expect(button).toBeInstanceOf(HTMLButtonElement);
-    expect(button.type).toBe('button');
-    expect(button.classList.contains('ce-inline-tool')).toBe(true);
-    expect(button.classList.contains('ce-inline-tool--link')).toBe(true);
-    expect(button.getAttribute('data-link-tool-active')).toBe('false');
-    expect(button.getAttribute('data-link-tool-unlink')).toBe('false');
-    expectButtonIcon(button, IconLink);
+    expect(renderResult).toHaveProperty('icon', IconLink);
+    expect(renderResult).toHaveProperty('isActive');
+    expect(typeof renderResult.isActive).toBe('function');
+    expect(renderResult).toHaveProperty('children');
   });
 
   it('renders actions input and invokes enter handler when Enter key is pressed', () => {
     const { tool } = createTool();
     const enterSpy = vi.spyOn(tool as unknown as { enterPressed(event: KeyboardEvent): void }, 'enterPressed');
 
-    const input = tool.renderActions() as HTMLInputElement;
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const input = renderResult.children.items[0].element as HTMLInputElement;
 
     expect(input.placeholder).toBe('Add a link');
     expect(input.classList.contains('ce-inline-tool-input')).toBe(true);
@@ -176,46 +168,53 @@ describe('LinkInlineTool', () => {
     expect(enterSpy).toHaveBeenCalledWith(event);
   });
 
-  it('activates unlink state when selection already contains anchor', () => {
+  it('returns true from isActive when selection contains anchor', () => {
     const { tool, selection } = createTool();
-    const button = tool.render() as HTMLButtonElement;
-    const input = tool.renderActions() as HTMLInputElement;
-    const openActionsSpy = vi.spyOn(tool as unknown as { openActions(needFocus?: boolean): void }, 'openActions');
     const anchor = document.createElement('a');
 
     anchor.setAttribute('href', 'https://codex.so');
     selection.findParentTag.mockReturnValue(anchor);
 
-    const result = tool.checkState();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const isActive = renderResult.isActive();
 
-    expect(result).toBe(true);
-    expectButtonIcon(button, IconUnlink);
-    expect(button.classList.contains('ce-inline-tool--active')).toBe(true);
-    expect(button.getAttribute('data-link-tool-unlink')).toBe('true');
-    expect(input.value).toBe('https://codex.so');
-    expect(openActionsSpy).toHaveBeenCalled();
-    expect(selection.save).toHaveBeenCalled();
+    expect(isActive).toBe(true);
   });
 
-  it('deactivates button when selection leaves anchor', () => {
+  it('returns false from isActive when selection does not contain anchor', () => {
     const { tool, selection } = createTool();
-    const button = tool.render() as HTMLButtonElement;
 
-    button.classList.add('ce-inline-tool--active');
-    tool.renderActions();
     selection.findParentTag.mockReturnValue(null);
 
-    const result = tool.checkState();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const isActive = renderResult.isActive();
 
-    expect(result).toBe(false);
-    expectButtonIcon(button, IconLink);
-    expect(button.classList.contains('ce-inline-tool--active')).toBe(false);
-    expect(button.getAttribute('data-link-tool-unlink')).toBe('false');
+    expect(isActive).toBe(false);
+  });
+
+  it('populates input when opened on an existing link', () => {
+    const { tool, selection } = createTool();
+    const anchor = document.createElement('a');
+
+    anchor.setAttribute('href', 'https://codex.so');
+
+    selection.findParentTag.mockReturnValue(anchor);
+
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const input = renderResult.children.items[0].element as HTMLInputElement;
+
+    // Simulate onOpen
+    renderResult.children.onOpen();
+
+    expect(input.value).toBe('https://codex.so');
+    expect(selection.save).toHaveBeenCalled();
   });
 
   it('removes link when input is submitted empty', () => {
     const { tool, selection } = createTool();
-    const input = tool.renderActions() as HTMLInputElement;
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const input = renderResult.children.items[0].element as HTMLInputElement;
+
     const unlinkSpy = vi.spyOn(tool as unknown as { unlink(): void }, 'unlink');
     const closeActionsSpy = vi.spyOn(tool as unknown as { closeActions(clearSavedSelection?: boolean): void }, 'closeActions');
 
@@ -233,7 +232,8 @@ describe('LinkInlineTool', () => {
 
   it('shows notifier when URL validation fails', () => {
     const { tool, notifier } = createTool();
-    const input = tool.renderActions() as HTMLInputElement;
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const input = renderResult.children.items[0].element as HTMLInputElement;
     const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
 
     input.value = 'https://codex .so';
@@ -249,7 +249,8 @@ describe('LinkInlineTool', () => {
 
   it('inserts prepared link and collapses selection when URL is valid', () => {
     const { tool, selection, inlineToolbar } = createTool();
-    const input = tool.renderActions() as HTMLInputElement;
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const input = renderResult.children.items[0].element as HTMLInputElement;
     const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
     const removeFakeBackgroundSpy = selection.removeFakeBackground as unknown as ReturnType<typeof vi.fn>;
 
@@ -275,19 +276,51 @@ describe('LinkInlineTool', () => {
     expect(addProtocol.addProtocol('//cdn.codex.so')).toBe('//cdn.codex.so');
   });
 
-  it('delegates to document.execCommand when inserting and removing links', () => {
-    const execSpy = vi.fn();
-
-    setDocumentCommand(execSpy as Document['execCommand']);
-
+  it('inserts anchor tag with correct attributes when inserting link', () => {
     const { tool } = createTool();
 
-    (tool as unknown as { insertLink(link: string): void }).insertLink('https://codex.so');
-    expect(execSpy).toHaveBeenCalledWith('createLink', false, 'https://codex.so');
+    const range = document.createRange();
+    const textNode = document.createTextNode('selected text');
 
-    execSpy.mockClear();
+    document.body.appendChild(textNode);
+    range.selectNodeContents(textNode);
+
+    const selectionMock = {
+      getRangeAt: vi.fn().mockReturnValue(range),
+      rangeCount: 1,
+      removeAllRanges: vi.fn(),
+      addRange: vi.fn(),
+    };
+
+    vi.spyOn(window, 'getSelection').mockReturnValue(selectionMock as unknown as Selection);
+
+    (tool as unknown as { insertLink(link: string): void }).insertLink('https://codex.so');
+
+    const anchor = document.querySelector('a');
+
+    expect(anchor).not.toBeNull();
+    expect(anchor?.href).toBe('https://codex.so/');
+    expect(anchor?.target).toBe('_blank');
+    expect(anchor?.rel).toBe('nofollow');
+    expect(anchor?.textContent).toBe('selected text');
+  });
+
+  it('unwraps anchor tag when unlinking', () => {
+    const { tool, selection } = createTool();
+
+    const anchor = document.createElement('a');
+
+    anchor.href = 'https://codex.so';
+    anchor.textContent = 'link text';
+    document.body.appendChild(anchor);
+
+    selection.findParentTag.mockReturnValue(anchor);
 
     (tool as unknown as { unlink(): void }).unlink();
-    expect(execSpy).toHaveBeenCalledWith('unlink');
+
+    const anchorCheck = document.querySelector('a');
+
+    expect(anchorCheck).toBeNull();
+    expect(document.body.textContent).toBe('link text');
   });
 });

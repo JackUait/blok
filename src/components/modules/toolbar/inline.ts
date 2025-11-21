@@ -10,7 +10,7 @@ import Shortcuts from '../../utils/shortcuts';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import type { EditorModules } from '../../../types-internal/editor-modules';
 import { CommonInternalSettings } from '../../tools/base';
-import type { Popover, PopoverItemHtmlParams, PopoverItemParams, WithChildren } from '../../utils/popover';
+import type { Popover, PopoverItemParams } from '../../utils/popover';
 import { PopoverItemType } from '../../utils/popover';
 import { PopoverInline } from '../../utils/popover/popover-inline';
 import type InlineToolAdapter from 'src/components/tools/inline';
@@ -73,11 +73,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * Shortcuts registered for inline tools
    */
   private registeredShortcuts: Map<string, string> = new Map();
-
-  /**
-   * Range captured before activating an inline tool via shortcut
-   */
-  private savedShortcutRange: Range | null = null;
 
   /**
    * Tracks whether inline shortcuts have been registered
@@ -250,9 +245,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     for (const toolInstance of this.tools.values()) {
-      if (_.isFunction(toolInstance.clear)) {
-        toolInstance.clear();
-      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      toolInstance;
     }
 
     this.tools = new Map();
@@ -274,7 +268,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.popover = null;
-    this.savedShortcutRange = null;
   }
 
   /**
@@ -362,8 +355,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.popover.show?.();
-
-    this.checkToolsState();
   }
 
   /**
@@ -640,9 +631,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   ): void {
     const commonPopoverItemParams = {
       name: toolName,
-      onActivate: () => {
-        this.toolClicked(instance);
-      },
       hint: {
         title: toolTitle,
         description: shortcutBeautified,
@@ -650,8 +638,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     } as PopoverItemParams;
 
     if ($.isElement(item)) {
-      this.processElementItem(item, instance, commonPopoverItemParams, popoverItems);
-
       return;
     }
 
@@ -680,71 +666,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.processDefaultItem(item, commonPopoverItemParams, popoverItems, index);
-  }
-
-  /**
-   * Process an element-based popover item (deprecated way)
-   *
-   * @param item - HTML element
-   * @param instance - tool instance
-   * @param commonPopoverItemParams - common parameters for popover item
-   * @param popoverItems - array to add the processed item to
-   */
-  private processElementItem(
-    item: HTMLElement,
-    instance: IInlineTool,
-    commonPopoverItemParams: PopoverItemParams,
-    popoverItems: PopoverItemParams[]
-  ): void {
-    /**
-     * Deprecated way to add custom html elements to the Inline Toolbar
-     */
-
-    const popoverItem = {
-      ...commonPopoverItemParams,
-      element: item,
-      type: PopoverItemType.Html,
-    } as PopoverItemParams;
-
-    /**
-     * If tool specifies actions in deprecated manner, append them as children
-     */
-    if (_.isFunction(instance.renderActions)) {
-      const actions = instance.renderActions();
-      const selection = SelectionUtils.get();
-
-      (popoverItem as WithChildren<PopoverItemHtmlParams>).children = {
-        isOpen: selection ? instance.checkState?.(selection) ?? false : false,
-        /** Disable keyboard navigation in actions, as it might conflict with enter press handling */
-        isFlippable: false,
-        items: [
-          {
-            type: PopoverItemType.Html,
-            element: actions,
-          },
-        ],
-      };
-    } else {
-      this.checkLegacyToolState(instance);
-    }
-
-    popoverItems.push(popoverItem);
-  }
-
-  /**
-   * Check state for legacy inline tools that might perform UI mutating logic
-   *
-   * @param instance - tool instance
-   */
-  private checkLegacyToolState(instance: IInlineTool): void {
-    /**
-     * Legacy inline tools might perform some UI mutating logic in checkState method, so, call it just in case
-     */
-    const selection = this.resolveSelection();
-
-    if (selection) {
-      instance.checkState?.(selection);
-    }
   }
 
   /**
@@ -780,15 +701,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     popoverItems.push(popoverItem);
-
-    /**
-     * Append a separator after the item if it has children and not the last one
-     */
-    if ('children' in popoverItem && index < this.tools.size - 1) {
-      popoverItems.push({
-        type: PopoverItemType.Separator,
-      });
-    }
   }
 
   /**
@@ -890,26 +802,11 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
-   * Inline Tool button clicks
-   *
-   * @param tool - Tool's instance
-   */
-  private toolClicked(tool: IInlineTool): void {
-    const range = SelectionUtils.range ?? this.restoreShortcutRange();
-
-    tool.surround?.(range);
-    this.savedShortcutRange = null;
-    this.checkToolsState();
-  }
-
-  /**
    * Activates inline tool triggered by keyboard shortcut
    *
    * @param toolName - tool to activate
    */
   private async activateToolByShortcut(toolName: string): Promise<void> {
-    const initialRange = SelectionUtils.range;
-
     if (!this.opened) {
       await this.tryToShow();
     }
@@ -917,66 +814,12 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     const selection = SelectionUtils.get();
 
     if (!selection) {
-      this.savedShortcutRange = initialRange ? initialRange.cloneRange() : null;
       this.popover?.activateItemByName(toolName);
 
       return;
     }
 
-    const toolEntry = Array.from(this.tools.entries())
-      .find(([ toolAdapter ]) => toolAdapter.name === toolName);
-
-    const toolInstance = toolEntry?.[1];
-    const isToolActive = toolInstance?.checkState?.(selection) ?? false;
-
-    if (isToolActive) {
-      this.savedShortcutRange = null;
-
-      return;
-    }
-
-    const currentRange = SelectionUtils.range ?? initialRange ?? null;
-
-    this.savedShortcutRange = currentRange ? currentRange.cloneRange() : null;
-
     this.popover?.activateItemByName(toolName);
-  }
-
-  /**
-   * Restores selection from the shortcut-captured range if present
-   */
-  private restoreShortcutRange(): Range | null {
-    if (!this.savedShortcutRange) {
-      return null;
-    }
-
-    const selection = SelectionUtils.get();
-
-    if (selection) {
-      selection.removeAllRanges();
-      const restoredRange = this.savedShortcutRange.cloneRange();
-
-      selection.addRange(restoredRange);
-
-      return restoredRange;
-    }
-
-    return this.savedShortcutRange;
-  }
-
-  /**
-   * Check Tools` state by selection
-   */
-  private checkToolsState(): void {
-    const selection = this.resolveSelection();
-
-    if (!selection) {
-      return;
-    }
-
-    this.tools?.forEach((toolInstance) => {
-      toolInstance.checkState?.(selection);
-    });
   }
 
   /**

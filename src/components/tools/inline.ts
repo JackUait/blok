@@ -29,15 +29,6 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
   }
 
   /**
-   * Returns title for Inline Tool if specified by user
-   */
-  public get title(): string {
-    const constructable = this.constructable as InlineToolConstructable | undefined;
-
-    return constructable?.title ?? '';
-  }
-
-  /**
    * Constructs new InlineTool instance from constructable
    */
   public create(): IInlineTool {

@@ -52,16 +52,6 @@ export const getEditorVersion = (): string => {
   return fallbackEditorVersion;
 };
 
-/**
- * @typedef {object} ChainData
- * @property {object} data - data that will be passed to the success or fallback
- * @property {Function} function - function's that must be called asynchronously
- * @interface ChainData
- */
-export interface ChainData {
-  data?: object;
-  function: (...args: unknown[]) => unknown;
-}
 
 /**
  * Editor.js utils
@@ -400,55 +390,6 @@ export const isPrintableKey = (keyCode: number): boolean => {
 };
 
 /**
- * Fires a promise sequence asynchronously
- *
- * @param {ChainData[]} chains - list or ChainData's
- * @param {Function} success - success callback
- * @param {Function} fallback - callback that fires in case of errors
- * @returns {Promise}
- * @deprecated use PromiseQueue.ts instead
- */
-export const sequence = async (
-  chains: ChainData[],
-  success: (data: object) => void = (): void => {},
-  fallback: (data: object) => void = (): void => {}
-): Promise<void> => {
-  /**
-   * Decorator
-   *
-   * @param {ChainData} chainData - Chain data
-   * @param {Function} successCallback - success callback
-   * @param {Function} fallbackCallback - fail callback
-   * @returns {Promise}
-   */
-  const waitNextBlock = async (
-    chainData: ChainData,
-    successCallback: (data: object) => void,
-    fallbackCallback: (data: object) => void
-  ): Promise<void> => {
-    try {
-      await chainData.function(chainData.data);
-      await successCallback(!isUndefined(chainData.data) ? chainData.data : {});
-    } catch (e) {
-      fallbackCallback(!isUndefined(chainData.data) ? chainData.data : {});
-    }
-  };
-
-  /**
-   * pluck each element from queue
-   * First, send resolved Promise as previous value
-   * Each plugins "prepare" method returns a Promise, that's why
-   * reduce current element will not be able to continue while can't get
-   * a resolved Promise
-   */
-  return chains.reduce(async (previousValue, currentValue) => {
-    await previousValue;
-
-    return waitNextBlock(currentValue, success, fallback);
-  }, Promise.resolve());
-};
-
-/**
  * Make array from array-like collection
  *
  * @param {ArrayLike} collection - collection to convert to array
@@ -700,20 +641,6 @@ export const generateId = (prefix = ''): string => {
   return `${prefix}${(Math.floor(Math.random() * ID_RANDOM_MULTIPLIER)).toString(HEXADECIMAL_RADIX)}`;
 };
 
-/**
- * Common method for printing a warning about the usage of deprecated property or method.
- *
- * @param condition - condition for deprecation.
- * @param oldProperty - deprecated property.
- * @param newProperty - the property that should be used instead.
- */
-export const deprecationAssert = (condition: boolean, oldProperty: string, newProperty: string): void => {
-  const message = `«${oldProperty}» is deprecated and will be removed in the next major release. Please use the «${newProperty}» instead.`;
-
-  if (condition) {
-    logLabeled(message, 'warn');
-  }
-};
 
 type CacheableAccessor<Value> = {
   get?: () => Value;

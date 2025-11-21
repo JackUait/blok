@@ -72,26 +72,10 @@ export interface Blocks {
   getBlockByElement(element: HTMLElement): BlockAPI | undefined;
 
   /**
-   * Mark Block as stretched
-   * @param {number} index - Block to mark
-   * @param {boolean} status - stretch status
-   *
-   * @deprecated Use BlockAPI interface to stretch Blocks
-   */
-  stretchBlock(index: number, status?: boolean): void;
-
-  /**
    * Returns Blocks count
    * @return {number}
    */
   getBlocksCount(): number;
-
-  /**
-   * Insert new Initial Block after current Block
-   *
-   * @deprecated
-   */
-  insertNewBlock(): void;
 
   /**
    * Insert new Block and return inserted Block API

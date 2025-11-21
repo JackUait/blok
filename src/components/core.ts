@@ -93,21 +93,12 @@ export default class Core {
       };
     } else {
       /**
-       * Process zero-configuration or with only holderId
+       * Process zero-configuration or with only holder
        * Make config object
        */
       this.config = {
         holder: config,
       };
-    }
-
-    /**
-     * If holderId is preset, assign him to holder property and work next only with holder
-     */
-    _.deprecationAssert(Boolean(this.config.holderId), 'config.holderId', 'config.holder');
-    if (Boolean(this.config.holderId) && this.config.holder == null) {
-      this.config.holder = this.config.holderId;
-      this.config.holderId = undefined;
     }
 
     /**
@@ -126,8 +117,7 @@ export default class Core {
     /**
      * If default Block's Tool was not passed, use the Paragraph Tool
      */
-    _.deprecationAssert(Boolean(this.config.initialBlock), 'config.initialBlock', 'config.defaultBlock');
-    this.config.defaultBlock = this.config.defaultBlock ?? this.config.initialBlock ?? 'paragraph';
+    this.config.defaultBlock = this.config.defaultBlock ?? 'paragraph';
 
     const toolsConfig = this.config.tools;
     const defaultBlockName = this.config.defaultBlock;
@@ -229,11 +219,7 @@ export default class Core {
    * Checks for required fields in Editor's config
    */
   public validate(): void {
-    const { holderId, holder } = this.config;
-
-    if (Boolean(holderId) && Boolean(holder)) {
-      throw Error('«holderId» and «holder» param can\'t assign at the same time.');
-    }
+    const { holder } = this.config;
 
     /**
      * Check for a holder element's existence

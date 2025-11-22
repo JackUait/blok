@@ -7,7 +7,10 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       # Checkout to target branch
       - uses: actions/checkout@v4
@@ -20,20 +23,24 @@ jobs:
         uses: codex-team/action-nodejs-package-info@v1
 
       # Setup node environment
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 22
           registry-url: https://registry.npmjs.org/
 
       # Prepare, build and publish project
       - name: Install dependencies
-        run: yarn
+        run: yarn install --frozen-lockfile
 
-      - name: Build output files
-        run: yarn build
+      - name: Lint
+        run: yarn lint
 
+      - name: Test
+        run: yarn test
+
+      # We don't need an explicit build step because prepublishOnly script in package.json will run it
       - name: Publish the package with a NEXT tag
-        run: yarn publish --access=public --tag=next
+        run: npm publish --access public --tag next --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

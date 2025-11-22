@@ -1,17 +1,22 @@
 {
-  "name": "@editorjs/editorjs",
-  "version": "2.31.0",
-  "description": "Editor.js — open source block-style WYSIWYG editor with JSON output",
+  "name": "blok",
+  "version": "0.1.0",
+  "description": "Blok — headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch",
   "main": "dist/editorjs.umd.js",
   "module": "dist/editorjs.mjs",
   "types": "./types/index.d.ts",
+  "files": [
+    "dist",
+    "types"
+  ],
   "keywords": [
-    "codex editor",
+    "blok",
     "text editor",
-    "editor",
-    "editor.js",
-    "editorjs",
-    "wysiwyg"
+    "rich text editor",
+    "block-based editor",
+    "notion-like editor",
+    "headless editor",
+    "extensible editor"
   ],
   "scripts": {
     "serve": "vite --no-open",
@@ -27,13 +32,17 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "jscpd": "jscpd src/ test/",
-    "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report"
+    "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report",
+    "prepublishOnly": "yarn build"
   },
   "author": "CodeX",
+  "contributors": [
+    "JackUait"
+  ],
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/codex-team/editor.js.git"
+    "url": "git+https://github.com/JackUait/editor.js"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
@@ -73,10 +82,6 @@
     "vite": "^4.2.1",
     "vite-plugin-css-injected-by-js": "^3.1.0",
     "vitest": "^1.6.1"
-  },
-  "collective": {
-    "type": "opencollective",
-    "url": "https://opencollective.com/editorjs"
   },
   "dependencies": {
     "@editorjs/caret": "^1.0.1",

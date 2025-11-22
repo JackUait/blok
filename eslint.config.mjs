@@ -406,7 +406,7 @@ export default [
         test: 'readonly',
         expect: 'readonly',
         // Custom globals
-        EditorJS: 'readonly',
+        Blok: 'readonly',
       },
     },
     rules: {

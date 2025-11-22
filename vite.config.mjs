@@ -23,8 +23,8 @@ export default {
     copyPublicDir: false,
     lib: {
       entry: path.resolve(__dirname, 'src', 'codex.ts'),
-      name: 'EditorJS',
-      fileName: 'editorjs',
+      name: 'Blok',
+      fileName: 'blok',
     },
     rollupOptions: {
       plugins: [

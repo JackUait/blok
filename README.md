@@ -1,8 +1,8 @@
 <p align="center">
-  <img width="75%" alt="Editor.js Logo" src="./assets/blok.png">
+  <img width="75%" alt="Blok logotype" src="./static/blok.webp">
 </p>
 
-## About
+## Introducing Blok
 
 **Blok** is a headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch.
 
@@ -19,3 +19,5 @@ Unlike traditional `contenteditable` solutions that treat text as a single HTML 
 **🖱️ Drag & Drop**: Native support for rearranging blocks with intuitive handles.
 
 **🔌 Extensible Plugin System**: Easily create custom blocks (e.g., Kanbans, Embeds, Code Blocks) to fit your specific use case.
+
+## Installation

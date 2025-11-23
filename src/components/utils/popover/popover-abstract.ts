@@ -116,7 +116,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Open popover
    */
   public show(): void {
-    if (!this.nodes.popover.isConnected) {
+    if (!this.nodes.popover.isConnected && !this.nodes.popover.parentNode) {
       document.body.appendChild(this.nodes.popover);
     }
 

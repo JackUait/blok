@@ -155,6 +155,10 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       toolbox: Dom.make('div', Toolbox.CSS.toolbox),
     };
 
+    if (import.meta.env.MODE === 'test') {
+      this.nodes.toolbox.setAttribute('data-cy', 'toolbox');
+    }
+
     this.initPopover();
 
     this.api.events.on(EditorMobileLayoutToggled, this.handleMobileLayoutToggle);

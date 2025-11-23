@@ -30,7 +30,7 @@ jobs:
 
       # Prepare, build and publish project
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install
 
       - name: Lint
         run: yarn lint

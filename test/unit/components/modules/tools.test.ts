@@ -282,16 +282,12 @@ describe('tools module', () => {
       const tool = module.blockTools.get('blockToolWithoutSettings');
 
       expect(tool?.tunes.has('delete')).toBe(true);
-      expect(tool?.tunes.has('moveUp')).toBe(true);
-      expect(tool?.tunes.has('moveDown')).toBe(true);
     });
 
     it('block tools contain default tunes', () => {
       const tool = module.blockTools.get('blockTool');
 
       expect(tool?.tunes.has('delete')).toBe(true);
-      expect(tool?.tunes.has('moveUp')).toBe(true);
-      expect(tool?.tunes.has('moveDown')).toBe(true);
     });
 
     it('block tools include tunes in the correct order', () => {
@@ -300,7 +296,7 @@ describe('tools module', () => {
 
       expect(toolWithInline?.tunes.has('blockTune')).toBe(true);
       expect(toolWithInline?.tunes.has('blockTune2')).toBe(true);
-      expect(tunesOrder).toStrictEqual(['blockTune2', 'blockTune', 'moveUp', 'delete', 'moveDown']);
+      expect(tunesOrder).toStrictEqual(['blockTune2', 'blockTune', 'delete']);
 
       const toolWithSuccessfulPrepare = module.blockTools.get('withSuccessfulPrepare');
 

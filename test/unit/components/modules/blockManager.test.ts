@@ -23,7 +23,7 @@ type BlocksStub = {
   insert: Mock<[index: number, block: Block, replace?: boolean], void>;
   insertMany: Mock<[items: Block[], index?: number], void>;
   replace: Mock<[index: number, block: Block], void>;
-  move: Mock<[toIndex: number, fromIndex: number], void>;
+  move: Mock<[toIndex: number, fromIndex: number, skipDOM?: boolean], void>;
   remove: Mock<[index: number], void>;
   indexOf: Mock<[block: Block], number>;
   blocks: Block[];
@@ -128,7 +128,7 @@ const createBlocksStub = (initialBlocks: Block[] = []): BlocksStub => {
     replace: vi.fn((index: number, block: Block) => {
       blocks[index] = block;
     }),
-    move: vi.fn((toIndex: number, fromIndex: number) => {
+    move: vi.fn((toIndex: number, fromIndex: number, _skipDOM = false) => {
       const [ movedBlock ] = blocks.splice(fromIndex, 1);
 
       blocks.splice(toIndex, 0, movedBlock);
@@ -339,7 +339,7 @@ describe('BlockManager', () => {
 
     blockManager.move(0, 1);
 
-    expect(blocksStub.move).toHaveBeenCalledWith(0, 1);
+    expect(blocksStub.move).toHaveBeenCalledWith(0, 1, false);
     expect(blockManager.currentBlockIndex).toBe(0);
     expect(blockManager.currentBlock).toBe(secondBlock);
     expect(blockDidMutatedSpy).toHaveBeenCalledWith(

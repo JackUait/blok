@@ -5,7 +5,6 @@ import { pathToFileURL } from 'node:url';
 
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
@@ -13,7 +12,6 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
 
 type SerializableToolConfig = {
   className?: string;
@@ -27,7 +25,6 @@ type CreateEditorOptions = {
   config?: Record<string, unknown>;
 };
 
-type OutputBlock = OutputData['blocks'][number];
 
 declare global {
   interface Window {
@@ -154,42 +151,6 @@ const saveEditor = async (page: Page): Promise<OutputData> => {
 
     return await window.editorInstance.save();
   });
-};
-
-const focusBlockByIndex = async (page: Page, index: number): Promise<void> => {
-  await page.evaluate(({ blockIndex }) => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
-    }
-
-    const didSetCaret = window.editorInstance.caret.setToBlock(blockIndex);
-
-    if (!didSetCaret) {
-      throw new Error(`Failed to set caret to block at index ${blockIndex}`);
-    }
-  }, { blockIndex: index });
-};
-
-const openBlockSettings = async (page: Page, index: number): Promise<void> => {
-  await focusBlockByIndex(page, index);
-
-  const block = page.locator(`:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`);
-
-  await block.scrollIntoViewIfNeeded();
-  await block.click();
-  await block.hover();
-
-  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`);
-
-  await settingsButton.waitFor({ state: 'visible' });
-  await settingsButton.click();
-};
-
-const clickTune = async (page: Page, tuneName: string): Promise<void> => {
-  const tuneButton = page.locator(`[data-cy="block-tunes"] [data-item-name=${tuneName}]`);
-
-  await tuneButton.waitFor({ state: 'visible' });
-  await tuneButton.click();
 };
 
 test.describe('modules/blockManager', () => {
@@ -479,61 +440,6 @@ test.describe('modules/blockManager', () => {
     expect((blocks[0]?.data as { text?: string }).text).toBe('stay text');
   });
 
-  test('moves a block up via the default tune', async ({ page }) => {
-    await createEditorWithBlocks(page, [
-      {
-        type: 'paragraph',
-        data: { text: 'First block' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Second block' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Third block' },
-      },
-    ]);
-
-    await openBlockSettings(page, 1);
-    await clickTune(page, 'move-up');
-
-    const { blocks } = await saveEditor(page);
-
-    expect(blocks.map((block: OutputBlock) => (block.data as { text: string }).text)).toStrictEqual([
-      'Second block',
-      'First block',
-      'Third block',
-    ]);
-  });
-
-  test('moves a block down via the default tune', async ({ page }) => {
-    await createEditorWithBlocks(page, [
-      {
-        type: 'paragraph',
-        data: { text: 'First block' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Second block' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Third block' },
-      },
-    ]);
-
-    await openBlockSettings(page, 1);
-    await clickTune(page, 'move-down');
-
-    const { blocks } = await saveEditor(page);
-
-    expect(blocks.map((block: OutputBlock) => (block.data as { text: string }).text)).toStrictEqual([
-      'First block',
-      'Third block',
-      'Second block',
-    ]);
-  });
 
   test('generates unique ids for newly inserted blocks', async ({ page }) => {
     await createEditor(page);

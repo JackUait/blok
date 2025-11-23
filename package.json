@@ -57,6 +57,7 @@
     "@eslint/eslintrc": "3.1.0",
     "@playwright/test": "1.56.1",
     "@types/node": "18.15.11",
+    "@types/sortablejs": "^1.15.9",
     "@vitest/coverage-v8": "1.6.1",
     "@vitest/ui": "1.6.1",
     "core-js": "3.30.0",
@@ -87,7 +88,8 @@
     "@editorjs/caret": "1.0.1",
     "@types/lodash": "4.17.20",
     "codex-notifier": "1.1.2",
-    "lodash": "4.17.21"
+    "lodash": "4.17.21",
+    "sortablejs": "^1.15.6"
   },
   "resolutions": {
     "@typescript-eslint/eslint-plugin": "6.0.0",

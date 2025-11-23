@@ -48,7 +48,7 @@ export default class UI extends Module<UINodes> {
    */
   public get CSS(): {
     editorWrapper: string; editorWrapperNarrow: string; editorZone: string; editorZoneHidden: string;
-    editorEmpty: string; editorRtlFix: string;
+    editorEmpty: string; editorRtlFix: string; editorDragging: string;
     } {
     return {
       editorWrapper: 'codex-editor',
@@ -57,6 +57,7 @@ export default class UI extends Module<UINodes> {
       editorZoneHidden: 'codex-editor__redactor--hidden',
       editorEmpty: 'codex-editor--empty',
       editorRtlFix: 'codex-editor--rtl',
+      editorDragging: 'codex-editor--dragging',
     };
   }
 
@@ -833,7 +834,7 @@ export default class UI extends Module<UINodes> {
      * Move and open toolbar
      * (used for showing Block Settings toggler after opening and closing Inline Toolbar)
      */
-    if (!this.Editor.ReadOnly.isEnabled) {
+    if (!this.Editor.ReadOnly.isEnabled && !this.Editor.Toolbar.contains(initialTarget)) {
       this.Editor.Toolbar.moveAndOpen();
     }
   }

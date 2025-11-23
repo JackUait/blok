@@ -268,7 +268,7 @@ test.describe('api.tunes', () => {
     await openBlockTunes(page);
 
     await expect(page.locator(FIRST_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-item-name', 'test-tune');
-    await expect(page.locator(SECOND_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-item-name', 'move-up');
+    await expect(page.locator(SECOND_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-item-name', 'delete');
   });
 });
 

@@ -9,6 +9,7 @@
 }
 
 .ce-block {
+    position: relative;
     animation: fade-in 300ms ease;
     animation-fill-mode: initial;
 

@@ -9,6 +9,8 @@ import Block from '../../block';
 import Toolbox, { ToolboxEvent } from '../../ui/toolbox';
 import { IconMenu, IconPlus } from '@codexteam/icons';
 import { BlockHovered } from '../../events/BlockHovered';
+import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
+import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
 import { beautifyShortcut } from '../../utils';
 import { getKeyboardKeyForCode } from '../../utils/keyboard';
 
@@ -124,6 +126,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
       plusButtonShortcut: 'ce-toolbar__plus-shortcut',
       settingsToggler: 'ce-toolbar__settings-btn',
       settingsTogglerHidden: 'ce-toolbar__settings-btn--hidden',
+      settingsTogglerOpened: 'ce-toolbar__settings-btn--opened',
     };
   }
 
@@ -236,8 +239,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
     if (!readOnlyEnabled) {
-      window.requestIdleCallback(() => {
-        this.drawUI();
+      window.requestIdleCallback(async () => {
+        await this.drawUI();
         this.enableModuleBindings();
       }, { timeout: 2000 });
     } else {
@@ -325,7 +328,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
        * On mobile — Toolbar at the bottom of Block
        */
       if (isMobile) {
-        return targetBlockHolder.offsetTop + targetBlockHolder.offsetHeight;
+        return targetBlockHolder.offsetHeight;
       }
 
       const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
@@ -336,11 +339,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
        *            Toolbar should be moved to the top of the block
        */
       if (firstInput === undefined) {
-        return targetBlockHolder.offsetTop + pluginContentOffset;
+        return pluginContentOffset;
       }
 
       if (firstInputOffset === null || firstInputOffset > MAX_OFFSET) {
-        return targetBlockHolder.offsetTop + pluginContentOffset;
+        return pluginContentOffset;
       }
 
       /**
@@ -353,7 +356,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
        * Visual padding inside the SVG icon
        */
       const toolbarActionsPaddingBottom = 8;
-      const baselineBasedY = targetBlockHolder.offsetTop + baseline - toolbarActionsHeight + toolbarActionsPaddingBottom + firstInputOffset;
+      const baselineBasedY = baseline - toolbarActionsHeight + toolbarActionsPaddingBottom + firstInputOffset;
 
       return baselineBasedY;
     })();
@@ -362,6 +365,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
      * Move Toolbar to the Top coordinate of Block
      */
     wrapper.style.top = `${Math.floor(toolbarY)}px`;
+    targetBlockHolder.appendChild(wrapper);
 
     /**
      * Do not show Block Tunes Toggler near single and empty block
@@ -401,6 +405,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private reset(): void {
     if (this.nodes.wrapper) {
       this.nodes.wrapper.style.top = 'unset';
+
+      /**
+       * Move Toolbar back to the Editor wrapper to save it from deletion
+       */
+      this.Editor.UI.nodes.wrapper.appendChild(this.nodes.wrapper);
     }
   }
 
@@ -614,11 +623,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const settingsToggler = this.nodes.settingsToggler;
 
     if (settingsToggler) {
+      /**
+       * Settings toggler
+       */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
-        /**
-         * Stop propagation to prevent block selection clearance
-         * @see UI.documentClicked
-         */
+        e.stopPropagation();
+        tooltip.hide(true);
+      }, true);
+
+      this.readOnlyMutableListeners.on(settingsToggler, 'click', (e) => {
         e.stopPropagation();
 
         this.settingsTogglerClicked();
@@ -626,8 +639,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
         if (this.toolboxInstance?.opened) {
           this.toolboxInstance.close();
         }
-
-        tooltip.hide(true);
       }, true);
     }
 
@@ -656,6 +667,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
         this.moveAndOpen(hoveredBlock);
       });
     }
+
+    /**
+     * Subscribe to the Block Settings events to toggle 'opened' state of the Settings Toggler
+     */
+    this.eventsDispatcher.on(BlockSettingsOpened, this.onBlockSettingsOpen);
+    this.eventsDispatcher.on(BlockSettingsClosed, this.onBlockSettingsClose);
   }
 
   /**
@@ -663,7 +680,23 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private disableModuleBindings(): void {
     this.readOnlyMutableListeners.clearAll();
+    this.eventsDispatcher.off(BlockSettingsOpened, this.onBlockSettingsOpen);
+    this.eventsDispatcher.off(BlockSettingsClosed, this.onBlockSettingsClose);
   }
+
+  /**
+   * Handler for BlockSettingsOpened event
+   */
+  private onBlockSettingsOpen = (): void => {
+    this.nodes.settingsToggler?.classList.add(this.CSS.settingsTogglerOpened);
+  };
+
+  /**
+   * Handler for BlockSettingsClosed event
+   */
+  private onBlockSettingsClose = (): void => {
+    this.nodes.settingsToggler?.classList.remove(this.CSS.settingsTogglerOpened);
+  };
 
   /**
    * Clicks on the Block Settings toggler
@@ -699,7 +732,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    *  - Make itself and append dependent nodes to itself
    *
    */
-  private drawUI(): void {
+  private async drawUI(): Promise<void> {
     /**
      * Make BlockSettings Panel
      */
@@ -708,7 +741,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     /**
      * Make Toolbar
      */
-    void this.make();
+    await this.make();
   }
 
   /**

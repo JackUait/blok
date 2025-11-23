@@ -115,8 +115,9 @@ export default class Blocks {
    * Move a block from one to another index
    * @param {number} toIndex - new index of the block
    * @param {number} fromIndex - block to move
+   * @param {boolean} skipDOM - if true, do not manipulate DOM (useful when SortableJS already did it)
    */
-  public move(toIndex: number, fromIndex: number): void {
+  public move(toIndex: number, fromIndex: number, skipDOM = false): void {
     /**
      * cut out the block, move the DOM element and insert at the desired index
      * again (the shifting within the blocks array will happen automatically).
@@ -124,15 +125,15 @@ export default class Blocks {
      */
     const block = this.blocks.splice(fromIndex, 1)[0];
 
-    // manipulate DOM
-    const prevIndex = toIndex - 1;
-    const previousBlockIndex = Math.max(0, prevIndex);
-    const previousBlock = this.blocks[previousBlockIndex];
+    if (!skipDOM) {
+      // manipulate DOM
+      const prevIndex = toIndex - 1;
+      const previousBlockIndex = Math.max(0, prevIndex);
+      const previousBlock = this.blocks[previousBlockIndex];
 
-    if (toIndex > 0) {
-      this.insertToDOM(block, 'afterend', previousBlock);
-    } else {
-      this.insertToDOM(block, 'beforebegin', previousBlock);
+      const position = toIndex > 0 ? 'afterend' : 'beforebegin';
+
+      this.insertToDOM(block, position, previousBlock);
     }
 
     // move in array

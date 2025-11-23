@@ -8,7 +8,9 @@ import Block, { BlockToolAPI } from '../block';
 import Module from '../__module';
 import $ from '../dom';
 import * as _ from '../utils';
+import * as tooltip from '../utils/tooltip';
 import Blocks from '../blocks';
+import Sortable from 'sortablejs';
 import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import BlockAPI from '../block/api';
@@ -168,6 +170,11 @@ export default class BlockManager extends Module {
   private _blocks: BlocksStore | null = null;
 
   /**
+   * Sortable instance
+   */
+  private sortable: Sortable | null = null;
+
+  /**
    * Should be called after Editor.UI preparation
    * Define this._blocks property
    */
@@ -198,6 +205,25 @@ export default class BlockManager extends Module {
         this.Editor.BlockEvents.handleCommandC(event as ClipboardEvent);
       }
     );
+
+    this.sortable = new Sortable(this.Editor.UI.nodes.redactor, {
+      animation: 150,
+      forceFallback: true,
+      handle: `.${this.Editor.Toolbar.CSS.settingsToggler}`,
+      onStart: () => {
+        this.Editor.UI.nodes.wrapper.classList.add(this.Editor.UI.CSS.editorDragging);
+        tooltip.hide(true);
+      },
+      onEnd: (evt) => {
+        this.Editor.UI.nodes.wrapper.classList.remove(this.Editor.UI.CSS.editorDragging);
+
+        if (evt.newIndex === undefined || evt.oldIndex === undefined) {
+          return;
+        }
+
+        this.move(evt.newIndex, evt.oldIndex, true);
+      },
+    });
   }
 
   /**
@@ -832,8 +858,9 @@ export default class BlockManager extends Module {
    * Move a block to a new index
    * @param {number} toIndex - index where to move Block
    * @param {number} fromIndex - index of Block to move
+   * @param {boolean} skipDOM - if true, do not manipulate DOM
    */
-  public move(toIndex: number, fromIndex: number = this.currentBlockIndex): void {
+  public move(toIndex: number, fromIndex: number = this.currentBlockIndex, skipDOM = false): void {
     // make sure indexes are valid and within a valid range
     if (isNaN(toIndex) || isNaN(fromIndex)) {
       _.log(`Warning during 'move' call: incorrect indices provided.`, 'warn');
@@ -848,7 +875,7 @@ export default class BlockManager extends Module {
     }
 
     /** Move up current Block */
-    this.blocksStore.move(toIndex, fromIndex);
+    this.blocksStore.move(toIndex, fromIndex, skipDOM);
 
     /** Now actual block moved so that current block index changed */
     this.currentBlockIndex = toIndex;
@@ -963,6 +990,11 @@ export default class BlockManager extends Module {
    * This is called when editor is destroyed
    */
   public async destroy(): Promise<void> {
+    if (this.sortable) {
+      this.sortable.destroy();
+      this.sortable = null;
+    }
+
     await Promise.all(this.blocks.map((block) => {
       return block.destroy();
     }));

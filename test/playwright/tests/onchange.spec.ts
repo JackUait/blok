@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -35,6 +35,23 @@ const DELIMITER_TOOL_UMD_PATH = path.resolve(
   __dirname,
   '../../../node_modules/@editorjs/delimiter/dist/bundle.js'
 );
+
+type BoundingBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+const getRequiredBoundingBox = async (locator: Locator): Promise<BoundingBox> => {
+  const box = await locator.boundingBox();
+
+  if (!box) {
+    throw new Error('Could not get bounding box');
+  }
+
+  return box;
+};
 
 type SerializableToolConfig = {
   name: string;
@@ -702,11 +719,29 @@ test.describe('onChange callback', () => {
       ],
     });
 
-    await openBlockSettings(page, 1);
+    const firstBlock = page.locator(`${BLOCK_SELECTOR}:nth-of-type(1)`);
+    const secondBlock = page.locator(`${BLOCK_SELECTOR}:nth-of-type(2)`);
 
-    const moveUpOption = page.locator('[data-cy=block-tunes] [data-item-name=move-up]');
+    await secondBlock.hover();
 
-    await moveUpOption.click();
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await settingsButton.waitFor({ state: 'visible' });
+
+    const settingsBox = await getRequiredBoundingBox(settingsButton);
+    const targetBox = await getRequiredBoundingBox(firstBlock);
+
+    await page.mouse.move(
+      settingsBox.x + settingsBox.width / 2,
+      settingsBox.y + settingsBox.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + 5,
+      { steps: 20 }
+    );
+    await page.mouse.up();
 
     await waitForOnChangeCallCount(page, 1);
 

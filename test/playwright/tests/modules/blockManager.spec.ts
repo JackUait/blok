@@ -5,7 +5,6 @@ import { pathToFileURL } from 'node:url';
 
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
@@ -13,7 +12,6 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
 
 type SerializableToolConfig = {
   className?: string;
@@ -27,7 +25,6 @@ type CreateEditorOptions = {
   config?: Record<string, unknown>;
 };
 
-type OutputBlock = OutputData['blocks'][number];
 
 declare global {
   interface Window {
@@ -154,42 +151,6 @@ const saveEditor = async (page: Page): Promise<OutputData> => {
 
     return await window.editorInstance.save();
   });
-};
-
-const focusBlockByIndex = async (page: Page, index: number): Promise<void> => {
-  await page.evaluate(({ blockIndex }) => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
-    }
-
-    const didSetCaret = window.editorInstance.caret.setToBlock(blockIndex);
-
-    if (!didSetCaret) {
-      throw new Error(`Failed to set caret to block at index ${blockIndex}`);
-    }
-  }, { blockIndex: index });
-};
-
-const openBlockSettings = async (page: Page, index: number): Promise<void> => {
-  await focusBlockByIndex(page, index);
-
-  const block = page.locator(`:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`);
-
-  await block.scrollIntoViewIfNeeded();
-  await block.click();
-  await block.hover();
-
-  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`);
-
-  await settingsButton.waitFor({ state: 'visible' });
-  await settingsButton.click();
-};
-
-const clickTune = async (page: Page, tuneName: string): Promise<void> => {
-  const tuneButton = page.locator(`[data-cy="block-tunes"] [data-item-name=${tuneName}]`);
-
-  await tuneButton.waitFor({ state: 'visible' });
-  await tuneButton.click();
 };
 
 test.describe('modules/blockManager', () => {

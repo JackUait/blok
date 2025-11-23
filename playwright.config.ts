@@ -1,3 +1,4 @@
+import './test/playwright/support/suppress-css-import';
 import { defineConfig } from '@playwright/test';
 
 /**

@@ -23,7 +23,6 @@ const getParagraphByBlockId = (page: Page, blockId: string): Locator => {
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -47,7 +46,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with provided blocks
- *
  * @param page - The Playwright page object
  * @param blocks - The blocks data to initialize the editor with
  */
@@ -75,7 +73,6 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
 
 /**
  * Create editor with empty config
- *
  * @param page - The Playwright page object
  */
 const createEditor = async (page: Page): Promise<void> => {
@@ -112,7 +109,6 @@ const createEditor = async (page: Page): Promise<void> => {
 
 /**
  * Save editor data
- *
  * @param page - The Playwright page object
  * @returns The saved output data
  */
@@ -128,7 +124,6 @@ const saveEditor = async (page: Page): Promise<OutputData> => {
 
 /**
  * Simulate paste event with clipboard data
- *
  * @param page - The Playwright page object
  * @param locator - The locator for the element to paste into
  * @param data - Map with MIME type as key and data as value
@@ -158,7 +153,6 @@ const paste = async (page: Page, locator: Locator, data: Record<string, string>)
 
 /**
  * Select all text in a block
- *
  * @param locator - The locator for the block element
  */
 const selectAllText = async (locator: Locator): Promise<void> => {
@@ -198,7 +192,6 @@ const selectAllText = async (locator: Locator): Promise<void> => {
 
 /**
  * Create editor with custom sanitizer config
- *
  * @param page - The Playwright page object
  * @param sanitizerConfig - Custom sanitizer configuration
  */

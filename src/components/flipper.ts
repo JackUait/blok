@@ -3,7 +3,6 @@ import * as _ from './utils';
 
 /**
  * Flipper construction options
- *
  * @interface FlipperOptions
  */
 export interface FlipperOptions {
@@ -116,7 +115,6 @@ export default class Flipper {
 
   /**
    * Active tab/arrows handling by flipper
-   *
    * @param items - Some modules (like, InlineToolbar, BlockSettings) might refresh buttons dynamically
    * @param cursorPosition - index of the item that should be focused once flipper is activated
    */
@@ -165,7 +163,6 @@ export default class Flipper {
 
   /**
    * Focus item at specified position without triggering flip callbacks
-   *
    * @param position - index of item to focus. Negative value clears focus.
    */
   public focusItem(position: number): void {
@@ -217,7 +214,6 @@ export default class Flipper {
 
   /**
    * Registers a function that should be executed on each navigation action
-   *
    * @param cb - function to execute
    */
   public onFlip(cb: () => void): void {
@@ -226,7 +222,6 @@ export default class Flipper {
 
   /**
    * Unregisters a function that is executed on each navigation action
-   *
    * @param cb - function to stop executing
    */
   public removeOnFlip(cb: () => void): void {
@@ -235,7 +230,6 @@ export default class Flipper {
 
   /**
    * Drops flipper's iterator cursor
-   *
    * @see DomIterator#dropCursor
    */
   private dropCursor(): void {
@@ -244,7 +238,6 @@ export default class Flipper {
 
   /**
    * Get numeric keyCode from KeyboardEvent.key for backward compatibility
-   *
    * @param event - keyboard event
    * @returns numeric keyCode or null if not recognized
    */
@@ -263,7 +256,6 @@ export default class Flipper {
 
   /**
    * KeyDown event handler
-   *
    * @param event - keydown event
    */
   private onKeyDown = (event: KeyboardEvent): void => {
@@ -330,7 +322,6 @@ export default class Flipper {
   /**
    * This function is fired before handling flipper keycodes
    * The result of this function defines if it is need to be handled or not
-   *
    * @param {KeyboardEvent} event - keydown keyboard event
    * @returns {boolean}
    */
@@ -342,7 +333,6 @@ export default class Flipper {
 
   /**
    * Enables or disables handling events dispatched from contenteditable elements
-   *
    * @param value - true if events from contenteditable elements should be handled
    */
   public setHandleContentEditableTargets(value: boolean): void {
@@ -351,7 +341,6 @@ export default class Flipper {
 
   /**
    * When flipper is activated tab press will leaf the items
-   *
    * @param {KeyboardEvent} event - tab keydown event
    */
   private handleTabPress(event: KeyboardEvent): void {
@@ -377,7 +366,6 @@ export default class Flipper {
 
   /**
    * Delegates external keyboard events to the flipper handler.
-   *
    * @param event - keydown event captured outside the flipper
    */
   public handleExternalKeydown(event: KeyboardEvent): void {
@@ -386,7 +374,6 @@ export default class Flipper {
 
   /**
    * Enter press will click current item if flipper is activated
-   *
    * @param {KeyboardEvent} event - enter keydown event
    */
   private handleEnterPress(event: KeyboardEvent): void {
@@ -421,7 +408,6 @@ export default class Flipper {
 
   /**
    * Determine if keyboard events coming from a target should be skipped
-   *
    * @param target - event target element
    * @param event - keyboard event being handled
    */

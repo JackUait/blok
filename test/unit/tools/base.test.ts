@@ -27,7 +27,6 @@ class TestToolAdapter extends BaseToolAdapter<ToolType, Tool> {
 
   /**
    * Creates a tool adapter instance preloaded with the supplied test options.
-   *
    * @param options configuration bundle used to build the adapter for a spec
    */
   constructor(options: TestToolAdapterOptions) {

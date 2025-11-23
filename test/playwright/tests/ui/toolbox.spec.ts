@@ -20,7 +20,6 @@ const SECONDARY_TITLE_SELECTOR = '.ce-popover-item__secondary-title';
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -44,7 +43,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with custom tools
- *
  * @param page - The Playwright page object
  * @param tools - Tools configuration
  * @param data - Optional initial editor data
@@ -151,7 +149,6 @@ const createEditorWithTools = async (
 
 /**
  * Save editor data
- *
  * @param page - The Playwright page object
  * @returns The saved output data
  */
@@ -200,7 +197,6 @@ const runShortcutBehaviour = async (page: Page, toolName: string): Promise<void>
 
 /**
  * Check if caret is within a block element
- *
  * @param page - The Playwright page object
  * @param blockId - Block ID to check
  * @returns True if caret is within the block
@@ -262,7 +258,6 @@ test.describe('toolbox', () => {
 
         /**
          * Constructor
-         *
          * @param data - Tool data
          */
         constructor({ data }: { data: { text: string } }) {
@@ -271,7 +266,6 @@ test.describe('toolbox', () => {
 
         /**
          * Render tool element
-         *
          * @returns Rendered HTML element
          */
         public render(): HTMLElement {
@@ -285,7 +279,6 @@ test.describe('toolbox', () => {
 
         /**
          * Save tool data
-         *
          * @param el - HTML element to save from
          * @returns Saved data
          */
@@ -377,7 +370,6 @@ test.describe('toolbox', () => {
 
         /**
          * Constructor
-         *
          * @param data - Tool data
          */
         constructor({ data }: { data: { text: string } }) {
@@ -386,7 +378,6 @@ test.describe('toolbox', () => {
 
         /**
          * Render tool element
-         *
          * @returns Rendered HTML element
          */
         public render(): HTMLElement {
@@ -400,7 +391,6 @@ test.describe('toolbox', () => {
 
         /**
          * Save tool data
-         *
          * @param el - HTML element to save from
          * @returns Saved data
          */
@@ -462,7 +452,6 @@ test.describe('toolbox', () => {
 
         /**
          * Constructor
-         *
          * @param data - Tool data
          */
         constructor({ data }: { data: { text: string } }) {
@@ -471,7 +460,6 @@ test.describe('toolbox', () => {
 
         /**
          * Render tool element
-         *
          * @returns Rendered HTML element
          */
         public render(): HTMLElement {
@@ -485,7 +473,6 @@ test.describe('toolbox', () => {
 
         /**
          * Save tool data
-         *
          * @param el - HTML element to save from
          * @returns Saved data
          */
@@ -565,7 +552,6 @@ test.describe('toolbox', () => {
 
         /**
          * Constructor
-         *
          * @param data - Tool data
          */
         constructor({ data }: { data: { text: string } }) {
@@ -574,7 +560,6 @@ test.describe('toolbox', () => {
 
         /**
          * Render tool element
-         *
          * @returns Rendered HTML element
          */
         public render(): HTMLElement {
@@ -588,7 +573,6 @@ test.describe('toolbox', () => {
 
         /**
          * Save tool data
-         *
          * @param el - HTML element to save from
          * @returns Saved data
          */

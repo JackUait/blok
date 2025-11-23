@@ -14,7 +14,6 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
 
   /**
    * Returns list of required methods that are missing on the inline tool prototype
-   *
    * @param requiredMethods - method names that must be implemented
    */
   public getMissingMethods(requiredMethods: string[]): string[] {

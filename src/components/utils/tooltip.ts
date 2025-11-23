@@ -71,14 +71,12 @@ type CSSTooltipClasses = {
  * Tiny any beautiful tooltips module.
  *
  * Can be showed near passed Element with any specified HTML content
- *
  * @author CodeX <codex.so>
  * @license MIT
  */
 class Tooltip {
   /**
    * Tooltip CSS classes
-   *
    * @returns {object} CSS class names
    */
   private get CSS(): CSSTooltipClasses {
@@ -174,7 +172,6 @@ class Tooltip {
 
   /**
    * Show Tooltip near passed element with specified HTML content
-   *
    * @param {HTMLElement} element - target element to place Tooltip near that
    * @param {TooltipContent} content — any HTML Element of String that will be used as content
    * @param {TooltipOptions} options — Available options {@link TooltipOptions}
@@ -257,7 +254,6 @@ class Tooltip {
 
   /**
    * Prepare tooltip content node
-   *
    * @param {TooltipContent} content - tooltip content (Node or string)
    */
   private createContentNode(content: TooltipContent): Node {
@@ -275,7 +271,6 @@ class Tooltip {
 
   /**
    * Hide toolbox tooltip and clean content
-   *
    * @param {boolean} skipDelay - forces hiding immediately
    */
   public hide(skipDelay: boolean = false): void {
@@ -307,7 +302,6 @@ class Tooltip {
 
   /**
    * Mouseover/Mouseleave decorator
-   *
    * @param {HTMLElement} element - target element to place Tooltip near that
    * @param {TooltipContent} content — any HTML Element of String that will be used as content
    * @param {TooltipOptions} options — Available options {@link TooltipOptions}
@@ -436,7 +430,6 @@ class Tooltip {
 
   /**
    * Calculates element coords and moves tooltip bottom of the element
-   *
    * @param {HTMLElement} element - target element
    * @param {TooltipOptions} showingOptions - placement options
    */
@@ -454,7 +447,6 @@ class Tooltip {
 
   /**
    * Calculates element coords and moves tooltip top of the element
-   *
    * @param {HTMLElement} element - target element
    * @param {TooltipOptions} _showingOptions - placement options (unused for top placement)
    */
@@ -472,7 +464,6 @@ class Tooltip {
 
   /**
    * Calculates element coords and moves tooltip left of the element
-   *
    * @param {HTMLElement} element - target element
    * @param {TooltipOptions} showingOptions - placement options
    */
@@ -490,7 +481,6 @@ class Tooltip {
 
   /**
    * Calculates element coords and moves tooltip right of the element
-   *
    * @param {HTMLElement} element - target element
    * @param {TooltipOptions} showingOptions - placement options
    */
@@ -508,7 +498,6 @@ class Tooltip {
 
   /**
    * Set wrapper position
-   *
    * @param {string} place - placement direction
    * @param {number} left - left position in pixels
    * @param {number} top - top position in pixels
@@ -537,7 +526,6 @@ class Tooltip {
 
   /**
    * Helper for making Elements with classname and attributes
-   *
    * @param  {string} tagName           - new Element tag name
    * @param  {Array<string>|string} classNames  - list or name of CSS classname(s)
    * @param  {object} attributes        - any attributes
@@ -565,7 +553,6 @@ class Tooltip {
 
   /**
    * Append one or several elements to the parent
-   *
    * @param  {Element|DocumentFragment} parent    - where to append
    * @param  {Element|Element[]} elements - element or elements list
    */
@@ -579,7 +566,6 @@ class Tooltip {
 
   /**
    * Append element or a couple to the beginning of the parent elements
-   *
    * @param {Element} parent - where to append
    * @param {Element|Element[]} elements - element or elements list
    */
@@ -603,7 +589,6 @@ const getTooltip = (): Tooltip => {
 
 /**
  * Show tooltip near element with specified content
- *
  * @param {HTMLElement} element - target element to place tooltip near
  * @param {TooltipContent} content - tooltip content
  * @param {TooltipOptions} options - tooltip options
@@ -614,7 +599,6 @@ export const show = (element: HTMLElement, content: TooltipContent, options?: To
 
 /**
  * Hide tooltip
- *
  * @param {boolean} skipHidingDelay - forces hiding immediately
  */
 export const hide = (skipHidingDelay = false): void => {
@@ -623,7 +607,6 @@ export const hide = (skipHidingDelay = false): void => {
 
 /**
  * Show tooltip on hover (mouseenter/mouseleave)
- *
  * @param {HTMLElement} element - target element to place tooltip near
  * @param {TooltipContent} content - tooltip content
  * @param {TooltipOptions} options - tooltip options

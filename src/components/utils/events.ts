@@ -29,7 +29,6 @@ export default class EventsDispatcher<EventMap> {
 
   /**
    * Subscribe any event on callback
-   *
    * @param eventName - event name
    * @param callback - subscriber
    */
@@ -44,7 +43,6 @@ export default class EventsDispatcher<EventMap> {
 
   /**
    * Subscribe any event on callback. Callback will be called once and be removed from subscribers array after call.
-   *
    * @param eventName - event name
    * @param callback - subscriber
    */
@@ -71,7 +69,6 @@ export default class EventsDispatcher<EventMap> {
 
   /**
    * Emit callbacks with passed data
-   *
    * @param eventName - event name
    * @param data - subscribers get this data when they were fired
    */
@@ -89,7 +86,6 @@ export default class EventsDispatcher<EventMap> {
 
   /**
    * Unsubscribe callback from event
-   *
    * @param eventName - event name
    * @param callback - event handler
    */

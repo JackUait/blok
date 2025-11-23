@@ -53,7 +53,6 @@ const getLastBlock = async (page: Page): Promise<Locator> => {
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -77,7 +76,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with custom tools
- *
  * @param page - The Playwright page object
  * @param tools - Tools configuration
  */
@@ -181,7 +179,6 @@ return (${classSource});
 
 /**
  * Save editor data
- *
  * @param page - The Playwright page object
  * @returns The saved output data
  */
@@ -224,7 +221,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Tool constructor
-         *
          * @param root0 - Constructor parameters
          * @param root0.data - Tool data
          */
@@ -248,7 +244,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Extracts Tool's data from the view
-         *
          * @param el - Tool view element
          */
         public save(el: HTMLElement): { text: string } {
@@ -314,7 +309,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Tool constructor
-         *
          * @param root0 - Constructor parameters
          * @param root0.data - Tool data
          */
@@ -338,7 +332,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Extracts Tool's data from the view
-         *
          * @param el - Tool view element
          */
         public save(el: HTMLElement): { text: string } {
@@ -396,7 +389,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Tool constructor
-         *
          * @param data - previously saved data
          */
         constructor({ data }: { data: { testProp: string; text?: string } }) {
@@ -430,7 +422,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Extracts Tool's data from the view
-         *
          * @param el - tool view
          */
         public save(el: HTMLElement): BlockToolData {

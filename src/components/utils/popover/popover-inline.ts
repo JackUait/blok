@@ -13,7 +13,6 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 export class PopoverInline extends PopoverDesktop {
   /**
    * Constructs the instance
-   *
    * @param params - instance parameters
    */
   constructor(params: PopoverParams) {
@@ -28,7 +27,6 @@ export class PopoverInline extends PopoverDesktop {
         [PopoverItemType.Default]: {
           /**
            * We use button instead of div here to fix bug associated with focus loss (which leads to selection change) on click in safari
-           *
            * @todo figure out better way to solve the issue
            */
           wrapperTag: 'button',
@@ -114,7 +112,6 @@ export class PopoverInline extends PopoverDesktop {
   /**
    * Sets CSS variable with position of item near which nested popover should be displayed.
    * Is used to position nested popover right below clicked item
-   *
    * @param nestedPopoverEl - nested popover element
    * @param item – item near which nested popover should be displayed
    */
@@ -135,7 +132,6 @@ export class PopoverInline extends PopoverDesktop {
   /**
    * Handles displaying nested items for the item.
    * Overriding in order to add toggling behaviour
-   *
    * @param item – item to toggle nested popover for
    */
   protected override showNestedItems(item: PopoverItemDefault | PopoverItemHtml): void {
@@ -153,7 +149,6 @@ export class PopoverInline extends PopoverDesktop {
   /**
    * Creates and displays nested popover for specified item.
    * Is used only on desktop
-   *
    * @param item - item to display nested popover by
    */
   protected showNestedPopoverForItem(item: PopoverItem): PopoverDesktop {
@@ -200,7 +195,6 @@ export class PopoverInline extends PopoverDesktop {
   /**
    * Overrides default item click handling.
    * Helps to close nested popover once other item is clicked.
-   *
    * @param item - clicked item
    */
   protected override handleItemClick(item: PopoverItem): void {

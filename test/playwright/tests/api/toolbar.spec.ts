@@ -28,7 +28,6 @@ const expectToolbarToBeOpened = async (page: Page): Promise<void> => {
 
 /**
  * Wait until the Editor bundle exposed the global constructor
- *
  * @param page - Playwright page instance
  */
 const waitForEditorBundle = async (page: Page): Promise<void> => {
@@ -46,7 +45,6 @@ const waitForEditorBundle = async (page: Page): Promise<void> => {
 
 /**
  * Ensure Toolbar DOM is rendered (Toolbox lives inside it)
- *
  * @param page - Playwright page instance
  */
 const waitForToolbarReady = async (page: Page): Promise<void> => {
@@ -55,7 +53,6 @@ const waitForToolbarReady = async (page: Page): Promise<void> => {
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -79,7 +76,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with initial data
- *
  * @param page - The Playwright page object
  * @param data - Initial editor data
  */

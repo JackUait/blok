@@ -142,7 +142,6 @@ const saveEditor = async (page: Page): Promise<OutputData> => {
 
 /**
  * Ensures that the provided value is a string.
- *
  * @param value - Value to validate.
  * @param errorMessage - Message for the thrown error when validation fails.
  */

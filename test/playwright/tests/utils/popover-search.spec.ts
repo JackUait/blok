@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-block`;
-const BLOCK_TUNES_SELECTOR = `[data-cy=block-tunes]`;
+const BLOCK_TUNES_SELECTOR = `.ce-popover[data-cy=block-tunes]`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
 const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} .cdx-search-field__input`;
 const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover-item`;
@@ -22,7 +22,6 @@ const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__contain
 
 /**
  * Clear the provided search input and emit an input event so filtering logic reacts
- *
  * @param searchInput - locator pointing to the search field
  */
 const clearSearchInputField = async (searchInput: Locator): Promise<void> => {
@@ -98,7 +97,6 @@ const buildTestToolsConfig = (
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -122,7 +120,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with provided blocks and optional tools/tunes
- *
  * @param page - The Playwright page object
  * @param blocks - The blocks data to initialize the editor with
  * @param tools - Optional tools configuration
@@ -273,7 +270,6 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
 
 /**
  * Focus the first block within the editor interface to expose block tunes actions.
- *
  * @param page - The Playwright page object
  */
 const focusFirstBlock = async (page: Page): Promise<void> => {
@@ -288,7 +284,6 @@ const focusFirstBlock = async (page: Page): Promise<void> => {
 
 /**
  * Open block tunes popover
- *
  * @param page - The Playwright page object
  */
 const openBlockTunes = async (page: Page): Promise<void> => {
@@ -299,7 +294,6 @@ const openBlockTunes = async (page: Page): Promise<void> => {
 
 /**
  * Open block tunes popover using Cmd+/ shortcut
- *
  * @param page - The Playwright page object
  */
 const openBlockTunesWithShortcut = async (page: Page): Promise<void> => {
@@ -991,7 +985,6 @@ test.describe('popover Search/Filter', () => {
         async ({ holderId }) => {
           /**
            * Block Tune with nested children
-           *
            * @class TestTune
            */
           class TestTune {

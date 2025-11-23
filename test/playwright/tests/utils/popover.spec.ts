@@ -16,7 +16,7 @@ const HEADER_TOOL_UMD_PATH = path.resolve(__dirname, '../../../../node_modules/@
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-block`;
-const BLOCK_TUNES_SELECTOR = '[data-cy=block-tunes]';
+const BLOCK_TUNES_SELECTOR = '.ce-popover[data-cy=block-tunes]';
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
 const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
 
@@ -84,7 +84,6 @@ const buildTestToolsConfig = (
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -108,7 +107,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with provided blocks and optional tools/tunes
- *
  * @param page - The Playwright page object
  * @param blocks - The blocks data to initialize the editor with
  * @param tools - Optional tools configuration (can be SerializableToolsConfig or tool classes)
@@ -344,7 +342,6 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
 
 /**
  * Select text content within a locator by character positions
- *
  * @param locator - The Playwright locator for the element containing the text
  * @param start - Start position (character index)
  * @param end - End position (character index)
@@ -409,7 +406,6 @@ const selectTextByRange = async (locator: Locator, start: number, end: number): 
 
 /**
  * Open block tunes popover
- *
  * @param page - The Playwright page object
  */
 const openBlockTunes = async (page: Page): Promise<void> => {

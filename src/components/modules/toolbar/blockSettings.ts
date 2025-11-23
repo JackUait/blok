@@ -28,7 +28,6 @@ interface BlockSettingsNodes {
 
 /**
  * Block Settings
- *
  *  @todo Make Block Settings no-module but a standalone class, like Toolbox
  */
 export default class BlockSettings extends Module<BlockSettingsNodes> {
@@ -58,7 +57,6 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * Getter for inner popover's flipper instance
-   *
    * @todo remove once BlockSettings becomes standalone non-module class
    */
   public get flipper(): Flipper {
@@ -126,7 +124,6 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * Open Block Settings pane
-   *
    * @param targetBlock - near which Block we should open BlockSettings
    * @param trigger - element to position the popover relative to
    */
@@ -197,7 +194,6 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * Checks if the element is contained in the BlockSettings or its Popover
-   *
    * @param element - element to check
    */
   public contains(element: HTMLElement): boolean {
@@ -257,7 +253,6 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
   /**
    * Returns list of items to be displayed in block tunes menu.
    * Merges tool specific tunes, conversion menu and common tunes in one list in predefined order
-   *
    * @param currentBlock –  block we are about to open block tunes for
    * @param commonTunes – common tunes
    * @param toolTunes - tool specific tunes
@@ -331,7 +326,6 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * Attaches keydown listener to delegate navigation events to the shared flipper
-   *
    * @param block - block that owns the currently focused content
    */
   private attachFlipperKeydownListener(block: Block): void {

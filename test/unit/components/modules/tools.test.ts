@@ -10,7 +10,6 @@ import type { EditorEventMap } from '../../../../src/components/events';
 
 /**
  * Creates a Tools module instance with provided editor config.
- *
  * @param config - optional editor configuration
  */
 const createModule = (config?: EditorConfig): Tools => {
@@ -69,7 +68,6 @@ describe('tools module', () => {
 
         /**
          * Forwards tool name and config to tool-level prepare handler.
-         *
          * @param data object containing tool identifier and its configuration
          */
         public static prepare(data: { toolName: string; config: unknown }): void {

@@ -9,7 +9,6 @@ import Module from '../../__module';
 export default class I18nAPI extends Module {
   /**
    * Return namespace section for tool or block tune
-   *
    * @param toolName - tool name
    * @param isTune - is tool a block tune
    */
@@ -36,7 +35,6 @@ export default class I18nAPI extends Module {
 
   /**
    * Return I18n API methods with tool namespaced dictionary
-   *
    * @param toolName - tool name
    * @param isTune - is tool a block tune
    */

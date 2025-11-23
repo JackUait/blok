@@ -8,7 +8,6 @@ import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 export abstract class PopoverItem {
   /**
    * Constructs the instance
-   *
    * @param params - instance parameters
    */
   constructor(protected readonly params?: PopoverItemParams) {}
@@ -75,7 +74,6 @@ export abstract class PopoverItem {
 
   /**
    * Adds hint to the item element if hint data is provided
-   *
    * @param itemElement - popover item root element to add hint to
    * @param hintData - hint data
    */
@@ -95,7 +93,6 @@ export abstract class PopoverItem {
 
   /**
    * Toggles item hidden state
-   *
    * @param isHidden - true if item should be hidden
    */
   public abstract toggleHidden(isHidden: boolean): void;

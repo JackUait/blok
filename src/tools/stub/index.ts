@@ -19,7 +19,6 @@ export default class Stub implements BlockTool {
 
   /**
    * Stub styles
-   *
    * @type {{wrapper: string, info: string, title: string, subtitle: string}}
    */
   private CSS = {
@@ -70,7 +69,6 @@ export default class Stub implements BlockTool {
 
   /**
    * Returns stub holder
-   *
    * @returns {HTMLElement}
    */
   public render(): HTMLElement {
@@ -79,7 +77,6 @@ export default class Stub implements BlockTool {
 
   /**
    * Return original Tool data
-   *
    * @returns {BlockToolData}
    */
   public save(): BlockToolData {
@@ -88,7 +85,6 @@ export default class Stub implements BlockTool {
 
   /**
    * Create Tool html markup
-   *
    * @returns {HTMLElement}
    */
   private make(): HTMLElement {

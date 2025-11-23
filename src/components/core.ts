@@ -78,13 +78,11 @@ export default class Core {
 
   /**
    * Setting for configuration
-   *
    * @param {EditorConfig|string|undefined} config - Editor's config to set
    */
   public set configuration(config: EditorConfig|string|undefined) {
     /**
      * Place config into the class property
-     *
      * @type {EditorConfig}
      */
     if (_.isObject(config)) {
@@ -152,7 +150,6 @@ export default class Core {
 
     /**
      * Height of Editor's bottom area that allows to set focus on the last Block
-     *
      * @type {number}
      */
     // eslint-disable-next-line @typescript-eslint/no-magic-numbers
@@ -161,7 +158,6 @@ export default class Core {
     /**
      * Default block type
      * Uses in case when there is no blocks passed
-     *
      * @type {{type: (*), data: {text: null}}}
      */
     const defaultBlockData = {
@@ -208,7 +204,6 @@ export default class Core {
 
   /**
    * Returns private property
-   *
    * @returns {EditorConfig}
    */
   public get configuration(): EditorConfig {
@@ -254,7 +249,6 @@ export default class Core {
    * Start Editor!
    *
    * Get list of modules that needs to be prepared and return a sequence (Promise)
-   *
    * @returns {Promise<void>}
    */
   public async start(): Promise<void> {
@@ -344,7 +338,6 @@ export default class Core {
 
   /**
    * Creates paragraph tool configuration with preserveBlank setting
-   *
    * @param {unknown} paragraphEntry - existing paragraph entry from tools config
    * @returns {Record<string, unknown>} paragraph tool configuration
    */
@@ -388,7 +381,6 @@ export default class Core {
 
   /**
    * Return modules without passed name
-   *
    * @param {string} name - module for witch modules difference should be calculated
    */
   private getModulesDiff(name: string): EditorModules {

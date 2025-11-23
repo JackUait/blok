@@ -34,7 +34,6 @@ export class PopoverHeader {
 
   /**
    * Constructs the instance
-   *
    * @param params - popover header params
    */
   constructor({ text, onBackButtonClick }: PopoverHeaderParams) {

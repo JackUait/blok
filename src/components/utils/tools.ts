@@ -3,7 +3,6 @@ import { isFunction, isString } from '../utils';
 
 /**
  * Check if tool has valid conversion config for export or import.
- *
  * @param tool - tool to check
  * @param direction - export for tool to merge from, import for tool to merge to
  */

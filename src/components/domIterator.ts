@@ -9,7 +9,6 @@ import SelectionUtils from './selection';
 export default class DomIterator {
   /**
    * This is a static property that defines iteration directions
-   *
    * @type {{RIGHT: string, LEFT: string}}
    */
   public static directions = {
@@ -25,7 +24,6 @@ export default class DomIterator {
   /**
    * Focused button index.
    * Default is -1 which means nothing is active
-   *
    * @type {number}
    */
   private cursor = -1;
@@ -49,7 +47,6 @@ export default class DomIterator {
 
   /**
    * Returns Focused button Node
-   *
    * @returns {HTMLElement | null}
    */
   public get currentItem(): HTMLElement | null {
@@ -62,7 +59,6 @@ export default class DomIterator {
 
   /**
    * Sets cursor to specified position
-   *
    * @param cursorPosition - new cursor position
    */
   public setCursor(cursorPosition: number): void {
@@ -75,7 +71,6 @@ export default class DomIterator {
 
   /**
    * Sets items. Can be used when iterable items changed dynamically
-   *
    * @param {HTMLElement[]} nodeList - nodes to iterate
    */
   public setItems(nodeList: HTMLElement[]): void {
@@ -117,7 +112,6 @@ export default class DomIterator {
 
   /**
    * Leafs nodes inside the target list from active element
-   *
    * @param {string} direction - leaf direction. Can be 'left' or 'right'
    * @returns {number} index of focused node
    */
@@ -159,14 +153,12 @@ export default class DomIterator {
     const focusedButtonIndex = direction === DomIterator.directions.RIGHT
       ? /**
          * If we go right then choose next (+1) Tool
-         *
          * @type {number}
          */
       (startingIndex + 1) % this.items.length
       : /**
          * If we go left then choose previous (-1) Tool
          * Before counting module we need to add length before because of "The JavaScript Modulo Bug"
-         *
          * @type {number}
          */
       (this.items.length + startingIndex - 1) % this.items.length;

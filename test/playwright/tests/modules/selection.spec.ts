@@ -247,7 +247,6 @@ const StaticBlockTool = class {
 
   /**
    * Serializes static block DOM into data
-   *
    * @param element - block root element
    */
   public save(element: HTMLElement): { text: string } {
@@ -291,7 +290,6 @@ const EditableTitleTool = class {
 
   /**
    * Serializes editable title DOM into data
-   *
    * @param element - block root element
    */
   public save(element: HTMLElement): { text: string } {

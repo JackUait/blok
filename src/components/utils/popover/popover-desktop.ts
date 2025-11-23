@@ -8,14 +8,12 @@ import { keyCodes } from '../../utils';
 import { CSSVariables, css } from './popover.const';
 import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent } from './components/search-input';
-import { cacheable } from '../../utils';
 import { PopoverItemDefault } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 
 /**
  * Desktop popover.
  * On desktop devices popover behaves like a floating element. Nested popover appears at right or left side.
- *
  * @todo support rtl for nested popovers and search
  */
 export class PopoverDesktop extends PopoverAbstract {
@@ -59,8 +57,12 @@ export class PopoverDesktop extends PopoverAbstract {
   private trigger: HTMLElement | undefined;
 
   /**
+   * Popover size cache
+   */
+  private _size: { height: number; width: number } | undefined;
+
+  /**
    * Construct the instance
-   *
    * @param params - popover params
    * @param itemsRenderParams – popover item render params.
    * The parameters that are not set by user via popover api but rather depend on technical implementation
@@ -234,7 +236,6 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Checks if popover contains the node.
    * Overridden to check nested popover as well.
-   *
    * @param node - node to check
    */
   public override hasNode(node: Node): boolean {
@@ -251,7 +252,6 @@ export class PopoverDesktop extends PopoverAbstract {
 
   /**
    * Handles displaying nested items for the item.
-   *
    * @param item – item to show nested popover for
    */
   protected override showNestedItems(item: PopoverItem): void {
@@ -266,7 +266,6 @@ export class PopoverDesktop extends PopoverAbstract {
 
   /**
    * Handles hover events inside popover items container
-   *
    * @param event - hover event data
    */
   protected handleHover(event: Event): void {
@@ -294,7 +293,6 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Sets CSS variable with position of item near which nested popover should be displayed.
    * Is used for correct positioning of the nested popover
-   *
    * @param nestedPopoverEl - nested popover element
    * @param item – item near which nested popover should be displayed
    */
@@ -331,7 +329,6 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Creates and displays nested popover for specified item.
    * Is used only on desktop
-   *
    * @param item - item to display nested popover by
    */
   protected showNestedPopoverForItem(item: PopoverItem): PopoverDesktop {
@@ -407,8 +404,11 @@ export class PopoverDesktop extends PopoverAbstract {
    * Helps to calculate size of popover that is only resolved when popover is displayed on screen.
    * Renders invisible clone of popover to get actual values.
    */
-  @cacheable
   public get size(): { height: number; width: number } {
+    if (this._size) {
+      return this._size;
+    }
+
     const size = {
       height: 0,
       width: 0,
@@ -433,6 +433,8 @@ export class PopoverDesktop extends PopoverAbstract {
     size.height = container.offsetHeight;
     size.width = container.offsetWidth;
     popoverClone.remove();
+
+    this._size = size;
 
     return size;
   }
@@ -487,7 +489,6 @@ export class PopoverDesktop extends PopoverAbstract {
 
   /**
    * Handles input inside search field
-   *
    * @param data - search input event data
    * @param data.query - search query text
    * @param data.result - search results
@@ -520,7 +521,6 @@ export class PopoverDesktop extends PopoverAbstract {
 
   /**
    * Toggles nothing found message visibility
-   *
    * @param isDisplayed - true if the message should be displayed
    */
   private toggleNothingFoundMessage(isDisplayed: boolean): void {

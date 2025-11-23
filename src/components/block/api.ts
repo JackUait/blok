@@ -5,7 +5,6 @@ import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
 
 /**
  * Constructs new BlockAPI object
- *
  * @class
  * @param {Block} block - Block to expose
  */
@@ -16,7 +15,6 @@ const BlockAPI = function BlockAPI(
   const blockAPI: BlockAPIInterface = {
     /**
      * Block id
-     *
      * @returns {string}
      */
     get id(): string {
@@ -24,7 +22,6 @@ const BlockAPI = function BlockAPI(
     },
     /**
      * Tool name
-     *
      * @returns {string}
      */
     get name(): string {
@@ -33,7 +30,6 @@ const BlockAPI = function BlockAPI(
 
     /**
      * Tool config passed on Editor's initialization
-     *
      * @returns {ToolConfig}
      */
     get config(): ToolConfig {
@@ -42,7 +38,6 @@ const BlockAPI = function BlockAPI(
 
     /**
      * .ce-block element, that wraps plugin contents
-     *
      * @returns {HTMLElement}
      */
     get holder(): HTMLElement {
@@ -51,7 +46,6 @@ const BlockAPI = function BlockAPI(
 
     /**
      * True if Block content is empty
-     *
      * @returns {boolean}
      */
     get isEmpty(): boolean {
@@ -60,7 +54,6 @@ const BlockAPI = function BlockAPI(
 
     /**
      * True if Block is selected with Cross-Block selection
-     *
      * @returns {boolean}
      */
     get selected(): boolean {
@@ -69,7 +62,6 @@ const BlockAPI = function BlockAPI(
 
     /**
      * Set Block's stretch state
-     *
      * @param {boolean} state — state to set
      */
     set stretched(state: boolean) {
@@ -78,7 +70,6 @@ const BlockAPI = function BlockAPI(
 
     /**
      * True if Block is stretched
-     *
      * @returns {boolean}
      */
     get stretched(): boolean {
@@ -94,7 +85,6 @@ const BlockAPI = function BlockAPI(
 
     /**
      * Call Tool method with errors handler under-the-hood
-     *
      * @param {string} methodName - method to call
      * @param {object} param - object with parameters
      * @returns {unknown}
@@ -105,7 +95,6 @@ const BlockAPI = function BlockAPI(
 
     /**
      * Save Block content
-     *
      * @returns {Promise<void|SavedData>}
      */
     save(): Promise<void|SavedData> {
@@ -114,7 +103,6 @@ const BlockAPI = function BlockAPI(
 
     /**
      * Validate Block data
-     *
      * @param {BlockToolData} data - data to validate
      * @returns {Promise<boolean>}
      */

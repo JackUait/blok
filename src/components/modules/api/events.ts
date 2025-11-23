@@ -9,7 +9,6 @@ import type { EditorEventMap } from '../../events';
 export default class EventsAPI extends Module {
   /**
    * Available methods
-   *
    * @returns {Events}
    */
   public get methods(): Events {
@@ -22,7 +21,6 @@ export default class EventsAPI extends Module {
 
   /**
    * Subscribe on Events
-   *
    * @param {string} eventName - event name to subscribe
    * @param {Function} callback - event handler
    */
@@ -32,7 +30,6 @@ export default class EventsAPI extends Module {
 
   /**
    * Emit event with data
-   *
    * @param {string} eventName - event to emit
    * @param {object} data - event's data
    */
@@ -45,7 +42,6 @@ export default class EventsAPI extends Module {
 
   /**
    * Unsubscribe from Event
-   *
    * @param {string} eventName - event to unsubscribe
    * @param {Function} callback - event handler
    */

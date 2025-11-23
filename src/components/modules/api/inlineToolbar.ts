@@ -8,7 +8,6 @@ import Module from '../../__module';
 export default class InlineToolbarAPI extends Module {
   /**
    * Available methods
-   *
    * @returns {InlineToolbar}
    */
   public get methods(): InlineToolbar {

@@ -38,7 +38,6 @@ export default class NotifierAPI extends Module {
 
   /**
    * Show notification
-   *
    * @param {NotifierOptions} options - message option
    */
   public show(options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions): void {

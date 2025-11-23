@@ -8,7 +8,6 @@ import Module from '../../__module';
 export default class ListenersAPI extends Module {
   /**
    * Available methods
-   *
    * @returns {Listeners}
    */
   public get methods(): Listeners {
@@ -22,7 +21,6 @@ export default class ListenersAPI extends Module {
 
   /**
    * Ads a DOM event listener. Return it's id.
-   *
    * @param {HTMLElement} element - Element to set handler to
    * @param {string} eventType - event type
    * @param {() => void} handler - event handler
@@ -39,7 +37,6 @@ export default class ListenersAPI extends Module {
 
   /**
    * Removes DOM listener from element
-   *
    * @param {Element} element - Element to remove handler from
    * @param eventType - event type
    * @param handler - event handler
@@ -51,7 +48,6 @@ export default class ListenersAPI extends Module {
 
   /**
    * Removes DOM listener by the listener id
-   *
    * @param id - id of the listener to remove
    */
   public offById(id: string): void {

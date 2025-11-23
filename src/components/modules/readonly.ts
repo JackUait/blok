@@ -18,7 +18,6 @@ export default class ReadOnly extends Module {
 
   /**
    * Value to track read-only state
-   *
    * @type {boolean}
    */
   private readOnlyEnabled = false;
@@ -58,7 +57,6 @@ export default class ReadOnly extends Module {
   /**
    * Set read-only mode or toggle current state
    * Call all Modules `toggleReadOnly` method and re-render Editor
-   *
    * @param state - (optional) read-only state or toggle
    * @param isInitial - (optional) true when editor is initializing
    */

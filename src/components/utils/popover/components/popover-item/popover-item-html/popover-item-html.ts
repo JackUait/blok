@@ -14,7 +14,6 @@ export class PopoverItemHtml extends PopoverItem {
 
   /**
    * Constructs the instance
-   *
    * @param params – instance parameters
    * @param renderParams – popover item render params.
    * The parameters that are not set by user via popover api but rather depend on technical implementation
@@ -49,7 +48,6 @@ export class PopoverItemHtml extends PopoverItem {
 
   /**
    * Toggles item hidden state
-   *
    * @param isHidden - true if item should be hidden
    */
   public toggleHidden(isHidden: boolean): void {

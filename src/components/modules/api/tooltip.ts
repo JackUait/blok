@@ -40,7 +40,6 @@ export default class TooltipAPI extends Module {
 
   /**
    * Method show tooltip on element with passed HTML content
-   *
    * @param {HTMLElement} element - element on which tooltip should be shown
    * @param {TooltipContent} content - tooltip content
    * @param {TooltipOptions} options - tooltip options
@@ -58,7 +57,6 @@ export default class TooltipAPI extends Module {
 
   /**
    * Decorator for showing Tooltip by mouseenter/mouseleave
-   *
    * @param {HTMLElement} element - element on which tooltip should be shown
    * @param {TooltipContent} content - tooltip content
    * @param {TooltipOptions} options - tooltip options

@@ -31,7 +31,6 @@ export default class Blocks {
 
   /**
    * Get length of Block instances array
-   *
    * @returns {number}
    */
   public get length(): number {
@@ -40,7 +39,6 @@ export default class Blocks {
 
   /**
    * Get Block instances array
-   *
    * @returns {Block[]}
    */
   public get array(): Block[] {
@@ -49,7 +47,6 @@ export default class Blocks {
 
   /**
    * Get blocks html elements array
-   *
    * @returns {HTMLElement[]}
    */
   public get nodes(): HTMLElement[] {
@@ -58,7 +55,6 @@ export default class Blocks {
 
   /**
    * Proxy trap to implement array-like setter
-   *
    * @example
    * blocks[0] = new Block(...)
    * @param {Blocks} instance — Blocks instance
@@ -78,7 +74,6 @@ export default class Blocks {
 
     /**
      * If property is number, call insert method to emulate array behaviour
-     *
      * @example
      * blocks[0] = new Block();
      */
@@ -89,7 +84,6 @@ export default class Blocks {
 
   /**
    * Proxy trap to implement array-like getter
-   *
    * @param {Blocks} instance — Blocks instance
    * @param {PropertyKey} property — Blocks class property key
    * @returns {Block|*}
@@ -110,7 +104,6 @@ export default class Blocks {
 
   /**
    * Push new Block to the blocks array and append it to working area
-   *
    * @param {Block} block - Block to add
    */
   public push(block: Block): void {
@@ -120,7 +113,6 @@ export default class Blocks {
 
   /**
    * Move a block from one to another index
-   *
    * @param {number} toIndex - new index of the block
    * @param {number} fromIndex - block to move
    */
@@ -128,7 +120,6 @@ export default class Blocks {
     /**
      * cut out the block, move the DOM element and insert at the desired index
      * again (the shifting within the blocks array will happen automatically).
-     *
      * @see https://stackoverflow.com/a/44932690/1238150
      */
     const block = this.blocks.splice(fromIndex, 1)[0];
@@ -158,7 +149,6 @@ export default class Blocks {
 
   /**
    * Insert new Block at passed index
-   *
    * @param {number} index — index to insert Block
    * @param {Block} block — Block to insert
    * @param {boolean} replace — it true, replace block on given index
@@ -202,7 +192,6 @@ export default class Blocks {
 
   /**
    * Replaces block under passed index with passed block
-   *
    * @param index - index of existed block
    * @param block - new block
    */
@@ -220,7 +209,6 @@ export default class Blocks {
 
   /**
    * Inserts several blocks at once
-   *
    * @param blocks - blocks to insert
    * @param index - index to insert blocks at
    */
@@ -264,7 +252,6 @@ export default class Blocks {
 
   /**
    * Remove block
-   *
    * @param {number} index - index of Block to remove
    */
   public remove(index: number): void {
@@ -290,7 +277,6 @@ export default class Blocks {
 
   /**
    * Insert Block after passed target
-   *
    * @todo decide if this method is necessary
    * @param {Block} targetBlock — target after which Block should be inserted
    * @param {Block} newBlock — Block to insert
@@ -303,7 +289,6 @@ export default class Blocks {
 
   /**
    * Get Block by index
-   *
    * @param {number} index — Block index
    * @returns {Block}
    */
@@ -313,7 +298,6 @@ export default class Blocks {
 
   /**
    * Return index of passed Block
-   *
    * @param {Block} block - Block to find
    * @returns {number}
    */
@@ -323,7 +307,6 @@ export default class Blocks {
 
   /**
    * Insert new Block into DOM
-   *
    * @param {Block} block - Block to insert
    * @param {InsertPosition} position — insert position (if set, will use insertAdjacentElement)
    * @param {Block} target — Block related to position
@@ -340,7 +323,6 @@ export default class Blocks {
 
   /**
    * Composes Block event with passed type and details
-   *
    * @param {string} type - event type
    * @param {object} detail - event detail
    */

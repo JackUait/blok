@@ -18,14 +18,12 @@ export default class DeleteTune implements BlockTune {
 
   /**
    * Property that contains Editor.js API methods
-   *
    * @see {@link docs/api.md}
    */
   private readonly api: API;
 
   /**
    * DeleteTune constructor
-   *
    * @param {API} api - Editor's API
    */
   constructor({ api }: { api: API }) {

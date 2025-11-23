@@ -267,7 +267,6 @@ export default abstract class BaseToolAdapter<Type extends ToolType = ToolType, 
 
   /**
    * Constructs new Tool instance from constructable blueprint
-   *
    * @param args
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -29,11 +29,11 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 const CODE_TOOL_UMD_PATH = path.resolve(
   __dirname,
-  '../../../node_modules/@editorjs/code/dist/code.umd.js'
+  '../../../node_modules/@editorjs/code/dist/bundle.js'
 );
 const DELIMITER_TOOL_UMD_PATH = path.resolve(
   __dirname,
-  '../../../node_modules/@editorjs/delimiter/dist/delimiter.umd.js'
+  '../../../node_modules/@editorjs/delimiter/dist/bundle.js'
 );
 
 type SerializableToolConfig = {

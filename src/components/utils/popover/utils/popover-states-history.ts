@@ -26,7 +26,6 @@ export class PopoverStatesHistory {
 
   /**
    * Push new popover state
-   *
    * @param state - new state
    */
   public push(state: PopoverStatesHistoryItem): void {

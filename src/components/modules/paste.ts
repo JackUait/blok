@@ -74,14 +74,12 @@ interface PatternSubstitute {
 interface FilesSubstitution {
   /**
    * Array of file extensions Tool can handle
-   *
    * @type {string[]}
    */
   extensions: string[];
 
   /**
    * Array of MIME types Tool can handle
-   *
    * @type {string[]}
    */
   mimeTypes: string[];
@@ -89,20 +87,17 @@ interface FilesSubstitution {
 
 /**
  * Processed paste data object.
- *
  * @interface PasteData
  */
 interface PasteData {
   /**
    * Name of related Tool
-   *
    * @type {string}
    */
   tool: string;
 
   /**
    * Pasted data. Processed and wrapped to HTML element
-   *
    * @type {HTMLElement}
    */
   content: HTMLElement;
@@ -114,7 +109,6 @@ interface PasteData {
 
   /**
    * True if content should be inserted as new Block
-   *
    * @type {boolean}
    */
   isBlock: boolean;
@@ -165,7 +159,6 @@ export default class Paste extends Module {
 
   /**
    * Determines whether current block should be replaced by the pasted file tool.
-   *
    * @param toolName - tool that is going to handle the file
    */
   private shouldReplaceCurrentBlockForFile(toolName?: string): boolean {
@@ -187,7 +180,6 @@ export default class Paste extends Module {
 
   /**
    * Builds sanitize config that keeps structural tags such as tables and lists intact.
-   *
    * @param node - root node to inspect
    */
   private getStructuralTagsSanitizeConfig(node: HTMLElement): SanitizerConfig {
@@ -215,7 +207,6 @@ export default class Paste extends Module {
 
   /**
    * Set read-only state
-   *
    * @param {boolean} readOnlyEnabled - read only flag value
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
@@ -228,7 +219,6 @@ export default class Paste extends Module {
 
   /**
    * Determines whether provided DataTransfer contains file-like entries
-   *
    * @param dataTransfer - data transfer payload to inspect
    */
   private containsFiles(dataTransfer: DataTransfer): boolean {
@@ -263,7 +253,6 @@ export default class Paste extends Module {
 
   /**
    * Handle pasted data transfer object
-   *
    * @param {DataTransfer} dataTransfer - pasted data transfer object
    */
   public async processDataTransfer(dataTransfer: DataTransfer): Promise<void> {
@@ -321,7 +310,6 @@ export default class Paste extends Module {
 
   /**
    * Process pasted text and divide them into Blocks
-   *
    * @param {string} data - text to process. Can be HTML or plain.
    * @param {boolean} isHTML - if passed string is HTML, this parameter should be true
    */
@@ -360,7 +348,6 @@ export default class Paste extends Module {
 
   /**
    * Wrapper handler for paste event that matches listeners.on signature
-   *
    * @param {Event} event - paste event
    */
   private handlePasteEventWrapper = (event: Event): void => {
@@ -394,7 +381,6 @@ export default class Paste extends Module {
 
   /**
    * Process paste config for each tool
-   *
    * @param tool - BlockTool object
    */
   private processTool = (tool: BlockToolAdapter): void => {
@@ -425,7 +411,6 @@ export default class Paste extends Module {
 
   /**
    * Get tags name list from either tag name or sanitization config.
-   *
    * @param {string | object} tagOrSanitizeConfig - tag name or sanitize config object.
    * @returns {string[]} array of tags.
    */
@@ -449,7 +434,6 @@ export default class Paste extends Module {
 
   /**
    * Get tags to substitute by Tool
-   *
    * @param tool - BlockTool object
    */
   private getTagsConfig(tool: BlockToolAdapter): void {
@@ -494,7 +478,6 @@ export default class Paste extends Module {
 
   /**
    * Get files` types and extensions to substitute by Tool
-   *
    * @param tool - BlockTool object
    */
   private getFilesConfig(tool: BlockToolAdapter): void {
@@ -553,7 +536,6 @@ export default class Paste extends Module {
 
   /**
    * Get RegExp patterns to substitute by Tool
-   *
    * @param tool - BlockTool object
    */
   private getPatternsConfig(tool: BlockToolAdapter): void {
@@ -584,7 +566,6 @@ export default class Paste extends Module {
 
   /**
    * Check if browser behavior suits better
-   *
    * @param {EventTarget} element - element where content has been pasted
    * @returns {boolean}
    */
@@ -594,7 +575,6 @@ export default class Paste extends Module {
 
   /**
    * Check if Editor should process pasted data and pass data transfer object to handler
-   *
    * @param {ClipboardEvent} event - clipboard event
    */
   private handlePasteEvent = async (event: ClipboardEvent): Promise<void> => {
@@ -629,7 +609,6 @@ export default class Paste extends Module {
 
   /**
    * Get files from data transfer object and insert related Tools
-   *
    * @param {FileList} items - pasted items
    */
   private async processFiles(items: FileList): Promise<void> {
@@ -655,7 +634,6 @@ export default class Paste extends Module {
 
   /**
    * Get information about file and find Tool to handle it
-   *
    * @param {File} file - file to process
    */
   private async processFile(file: File): Promise<{ event: PasteEvent; type: string } | undefined> {
@@ -694,7 +672,6 @@ export default class Paste extends Module {
 
   /**
    * Split HTML string to blocks and return it as array of Block data
-   *
    * @param {string} innerHTML - html string to process
    * @returns {PasteData[]}
    */
@@ -825,7 +802,6 @@ export default class Paste extends Module {
 
   /**
    * Split plain text by new line symbols and return it as array of Block data
-   *
    * @param {string} plain - string to process
    * @returns {PasteData[]}
    */
@@ -861,7 +837,6 @@ export default class Paste extends Module {
 
   /**
    * Process paste of single Block tool content
-   *
    * @param {PasteData} dataToInsert - data of Block to insert
    */
   private async processSingleBlock(dataToInsert: PasteData): Promise<void> {
@@ -889,7 +864,6 @@ export default class Paste extends Module {
    * 1. Find patterns` matches
    * 2. Insert new block if it is not the same type as current one
    * 3. Just insert text if there is no substitutions
-   *
    * @param {PasteData} dataToInsert - data of Block to insert
    */
   private async processInlinePaste(dataToInsert: PasteData): Promise<void> {
@@ -933,7 +907,6 @@ export default class Paste extends Module {
 
   /**
    * Get patterns` matches
-   *
    * @param {string} text - text to process
    * @returns {Promise<{event: PasteEvent, tool: string}>}
    */
@@ -965,7 +938,6 @@ export default class Paste extends Module {
 
   /**
    * Insert pasted Block content to Editor
-   *
    * @param {PasteData} data - data to insert
    * @param {boolean} canReplaceCurrentBlock - if true and is current Block is empty, will replace current Block
    * @returns {void}
@@ -989,7 +961,6 @@ export default class Paste extends Module {
 
   /**
    * Insert data passed as application/x-editor-js JSON
-   *
    * @param {Array} blocks — Blocks' data to insert
    * @returns {void}
    */
@@ -1018,7 +989,6 @@ export default class Paste extends Module {
 
   /**
    * Fetch nodes from Element node
-   *
    * @param {Node} node - current node
    * @param {Node[]} nodes - processed nodes
    * @param {Node} destNode - destination node
@@ -1065,7 +1035,6 @@ export default class Paste extends Module {
    * Recursively divide HTML string to two types of nodes:
    * 1. Block element
    * 2. Document Fragments contained text and markup tags like a, b, i etc.
-   *
    * @param {Node} wrapper - wrapper of paster HTML content
    * @returns {Node[]}
    */
@@ -1115,7 +1084,6 @@ export default class Paste extends Module {
 
   /**
    * Compose paste event with passed type and detail
-   *
    * @param {string} type - event type
    * @param {PasteEventDetail} detail - event detail
    */

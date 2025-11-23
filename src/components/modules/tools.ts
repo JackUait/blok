@@ -26,19 +26,15 @@ import { CriticalError } from '../errors/critical';
  */
 export interface ChainData {
   data?: object;
-  function: (...args: unknown[]) => unknown;
+  function: (data?: object) => unknown;
 }
-
-const cacheableSanitizer = _.cacheable as (
-  target: object,
-  propertyKey: string | symbol,
-  descriptor: TypedPropertyDescriptor<() => SanitizerConfig>
-) => void;
 
 type ToolPrepareData = {
   toolName: string;
   config: ToolConfig;
 };
+
+type ToolPrepareFunction = (data: ToolPrepareData) => void | Promise<void>;
 
 const toToolConstructable = (constructable: unknown): ToolConstructable => {
   if (!_.isFunction(constructable)) {
@@ -61,7 +57,6 @@ export default class Tools extends Module {
   /**
    * Name of Stub Tool
    * Stub Tool is used to substitute unavailable block Tools and store their data
-   *
    * @type {string}
    */
   public stubTool = 'stub';
@@ -96,7 +91,6 @@ export default class Tools extends Module {
 
   /**
    * Return available Block Tunes
-   *
    * @returns {object} - object of Inline Tool's classes
    */
   public get blockTunes(): ToolsCollection<BlockTuneAdapter> {
@@ -138,6 +132,11 @@ export default class Tools extends Module {
   private readonly toolsUnavailable: ToolsCollection = new ToolsCollection();
 
   /**
+   * Cache for the sanitizer config
+   */
+  private inlineToolsSanitizeConfigCache: SanitizerConfig | null = null;
+
+  /**
    * Returns internal tools
    */
   public get internal(): ToolsCollection {
@@ -146,7 +145,6 @@ export default class Tools extends Module {
 
   /**
    * Creates instances via passed or default configuration
-   *
    * @returns {Promise<void>}
    */
   public async prepare(): Promise<void> {
@@ -220,14 +218,19 @@ export default class Tools extends Module {
   /**
    * Return general Sanitizer config for all inline tools
    */
-  @cacheableSanitizer
   public getAllInlineToolsSanitizeConfig(): SanitizerConfig {
+    if (this.inlineToolsSanitizeConfigCache) {
+      return this.inlineToolsSanitizeConfigCache;
+    }
+
     const config: SanitizerConfig = {} as SanitizerConfig;
 
     Array.from(this.inlineTools.values())
       .forEach(inlineTool => {
         Object.assign(config, inlineTool.sanitizeConfig);
       });
+
+    this.inlineToolsSanitizeConfigCache = config;
 
     return config;
   }
@@ -306,7 +309,6 @@ export default class Tools extends Module {
 
   /**
    * Tool prepare method success callback
-   *
    * @param {object} data - append tool to available list
    */
   private toolPrepareMethodSuccess(data: { toolName: string }): void {
@@ -341,7 +343,6 @@ export default class Tools extends Module {
 
   /**
    * Tool prepare method fail callback
-   *
    * @param {object} data - append tool to unavailable list
    */
   private toolPrepareMethodFallback(data: { toolName: string }): void {
@@ -352,7 +353,6 @@ export default class Tools extends Module {
 
   /**
    * Binds prepare function of plugins with user or default config
-   *
    * @returns {Array} list of functions that needs to be fired sequentially
    * @param config - tools config
    */
@@ -373,10 +373,7 @@ export default class Tools extends Module {
           }
 
           const data = (payload ?? toolData) as ToolPrepareData;
-          const prepareMethod = constructable.prepare as unknown as (
-            this: typeof constructable,
-            payload: ToolPrepareData
-          ) => void | Promise<void>;
+          const prepareMethod = constructable.prepare as unknown as ToolPrepareFunction;
 
           return prepareMethod.call(constructable, data);
         };
@@ -400,7 +397,6 @@ export default class Tools extends Module {
 
   /**
    * Assign enabled Inline Tools for Block Tool
-   *
    * @param tool - Block Tool
    */
   private assignInlineToolsToBlockTool(tool: BlockToolAdapter): void {
@@ -444,7 +440,6 @@ export default class Tools extends Module {
 
   /**
    * Assign enabled Block Tunes for Block Tool
-   *
    * @param tool — Block Tool
    */
   private assignBlockTunesToBlockTool(tool: BlockToolAdapter): void {
@@ -522,7 +517,6 @@ export default class Tools extends Module {
 
   /**
    * Unify tools config
-   *
    * @param toolsConfig - raw tools configuration
    */
   private prepareConfig(toolsConfig: Record<string, ToolConstructable | ToolSettings>): Record<string, ToolSettings> {
@@ -556,7 +550,6 @@ export default class Tools extends Module {
 
   /**
    * Type guard that ensures provided data contains tool preparation metadata.
-   *
    * @param data - data passed to prepare sequence callbacks
    */
   private isToolPrepareData(data: object): data is ToolPrepareData {
@@ -567,7 +560,6 @@ export default class Tools extends Module {
 
   /**
    * Returns initialized tools factory instance.
-   *
    * @returns tools factory
    */
   private getFactory(): ToolsFactory {
@@ -580,7 +572,6 @@ export default class Tools extends Module {
 
   /**
    * Builds inline tools collection for provided tool names, skipping unavailable ones.
-   *
    * @param toolNames - inline tool names to include
    * @returns tools collection containing available inline tools
    */
@@ -603,7 +594,6 @@ export default class Tools extends Module {
 
   /**
    * Builds block tunes collection for provided tune names, skipping unavailable ones.
-   *
    * @param tuneNames - block tune names to include
    * @returns tools collection containing available block tunes
    */

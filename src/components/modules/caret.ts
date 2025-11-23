@@ -8,7 +8,6 @@ const ASCII_MAX_CODE_POINT = 0x7f;
 
 /**
  * Determines whether the provided text is comprised only of punctuation and whitespace characters.
- *
  * @param text - text to check
  */
 const isPunctuationOnly = (text: string): boolean => {
@@ -52,7 +51,6 @@ const collectTextNodes = (node: Node): Text[] => {
  *
  * Prefers nodes that contain more than just punctuation so caret remains inside formatting nodes
  * whenever possible.
- *
  * @param root - element to search within
  */
 const findLastMeaningfulTextNode = (root: HTMLElement): Text | null => {
@@ -82,13 +80,11 @@ const findLastMeaningfulTextNode = (root: HTMLElement): Text | null => {
 /**
  * Caret
  * Contains methods for working Caret
- *
  * @todo get rid of this module and separate it for utility functions
  */
 export default class Caret extends Module {
   /**
    * Allowed caret positions in input
-   *
    * @static
    * @returns {{START: string, END: string, DEFAULT: string}}
    */
@@ -112,9 +108,8 @@ export default class Caret extends Module {
   /**
    * Method gets Block instance and puts caret to the text node with offset
    * There two ways that method applies caret position:
-   *   - first found text node: sets at the beginning, but you can pass an offset
-   *   - last found text node: sets at the end of the node. Also, you can customize the behaviour
-   *
+   * - first found text node: sets at the beginning, but you can pass an offset
+   * - last found text node: sets at the end of the node. Also, you can customize the behaviour
    * @param {Block} block - Block class
    * @param {string} position - position where to set caret.
    *                            If default - leave default behaviour and apply offset if it's passed
@@ -207,7 +202,6 @@ export default class Caret extends Module {
 
   /**
    * Calculates the node and offset when caret should be placed near element's end.
-   *
    * @param {HTMLElement} el - element to inspect
    */
   private resolveEndPositionNode(el: HTMLElement): { node: Node | null; offset: number } {
@@ -244,7 +238,6 @@ export default class Caret extends Module {
 
   /**
    * Set caret to the current input of current Block.
-   *
    * @param {HTMLElement} input - input where caret should be set
    * @param {string} position - position of the caret.
    *                            If default - leave default behaviour and apply offset if it's passed
@@ -278,7 +271,6 @@ export default class Caret extends Module {
 
   /**
    * Creates Document Range and sets caret to the element with offset
-   *
    * @param {HTMLElement} element - target node.
    * @param {number} offset - offset
    */
@@ -381,7 +373,6 @@ export default class Caret extends Module {
    * Set's caret to the next Block or Tool`s input
    * Before moving caret, we should check if caret position is at the end of Plugins node
    * Using {@link Dom#getDeepestNode} to get a last node and match with current selection
-   *
    * @param {boolean} force - pass true to skip check for caret position
    */
   public navigateNext(force = false): boolean {
@@ -451,7 +442,6 @@ export default class Caret extends Module {
    * Set's caret to the previous Tool`s input or Block
    * Before moving caret, we should check if caret position is start of the Plugins node
    * Using {@link Dom#getDeepestNode} to get a last node and match with current selection
-   *
    * @param {boolean} force - pass true to skip check for caret position
    */
   public navigatePrevious(force = false): boolean {
@@ -490,7 +480,6 @@ export default class Caret extends Module {
 
   /**
    * Inserts shadow element after passed element where caret can be placed
-   *
    * @param {Element} element - element after which shadow caret should be inserted
    */
   public createShadow(element: Element): void {
@@ -502,7 +491,6 @@ export default class Caret extends Module {
 
   /**
    * Restores caret position
-   *
    * @param {HTMLElement} element - element where caret should be restored
    */
   public restoreCaret(element: HTMLElement): void {
@@ -532,7 +520,6 @@ export default class Caret extends Module {
 
   /**
    * Inserts passed content at caret position
-   *
    * @param {string} content - content to insert
    */
   public insertContentAtCaretPosition(content: string): void {

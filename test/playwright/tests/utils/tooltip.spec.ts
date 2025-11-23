@@ -13,7 +13,6 @@ const HOLDER_ID = 'editorjs';
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -37,7 +36,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor instance
- *
  * @param page - The Playwright page object
  */
 const createEditor = async (page: Page): Promise<void> => {
@@ -55,7 +53,6 @@ const createEditor = async (page: Page): Promise<void> => {
 
 /**
  * Wait for tooltip to appear and verify it's visible
- *
  * @param page - The Playwright page object
  * @returns The tooltip locator
  */
@@ -69,7 +66,6 @@ const waitForTooltip = async (page: Page): Promise<Locator> => {
 
 /**
  * Wait for tooltip to disappear
- *
  * @param page - The Playwright page object
  */
 const waitForTooltipToHide = async (page: Page): Promise<void> => {

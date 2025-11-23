@@ -110,7 +110,6 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
 
   /**
    * Applies provided query to the search state and notifies listeners
-   *
    * @param query - search query to apply
    */
   private applySearch(query: string): void {
@@ -168,7 +167,6 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
 
   /**
    * Contains logic for checking whether passed item conforms the search query
-   *
    * @param item - item to be checked
    */
   private checkItem(item: SearchableItem): boolean {

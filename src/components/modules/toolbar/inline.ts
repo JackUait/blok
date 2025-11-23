@@ -216,7 +216,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Shows Inline Toolbar if something is selected
-   *
    * @param [needToClose] - pass true to close toolbar if it is not allowed.
    *                                  Avoid to use it just for closing IT, better call .close() clearly.
    */
@@ -272,7 +271,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Check if node is contained by Inline Toolbar
-   *
    * @param {Node} node — node to check
    */
   public containsNode(node: Node): boolean {
@@ -359,7 +357,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Move Toolbar to the selected text
-   *
    * @param popoverWidth - width of the toolbar popover
    */
   private move(popoverWidth: number): void {
@@ -593,7 +590,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Try to enable shortcut for a tool, catching any errors silently
-   *
    * @param toolName - tool name
    * @param shortcut - shortcut to enable, or undefined
    */
@@ -611,7 +607,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Process a single popover item and add it to the popoverItems array
-   *
    * @param item - item to process
    * @param toolName - name of the tool
    * @param instance - tool instance
@@ -670,7 +665,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Process a default popover item
-   *
    * @param item - item to process
    * @param commonPopoverItemParams - common parameters for popover item
    * @param popoverItems - array to add the processed item to
@@ -705,7 +699,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Get shortcut name for tool
-   *
    * @param toolName — Tool name
    */
   private getToolShortcut(toolName: string): string | undefined {
@@ -733,7 +726,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Enable Tool shortcut with Editor Shortcuts Module
-   *
    * @param toolName - tool name
    * @param shortcut - shortcut according to the ShortcutData Module format
    */
@@ -791,7 +783,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Check if shortcut is already registered by another inline tool
-   *
    * @param toolName - tool that is currently being processed
    * @param shortcut - shortcut to check
    */
@@ -803,7 +794,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Activates inline tool triggered by keyboard shortcut
-   *
    * @param toolName - tool to activate
    */
   private async activateToolByShortcut(toolName: string): Promise<void> {

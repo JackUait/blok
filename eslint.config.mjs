@@ -190,7 +190,8 @@ export default [
       'src/components/tools/paragraph/**',
       'src/polyfills.ts',
       'dist',
-      'public/assets/**'
+      'public/assets/**',
+      '**/public/assets/**',
     ],
   },
   ...compat.config({

@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { defineConfig } from 'vite';
 
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import license from 'rollup-plugin-license';
@@ -8,9 +9,6 @@ import * as pkg from './package.json';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const NODE_ENV = process.argv.mode || 'development';
-const VERSION = pkg.version;
-
 /**
  * Trick to use Vite server.open option on macOS
  *
@@ -18,62 +16,66 @@ const VERSION = pkg.version;
  */
 process.env.BROWSER = 'open';
 
-export default {
-  build: {
-    copyPublicDir: false,
-    lib: {
-      entry: path.resolve(__dirname, 'src', 'codex.ts'),
-      name: 'Blok',
-      fileName: 'blok',
-    },
-    rollupOptions: {
-      plugins: [
-        license({
-          thirdParty: {
-            allow: {
-              test: (dependency) => {
-                // Manually allow html-janitor (https://github.com/guardian/html-janitor/blob/master/LICENSE)
-                // because of missing LICENSE file in published package
-                if (dependency.name === 'html-janitor') {
-                  return true;
-                }
+export default defineConfig(({ mode }) => {
+  const NODE_ENV = mode || 'development';
+  const VERSION = pkg.version;
 
-                // Return false for unlicensed dependencies.
-                if (!dependency.license) {
-                  return false;
-                }
+  return {
+    build: {
+      copyPublicDir: false,
+      lib: {
+        entry: path.resolve(__dirname, 'src', 'codex.ts'),
+        name: 'Blok',
+        fileName: 'blok',
+      },
+      rollupOptions: {
+        plugins: [
+          license({
+            thirdParty: {
+              allow: {
+                test: (dependency) => {
+                  // Manually allow html-janitor (https://github.com/guardian/html-janitor/blob/master/LICENSE)
+                  // because of missing LICENSE file in published package
+                  if (dependency.name === 'html-janitor') {
+                    return true;
+                  }
 
-                // Allow MIT and Apache-2.0 licenses.
-                return ['MIT', 'Apache-2.0'].includes(dependency.license);
+                  // Return false for unlicensed dependencies.
+                  if (!dependency.license) {
+                    return false;
+                  }
+
+                  // Allow MIT and Apache-2.0 licenses.
+                  return ['MIT', 'Apache-2.0'].includes(dependency.license);
+                },
+                failOnUnlicensed: true,
+                failOnViolation: true,
               },
-              failOnUnlicensed: true,
-              failOnViolation: true,
+              output: path.resolve(__dirname, 'dist', 'vendor.LICENSE.txt'),
             },
-            output: path.resolve(__dirname, 'dist', 'vendor.LICENSE.txt'),
-          },
-        }),
-      ],
+          }),
+        ],
+      },
     },
-  },
 
-  define: {
-    'NODE_ENV': JSON.stringify(NODE_ENV),
-    'VERSION': JSON.stringify(VERSION),
-  },
-
-  resolve: {
-    alias: {
-      '@/types': path.resolve(__dirname, './types'),
+    define: {
+      'NODE_ENV': JSON.stringify(NODE_ENV),
+      'VERSION': JSON.stringify(VERSION),
     },
-  },
 
-  server: {
-    port: 3303,
-    open: true,
-  },
+    resolve: {
+      alias: {
+        '@/types': path.resolve(__dirname, './types'),
+      },
+    },
 
-  plugins: [
-    cssInjectedByJsPlugin(),
-  ],
-};
+    server: {
+      port: 3303,
+      open: true,
+    },
 
+    plugins: [
+      cssInjectedByJsPlugin(),
+    ],
+  };
+});

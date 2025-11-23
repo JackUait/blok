@@ -21,9 +21,11 @@
       "@/types/*": [ "./types/*" ],
       "@editorjs/editorjs": [ "./types" ],
       "@editorjs/editorjs/*": [ "./types/*" ],
+      "@editorjs/paragraph": [ "./src/types-internal/paragraph.d.ts" ]
     },
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "checkJs": true,
     "allowArbitraryExtensions": true,
     "noEmit": true
   },

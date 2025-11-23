@@ -14,7 +14,7 @@ const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
 const TOOLBOX_CONTAINER_SELECTOR = '[data-cy="toolbox"] .ce-popover__container';
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
-  `${EDITOR_INTERFACE_SELECTOR} .ce-popover-item[data-item-name=${itemName}]`;
+  `[data-cy="toolbox"] .ce-popover-item[data-item-name=${itemName}]`;
 const BLOCK_TUNES_SELECTOR = '[data-cy="block-tunes"] .ce-popover__container';
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 

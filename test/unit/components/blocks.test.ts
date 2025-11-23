@@ -13,7 +13,6 @@ describe('Blocks', () => {
 
   /**
    * Create a mock Block instance
-   *
    * @param id - The block ID
    * @param name - The block name (default: 'paragraph')
    */

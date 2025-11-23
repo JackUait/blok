@@ -103,7 +103,6 @@ interface BlockEvents {
 export default class Block extends EventsDispatcher<BlockEvents> {
   /**
    * CSS classes for the Block
-   *
    * @returns {{wrapper: string, content: string}}
    */
   public static get CSS(): { [name: string]: string } {
@@ -193,7 +192,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Focused input index
-   *
    * @type {number}
    */
   private inputIndex = 0;
@@ -280,7 +278,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * Calls Tool's method
    *
    * Method checks tool property {MethodName}. Fires method with passes params If it is instance of Function
-   *
    * @param {string} methodName - method to call
    * @param {object} params - method argument
    */
@@ -306,7 +303,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Call plugins merge method
-   *
    * @param {BlockToolData} data - data to merge
    */
   public async mergeWith(data: BlockToolData): Promise<void> {
@@ -320,7 +316,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   /**
    * Extracts data from Block
    * Groups Tool's save processing time
-   *
    * @returns {object}
    */
   public async save(): Promise<undefined | BlockSaveResult> {
@@ -413,7 +408,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   /**
    * Uses Tool's validation method to check the correctness of output data
    * Tool's validation method is optional
-   *
    * @description Method returns true|false whether data passed the validation or not
    * @param {BlockToolData} data - data to validate
    * @returns {Promise<boolean>} valid
@@ -664,7 +658,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Set input index to the passed element
-   *
    * @param element - HTML Element to set as current input
    */
   public set currentInput(element: HTMLElement | undefined) {
@@ -715,7 +708,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Get Block's JSON data
-   *
    * @returns {object}
    */
   public get data(): Promise<BlockToolData> {
@@ -744,7 +736,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Returns tool's sanitizer config
-   *
    * @returns {object}
    */
   public get sanitize(): SanitizerConfig {
@@ -754,7 +745,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   /**
    * is block mergeable
    * We plugin have merge function then we call it mergeable
-   *
    * @returns {boolean}
    */
   public get mergeable(): boolean {
@@ -770,7 +760,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Check block for emptiness
-   *
    * @returns {boolean}
    */
   public get isEmpty(): boolean {
@@ -782,13 +771,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Check if block has a media content such as images, iframe and other
-   *
    * @returns {boolean}
    */
   public get hasMedia(): boolean {
     /**
      * This tags represents media-content
-     *
      * @type {string[]}
      */
     const mediaTags = [
@@ -808,7 +795,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   /**
    * Set selected state
    * We don't need to mark Block as Selected when it is empty
-   *
    * @param {boolean} state - 'true' to select, 'false' to remove selection
    */
   public set selected(state: boolean) {
@@ -836,7 +822,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Returns True if it is Selected
-   *
    * @returns {boolean}
    */
   public get selected(): boolean {
@@ -845,7 +830,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Set stretched state
-   *
    * @param {boolean} state - 'true' to enable, 'false' to disable stretched state
    */
   public setStretchState(state: boolean): void {
@@ -854,7 +838,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Backward-compatible setter for stretched state
-   *
    * @param state - true to enable, false to disable stretched state
    */
   public set stretched(state: boolean) {
@@ -863,7 +846,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Return Block's stretched state
-   *
    * @returns {boolean}
    */
   public get stretched(): boolean {
@@ -873,7 +855,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Returns Plugins content
-   *
    * @returns {HTMLElement}
    */
   public get pluginsContent(): HTMLElement {
@@ -886,7 +867,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Make default Block wrappers and put Tool`s content there
-   *
    * @returns {HTMLDivElement}
    */
   private compose(): HTMLDivElement {
@@ -959,7 +939,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Add data attributes to tool-rendered element based on tool name
-   *
    * @param element - The tool-rendered element
    * @param blockWrapper - Block wrapper that hosts the tool render
    * @private
@@ -994,7 +973,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Instantiate Block Tunes
-   *
    * @param tunesData - current Block tunes data
    * @private
    */
@@ -1061,7 +1039,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Is fired when DOM mutation has been happened
-   *
    * @param mutationsOrInputEvent - actual changes
    *   - MutationRecord[] - any DOM change
    *   - InputEvent — <input> change
@@ -1158,7 +1135,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private watchBlockMutations(): void {
     /**
      * Save callback to a property to remove it on Block destroy
-     *
      * @param payload - event payload
      */
     this.redactorDomChangedCallback = (payload) => {
@@ -1186,7 +1162,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   /**
    * Sometimes Tool can replace own main element, for example H2 -> H4 or UL -> OL
    * We need to detect such changes and update a link to tools main element with the new one
-   *
    * @param mutations - records of block content mutations
    */
   private detectToolRootChange(mutations: MutationRecord[]): void {

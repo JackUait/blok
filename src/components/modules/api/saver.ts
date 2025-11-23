@@ -10,7 +10,6 @@ import Module from '../../__module';
 export default class SaverAPI extends Module {
   /**
    * Available methods
-   *
    * @returns {Saver}
    */
   public get methods(): Saver {
@@ -21,7 +20,6 @@ export default class SaverAPI extends Module {
 
   /**
    * Return Editor's data
-   *
    * @returns {OutputData}
    */
   public async save(): Promise<OutputData> {

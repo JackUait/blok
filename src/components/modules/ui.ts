@@ -1,7 +1,6 @@
 /* eslint-disable jsdoc/no-undefined-types */
 /**
  * Module UI
- *
  * @type {UI}
  */
 import Module from '../__module';
@@ -45,7 +44,6 @@ interface UINodes {
 export default class UI extends Module<UINodes> {
   /**
    * Editor.js UI CSS class names
-   *
    * @returns {{editorWrapper: string, editorZone: string}}
    */
   public get CSS(): {
@@ -64,7 +62,6 @@ export default class UI extends Module<UINodes> {
 
   /**
    * Return Width of center column of Editor
-   *
    * @returns {DOMRect}
    */
   public get contentRect(): DOMRect {
@@ -92,7 +89,6 @@ export default class UI extends Module<UINodes> {
 
   /**
    * Flag that became true on mobile viewport
-   *
    * @type {boolean}
    */
   public isMobile = false;
@@ -101,14 +97,12 @@ export default class UI extends Module<UINodes> {
   /**
    * Cache for center column rectangle info
    * Invalidates on window resize
-   *
    * @type {DOMRect}
    */
   private contentRectCache: DOMRect | null = null;
 
   /**
    * Handle window resize only when it finished
-   *
    * @type {() => void}
    */
   private resizeDebouncer: () => void = _.debounce(() => {
@@ -147,11 +141,10 @@ export default class UI extends Module<UINodes> {
    * Toggle read-only state
    *
    * If readOnly is true:
-   *  - removes all listeners from main UI module elements
+   * - removes all listeners from main UI module elements
    *
    * if readOnly is false:
-   *  - enables all listeners to UI module elements
-   *
+   * - enables all listeners to UI module elements
    * @param {boolean} readOnlyEnabled - "read only" state
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
@@ -206,7 +199,6 @@ export default class UI extends Module<UINodes> {
   /**
    * Check if one of Toolbar is opened
    * Used to prevent global keydowns (for example, Enter) conflicts with Enter-on-toolbar
-   *
    * @returns {boolean}
    */
   public get someToolbarOpened(): boolean {
@@ -260,7 +252,6 @@ export default class UI extends Module<UINodes> {
 
   /**
    * Event listener for 'mousedown' and 'touchstart' events
-   *
    * @param event - TouchEvent or MouseEvent
    */
   private documentTouchedListener = (event: Event): void => {
@@ -291,7 +282,6 @@ export default class UI extends Module<UINodes> {
   private make(): void {
     /**
      * Element where we need to append Editor.js
-     *
      * @type {Element}
      */
     const holder = this.config.holder;
@@ -314,7 +304,6 @@ export default class UI extends Module<UINodes> {
 
     /**
      * If Editor has injected into the narrow container, enable Narrow Mode
-     *
      * @todo Forced layout. Get rid of this feature
      */
     if (this.nodes.holder.offsetWidth < this.contentRect.width) {
@@ -359,7 +348,6 @@ export default class UI extends Module<UINodes> {
 
     /**
      * If user enabled Content Security Policy, he can pass nonce through the config
-     *
      * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
      */
     if (this.config.style && !_.isEmpty(this.config.style) && this.config.style.nonce) {
@@ -522,7 +510,6 @@ export default class UI extends Module<UINodes> {
 
   /**
    * All keydowns on document
-   *
    * @param {KeyboardEvent} event - keyboard event
    */
   private documentKeydown(event: KeyboardEvent): void {
@@ -550,7 +537,6 @@ export default class UI extends Module<UINodes> {
 
   /**
    * Ignore all other document's keydown events
-   *
    * @param {KeyboardEvent} event - keyboard event
    */
   private defaultBehaviour(event: KeyboardEvent): void {
@@ -634,7 +620,6 @@ export default class UI extends Module<UINodes> {
   /**
    * Escape pressed
    * If some of Toolbar components are opened, then close it otherwise close Toolbar
-   *
    * @param {Event} event - escape keydown event
    */
   private escapePressed(event: KeyboardEvent): void {
@@ -668,7 +653,6 @@ export default class UI extends Module<UINodes> {
 
   /**
    * Enter pressed on document
-   *
    * @param {KeyboardEvent} event - keyboard event
    */
   private enterPressed(event: KeyboardEvent): void {
@@ -733,7 +717,6 @@ export default class UI extends Module<UINodes> {
 
   /**
    * All clicks on document
-   *
    * @param {MouseEvent} event - Click event
    */
   private documentClicked(event: MouseEvent): void {
@@ -751,7 +734,7 @@ export default class UI extends Module<UINodes> {
     const target = event.target as HTMLElement;
     const clickedInsideOfEditor = this.nodes.holder.contains(target) || Selection.isAtEditor;
     const clickedInsideRedactor = this.nodes.redactor.contains(target);
-    const clickedInsideToolbar = this.Editor.Toolbar.nodes.wrapper?.contains(target) ?? false;
+    const clickedInsideToolbar = this.Editor.Toolbar.contains(target);
     const clickedInsideEditorSurface = clickedInsideOfEditor || clickedInsideToolbar;
 
     const shouldClearCurrentBlock = !clickedInsideEditorSurface || (!clickedInsideRedactor && !clickedInsideToolbar);
@@ -773,7 +756,7 @@ export default class UI extends Module<UINodes> {
      * But allow clicking inside Block Settings.
      * Also, do not process clicks on the Block Settings Toggler, because it has own click listener
      */
-    const isClickedInsideBlockSettings = this.Editor.BlockSettings.nodes.wrapper?.contains(target);
+    const isClickedInsideBlockSettings = this.Editor.BlockSettings.contains(target);
     const isClickedInsideBlockSettingsToggler = this.Editor.Toolbar.nodes.settingsToggler?.contains(target);
     const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler;
 
@@ -803,7 +786,6 @@ export default class UI extends Module<UINodes> {
    * Also:
    * - Move and show the Toolbar
    * - Set a Caret
-   *
    * @param event - touch or mouse event
    */
   private documentTouched(event: Event): void {
@@ -858,7 +840,6 @@ export default class UI extends Module<UINodes> {
 
   /**
    * All clicks on the redactor zone
-   *
    * @param {MouseEvent} event - click event
    * @description
    * - By clicks on the Editor's bottom zone:
@@ -900,9 +881,8 @@ export default class UI extends Module<UINodes> {
 
   /**
    * Check if user clicks on the Editor's bottom zone:
-   *  - set caret to the last block
-   *  - or add new empty block
-   *
+   * - set caret to the last block
+   * - or add new empty block
    * @param event - click event
    */
   private processBottomZoneClick(event: MouseEvent): void {
@@ -968,7 +948,6 @@ export default class UI extends Module<UINodes> {
     if (!focusedElement && !Selection.range) {
       /**
        * If there is no selected range, close inline toolbar
-       *
        * @todo Make this method more straightforward
        */
       this.Editor.InlineToolbar.close();
@@ -1025,7 +1004,6 @@ export default class UI extends Module<UINodes> {
   private enableInputsEmptyMark(): void {
     /**
      * Toggle data-empty attribute on input depending on its emptiness
-     *
      * @param event - input or focus event
      */
     const handleInputOrFocusChange = (event: Event): void => {

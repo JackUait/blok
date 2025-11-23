@@ -23,14 +23,14 @@ jobs:
         uses: codex-team/action-nodejs-package-info@v1
 
       # Setup node environment
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org/
 
       # Prepare, build and publish project
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install
 
       - name: Lint
         run: yarn lint

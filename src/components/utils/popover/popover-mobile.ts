@@ -39,7 +39,6 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
 
   /**
    * Construct the instance
-   *
    * @param params - popover params
    */
   constructor(params: PopoverParams) {
@@ -109,7 +108,6 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
 
   /**
    * Handles displaying nested items for the item
-   *
    * @param item – item to show nested popover for
    */
   protected override showNestedItems(item: PopoverItemDefault): void {
@@ -124,7 +122,6 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
 
   /**
    * Removes rendered popover items and header and displays new ones
-   *
    * @param items - new popover items
    * @param title - new popover header text
    */

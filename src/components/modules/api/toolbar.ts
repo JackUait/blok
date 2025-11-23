@@ -8,7 +8,6 @@ import * as _ from './../../utils';
 export default class ToolbarAPI extends Module {
   /**
    * Available methods
-   *
    * @returns {Toolbar}
    */
   public get methods(): Toolbar {
@@ -36,7 +35,6 @@ export default class ToolbarAPI extends Module {
 
   /**
    * Toggles Block Setting of the current block
-   *
    * @param {boolean} openingState —  opening state of Block Setting
    */
   public toggleBlockSettings(openingState?: boolean): void {
@@ -60,7 +58,6 @@ export default class ToolbarAPI extends Module {
 
   /**
    * Open toolbox
-   *
    * @param {boolean} openingState - Opening state of toolbox
    */
   public toggleToolbox(openingState?: boolean): void {

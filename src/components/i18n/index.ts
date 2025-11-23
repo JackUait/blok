@@ -19,7 +19,6 @@ export default class I18n {
   /**
    * Type-safe translation for internal UI texts:
    * Perform translation of the string by namespace and a key
-   *
    * @example I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to tune')
    * @param internalNamespace - path to translated string in dictionary
    * @param dictKey - dictionary key. Better to use default locale original text
@@ -31,7 +30,6 @@ export default class I18n {
   /**
    * Translate for external strings that is not presented in default dictionary.
    * For example, for user-specified tool names
-   *
    * @param namespace - path to translated string in dictionary
    * @param dictKey - dictionary key. Better to use default locale original text
    */
@@ -41,7 +39,6 @@ export default class I18n {
 
   /**
    * Adjust module for using external dictionary
-   *
    * @param dictionary - new messages list to override default
    */
   public static setDictionary(dictionary: I18nDictionary): void {
@@ -51,7 +48,6 @@ export default class I18n {
   /**
    * Perform translation both for internal and external namespaces
    * If there is no translation found, returns passed key as a translated message
-   *
    * @param namespace - path to translated string in dictionary
    * @param dictKey - dictionary key. Better to use default locale original text
    */
@@ -74,7 +70,6 @@ export default class I18n {
 
   /**
    * Find messages section by namespace path
-   *
    * @param namespace - path to section
    */
   private static getNamespace(namespace: string): Dictionary {

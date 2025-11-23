@@ -10,7 +10,6 @@ import { clean } from '../../utils/sanitizer';
 export default class SanitizerAPI extends Module {
   /**
    * Available methods
-   *
    * @returns {SanitizerConfig}
    */
   public get methods(): ISanitizer {
@@ -21,7 +20,6 @@ export default class SanitizerAPI extends Module {
 
   /**
    * Perform sanitizing of a string
-   *
    * @param {string} taintString - what to sanitize
    * @param {SanitizerConfig} config - sanitizer config
    * @returns {string}

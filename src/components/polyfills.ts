@@ -4,7 +4,6 @@ declare global {
   interface Element {
     /**
      * Scrolls the current element into the visible area of the browser window
-     *
      * @param centerIfNeeded - true, if the element should be aligned so it is centered within the visible area of the scrollable ancestor.
      */
     scrollIntoViewIfNeeded?(centerIfNeeded?: boolean): void;
@@ -13,7 +12,6 @@ declare global {
 
 /**
  * ScrollIntoViewIfNeeded polyfill by KilianSSL (forked from hsablonniere)
- *
  * @see {@link https://gist.github.com/KilianSSL/774297b76378566588f02538631c3137}
  * @param centerIfNeeded - true, if the element should be aligned so it is centered within the visible area of the scrollable ancestor.
  */
@@ -52,7 +50,6 @@ if (typeof Element.prototype.scrollIntoViewIfNeeded === 'undefined') {
 
 /**
  * RequestIdleCallback polyfill (shims)
- *
  * @see https://developer.chrome.com/blog/using-requestidlecallback/
  * @param cb - callback to be executed when the browser is idle
  */

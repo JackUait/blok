@@ -35,7 +35,6 @@ declare global {
  * For example, for "Slash" it will return "/" on US keyboard and "-" on Spanish keyboard.
  *
  * Works with Keyboard API which is not supported by Firefox and Safari. So fallback is used for these browsers.
- *
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Keyboard
  * @param code - {@link https://www.w3.org/TR/uievents-code/#key-alphanumeric-writing-system}
  * @param fallback - fallback value to be returned if Keyboard API is not supported (Safari, Firefox)

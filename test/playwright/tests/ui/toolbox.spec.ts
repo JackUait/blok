@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { ConversionConfig, ToolboxConfig, OutputData } from '@/types';
 import type { BlockToolConstructable } from '@/types/tools';
-import { EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
@@ -14,13 +14,12 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"]`;
-const POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover`;
+const POPOVER_SELECTOR = '.ce-popover';
 const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} .ce-popover-item`;
 const SECONDARY_TITLE_SELECTOR = '.ce-popover-item__secondary-title';
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -44,7 +43,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with custom tools
- *
  * @param page - The Playwright page object
  * @param tools - Tools configuration
  * @param data - Optional initial editor data
@@ -151,7 +149,6 @@ const createEditorWithTools = async (
 
 /**
  * Save editor data
- *
  * @param page - The Playwright page object
  * @returns The saved output data
  */
@@ -200,7 +197,6 @@ const runShortcutBehaviour = async (page: Page, toolName: string): Promise<void>
 
 /**
  * Check if caret is within a block element
- *
  * @param page - The Playwright page object
  * @param blockId - Block ID to check
  * @returns True if caret is within the block
@@ -262,7 +258,6 @@ test.describe('toolbox', () => {
 
         /**
          * Constructor
-         *
          * @param data - Tool data
          */
         constructor({ data }: { data: { text: string } }) {
@@ -271,7 +266,6 @@ test.describe('toolbox', () => {
 
         /**
          * Render tool element
-         *
          * @returns Rendered HTML element
          */
         public render(): HTMLElement {
@@ -285,7 +279,6 @@ test.describe('toolbox', () => {
 
         /**
          * Save tool data
-         *
          * @param el - HTML element to save from
          * @returns Saved data
          */
@@ -302,6 +295,29 @@ test.describe('toolbox', () => {
           class: ConvertableTool as unknown as BlockToolConstructable,
           shortcut: 'CMD+SHIFT+H',
         },
+      });
+
+      // Wait for toolbox to be initialized (it is created in requestIdleCallback)
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          const check = (): void => {
+            type EditorJSInternal = EditorJS & {
+              module: {
+                toolbar: {
+                  toolboxInstance: unknown;
+                };
+              };
+            };
+
+            if ((window.editorInstance as unknown as EditorJSInternal)?.module?.toolbar?.toolboxInstance) {
+              resolve();
+            } else {
+              requestAnimationFrame(check);
+            }
+          };
+
+          check();
+        });
       });
 
       const paragraphBlock = page.locator(PARAGRAPH_BLOCK_SELECTOR);
@@ -354,7 +370,6 @@ test.describe('toolbox', () => {
 
         /**
          * Constructor
-         *
          * @param data - Tool data
          */
         constructor({ data }: { data: { text: string } }) {
@@ -363,7 +378,6 @@ test.describe('toolbox', () => {
 
         /**
          * Render tool element
-         *
          * @returns Rendered HTML element
          */
         public render(): HTMLElement {
@@ -377,7 +391,6 @@ test.describe('toolbox', () => {
 
         /**
          * Save tool data
-         *
          * @param el - HTML element to save from
          * @returns Saved data
          */
@@ -439,7 +452,6 @@ test.describe('toolbox', () => {
 
         /**
          * Constructor
-         *
          * @param data - Tool data
          */
         constructor({ data }: { data: { text: string } }) {
@@ -448,7 +460,6 @@ test.describe('toolbox', () => {
 
         /**
          * Render tool element
-         *
          * @returns Rendered HTML element
          */
         public render(): HTMLElement {
@@ -462,7 +473,6 @@ test.describe('toolbox', () => {
 
         /**
          * Save tool data
-         *
          * @param el - HTML element to save from
          * @returns Saved data
          */
@@ -486,9 +496,14 @@ test.describe('toolbox', () => {
       await expect(paragraphBlock).toHaveCount(1);
 
       await paragraphBlock.click();
-      await paragraphBlock.type('Some text');
-      await page.keyboard.press(`${MODIFIER_KEY}+A`);
+      await paragraphBlock.locator('[contenteditable]').fill('Some text');
+      await paragraphBlock.locator('[contenteditable]').fill('');
+      await paragraphBlock.locator('[contenteditable]').focus();
+      // Trigger backspace to ensure Editor.js internal state is clean
       await page.keyboard.press('Backspace');
+
+      // Wait for Editor.js to mark it as empty
+      await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-empty', 'true');
 
       // Open toolbox with "/" shortcut
       await page.keyboard.type('/');
@@ -537,7 +552,6 @@ test.describe('toolbox', () => {
 
         /**
          * Constructor
-         *
          * @param data - Tool data
          */
         constructor({ data }: { data: { text: string } }) {
@@ -546,7 +560,6 @@ test.describe('toolbox', () => {
 
         /**
          * Render tool element
-         *
          * @returns Rendered HTML element
          */
         public render(): HTMLElement {
@@ -560,7 +573,6 @@ test.describe('toolbox', () => {
 
         /**
          * Save tool data
-         *
          * @param el - HTML element to save from
          * @returns Saved data
          */
@@ -584,9 +596,14 @@ test.describe('toolbox', () => {
       await expect(paragraphBlock).toHaveCount(1);
 
       await paragraphBlock.click();
-      await paragraphBlock.type('Some text');
-      await page.keyboard.press(`${MODIFIER_KEY}+A`);
+      await paragraphBlock.locator('[contenteditable]').fill('Some text');
+      await paragraphBlock.locator('[contenteditable]').fill('');
+      await paragraphBlock.locator('[contenteditable]').focus();
+      // Trigger backspace to ensure Editor.js internal state is clean
       await page.keyboard.press('Backspace');
+
+      // Wait for Editor.js to mark it as empty
+      await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-empty', 'true');
 
       // Open toolbox with "/" shortcut
       await page.keyboard.type('/');

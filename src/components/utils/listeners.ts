@@ -2,7 +2,6 @@ import * as _ from '../utils';
 
 /**
  * Event listener information
- *
  * @interface ListenerData
  */
 export interface ListenerData {
@@ -23,7 +22,6 @@ export interface ListenerData {
 
   /**
    * Event handler
-   *
    * @param {Event} event - event object
    */
   handler: (event: Event) => void;
@@ -45,7 +43,6 @@ interface NormalizedListenerOptions {
  * Editor.js Listeners helper
  *
  * Decorator for event listeners assignment
- *
  * @author Codex Team
  * @version 2.0.0
  */
@@ -57,14 +54,12 @@ interface NormalizedListenerOptions {
 export default class Listeners {
   /**
    * Stores all listeners data to find/remove/process it
-   *
    * @type {ListenerData[]}
    */
   private allListeners: ListenerData[] = [];
 
   /**
    * Assigns event listener on element and returns unique identifier
-   *
    * @param {EventTarget} element - DOM element that needs to be listened
    * @param {string} eventType - event type
    * @param {Function} handler - method that will be fired on event
@@ -99,7 +94,6 @@ export default class Listeners {
 
   /**
    * Removes event listener from element
-   *
    * @param {EventTarget} element - DOM element that we removing listener
    * @param {string} eventType - event type
    * @param {Function} handler - remove handler, if element listens several handlers on the same event type
@@ -126,7 +120,6 @@ export default class Listeners {
 
   /**
    * Removes listener by id
-   *
    * @param {string} id - listener identifier
    */
   public offById(id: string): void {
@@ -146,7 +139,6 @@ export default class Listeners {
 
   /**
    * Finds and returns first listener by passed params
-   *
    * @param {EventTarget} element - event target
    * @param {string} [eventType] - event type
    * @param {Function} [handler] - event handler
@@ -166,7 +158,6 @@ export default class Listeners {
 
   /**
    * Return all stored listeners by passed params
-   *
    * @param {EventTarget} element - event target
    * @param {string} eventType - event type
    * @param {Function} handler - event handler
@@ -214,7 +205,6 @@ export default class Listeners {
 
   /**
    * Search method: looks for listener by passed element
-   *
    * @param {EventTarget} element - searching element
    * @returns {Array} listeners that found on element
    */
@@ -224,7 +214,6 @@ export default class Listeners {
 
   /**
    * Search method: looks for listener by passed event type
-   *
    * @param {string} eventType - event type
    * @returns {ListenerData[]} listeners that found on element
    */
@@ -234,7 +223,6 @@ export default class Listeners {
 
   /**
    * Search method: looks for listener by passed handler
-   *
    * @param {Function} handler - event handler
    * @returns {ListenerData[]} listeners that found on element
    */
@@ -244,7 +232,6 @@ export default class Listeners {
 
   /**
    * Returns listener data found by id
-   *
    * @param {string} id - listener identifier
    * @returns {ListenerData}
    */
@@ -254,7 +241,6 @@ export default class Listeners {
 
   /**
    * Normalizes listener options to a comparable shape
-   *
    * @param {boolean|AddEventListenerOptions} [options] - event options
    * @returns {NormalizedListenerOptions}
    */
@@ -285,7 +271,6 @@ export default class Listeners {
 
   /**
    * Compares stored listener options with provided ones
-   *
    * @param {boolean|AddEventListenerOptions} storedOptions - stored event options
    * @param {boolean|AddEventListenerOptions} [providedOptions] - provided event options
    * @returns {boolean}

@@ -51,7 +51,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
   /**
    * Constructs the instance
-   *
    * @param params - popover construction params
    * @param itemsRenderParams - popover item render params.
    * The parameters that are not set by user via popover api but rather depend on technical implementation
@@ -116,7 +115,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Open popover
    */
   public show(): void {
-    if (!this.nodes.popover.isConnected) {
+    if (!this.nodes.popover.isConnected && !this.nodes.popover.parentNode) {
       document.body.appendChild(this.nodes.popover);
     }
 
@@ -157,7 +156,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
   /**
    * Looks for the item by name and imitates click on it
-   *
    * @param name - name of the item to activate
    */
   public activateItemByName(name: string): void {
@@ -172,7 +170,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
   /**
    * Factory method for creating popover items
-   *
    * @param items - list of items params
    */
   protected buildItems(items: PopoverItemParams[]): Array<PopoverItem> {
@@ -190,7 +187,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
   /**
    * Retrieves popover item that is the target of the specified event
-   *
    * @param event - event to retrieve popover item from
    */
   protected getTargetItem(event: Event): PopoverItemDefault | PopoverItemHtml | undefined {
@@ -209,7 +205,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
   /**
    * Handles popover item click
-   *
    * @param item - item to handle click of
    */
   protected handleItemClick(item: PopoverItem): void {
@@ -240,7 +235,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
   /**
    * Handles clicks inside popover
-   *
    * @param event - item to handle click of
    */
   private handleClick(event: Event): void {
@@ -258,7 +252,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    *
    * - Performs radiobutton-like behavior if the item has property 'toggle' set to string key.
    * (All the other items with the same key get inactive, and the item gets active)
-   *
    * @param clickedItem - popover item that was clicked
    */
   private toggleItemActivenessIfNeeded(clickedItem: PopoverItem): void {
@@ -291,7 +284,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
   /**
    * Executes handleClick if it is present on item.
-   *
    * @param item - popover item whose handler should be executed
    */
   private callHandleClickIfPresent(item: PopoverItem): void {
@@ -302,8 +294,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
   /**
    * Handles displaying nested items for the item. Behaviour differs depending on platform.
-   *
    * @param item – item to show nested popover for
    */
   protected abstract showNestedItems(item: PopoverItemDefault | PopoverItemHtml): void;
+
+  /**
+   * Checks if popover contains the node
+   * @param node - node to check
+   */
+  public hasNode(node: Node): boolean {
+    return this.nodes.popover.contains(node);
+  }
 }

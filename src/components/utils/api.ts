@@ -4,7 +4,6 @@ import type Block from '../block';
 
 /**
  * Returns Block instance by passed Block index or Block id
- *
  * @param attribute - either BlockAPI or Block id or Block index
  * @param editor - Editor instance
  */

@@ -44,7 +44,6 @@ export default class ModificationsObserver extends Module {
 
   /**
    * Prepare the module
-   *
    * @param options - options used by the modification observer module
    * @param options.config - Editor configuration object
    * @param options.eventsDispatcher - common Editor event bus
@@ -101,7 +100,6 @@ export default class ModificationsObserver extends Module {
 
   /**
    * Call onChange event passed to Editor.js configuration
-   *
    * @param event - some of our custom change events
    */
   private particularBlockChanged(event: BlockMutationEvent): void {
@@ -133,7 +131,6 @@ export default class ModificationsObserver extends Module {
 
   /**
    * Fired on every blocks wrapper dom change
-   *
    * @param mutations - mutations happened
    */
   private redactorChanged(mutations: MutationRecord[]): void {

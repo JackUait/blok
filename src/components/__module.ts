@@ -28,14 +28,12 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
 
   /**
    * Editor modules list
-   *
    * @type {EditorModules}
    */
   protected Editor: EditorModules;
 
   /**
    * Editor configuration object
-   *
    * @type {EditorConfig}
    */
   protected config: EditorConfig;
@@ -56,7 +54,6 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
   protected readOnlyMutableListeners = {
     /**
      * Assigns event listener on DOM element and pushes into special array that might be removed
-     *
      * @param {EventTarget} element - DOM Element
      * @param {string} eventType - Event name
      * @param {Function} handler - Event handler
@@ -111,7 +108,6 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
 
   /**
    * Editor modules setter
-   *
    * @param {EditorModules} Editor - Editor's Modules
    */
   public set state(Editor: EditorModules) {

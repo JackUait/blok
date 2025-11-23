@@ -34,7 +34,6 @@ type BlocksStore = Blocks & {
 export default class BlockManager extends Module {
   /**
    * Returns current Block index
-   *
    * @returns {number}
    */
   public get currentBlockIndex(): number {
@@ -43,7 +42,6 @@ export default class BlockManager extends Module {
 
   /**
    * Set current Block index and fire Block lifecycle callbacks
-   *
    * @param {number} newIndex - index of Block to set as current
    */
   public set currentBlockIndex(newIndex: number) {
@@ -52,7 +50,6 @@ export default class BlockManager extends Module {
 
   /**
    * returns first Block
-   *
    * @returns {Block}
    */
   public get firstBlock(): Block | undefined {
@@ -61,7 +58,6 @@ export default class BlockManager extends Module {
 
   /**
    * returns last Block
-   *
    * @returns {Block}
    */
   public get lastBlock(): Block | undefined {
@@ -70,7 +66,6 @@ export default class BlockManager extends Module {
 
   /**
    * Get current Block instance
-   *
    * @returns {Block}
    */
   public get currentBlock(): Block | undefined {
@@ -79,7 +74,6 @@ export default class BlockManager extends Module {
 
   /**
    * Set passed Block as a current
-   *
    * @param block - block to set as a current
    */
   public set currentBlock(block: Block | undefined) {
@@ -94,7 +88,6 @@ export default class BlockManager extends Module {
 
   /**
    * Returns next Block instance
-   *
    * @returns {Block|null}
    */
   public get nextBlock(): Block | null {
@@ -111,7 +104,6 @@ export default class BlockManager extends Module {
 
   /**
    * Return first Block with inputs after current Block
-   *
    * @returns {Block | undefined}
    */
   public get nextContentfulBlock(): Block | undefined {
@@ -122,7 +114,6 @@ export default class BlockManager extends Module {
 
   /**
    * Return first Block with inputs before current Block
-   *
    * @returns {Block | undefined}
    */
   public get previousContentfulBlock(): Block | undefined {
@@ -133,7 +124,6 @@ export default class BlockManager extends Module {
 
   /**
    * Returns previous Block instance
-   *
    * @returns {Block|null}
    */
   public get previousBlock(): Block | null {
@@ -150,7 +140,6 @@ export default class BlockManager extends Module {
 
   /**
    * Get array of Block instances
-   *
    * @returns {Block[]} {@link Blocks#array}
    */
   public get blocks(): Block[] {
@@ -159,7 +148,6 @@ export default class BlockManager extends Module {
 
   /**
    * Check if each Block is empty
-   *
    * @returns {boolean}
    */
   public get isEditorEmpty(): boolean {
@@ -168,14 +156,12 @@ export default class BlockManager extends Module {
 
   /**
    * Index of current working block
-   *
    * @type {number}
    */
   private _currentBlockIndex = -1;
 
   /**
    * Proxy for Blocks instance {@link Blocks}
-   *
    * @type {Proxy}
    * @private
    */
@@ -191,7 +177,6 @@ export default class BlockManager extends Module {
     /**
      * We need to use Proxy to overload set/get [] operator.
      * So we can use array-like syntax to access blocks
-     *
      * @example
      * this._blocks[0] = new Block(...);
      *
@@ -219,11 +204,10 @@ export default class BlockManager extends Module {
    * Toggle read-only state
    *
    * If readOnly is true:
-   *  - Unbind event handlers from created Blocks
+   * - Unbind event handlers from created Blocks
    *
    * if readOnly is false:
-   *  - Bind event handlers to all existing Blocks
-   *
+   * - Bind event handlers to all existing Blocks
    * @param {boolean} readOnlyEnabled - "read only" state
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
@@ -236,7 +220,6 @@ export default class BlockManager extends Module {
 
   /**
    * Creates Block instance by tool name
-   *
    * @param {object} options - block creation options
    * @param {string} options.tool - tools passed in editor config {@link EditorConfig#tools}
    * @param {string} [options.id] - unique id for this block
@@ -276,7 +259,6 @@ export default class BlockManager extends Module {
 
   /**
    * Insert new block into _blocks
-   *
    * @param {object} options - insert options
    * @param {string} [options.id] - block's unique id
    * @param {string} [options.tool] - plugin name, by default method inserts the default block type
@@ -371,7 +353,6 @@ export default class BlockManager extends Module {
 
   /**
    * Inserts several blocks at once
-   *
    * @param blocks - blocks to insert
    * @param index - index where to insert
    */
@@ -386,7 +367,6 @@ export default class BlockManager extends Module {
    * Should not trigger 'block-removed' or 'block-added' events.
    *
    * If neither data nor tunes is provided, return the provided block instead.
-   *
    * @param block - block to update
    * @param data - (optional) new data
    * @param tunes - (optional) tune data
@@ -418,7 +398,6 @@ export default class BlockManager extends Module {
 
   /**
    * Replace passed Block with the new one with specified Tool and data
-   *
    * @param block - block to replace
    * @param newTool - new Tool name
    * @param data - new Tool data
@@ -436,7 +415,6 @@ export default class BlockManager extends Module {
 
   /**
    * Returns the proxied Blocks storage ensuring it is initialized.
-   *
    * @throws {Error} if the storage is not prepared.
    */
   private get blocksStore(): BlocksStore {
@@ -449,7 +427,6 @@ export default class BlockManager extends Module {
 
   /**
    * Insert pasted content. Call onPaste callback after insert.
-   *
    * @param {string} toolName - name of Tool to insert
    * @param {PasteEvent} pasteEvent - pasted data
    * @param {boolean} replace - should replace current block
@@ -469,7 +446,6 @@ export default class BlockManager extends Module {
        * We need to call onPaste after Block will be ready
        * because onPaste could change tool's root element, and we need to do that after block.watchBlockMutations() bound
        * to detect tool root element change
-       *
        * @todo make this.insert() awaitable and remove requestIdleCallback
        */
       window.requestIdleCallback(() => {
@@ -484,7 +460,6 @@ export default class BlockManager extends Module {
 
   /**
    * Insert new default block at passed index
-   *
    * @param {number} index - index where Block should be inserted
    * @param {boolean} needToFocus - if true, updates current Block index
    *
@@ -507,7 +482,6 @@ export default class BlockManager extends Module {
 
   /**
    * Always inserts at the end
-   *
    * @returns {Block}
    */
   public insertAtEnd(): Block {
@@ -524,7 +498,6 @@ export default class BlockManager extends Module {
 
   /**
    * Merge two blocks
-   *
    * @param {Block} targetBlock - previous block will be append to this block
    * @param {Block} blockToMerge - block that will be merged with target block
    * @returns {Promise} - the sequence that can be continued
@@ -576,7 +549,6 @@ export default class BlockManager extends Module {
 
   /**
    * Remove passed Block
-   *
    * @param block - Block to remove
    * @param addLastBlock - if true, adds new default block at the end. @todo remove this logic and use event-bus instead
    */
@@ -629,7 +601,6 @@ export default class BlockManager extends Module {
   /**
    * Remove only selected Blocks
    * and returns first Block index where started removing...
-   *
    * @returns {number|undefined}
    */
   public removeSelectedBlocks(): number | undefined {
@@ -681,7 +652,6 @@ export default class BlockManager extends Module {
    * Split current Block
    * 1. Extract content from Caret position to the Block`s end
    * 2. Insert a new Block below current one with extracted content
-   *
    * @returns {Block}
    */
   public split(): Block {
@@ -699,7 +669,6 @@ export default class BlockManager extends Module {
 
     /**
      * Renew current Block
-     *
      * @type {Block}
      */
     return this.insert({ data });
@@ -722,7 +691,6 @@ export default class BlockManager extends Module {
 
   /**
    * Returns Block by passed index
-   *
    * @param {number} index - index to get. -1 to get last
    * @returns {Block}
    */
@@ -736,7 +704,6 @@ export default class BlockManager extends Module {
 
   /**
    * Returns an index for passed Block
-   *
    * @param block - block to find index
    */
   public getBlockIndex(block: Block): number {
@@ -745,7 +712,6 @@ export default class BlockManager extends Module {
 
   /**
    * Returns the Block by passed id
-   *
    * @param id - id of block to get
    * @returns {Block}
    */
@@ -755,7 +721,6 @@ export default class BlockManager extends Module {
 
   /**
    * Get Block instance by html element
-   *
    * @param {Node} element - html element to get Block by
    */
   public getBlock(element: HTMLElement): Block | undefined {
@@ -784,7 +749,6 @@ export default class BlockManager extends Module {
   /**
    * 1) Find first-level Block from passed child Node
    * 2) Mark it as current
-   *
    * @param {Node} childNode - look ahead from this node.
    * @returns {Block | undefined} can return undefined in case when the passed child note is not a part of the current editor instance
    */
@@ -807,7 +771,6 @@ export default class BlockManager extends Module {
     /**
      * Support multiple Editor.js instances,
      * by checking whether the found block belongs to the current instance
-     *
      * @see {@link Ui#documentTouched}
      */
     const editorWrapper = parentFirstLevelBlock.closest(`.${this.Editor.UI.CSS.editorWrapper}`);
@@ -819,7 +782,6 @@ export default class BlockManager extends Module {
 
     /**
      * Update current Block's index
-     *
      * @type {number}
      */
     if (!(parentFirstLevelBlock instanceof HTMLElement)) {
@@ -840,7 +802,6 @@ export default class BlockManager extends Module {
 
   /**
    * Return block which contents passed node
-   *
    * @param {Node} childNode - node to get Block by
    * @returns {Block}
    */
@@ -869,7 +830,6 @@ export default class BlockManager extends Module {
 
   /**
    * Move a block to a new index
-   *
    * @param {number} toIndex - index where to move Block
    * @param {number} fromIndex - index of Block to move
    */
@@ -910,7 +870,6 @@ export default class BlockManager extends Module {
   /**
    * Converts passed Block to the new Tool
    * Uses Conversion Config
-   *
    * @param blockToConvert - Block that should be converted
    * @param targetToolName - name of the Tool to convert to
    * @param blockDataOverrides - optional new Block data overrides
@@ -969,7 +928,6 @@ export default class BlockManager extends Module {
 
   /**
    * Clears Editor
-   *
    * @param {boolean} needToAddDefaultBlock - 1) in internal calls (for example, in api.blocks.render)
    *                                             we don't need to add an empty default block
    *                                        2) in api.blocks.clear we should add empty block
@@ -1012,7 +970,6 @@ export default class BlockManager extends Module {
 
   /**
    * Bind Block events
-   *
    * @param {Block} block - Block to which event should be bound
    */
   private bindBlockEvents(block: Block): void {
@@ -1065,7 +1022,6 @@ export default class BlockManager extends Module {
 
   /**
    * Validates that the given index is not lower than 0 or higher than the amount of blocks
-   *
    * @param {number} index - index of blocks array to validate
    * @returns {boolean}
    */
@@ -1075,7 +1031,6 @@ export default class BlockManager extends Module {
 
   /**
    * Block mutation callback
-   *
    * @param mutationType - what happened with block
    * @param block - mutated block
    * @param detailData - additional data to pass with change event

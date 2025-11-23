@@ -10,7 +10,6 @@ import { css, DATA_ATTRIBUTE_ACTIVE } from './popover-item-default.const';
 
 /**
  * Represents single popover item node
- *
  * @todo move nodes initialization to constructor
  * @todo replace multiple make() usages with constructing separate instances
  * @todo split regular popover item and popover item with confirmation to separate classes
@@ -75,7 +74,6 @@ export class PopoverItemDefault extends PopoverItem {
 
   /**
    * Constructs popover item instance
-   *
    * @param params - popover item construction params
    * @param renderParams - popover item render params.
    * The parameters that are not set by user via popover api but rather depend on technical implementation
@@ -108,7 +106,6 @@ export class PopoverItemDefault extends PopoverItem {
 
   /**
    * Toggles item active state
-   *
    * @param isActive - true if item should strictly should become active
    */
   public toggleActive(isActive?: boolean): void {
@@ -129,7 +126,6 @@ export class PopoverItemDefault extends PopoverItem {
 
   /**
    * Toggles item hidden state
-   *
    * @param isHidden - true if item should be hidden
    */
   public override toggleHidden(isHidden: boolean): void {
@@ -154,7 +150,6 @@ export class PopoverItemDefault extends PopoverItem {
 
   /**
    * Constructs HTML element corresponding to popover item params
-   *
    * @param params - item construction params
    * @param renderParams - popover item render params
    */
@@ -216,7 +211,6 @@ export class PopoverItemDefault extends PopoverItem {
 
   /**
    * Activates confirmation mode for the item.
-   *
    * @param newState - new popover item params that should be applied
    */
   private enableConfirmationMode(newState: PopoverItemDefaultParams): void {
@@ -293,7 +287,6 @@ export class PopoverItemDefault extends PopoverItem {
 
   /**
    * Executes item's onActivate callback if the item has no confirmation configured
-   *
    * @param item - item to activate or bring to confirmation mode
    */
   private activateOrEnableConfirmationMode(item: PopoverItemDefaultParams): void {

@@ -20,7 +20,6 @@ export default class MoveDownTune implements BlockTune {
 
   /**
    * Property that contains Editor.js API methods
-   *
    * @see {@link docs/api.md}
    */
   private readonly api: API;
@@ -34,7 +33,6 @@ export default class MoveDownTune implements BlockTune {
 
   /**
    * MoveDownTune constructor
-   *
    * @param {API} api — Editor's API
    */
   constructor({ api }: { api: API }) {

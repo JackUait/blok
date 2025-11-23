@@ -16,7 +16,7 @@ const HEADER_TOOL_UMD_PATH = path.resolve(__dirname, '../../../../node_modules/@
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-block`;
-const BLOCK_TUNES_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy=block-tunes]`;
+const BLOCK_TUNES_SELECTOR = '.ce-popover[data-cy=block-tunes]';
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
 const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
 
@@ -84,7 +84,6 @@ const buildTestToolsConfig = (
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -108,7 +107,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with provided blocks and optional tools/tunes
- *
  * @param page - The Playwright page object
  * @param blocks - The blocks data to initialize the editor with
  * @param tools - Optional tools configuration (can be SerializableToolsConfig or tool classes)
@@ -335,7 +333,7 @@ const createEditorWithBlocks = async (
 };
 
 const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<void> => {
-  await page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover`).waitFor({
+  await page.locator(BLOCK_TUNES_SELECTOR).waitFor({
     state: 'attached',
     timeout,
   });
@@ -344,7 +342,6 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
 
 /**
  * Select text content within a locator by character positions
- *
  * @param locator - The Playwright locator for the element containing the text
  * @param start - Start position (character index)
  * @param end - End position (character index)
@@ -409,7 +406,6 @@ const selectTextByRange = async (locator: Locator, start: number, end: number): 
 
 /**
  * Open block tunes popover
- *
  * @param page - The Playwright page object
  */
 const openBlockTunes = async (page: Page): Promise<void> => {
@@ -750,7 +746,7 @@ test.describe('popover', () => {
     await waitForBlockTunesPopover(page);
 
     // Check item with custom html content is displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover .ce-popover-item-html`).filter({ hasText: 'Tune' })).toBeVisible();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-item-html`).filter({ hasText: 'Tune' })).toBeVisible();
   });
 
   test('should support flipping between custom content items', async ({ page }) => {
@@ -831,7 +827,7 @@ test.describe('popover', () => {
 
     // Check the first custom html item is focused
     await expect(
-      page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover .ce-popover-item-html .ce-settings__button`)
+      page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-item-html .ce-settings__button`)
         .filter({ hasText: 'Tune1' })
     ).toHaveClass(/ce-popover-item--focused/);
 
@@ -840,7 +836,7 @@ test.describe('popover', () => {
 
     // Check the second custom html item is focused
     await expect(
-      page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover .ce-popover-item-html .ce-settings__button`)
+      page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-item-html .ce-settings__button`)
         .filter({ hasText: 'Tune2' })
     ).toHaveClass(/ce-popover-item--focused/);
 
@@ -889,10 +885,10 @@ test.describe('popover', () => {
     await page.locator('[data-item-name="test-item"]').click();
 
     // Check nested popover opened
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover--nested .ce-popover__container`)).toBeVisible();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover--nested .ce-popover__container`)).toBeVisible();
 
     // Check child item displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover--nested .ce-popover__container [data-item-name="nested-test-item"]`)).toBeVisible();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover--nested .ce-popover__container [data-item-name="nested-test-item"]`)).toBeVisible();
   });
 
   test('should display children items, back button and item header and correctly switch between parent and child states (mobile)', async ({ page }) => {
@@ -936,25 +932,25 @@ test.describe('popover', () => {
     await page.locator('[data-item-name="test-item"]').click();
 
     // Check child item displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container [data-item-name="nested-test-item"]`)).toBeVisible();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover__container [data-item-name="nested-test-item"]`)).toBeVisible();
 
     // Check header displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover-header`)).toHaveText('Tune');
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-header`)).toHaveText('Tune');
 
     // Check back button displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container .ce-popover-header__back-button`)).toBeVisible();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover__container .ce-popover-header__back-button`)).toBeVisible();
 
     // Click back button
-    await page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container .ce-popover-header__back-button`).click();
+    await page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover__container .ce-popover-header__back-button`).click();
 
     // Check child item is not displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container [data-item-name="nested-test-item"]`)).toBeHidden();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover__container [data-item-name="nested-test-item"]`)).toBeHidden();
 
     // Check back button is not displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container .ce-popover-header__back-button`)).toBeHidden();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover__container .ce-popover-header__back-button`)).toBeHidden();
 
     // Check header is not displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover-header`)).toBeHidden();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-header`)).toBeHidden();
   });
 
   test('should display default (non-separator) items without specifying type: default', async ({ page }) => {
@@ -980,7 +976,7 @@ test.describe('popover', () => {
     await openBlockTunes(page);
 
     // Check item displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container [data-item-name="test-item"]`)).toBeVisible();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover__container [data-item-name="test-item"]`)).toBeVisible();
   });
 
   test('should display separator', async ({ page }) => {
@@ -1011,10 +1007,10 @@ test.describe('popover', () => {
     await openBlockTunes(page);
 
     // Check item displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container [data-item-name="test-item"]`)).toBeVisible();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover__container [data-item-name="test-item"]`)).toBeVisible();
 
     // Check separator displayed
-    await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container .ce-popover-item-separator`)).toBeVisible();
+    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover__container .ce-popover-item-separator`)).toBeVisible();
   });
 
   test('should perform keyboard navigation between items ignoring separators', async ({ page }) => {
@@ -1193,6 +1189,41 @@ test.describe('popover', () => {
 
       // Check first item is focused
       await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container [data-item-name="header"].ce-popover-item--focused`)).toBeVisible();
+    });
+
+    test('should convert block when clicking on item in nested popover', async ({ page }) => {
+      await createEditorWithBlocks(
+        page,
+        [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'First block text',
+            },
+          },
+        ],
+        {
+          header: { fromGlobal: 'Header' },
+        }
+      );
+
+      // Open Inline Toolbar
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
+
+      await paragraph.click();
+      await selectTextByRange(paragraph, 0, 5); // Select "First"
+
+      // Click Convert To item which has nested popover
+      await page.locator('[data-item-name=convert-to]').click();
+
+      // Click Header item in nested popover
+      await page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover--nested .ce-popover__container [data-item-name="header"]`).click();
+
+      // Check block converted
+      const header = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-header`);
+
+      await expect(header).toBeVisible();
+      await expect(header).toHaveText('First block text');
     });
   });
 });

@@ -6,7 +6,6 @@ import { ToolType } from '@/types/tools/adapters/tool-type';
 
 /**
  * Stub class for BlockTunes
- *
  * @todo Implement
  */
 export default class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBlockTune> implements BlockTuneAdapterInterface {
@@ -17,7 +16,6 @@ export default class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBl
 
   /**
    * Constructs new BlockTune instance from constructable
-   *
    * @param data - Tune data
    * @param block - Block API object
    */

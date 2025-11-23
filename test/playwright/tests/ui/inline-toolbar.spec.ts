@@ -128,7 +128,6 @@ class NestedEditorTool {
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -152,7 +151,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Initialize the editor with the provided configuration
- *
  * @param page - The Playwright page object
  * @param options - Editor configuration options
  */
@@ -230,7 +228,6 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
 /**
  * Programmatically set selection range within an element.
- *
  * @param locator - Locator that wraps the element containing selectable text
  * @param start - Selection start offset (inclusive)
  * @param end - Selection end offset (exclusive)
@@ -323,7 +320,6 @@ const setSelectionRange = async (locator: Locator, start: number, end: number): 
 
 /**
  * Select text content within a locator by string match
- *
  * @param locator - The Playwright locator for the element containing the text
  * @param text - The text string to select within the element
  */
@@ -342,7 +338,6 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
 
 /**
  * Select text content within a locator by character offsets
- *
  * @param locator - The Playwright locator for the element containing the text
  * @param start - The start offset (inclusive)
  * @param end - The end offset (exclusive)
@@ -353,7 +348,6 @@ const selectTextByOffset = async (locator: Locator, start: number, end: number):
 
 /**
  * Calculate line wrap positions for the provided locator
- *
  * @param locator - The Playwright locator for the element containing the text
  */
 const getLineWrapPositions = async (locator: Locator): Promise<number[]> => {
@@ -404,7 +398,6 @@ type ToolbarItemSnapshot = {
 
 /**
  * Collect inline toolbar items meta information for assertions that depend on ordering
- *
  * @param page - The Playwright page object
  */
 const getInlineToolbarSnapshot = async (page: Page): Promise<ToolbarItemSnapshot[]> => {

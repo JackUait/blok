@@ -4,7 +4,6 @@ import { isObject, isString } from '../utils';
 
 /**
  * Evaluate messages dictionary and return object for namespace chaining
- *
  * @param dict - Messages dictionary
  * @param [keyPath] - subsection path (used in recursive call)
  */
@@ -48,7 +47,6 @@ const getNamespaces = (dict: object, keyPath?: string): DictNamespaces<typeof de
 
 /**
  * Type safe access to the internal messages dictionary sections
- *
  * @example I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to tune');
  */
 export const I18nInternalNS = getNamespaces(defaultDictionary);

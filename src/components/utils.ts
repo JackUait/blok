@@ -59,7 +59,6 @@ export const getEditorVersion = (): string => {
 
 /**
  * Returns basic key codes as constants
- *
  * @returns {{}}
  */
 export const keyCodes = {
@@ -165,7 +164,6 @@ type ConsoleMethod = {
 
 /**
  * Custom logger
- *
  * @param {boolean} labeled — if true, Editor.js label is shown
  * @param {string} msg  - message
  * @param {string} type - logging type 'log'|'warn'|'error'|'info'
@@ -262,7 +260,6 @@ _log.logLevel = LogLevels.VERBOSE;
 
 /**
  * Set current log level
- *
  * @param {LogLevels} logLevel - log level to set
  */
 export const setLogLevel = (logLevel: LogLevels): void => {
@@ -271,7 +268,6 @@ export const setLogLevel = (logLevel: LogLevels): void => {
 
 /**
  * _log method proxy without Editor.js label
- *
  * @param msg - message to log
  * @param type - console method name
  * @param args - optional payload to pass to console
@@ -288,7 +284,6 @@ export const log = (
 
 /**
  * _log method proxy with Editor.js label
- *
  * @param msg - message to log
  * @param type - console method name
  * @param args - optional payload to pass to console
@@ -305,7 +300,6 @@ export const logLabeled = (
 
 /**
  * Check if passed variable is a function
- *
  * @param {*} fn - function to check
  * @returns {boolean}
  */
@@ -315,7 +309,6 @@ export const isFunction = (fn: unknown): fn is (...args: unknown[]) => unknown =
 
 /**
  * Checks if passed argument is an object
- *
  * @param {*} v - object to check
  * @returns {boolean}
  */
@@ -325,7 +318,6 @@ export const isObject = (v: unknown): v is object => {
 
 /**
  * Checks if passed argument is a string
- *
  * @param {*} v - variable to check
  * @returns {boolean}
  */
@@ -335,7 +327,6 @@ export const isString = (v: unknown): v is string => {
 
 /**
  * Checks if passed argument is boolean
- *
  * @param {*} v - variable to check
  * @returns {boolean}
  */
@@ -345,7 +336,6 @@ export const isBoolean = (v: unknown): v is boolean => {
 
 /**
  * Checks if passed argument is number
- *
  * @param {*} v - variable to check
  * @returns {boolean}
  */
@@ -355,7 +345,6 @@ export const isNumber = (v: unknown): v is number => {
 
 /**
  * Checks if passed argument is undefined
- *
  * @param {*} v - variable to check
  * @returns {boolean}
  */
@@ -365,7 +354,6 @@ export const isUndefined = function (v: unknown): v is undefined {
 
 /**
  * Checks if object is empty
- *
  * @param {object} object - object to check
  * @returns {boolean}
  */
@@ -375,7 +363,6 @@ export const isEmpty = (object: object | null | undefined): boolean => {
 
 /**
  * Returns true if passed key code is printable (a-Z, 0-9, etc) character.
- *
  * @param {number} keyCode - key code
  * @returns {boolean}
  */
@@ -391,7 +378,6 @@ export const isPrintableKey = (keyCode: number): boolean => {
 
 /**
  * Make array from array-like collection
- *
  * @param {ArrayLike} collection - collection to convert to array
  * @returns {Array}
  */
@@ -402,7 +388,6 @@ export const array = (collection: ArrayLike<any>): any[] => {
 
 /**
  * Delays method execution
- *
  * @param {Function} method - method to execute
  * @param {number} timeout - timeout in ms
  */
@@ -414,7 +399,6 @@ export const delay = (method: (...args: unknown[]) => unknown, timeout: number) 
 
 /**
  * Get file extension
- *
  * @param {File} file - file
  * @returns {string}
  */
@@ -424,7 +408,6 @@ export const getFileExtension = (file: File): string => {
 
 /**
  * Check if string is MIME type
- *
  * @param {string} type - string to check
  * @returns {boolean}
  */
@@ -437,7 +420,6 @@ export const isValidMimeType = (type: string): boolean => {
  * Call method after passed time
  *
  * Note that this method returns Function and declared variable need to be called
- *
  * @param {Function} func - function that we're throttling
  * @param {number} wait - time in milliseconds
  * @param {boolean} immediate - call now
@@ -470,7 +452,6 @@ export const debounce = (func: (...args: unknown[]) => void, wait?: number, imme
 
 /**
  * Returns a function, that, when invoked, will only be triggered at most once during a given window of time.
- *
  * @param func - function to throttle
  * @param wait - function will be called only once for that period
  * @param options - Normally, the throttled function will run as much as it can
@@ -512,7 +493,6 @@ export const getUserOS = (): {[key: string]: boolean} => {
 
 /**
  * Capitalizes first letter of the string
- *
  * @param {string} text - text to capitalize
  * @returns {string}
  */
@@ -526,7 +506,6 @@ export const capitalize = (text: string): string => {
 
 /**
  * Customizer function for deep merge that overwrites arrays
- *
  * @param {unknown} objValue - object value
  * @param {unknown} srcValue - source value
  * @returns {unknown}
@@ -555,7 +534,6 @@ export const deepMerge = <T extends object> (target: T, ...sources: Partial<T>[]
 
 /**
  * Make shortcut command more human-readable
- *
  * @param {string} shortcut — string like 'CMD+B'
  */
 export const beautifyShortcut = (shortcut: string): string => {
@@ -584,7 +562,6 @@ export const beautifyShortcut = (shortcut: string): string => {
  * Returns valid URL. If it is going outside and valid, it returns itself
  * If url has `one slash`, then it concatenates with window location origin
  * or when url has `two lack` it appends only protocol
- *
  * @param {string} url - url to prettify
  */
 export const getValidUrl = (url: string): string => {
@@ -607,7 +584,6 @@ export const getValidUrl = (url: string): string => {
 
 /**
  * Create a block id
- *
  * @returns {string}
  */
 export const generateBlockId = (): string => {
@@ -618,7 +594,6 @@ export const generateBlockId = (): string => {
 
 /**
  * Opens new Tab with passed URL
- *
  * @param {string} url - URL address to redirect
  */
 export const openTab = (url: string): void => {
@@ -633,7 +608,6 @@ export const openTab = (url: string): void => {
 
 /**
  * Returns random generated identifier
- *
  * @param {string} prefix - identifier prefix
  * @returns {string}
  */
@@ -820,7 +794,6 @@ const applyStage3CacheableDecorator = (
 /**
  * Decorator which provides ability to cache method or accessor result.
  * Supports both legacy and TC39 stage 3 decorator semantics.
- *
  * @param args - decorator arguments (legacy: target, propertyKey, descriptor. Stage 3: value, context)
  */
 const cacheableImpl = (...args: unknown[]): unknown => {
@@ -905,7 +878,6 @@ export const isIosDevice = (() => {
 
 /**
  * Compares two values with unknown type
- *
  * @param var1 - value to compare
  * @param var2 - value to compare with
  * @returns {boolean} true if they are equal

@@ -22,7 +22,7 @@ const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
-  `${EDITOR_INTERFACE_SELECTOR} .ce-popover-item[data-item-name=${itemName}]`;
+  `.ce-popover-item[data-item-name=${itemName}]`;
 
 type SerializableToolConfig = {
   className?: string;
@@ -142,7 +142,6 @@ const saveEditor = async (page: Page): Promise<OutputData> => {
 
 /**
  * Ensures that the provided value is a string.
- *
  * @param value - Value to validate.
  * @param errorMessage - Message for the thrown error when validation fails.
  */

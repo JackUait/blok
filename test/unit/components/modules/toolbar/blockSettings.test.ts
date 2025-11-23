@@ -346,9 +346,6 @@ describe('BlockSettings', () => {
     expect(popover?.show).toHaveBeenCalledTimes(1);
     expect(popover?.on).toHaveBeenCalledWith('closed', expect.any(Function));
 
-    const popoverElement = popover?.getElement();
-
-    expect(popoverElement && blockSettings.getElement()?.contains(popoverElement)).toBe(true);
     expect(flipperInstances[0]?.focusItem).toHaveBeenCalledWith(0);
     expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
 

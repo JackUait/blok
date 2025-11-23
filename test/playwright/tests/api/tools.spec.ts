@@ -152,7 +152,7 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
 
   await expect(
     page
-      .locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy="block-tunes"] .ce-popover[data-popover-opened="true"]`)
+      .locator('.ce-popover[data-cy="block-tunes"][data-popover-opened="true"]')
   ).toHaveCount(1);
 };
 
@@ -392,7 +392,7 @@ test.describe('api.tools', () => {
 
       await expect(
         page.locator(
-          `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-tunes"] .ce-popover[data-popover-opened="true"]`
+          '.ce-popover[data-cy="block-tunes"][data-popover-opened="true"]'
         )
       ).toContainText(sampleText);
     });

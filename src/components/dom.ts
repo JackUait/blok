@@ -2,13 +2,11 @@ import * as _ from './utils';
 
 /**
  * DOM manipulations helper
- *
  * @todo get rid of class and make separate utility functions
  */
 export default class Dom {
   /**
    * Check if passed tag has no closed tag
-   *
    * @param {HTMLElement} tag - element to check
    * @returns {boolean}
    */
@@ -35,7 +33,6 @@ export default class Dom {
 
   /**
    * Check if element is BR or WBR
-   *
    * @param {HTMLElement} element - element to check
    * @returns {boolean}
    */
@@ -45,7 +42,6 @@ export default class Dom {
 
   /**
    * Helper for making Elements with class name and attributes
-   *
    * @param  {string} tagName - new Element tag name
    * @param  {string[]|string} [classNames] - list or name of CSS class name(s)
    * @param  {object} [attributes] - any attributes
@@ -89,7 +85,6 @@ export default class Dom {
 
   /**
    * Creates Text Node with the passed content
-   *
    * @param {string} content - text content
    * @returns {Text}
    */
@@ -99,7 +94,6 @@ export default class Dom {
 
   /**
    * Append one or several elements to the parent
-   *
    * @param  {Element|DocumentFragment} parent - where to append
    * @param  {Element|Element[]|DocumentFragment|Text|Text[]} elements - element or elements list
    */
@@ -116,7 +110,6 @@ export default class Dom {
 
   /**
    * Append element or a couple to the beginning of the parent elements
-   *
    * @param {Element} parent - where to append
    * @param {Element|Element[]} elements - element or elements list
    */
@@ -134,7 +127,6 @@ export default class Dom {
    * Selector Decorator
    *
    * Returns first match
-   *
    * @param {Element} el - element we searching inside. Default - DOM Document
    * @param {string} selector - searching string
    * @returns {Element}
@@ -145,7 +137,6 @@ export default class Dom {
 
   /**
    * Get Element by Id
-   *
    * @param {string} id - id to find
    * @returns {HTMLElement | null}
    */
@@ -157,7 +148,6 @@ export default class Dom {
    * Selector Decorator.
    *
    * Returns all matches
-   *
    * @param {Element|Document} el - element we searching inside. Default - DOM Document
    * @param {string} selector - searching string
    * @returns {NodeList}
@@ -178,7 +168,6 @@ export default class Dom {
 
   /**
    * Find all contenteditable, textarea and editable input elements passed holder contains
-   *
    * @param holder - element where to find inputs
    */
   public static findAllInputs(holder: Element): HTMLElement[] {
@@ -198,7 +187,6 @@ export default class Dom {
   /**
    * Search for deepest node which is Leaf.
    * Leaf is the vertex that doesn't have any child nodes
-   *
    * @description Method recursively goes throw the all Node until it finds the Leaf
    * @param {Node} node - root Node. From this vertex we start Deep-first search
    *                      {@link https://en.wikipedia.org/wiki/Depth-first_search}
@@ -211,7 +199,6 @@ export default class Dom {
      * Current function have two directions:
      * - starts from first child and every time gets first or nextSibling in special cases
      * - starts from last child and gets last or previousSibling
-     *
      * @type {string}
      */
     const child: 'lastChild' | 'firstChild' = atLast ? 'lastChild' : 'firstChild';
@@ -253,7 +240,6 @@ export default class Dom {
 
   /**
    * Check if object is DOM node
-   *
    * @param {*} node - object to check
    * @returns {boolean}
    */
@@ -268,7 +254,6 @@ export default class Dom {
 
   /**
    * Check if object is DocumentFragment node
-   *
    * @param {object} node - object to check
    * @returns {boolean}
    */
@@ -283,7 +268,6 @@ export default class Dom {
 
   /**
    * Check if passed element is contenteditable
-   *
    * @param {HTMLElement} element - html element to check
    * @returns {boolean}
    */
@@ -293,7 +277,6 @@ export default class Dom {
 
   /**
    * Checks target if it is native input
-   *
    * @param {*} target - HTML element or string
    * @returns {boolean}
    */
@@ -309,7 +292,6 @@ export default class Dom {
 
   /**
    * Checks if we can set caret
-   *
    * @param {HTMLElement} target - target to check
    * @returns {boolean}
    */
@@ -334,7 +316,6 @@ export default class Dom {
 
   /**
    * Checks node if it is empty
-   *
    * @description Method checks simple Node without any childs for emptiness
    * If you have Node with 2 or more children id depth, you better use {@link Dom#isEmpty} method
    * @param {Node} node - node to check
@@ -358,7 +339,6 @@ export default class Dom {
 
   /**
    * checks node if it is doesn't have any child nodes
-   *
    * @param {Node} node - node to check
    * @returns {boolean}
    */
@@ -373,7 +353,6 @@ export default class Dom {
   /**
    * breadth-first search (BFS)
    * {@link https://en.wikipedia.org/wiki/Breadth-first_search}
-   *
    * @description Pushes to stack all DOM leafs and checks for emptiness
    * @param {Node} node - node to check
    * @param {string} [ignoreChars] - char or substring to treat as empty
@@ -403,7 +382,6 @@ export default class Dom {
 
   /**
    * Check if string contains html elements
-   *
    * @param {string} str - string to check
    * @returns {boolean}
    */
@@ -417,7 +395,6 @@ export default class Dom {
 
   /**
    * Return length of node`s text content
-   *
    * @param {Node} node - node with content
    * @returns {number}
    */
@@ -435,7 +412,6 @@ export default class Dom {
 
   /**
    * Return array of names of block html elements
-   *
    * @returns {string[]}
    */
   public static get blockElements(): string[] {
@@ -484,7 +460,6 @@ export default class Dom {
 
   /**
    * Check if passed content includes only inline elements
-   *
    * @param {string|HTMLElement} data - element or html string
    * @returns {boolean}
    */
@@ -509,7 +484,6 @@ export default class Dom {
 
   /**
    * Find and return all block elements in the passed parent (including subtree)
-   *
    * @param {HTMLElement} parent - root element
    * @returns {HTMLElement[]}
    */
@@ -525,7 +499,6 @@ export default class Dom {
 
   /**
    * Helper for get holder from {string} or return HTMLElement
-   *
    * @param {string | HTMLElement} element - holder's id or holder's HTML Element
    * @returns {HTMLElement}
    */
@@ -545,7 +518,6 @@ export default class Dom {
 
   /**
    * Returns true if element is anchor (is A tag)
-   *
    * @param {Element} element - element to check
    * @returns {boolean}
    */
@@ -555,7 +527,6 @@ export default class Dom {
 
   /**
    * Return element's offset related to the document
-   *
    * @todo handle case when editor initialized in scrollable popup
    * @param el - element to compute offset
    */
@@ -577,7 +548,6 @@ export default class Dom {
 
   /**
    * Find text node and offset by total content offset
-   *
    * @param {Node} root - root node to start search from
    * @param {number} totalOffset - offset relative to the root node content
    * @returns {{node: Node | null, offset: number}} - node and offset inside node
@@ -665,7 +635,6 @@ export default class Dom {
  * There are two types of whitespaces in HTML:
  * - Visible (&nbsp;)
  * - Invisible (regular trailing spaces, tabs, etc)
- *
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
  * @see https://www.w3.org/TR/css-text-3/#white-space-processing
  * @param textContent — any string, for ex a textContent of a node
@@ -697,7 +666,6 @@ export const isCollapsedWhitespaces = (textContent: string): boolean => {
  *
  * 3. Calculate the total baseline Y coordinate:
  * - Sum of `marginTop`, `borderTopWidth`, `paddingTop`, the extra space due to `lineHeight`, and the baseline offset.
- *
  * @param element - The element to calculate the baseline for.
  * @returns {number} - The Y coordinate of the text baseline from the top of the element's margin box.
  */
@@ -732,7 +700,6 @@ export const calculateBaseline = (element: Element): number => {
 /**
  * Toggles the [data-empty] attribute on element depending on its emptiness
  * Used to mark empty inputs with a special attribute for placeholders feature
- *
  * @param element - The element to toggle the [data-empty] attribute on
  */
 export const toggleEmptyMark = (element: HTMLElement): void => {

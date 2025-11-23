@@ -14,7 +14,7 @@ const TEST_PAGE_URL = pathToFileURL(
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-block`;
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
-const POPOVER_ITEM_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover-item`;
+const POPOVER_ITEM_SELECTOR = `[data-cy=toolbox] .ce-popover-item`;
 const POPOVER_ITEM_ICON_SELECTOR = '.ce-popover-item__icon';
 
 const ICON = '<svg width="17" height="15" viewBox="0 0 336 276" xmlns="http://www.w3.org/2000/svg"><path d="M291 150V79c0-19-15-34-34-34H79c-19 0-34 15-34 34v42l67-44 81 72 56-29 42 30zm0 52l-43-30-56 30-81-67-66 39v23c0 19 15 34 34 34h178c17 0 31-13 34-29zM79 0h178c44 0 79 35 79 79v118c0 44-35 79-79 79H79c-44 0-79-35-79-79V79C0 35 35 0 79 0z"></path></svg>';
@@ -53,7 +53,6 @@ const getLastBlock = async (page: Page): Promise<Locator> => {
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -77,7 +76,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with custom tools
- *
  * @param page - The Playwright page object
  * @param tools - Tools configuration
  */
@@ -181,7 +179,6 @@ return (${classSource});
 
 /**
  * Save editor data
- *
  * @param page - The Playwright page object
  * @returns The saved output data
  */
@@ -224,7 +221,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Tool constructor
-         *
          * @param root0 - Constructor parameters
          * @param root0.data - Tool data
          */
@@ -248,7 +244,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Extracts Tool's data from the view
-         *
          * @param el - Tool view element
          */
         public save(el: HTMLElement): { text: string } {
@@ -314,7 +309,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Tool constructor
-         *
          * @param root0 - Constructor parameters
          * @param root0.data - Tool data
          */
@@ -338,7 +332,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Extracts Tool's data from the view
-         *
          * @param el - Tool view element
          */
         public save(el: HTMLElement): { text: string } {
@@ -396,7 +389,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Tool constructor
-         *
          * @param data - previously saved data
          */
         constructor({ data }: { data: { testProp: string; text?: string } }) {
@@ -430,7 +422,6 @@ test.describe('editor Tools Api', () => {
 
         /**
          * Extracts Tool's data from the view
-         *
          * @param el - tool view
          */
         public save(el: HTMLElement): BlockToolData {

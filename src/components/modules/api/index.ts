@@ -38,7 +38,6 @@ export default class API extends Module {
 
   /**
    * Returns Editor.js Core API methods for passed tool
-   *
    * @param toolName - tool name
    * @param isTune - is tool a block tune
    */

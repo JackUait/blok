@@ -14,8 +14,8 @@ const TEST_PAGE_URL = pathToFileURL(
 const HOLDER_ID = 'editorjs';
 const FIRST_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block:first-of-type`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover.ce-popover--opened`;
-const POPOVER_ITEM_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-settings .ce-popover-item`;
+const POPOVER_SELECTOR = '.ce-popover[data-cy="block-tunes"]';
+const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} .ce-popover-item`;
 const FIRST_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(1)`;
 const SECOND_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(2)`;
 
@@ -39,7 +39,6 @@ declare global {
 
 /**
  * Reset the editor holder and destroy existing editor instance.
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -66,7 +65,6 @@ const resetEditor = async (page: Page): Promise<void> => {
  *
  * Some tests were flaking because the fixture page occasionally loads before the UMD bundle is ready,
  * leaving window.EditorJS undefined. As a fallback we inject the bundle manually once per run.
- *
  * @param page - The Playwright page object
  */
 const ensureEditorBundleLoaded = async (page: Page): Promise<void> => {
@@ -91,7 +89,6 @@ const ensureEditorBundleLoaded = async (page: Page): Promise<void> => {
 
 /**
  * Create an Editor instance configured with a tune that returns the provided render config.
- *
  * @param page - The Playwright page object
  * @param renderConfig - Serializable configuration describing tune render output
  */
@@ -120,7 +117,6 @@ const createEditorWithTune = async (
 
         /**
          * Render tune configuration for block tunes popover.
-         *
          * @returns Tune menu configuration or custom element
          */
         public render(): unknown {
@@ -172,7 +168,6 @@ const createEditorWithTune = async (
 
 /**
  * Focus the first block and type provided text to expose block tunes controls.
- *
  * @param page - The Playwright page object
  * @param text - Text to type into the block
  */
@@ -186,7 +181,6 @@ const focusBlockAndType = async (page: Page, text: string): Promise<void> => {
 
 /**
  * Open block tunes popover from the currently focused block.
- *
  * @param page - The Playwright page object
  */
 const openBlockTunes = async (page: Page): Promise<void> => {

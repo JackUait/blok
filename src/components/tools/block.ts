@@ -15,26 +15,6 @@ import ToolsCollection from './collection';
 import type { BlockToolAdapter as BlockToolAdapterInterface } from '@/types/tools/adapters/block-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 
-type SanitizerConfigCacheableDecorator = {
-  (target: object, propertyKey: string | symbol, descriptor?: TypedPropertyDescriptor<SanitizerConfig>): TypedPropertyDescriptor<SanitizerConfig> | void;
-  (value: () => SanitizerConfig, context: {
-    kind: 'getter' | 'accessor';
-    name: string | symbol;
-    static?: boolean;
-    private?: boolean;
-    access?: {
-      get?: () => SanitizerConfig;
-      set?: (value: SanitizerConfig) => void;
-    };
-  }): (() => SanitizerConfig) | {
-    get?: () => SanitizerConfig;
-    set?: (value: SanitizerConfig) => void;
-    init?: (value: SanitizerConfig) => SanitizerConfig;
-  };
-};
-
-const cacheSanitizerConfig = _.cacheable as SanitizerConfigCacheableDecorator;
-
 /**
  * Class to work with Block tools constructables
  */
@@ -55,8 +35,17 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
   public tunes: ToolsCollection<BlockTuneAdapter> = new ToolsCollection<BlockTuneAdapter>();
 
   /**
+   * Cache for sanitize configuration
+   */
+  private _sanitizeConfig: SanitizerConfig | undefined;
+
+  /**
+   * Cache for base sanitize configuration
+   */
+  private _baseSanitizeConfig: SanitizerConfig | undefined;
+
+  /**
    * Creates new Tool instance
-   *
    * @param data - Tool data
    * @param block - BlockAPI for current Block
    * @param readOnly - True if Editor is in read-only mode
@@ -181,12 +170,17 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
   /**
    * Returns sanitize configuration for Block Tool including configs from related Inline Tools and Block Tunes
    */
-  @cacheSanitizerConfig
   public get sanitizeConfig(): SanitizerConfig {
+    if (this._sanitizeConfig) {
+      return this._sanitizeConfig;
+    }
+
     const toolRules = super.sanitizeConfig;
     const baseConfig = this.baseSanitizeConfig;
 
     if (_.isEmpty(toolRules)) {
+      this._sanitizeConfig = baseConfig;
+
       return baseConfig;
     }
 
@@ -211,14 +205,19 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
       }
     }
 
+    this._sanitizeConfig = toolConfig;
+
     return toolConfig;
   }
 
   /**
    * Returns sanitizer configuration composed from sanitize config of Inline Tools enabled for Tool
    */
-  @cacheSanitizerConfig
   public get baseSanitizeConfig(): SanitizerConfig {
+    if (this._baseSanitizeConfig) {
+      return this._baseSanitizeConfig;
+    }
+
     const baseConfig = {};
 
     Array
@@ -228,6 +227,8 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
     Array
       .from(this.tunes.values())
       .forEach(tune => Object.assign(baseConfig, tune.sanitizeConfig));
+
+    this._baseSanitizeConfig = baseConfig;
 
     return baseConfig;
   }

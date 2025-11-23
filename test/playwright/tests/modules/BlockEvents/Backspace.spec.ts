@@ -47,7 +47,6 @@ const getBlockWrapperLocator = async (page: Page, position: 'first' | 'last'): P
 
 /**
  * Resets the editor instance by destroying any existing instance and clearing the holder.
- *
  * @param page - The Playwright Page object to interact with the browser.
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -390,7 +389,6 @@ const getCaretInfo = (locator: Locator, options: { normalize?: boolean } = {}): 
 
 /**
  * Sets the caret to a specific position within a child node of the element
- *
  * @param locator - Playwright Locator for the element
  * @param childIndex - Index of the child node to set caret in
  * @param offset - Offset within the child node
@@ -544,7 +542,6 @@ test.describe('backspace keydown', () => {
 
         /**
          * Simulates native backspace behavior if event is not prevented
-         *
          * @param event - Keyboard event
          */
         const simulateNativeBackspace = (event: KeyboardEvent): void => {
@@ -639,7 +636,6 @@ test.describe('backspace keydown', () => {
 
         /**
          * Simulates native backspace behavior if event is not prevented
-         *
          * @param event - Keyboard event
          */
         const simulateNativeBackspace = (event: KeyboardEvent): void => {
@@ -731,7 +727,6 @@ test.describe('backspace keydown', () => {
 
         /**
          * Simulates native backspace behavior if event is not prevented
-         *
          * @param event - Keyboard event
          */
         const simulateNativeBackspace = (event: KeyboardEvent): void => {
@@ -823,7 +818,6 @@ test.describe('backspace keydown', () => {
 
         /**
          * Simulates native backspace behavior if event is not prevented
-         *
          * @param event - Keyboard event
          */
         const simulateNativeBackspace = (event: KeyboardEvent): void => {

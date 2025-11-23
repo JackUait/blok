@@ -14,7 +14,6 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
 
   /**
    * Returns list of required methods that are missing on the inline tool prototype
-   *
    * @param requiredMethods - method names that must be implemented
    */
   public getMissingMethods(requiredMethods: string[]): string[] {
@@ -49,5 +48,14 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
     const constructable = this.constructable as InlineToolConstructable | undefined;
 
     return constructable?.isReadOnlySupported ?? false;
+  }
+
+  /**
+   * Returns title of the tool
+   */
+  public get title(): string {
+    const constructable = this.constructable as InlineToolConstructable;
+
+    return constructable['title'] || '';
   }
 }

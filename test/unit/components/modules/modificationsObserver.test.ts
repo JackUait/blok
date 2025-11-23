@@ -30,7 +30,6 @@ class MutationObserverStub {
 
   /**
    * Creates a stub that records the provided observer callback for later manual triggering.
-   *
    * @param callback Mutation observer callback that should run when `trigger` is invoked.
    */
   constructor(callback: MutationCallback) {
@@ -40,7 +39,6 @@ class MutationObserverStub {
 
   /**
    * Invokes the stored callback with the supplied mutation records.
-   *
    * @param mutations Mutation records that simulate DOM changes.
    */
   public trigger(mutations: MutationRecord[]): void {

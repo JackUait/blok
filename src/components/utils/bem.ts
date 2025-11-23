@@ -3,7 +3,6 @@ const MODIFIER_DELIMITER = '--';
 
 /**
  * Utility function that allows to construct class names from block and element names
- *
  * @example bem('ce-popover)() -> 'ce-popover'
  * @example bem('ce-popover)('container') -> 'ce-popover__container'
  * @example bem('ce-popover)('container', 'hidden') -> 'ce-popover__container--hidden'

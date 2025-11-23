@@ -15,11 +15,10 @@ const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
-const POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover`;
+const POPOVER_SELECTOR = '.ce-popover';
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -43,7 +42,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with i18n configuration
- *
  * @param page - The Playwright page object
  * @param config - Editor configuration including i18n settings
  */
@@ -162,7 +160,6 @@ const createEditorWithI18n = async (
 
 /**
  * Select text content within a locator by string match
- *
  * @param locator - The Playwright locator for the element containing the text
  * @param text - The text string to select within the element
  */
@@ -204,7 +201,6 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
 
 /**
  * Wait for tooltip to appear and get its text
- *
  * @param page - The Playwright page object
  * @param triggerElement - Element to hover over to trigger tooltip
  * @returns The tooltip text content
@@ -221,7 +217,6 @@ const getTooltipText = async (page: Page, triggerElement: Locator): Promise<stri
 
 /**
  * Opens the inline toolbar popover and waits until it becomes visible.
- *
  * @param page - The Playwright page object
  * @returns Locator for the inline toolbar popover
  */
@@ -287,7 +282,6 @@ test.describe('editor i18n', () => {
 
           /**
            * Creates a `SimpleHeader` instance with initial block data.
-           *
            * @param root0 - Editor.js constructor arguments containing the block data.
            */
           constructor({ data }: { data: { text: string } }) {
@@ -308,7 +302,6 @@ test.describe('editor i18n', () => {
 
           /**
            * Persists the heading content to the Editor.js data format.
-           *
            * @param element - Heading element that contains the current block content.
            */
           public save(element: HTMLHeadingElement): { text: string; level: number } {
@@ -679,7 +672,6 @@ test.describe('editor i18n', () => {
 
           /**
            * Creates a `SimpleHeader` instance with initial block data.
-           *
            * @param root0 - Editor.js constructor arguments containing the block data.
            */
           constructor({ data }: { data: { text: string } }) {
@@ -700,7 +692,6 @@ test.describe('editor i18n', () => {
 
           /**
            * Persists the heading content to the Editor.js data format.
-           *
            * @param element - Heading element that contains the current block content.
            */
           public save(element: HTMLHeadingElement): { text: string; level: number } {
@@ -1210,7 +1201,6 @@ test.describe('editor i18n', () => {
 
           /**
            * Creates a `SimpleHeader` instance with initial block data.
-           *
            * @param root0 - Editor.js constructor arguments containing the block data.
            */
           constructor({ data }: { data: { text: string } }) {
@@ -1231,7 +1221,6 @@ test.describe('editor i18n', () => {
 
           /**
            * Persists the heading content to the Editor.js data format.
-           *
            * @param element - Heading element that contains the current block content.
            */
           public save(element: HTMLHeadingElement): { text: string; level: number } {
@@ -1419,7 +1408,6 @@ test.describe('editor i18n', () => {
 
           /**
            * Creates a `SimpleHeader` instance with initial block data.
-           *
            * @param root0 - Editor.js constructor arguments containing the block data.
            */
           constructor({ data }: { data: { text: string } }) {
@@ -1440,7 +1428,6 @@ test.describe('editor i18n', () => {
 
           /**
            * Persists the heading content to the Editor.js data format.
-           *
            * @param element - Heading element that contains the current block content.
            */
           public save(element: HTMLHeadingElement): { text: string; level: number } {

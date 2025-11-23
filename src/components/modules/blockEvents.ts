@@ -30,7 +30,6 @@ const EDITABLE_INPUT_SELECTOR = '[contenteditable="true"], textarea, input';
 export default class BlockEvents extends Module {
   /**
    * All keydowns on Block
-   *
    * @param {KeyboardEvent} event - keydown
    */
   public keydown(event: KeyboardEvent): void {
@@ -40,6 +39,13 @@ export default class BlockEvents extends Module {
     this.beforeKeydownProcessing(event);
 
     if (this.handleSelectedBlocksDeletion(event)) {
+      return;
+    }
+
+    /**
+     * If event was already handled by something (e.g. tool), we should not handle it
+     */
+    if (event.defaultPrevented) {
       return;
     }
 
@@ -78,7 +84,6 @@ export default class BlockEvents extends Module {
 
     /**
      * We check for "key" here since on different keyboard layouts "/" can be typed as "Shift + 7" etc
-     *
      * @todo probably using "beforeInput" event would be better here
      */
     if (event.key === '/' && !event.ctrlKey && !event.metaKey) {
@@ -97,7 +102,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Tries to delete selected blocks when remove keys pressed.
-   *
    * @param event - keyboard event
    * @returns true if event was handled
    */
@@ -133,7 +137,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Fires on keydown before event processing
-   *
    * @param {KeyboardEvent} event - keydown
    */
   public beforeKeydownProcessing(event: KeyboardEvent): void {
@@ -157,7 +160,6 @@ export default class BlockEvents extends Module {
 
     /**
      * Allow to use shortcuts with selected blocks
-     *
      * @type {boolean}
      */
     const isShortcut = event.ctrlKey || event.metaKey || event.altKey || event.shiftKey;
@@ -173,7 +175,6 @@ export default class BlockEvents extends Module {
    * Key up on Block:
    * - shows Inline Toolbar if something selected
    * - shows conversion toolbar with 85% of block selection
-   *
    * @param {KeyboardEvent} event - keyup event
    */
   public keyup(event: KeyboardEvent): void {
@@ -194,7 +195,6 @@ export default class BlockEvents extends Module {
   /**
    * Copying selected blocks
    * Before putting to the clipboard we sanitize all blocks and then copy to the clipboard
-   *
    * @param {ClipboardEvent} event - clipboard event
    */
   public handleCommandC(event: ClipboardEvent): void {
@@ -210,7 +210,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Copy and Delete selected Blocks
-   *
    * @param {ClipboardEvent} event - clipboard event
    */
   public handleCommandX(event: ClipboardEvent): void {
@@ -242,7 +241,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Tab pressed inside a Block.
-   *
    * @param {KeyboardEvent} event - keydown
    */
   private tabPressed(event: KeyboardEvent): void {
@@ -277,7 +275,6 @@ export default class BlockEvents extends Module {
 
   /**
    * '/' keydown inside a Block
-   *
    * @param event - keydown
    */
   private slashPressed(event: KeyboardEvent): void {
@@ -313,7 +310,6 @@ export default class BlockEvents extends Module {
 
   /**
    * ENTER pressed on block
-   *
    * @param {KeyboardEvent} event - keydown
    */
   private enter(event: KeyboardEvent): void {
@@ -388,7 +384,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Handle backspace keydown on Block
-   *
    * @param {KeyboardEvent} event - keydown
    */
   private backspace(event: KeyboardEvent): void {
@@ -476,7 +471,6 @@ export default class BlockEvents extends Module {
    * Handles delete keydown on Block
    * Removes char after the caret.
    * If caret is at the end of the block, merge next block with current
-   *
    * @param {KeyboardEvent} event - keydown
    */
   private delete(event: KeyboardEvent): void {
@@ -560,7 +554,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Merge passed Blocks
-   *
    * @param targetBlock - to which Block we want to merge
    * @param blockToMerge - what Block we want to merge
    */
@@ -585,7 +578,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Handle right and down keyboard keys
-   *
    * @param {KeyboardEvent} event - keyboard event
    */
   private arrowRightAndDown(event: KeyboardEvent): void {
@@ -692,7 +684,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Handle left and up keyboard keys
-   *
    * @param {KeyboardEvent} event - keyboard event
    */
   private arrowLeftAndUp(event: KeyboardEvent): void {
@@ -787,7 +778,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Cases when we need to close Toolbar
-   *
    * @param {KeyboardEvent} event - keyboard event
    */
   private needToolbarClosing(event: KeyboardEvent): boolean {
@@ -852,7 +842,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Convert KeyboardEvent.key or code to the legacy numeric keyCode
-   *
    * @param event - keyboard event
    */
   private getKeyCode(event: KeyboardEvent): number | null {
@@ -873,7 +862,6 @@ export default class BlockEvents extends Module {
 
   /**
    * Detect whether KeyDown should be treated as printable input
-   *
    * @param event - keyboard event
    */
   private isPrintableKeyEvent(event: KeyboardEvent): boolean {

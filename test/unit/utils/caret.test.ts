@@ -39,7 +39,6 @@ describe('caret utilities', () => {
   /**
    * Helper function to set up selection in jsdom
    * jsdom has limited Selection API support, so we need to manually set focusNode and focusOffset
-   *
    * @param node - The node where the selection should be set
    * @param offset - The offset within the node where the selection should be set
    */

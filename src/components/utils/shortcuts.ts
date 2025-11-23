@@ -9,7 +9,6 @@ import Shortcut from '@codexteam/shortcuts';
  * Each shortcut must have name and handler
  * `name` is a shortcut, like 'CMD+K', 'CMD+B' etc
  * `handler` is a callback
- *
  * @interface ShortcutData
  */
 export interface ShortcutData {
@@ -40,14 +39,12 @@ export interface ShortcutData {
 class Shortcuts {
   /**
    * All registered shortcuts
-   *
    * @type {Map<HTMLElement | Document, Shortcut[]>}
    */
   private registeredShortcuts: Map<HTMLElement | Document, Shortcut[]> = new Map();
 
   /**
    * Register shortcut
-   *
    * @param shortcut - shortcut options
    */
   public add(shortcut: ShortcutData): void {
@@ -71,7 +68,6 @@ class Shortcuts {
 
   /**
    * Remove shortcut
-   *
    * @param element - Element shortcut is set for
    * @param name - shortcut name
    */
@@ -103,7 +99,6 @@ class Shortcuts {
 
   /**
    * Get Shortcut instance if exist
-   *
    * @param element - Element shorcut is set for
    * @param shortcut - shortcut name
    * @returns {number} index - shortcut index if exist

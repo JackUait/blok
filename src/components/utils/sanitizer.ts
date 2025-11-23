@@ -3,7 +3,6 @@
  * CodeX Sanitizer
  *
  * Clears HTML from taint tags
- *
  * @version 2.0.0
  * @example
  *
@@ -44,7 +43,6 @@ const UNSAFE_URL_ATTR_FALLBACK_PATTERN =
  * Sanitize Blocks
  *
  * Enumerate blocks and clean data
- *
  * @param blocksData - blocks' data to sanitize
  * @param sanitizeConfig — sanitize config to use or function to get config for Tool
  * @param globalSanitizer — global sanitizer config defined on editor level
@@ -71,7 +69,6 @@ export const sanitizeBlocks = (
 /**
  * Cleans string from unwanted tags
  * Method allows to use default config
- *
  * @param {string} taintString - taint string
  * @param {SanitizerConfig} customConfig - allowed tags
  * @returns {string} clean HTML
@@ -91,7 +88,6 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {} as
 
 /**
  * Method recursively reduces Block's data and cleans with passed rules
- *
  * @param {BlockToolData|object|*} dataToSanitize - taint string or object/array that contains taint string
  * @param {SanitizerConfig} rules - object with sanitizer rules
  * @param {SanitizerConfig} globalRules - global sanitizer config
@@ -135,7 +131,6 @@ const deepSanitize = (
 
 /**
  * Clean array
- *
  * @param {Array} array - [1, 2, {}, []]
  * @param {SanitizerConfig} ruleForItem - sanitizer config for array
  * @param {SanitizerConfig} globalRules - global sanitizer config
@@ -150,7 +145,6 @@ const cleanArray = (
 
 /**
  * Clean object
- *
  * @param {object} object  - {level: 0, text: 'adada', items: [1,2,3]}}
  * @param {object} rules - { b: true } or true|false
  * @param {SanitizerConfig} globalRules - global sanitizer config
@@ -190,7 +184,6 @@ const cleanObject = (
 
 /**
  * Clean primitive value
- *
  * @param {string} taintString - string to clean
  * @param {SanitizerConfig|boolean} rule - sanitizer rule
  * @param {SanitizerConfig} globalRules - global sanitizer config
@@ -220,9 +213,8 @@ const cleanOneItem = (
 
 /**
  * Check if passed item is a HTML Janitor rule:
- *  { a : true }, {}, false, true, function(){} — correct rules
- *  undefined, null, 0, 1, 2 — not a rules
- *
+ * { a : true }, {}, false, true, function(){} — correct rules
+ * undefined, null, 0, 1, 2 — not a rules
  * @param {SanitizerConfig} config - config to check
  */
 const isRule = (config: DeepSanitizerRule): boolean => {

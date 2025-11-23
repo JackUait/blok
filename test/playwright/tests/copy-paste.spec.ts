@@ -18,7 +18,7 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 
 const SIMPLE_IMAGE_TOOL_UMD_PATH = path.resolve(
   __dirname,
-  '../../../node_modules/@editorjs/simple-image/dist/simple-image.umd.js'
+  '../../../node_modules/@editorjs/simple-image/dist/bundle.js'
 );
 
 const HOLDER_ID = 'editorjs';
@@ -181,12 +181,6 @@ const paste = async (page: Page, locator: Locator, data: Record<string, string>)
 
     element.dispatchEvent(pasteEvent);
   }, data);
-
-  await page.evaluate(() => {
-    return new Promise((resolve) => {
-      setTimeout(resolve, 200);
-    });
-  });
 };
 
 const pasteFiles = async (page: Page, locator: Locator, files: ClipboardFileDescriptor[]): Promise<void> => {
@@ -207,12 +201,6 @@ const pasteFiles = async (page: Page, locator: Locator, files: ClipboardFileDesc
 
     element.dispatchEvent(pasteEvent);
   }, files);
-
-  await page.evaluate(() => {
-    return new Promise((resolve) => {
-      setTimeout(resolve, 200);
-    });
-  });
 };
 
 const selectAllText = async (locator: Locator): Promise<void> => {
@@ -352,9 +340,8 @@ test.describe('copy and paste', () => {
       });
 
       const blocks = page.locator(BLOCK_SELECTOR);
-      const texts = (await blocks.allTextContents()).map((text) => text.trim()).filter(Boolean);
 
-      expect(texts).toStrictEqual(['First block', 'Second block']);
+      await expect(blocks).toHaveText(['First block', 'Second block']);
     });
 
     test('should paste plain text with special characters intact', async ({ page }) => {
@@ -384,9 +371,8 @@ test.describe('copy and paste', () => {
       });
 
       const blocks = page.locator(BLOCK_SELECTOR);
-      const texts = (await blocks.allTextContents()).map((text) => text.trim()).filter(Boolean);
 
-      expect(texts).toStrictEqual(['First block', 'Second block']);
+      await expect(blocks).toHaveText(['First block', 'Second block']);
     });
 
     test('should paste using custom data type', async ({ page }) => {
@@ -410,9 +396,8 @@ test.describe('copy and paste', () => {
       });
 
       const blocks = page.locator(BLOCK_SELECTOR);
-      const texts = (await blocks.allTextContents()).map((text) => text.trim()).filter(Boolean);
 
-      expect(texts).toStrictEqual(['First block', 'Second block']);
+      await expect(blocks).toHaveText(['First block', 'Second block']);
     });
 
     test('should parse block tags', async ({ page }) => {
@@ -498,9 +483,7 @@ test.describe('copy and paste', () => {
         'text/html': maliciousHtml,
       });
 
-      const texts = (await page.locator(BLOCK_SELECTOR).allTextContents()).map((text) => text.trim()).filter(Boolean);
-
-      expect(texts).toStrictEqual(['Safe text', 'Another line']);
+      await expect(page.locator(BLOCK_SELECTOR)).toHaveText(['Safe text', 'Another line']);
 
       const scriptExecuted = await page.evaluate(() => {
         return window.__maliciousPasteExecuted ?? false;
@@ -703,12 +686,15 @@ test.describe('copy and paste', () => {
         'text/plain': 'Hello',
       });
 
-      const events = await page.evaluate(() => {
-        return window.blockToolPasteEvents ?? [];
+      const events = await page.waitForFunction(() => {
+        return window.blockToolPasteEvents?.length ? window.blockToolPasteEvents : undefined;
       });
 
-      expect(events).toHaveLength(1);
-      expect(events[0]?.defaultPrevented).toBe(false);
+      const eventList = await events.jsonValue();
+
+      expect(eventList).toBeDefined();
+      expect(eventList).toHaveLength(1);
+      expect(eventList?.[0]?.defaultPrevented).toBe(false);
     });
   });
 

@@ -12,7 +12,6 @@ import type { MenuConfig } from '../../../types/tools';
 export default class ItalicInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
-   *
    * @returns {boolean}
    */
   public static isInline = true;
@@ -25,7 +24,6 @@ export default class ItalicInlineTool implements InlineTool {
   /**
    * Sanitizer Rule
    * Leave <i> and <em> tags
-   *
    * @returns {object}
    */
   public static get sanitize(): SanitizerConfig {
@@ -89,7 +87,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Handle toggle for collapsed selection (caret)
-   *
    * @param range - Current range
    * @param selection - Current selection
    */
@@ -129,7 +126,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Check if current selection is within an italic tag
-   *
    * @param selection - The Selection object to check
    */
   private isSelectionVisuallyItalic(selection: Selection): boolean {
@@ -144,7 +140,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Check if a range contains italic text
-   *
    * @param range - The range to check
    * @param options - Options for checking italic status
    */
@@ -200,7 +195,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Wrap selection with <i> tag
-   *
    * @param range - The Range object containing the selection to wrap
    */
   private wrapWithItalic(range: Range): void {
@@ -216,7 +210,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Remove italic tags (<i>/<em>) while preserving content
-   *
    * @param range - The Range object containing the selection to unwrap
    */
   private unwrapItalicTags(range: Range): void {
@@ -281,7 +274,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Check if a node or any of its parents is an italic tag
-   *
    * @param node - The node to check
    */
   private hasItalicParent(node: Node | null): boolean {
@@ -298,7 +290,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Find an italic element in the parent chain
-   *
    * @param node - The node to start searching from
    */
   private findItalicElement(node: Node | null): HTMLElement | null {
@@ -315,7 +306,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Check if an element is an italic tag (<i> or <em>)
-   *
    * @param node - The element to check
    */
   private isItalicTag(node: Element): boolean {
@@ -326,7 +316,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Collect all italic ancestor elements within a range
-   *
    * @param range - The range to search for italic ancestors
    */
   private collectItalicAncestors(range: Range): HTMLElement[] {
@@ -365,7 +354,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Get HTML content of a range with italic tags removed
-   *
    * @param range - The range to extract HTML from
    */
   private getRangeHtmlWithoutItalic(range: Range): string {
@@ -382,7 +370,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Remove nested italic tags from a root node
-   *
    * @param root - The root node to process
    */
   private removeNestedItalic(root: ParentNode): void {
@@ -399,7 +386,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Unwrap an element by moving its children to the parent
-   *
    * @param element - The element to unwrap
    */
   private unwrapElement(element: Element): void {
@@ -420,7 +406,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Replace the current range contents with provided HTML snippet
-   *
    * @param range - Range to replace
    * @param html - HTML string to insert
    */
@@ -447,7 +432,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Convert an HTML snippet to a document fragment
-   *
    * @param html - HTML string to convert
    */
   private createFragmentFromHtml(html: string): DocumentFragment {
@@ -460,7 +444,6 @@ export default class ItalicInlineTool implements InlineTool {
 
   /**
    * Move a temporary marker element outside of an italic ancestor while preserving content order
-   *
    * @param marker - Marker element wrapping the selection contents
    * @param italicElement - Italic ancestor containing the marker
    */

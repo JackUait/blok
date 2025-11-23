@@ -1247,7 +1247,7 @@ test.describe('api.blocks', () => {
    * These test the conversion options UI which uses getConvertibleToolsForBlock
    */
   test.describe('getConvertibleToolsForBlock (via UI)', () => {
-    const BLOCK_TUNES_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy=block-tunes]`;
+    const BLOCK_TUNES_SELECTOR = `[data-cy=block-tunes]`;
     const CONVERT_TO_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-item-name="convert-to"]`;
 
     const openConvertToMenu = async (page: Page): Promise<Locator> => {
@@ -1359,6 +1359,12 @@ test.describe('api.blocks', () => {
       });
 
       await openBlockSettings(page);
+
+      // Check if block tunes popover is visible
+      await expect(page.locator(BLOCK_TUNES_SELECTOR).locator('.ce-popover__container')).toBeVisible();
+
+      // Check if delete tune is visible (debug)
+      await expect(page.locator(`${BLOCK_TUNES_SELECTOR} [data-item-name="delete"]`)).toBeVisible();
 
       // Check that "Convert to" menu item is visible
       await expect(page.locator(CONVERT_TO_SELECTOR)).toBeVisible();

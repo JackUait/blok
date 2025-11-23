@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_TUNES_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy=block-tunes]`;
+const BLOCK_TUNES_SELECTOR = '.ce-popover[data-cy=block-tunes]';
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
 const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
 const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} .ce-popover-item`;
@@ -188,7 +188,7 @@ const createEditorWithPlugin = async (page: Page, data?: Record<string, unknown>
 };
 
 const waitForBlockTunesPopover = async (page: Page, timeout = 5_000): Promise<void> => {
-  await page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover`).waitFor({
+  await page.locator(BLOCK_TUNES_SELECTOR).waitFor({
     state: 'attached',
     timeout,
   });

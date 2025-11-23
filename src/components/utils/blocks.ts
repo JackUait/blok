@@ -10,7 +10,6 @@ import { isToolConvertable } from './tools';
 
 /**
  * Check if block has valid conversion config for export or import.
- *
  * @param block - block to check
  * @param direction - export for block to merge from, import for block to merge to
  */
@@ -26,12 +25,11 @@ export const isBlockConvertable = (block: Block, direction: 'export' | 'import')
  * data1 = { level: 1 }
  *
  * data2 = {
- *    text: "Heading text",
- *    level: 1
- *  }
+ * text: "Heading text",
+ * level: 1
+ * }
  *
  * isSameBlockData(data1, data2) => true
- *
  * @param data1 – first block data
  * @param data2 – second block data
  */
@@ -43,7 +41,6 @@ export const isSameBlockData = (data1: BlockToolData, data2: BlockToolData): boo
 
 /**
  * Returns list of tools you can convert specified block to
- *
  * @param block - block to get conversion items for
  * @param allBlockTools - all block tools available in the editor
  */
@@ -115,10 +112,9 @@ export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools
  * Check if two blocks could be merged.
  *
  * We can merge two blocks if:
- *  - they have the same type
- *  - they have a merge function (.mergeable = true)
- *  - If they have valid conversions config
- *
+ * - they have the same type
+ * - they have a merge function (.mergeable = true)
+ * - If they have valid conversions config
  * @param targetBlock - block to merge to
  * @param blockToMerge - block to merge from
  */
@@ -147,7 +143,6 @@ export const areBlocksMergeable = (targetBlock: Block, blockToMerge: Block): boo
 
 /**
  * Using conversionConfig, convert block data to string.
- *
  * @param blockData - block data to convert
  * @param conversionConfig - tool's conversion config
  */
@@ -175,7 +170,6 @@ export const convertBlockDataToString = (blockData: BlockToolData, conversionCon
 
 /**
  * Using conversionConfig, convert string to block data.
- *
  * @param stringToImport - string to convert
  * @param conversionConfig - tool's conversion config
  * @param targetToolConfig - target tool config, used in conversionConfig.import method

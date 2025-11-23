@@ -54,6 +54,7 @@ const createEditorStub = (): UI['Editor'] => {
     BlockSettings: {
       opened: false,
       close: vi.fn(),
+      contains: vi.fn(() => false),
       nodes: {
         wrapper: blockSettingsWrapper,
       },
@@ -70,6 +71,7 @@ const createEditorStub = (): UI['Editor'] => {
         close: vi.fn(),
         hasFocus: vi.fn(() => false),
       },
+      contains: vi.fn(() => false),
     },
     BlockEvents: {
       keydown: vi.fn(),

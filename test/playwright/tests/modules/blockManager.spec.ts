@@ -186,7 +186,7 @@ const openBlockSettings = async (page: Page, index: number): Promise<void> => {
 };
 
 const clickTune = async (page: Page, tuneName: string): Promise<void> => {
-  const tuneButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-item-name=${tuneName}]`);
+  const tuneButton = page.locator(`[data-cy="block-tunes"] [data-item-name=${tuneName}]`);
 
   await tuneButton.waitFor({ state: 'visible' });
   await tuneButton.click();

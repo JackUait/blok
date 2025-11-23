@@ -34,7 +34,6 @@ export class PopoverItemSeparator extends PopoverItem {
 
   /**
    * Toggles item hidden state
-   *
    * @param isHidden - true if item should be hidden
    */
   public toggleHidden(isHidden: boolean): void {

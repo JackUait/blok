@@ -22,14 +22,12 @@ export default class BlockSelection extends Module {
    * Sometimes .anyBlockSelected can be called frequently,
    * for example at ui@selectionChange (to clear native browser selection in CBS)
    * We use cache to prevent multiple iterations through all the blocks
-   *
    * @private
    */
   private anyBlockSelectedCache: boolean | null = null;
 
   /**
    * Sanitizer Config
-   *
    * @returns {SanitizerConfig}
    */
   private get sanitizerConfig(): SanitizerConfig {
@@ -63,7 +61,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Flag that identifies all Blocks selection
-   *
    * @returns {boolean}
    */
   public get allBlocksSelected(): boolean {
@@ -74,7 +71,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Set selected all blocks
-   *
    * @param {boolean} state - state to set
    */
   public set allBlocksSelected(state: boolean) {
@@ -89,7 +85,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Flag that identifies any Block selection
-   *
    * @returns {boolean}
    */
   public get anyBlockSelected(): boolean {
@@ -104,7 +99,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Return selected Blocks array
-   *
    * @returns {Block[]}
    */
   public get selectedBlocks(): Block[] {
@@ -114,7 +108,6 @@ export default class BlockSelection extends Module {
   /**
    * Flag used to define block selection
    * First CMD+A defines it as true and then second CMD+A selects all Blocks
-   *
    * @type {boolean}
    */
   private needToSelectAll = false;
@@ -122,7 +115,6 @@ export default class BlockSelection extends Module {
   /**
    * Flag used to define native input selection
    * In this case we allow double CMD+A to select Block
-   *
    * @type {boolean}
    */
   private nativeInputSelected = false;
@@ -130,14 +122,12 @@ export default class BlockSelection extends Module {
   /**
    * Flag identifies any input selection
    * That means we can select whole Block
-   *
    * @type {boolean}
    */
   private readyToBlockSelection = false;
 
   /**
    * SelectionUtils instance
-   *
    * @type {SelectionUtils}
    */
   private selection: SelectionUtils = new SelectionUtils();
@@ -205,7 +195,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Remove selection of Block
-   *
    * @param {number?} index - Block index according to the BlockManager's indexes
    */
   public unSelectBlockByIndex(index?: number): void {
@@ -226,7 +215,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Clear selection from Blocks
-   *
    * @param {Event} reason - event caused clear of selection
    * @param {boolean} restoreSelection - if true, restore saved selection
    */
@@ -271,7 +259,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Reduce each Block and copy its content
-   *
    * @param {ClipboardEvent} e - copy/cut event
    * @returns {Promise<void>}
    */
@@ -332,7 +319,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Select Block by its index
-   *
    * @param {number?} index - Block index according to the BlockManager's indexes
    */
   public selectBlockByIndex(index: number): void {
@@ -349,7 +335,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Select passed Block
-   *
    * @param {Block} block - Block to select
    */
   public selectBlock(block: Block): void {
@@ -371,7 +356,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Remove selection from passed Block
-   *
    * @param {Block} block - Block to unselect
    */
   public unselectBlock(block: Block): void {
@@ -401,7 +385,6 @@ export default class BlockSelection extends Module {
   /**
    * First CMD+A selects all input content by native behaviour,
    * next CMD+A keypress selects all blocks
-   *
    * @param {KeyboardEvent} event - keyboard event
    */
   private handleCommandA(event: KeyboardEvent): void {
@@ -501,7 +484,6 @@ export default class BlockSelection extends Module {
 
   /**
    * Remove selected blocks and insert pressed printable key
-   *
    * @param event - keyboard event that triggers replacement
    */
   private replaceSelectedBlocksWithPrintableKey(event: KeyboardEvent): void {
@@ -526,7 +508,6 @@ export default class BlockSelection extends Module {
       /**
        * If event.key length >1 that means key is special (e.g. Enter or Dead or Unidentified).
        * So we use empty string
-       *
        * @see https://developer.mozilla.org/ru/docs/Web/API/KeyboardEvent/key
        */
       Caret.insertContentAtCaretPosition(eventKey.length > 1 ? '' : eventKey);

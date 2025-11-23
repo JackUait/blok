@@ -1,6 +1,5 @@
 /**
  * Check if passed mutation belongs to a passed element
- *
  * @param mutationRecord - mutation to check
  * @param element - element that is expected to contain mutation
  */

@@ -1,6 +1,5 @@
 /**
  * Editor.js Saver
- *
  * @module Saver
  * @author Codex Team
  * @version 2.0.0
@@ -33,7 +32,6 @@ export default class Saver extends Module {
 
   /**
    * Composes new chain of Promises to fire them alternatelly
-   *
    * @returns {OutputData | undefined}
    */
   public async save(): Promise<OutputData | undefined> {
@@ -79,7 +77,6 @@ export default class Saver extends Module {
 
   /**
    * Saves and validates
-   *
    * @param {Block} block - Editor's Tool
    * @returns {ValidatedData} - Tool's validated data
    */
@@ -107,7 +104,6 @@ export default class Saver extends Module {
 
   /**
    * Creates output object with saved data, time and version of editor
-   *
    * @param {ValidatedData} allExtractedData - data extracted from Blocks
    * @returns {OutputData}
    */
@@ -162,7 +158,6 @@ export default class Saver extends Module {
 
   /**
    * Sanitizes extracted block data in-place
-   *
    * @param extractedData - collection of saved block data
    * @param getToolSanitizeConfig - resolver for tool-specific sanitize config
    * @param globalSanitizer - global sanitizer config specified in editor settings
@@ -209,7 +204,6 @@ export default class Saver extends Module {
 
   /**
    * Checks whether block data contains fields required for sanitizing procedure
-   *
    * @param blockData - data to check
    */
   private hasSanitizableData(blockData: SaverValidatedData): blockData is SanitizableBlockData {
@@ -218,7 +212,6 @@ export default class Saver extends Module {
 
   /**
    * Check that stub data matches OutputBlockData format
-   *
    * @param data - saved stub data that should represent original block payload
    */
   private isStubSavedData(data: BlockToolData): data is OutputData['blocks'][number] {
@@ -240,7 +233,6 @@ export default class Saver extends Module {
 
   /**
    * Returns the last successfully extracted data for the provided block, if any.
-   *
    * @param block - block whose preserved data should be returned
    */
   private getPreservedSavedData(block: Block): (SavedData & { tunes?: Record<string, BlockTuneData> }) | undefined {

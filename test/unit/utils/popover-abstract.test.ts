@@ -31,7 +31,6 @@ class TestPopover extends PopoverAbstract {
 
   /**
    * Override to track calls to showNestedItems
-   *
    * @param item - The popover item to show nested items for
    */
   protected override showNestedItems(item: PopoverItemDefault | PopoverItemHtml): void {
@@ -54,7 +53,6 @@ class TestPopover extends PopoverAbstract {
 
   /**
    * Exposes getTargetItem for testing purposes
-   *
    * @param event - The event to get the target item from
    */
   public invokeGetTargetItem(event: Event): PopoverItemDefault | PopoverItemHtml | undefined {
@@ -63,7 +61,6 @@ class TestPopover extends PopoverAbstract {
 
   /**
    * Exposes handleItemClick for testing purposes
-   *
    * @param item - The popover item to handle click for
    */
   public invokeHandleItemClick(item: PopoverItem): void {
@@ -72,7 +69,6 @@ class TestPopover extends PopoverAbstract {
 
   /**
    * Exposes buildItems for testing purposes
-   *
    * @param items - The item parameters to build items from
    */
   public invokeBuildItems(items: PopoverItemParams[]): Array<PopoverItem> {

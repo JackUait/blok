@@ -189,7 +189,9 @@ export default [
       '**/*.d.ts',
       'src/components/tools/paragraph/**',
       'src/polyfills.ts',
-      'dist'
+      'dist',
+      'public/assets/**',
+      '**/public/assets/**',
     ],
   },
   ...compat.config({
@@ -252,6 +254,10 @@ export default [
           selector: 'VariableDeclaration[kind="let"]',
           message: 'Use const instead of let. If reassignment is needed, refactor to avoid mutation.',
         },
+        {
+          selector: 'Decorator',
+          message: 'Decorators are not allowed.',
+        },
       ],
       'jsdoc/require-returns-type': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
@@ -288,6 +294,7 @@ export default [
         },
         rules: {
           '@typescript-eslint/no-floating-promises': 'error',
+          'no-unused-vars': 'off',
         },
       },
       {

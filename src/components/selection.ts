@@ -30,13 +30,11 @@ interface Document {
 
 /**
  * Working with selection
- *
  * @typedef {SelectionUtils} SelectionUtils
  */
 export default class SelectionUtils {
   /**
    * Selection instances
-   *
    * @todo Check if this is still relevant
    */
   public instance: Selection | null = null;
@@ -44,14 +42,12 @@ export default class SelectionUtils {
 
   /**
    * This property can store SelectionUtils's range for restoring later
-   *
    * @type {Range|null}
    */
   public savedSelectionRange: Range | null = null;
 
   /**
    * Fake background is active
-   *
    * @returns {boolean}
    */
   public isFakeBackgroundEnabled = false;
@@ -63,7 +59,6 @@ export default class SelectionUtils {
 
   /**
    * Editor styles
-   *
    * @returns {{editorWrapper: string, editorZone: string}}
    */
   public static get CSS(): { editorWrapper: string; editorZone: string } {
@@ -76,7 +71,6 @@ export default class SelectionUtils {
   /**
    * Returns selected anchor
    * {@link https://developer.mozilla.org/ru/docs/Web/API/Selection/anchorNode}
-   *
    * @returns {Node|null}
    */
   public static get anchorNode(): Node | null {
@@ -87,7 +81,6 @@ export default class SelectionUtils {
 
   /**
    * Returns selected anchor element
-   *
    * @returns {Element|null}
    */
   public static get anchorElement(): Element | null {
@@ -113,7 +106,6 @@ export default class SelectionUtils {
   /**
    * Returns selection offset according to the anchor node
    * {@link https://developer.mozilla.org/ru/docs/Web/API/Selection/anchorOffset}
-   *
    * @returns {number|null}
    */
   public static get anchorOffset(): number | null {
@@ -124,7 +116,6 @@ export default class SelectionUtils {
 
   /**
    * Is current selection range collapsed
-   *
    * @returns {boolean|null}
    */
   public static get isCollapsed(): boolean | null {
@@ -135,7 +126,6 @@ export default class SelectionUtils {
 
   /**
    * Check current selection if it is at Editor's zone
-   *
    * @returns {boolean}
    */
   public static get isAtEditor(): boolean {
@@ -144,7 +134,6 @@ export default class SelectionUtils {
 
   /**
    * Check if passed selection is at Editor's zone
-   *
    * @param selection - Selection object to check
    */
   public static isSelectionAtEditor(selection: Selection | null): boolean {
@@ -172,7 +161,6 @@ export default class SelectionUtils {
 
   /**
    * Check if passed range at Editor zone
-   *
    * @param range - range to check
    */
   public static isRangeAtEditor(range: Range): boolean | void {
@@ -207,7 +195,6 @@ export default class SelectionUtils {
 
   /**
    * Return first range
-   *
    * @returns {Range|null}
    */
   public static get range(): Range | null {
@@ -216,7 +203,6 @@ export default class SelectionUtils {
 
   /**
    * Returns range from passed Selection object
-   *
    * @param selection - Selection object to get Range from
    */
   public static getRangeFromSelection(selection: Selection | null): Range | null {
@@ -225,7 +211,6 @@ export default class SelectionUtils {
 
   /**
    * Calculates position and size of selected text
-   *
    * @returns {DOMRect}
    */
   public static get rect(): DOMRect {
@@ -297,7 +282,6 @@ export default class SelectionUtils {
 
   /**
    * Returns selected text as String
-   *
    * @returns {string}
    */
   public static get text(): string {
@@ -309,7 +293,6 @@ export default class SelectionUtils {
   /**
    * Returns window SelectionUtils
    * {@link https://developer.mozilla.org/ru/docs/Web/API/Window/getSelection}
-   *
    * @returns {Selection}
    */
   public static get(): Selection | null  {
@@ -318,7 +301,6 @@ export default class SelectionUtils {
 
   /**
    * Set focus to contenteditable or native input element
-   *
    * @param element - element where to set focus
    * @param offset - offset of cursor
    */
@@ -358,7 +340,6 @@ export default class SelectionUtils {
 
   /**
    * Check if current range exists and belongs to container
-   *
    * @param container - where range should be
    */
   public static isRangeInsideContainer(container: HTMLElement): boolean {
@@ -391,7 +372,6 @@ export default class SelectionUtils {
 
   /**
    * Check if passed element contains a fake cursor
-   *
    * @param el - where to check
    */
   public static isFakeCursorInsideContainer(el: HTMLElement): boolean {
@@ -400,7 +380,6 @@ export default class SelectionUtils {
 
   /**
    * Removes fake cursor from a container
-   *
    * @param container - container to look for
    */
   public static removeFakeCursor(container: HTMLElement = document.body): void {
@@ -515,7 +494,6 @@ export default class SelectionUtils {
 
   /**
    * Collects text nodes that intersect with the passed range
-   *
    * @param range - selection range
    */
   private collectTextNodes(range: Range): Text[] {
@@ -553,7 +531,6 @@ export default class SelectionUtils {
 
   /**
    * Wraps passed range (that belongs to the single text node) with fake background element
-   *
    * @param range - range to wrap
    */
   private wrapRangeWithFakeBackground(range: Range): HTMLElement | null {
@@ -585,7 +562,6 @@ export default class SelectionUtils {
 
   /**
    * Removes fake background wrapper
-   *
    * @param element - wrapper element
    */
   private unwrapFakeBackground(element: HTMLElement): void {
@@ -654,7 +630,6 @@ export default class SelectionUtils {
 
   /**
    * Looks ahead to find passed tag from current selection
-   *
    * @param  {string} tagName       - tag to found
    * @param  {string} [className]   - tag's class name
    * @param  {number} [searchDepth] - count of tags that can be included. For better performance.
@@ -682,7 +657,6 @@ export default class SelectionUtils {
 
     /**
      * Helper function to find parent tag starting from a given node
-     *
      * @param {HTMLElement} startNode - node to start searching from
      * @returns {HTMLElement | null}
      */
@@ -726,7 +700,6 @@ export default class SelectionUtils {
 
   /**
    * Expands selection range to the passed parent node
-   *
    * @param {HTMLElement} element - element which contents should be selected
    */
   public expandToTag(element: HTMLElement): void {

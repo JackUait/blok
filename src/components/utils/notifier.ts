@@ -1,6 +1,5 @@
 /**
  * Use external package module for notifications
- *
  * @see https://github.com/codex-team/js-notifier
  */
 import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } from 'codex-notifier';
@@ -25,7 +24,6 @@ export default class Notifier {
 
   /**
    * Lazily load codex-notifier only when necessary.
-   *
    * @returns {Promise<CodexNotifierModule>} loaded notifier module
    */
   private loadNotifierModule(): Promise<CodexNotifierModule> {
@@ -58,7 +56,6 @@ export default class Notifier {
 
   /**
    * Show web notification
-   *
    * @param {NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions} options - notification options
    */
   public show(options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions): void {
@@ -73,7 +70,6 @@ export default class Notifier {
 
   /**
    * Narrow unknown module to codex-notifier module shape
-   *
    * @param {unknown} candidate - module to verify
    */
   private isNotifierModule(candidate: unknown): candidate is CodexNotifierModule {

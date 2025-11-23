@@ -77,7 +77,6 @@ const selectAll = async (locator: Locator): Promise<void> => {
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -101,7 +100,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with provided blocks
- *
  * @param page - The Playwright page object
  * @param blocks - The blocks data to initialize the editor with
  */
@@ -123,7 +121,6 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
 
 /**
  * Select text content within a locator by string match using Playwright's built-in methods
- *
  * @param locator - The Playwright locator for the element containing the text
  * @param text - The text string to select within the element
  */
@@ -200,7 +197,6 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
 
 /**
  * Submit a URL via the inline link input
- *
  * @param page - The Playwright page object
  * @param url - URL to submit
  */

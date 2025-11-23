@@ -14,7 +14,6 @@ import SelectionUtils from '../selection';
 export default class BoldInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
-   *
    * @returns {boolean}
    */
   public static isInline = true;
@@ -27,7 +26,6 @@ export default class BoldInlineTool implements InlineTool {
   /**
    * Sanitizer Rule
    * Leave <strong> tags
-   *
    * @returns {object}
    */
   public static get sanitize(): SanitizerConfig {
@@ -55,7 +53,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Normalize bold tags within a mutated node if it belongs to the editor
-   *
    * @param node - The node affected by mutation
    */
   private static normalizeBoldInNode(node: Node): void {
@@ -231,7 +228,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Ensure the caret remains at the end of the boundary text node when exiting bold
-   *
    * @param selection - Current document selection
    * @param boundary - Text node following the bold element
    */
@@ -245,7 +241,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Ensure the caret remains at the end of the boundary text node after the current microtask queue is flushed
-   *
    * @param boundary - Boundary text node that should keep the caret at its end
    */
   private static scheduleBoundaryCaretAdjustment(boundary: Text): void {
@@ -283,7 +278,6 @@ export default class BoldInlineTool implements InlineTool {
   /**
    * Ensure there is a text node immediately following the provided bold element.
    * Creates one when necessary.
-   *
    * @param boldElement - Bold element that precedes the boundary
    * @returns The text node following the bold element or null if it cannot be created
    */
@@ -315,7 +309,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Resolve the boundary text node tracked for a collapsed exit record.
-   *
    * @param record - Collapsed exit tracking record
    * @returns The aligned boundary text node or null when it cannot be determined
    */
@@ -341,7 +334,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Move caret to the end of the provided boundary text node
-   *
    * @param selection - Current selection to update
    * @param boundary - Boundary text node that hosts the caret
    */
@@ -358,7 +350,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Recursively check if a node or any of its parents is a bold tag (<strong>)
-   *
    * @param node - The node to check
    */
   private static hasBoldParent(node: Node | null): boolean {
@@ -375,7 +366,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Recursively find a bold element (<strong>) in the parent chain
-   *
    * @param node - The node to start searching from
    */
   private static findBoldElement(node: Node | null): HTMLElement | null {
@@ -392,7 +382,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Check if an element is a bold tag (<strong> for conversion)
-   *
    * @param node - The element to check
    */
   private static isBoldTag(node: Element): boolean {
@@ -403,7 +392,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Ensure an element is a <strong> tag, converting from <b> if needed
-   *
    * @param element - The element to ensure is a strong tag
    */
   private static ensureStrongElement(element: HTMLElement): HTMLElement {
@@ -430,7 +418,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Merge two strong elements by moving children from right to left
-   *
    * @param left - The left strong element to merge into
    * @param right - The right strong element to merge from
    */
@@ -496,7 +483,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Check if current selection is within a bold tag (<strong>)
-   *
    * @param selection - The Selection object to check
    */
   private isSelectionVisuallyBold(selection: Selection): boolean {
@@ -511,7 +497,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Wrap selection with <strong> tag
-   *
    * @param range - The Range object containing the selection to wrap
    */
   private wrapWithBold(range: Range): void {
@@ -544,7 +529,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Remove bold tags (<strong>) while preserving content
-   *
    * @param range - The Range object containing the selection to unwrap
    */
   private unwrapBoldTags(range: Range): void {
@@ -617,7 +601,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Replace the current range contents with provided HTML snippet
-   *
    * @param range - Range to replace
    * @param html - HTML string to insert
    * @returns range spanning inserted content
@@ -645,7 +628,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Move a temporary marker element outside of a bold ancestor while preserving content order
-   *
    * @param marker - Marker element wrapping the selection contents
    * @param boldElement - Bold ancestor containing the marker
    */
@@ -692,7 +674,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Select all contents of an element
-   *
    * @param element - The element whose contents should be selected
    */
   private selectElementContents(element: HTMLElement): void {
@@ -712,7 +693,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Set a shortcut
-   *
    * @returns {boolean}
    */
   public get shortcut(): string {
@@ -721,7 +701,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Check if a range contains bold text
-   *
    * @param range - The range to check
    * @param options - Options for checking bold status
    * @param options.ignoreWhitespace - Whether to ignore whitespace-only text nodes
@@ -782,7 +761,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Remove nested bold tags from a root node
-   *
    * @param root - The root node to process
    */
   private removeNestedBold(root: ParentNode): void {
@@ -799,7 +777,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Unwrap an element by moving its children to the parent
-   *
    * @param element - The element to unwrap
    */
   private unwrapElement(element: Element): void {
@@ -820,7 +797,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Merge adjacent bold elements into a single element
-   *
    * @param element - The bold element to merge with adjacent elements
    */
   private mergeAdjacentBold(element: HTMLElement): HTMLElement {
@@ -880,7 +856,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Insert a bold wrapper at the caret so newly typed text becomes bold
-   *
    * @param range - Current collapsed range
    */
   private startCollapsedBold(range: Range): Range | undefined {
@@ -946,7 +921,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Insert a collapsed bold wrapper when the caret resides inside a text node
-   *
    * @param text - Text node containing the caret
    * @param strong - Strong element to insert
    * @param offset - Caret offset within the text node
@@ -980,7 +954,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Insert a collapsed bold wrapper directly into an element container
-   *
    * @param element - Container element
    * @param strong - Strong element to insert
    * @param offset - Index at which to insert the strong element
@@ -994,7 +967,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Check if an element is empty (has no text content)
-   *
    * @param element - The element to check
    */
   private static isElementEmpty(element: HTMLElement): boolean {
@@ -1053,7 +1025,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Normalize whitespace around a bold element
-   *
    * @param element - The bold element to normalize whitespace around
    */
   private normalizeWhitespaceAround(element: HTMLElement): void {
@@ -1063,7 +1034,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Replace non-breaking spaces with regular spaces in a text node
-   *
    * @param node - The text node to process
    */
   private static replaceNbspWithSpace(node: Node | null): void {
@@ -1083,7 +1053,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Restore a selection range from marker elements
-   *
    * @param markerId - The ID of the markers used to mark the selection
    */
   private restoreSelectionFromMarkers(markerId: string): Range | undefined {
@@ -1122,7 +1091,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Replace non-breaking spaces with regular spaces within a range
-   *
    * @param range - The range to process
    */
   private replaceNbspWithinRange(range?: Range): void {
@@ -1159,7 +1127,6 @@ export default class BoldInlineTool implements InlineTool {
   /**
    * Normalize all bold tags within the editor to <strong> tags
    * Converts any legacy <b> tags to <strong> tags
-   *
    * @param selection - The current selection to determine the editor context
    */
   private static normalizeBoldTagsWithinEditor(selection: Selection | null): void {
@@ -1184,7 +1151,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Replace non-breaking spaces with regular spaces in the block containing the selection
-   *
    * @param selection - The current selection to determine the block context
    */
   private static replaceNbspInBlock(selection: Selection | null): void {
@@ -1214,7 +1180,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Remove empty bold elements within the current block
-   *
    * @param selection - The current selection to determine the block context
    */
   private static removeEmptyBoldElements(selection: Selection | null): void {
@@ -1249,7 +1214,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Ensure collapsed bold placeholders absorb newly typed text
-   *
    * @param selection - The current selection to determine the editor context
    */
   private static synchronizeCollapsedBold(selection: Selection | null): void {
@@ -1329,7 +1293,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Ensure caret is positioned after boundary bold elements when toggling collapsed selections
-   *
    * @param selection - Current selection
    */
   private static moveCaretAfterBoundaryBold(selection: Selection): void {
@@ -1358,7 +1321,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Locate a bold element adjacent to a collapsed range
-   *
    * @param range - Range to inspect
    */
   private static getAdjacentBold(range: Range): HTMLElement | null {
@@ -1377,7 +1339,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Get bold element adjacent to a text node container
-   *
    * @param range - Current collapsed range
    * @param textNode - Text node hosting the caret
    */
@@ -1400,7 +1361,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Get bold element adjacent to an element container
-   *
    * @param range - Current collapsed range
    * @param element - Element containing the caret
    */
@@ -1418,7 +1378,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Exit collapsed bold state when caret no longer resides within bold content
-   *
    * @param selection - Current selection
    * @param range - Collapsed range after toggling bold
    */
@@ -1447,7 +1406,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Adjust caret when selection container is an element adjacent to bold content
-   *
    * @param selection - Current selection
    * @param range - Collapsed range to inspect
    * @returns true when caret position was updated
@@ -1469,7 +1427,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Move caret after the bold node that precedes the caret when possible
-   *
    * @param selection - Current selection
    * @param element - Container element
    * @param offset - Caret offset within the container
@@ -1496,7 +1453,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Move caret before the bold node that follows the caret, ensuring there's a text node to receive input
-   *
    * @param selection - Current selection
    * @param element - Container element
    * @param offset - Caret offset within the container
@@ -1523,7 +1479,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Adjust caret when selection container is a text node adjacent to bold content
-   *
    * @param selection - Current selection
    * @param range - Collapsed range to inspect
    */
@@ -1566,7 +1521,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Ensure caret is positioned at the end of a collapsed boundary text node before the browser processes a printable keydown
-   *
    * @param event - Keydown event fired before browser input handling
    */
   private static guardCollapsedBoundaryKeydown(event: KeyboardEvent): void {
@@ -1614,7 +1568,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Determine whether a node is a bold element (<strong>/<b>)
-   *
    * @param node - Node to inspect
    */
   private static isBoldElement(node: Node | null): node is Element {
@@ -1623,7 +1576,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Place caret at the provided offset within a text node
-   *
    * @param selection - Current selection
    * @param node - Target text node
    * @param offset - Offset within the text node
@@ -1640,7 +1592,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Position caret immediately after the provided node
-   *
    * @param selection - Current selection
    * @param node - Reference node
    */
@@ -1660,7 +1611,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Ensure there is a text node immediately following a bold element to accept new input
-   *
    * @param boldElement - Bold element after which text should be inserted
    * @param referenceNode - Node that currently follows the bold element
    */
@@ -1684,7 +1634,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Enforce length limits on collapsed bold elements
-   *
    * @param selection - The current selection to determine the editor context
    */
   private static enforceCollapsedBoldLengths(selection: Selection | null): void {
@@ -1768,7 +1717,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Split text content exceeding the allowed collapsed bold length and move the excess outside
-   *
    * @param boldEl - Bold element hosting the collapsed selection
    * @param allowedLength - Maximum allowed length for the collapsed bold
    * @param currentText - Current text content inside the bold element
@@ -1795,7 +1743,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Check if a node is within the provided container
-   *
    * @param target - Node to test
    * @param container - Potential ancestor container
    */
@@ -1823,7 +1770,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Normalize selection state after editor input or selection updates
-   *
    * @param source - The event source triggering the refresh
    */
   private static refreshSelectionState(source: 'selectionchange' | 'input'): void {
@@ -1888,7 +1834,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Prevent the browser's native bold command to avoid <b> wrappers
-   *
    * @param event - BeforeInput event fired by the browser
    */
   private static handleBeforeInput(event: InputEvent): void {
@@ -1913,12 +1858,10 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Attempt to toggle bold via the browser's native command
-   *
    * @param selection - Current selection
    */
   /**
    * Exit a collapsed bold selection by moving the caret outside the bold element
-   *
    * @param selection - The current selection
    * @param boldElement - The bold element to exit from
    */
@@ -1939,7 +1882,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Remove an empty bold element and place the caret before its position
-   *
    * @param selection - Current selection
    * @param boldElement - Bold element to remove
    * @param parent - Parent node that hosts the bold element
@@ -1960,7 +1902,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Exit a collapsed bold state when the bold element still contains text
-   *
    * @param selection - Current selection
    * @param boldElement - Bold element currently wrapping the caret
    * @param parent - Parent node that hosts the bold element
@@ -2011,7 +1952,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Get a bold element at the boundary of a collapsed range
-   *
    * @param range - The collapsed range to check
    */
   private static getBoundaryBold(range: Range): HTMLElement | null {
@@ -2030,7 +1970,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Get boundary bold when caret resides inside a text node
-   *
    * @param range - Collapsed range
    * @param textNode - Text container
    */
@@ -2052,7 +1991,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Get boundary bold when caret container is an element
-   *
    * @param range - Collapsed range
    * @param element - Element container
    */
@@ -2068,7 +2006,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Handle keyboard shortcut for bold when selection is collapsed
-   *
    * @param event - The keyboard event
    */
   private static handleShortcut(event: KeyboardEvent): void {
@@ -2099,7 +2036,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Check if a keyboard event is the bold shortcut (Cmd/Ctrl+B)
-   *
    * @param event - The keyboard event to check
    */
   private static isBoldShortcut(event: KeyboardEvent): boolean {
@@ -2116,7 +2052,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Check if a selection is inside the editor
-   *
    * @param selection - The selection to check
    */
   private static isSelectionInsideEditor(selection: Selection): boolean {
@@ -2133,7 +2068,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Check if an event target resides inside the editor wrapper
-   *
    * @param target - Event target to inspect
    */
   private static isEventTargetInsideEditor(target: EventTarget | null): boolean {
@@ -2172,7 +2106,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Get HTML content of a range with bold tags removed
-   *
    * @param range - The range to extract HTML from
    */
   private getRangeHtmlWithoutBold(range: Range): string {
@@ -2189,7 +2122,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Convert an HTML snippet to a document fragment
-   *
    * @param html - HTML string to convert
    */
   private static createFragmentFromHtml(html: string): DocumentFragment {
@@ -2202,7 +2134,6 @@ export default class BoldInlineTool implements InlineTool {
 
   /**
    * Collect all bold ancestor elements within a range
-   *
    * @param range - The range to search for bold ancestors
    */
   private collectBoldAncestors(range: Range): HTMLElement[] {

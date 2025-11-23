@@ -55,7 +55,6 @@ type BlockToolConstructableWithOptionalDisabling = BlockToolConstructable & {
 
 /**
  * Determines whether provided constructable exposes Block Tool capabilities.
- *
  * @param constructable - Tool constructable candidate.
  */
 const isBlockToolConstructable = (
@@ -66,7 +65,6 @@ const isBlockToolConstructable = (
 
 /**
  * Ensures constructable implements the Block Tool interface or throws.
- *
  * @param constructable - Tool constructable candidate.
  */
 const ensureBlockToolConstructable = (
@@ -81,7 +79,6 @@ const ensureBlockToolConstructable = (
 
 /**
  * Determines whether the supplied instance matches the block tool stub shape.
- *
  * @param instance - Value to test.
  */
 const isBlockToolStubInstance = (instance: unknown): instance is BlockToolStubInstance => {
@@ -102,7 +99,6 @@ const isBlockToolStubInstance = (instance: unknown): instance is BlockToolStubIn
 
 /**
  * Coerces a value to a block tool stub instance or throws.
- *
  * @param instance - Value to assert.
  */
 const ensureBlockToolStubInstance = (instance: unknown): BlockToolStubInstance => {
@@ -115,7 +111,6 @@ const ensureBlockToolStubInstance = (instance: unknown): BlockToolStubInstance =
 
 /**
  * Creates a simple mock function that records every call.
- *
  * @param implementation - Optional implementation executed on each invocation.
  */
 const createMock = <Args extends unknown[] = [], Result = void>(
@@ -234,7 +229,6 @@ const createBlockToolConstructable = (): BlockToolConstructable => {
 
 /**
  * Provides a constructable inline tool stub with supplied sanitize config.
- *
  * @param sanitize - Sanitize configuration exposed by the inline tool.
  */
 const createInlineToolConstructable = (
@@ -261,7 +255,6 @@ const createInlineToolConstructable = (
 
 /**
  * Creates options for instantiating a block tool adapter.
- *
  * @param override - Optional overrides applied to the default block tool options.
  */
 const createBlockToolOptions = (override: BlockToolOptionsOverride = {}): BlockToolAdapterOptions => {
@@ -300,7 +293,6 @@ const createBlockToolOptions = (override: BlockToolOptionsOverride = {}): BlockT
 
 /**
  * Creates options for instantiating an inline tool adapter.
- *
  * @param override - Optional overrides applied to the default inline tool options.
  */
 const createInlineToolOptions = (override: InlineToolOptionsOverride = {}): InlineToolAdapterOptions => ({
@@ -317,7 +309,6 @@ const createInlineToolOptions = (override: InlineToolOptionsOverride = {}): Inli
 
 /**
  * Creates an inline tool adapter with a specific sanitize configuration.
- *
  * @param sanitize - Sanitize configuration exposed by the inline tool.
  * @param name - Tool name used when registering the inline tool.
  */

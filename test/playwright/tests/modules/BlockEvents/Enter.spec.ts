@@ -155,6 +155,86 @@ test.describe('enter keydown', () => {
 
     expect(caretInsideLastBlock).toBeTruthy();
   });
+
+  test('should not create new block if Enter was handled by the Tool (preventDefault called)', async ({ page }) => {
+    const PREVENT_DEFAULT_TOOL_SOURCE = `class PreventDefaultTool {
+      static get enableLineBreaks() {
+        return false;
+      }
+
+      static get toolbox() {
+        return {
+            icon: 'P',
+            title: 'Prevent Default Tool'
+        };
+      }
+
+      render() {
+        const div = document.createElement('div');
+        div.contentEditable = 'true';
+        div.innerHTML = 'Prevent Default Tool';
+
+        div.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+          }
+        });
+
+        return div;
+      }
+
+      save(block) {
+        return {
+          text: block.innerHTML
+        };
+      }
+    }`;
+
+    await resetEditor(page);
+
+    await page.evaluate(async ({ holderId, toolSource }) => {
+      const PreventDefaultTool = new Function(`return (${toolSource});`)();
+
+      const editor = new window.EditorJS({
+        holder: holderId,
+        tools: {
+          preventDefaultTool: {
+            class: PreventDefaultTool,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'preventDefaultTool',
+              data: {
+                text: 'Prevent Default Tool',
+              },
+            },
+          ],
+        },
+      });
+
+      window.editorInstance = editor;
+      await editor.isReady;
+    }, { holderId: HOLDER_ID,
+      toolSource: PREVENT_DEFAULT_TOOL_SOURCE });
+
+    const block = page.locator('[contenteditable=true]');
+
+    await block.click();
+
+    // Wait for focus
+    await expect(block).toBeFocused();
+
+    await page.keyboard.press('Enter');
+
+    // Wait for potential reaction
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
+
+    const { blocks } = await saveEditor(page);
+
+    expect(blocks).toHaveLength(1);
+  });
 });
 
 declare global {

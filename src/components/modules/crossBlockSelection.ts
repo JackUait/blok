@@ -19,7 +19,6 @@ export default class CrossBlockSelection extends Module {
 
   /**
    * Module preparation
-   *
    * @returns {Promise}
    */
   public async prepare(): Promise<void> {
@@ -30,7 +29,6 @@ export default class CrossBlockSelection extends Module {
 
   /**
    * Sets up listeners
-   *
    * @param {MouseEvent} event - mouse down event
    */
   public watchSelection(event: MouseEvent): void {
@@ -64,7 +62,6 @@ export default class CrossBlockSelection extends Module {
   /**
    * Change selection state of the next Block
    * Used for CBS via Shift + arrow keys
-   *
    * @param {boolean} next - if true, toggle next block. Previous otherwise
    */
   public toggleBlockSelectedState(next = true): void {
@@ -127,7 +124,6 @@ export default class CrossBlockSelection extends Module {
 
   /**
    * Clear saved state
-   *
    * @param {Event} reason - event caused clear of selection
    */
   public clear(reason?: Event): void {
@@ -170,7 +166,6 @@ export default class CrossBlockSelection extends Module {
 
   /**
    * Enables Cross Block Selection
-   *
    * @param {MouseEvent} event - mouse down event
    */
   private enableCrossBlockSelection(event: MouseEvent): void {
@@ -208,7 +203,6 @@ export default class CrossBlockSelection extends Module {
   /**
    * Mouse over event handler
    * Gets target and related blocks and change selected state for blocks in between
-   *
    * @param {Event} event - mouse over event
    */
   private onMouseOver = (event: Event): void => {
@@ -261,7 +255,6 @@ export default class CrossBlockSelection extends Module {
 
   /**
    * Change blocks selection state between passed two blocks.
-   *
    * @param {Block} firstBlock - first block in range
    * @param {Block} lastBlock - last block in range
    */

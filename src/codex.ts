@@ -15,7 +15,6 @@ import { destroy as destroyTooltip } from './components/utils/tooltip';
 
 /**
  * Editor.js
- *
  * @license Apache-2.0
  * @see Editor.js <https://editorjs.io>
  * @author CodeX Team <https://codex.so>
@@ -72,7 +71,6 @@ export default class EditorJS {
     /**
      * We need to export isReady promise in the constructor
      * as it can be used before other API methods are exported
-     *
      * @type {Promise<void>}
      */
     this.isReady = editor.isReady.then(() => {
@@ -86,7 +84,6 @@ export default class EditorJS {
 
   /**
    * Export external API methods
-   *
    * @param {Core} editor — Editor's instance
    */
   public exportAPI(editor: Core): void {

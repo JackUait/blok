@@ -14,7 +14,6 @@ import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-dat
 export default class BlocksAPI extends Module {
   /**
    * Available methods
-   *
    * @returns {Blocks}
    */
   public get methods(): Blocks {
@@ -40,7 +39,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Returns Blocks count
-   *
    * @returns {number}
    */
   public getBlocksCount(): number {
@@ -49,7 +47,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Returns current block index
-   *
    * @returns {number}
    */
   public getCurrentBlockIndex(): number {
@@ -58,7 +55,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Returns the index of Block by id;
-   *
    * @param id - block id
    */
   public getBlockIndex(id: string): number | undefined {
@@ -75,7 +71,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Returns BlockAPI object by Block index
-   *
    * @param {number} index - index to get
    */
   public getBlockByIndex(index: number): BlockAPIInterface | undefined {
@@ -92,7 +87,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Returns BlockAPI object by Block id
-   *
    * @param id - id of block to get
    */
   public getById(id: string): BlockAPIInterface | null {
@@ -109,7 +103,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Get Block API object by any child html element
-   *
    * @param element - html element to get Block by
    */
   public getBlockByElement(element: HTMLElement): BlockAPIInterface | undefined {
@@ -126,7 +119,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Move block from one index to another
-   *
    * @param {number} toIndex - index to move to
    * @param {number} fromIndex - index to move from
    */
@@ -136,7 +128,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Deletes Block
-   *
    * @param {number} blockIndex - index of Block to delete
    */
   public delete(blockIndex: number = this.Editor.BlockManager.currentBlockIndex): void {
@@ -184,7 +175,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Fills Editor with Blocks data
-   *
    * @param {OutputData} data — Saved Editor data
    */
   public async render(data: OutputData): Promise<void> {
@@ -206,7 +196,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Render passed HTML string
-   *
    * @param {string} data - HTML string to render
    * @returns {Promise<void>}
    */
@@ -218,7 +207,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Insert new Block and returns it's API
-   *
    * @param {string} type — Tool name
    * @param {BlockToolData} data — Tool data to insert
    * @param {ToolConfig} _config — Tool config
@@ -252,7 +240,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Creates data of an empty block with a passed type.
-   *
    * @param toolName - block tool name
    */
   public composeBlockData = async (toolName: string): Promise<BlockToolData> => {
@@ -275,7 +262,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Updates block data by id
-   *
    * @param id - id of the block to update
    * @param data - (optional) the new data
    * @param tunes - (optional) tune data
@@ -295,7 +281,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Converts block to another type. Both blocks should provide the conversionConfig.
-   *
    * @param id - id of the existing block to convert. Should provide 'conversionConfig.export' method
    * @param newType - new block type. Should provide 'conversionConfig.import' method
    * @param dataOverrides - optional data overrides for the new block
@@ -336,7 +321,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Inserts several Blocks to a specified index
-   *
    * @param blocks - blocks data to insert
    * @param index - index to insert the blocks at
    */
@@ -361,7 +345,6 @@ export default class BlocksAPI extends Module {
 
   /**
    * Validated block index and throws an error if it's invalid
-   *
    * @param index - index to validate
    */
   private validateIndex(index: unknown): void {

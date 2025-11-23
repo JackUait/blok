@@ -17,7 +17,6 @@ const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy=inline-to
 
 /**
  * Reset the editor holder and destroy any existing instance
- *
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
@@ -41,7 +40,6 @@ const resetEditor = async (page: Page): Promise<void> => {
 
 /**
  * Create editor with provided blocks
- *
  * @param page - The Playwright page object
  * @param blocks - The blocks data to initialize the editor with
  */
@@ -61,7 +59,6 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
 
 /**
  * Select text content within a locator by string match
- *
  * @param locator - The Playwright locator for the element containing the text
  * @param text - The text string to select within the element
  */

@@ -1,6 +1,5 @@
 /**
  * Class allows to make a queue of async jobs and wait until they all will be finished one by one
- *
  * @example const queue = new PromiseQueue();
  *            queue.add(async () => { ... });
  *            queue.add(async () => { ... });
@@ -26,7 +25,6 @@ export default class PromiseQueue {
 
   /**
    * Add new promise to queue
-   *
    * @param operation - promise should be added to queue
    */
   public add(operation: () => void | PromiseLike<void>): Promise<void> {

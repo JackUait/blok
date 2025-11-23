@@ -59,13 +59,11 @@ type ToolboxTextLabelsKeys = 'filter' | 'nothingFound';
  * Toolbox
  * This UI element contains list of Block Tools available to be inserted
  * It appears after click on the Plus Button
- *
  * @implements {EventsDispatcher} with some events, see {@link ToolboxEvent}
  */
 export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   /**
    * Returns True if Toolbox is Empty and nothing to show
-   *
    * @returns {boolean}
    */
   public get isEmpty(): boolean {
@@ -74,7 +72,6 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * Opening state
-   *
    * @type {boolean}
    */
   public opened = false;
@@ -99,6 +96,16 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * List of Tools available. Some of them will be shown in the Toolbox
    */
   private tools: ToolsCollection<BlockToolAdapter>;
+
+  /**
+   * Cache for tools to be displayed
+   */
+  private _toolsToBeDisplayed: BlockToolAdapter[] | undefined;
+
+  /**
+   * Cache for toolbox items to be displayed
+   */
+  private _toolboxItemsToBeDisplayed: PopoverItemParams[] | undefined;
 
   /**
    * Text labels used in the Toolbox. Should be passed from the i18n module
@@ -130,7 +137,6 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * Toolbox constructor
-   *
    * @param options - available parameters
    * @param options.api - Editor API methods
    * @param options.tools - Tools available to check whether some of them should be displayed at the Toolbox or not
@@ -155,11 +161,11 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       toolbox: Dom.make('div', Toolbox.CSS.toolbox),
     };
 
-    this.initPopover();
-
     if (import.meta.env.MODE === 'test') {
       this.nodes.toolbox.setAttribute('data-cy', 'toolbox');
     }
+
+    this.initPopover();
 
     this.api.events.on(EditorMobileLayoutToggled, this.handleMobileLayoutToggle);
   }
@@ -169,6 +175,22 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    */
   public getElement(): HTMLElement | null {
     return this.nodes.toolbox;
+  }
+
+  /**
+   * Checks if the element is contained in the Toolbox or its Popover
+   * @param element - element to check
+   */
+  public contains(element: HTMLElement): boolean {
+    if (this.nodes.toolbox.contains(element)) {
+      return true;
+    }
+
+    if (this.popover?.getElement().contains(element)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -200,7 +222,6 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * Toolbox Tool's button click handler
-   *
    * @param toolName - tool type to be activated
    * @param blockDataOverrides - Block data predefined by the activated Toolbox item
    */
@@ -267,6 +288,10 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
+
+    if (import.meta.env.MODE === 'test') {
+      this.popover.getElement().setAttribute('data-cy', 'toolbox');
+    }
   }
 
   /**
@@ -296,8 +321,11 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   /**
    * Returns list of tools that enables the Toolbox (by specifying the 'toolbox' getter)
    */
-  @_.cacheable
   private get toolsToBeDisplayed(): BlockToolAdapter[] {
+    if (this._toolsToBeDisplayed) {
+      return this._toolsToBeDisplayed;
+    }
+
     const result: BlockToolAdapter[] = [];
 
     this.tools.forEach((tool) => {
@@ -308,14 +336,19 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       }
     });
 
+    this._toolsToBeDisplayed = result;
+
     return result;
   }
 
   /**
    * Returns list of items that will be displayed in toolbox
    */
-  @_.cacheable
   private get toolboxItemsToBeDisplayed(): PopoverItemParams[] {
+    if (this._toolboxItemsToBeDisplayed) {
+      return this._toolboxItemsToBeDisplayed;
+    }
+
     /**
      * Maps tool data to popover item structure
      */
@@ -331,22 +364,26 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       };
     };
 
-    return this.toolsToBeDisplayed
-      .reduce<PopoverItemParams[]>((result, tool) => {
+    const result = this.toolsToBeDisplayed
+      .reduce<PopoverItemParams[]>((acc, tool) => {
         const { toolbox } = tool;
 
         if (toolbox === undefined) {
-          return result;
+          return acc;
         }
 
         const items = Array.isArray(toolbox) ? toolbox : [ toolbox ];
 
         items.forEach((item, index) => {
-          result.push(toPopoverItem(item, tool, index === 0));
+          acc.push(toPopoverItem(item, tool, index === 0));
         });
 
-        return result;
+        return acc;
       }, []);
+
+    this._toolboxItemsToBeDisplayed = result;
+
+    return result;
   }
 
   /**
@@ -364,7 +401,6 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * Enable shortcut Block Tool implemented shortcut
-   *
    * @param {string} toolName - Tool name
    * @param {string} shortcut - shortcut according to the ShortcutData Module format
    */
@@ -414,7 +450,6 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   /**
    * Inserts new block
    * Can be called when button clicked on Toolbox or by ShortcutData
-   *
    * @param {string} toolName - Tool name
    * @param blockDataOverrides - predefined Block data
    */

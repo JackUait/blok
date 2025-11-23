@@ -66,7 +66,6 @@ interface ToolbarNodes {
  *| .  Default Settings  . |
  *| ...................... |
  *|________________________|
- *
  * @class
  * @classdesc Toolbar module
  * @typedef {Toolbar} Toolbar
@@ -109,7 +108,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
   /**
    * CSS styles
-   *
    * @returns {object}
    */
   public get CSS(): { [name: string]: string } {
@@ -131,11 +129,30 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
   /**
    * Returns the Toolbar opening state
-   *
    * @returns {boolean}
    */
   public get opened(): boolean {
     return this.nodes.wrapper?.classList.contains(this.CSS.toolbarOpened) ?? false;
+  }
+
+  /**
+   * Check if the element is contained in the Toolbar or its components (Toolbox, BlockSettings)
+   * @param element - element to check
+   */
+  public contains(element: HTMLElement): boolean {
+    if (this.nodes.wrapper?.contains(element)) {
+      return true;
+    }
+
+    if (this.toolboxInstance?.contains(element)) {
+      return true;
+    }
+
+    if (this.Editor.BlockSettings.contains(element)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -215,7 +232,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
   /**
    * Toggles read-only mode
-   *
    * @param {boolean} readOnlyEnabled - read-only mode
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
@@ -233,7 +249,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
   /**
    * Move Toolbar to the passed (or current) Block
-   *
    * @param block - block to move Toolbar near it
    */
   public moveAndOpen(block?: Block | null): void {
@@ -391,7 +406,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
   /**
    * Open Toolbar with Plus Button and Actions
-   *
    * @param {boolean} withBlockActions - by default, Toolbar opens with Block Actions.
    *                                     This flag allows to open Toolbar without Actions.
    */
@@ -603,7 +617,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
         /**
          * Stop propagation to prevent block selection clearance
-         *
          * @see UI.documentClicked
          */
         e.stopPropagation();
@@ -620,7 +633,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Subscribe to the 'block-hovered' event if current view is not mobile
-     *
      * @see https://github.com/codex-team/editor.js/issues/1972
      */
     if (!_.isMobileScreen()) {

@@ -45,7 +45,6 @@ export default class ToolsFactory {
 
   /**
    * Returns Tool object based on it's type
-   *
    * @param name - tool name
    */
   public get(name: string): InlineToolAdapter | BlockToolAdapter | BlockTuneAdapter {
@@ -72,7 +71,6 @@ export default class ToolsFactory {
 
   /**
    * Find appropriate Tool object constructor for Tool constructable
-   *
    * @param constructable - Tools constructable
    */
   private getConstructor(constructable: ToolConstructable): ToolConstructor {

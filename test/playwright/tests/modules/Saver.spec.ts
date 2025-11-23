@@ -21,7 +21,7 @@ const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
 const BLOCK_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block__content`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const SETTINGS_ITEM_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-settings .ce-popover-item`;
+const SETTINGS_ITEM_SELECTOR = '[data-cy=block-tunes] .ce-popover-item';
 const BLOCK_TEXT = 'The block with some text';
 
 type SerializableToolConfig = {

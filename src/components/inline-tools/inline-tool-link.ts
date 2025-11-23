@@ -22,7 +22,6 @@ import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../constants';
 const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
-   *
    * @returns {boolean}
    */
   public static isInline = true;
@@ -35,7 +34,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   /**
    * Sanitizer Rule
    * Leave <a> tags
-   *
    * @returns {object}
    */
   public static get sanitize(): SanitizerConfig {
@@ -256,7 +254,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
   /**
    * Update button state attributes for e2e hooks
-   *
    * @param hasAnchor - Optional override for anchor presence
    */
   private updateButtonStateAttributes(hasAnchor?: boolean): void {
@@ -274,7 +271,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
   /**
    * Handles toggling the inline tool button while actions menu is open
-   *
    * @param event - Click event emitted by the inline tool button
    */
   private handleButtonClick = (event: MouseEvent): void => {
@@ -294,7 +290,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
   /**
    * Close input
-   *
    * @param {boolean} clearSavedSelection — we don't need to clear saved selection
    *                                        on toggle-clicks on the icon of opened Toolbar
    */
@@ -362,7 +357,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
   /**
    * Enter pressed on input
-   *
    * @param {KeyboardEvent} event - enter keydown event
    */
   private enterPressed(event: KeyboardEvent): void {
@@ -412,7 +406,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
   /**
    * Detects if passed string is URL
-   *
    * @param {string} str - string to validate
    * @returns {boolean}
    */
@@ -427,7 +420,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
    * Process link before injection
    * - sanitize
    * - add protocol for links like 'google.com'
-   *
    * @param {string} link - raw user input
    */
   private prepareLink(link: string): string {
@@ -436,7 +428,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
   /**
    * Add 'http' protocol to the links like 'vc.ru', 'google.com'
-   *
    * @param {string} link - string to process
    */
   private addProtocol(link: string): string {
@@ -466,7 +457,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
   /**
    * Inserts <a> tag with "href"
-   *
    * @param {string} link - "href" value
    */
   private insertLink(link: string): void {
@@ -519,7 +509,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
   /**
    * Unwrap passed node
-   *
    * @param term - node to unwrap
    */
   private unwrap(term: HTMLElement): void {
@@ -534,7 +523,6 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
   /**
    * Persist state as data attributes for testing hooks
-   *
    * @param element - The HTML element to set the attribute on, or null
    * @param attributeName - The name of the attribute to set
    * @param state - The boolean state value to persist

@@ -19,7 +19,6 @@ export class Hint {
 
   /**
    * Constructs the hint content instance
-   *
    * @param params - hint content parameters
    */
   constructor(params: HintParams) {

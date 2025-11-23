@@ -157,10 +157,6 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.initPopover();
 
-    if (import.meta.env.MODE === 'test') {
-      this.nodes.toolbox.setAttribute('data-cy', 'toolbox');
-    }
-
     this.api.events.on(EditorMobileLayoutToggled, this.handleMobileLayoutToggle);
   }
 
@@ -169,6 +165,23 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    */
   public getElement(): HTMLElement | null {
     return this.nodes.toolbox;
+  }
+
+  /**
+   * Checks if the element is contained in the Toolbox or its Popover
+   *
+   * @param element - element to check
+   */
+  public contains(element: HTMLElement): boolean {
+    if (this.nodes.toolbox.contains(element)) {
+      return true;
+    }
+
+    if (this.popover?.getElement().contains(element)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -267,6 +280,10 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
+
+    if (import.meta.env.MODE === 'test') {
+      this.popover.getElement().setAttribute('data-cy', 'toolbox');
+    }
   }
 
   /**

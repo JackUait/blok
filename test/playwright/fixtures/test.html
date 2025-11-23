@@ -5,7 +5,13 @@
 </head>
 <body>
   <!-- Load Editor.js's Core -->
-  <script src="./../../../dist/editorjs.umd.js"></script>
+  <script src="./../../../dist/blok.umd.js"></script>
+  <script>
+    /**
+     * Allow to access the Editor.js API via window.EditorJS to support existing tests
+     */
+    window.EditorJS = window.Blok;
+  </script>
   <h1>Editor.js test page</h1>
 </body>
 </html>

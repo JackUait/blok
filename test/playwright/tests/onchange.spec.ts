@@ -511,7 +511,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const delimiterOption = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover-item[data-item-name=delimiter]`);
+    const delimiterOption = page.locator('[data-cy=toolbox] .ce-popover-item[data-item-name=delimiter]');
 
     await delimiterOption.click();
 
@@ -571,7 +571,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const headerOption = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover-item[data-item-name=header]`);
+    const headerOption = page.locator('[data-cy=toolbox] .ce-popover-item[data-item-name=header]');
 
     await headerOption.click();
 
@@ -624,7 +624,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const tuneOption = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-settings .ce-popover-item:nth-of-type(4)`);
+    const tuneOption = page.locator('[data-cy=block-tunes] .ce-popover-item:nth-of-type(4)');
 
     await tuneOption.click();
 
@@ -658,7 +658,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const deleteOption = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-item-name=delete]:visible`);
+    const deleteOption = page.locator('[data-cy=block-tunes] [data-item-name=delete]:visible');
 
     await deleteOption.click();
     await deleteOption.click();
@@ -704,7 +704,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 1);
 
-    const moveUpOption = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-item-name=move-up]`);
+    const moveUpOption = page.locator('[data-cy=block-tunes] [data-item-name=move-up]');
 
     await moveUpOption.click();
 

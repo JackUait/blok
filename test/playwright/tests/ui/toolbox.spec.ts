@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { ConversionConfig, ToolboxConfig, OutputData } from '@/types';
 import type { BlockToolConstructable } from '@/types/tools';
-import { EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
@@ -14,7 +14,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"]`;
-const POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover`;
+const POPOVER_SELECTOR = '.ce-popover';
 const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} .ce-popover-item`;
 const SECONDARY_TITLE_SELECTOR = '.ce-popover-item__secondary-title';
 
@@ -304,6 +304,29 @@ test.describe('toolbox', () => {
         },
       });
 
+      // Wait for toolbox to be initialized (it is created in requestIdleCallback)
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          const check = (): void => {
+            type EditorJSInternal = EditorJS & {
+              module: {
+                toolbar: {
+                  toolboxInstance: unknown;
+                };
+              };
+            };
+
+            if ((window.editorInstance as unknown as EditorJSInternal)?.module?.toolbar?.toolboxInstance) {
+              resolve();
+            } else {
+              requestAnimationFrame(check);
+            }
+          };
+
+          check();
+        });
+      });
+
       const paragraphBlock = page.locator(PARAGRAPH_BLOCK_SELECTOR);
 
       await expect(paragraphBlock).toHaveCount(1);
@@ -486,9 +509,14 @@ test.describe('toolbox', () => {
       await expect(paragraphBlock).toHaveCount(1);
 
       await paragraphBlock.click();
-      await paragraphBlock.type('Some text');
-      await page.keyboard.press(`${MODIFIER_KEY}+A`);
+      await paragraphBlock.locator('[contenteditable]').fill('Some text');
+      await paragraphBlock.locator('[contenteditable]').fill('');
+      await paragraphBlock.locator('[contenteditable]').focus();
+      // Trigger backspace to ensure Editor.js internal state is clean
       await page.keyboard.press('Backspace');
+
+      // Wait for Editor.js to mark it as empty
+      await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-empty', 'true');
 
       // Open toolbox with "/" shortcut
       await page.keyboard.type('/');
@@ -584,9 +612,14 @@ test.describe('toolbox', () => {
       await expect(paragraphBlock).toHaveCount(1);
 
       await paragraphBlock.click();
-      await paragraphBlock.type('Some text');
-      await page.keyboard.press(`${MODIFIER_KEY}+A`);
+      await paragraphBlock.locator('[contenteditable]').fill('Some text');
+      await paragraphBlock.locator('[contenteditable]').fill('');
+      await paragraphBlock.locator('[contenteditable]').focus();
+      // Trigger backspace to ensure Editor.js internal state is clean
       await page.keyboard.press('Backspace');
+
+      // Wait for Editor.js to mark it as empty
+      await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-empty', 'true');
 
       // Open toolbox with "/" shortcut
       await page.keyboard.type('/');

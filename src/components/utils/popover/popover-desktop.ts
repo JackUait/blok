@@ -232,6 +232,24 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Checks if popover contains the node.
+   * Overridden to check nested popover as well.
+   *
+   * @param node - node to check
+   */
+  public override hasNode(node: Node): boolean {
+    if (super.hasNode(node)) {
+      return true;
+    }
+
+    if (this.nestedPopover !== undefined && this.nestedPopover !== null) {
+      return this.nestedPopover.hasNode(node);
+    }
+
+    return false;
+  }
+
+  /**
    * Handles displaying nested items for the item.
    *
    * @param item – item to show nested popover for

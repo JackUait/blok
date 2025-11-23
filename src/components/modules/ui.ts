@@ -751,7 +751,7 @@ export default class UI extends Module<UINodes> {
     const target = event.target as HTMLElement;
     const clickedInsideOfEditor = this.nodes.holder.contains(target) || Selection.isAtEditor;
     const clickedInsideRedactor = this.nodes.redactor.contains(target);
-    const clickedInsideToolbar = this.Editor.Toolbar.nodes.wrapper?.contains(target) ?? false;
+    const clickedInsideToolbar = this.Editor.Toolbar.contains(target);
     const clickedInsideEditorSurface = clickedInsideOfEditor || clickedInsideToolbar;
 
     const shouldClearCurrentBlock = !clickedInsideEditorSurface || (!clickedInsideRedactor && !clickedInsideToolbar);
@@ -773,7 +773,7 @@ export default class UI extends Module<UINodes> {
      * But allow clicking inside Block Settings.
      * Also, do not process clicks on the Block Settings Toggler, because it has own click listener
      */
-    const isClickedInsideBlockSettings = this.Editor.BlockSettings.nodes.wrapper?.contains(target);
+    const isClickedInsideBlockSettings = this.Editor.BlockSettings.contains(target);
     const isClickedInsideBlockSettingsToggler = this.Editor.Toolbar.nodes.settingsToggler?.contains(target);
     const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler;
 

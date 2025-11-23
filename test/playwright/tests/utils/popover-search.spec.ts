@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-block`;
-const BLOCK_TUNES_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy=block-tunes]`;
+const BLOCK_TUNES_SELECTOR = `[data-cy=block-tunes]`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
 const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} .cdx-search-field__input`;
 const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover-item`;
@@ -241,7 +241,7 @@ const createEditorWithBlocks = async (
 };
 
 const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<void> => {
-  await page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover`).waitFor({
+  await page.locator(BLOCK_TUNES_SELECTOR).waitFor({
     state: 'attached',
     timeout,
   });

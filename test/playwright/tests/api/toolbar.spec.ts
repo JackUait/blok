@@ -17,10 +17,10 @@ const TOOLBAR_OPENED_SELECTOR = `${TOOLBAR_SELECTOR}.ce-toolbar--opened`;
 const TOOLBAR_ACTIONS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__actions`;
 const TOOLBAR_ACTIONS_OPENED_SELECTOR = `${TOOLBAR_ACTIONS_SELECTOR}.ce-toolbar__actions--opened`;
 const TOOLBOX_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbox`;
-const TOOLBOX_POPOVER_SELECTOR = `${TOOLBOX_SELECTOR} .ce-popover__container`;
-const BLOCK_TUNES_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy=block-tunes]`;
+const TOOLBOX_POPOVER_SELECTOR = `[data-cy=toolbox] .ce-popover__container`;
+const BLOCK_TUNES_SELECTOR = `[data-cy=block-tunes]`;
 const BLOCK_TUNES_POPOVER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
-const OPENED_BLOCK_TUNES_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover[data-popover-opened="true"]`;
+const OPENED_BLOCK_TUNES_SELECTOR = `${BLOCK_TUNES_SELECTOR}[data-popover-opened="true"]`;
 
 const expectToolbarToBeOpened = async (page: Page): Promise<void> => {
   await expect(page.locator(TOOLBAR_SELECTOR)).toHaveAttribute('class', /\bce-toolbar--opened\b/);

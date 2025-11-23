@@ -24,9 +24,9 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const CONVERT_TO_OPTION_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover-item[data-item-name="convert-to"]`;
-const NESTED_POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover--nested`;
-const POPOVER_CONTAINER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover.ce-popover--opened > .ce-popover__container`;
+const CONVERT_TO_OPTION_SELECTOR = '.ce-popover-item[data-item-name="convert-to"]';
+const NESTED_POPOVER_SELECTOR = '.ce-popover--nested';
+const POPOVER_CONTAINER_SELECTOR = '.ce-popover.ce-popover--opened > .ce-popover__container';
 const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} .cdx-search-field__input`;
 const DEFAULT_WAIT_TIMEOUT = 5_000;
 const BLOCK_TUNES_WAIT_BUFFER = 500;
@@ -408,7 +408,7 @@ test.describe('ui.block-tunes', () => {
       await openBlockTunesViaToolbar(page);
 
       const convertToOption = page
-        .locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover-item`)
+        .locator('.ce-popover-item')
         .filter({ hasText: 'Convert to' });
 
       await expect(convertToOption).toBeVisible();
@@ -485,7 +485,7 @@ test.describe('ui.block-tunes', () => {
       await openBlockTunesViaToolbar(page);
 
       const convertToOption = page
-        .locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover-item`)
+        .locator('.ce-popover-item')
         .filter({ hasText: 'Convert to' });
 
       await convertToOption.click();
@@ -526,7 +526,7 @@ test.describe('ui.block-tunes', () => {
       await openBlockTunesViaToolbar(page);
 
       const convertToOption = page
-        .locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover-item`)
+        .locator('.ce-popover-item')
         .filter({ hasText: 'Convert to' });
 
       await convertToOption.click();

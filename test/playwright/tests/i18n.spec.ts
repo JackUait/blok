@@ -15,7 +15,7 @@ const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
-const POPOVER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-popover`;
+const POPOVER_SELECTOR = '.ce-popover';
 
 /**
  * Reset the editor holder and destroy any existing instance

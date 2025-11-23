@@ -139,6 +139,27 @@ export default class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * Check if the element is contained in the Toolbar or its components (Toolbox, BlockSettings)
+   *
+   * @param element - element to check
+   */
+  public contains(element: HTMLElement): boolean {
+    if (this.nodes.wrapper?.contains(element)) {
+      return true;
+    }
+
+    if (this.toolboxInstance?.contains(element)) {
+      return true;
+    }
+
+    if (this.Editor.BlockSettings.contains(element)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
    * Public interface for accessing the Toolbox
    */
   public get toolbox(): {

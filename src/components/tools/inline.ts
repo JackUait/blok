@@ -50,4 +50,13 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
 
     return constructable?.isReadOnlySupported ?? false;
   }
+
+  /**
+   * Returns title of the tool
+   */
+  public get title(): string {
+    const constructable = this.constructable as InlineToolConstructable;
+
+    return constructable['title'] || '';
+  }
 }

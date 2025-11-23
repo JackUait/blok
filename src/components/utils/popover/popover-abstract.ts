@@ -306,4 +306,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * @param item – item to show nested popover for
    */
   protected abstract showNestedItems(item: PopoverItemDefault | PopoverItemHtml): void;
+
+  /**
+   * Checks if popover contains the node
+   *
+   * @param node - node to check
+   */
+  public hasNode(node: Node): boolean {
+    return this.nodes.popover.contains(node);
+  }
 }

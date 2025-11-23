@@ -43,6 +43,13 @@ export default class BlockEvents extends Module {
       return;
     }
 
+    /**
+     * If event was already handled by something (e.g. tool), we should not handle it
+     */
+    if (event.defaultPrevented) {
+      return;
+    }
+
     const keyCode = this.getKeyCode(event);
 
     /**

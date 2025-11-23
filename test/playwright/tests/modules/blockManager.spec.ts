@@ -479,61 +479,6 @@ test.describe('modules/blockManager', () => {
     expect((blocks[0]?.data as { text?: string }).text).toBe('stay text');
   });
 
-  test('moves a block up via the default tune', async ({ page }) => {
-    await createEditorWithBlocks(page, [
-      {
-        type: 'paragraph',
-        data: { text: 'First block' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Second block' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Third block' },
-      },
-    ]);
-
-    await openBlockSettings(page, 1);
-    await clickTune(page, 'move-up');
-
-    const { blocks } = await saveEditor(page);
-
-    expect(blocks.map((block: OutputBlock) => (block.data as { text: string }).text)).toStrictEqual([
-      'Second block',
-      'First block',
-      'Third block',
-    ]);
-  });
-
-  test('moves a block down via the default tune', async ({ page }) => {
-    await createEditorWithBlocks(page, [
-      {
-        type: 'paragraph',
-        data: { text: 'First block' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Second block' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Third block' },
-      },
-    ]);
-
-    await openBlockSettings(page, 1);
-    await clickTune(page, 'move-down');
-
-    const { blocks } = await saveEditor(page);
-
-    expect(blocks.map((block: OutputBlock) => (block.data as { text: string }).text)).toStrictEqual([
-      'First block',
-      'Third block',
-      'Second block',
-    ]);
-  });
 
   test('generates unique ids for newly inserted blocks', async ({ page }) => {
     await createEditor(page);

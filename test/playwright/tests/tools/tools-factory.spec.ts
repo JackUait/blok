@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import Paragraph from '@editorjs/paragraph';
 import LinkInlineTool from '../../../../src/components/inline-tools/inline-tool-link';
-import MoveUpTune from '../../../../src/components/block-tunes/block-tune-move-up';
+import DeleteTune from '../../../../src/components/block-tunes/block-tune-delete';
 import ToolsFactory from '../../../../src/components/tools/factory';
 import InlineToolAdapter from '../../../../src/components/tools/inline';
 import BlockToolAdapter from '../../../../src/components/tools/block';
@@ -23,8 +23,8 @@ const toolsConfig = {
   link: {
     class: LinkInlineTool,
   },
-  moveUp: {
-    class: MoveUpTune,
+  delete: {
+    class: DeleteTune,
   },
 } as Record<string, ToolSettings & { class: ToolConstructable; isInternal?: boolean }>;
 
@@ -90,7 +90,7 @@ test.describe('toolsFactory', () => {
   });
 
   test('.get returns BlockTune object for tune', () => {
-    const tool = factory.get('moveUp');
+    const tool = factory.get('delete');
 
     expect(tool).toBeInstanceOf(BlockTuneAdapter);
   });

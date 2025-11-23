@@ -844,7 +844,7 @@ test.describe('popover', () => {
     await page.keyboard.press('Tab');
 
     // Check that default popover item got focused
-    await expect(page.locator('[data-item-name=move-up]')).toHaveClass(/ce-popover-item--focused/);
+    await expect(page.locator('[data-item-name=delete]')).toHaveClass(/ce-popover-item--focused/);
   });
 
   test('should display nested popover (desktop)', async ({ page }) => {

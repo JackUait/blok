@@ -33,7 +33,7 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
   /**
    * Current search query
    */
-  private searchQuery: string | undefined;
+  private searchQuery = '';
 
   /**
    * @param options - available config

@@ -12,9 +12,7 @@ import ToolsFactory from '../tools/factory';
 import type InlineToolAdapter from '../tools/inline';
 import type BlockToolAdapter from '../tools/block';
 import type BlockTuneAdapter from '../tools/tune';
-import MoveDownTune from '../block-tunes/block-tune-move-down';
 import DeleteTune from '../block-tunes/block-tune-delete';
-import MoveUpTune from '../block-tunes/block-tune-move-up';
 import ToolsCollection from '../tools/collection';
 import { CriticalError } from '../errors/critical';
 
@@ -292,16 +290,8 @@ export default class Tools extends Module {
         class: toToolConstructable(Stub),
         isInternal: true,
       },
-      moveUp: {
-        class: toToolConstructable(MoveUpTune),
-        isInternal: true,
-      },
       delete: {
         class: toToolConstructable(DeleteTune),
-        isInternal: true,
-      },
-      moveDown: {
-        class: toToolConstructable(MoveDownTune),
         isInternal: true,
       },
     };

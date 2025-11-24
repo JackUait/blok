@@ -41,7 +41,7 @@ jobs:
         run: yarn e2e
 
       - name: Publish to NPM
-        run: npm publish
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

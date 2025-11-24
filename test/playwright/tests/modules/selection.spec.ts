@@ -16,7 +16,7 @@ const HOLDER_ID = 'editorjs';
 const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
-const FAKE_BACKGROUND_SELECTOR = '.codex-editor__fake-background';
+const FAKE_BACKGROUND_SELECTOR = '[data-testid="fake-background"]';
 
 declare global {
   interface Window {
@@ -444,7 +444,7 @@ test.describe('modules/selection', () => {
 
       selection?.removeAllRanges();
 
-      const paragraphEl = document.querySelector('.ce-paragraph');
+      const paragraphEl = document.querySelector('[data-testid="block-wrapper"] [contenteditable]');
       const textNode = paragraphEl?.firstChild as Text | null;
 
       if (textNode) {

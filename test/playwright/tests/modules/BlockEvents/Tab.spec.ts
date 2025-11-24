@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"] [contenteditable]`;
 const TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR = '[data-testid=tool-with-two-inputs-primary]';
 const TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR = '[data-testid=tool-with-two-inputs-secondary]';
 const CONTENTLESS_TOOL_SELECTOR = '[data-testid=contentless-tool]';
@@ -267,7 +267,7 @@ test.describe('tab keydown', () => {
       ({ selector }) => {
         const element = document.querySelector(selector);
 
-        return element?.closest('.ce-block')?.classList.contains('ce-block--selected') ?? false;
+        return element?.closest('[data-testid="block-wrapper"]')?.getAttribute('data-selected') === 'true' ?? false;
       },
       { selector: CONTENTLESS_TOOL_SELECTOR }
     );
@@ -289,7 +289,7 @@ test.describe('tab keydown', () => {
        * Hide block tune popovers to keep the tab order identical to the previous e2e plugin,
        * which skips hidden elements when emulating native Tab navigation.
        */
-      const elements = Array.from(document.querySelectorAll('.ce-popover__items'));
+      const elements = Array.from(document.querySelectorAll('[data-testid="popover-items"]'));
 
       for (const element of elements) {
         (element as HTMLElement).style.display = 'none';
@@ -348,7 +348,7 @@ test.describe('shift+Tab keydown', () => {
       ({ selector }) => {
         const element = document.querySelector(selector);
 
-        return element?.closest('.ce-block')?.classList.contains('ce-block--selected') ?? false;
+        return element?.closest('[data-testid="block-wrapper"]')?.getAttribute('data-selected') === 'true' ?? false;
       },
       { selector: CONTENTLESS_TOOL_SELECTOR }
     );

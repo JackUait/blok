@@ -252,7 +252,7 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
 
     const seenNames = new Set<string>();
 
-    settingsElement.querySelectorAll<HTMLElement>('.ce-popover-item[data-item-name]').forEach((item) => {
+    settingsElement.querySelectorAll<HTMLElement>('[data-testid="popover-item"][data-item-name]').forEach((item) => {
       const name = item.dataset.itemName ?? '';
 
       if (seenNames.has(name)) {
@@ -262,7 +262,7 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
       }
     });
 
-    const searchInput = settingsElement.querySelector<HTMLInputElement>('.cdx-search-field__input');
+    const searchInput = settingsElement.querySelector<HTMLInputElement>('[data-testid="popover-search-input"]');
 
     searchInput?.focus();
   }, BLOCK_TUNES_SELECTOR);
@@ -906,7 +906,7 @@ test.describe('popover Search/Filter', () => {
         }
 
         return searchFieldElement.contains(range.startContainer);
-      }, `${BLOCK_TUNES_SELECTOR} .cdx-search-field`);
+      }, `${BLOCK_TUNES_SELECTOR} [data-testid="popover-search-field"]`);
 
       expect(containsCaret).toBe(true);
     });
@@ -946,7 +946,7 @@ test.describe('popover Search/Filter', () => {
 
       await openBlockTunes(page);
 
-      const separator = page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-item-separator`);
+      const separator = page.locator(`${BLOCK_TUNES_SELECTOR} [data-testid="popover-item-separator"]`);
 
       // Check separator is displayed initially
       await expect(separator).toBeVisible();
@@ -963,15 +963,15 @@ test.describe('popover Search/Filter', () => {
       await page.keyboard.press('Tab');
 
       // Check first item is focused
-      await expect(page.locator('[data-item-name="test-item-1"].ce-popover-item--focused')).toBeVisible();
-      await expect(page.locator('[data-item-name="test-item-2"].ce-popover-item--focused')).toBeHidden();
+      await expect(page.locator('[data-item-name="test-item-1"][data-focused="true"]')).toBeVisible();
+      await expect(page.locator('[data-item-name="test-item-2"][data-focused="true"]')).toBeHidden();
 
       // Press Tab again
       await page.keyboard.press('Tab');
 
       // Check second item is focused
-      await expect(page.locator('[data-item-name="test-item-1"].ce-popover-item--focused')).toBeHidden();
-      await expect(page.locator('[data-item-name="test-item-2"].ce-popover-item--focused')).toBeVisible();
+      await expect(page.locator('[data-item-name="test-item-1"][data-focused="true"]')).toBeHidden();
+      await expect(page.locator('[data-item-name="test-item-2"][data-focused="true"]')).toBeVisible();
     });
   });
 
@@ -1059,7 +1059,7 @@ test.describe('popover Search/Filter', () => {
 
       // Check nested popover search input has placeholder text with i18n
       const nestedSearchInput = page.locator(
-        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .cdx-search-field__input`
+        `${BLOCK_TUNES_SELECTOR} [data-nested="true"] [data-testid="popover-search-input"]`
       );
 
       await expect(nestedSearchInput).toHaveAttribute('placeholder', 'Искать');
@@ -1069,7 +1069,7 @@ test.describe('popover Search/Filter', () => {
 
       // Check nested popover has nothing found message with i18n
       const nothingFoundMessage = page.locator(
-        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .ce-popover__nothing-found-message`
+        `${BLOCK_TUNES_SELECTOR} [data-nested="true"] [data-testid="popover-nothing-found"]`
       );
 
       await expect(nothingFoundMessage).toHaveText('Ничего не найдено');
@@ -1125,13 +1125,13 @@ test.describe('popover Search/Filter', () => {
 
       // Wait for nested popover to appear
       const nestedPopoverContainer = page.locator(
-        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .ce-popover__container`
+        `${BLOCK_TUNES_SELECTOR} [data-nested="true"] [data-testid="popover-container"]`
       );
 
       await expect(nestedPopoverContainer).toBeVisible();
 
       const nestedSearchInput = page.locator(
-        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .cdx-search-field__input`
+        `${BLOCK_TUNES_SELECTOR} [data-nested="true"] [data-testid="popover-search-input"]`
       );
 
       // Initially all child items should be visible

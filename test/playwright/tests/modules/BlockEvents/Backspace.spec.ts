@@ -10,9 +10,9 @@ import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constan
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"] [contenteditable]`;
+const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbar"]`;
 const HOLDER_ID = 'editorjs';
 
 const getPositionalLocator = async (page: Page, selector: string, position: 'first' | 'last'): Promise<Locator> => {
@@ -528,7 +528,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -622,7 +622,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -713,7 +713,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -804,7 +804,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 

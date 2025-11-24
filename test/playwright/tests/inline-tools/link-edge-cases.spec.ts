@@ -16,7 +16,7 @@ const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 // The link tool renders the item itself as a button, not a nested button
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-item-name="link"]`;
 const LINK_INPUT_SELECTOR = `input[data-link-tool-input-opened]`;
-const NOTIFIER_SELECTOR = '.cdx-notifies';
+const NOTIFIER_SELECTOR = '[data-testid="notifier-container"]';
 
 const getParagraphByText = (page: Page, text: string): Locator => {
   return page.locator(PARAGRAPH_CONTENT_SELECTOR, { hasText: text });

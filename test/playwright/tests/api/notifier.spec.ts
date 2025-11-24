@@ -35,7 +35,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     holder?.remove();
 
     // Remove leftover notifications between tests to keep DOM deterministic
-    document.querySelectorAll('.cdx-notifies').forEach((node) => node.remove());
+    document.querySelectorAll('[data-testid="notifier-container"]').forEach((node) => node.remove());
 
     const container = document.createElement('div');
 
@@ -77,7 +77,7 @@ test.describe('api.notifier', () => {
         window.editorInstance = undefined;
       }
 
-      document.querySelectorAll('.cdx-notifies').forEach((node) => node.remove());
+      document.querySelectorAll('[data-testid="notifier-container"]').forEach((node) => node.remove());
       document.getElementById(holderId)?.remove();
     }, { holderId: HOLDER_ID });
   });

@@ -41,9 +41,15 @@ export class PopoverHeader {
     this.onBackButtonClick = onBackButtonClick;
 
     this.nodes = {
-      root: Dom.make('div', [ css.root ]),
-      backButton: Dom.make('button', [ css.backButton ]),
-      text: Dom.make('div', [ css.text ]),
+      root: Dom.make('div', [ css.root ], {
+        'data-testid': 'popover-header',
+      }),
+      backButton: Dom.make('button', [ css.backButton ], {
+        'data-testid': 'popover-header-back-button',
+      }),
+      text: Dom.make('div', [ css.text ], {
+        'data-testid': 'popover-header-text',
+      }),
     };
     this.nodes.backButton.innerHTML = IconChevronLeft;
     this.nodes.root.appendChild(this.nodes.backButton);

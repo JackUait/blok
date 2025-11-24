@@ -994,7 +994,7 @@ test.describe('editor i18n', () => {
 
       await expect(nestedPopover).toHaveCount(1);
 
-      const nestedPopoverContainer = nestedPopover.locator('.ce-popover__container');
+      const nestedPopoverContainer = nestedPopover.locator('[data-testid="popover-container"]');
 
       await expect(nestedPopoverContainer).toHaveCount(1);
       await expect(nestedPopoverContainer).toBeVisible();

@@ -83,6 +83,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     this.nodes.popoverContainer.appendChild(this.nodes.nothingFoundMessage);
     this.nodes.items = Dom.make('div', [ css.items ]);
+    this.nodes.items.setAttribute('data-testid', 'popover-items');
 
     this.items.forEach(item => {
       const itemEl = item.getElement();

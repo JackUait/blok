@@ -130,6 +130,12 @@ export class PopoverItemDefault extends PopoverItem {
    */
   public override toggleHidden(isHidden: boolean): void {
     this.nodes.root?.classList.toggle(css.hidden, isHidden);
+
+    if (isHidden) {
+      this.nodes.root?.setAttribute('data-hidden', 'true');
+    } else {
+      this.nodes.root?.removeAttribute('data-hidden');
+    }
   }
 
   /**
@@ -167,6 +173,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     this.nodes.icon = Dom.make('div', [css.icon, css.iconTool], {
       innerHTML: params.icon || IconDotCircle,
+      'data-testid': 'popover-item-icon',
     });
 
     el.appendChild(this.nodes.icon);
@@ -177,6 +184,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (title !== undefined) {
       el.appendChild(Dom.make('div', css.title, {
         innerHTML: title || '',
+        'data-testid': 'popover-item-title',
       }));
     }
 
@@ -192,6 +200,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (this.hasChildren) {
       el.appendChild(Dom.make('div', [css.icon, css.iconChevronRight], {
         innerHTML: IconChevronRight,
+        'data-testid': 'popover-item-chevron-right',
       }));
     }
 

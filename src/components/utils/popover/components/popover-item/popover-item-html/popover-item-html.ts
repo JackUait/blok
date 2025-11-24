@@ -26,11 +26,10 @@ export class PopoverItemHtml extends PopoverItem {
     };
 
     this.nodes.root.appendChild(params.element);
-    this.nodes.root.setAttribute('data-testid', 'popover-item');
+    this.nodes.root.setAttribute('data-testid', 'popover-item-html');
 
     if (params.name) {
       this.nodes.root.dataset.itemName = params.name;
-      this.nodes.root.setAttribute('data-testid', params.name);
     }
 
     if (params.hint !== undefined && renderParams?.hint?.enabled !== false) {
@@ -54,6 +53,12 @@ export class PopoverItemHtml extends PopoverItem {
    */
   public toggleHidden(isHidden: boolean): void {
     this.nodes.root?.classList.toggle(css.hidden, isHidden);
+
+    if (isHidden) {
+      this.nodes.root?.setAttribute('data-hidden', 'true');
+    } else {
+      this.nodes.root?.removeAttribute('data-hidden');
+    }
   }
 
   /**

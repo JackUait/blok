@@ -12,7 +12,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
 
 type CreateEditorOptions = {
   data?: OutputData;
@@ -95,7 +95,7 @@ test.describe('drag and drop', () => {
     });
 
     // 1. Hover over the first block to show the settings button (drag handle)
-    const firstBlock = page.locator('.ce-block').filter({ hasText: 'First block' });
+    const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
 
     await firstBlock.hover();
 
@@ -106,7 +106,7 @@ test.describe('drag and drop', () => {
 
     expect(settingsButtonBox).not.toBeNull();
 
-    const targetBlock = page.locator('.ce-block').filter({ hasText: 'Third block' });
+    const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third block' });
     const targetBox = await targetBlock.boundingBox();
 
     expect(targetBox).not.toBeNull();
@@ -125,7 +125,7 @@ test.describe('drag and drop', () => {
     await page.mouse.up();
 
     // 4. Verify the new order in DOM
-    await expect(page.locator('.ce-block')).toHaveText([
+    await expect(page.getByTestId('block-wrapper')).toHaveText([
       'Second block',
       'Third block',
       'First block',
@@ -160,7 +160,7 @@ test.describe('drag and drop', () => {
     });
 
     // 1. Hover over the last block to show the settings button
-    const lastBlock = page.locator('.ce-block').filter({ hasText: 'Third block' });
+    const lastBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third block' });
 
     await lastBlock.hover();
 
@@ -171,7 +171,7 @@ test.describe('drag and drop', () => {
 
     expect(settingsButtonBox).not.toBeNull();
 
-    const targetBlock = page.locator('.ce-block').filter({ hasText: 'First block' });
+    const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
     const targetBox = await targetBlock.boundingBox();
 
     expect(targetBox).not.toBeNull();
@@ -190,7 +190,7 @@ test.describe('drag and drop', () => {
     await page.mouse.up();
 
     // 4. Verify the new order
-    await expect(page.locator('.ce-block')).toHaveText([
+    await expect(page.getByTestId('block-wrapper')).toHaveText([
       'Third block',
       'First block',
       'Second block',

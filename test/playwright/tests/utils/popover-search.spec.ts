@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const BLOCK_TUNES_SELECTOR = `.ce-popover[data-testid=block-tunes]`;
+const BLOCK_TUNES_SELECTOR = `[data-testid="block-tunes-popover"]`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
 const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-search-input"]`;
 const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-item"]`;

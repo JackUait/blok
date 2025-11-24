@@ -17,7 +17,6 @@ const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 const FAKE_BACKGROUND_SELECTOR = '.codex-editor__fake-background';
-const BLOCK_SELECTED_CLASS = 'ce-block--selected';
 
 declare global {
   interface Window {

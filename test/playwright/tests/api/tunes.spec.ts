@@ -12,10 +12,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const FIRST_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block:first-of-type`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const POPOVER_SELECTOR = '.ce-popover[data-testid="block-tunes"]';
-const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} .ce-popover-item`;
+const FIRST_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]:first-of-type`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
+const POPOVER_SELECTOR = '[data-testid="block-tunes-popover"]';
+const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-testid="popover-item"]`;
 const FIRST_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(1)`;
 const SECOND_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(2)`;
 

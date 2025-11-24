@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_TUNES_SELECTOR = '.ce-popover[data-testid=block-tunes]';
+const BLOCK_TUNES_SELECTOR = '[data-testid="block-tunes-popover"]';
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
 const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-container"]`;
 const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-testid="popover-item"]`;

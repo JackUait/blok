@@ -11,9 +11,9 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"]`;
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"]`;
+const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbar"]`;
 const QUOTE_TOOL_INPUT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="quote-tool"] div[contenteditable]`;
 
 const getBlockByIndex = (page: Page, index: number): Locator => {
@@ -24,7 +24,7 @@ const getLastBlock = async (page: Page): Promise<Locator> => {
   const blockCount = await page.locator(BLOCK_SELECTOR).count();
 
   if (blockCount === 0) {
-    throw new Error('No blocks found for selector: div.ce-block');
+    throw new Error('No blocks found for selector: [data-testid="block-wrapper"]');
   }
 
   return page.locator(`:nth-match(${BLOCK_SELECTOR}, ${blockCount})`);
@@ -338,7 +338,7 @@ test.describe('delete keydown', () => {
       await createParagraphEditor(page, ['1\u00A0', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const paragraphContent = firstParagraph.locator('.ce-paragraph');
+      const paragraphContent = firstParagraph.locator('[contenteditable]');
 
       await firstParagraph.click();
 
@@ -403,7 +403,7 @@ test.describe('delete keydown', () => {
       await createParagraphEditor(page, ['1\u00A0<b></b>', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const paragraphContent = firstParagraph.locator('.ce-paragraph');
+      const paragraphContent = firstParagraph.locator('[contenteditable]');
 
       await firstParagraph.click();
 
@@ -432,7 +432,7 @@ test.describe('delete keydown', () => {
       await createParagraphEditor(page, ['1<b></b>\u00A0', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const paragraphContent = firstParagraph.locator('.ce-paragraph');
+      const paragraphContent = firstParagraph.locator('[contenteditable]');
 
       await firstParagraph.click();
 
@@ -459,7 +459,7 @@ test.describe('delete keydown', () => {
       await createParagraphEditor(page, ['1\u00A0 ', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const paragraphContent = firstParagraph.locator('.ce-paragraph');
+      const paragraphContent = firstParagraph.locator('[contenteditable]');
 
       await firstParagraph.click();
 
@@ -496,7 +496,7 @@ test.describe('delete keydown', () => {
     await createParagraphEditor(page, ['The first block', 'The second block']);
 
     const firstParagraph = getParagraphByIndex(page, 0);
-    const paragraphContent = firstParagraph.locator('.ce-paragraph');
+    const paragraphContent = firstParagraph.locator('[contenteditable]');
 
     await firstParagraph.click();
     await selectText(paragraphContent, 'The ');
@@ -651,7 +651,7 @@ test.describe('delete keydown', () => {
 
       // Workaround for potential duplication: remove extra blocks if any
       await page.evaluate(() => {
-        const blocks = document.querySelectorAll('.ce-block');
+        const blocks = document.querySelectorAll('[data-testid="block-wrapper"]');
 
         Array.from(blocks).forEach((block) => {
           if (!block.textContent?.includes('The only block. Not empty')) {

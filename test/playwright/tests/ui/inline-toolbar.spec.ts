@@ -21,10 +21,10 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
-const HEADER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-header`;
-const INLINE_TOOLBAR_ITEMS_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} .ce-popover__items > *`;
-const INLINE_TOOLBAR_CONTAINER_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} .ce-popover__container`;
-const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} .ce-popover-item`;
+const HEADER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="header"]`;
+const INLINE_TOOLBAR_ITEMS_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-testid="popover-items"] > *`;
+const INLINE_TOOLBAR_CONTAINER_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-testid="popover-container"]`;
+const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-testid="popover-item"]`;
 const NESTED_EDITOR_ID = 'nested-editor';
 
 type SerializableToolConfig = {
@@ -412,7 +412,7 @@ const getInlineToolbarSnapshot = async (page: Page): Promise<ToolbarItemSnapshot
     return elements.map((element) => {
       return {
         name: element.getAttribute('data-item-name'),
-        hasSeparator: element.classList.contains('ce-popover-item-separator'),
+        hasSeparator: element.getAttribute('data-testid') === 'popover-item-separator',
       };
     });
   }, INLINE_TOOLBAR_ITEMS_SELECTOR);
@@ -703,7 +703,7 @@ test.describe('inline toolbar', () => {
     await selectText(paragraph, 'Some text');
 
     await page.locator('[data-item-name="convert-to"]').click();
-    await page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} .ce-popover-item[data-item-name="header"]`).click();
+    await page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-testid="popover-item"][data-item-name="header"]`).click();
 
     await expect(page.locator(HEADER_SELECTOR)).toHaveText('Some text');
 
@@ -765,13 +765,13 @@ test.describe('inline toolbar', () => {
 
     await page.locator(`[data-testid="${NESTED_EDITOR_ID}"] [data-item-name="link"]`).click();
 
-    const input = page.locator(`[data-testid="${NESTED_EDITOR_ID}"] .ce-inline-tool-input`);
+    const input = page.locator(`[data-testid="${NESTED_EDITOR_ID}"] [data-testid="inline-tool-input"]`);
 
     await input.click();
     await input.type('https://editorjs.io', { delay: 20 });
 
     const nestedToolbar = page.locator(
-      `[data-testid="${NESTED_EDITOR_ID}"] [data-interface="inline-toolbar"] > .ce-popover > .ce-popover__container`
+      `[data-testid="${NESTED_EDITOR_ID}"] [data-interface="inline-toolbar"] > [data-testid="popover"] > [data-testid="popover-container"]`
     );
 
     await expect(nestedToolbar).toBeVisible();

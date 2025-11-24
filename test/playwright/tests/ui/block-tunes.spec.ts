@@ -24,9 +24,9 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
-const CONVERT_TO_OPTION_SELECTOR = '.ce-popover-item[data-item-name="convert-to"]';
-const NESTED_POPOVER_SELECTOR = '.ce-popover--nested';
-const POPOVER_CONTAINER_SELECTOR = '[data-testid="block-tunes"][data-popover-opened="true"] > [data-testid="popover-container"]';
+const CONVERT_TO_OPTION_SELECTOR = '[data-testid="popover-item"][data-item-name="convert-to"]';
+const NESTED_POPOVER_SELECTOR = '[data-testid="popover"][data-nested="true"]';
+const POPOVER_CONTAINER_SELECTOR = '[data-testid="block-tunes-popover"] > [data-testid="popover-container"]';
 const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-testid="popover-search-input"]`;
 const DEFAULT_WAIT_TIMEOUT = 5_000;
 const BLOCK_TUNES_WAIT_BUFFER = 500;
@@ -408,7 +408,7 @@ test.describe('ui.block-tunes', () => {
       await openBlockTunesViaToolbar(page);
 
       const convertToOption = page
-        .locator('.ce-popover-item')
+        .getByTestId('popover-item')
         .filter({ hasText: 'Convert to' });
 
       await expect(convertToOption).toBeVisible();
@@ -485,7 +485,7 @@ test.describe('ui.block-tunes', () => {
       await openBlockTunesViaToolbar(page);
 
       const convertToOption = page
-        .locator('.ce-popover-item')
+        .getByTestId('popover-item')
         .filter({ hasText: 'Convert to' });
 
       await convertToOption.click();
@@ -526,7 +526,7 @@ test.describe('ui.block-tunes', () => {
       await openBlockTunesViaToolbar(page);
 
       const convertToOption = page
-        .locator('.ce-popover-item')
+        .getByTestId('popover-item')
         .filter({ hasText: 'Convert to' });
 
       await convertToOption.click();
@@ -573,11 +573,11 @@ test.describe('ui.block-tunes', () => {
 
       await expect(popoverContainer).toHaveCount(1);
 
-      const popoverItems = popoverContainer.locator('.ce-popover-item:not(.ce-popover-item--hidden)');
+      const popoverItems = popoverContainer.locator('[data-testid="popover-item"]:not([data-hidden="true"])');
       const itemsCount = await popoverItems.count();
 
       expect(itemsCount).toBeGreaterThan(1);
-      const firstPopoverItem = popoverContainer.locator('.ce-popover-item:not(.ce-popover-item--hidden):first-of-type');
+      const firstPopoverItem = popoverContainer.locator('[data-testid="popover-item"]:not([data-hidden="true"]):first-of-type');
 
       await expect(firstPopoverItem).toContainText('Tune');
     });

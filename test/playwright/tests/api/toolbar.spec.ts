@@ -18,7 +18,7 @@ const TOOLBAR_ACTIONS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__acti
 const TOOLBAR_ACTIONS_OPENED_SELECTOR = `${TOOLBAR_ACTIONS_SELECTOR}.ce-toolbar__actions--opened`;
 const TOOLBOX_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbox`;
 const TOOLBOX_POPOVER_SELECTOR = `[data-testid=toolbox] .ce-popover__container`;
-const BLOCK_TUNES_SELECTOR = `[data-testid=block-tunes]`;
+const BLOCK_TUNES_SELECTOR = `[data-testid="block-tunes-popover"]`;
 const BLOCK_TUNES_POPOVER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
 const OPENED_BLOCK_TUNES_SELECTOR = `${BLOCK_TUNES_SELECTOR}[data-popover-opened="true"]`;
 

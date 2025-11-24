@@ -22,13 +22,13 @@ const SIMPLE_IMAGE_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
 const getBlockByIndex = (page: Page, index: number): Locator => {
   return page.locator(`${BLOCK_SELECTOR}:nth-of-type(${index + 1})`);
 };
 
 const getParagraphByIndex = (page: Page, index: number): Locator => {
-  return getBlockByIndex(page, index).locator('.ce-paragraph');
+  return getBlockByIndex(page, index).locator('[contenteditable]');
 };
 
 const getCommandModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
@@ -419,8 +419,8 @@ test.describe('copy and paste', () => {
         'text/html': '<h2>First block</h2><p>Second block</p>',
       });
 
-      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-header`);
-      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph:nth-last-of-type(1)`);
+      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-block-tool="header"]`);
+      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]:nth-last-of-type(1)`);
 
       await expect(headerBlock).toHaveText('First block');
       await expect(paragraphBlock).toHaveText('Second block');
@@ -528,6 +528,7 @@ test.describe('copy and paste', () => {
         render() {
           this.element = document.createElement('div');
           this.element.className = 'file-paste-tool';
+          this.element.dataset.testid = 'file-paste-tool';
           this.element.contentEditable = 'true';
           this.element.textContent = this.data.text ?? 'Paste file here';
 
@@ -570,7 +571,7 @@ test.describe('copy and paste', () => {
         },
       });
 
-      const block = page.locator('.file-paste-tool');
+      const block = page.getByTestId('file-paste-tool');
 
       await expect(block).toHaveCount(1);
       await block.click();
@@ -640,6 +641,7 @@ test.describe('copy and paste', () => {
           const block = document.createElement('div');
 
           block.className = 'ce-block-with-disabled-prevent-default';
+          block.dataset.testid = 'block-with-disabled-prevent-default';
           block.contentEditable = 'true';
 
           block.addEventListener('paste', (event) => {
@@ -677,7 +679,7 @@ test.describe('copy and paste', () => {
         },
       });
 
-      const block = page.locator('.ce-block-with-disabled-prevent-default');
+      const block = page.getByTestId('block-with-disabled-prevent-default');
 
       await expect(block).toHaveCount(1);
 

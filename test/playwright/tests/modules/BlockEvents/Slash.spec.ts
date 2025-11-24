@@ -14,8 +14,8 @@ const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
 const TOOLBOX_CONTAINER_SELECTOR = '[data-testid="toolbox"] .ce-popover__container';
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
-  `[data-testid="toolbox"] .ce-popover-item[data-item-name=${itemName}]`;
-const BLOCK_TUNES_SELECTOR = '[data-testid="block-tunes"] .ce-popover__container';
+  `[data-testid="toolbox"] [data-testid="popover-item"][data-item-name=${itemName}]`;
+const BLOCK_TUNES_SELECTOR = '[data-testid="block-tunes-popover"] [data-testid="popover-container"]';
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 
 const modifierKeyVariants: Array<{ description: string; key: 'Control' | 'Meta' }> = [
@@ -152,7 +152,7 @@ test.describe('slash keydown', () => {
 
     await textToolOption.click();
 
-    const pageTitle = page.locator('[data-testid="page-title"]');
+    const pageTitle = page.getByTestId('page-title');
 
     await pageTitle.evaluate((element) => {
       element.setAttribute('contenteditable', 'true');

@@ -528,7 +528,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const delimiterOption = page.getByTestId('toolbox').locator('.ce-popover-item[data-item-name=delimiter]');
+    const delimiterOption = page.getByTestId('toolbox').locator('[data-testid="popover-item"][data-item-name=delimiter]');
 
     await delimiterOption.click();
 
@@ -588,7 +588,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const headerOption = page.getByTestId('toolbox').locator('.ce-popover-item[data-item-name=header]');
+    const headerOption = page.getByTestId('toolbox').locator('[data-testid="popover-item"][data-item-name=header]');
 
     await headerOption.click();
 
@@ -641,7 +641,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const tuneOption = page.getByTestId('block-tunes').locator('.ce-popover-item:nth-of-type(4)');
+    const tuneOption = page.getByTestId('block-tunes-popover').locator('[data-testid="popover-item"]:nth-of-type(4)');
 
     await tuneOption.click();
 
@@ -675,7 +675,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const deleteOption = page.getByTestId('block-tunes').locator('[data-item-name=delete]:visible');
+    const deleteOption = page.getByTestId('block-tunes-popover').locator('[data-item-name=delete]:visible');
 
     await deleteOption.click();
     await deleteOption.click();

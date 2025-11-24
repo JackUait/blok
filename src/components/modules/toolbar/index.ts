@@ -435,9 +435,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const wrapper = $.make('div', this.CSS.toolbar);
 
     this.nodes.wrapper = wrapper;
-    /**
-     * @todo detect test environment and add data-testid="toolbar" to use it in tests instead of class name
-     */
+    // eslint-disable-next-line sonarjs/no-duplicate-string
+    wrapper.setAttribute('data-testid', 'toolbar');
 
     /**
      * Make Content Zone and Actions Zone
@@ -463,6 +462,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const plusButton = $.make('div', this.CSS.plusButton, {
       innerHTML: IconPlus,
     });
+
+    plusButton.setAttribute('data-testid', 'plus-button');
 
     this.nodes.plusButton = plusButton;
     $.append(actions, plusButton);
@@ -495,6 +496,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const settingsToggler = $.make('span', this.CSS.settingsToggler, {
       innerHTML: IconMenu,
     });
+
+    settingsToggler.setAttribute('data-testid', 'settings-toggler');
 
     this.nodes.settingsToggler = settingsToggler;
 

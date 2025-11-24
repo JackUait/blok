@@ -29,6 +29,7 @@ export class PopoverItemHtml extends PopoverItem {
 
     if (params.name) {
       this.nodes.root.dataset.itemName = params.name;
+      this.nodes.root.setAttribute('data-testid', params.name);
     }
 
     if (params.hint !== undefined && renderParams?.hint?.enabled !== false) {

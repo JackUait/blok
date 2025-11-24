@@ -874,9 +874,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     const contentNode = $.make('div', Block.CSS.content);
     const pluginsContent = this.toolInstance.render();
 
-    if (import.meta.env.MODE === 'test') {
-      wrapper.setAttribute('data-testid', 'block-wrapper');
-    }
+    wrapper.setAttribute('data-testid', 'block-wrapper');
 
     if (this.name && !wrapper.hasAttribute(BLOCK_TOOL_ATTRIBUTE)) {
       wrapper.setAttribute(BLOCK_TOOL_ATTRIBUTE, this.name);

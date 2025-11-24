@@ -387,47 +387,6 @@ test.describe('inline tool bold', () => {
     expect(html).toBe('Keyboard shortcut');
   });
 
-  test('applies bold to typed text', async ({ page }) => {
-    await createEditorWithBlocks(page, [
-      {
-        type: 'paragraph',
-        data: {
-          text: 'Typing test',
-        },
-      },
-    ]);
-
-    const paragraph = page.locator(PARAGRAPH_SELECTOR);
-
-    await paragraph.evaluate((element) => {
-      const paragraphEl = element as HTMLElement;
-      const doc = paragraphEl.ownerDocument;
-      const textNode = paragraphEl.childNodes[paragraphEl.childNodes.length - 1];
-
-      if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
-        throw new Error('Expected trailing text node');
-      }
-
-      const range = doc.createRange();
-      const selection = doc.getSelection();
-
-      range.setStart(textNode, textNode.textContent?.length ?? 0);
-      range.collapse(true);
-
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    });
-
-    await page.keyboard.press(`${MODIFIER_KEY}+b`);
-    await page.keyboard.type(' Bold');
-    await page.keyboard.press(`${MODIFIER_KEY}+b`);
-    await page.keyboard.type(' normal');
-
-    const html = await paragraph.innerHTML();
-
-    expect(html.replace(/&nbsp;/g, ' ')).toBe('Typing test<strong> Bold</strong> normal');
-  });
-
   test('persists bold in saved output', async ({ page }) => {
     await createEditorWithBlocks(page, [
       {

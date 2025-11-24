@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
+import { Buffer } from 'node:buffer';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
@@ -419,8 +420,8 @@ test.describe('copy and paste', () => {
         'text/html': '<h2>First block</h2><p>Second block</p>',
       });
 
-      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-block-tool="header"]`);
-      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"]:nth-last-of-type(1)`);
+      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="header"]`);
+      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"]:nth-last-of-type(1)`);
 
       await expect(headerBlock).toHaveText('First block');
       await expect(paragraphBlock).toHaveText('Second block');
@@ -440,6 +441,12 @@ test.describe('copy and paste', () => {
 
     test('should parse pattern', async ({ page }) => {
       await page.addScriptTag({ path: SIMPLE_IMAGE_TOOL_UMD_PATH });
+
+      await page.route('**/codex2x.png', route => route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+      }));
 
       await createEditor(page, {
         tools: {

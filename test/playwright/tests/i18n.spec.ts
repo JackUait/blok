@@ -15,7 +15,8 @@ const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="plus-button"]`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
-const POPOVER_SELECTOR = '[data-testid="popover"]';
+const TOOLBOX_POPOVER_SELECTOR = '[data-testid="toolbox"]';
+const BLOCK_TUNES_POPOVER_SELECTOR = '[data-testid="block-tunes-popover"]';
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -340,7 +341,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const headerItem = page.locator(`${POPOVER_SELECTOR} [data-item-name="header"]`);
+      const headerItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-item-name="header"]`);
 
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(toolNamesDictionary.Heading);
@@ -410,7 +411,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const testToolItems = page.locator(`${POPOVER_SELECTOR} [data-item-name="testTool"]`);
+      const testToolItems = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-item-name="testTool"]`);
 
       await expect(testToolItems).toHaveCount(2);
       await expect(testToolItems).toContainText([
@@ -476,7 +477,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const testToolItem = page.locator(`${POPOVER_SELECTOR} [data-item-name="testTool"]`);
+      const testToolItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-item-name="testTool"]`);
 
       await expect(testToolItem).toBeVisible();
       await expect(testToolItem).toContainText(toolNamesDictionary.TestTool);
@@ -515,7 +516,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
-      const deleteButton = page.locator(`${POPOVER_SELECTOR} [data-item-name="delete"]`);
+      const deleteButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-item-name="delete"]`);
 
       await expect(deleteButton).toBeVisible();
       await expect(deleteButton).toContainText(blockTunesDictionary.delete.Delete);
@@ -554,7 +555,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
-      const deleteButton = page.locator(`${POPOVER_SELECTOR} [data-item-name="delete"]`);
+      const deleteButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-item-name="delete"]`);
 
       await deleteButton.click();
 
@@ -664,13 +665,13 @@ test.describe('editor i18n', () => {
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
       // Open "Convert to" menu
-      const convertToButton = page.locator(`${POPOVER_SELECTOR} [data-item-name="convert-to"]`);
+      const convertToButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-item-name="convert-to"]`);
 
       await expect(convertToButton).toBeVisible();
       await convertToButton.click();
 
       // Check item in convert to menu is internationalized
-      const headerItem = page.locator(`${POPOVER_SELECTOR} .ce-popover--nested [data-item-name="header"]`);
+      const headerItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} .ce-popover--nested [data-item-name="header"]`);
 
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(toolNamesDictionary.Heading);
@@ -699,7 +700,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const searchInput = page.locator(`${POPOVER_SELECTOR} input[type="search"], ${POPOVER_SELECTOR} input[placeholder*="Filter"]`);
+      const searchInput = page.locator(`${TOOLBOX_POPOVER_SELECTOR} input[type="search"], ${TOOLBOX_POPOVER_SELECTOR} input[placeholder*="Filter"]`);
 
       await expect(searchInput).toBeVisible();
 
@@ -731,7 +732,7 @@ test.describe('editor i18n', () => {
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
       const popoverContainer = page
-        .locator(`${POPOVER_SELECTOR} .ce-popover__container:visible`)
+        .locator(`${TOOLBOX_POPOVER_SELECTOR} .ce-popover__container:visible`)
         .filter({ has: page.locator('input[type="search"]') });
 
       await expect(popoverContainer).toHaveCount(1);
@@ -847,7 +848,7 @@ test.describe('editor i18n', () => {
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
       const popoverContainer = page
-        .locator(`${POPOVER_SELECTOR} .ce-popover__container:visible`)
+        .locator(`${BLOCK_TUNES_POPOVER_SELECTOR} .ce-popover__container:visible`)
         .filter({ has: page.locator(`input[placeholder*="${uiDictionary.popover.Filter}"]`) });
 
       await expect(popoverContainer).toHaveCount(1);

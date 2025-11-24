@@ -42,7 +42,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JackUait/editor.js"
+    "url": "git+https://github.com/JackUait/editor.js.git"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.0",

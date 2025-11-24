@@ -1779,7 +1779,6 @@ export default class BoldInlineTool implements InlineTool {
     BoldInlineTool.maintainCollapsedExitState();
     BoldInlineTool.synchronizeCollapsedBold(selection);
     BoldInlineTool.normalizeBoldTagsWithinEditor(selection);
-    BoldInlineTool.replaceNbspInBlock(selection);
     BoldInlineTool.removeEmptyBoldElements(selection);
 
     if (source === 'input' && selection) {

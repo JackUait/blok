@@ -21,3 +21,19 @@ Unlike traditional `contenteditable` solutions that treat text as a single HTML 
 **🔌 Extensible Plugin System**: Easily create custom blocks (e.g., Kanbans, Embeds, Code Blocks) to fit your specific use case.
 
 ## Installation
+
+Install the package via NPM or Yarn:
+
+```bash
+npm install @jackuait/blok
+```
+
+or
+
+```bash
+yarn add @jackuait/blok
+```
+
+## Documentation
+
+📚 **Documentation is coming soon!** We're working hard to provide comprehensive guides, API references, and examples. Stay tuned for updates.

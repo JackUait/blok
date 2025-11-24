@@ -317,7 +317,7 @@ export default [
     },
     rules: {
       // Duplicate code detection
-      'sonarjs/no-duplicate-string': ['error', { threshold: 3 }],
+      'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-testid' }],
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-identical-expressions': 'error',
       // Prevent UMD module patterns

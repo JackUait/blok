@@ -22,12 +22,12 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
 const CONVERT_TO_OPTION_SELECTOR = '.ce-popover-item[data-item-name="convert-to"]';
 const NESTED_POPOVER_SELECTOR = '.ce-popover--nested';
-const POPOVER_CONTAINER_SELECTOR = '.ce-popover.ce-popover--opened > .ce-popover__container';
-const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} .cdx-search-field__input`;
+const POPOVER_CONTAINER_SELECTOR = '[data-testid="block-tunes"][data-popover-opened="true"] > [data-testid="popover-container"]';
+const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-testid="popover-search-input"]`;
 const DEFAULT_WAIT_TIMEOUT = 5_000;
 const BLOCK_TUNES_WAIT_BUFFER = 500;
 
@@ -349,7 +349,7 @@ test.describe('ui.block-tunes', () => {
       await searchInput.waitFor({ state: 'visible' });
       await page.keyboard.press('Enter');
 
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`);
 
       await expect(paragraph).toHaveCount(1);
       await expect(paragraph).toHaveText('Some text');
@@ -380,7 +380,7 @@ test.describe('ui.block-tunes', () => {
       const block = page.locator(BLOCK_SELECTOR);
 
       await expect(block).toHaveCount(1);
-      await expect(block).toHaveClass(/ce-block--selected/);
+      await expect(block).toHaveAttribute('data-selected', 'true');
     });
   });
 

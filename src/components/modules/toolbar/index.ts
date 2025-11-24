@@ -391,6 +391,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarOpened);
+    this.nodes.wrapper?.removeAttribute('data-opened');
 
     /** Close components */
     this.blockActions.hide();
@@ -420,6 +421,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private open(withBlockActions = true): void {
     this.nodes.wrapper?.classList.add(this.CSS.toolbarOpened);
+    this.nodes.wrapper?.setAttribute('data-opened', 'true');
 
     if (withBlockActions) {
       this.blockActions.show();
@@ -435,7 +437,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const wrapper = $.make('div', this.CSS.toolbar);
 
     this.nodes.wrapper = wrapper;
-    // eslint-disable-next-line sonarjs/no-duplicate-string
     wrapper.setAttribute('data-testid', 'toolbar');
 
     /**

@@ -74,10 +74,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes = {} as Nodes;
 
     this.nodes.popoverContainer = Dom.make('div', [ css.popoverContainer ]);
+    this.nodes.popoverContainer.setAttribute('data-testid', 'popover-container');
 
     this.nodes.nothingFoundMessage = Dom.make('div', [ css.nothingFoundMessage ], {
       textContent: this.messages.nothingFound,
     });
+    this.nodes.nothingFoundMessage.setAttribute('data-testid', 'popover-nothing-found');
 
     this.nodes.popoverContainer.appendChild(this.nodes.nothingFoundMessage);
     this.nodes.items = Dom.make('div', [ css.items ]);
@@ -100,6 +102,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       css.popover,
       this.params.class,
     ]);
+    this.nodes.popover.setAttribute('data-testid', 'popover');
 
     this.nodes.popover.appendChild(this.nodes.popoverContainer);
   }

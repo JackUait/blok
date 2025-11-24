@@ -23,7 +23,7 @@ const BLOCK_TUNES_POPOVER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__conta
 const OPENED_BLOCK_TUNES_SELECTOR = `${BLOCK_TUNES_SELECTOR}[data-popover-opened="true"]`;
 
 const expectToolbarToBeOpened = async (page: Page): Promise<void> => {
-  await expect(page.locator(TOOLBAR_SELECTOR)).toHaveAttribute('class', /\bce-toolbar--opened\b/);
+  await expect(page.locator(TOOLBAR_SELECTOR)).toHaveAttribute('data-opened', 'true');
 };
 
 /**

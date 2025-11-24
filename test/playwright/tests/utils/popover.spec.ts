@@ -15,10 +15,10 @@ const TEST_PAGE_URL = pathToFileURL(
 const HEADER_TOOL_UMD_PATH = path.resolve(__dirname, '../../../../node_modules/@editorjs/header/dist/header.umd.js');
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-block`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
 const BLOCK_TUNES_SELECTOR = '.ce-popover[data-testid=block-tunes]';
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
+const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-container"]`;
 
 interface SerializableMenuChildren {
   searchable?: boolean;
@@ -499,7 +499,7 @@ test.describe('popover', () => {
     await openBlockTunes(page);
 
     // Check item has active class
-    await expect(page.locator('[data-item-name=testItem]')).toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator('[data-item-name=testItem]')).toHaveAttribute('data-popover-item-active', 'true');
   });
 
   test('should not execute item\'s onActivate callback if the item is disabled', async ({ page }) => {
@@ -525,7 +525,7 @@ test.describe('popover', () => {
     await openBlockTunes(page);
 
     // Check item has disabled class
-    await expect(page.locator('[data-item-name=testItem]')).toHaveClass(/ce-popover-item--disabled/);
+    await expect(page.locator('[data-item-name=testItem]')).toHaveAttribute('data-disabled', 'true');
 
     // Attempt to activate disabled item programmatically
     await page.evaluate(() => {
@@ -538,7 +538,7 @@ test.describe('popover', () => {
     });
 
     // Verify item remains disabled (onActivate should not be called)
-    await expect(page.locator('[data-item-name=testItem]')).toHaveClass(/ce-popover-item--disabled/);
+    await expect(page.locator('[data-item-name=testItem]')).toHaveAttribute('data-disabled', 'true');
 
     const activations = await page.evaluate(() => {
       const globalWindow = window as typeof window & { edjsTestActivations?: string[] };
@@ -604,13 +604,13 @@ test.describe('popover', () => {
     await openBlockTunes(page);
 
     // Item should not be active initially
-    await expect(page.locator('[data-item-name=testItem]')).not.toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator('[data-item-name=testItem]')).not.toHaveAttribute('data-popover-item-active', 'true');
 
     // Click item
     await page.locator('[data-item-name=testItem]').click();
 
     // Check item has active class
-    await expect(page.locator('[data-item-name=testItem]')).toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator('[data-item-name=testItem]')).toHaveAttribute('data-popover-item-active', 'true');
   });
 
   test('should perform radiobutton-like behavior among the items that have toggle property value set to the same string value', async ({ page }) => {
@@ -645,19 +645,19 @@ test.describe('popover', () => {
     await openBlockTunes(page);
 
     // Check first item is active
-    await expect(page.locator('[data-item-name=testItem1]')).toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator('[data-item-name=testItem1]')).toHaveAttribute('data-popover-item-active', 'true');
 
     // Check second item is not active
-    await expect(page.locator('[data-item-name=testItem2]')).not.toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator('[data-item-name=testItem2]')).not.toHaveAttribute('data-popover-item-active', 'true');
 
     // Click second item
     await page.locator('[data-item-name=testItem2]').click();
 
     // Check second item became active
-    await expect(page.locator('[data-item-name=testItem2]')).toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator('[data-item-name=testItem2]')).toHaveAttribute('data-popover-item-active', 'true');
 
     // Check first item became not active
-    await expect(page.locator('[data-item-name=testItem1]')).not.toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator('[data-item-name=testItem1]')).not.toHaveAttribute('data-popover-item-active', 'true');
   });
 
   test('should toggle item if it is the only item in toggle group', async ({ page }) => {
@@ -683,13 +683,13 @@ test.describe('popover', () => {
     await openBlockTunes(page);
 
     // Item should not be active initially
-    await expect(page.locator('[data-item-name=testItem]')).not.toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator('[data-item-name=testItem]')).not.toHaveAttribute('data-popover-item-active', 'true');
 
     // Click item
     await page.locator('[data-item-name=testItem]').click();
 
     // Check item has active class
-    await expect(page.locator('[data-item-name=testItem]')).toHaveClass(/ce-popover-item--active/);
+    await expect(page.locator('[data-item-name=testItem]')).toHaveAttribute('data-popover-item-active', 'true');
   });
 
   test('should display item with custom html', async ({ page }) => {
@@ -829,7 +829,7 @@ test.describe('popover', () => {
     await expect(
       page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-item-html .ce-settings__button`)
         .filter({ hasText: 'Tune1' })
-    ).toHaveClass(/ce-popover-item--focused/);
+    ).toHaveAttribute('data-focused', 'true');
 
     // Press Tab
     await page.keyboard.press('Tab');
@@ -838,13 +838,13 @@ test.describe('popover', () => {
     await expect(
       page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-item-html .ce-settings__button`)
         .filter({ hasText: 'Tune2' })
-    ).toHaveClass(/ce-popover-item--focused/);
+    ).toHaveAttribute('data-focused', 'true');
 
     // Press Tab
     await page.keyboard.press('Tab');
 
     // Check that default popover item got focused
-    await expect(page.locator('[data-item-name=delete]')).toHaveClass(/ce-popover-item--focused/);
+    await expect(page.locator('[data-item-name=delete]')).toHaveAttribute('data-focused', 'true');
   });
 
   test('should display nested popover (desktop)', async ({ page }) => {
@@ -969,6 +969,15 @@ test.describe('popover', () => {
         title: 'Tune',
         toggle: 'key',
         name: 'test-item',
+        children: {
+          items: [
+            {
+              icon: 'Icon',
+              title: 'Title',
+              name: 'nested-test-item',
+            },
+          ],
+        },
       })
     );
 
@@ -996,6 +1005,15 @@ test.describe('popover', () => {
           title: 'Tune',
           toggle: 'key',
           name: 'test-item',
+          children: {
+            items: [
+              {
+                icon: 'Icon',
+                title: 'Title',
+                name: 'nested-test-item',
+              },
+            ],
+          },
         },
         {
           type: PopoverItemType.Separator,
@@ -1048,19 +1066,19 @@ test.describe('popover', () => {
     await page.keyboard.press('Tab');
 
     // Check first item is focused
-    await expect(page.locator('[data-item-name="test-item-1"].ce-popover-item--focused')).toBeVisible();
+    await expect(page.locator('[data-item-name="test-item-1"][data-focused="true"]')).toBeVisible();
 
     // Check second item is not focused
-    await expect(page.locator('[data-item-name="test-item-2"].ce-popover-item--focused')).toBeHidden();
+    await expect(page.locator('[data-item-name="test-item-2"][data-focused="true"]')).toBeHidden();
 
     // Press Tab
     await page.keyboard.press('Tab');
 
     // Check first item is not focused
-    await expect(page.locator('[data-item-name="test-item-1"].ce-popover-item--focused')).toBeHidden();
+    await expect(page.locator('[data-item-name="test-item-1"][data-focused="true"]')).toBeHidden();
 
     // Check second item is focused
-    await expect(page.locator('[data-item-name="test-item-2"].ce-popover-item--focused')).toBeVisible();
+    await expect(page.locator('[data-item-name="test-item-2"][data-focused="true"]')).toBeVisible();
   });
 
   test.describe('inline popover', () => {
@@ -1085,7 +1103,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "First"
@@ -1120,7 +1138,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "block"
@@ -1129,22 +1147,22 @@ test.describe('popover', () => {
       await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container`)).toBeVisible();
 
       // Check first item is NOT focused
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="convert-to"].ce-popover-item--focused`)).toBeHidden();
+      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="convert-to"][data-focused="true"]`)).toBeHidden();
 
       // Press Tab
       await page.keyboard.press('Tab');
 
       // Check first item became focused after tab
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="convert-to"].ce-popover-item--focused`)).toBeVisible();
+      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="convert-to"][data-focused="true"]`)).toBeVisible();
 
       // Check second item is NOT focused
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="link"].ce-popover-item--focused`)).toBeHidden();
+      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="link"][data-focused="true"]`)).toBeHidden();
 
       // Press Tab
       await page.keyboard.press('Tab');
 
       // Check second item became focused after tab
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="link"].ce-popover-item--focused`)).toBeVisible();
+      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover__container [data-item-name="link"][data-focused="true"]`)).toBeVisible();
     });
 
     test('should allow to reach nested popover via keyboard', async ({ page }) => {
@@ -1164,7 +1182,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "block"
@@ -1182,13 +1200,13 @@ test.describe('popover', () => {
       await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-inline-toolbar .ce-popover--nested .ce-popover__container`)).toBeVisible();
 
       // Check first item is NOT focused
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container [data-item-name="header"].ce-popover-item--focused`)).toBeHidden();
+      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container [data-item-name="header"][data-focused="true"]`)).toBeHidden();
 
       // Press Tab
       await page.keyboard.press('Tab');
 
       // Check first item is focused
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container [data-item-name="header"].ce-popover-item--focused`)).toBeVisible();
+      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-popover__container [data-item-name="header"][data-focused="true"]`)).toBeVisible();
     });
 
     test('should convert block when clicking on item in nested popover', async ({ page }) => {
@@ -1208,7 +1226,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "First"

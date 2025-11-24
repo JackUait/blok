@@ -159,9 +159,10 @@ export class PopoverItemDefault extends PopoverItem {
       type: tag === 'button' ? 'button' : undefined,
     });
 
+    el.setAttribute('data-testid', 'popover-item');
+
     if (params.name) {
       el.dataset.itemName = params.name;
-      el.setAttribute('data-testid', params.name);
     }
 
     this.nodes.icon = Dom.make('div', [css.icon, css.iconTool], {
@@ -180,9 +181,12 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     if (params.secondaryLabel) {
-      el.appendChild(Dom.make('div', css.secondaryTitle, {
+      const secondaryTitle = Dom.make('div', css.secondaryTitle, {
         textContent: params.secondaryLabel,
-      }));
+      });
+
+      secondaryTitle.setAttribute('data-testid', 'popover-item-secondary-title');
+      el.appendChild(secondaryTitle);
     }
 
     if (this.hasChildren) {
@@ -198,6 +202,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     if (params.isDisabled) {
       el.classList.add(css.disabled);
+      el.setAttribute('data-disabled', 'true');
     }
 
     if (params.hint !== undefined && renderParams?.hint?.enabled !== false) {

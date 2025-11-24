@@ -445,7 +445,7 @@ const expectCaretOffset = async (locator: Locator, expectedOffset: number, optio
 const expectToolbarClosed = async (page: Page): Promise<void> => {
   const toolbar = page.locator(TOOLBAR_SELECTOR);
 
-  await expect(toolbar).not.toHaveClass(/ce-toolbar--opened/);
+  await expect(toolbar).not.toHaveAttribute('data-opened', 'true');
 };
 
 test.describe('backspace keydown', () => {

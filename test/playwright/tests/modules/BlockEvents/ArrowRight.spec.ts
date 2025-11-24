@@ -350,11 +350,11 @@ test.describe('arrow right keydown', () => {
     await firstParagraph.press('End');
     await page.keyboard.press('ArrowRight');
 
-    await expect(contentlessBlock).toHaveClass(/ce-block--selected/);
+    await expect(contentlessBlock).toHaveAttribute('data-selected', 'true');
 
     await page.keyboard.press('ArrowRight');
 
-    await expect(contentlessBlock).not.toHaveClass(/ce-block--selected/);
+    await expect(contentlessBlock).not.toHaveAttribute('data-selected', 'true');
     const caretInfo = await getCaretInfoOrThrow(lastParagraph);
 
     expect(caretInfo).toMatchObject({

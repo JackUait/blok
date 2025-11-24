@@ -20,7 +20,7 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
 const HEADER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-header`;
 const INLINE_TOOLBAR_ITEMS_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} .ce-popover__items > *`;
 const INLINE_TOOLBAR_CONTAINER_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} .ce-popover__container`;
@@ -660,11 +660,11 @@ test.describe('inline toolbar', () => {
 
     const boldButton = page.locator(`${INLINE_TOOL_SELECTOR}[data-item-name="bold"]`);
 
-    await expect(boldButton).not.toHaveClass(/ce-popover-item--active/);
+    await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
 
     await boldButton.click();
 
-    await expect(boldButton).toHaveClass(/ce-popover-item--active/);
+    await expect(boldButton).toHaveAttribute('data-popover-item-active', 'true');
 
     await selectText(paragraph, 'plain part');
 
@@ -672,7 +672,7 @@ test.describe('inline toolbar', () => {
       window.editorInstance?.inlineToolbar?.open();
     });
 
-    await expect(boldButton).not.toHaveClass(/ce-popover-item--active/);
+    await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
   });
 
   test('should restore caret after converting a block', async ({ page }) => {

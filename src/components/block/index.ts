@@ -800,6 +800,12 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   public set selected(state: boolean) {
     this.holder.classList.toggle(Block.CSS.selected, state);
 
+    if (state) {
+      this.holder.setAttribute('data-selected', 'true');
+    } else {
+      this.holder.removeAttribute('data-selected');
+    }
+
     const fakeCursorWillBeAdded = state === true && SelectionUtils.isRangeInsideContainer(this.holder);
     const fakeCursorWillBeRemoved = state === false && SelectionUtils.isFakeCursorInsideContainer(this.holder);
 

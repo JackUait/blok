@@ -351,11 +351,11 @@ test.describe('arrowLeft keydown', () => {
 
     const delimiterBlock = getDelimiterBlock(page);
 
-    await expect(delimiterBlock).toHaveClass(/ce-block--selected/);
+    await expect(delimiterBlock).toHaveAttribute('data-selected', 'true');
 
     await page.keyboard.press('ArrowLeft');
 
-    await expect(delimiterBlock).not.toHaveClass(/ce-block--selected/);
+    await expect(delimiterBlock).not.toHaveAttribute('data-selected', 'true');
 
     const firstParagraph = getParagraphByIndex(page, 0);
 

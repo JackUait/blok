@@ -13,10 +13,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"]`;
-const POPOVER_SELECTOR = '.ce-popover';
-const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} .ce-popover-item`;
-const SECONDARY_TITLE_SELECTOR = '.ce-popover-item__secondary-title';
+const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"]`;
+const POPOVER_SELECTOR = '[data-testid="toolbox"].ce-popover';
+const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-testid="popover-item"]`;
+const SECONDARY_TITLE_SELECTOR = '[data-testid="popover-item-secondary-title"]';
 
 /**
  * Reset the editor holder and destroy any existing instance

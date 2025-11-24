@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const EDITOR_ROOT_SELECTOR = EDITOR_INTERFACE_SELECTOR;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
 const STYLE_TAG_SELECTOR = '#editor-js-styles';
 
 type InitializationOptions = {

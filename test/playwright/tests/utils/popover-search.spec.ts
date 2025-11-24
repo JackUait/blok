@@ -12,13 +12,13 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-block`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
 const BLOCK_TUNES_SELECTOR = `.ce-popover[data-testid=block-tunes]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} .cdx-search-field__input`;
-const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover-item`;
-const NOTHING_FOUND_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__nothing-found-message`;
-const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
+const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-search-input"]`;
+const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-item"]`;
+const NOTHING_FOUND_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-nothing-found"]`;
+const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-container"]`;
 
 /**
  * Clear the provided search input and emit an input event so filtering logic reacts

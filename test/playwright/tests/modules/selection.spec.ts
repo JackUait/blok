@@ -14,7 +14,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 const FAKE_BACKGROUND_SELECTOR = '.codex-editor__fake-background';
 const BLOCK_SELECTED_CLASS = 'ce-block--selected';
@@ -363,7 +363,7 @@ test.describe('modules/selection', () => {
     await expect(blocks).toHaveCount(3);
 
     for (const index of [0, 1, 2]) {
-      await expect(getBlockByIndex(page, index)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
+      await expect(getBlockByIndex(page, index)).toHaveAttribute('data-selected', 'true');
     }
   });
 
@@ -406,10 +406,10 @@ test.describe('modules/selection', () => {
     await page.mouse.move(thirdCenter.x, thirdCenter.y, { steps: 10 });
     await page.mouse.up();
 
-    await expect(getBlockByIndex(page, 0)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 1)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 2)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 3)).not.toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-selected', 'true');
+    await expect(getBlockByIndex(page, 3)).not.toHaveAttribute('data-selected', 'true');
   });
 
   test('selection API exposes save/restore, expandToTag, fake background helpers', async ({ page }) => {
@@ -528,9 +528,9 @@ test.describe('modules/selection', () => {
     await page.keyboard.press('ArrowDown');
 
     await page.keyboard.up('Shift');
-    await expect(getBlockByIndex(page, 0)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 1)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 2)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-selected', 'true');
 
     await page.keyboard.press('Backspace');
 
@@ -604,7 +604,7 @@ test.describe('modules/selection', () => {
     await page.keyboard.up('Shift');
 
     for (const index of [0, 1, 2]) {
-      await expect(getBlockByIndex(page, index)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
+      await expect(getBlockByIndex(page, index)).toHaveAttribute('data-selected', 'true');
     }
   });
 });

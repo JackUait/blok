@@ -12,11 +12,11 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_TUNES_SELECTOR = '.ce-popover[data-testid=block-tunes]';
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
-const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} .ce-popover-item`;
-const PLUGIN_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-some-plugin`;
-const INLINE_TOOLBAR_SELECTOR = '[data-testid="inline-toolbar"] .ce-popover--opened';
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
+const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-container"]`;
+const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-testid="popover-item"]`;
+const PLUGIN_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="some-plugin"]`;
+const INLINE_TOOLBAR_SELECTOR = '[data-testid="inline-toolbar"] [data-testid="popover"][data-popover-opened="true"]';
 
 const KEY_CODES = {
   TAB: 9,
@@ -65,6 +65,7 @@ class SomePlugin {
     const wrapper = document.createElement('div');
 
     wrapper.classList.add('cdx-some-plugin');
+    wrapper.setAttribute('data-testid', 'some-plugin');
     wrapper.contentEditable = 'true';
     wrapper.addEventListener('keydown', SomePlugin.pluginInternalKeydownHandler);
 
@@ -291,7 +292,7 @@ const getPluginHandlerCallCount = async (page: Page): Promise<number> => {
 
 const getFocusedPopoverIndex = async (page: Page): Promise<number> => {
   const focusedIndex = await page.locator(POPOVER_ITEM_SELECTOR).evaluateAll(elements => {
-    return elements.findIndex(element => element.classList.contains('ce-popover-item--focused'));
+    return elements.findIndex(element => element.hasAttribute('data-focused'));
   });
 
   if (focusedIndex === -1) {
@@ -338,7 +339,7 @@ test.describe('flipper', () => {
 
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
-    await expect(page.locator('[data-item-name="delete"]')).toHaveClass(/ce-popover-item--focused/);
+    await expect(page.locator('[data-item-name="delete"]')).toHaveAttribute('data-focused', 'true');
 
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
@@ -363,7 +364,7 @@ test.describe('flipper', () => {
       },
     });
 
-    const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`, {
+    const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`, {
       hasText: /^Workspace in classic editors/,
     });
 
@@ -376,7 +377,7 @@ test.describe('flipper', () => {
     });
 
     await expect(page.locator(INLINE_TOOLBAR_SELECTOR)).toBeVisible();
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} .ce-popover-item--focused`)).toHaveCount(0);
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-focused="true"]`)).toHaveCount(0);
   });
 
   test('cycles focus with Tab and Shift+Tab', async ({ page }) => {
@@ -440,7 +441,7 @@ test.describe('flipper', () => {
 
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
-    await expect(page.locator('[data-item-name="delete"]')).toHaveClass(/ce-popover-item--focused/);
+    await expect(page.locator('[data-item-name="delete"]')).toHaveAttribute('data-focused', 'true');
 
     await page.evaluate(() => {
       const deleteItem = document.querySelector('[data-item-name="delete"]');
@@ -724,7 +725,7 @@ test.describe('flipper', () => {
         throw new Error('No popover items found');
       }
 
-      return firstElement.classList.contains('ce-popover-item--focused');
+      return firstElement.hasAttribute('data-focused');
     });
 
     expect(isFirstItemFocused).toBe(true);
@@ -983,7 +984,7 @@ test.describe('flipper', () => {
       },
       {
         targetIndex,
-        selector: `${BLOCK_TUNES_SELECTOR} .ce-popover-item`,
+        selector: `${BLOCK_TUNES_SELECTOR} [data-testid="popover-item"]`,
       }
     );
 
@@ -995,7 +996,7 @@ test.describe('flipper', () => {
           throw new Error(`No popover item found at index ${index}`);
         }
 
-        return target.classList.contains('ce-popover-item--focused');
+        return target.hasAttribute('data-focused');
       },
       targetIndex
     );
@@ -1033,21 +1034,23 @@ test.describe('flipper', () => {
       }
 
       const originalItems = Array.from(
-        document.querySelectorAll('.ce-popover-item')
+        document.querySelectorAll('[data-testid="popover-item"]')
       ) as HTMLElement[];
 
       // Create new items
       const newItem1 = document.createElement('div');
 
       newItem1.className = 'ce-popover-item';
+      newItem1.dataset.testid = 'popover-item';
       newItem1.textContent = 'New Item 1';
 
       const newItem2 = document.createElement('div');
 
       newItem2.className = 'ce-popover-item';
+      newItem2.dataset.testid = 'popover-item';
       newItem2.textContent = 'New Item 2';
 
-      const container = document.querySelector('.ce-popover__container');
+      const container = document.querySelector('[data-testid="popover-container"]');
 
       if (container) {
         container.appendChild(newItem1);
@@ -1086,7 +1089,7 @@ test.describe('flipper', () => {
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
     await page.evaluate(() => {
-      const focusedItem = document.querySelector('.ce-popover-item--focused');
+      const focusedItem = document.querySelector('[data-focused="true"]');
 
       if (!focusedItem) {
         throw new Error('No focused item found');
@@ -1300,7 +1303,7 @@ test.describe('flipper', () => {
       code: 'Tab',
     });
 
-    const focusedItem = page.locator('.ce-popover-item--focused');
+    const focusedItem = page.locator('[data-focused="true"]');
 
     await expect(focusedItem).toBeVisible();
     await expect(focusedItem).toHaveCount(1);
@@ -1488,4 +1491,3 @@ test.describe('flipper', () => {
     expect(true).toBe(true);
   });
 });
-

@@ -1,9 +1,8 @@
-name: Publish package to NPM
+name: Publish Package to NPM
 
 on:
   release:
-    types:
-      - published
+    types: [published]
 
 jobs:
   publish:
@@ -11,41 +10,38 @@ jobs:
     permissions:
       contents: read
       id-token: write
+
     steps:
-      # Checkout to target branch
-      - uses: actions/checkout@v4
-        with:
-          # Pull submodules
-          submodules: 'recursive'
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-      - name: Get package info
-        id: package
-        uses: codex-team/action-nodejs-package-info@v1
-
-      # Setup node environment
-      - uses: actions/setup-node@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org/
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'yarn'
 
-      # Prepare, build and publish project
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
 
       - name: Lint
         run: yarn lint
 
-      - name: Test
+      - name: Run Unit Tests
         run: yarn test
 
-      # We don't need an explicit build step because prepublishOnly script in package.json will run it
-      - name: Publish the package with a NEXT tag
-        run: npm publish --access public --tag next --provenance
+      - name: Build
+        run: yarn build
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E Tests
+        run: yarn e2e
+
+      - name: Publish to NPM
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Add LATEST tag for the published package if this is not a prerelease version
-        if: github.event.release.prerelease != true
-        run: npm dist-tag add ${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }} latest
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

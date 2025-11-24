@@ -20,8 +20,8 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const NOTIFIER_CONTAINER_SELECTOR = '.cdx-notifies';
-const NOTIFICATION_SELECTOR = '.cdx-notify';
+const NOTIFIER_CONTAINER_SELECTOR = '[data-testid="notifier-container"]';
+const NOTIFICATION_SELECTOR = '[data-testid^="notification"]';
 
 const resetEditor = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holderId }) => {
@@ -100,7 +100,7 @@ test.describe('api.notifier', () => {
     const notification = page.locator(NOTIFICATION_SELECTOR).filter({ hasText: message });
 
     await expect(notification).toBeVisible();
-    await expect(notification).toHaveClass(/cdx-notify--success/);
+    await expect(notification).toHaveAttribute('data-testid', 'notification-success');
 
     await expect(page.locator(NOTIFIER_CONTAINER_SELECTOR)).toBeVisible();
   });
@@ -131,8 +131,8 @@ test.describe('api.notifier', () => {
     const notification = page.locator(NOTIFICATION_SELECTOR).filter({ hasText: message });
 
     await expect(notification).toBeVisible();
-    await expect(notification).toHaveClass(/cdx-notify--error/);
-    await expect(notification.locator('.cdx-notify__button--confirm')).toHaveText(okText);
-    await expect(notification.locator('.cdx-notify__button--cancel')).toHaveText(cancelText);
+    await expect(notification).toHaveAttribute('data-testid', 'notification-error');
+    await expect(notification.locator('[data-testid="notification-confirm-button"]')).toHaveText(okText);
+    await expect(notification.locator('[data-testid="notification-cancel-button"]')).toHaveText(cancelText);
   });
 });

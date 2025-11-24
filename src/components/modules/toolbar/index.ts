@@ -215,9 +215,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     return {
       hide: (): void => {
         this.nodes.actions?.classList.remove(this.CSS.actionsOpened);
+        this.nodes.actions?.removeAttribute('data-opened');
       },
       show: (): void => {
         this.nodes.actions?.classList.add(this.CSS.actionsOpened);
+        this.nodes.actions?.setAttribute('data-opened', 'true');
       },
     };
   }
@@ -448,6 +450,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.nodes.content = content;
 
     this.nodes.actions = actions;
+    actions.setAttribute('data-testid', 'toolbar-actions');
 
     /**
      * Actions will be included to the toolbar content so we can align in to the right of the content

@@ -19,7 +19,7 @@ const TEST_PAGE_URL = pathToFileURL(
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
 const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="redactor"]`;
-const TOOLBOX_POPOVER_SELECTOR = '.ce-popover[data-popover-opened="true"]:not(.ce-popover--inline)';
+const TOOLBOX_POPOVER_SELECTOR = '[data-testid="toolbox"][data-popover-opened="true"]';
 const FAILING_TOOL_SOURCE = `
   class FailingTool {
     render() {

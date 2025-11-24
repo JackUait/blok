@@ -12,10 +12,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
-const TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR = '[data-cy=tool-with-two-inputs-primary]';
-const TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR = '[data-cy=tool-with-two-inputs-secondary]';
-const CONTENTLESS_TOOL_SELECTOR = '[data-cy=contentless-tool]';
-const REGULAR_INPUT_SELECTOR = '[data-cy=regular-input]';
+const TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR = '[data-testid=tool-with-two-inputs-primary]';
+const TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR = '[data-testid=tool-with-two-inputs-secondary]';
+const CONTENTLESS_TOOL_SELECTOR = '[data-testid=contentless-tool]';
+const REGULAR_INPUT_SELECTOR = '[data-testid=regular-input]';
 
 const resetEditor = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holderId }) => {
@@ -29,7 +29,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -92,12 +92,12 @@ const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
         const input1 = document.createElement('div');
         const input2 = document.createElement('div');
 
-        wrapper.dataset.cy = 'tool-with-two-inputs';
+        wrapper.dataset.testid = 'tool-with-two-inputs';
 
         input1.contentEditable = 'true';
         input2.contentEditable = 'true';
-        input1.dataset.cy = 'tool-with-two-inputs-primary';
-        input2.dataset.cy = 'tool-with-two-inputs-secondary';
+        input1.dataset.testid = 'tool-with-two-inputs-primary';
+        input2.dataset.testid = 'tool-with-two-inputs-secondary';
 
         wrapper.append(input1, input2);
 
@@ -153,7 +153,7 @@ const createEditorWithContentlessTool = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const wrapper = document.createElement('div');
 
-        wrapper.dataset.cy = 'contentless-tool';
+        wrapper.dataset.testid = 'contentless-tool';
         wrapper.textContent = '***';
 
         return wrapper;
@@ -208,7 +208,7 @@ const addRegularInput = async (page: Page, position: 'before' | 'after'): Promis
       throw new Error('Editor holder is not available');
     }
 
-    input.dataset.cy = 'regular-input';
+    input.dataset.testid = 'regular-input';
 
     if (placement === 'before') {
       holder.parentNode.insertBefore(input, holder);

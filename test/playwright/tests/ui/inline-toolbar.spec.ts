@@ -90,9 +90,9 @@ class NestedEditorTool {
     const holder = document.createElement('div');
     const holderId = '${NESTED_EDITOR_ID}-holder-' + Math.random().toString(16).slice(2);
 
-    wrapper.dataset.cy = '${NESTED_EDITOR_ID}';
+    wrapper.dataset.testid = '${NESTED_EDITOR_ID}';
     holder.id = holderId;
-    holder.dataset.cy = '${NESTED_EDITOR_ID}-holder';
+    holder.dataset.testid = '${NESTED_EDITOR_ID}-holder';
 
     wrapper.appendChild(holder);
 
@@ -142,7 +142,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -755,7 +755,7 @@ test.describe('inline toolbar', () => {
       },
     });
 
-    const nestedParagraph = page.locator(`[data-cy="${NESTED_EDITOR_ID}"] ${PARAGRAPH_SELECTOR}`);
+    const nestedParagraph = page.locator(`[data-testid="${NESTED_EDITOR_ID}"] ${PARAGRAPH_SELECTOR}`);
 
     await expect(nestedParagraph).toHaveCount(1);
 
@@ -763,15 +763,15 @@ test.describe('inline toolbar', () => {
 
     await selectText(nestedParagraph, 'document structures');
 
-    await page.locator(`[data-cy="${NESTED_EDITOR_ID}"] [data-item-name="link"]`).click();
+    await page.locator(`[data-testid="${NESTED_EDITOR_ID}"] [data-item-name="link"]`).click();
 
-    const input = page.locator(`[data-cy="${NESTED_EDITOR_ID}"] .ce-inline-tool-input`);
+    const input = page.locator(`[data-testid="${NESTED_EDITOR_ID}"] .ce-inline-tool-input`);
 
     await input.click();
     await input.type('https://editorjs.io', { delay: 20 });
 
     const nestedToolbar = page.locator(
-      `[data-cy="${NESTED_EDITOR_ID}"] [data-interface="inline-toolbar"] > .ce-popover > .ce-popover__container`
+      `[data-testid="${NESTED_EDITOR_ID}"] [data-interface="inline-toolbar"] > .ce-popover > .ce-popover__container`
     );
 
     await expect(nestedToolbar).toBeVisible();

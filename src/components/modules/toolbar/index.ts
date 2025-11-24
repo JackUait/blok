@@ -436,7 +436,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
     this.nodes.wrapper = wrapper;
     /**
-     * @todo detect test environment and add data-cy="toolbar" to use it in tests instead of class name
+     * @todo detect test environment and add data-testid="toolbar" to use it in tests instead of class name
      */
 
     /**

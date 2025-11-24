@@ -29,7 +29,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -81,7 +81,7 @@ const createEditorWithDelimiter = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const wrapper = document.createElement('div');
 
-        wrapper.dataset.cyType = 'contentless-tool';
+        wrapper.dataset.testidType = 'contentless-tool';
         wrapper.textContent = '***';
 
         return wrapper;
@@ -199,7 +199,7 @@ const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
 };
 
 const getDelimiterBlock = (page: Page): Locator => {
-  return page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-block:has([data-cy-type="contentless-tool"])`);
+  return page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-block:has([data-testid-type="contentless-tool"])`);
 };
 
 test.describe('arrowLeft keydown', () => {

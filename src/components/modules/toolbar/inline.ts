@@ -300,7 +300,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     ]);
 
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE);
-    this.nodes.wrapper.setAttribute('data-cy', 'inline-toolbar');
+    this.nodes.wrapper.setAttribute('data-testid', 'inline-toolbar');
 
     /**
      * Append the inline toolbar to the editor.

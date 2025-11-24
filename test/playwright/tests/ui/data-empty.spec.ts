@@ -14,7 +14,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
-const PARAGRAPH_INDEX_ATTRIBUTE = 'data-cy-paragraph-index';
+const PARAGRAPH_INDEX_ATTRIBUTE = 'data-testid-paragraph-index';
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 
 declare global {
@@ -35,7 +35,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

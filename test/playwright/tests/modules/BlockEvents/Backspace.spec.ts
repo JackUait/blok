@@ -34,13 +34,13 @@ const getBlockLocator = async (page: Page, position: 'first' | 'last'): Promise<
 };
 
 const getQuoteInputLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
-  const quoteInputSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy=quote-tool] div[contenteditable]`;
+  const quoteInputSelector = `${EDITOR_INTERFACE_SELECTOR} [data-testid=quote-tool] div[contenteditable]`;
 
   return getPositionalLocator(page, quoteInputSelector, position);
 };
 
 const getBlockWrapperLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
-  const blockWrapperSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy=block-wrapper]`;
+  const blockWrapperSelector = `${EDITOR_INTERFACE_SELECTOR} [data-testid=block-wrapper]`;
 
   return getPositionalLocator(page, blockWrapperSelector, position);
 };
@@ -61,7 +61,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -200,7 +200,7 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
         const input = document.createElement('div');
         const input2 = document.createElement('div');
 
-        container.dataset.cy = 'quote-tool';
+        container.dataset.testid = 'quote-tool';
 
         input.contentEditable = 'true';
         input2.contentEditable = 'true';
@@ -257,7 +257,7 @@ const createUnmergeableToolEditor = async (page: Page, options: { hasConversionC
       public render(): HTMLElement {
         const container = document.createElement('div');
 
-        container.dataset.cy = 'unmergeable-tool';
+        container.dataset.testid = 'unmergeable-tool';
         container.contentEditable = 'true';
         container.innerHTML = 'Unmergeable not empty tool';
 
@@ -1038,7 +1038,7 @@ test.describe('backspace keydown', () => {
       },
     ]);
 
-    const targetBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"][data-id="block2"]`);
+    const targetBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-id="block2"]`);
 
     await targetBlock.click();
     await targetBlock.press('Home');
@@ -1068,7 +1068,7 @@ test.describe('backspace keydown', () => {
     const { blocks } = await saveEditor(page);
 
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=unmergeable-tool]`));
+    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid=unmergeable-tool]`));
     await expectToolbarClosed(page);
   });
 
@@ -1084,7 +1084,7 @@ test.describe('backspace keydown', () => {
     const { blocks } = await saveEditor(page);
 
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=unmergeable-tool]`));
+    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid=unmergeable-tool]`));
     await expectToolbarClosed(page);
   });
 

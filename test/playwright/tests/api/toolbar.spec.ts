@@ -17,8 +17,8 @@ const TOOLBAR_OPENED_SELECTOR = `${TOOLBAR_SELECTOR}.ce-toolbar--opened`;
 const TOOLBAR_ACTIONS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__actions`;
 const TOOLBAR_ACTIONS_OPENED_SELECTOR = `${TOOLBAR_ACTIONS_SELECTOR}.ce-toolbar__actions--opened`;
 const TOOLBOX_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbox`;
-const TOOLBOX_POPOVER_SELECTOR = `[data-cy=toolbox] .ce-popover__container`;
-const BLOCK_TUNES_SELECTOR = `[data-cy=block-tunes]`;
+const TOOLBOX_POPOVER_SELECTOR = `[data-testid=toolbox] .ce-popover__container`;
+const BLOCK_TUNES_SELECTOR = `[data-testid=block-tunes]`;
 const BLOCK_TUNES_POPOVER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
 const OPENED_BLOCK_TUNES_SELECTOR = `${BLOCK_TUNES_SELECTOR}[data-popover-opened="true"]`;
 
@@ -67,7 +67,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

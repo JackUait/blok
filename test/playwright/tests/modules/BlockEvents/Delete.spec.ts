@@ -14,7 +14,7 @@ const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"]`;
 const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
-const QUOTE_TOOL_INPUT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="quote-tool"] div[contenteditable]`;
+const QUOTE_TOOL_INPUT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="quote-tool"] div[contenteditable]`;
 
 const getBlockByIndex = (page: Page, index: number): Locator => {
   return page.locator(`:nth-match(${BLOCK_SELECTOR}, ${index + 1})`);
@@ -60,7 +60,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -106,7 +106,7 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
         const input = document.createElement('div');
         const input2 = document.createElement('div');
 
-        container.dataset.cy = 'quote-tool';
+        container.dataset.testid = 'quote-tool';
 
         input.contentEditable = 'true';
         input2.contentEditable = 'true';
@@ -157,7 +157,7 @@ const createEditorWithUnmergeableTool = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const container = document.createElement('div');
 
-        container.dataset.cy = 'unmergeable-tool';
+        container.dataset.testid = 'unmergeable-tool';
         container.contentEditable = 'true';
         container.innerHTML = 'Unmergeable not empty tool';
 
@@ -639,7 +639,7 @@ test.describe('delete keydown', () => {
     await firstParagraph.press('End');
     await firstParagraph.press('Delete');
 
-    const caretInfo = await getCaretInfo(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=unmergeable-tool]`));
+    const caretInfo = await getCaretInfo(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid=unmergeable-tool]`));
 
     expect(caretInfo?.inside).toBeTruthy();
     await expectToolbarClosed(page);

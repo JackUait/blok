@@ -50,7 +50,7 @@ const setupEditor = (html: string): { block: HTMLElement } => {
 
   const toolbar = document.createElement('div');
 
-  toolbar.dataset.cy = 'inline-toolbar';
+  toolbar.dataset.testid = 'inline-toolbar';
 
   const button = document.createElement('button');
 

@@ -15,7 +15,7 @@ const TEST_PAGE_URL = pathToFileURL(
 const EDITOR_BUNDLE_PATH = path.resolve(__dirname, '../../../../dist/editorjs.umd.js');
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"][data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"]`;
 
 type ToolDefinition = {
   name: string;
@@ -147,7 +147,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

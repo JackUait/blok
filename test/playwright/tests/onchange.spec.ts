@@ -117,7 +117,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -528,7 +528,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const delimiterOption = page.locator('[data-cy=toolbox] .ce-popover-item[data-item-name=delimiter]');
+    const delimiterOption = page.getByTestId('toolbox] .ce-popover-item[data-item-name=delimiter');
 
     await delimiterOption.click();
 
@@ -588,7 +588,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const headerOption = page.locator('[data-cy=toolbox] .ce-popover-item[data-item-name=header]');
+    const headerOption = page.getByTestId('toolbox] .ce-popover-item[data-item-name=header');
 
     await headerOption.click();
 
@@ -641,7 +641,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const tuneOption = page.locator('[data-cy=block-tunes] .ce-popover-item:nth-of-type(4)');
+    const tuneOption = page.locator('[data-testid=block-tunes] .ce-popover-item:nth-of-type(4)');
 
     await tuneOption.click();
 
@@ -675,7 +675,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const deleteOption = page.locator('[data-cy=block-tunes] [data-item-name=delete]:visible');
+    const deleteOption = page.locator('[data-testid=block-tunes] [data-item-name=delete]:visible');
 
     await deleteOption.click();
     await deleteOption.click();
@@ -968,7 +968,7 @@ test.describe('onChange callback', () => {
       const toolWrapper = document.createElement('div');
       const child = document.createElement('div');
 
-      child.setAttribute('data-cy', 'tool-child');
+      child.setAttribute('data-testid', 'tool-child');
       child.setAttribute('contenteditable', 'true');
       child.textContent = '';
 
@@ -1009,7 +1009,7 @@ test.describe('onChange callback', () => {
       ],
     });
 
-    const child = page.locator('[data-cy=tool-child]');
+    const child = page.getByTestId('tool-child');
 
     await child.click();
     await child.type('some text');
@@ -1157,7 +1157,7 @@ test.describe('onChange callback', () => {
 
             contenteditable.contentEditable = 'true';
             contenteditable.innerText = 'a';
-            contenteditable.setAttribute('data-cy', 'nested-contenteditable');
+            contenteditable.setAttribute('data-testid', 'nested-contenteditable');
 
             const wrapper = document.createElement('div');
 
@@ -1187,7 +1187,7 @@ test.describe('onChange callback', () => {
       ],
     });
 
-    const nestedContentEditable = page.locator('[data-cy=nested-contenteditable]');
+    const nestedContentEditable = page.getByTestId('nested-contenteditable');
 
     await nestedContentEditable.click();
     await nestedContentEditable.clear();

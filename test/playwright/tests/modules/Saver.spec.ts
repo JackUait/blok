@@ -21,7 +21,7 @@ const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
 const BLOCK_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block__content`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const SETTINGS_ITEM_SELECTOR = '[data-cy=block-tunes] .ce-popover-item';
+const SETTINGS_ITEM_SELECTOR = '[data-testid=block-tunes] .ce-popover-item';
 const BLOCK_TEXT = 'The block with some text';
 
 type SerializableToolConfig = {
@@ -53,7 +53,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

@@ -12,7 +12,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
+const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
 const DEFAULT_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
 const ICON = '<svg width="17" height="15" viewBox="0 0 336 276" xmlns="http://www.w3.org/2000/svg"><path d="M291 150V79c0-19-15-34-34-34H79c-19 0-34 15-34 34v42l67-44 81 72 56-29 42 30zm0 52l-43-30-56 30-81-67-66 39v23c0 19 15 34 34 34h178c17 0 31-13 34-29zM79 0h178c44 0 79 35 79 79v118c0 44-35 79-79 79H79c-44 0-79-35-79-79V79C0 35 35 0 79 0z"></path></svg>';
 
@@ -55,7 +55,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -152,7 +152,7 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
 
   await expect(
     page
-      .locator('.ce-popover[data-cy="block-tunes"][data-popover-opened="true"]')
+      .locator('.ce-popover[data-testid="block-tunes"][data-popover-opened="true"]')
   ).toHaveCount(1);
 };
 
@@ -392,7 +392,7 @@ test.describe('api.tools', () => {
 
       await expect(
         page.locator(
-          '.ce-popover[data-cy="block-tunes"][data-popover-opened="true"]'
+          '.ce-popover[data-testid="block-tunes"][data-popover-opened="true"]'
         )
       ).toContainText(sampleText);
     });

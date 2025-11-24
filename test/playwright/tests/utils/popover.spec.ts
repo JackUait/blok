@@ -16,7 +16,7 @@ const HEADER_TOOL_UMD_PATH = path.resolve(__dirname, '../../../../node_modules/@
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-block`;
-const BLOCK_TUNES_SELECTOR = '.ce-popover[data-cy=block-tunes]';
+const BLOCK_TUNES_SELECTOR = '.ce-popover[data-testid=block-tunes]';
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
 const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
 
@@ -98,7 +98,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

@@ -151,7 +151,7 @@ describe('Toolbox', () => {
       expect(element?.classList.contains('ce-toolbox')).toBe(true);
     });
 
-    it('should set data-cy attribute in test mode', () => {
+    it('should set data-testid attribute in test mode', () => {
       const toolbox = new Toolbox({
         api: mocks.api,
         tools: mocks.tools,
@@ -160,7 +160,7 @@ describe('Toolbox', () => {
 
       const element = toolbox.getElement();
 
-      expect(element?.getAttribute('data-cy')).toBe('toolbox');
+      expect(element?.getAttribute('data-testid')).toBe('toolbox');
     });
 
     it('should initialize with opened = false', () => {

@@ -162,7 +162,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     };
 
     if (import.meta.env.MODE === 'test') {
-      this.nodes.toolbox.setAttribute('data-cy', 'toolbox');
+      this.nodes.toolbox.setAttribute('data-testid', 'toolbox');
     }
 
     this.initPopover();
@@ -290,7 +290,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
 
     if (import.meta.env.MODE === 'test') {
-      this.popover.getElement().setAttribute('data-cy', 'toolbox');
+      this.popover.getElement().setAttribute('data-testid', 'toolbox');
     }
   }
 

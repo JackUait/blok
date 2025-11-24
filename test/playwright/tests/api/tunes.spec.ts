@@ -14,7 +14,7 @@ const TEST_PAGE_URL = pathToFileURL(
 const HOLDER_ID = 'editorjs';
 const FIRST_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block:first-of-type`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const POPOVER_SELECTOR = '.ce-popover[data-cy="block-tunes"]';
+const POPOVER_SELECTOR = '.ce-popover[data-testid="block-tunes"]';
 const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} .ce-popover-item`;
 const FIRST_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(1)`;
 const SECOND_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(2)`;
@@ -53,7 +53,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

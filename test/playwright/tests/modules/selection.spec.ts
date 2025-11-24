@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
+const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 const FAKE_BACKGROUND_SELECTOR = '.codex-editor__fake-background';
@@ -66,7 +66,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.dataset.testid = holderId;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -282,7 +282,7 @@ const EditableTitleTool = class {
     const wrapper = document.createElement('div');
 
     wrapper.contentEditable = 'true';
-    wrapper.dataset.cy = 'editable-title-block';
+    wrapper.dataset.testid = 'editable-title-block';
     wrapper.textContent = this.data.text ?? 'Editable block';
 
     return wrapper;

@@ -13,10 +13,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
+const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
-const FAKE_BACKGROUND_SELECTOR = '[data-testid="fake-background"]';
+const FAKE_BACKGROUND_SELECTOR = '[data-blok-testid="fake-background"]';
 
 declare global {
   interface Window {
@@ -65,7 +65,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -281,7 +281,7 @@ const EditableTitleTool = class {
     const wrapper = document.createElement('div');
 
     wrapper.contentEditable = 'true';
-    wrapper.setAttribute('data-testid', 'editable-title-block');
+    wrapper.setAttribute('data-blok-testid', 'editable-title-block');
     wrapper.textContent = this.data.text ?? 'Editable block';
 
     return wrapper;
@@ -444,7 +444,7 @@ test.describe('modules/selection', () => {
 
       selection?.removeAllRanges();
 
-      const paragraphEl = document.querySelector('[data-testid="block-wrapper"] [contenteditable]');
+      const paragraphEl = document.querySelector('[data-blok-testid="block-wrapper"] [contenteditable]');
       const textNode = paragraphEl?.firstChild as Text | null;
 
       if (textNode) {

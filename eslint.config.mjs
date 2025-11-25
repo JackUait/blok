@@ -43,7 +43,7 @@ const NON_CSS_PREFIXES = [
   'xpath=',
   'xpath:',
   'id=',
-  'data-testid=',
+  'data-blok-testid=',
   'data-blok-test=',
   'data-blok-qa=',
   'nth=',
@@ -317,7 +317,7 @@ export default [
     },
     rules: {
       // Duplicate code detection
-      'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-testid,data-blok-focused' }],
+      'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-blok-testid,data-blok-focused' }],
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-identical-expressions': 'error',
       // Prevent UMD module patterns

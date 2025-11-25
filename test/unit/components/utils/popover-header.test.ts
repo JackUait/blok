@@ -4,7 +4,7 @@ import Listeners from '../../../../src/components/utils/listeners';
 import { css } from '../../../../src/components/utils/popover/components/popover-header/popover-header.const';
 
 const { iconMarkup } = vi.hoisted(() => ({
-  iconMarkup: '<svg data-testid="chevron"></svg>',
+  iconMarkup: '<svg data-blok-testid="chevron"></svg>',
 }));
 
 vi.mock('@codexteam/icons', () => ({

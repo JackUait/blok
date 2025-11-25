@@ -22,7 +22,7 @@ export class PopoverItemSeparator extends PopoverItem {
       line: Dom.make('div', css.line),
     };
 
-    this.nodes.root.setAttribute('data-testid', 'popover-item-separator');
+    this.nodes.root.setAttribute('data-blok-testid', 'popover-item-separator');
     this.nodes.root.appendChild(this.nodes.line);
   }
 

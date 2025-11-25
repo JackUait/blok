@@ -17,10 +17,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
-const TOOLBAR_PLUS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="plus-button"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
+const TOOLBAR_PLUS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const WAIT_FOR_BATCH = modificationsObserverBatchTimeout + 100;
 
 const HEADER_TOOL_UMD_PATH = path.resolve(
@@ -117,7 +117,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -528,7 +528,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const delimiterOption = page.getByTestId('toolbox').locator('[data-testid="popover-item"][data-blok-item-name=delimiter]');
+    const delimiterOption = page.getByTestId('toolbox').locator('[data-blok-testid="popover-item"][data-blok-item-name=delimiter]');
 
     await delimiterOption.click();
 
@@ -588,7 +588,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const headerOption = page.getByTestId('toolbox').locator('[data-testid="popover-item"][data-blok-item-name=header]');
+    const headerOption = page.getByTestId('toolbox').locator('[data-blok-testid="popover-item"][data-blok-item-name=header]');
 
     await headerOption.click();
 
@@ -641,7 +641,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const tuneOption = page.getByTestId('block-tunes-popover').locator('[data-testid="popover-item"]:nth-of-type(4)');
+    const tuneOption = page.getByTestId('block-tunes-popover').locator('[data-blok-testid="popover-item"]:nth-of-type(4)');
 
     await tuneOption.click();
 
@@ -968,7 +968,7 @@ test.describe('onChange callback', () => {
       const toolWrapper = document.createElement('div');
       const child = document.createElement('div');
 
-      child.setAttribute('data-testid', 'tool-child');
+      child.setAttribute('data-blok-testid', 'tool-child');
       child.setAttribute('contenteditable', 'true');
       child.textContent = '';
 
@@ -1157,7 +1157,7 @@ test.describe('onChange callback', () => {
 
             contenteditable.contentEditable = 'true';
             contenteditable.innerText = 'a';
-            contenteditable.setAttribute('data-testid', 'nested-contenteditable');
+            contenteditable.setAttribute('data-blok-testid', 'nested-contenteditable');
 
             const wrapper = document.createElement('div');
 

@@ -165,7 +165,7 @@ export class PopoverItemDefault extends PopoverItem {
       type: tag === 'button' ? 'button' : undefined,
     });
 
-    el.setAttribute('data-testid', 'popover-item');
+    el.setAttribute('data-blok-testid', 'popover-item');
 
     if (params.name) {
       el.setAttribute('data-blok-item-name', params.name);
@@ -173,7 +173,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     this.nodes.icon = Dom.make('div', [css.icon, css.iconTool], {
       innerHTML: params.icon || IconDotCircle,
-      'data-testid': 'popover-item-icon',
+      'data-blok-testid': 'popover-item-icon',
     });
 
     el.appendChild(this.nodes.icon);
@@ -184,7 +184,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (title !== undefined) {
       el.appendChild(Dom.make('div', css.title, {
         innerHTML: title || '',
-        'data-testid': 'popover-item-title',
+        'data-blok-testid': 'popover-item-title',
       }));
     }
 
@@ -193,14 +193,14 @@ export class PopoverItemDefault extends PopoverItem {
         textContent: params.secondaryLabel,
       });
 
-      secondaryTitle.setAttribute('data-testid', 'popover-item-secondary-title');
+      secondaryTitle.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       el.appendChild(secondaryTitle);
     }
 
     if (this.hasChildren) {
       el.appendChild(Dom.make('div', [css.icon, css.iconChevronRight], {
         innerHTML: IconChevronRight,
-        'data-testid': 'popover-item-chevron-right',
+        'data-blok-testid': 'popover-item-chevron-right',
       }));
     }
 

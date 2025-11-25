@@ -12,10 +12,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [contenteditable]`;
-const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="plus-button"]`;
-const POPOVER_ITEM_SELECTOR = `[data-testid=toolbox] [data-testid="popover-item"]`;
-const POPOVER_ITEM_ICON_SELECTOR = '[data-testid="popover-item-icon"]';
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [contenteditable]`;
+const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const POPOVER_ITEM_SELECTOR = `[data-blok-testid=toolbox] [data-blok-testid="popover-item"]`;
+const POPOVER_ITEM_ICON_SELECTOR = '[data-blok-testid="popover-item-icon"]';
 
 const ICON = '<svg width="17" height="15" viewBox="0 0 336 276" xmlns="http://www.w3.org/2000/svg"><path d="M291 150V79c0-19-15-34-34-34H79c-19 0-34 15-34 34v42l67-44 81 72 56-29 42 30zm0 52l-43-30-56 30-81-67-66 39v23c0 19 15 34 34 34h178c17 0 31-13 34-29zM79 0h178c44 0 79 35 79 79v118c0 44-35 79-79 79H79c-44 0-79-35-79-79V79C0 35 35 0 79 0z"></path></svg>';
 
@@ -67,7 +67,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

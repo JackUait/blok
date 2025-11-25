@@ -157,7 +157,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
     input.placeholder = this.i18n.t('Add a link');
     input.enterKeyHint = 'done';
     input.classList.add(this.CSS.input);
-    input.setAttribute('data-testid', 'inline-tool-input');
+    input.setAttribute('data-blok-testid', 'inline-tool-input');
     this.setBooleanStateAttribute(input, this.DATA_ATTRIBUTES.inputOpened, false);
     input.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Enter') {

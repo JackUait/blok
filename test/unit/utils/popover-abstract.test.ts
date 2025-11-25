@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('@codexteam/icons', () => ({
-  IconDotCircle: '<svg data-testid="dot-circle"></svg>',
-  IconChevronRight: '<svg data-testid="chevron-right"></svg>',
+  IconDotCircle: '<svg data-blok-testid="dot-circle"></svg>',
+  IconChevronRight: '<svg data-blok-testid="chevron-right"></svg>',
 }));
 
 import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';

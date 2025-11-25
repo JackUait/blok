@@ -12,13 +12,13 @@ const TEST_PAGE_URL = pathToFileURL(
 const DIST_BUNDLE_PATH = path.resolve(__dirname, '../../../dist/editorjs.umd.js');
 
 const HOLDER_ID = 'editorjs';
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbar"]`;
+const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
 const TOOLBAR_OPENED_SELECTOR = `${TOOLBAR_SELECTOR}[data-blok-opened="true"]`;
-const TOOLBAR_ACTIONS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbar-actions"]`;
+const TOOLBAR_ACTIONS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar-actions"]`;
 const TOOLBAR_ACTIONS_OPENED_SELECTOR = `${TOOLBAR_ACTIONS_SELECTOR}[data-blok-opened="true"]`;
-const TOOLBOX_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbox"]`;
-const TOOLBOX_POPOVER_SELECTOR = `[data-testid=toolbox] .ce-popover__container`;
-const BLOCK_TUNES_SELECTOR = `[data-testid="block-tunes-popover"]`;
+const TOOLBOX_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbox"]`;
+const TOOLBOX_POPOVER_SELECTOR = `[data-blok-testid=toolbox] .ce-popover__container`;
+const BLOCK_TUNES_SELECTOR = `[data-blok-testid="block-tunes-popover"]`;
 const BLOCK_TUNES_POPOVER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
 const OPENED_BLOCK_TUNES_SELECTOR = `${BLOCK_TUNES_SELECTOR}[data-blok-popover-opened="true"]`;
 
@@ -67,7 +67,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

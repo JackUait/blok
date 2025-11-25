@@ -11,12 +11,12 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
-const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="plus-button"]`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
-const TOOLBOX_POPOVER_SELECTOR = '[data-testid="toolbox"]';
-const BLOCK_TUNES_POPOVER_SELECTOR = '[data-testid="block-tunes-popover"]';
+const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox"]';
+const BLOCK_TUNES_POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -34,7 +34,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -995,7 +995,7 @@ test.describe('editor i18n', () => {
 
       await expect(nestedPopover).toHaveCount(1);
 
-      const nestedPopoverContainer = nestedPopover.locator('[data-testid="popover-container"]');
+      const nestedPopoverContainer = nestedPopover.locator('[data-blok-testid="popover-container"]');
 
       await expect(nestedPopoverContainer).toHaveCount(1);
       await expect(nestedPopoverContainer).toBeVisible();

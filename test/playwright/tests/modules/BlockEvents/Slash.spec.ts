@@ -12,10 +12,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-blok-block-tool="paragraph"]`;
-const TOOLBOX_CONTAINER_SELECTOR = '[data-testid="toolbox"] .ce-popover__container';
+const TOOLBOX_CONTAINER_SELECTOR = '[data-blok-testid="toolbox"] .ce-popover__container';
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
-  `[data-testid="toolbox"] [data-testid="popover-item"][data-blok-item-name=${itemName}]`;
-const BLOCK_TUNES_SELECTOR = '[data-testid="block-tunes-popover"] [data-testid="popover-container"]';
+  `[data-blok-testid="toolbox"] [data-blok-testid="popover-item"][data-blok-item-name=${itemName}]`;
+const BLOCK_TUNES_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 
 const modifierKeyVariants: Array<{ description: string; key: 'Control' | 'Meta' }> = [
@@ -37,7 +37,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -132,7 +132,7 @@ test.describe('slash keydown', () => {
       const title = document.querySelector('h1');
 
       if (title) {
-        title.setAttribute('data-testid', 'page-title');
+        title.setAttribute('data-blok-testid', 'page-title');
       }
     });
 

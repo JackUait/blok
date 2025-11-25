@@ -23,7 +23,7 @@ const SIMPLE_IMAGE_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const getBlockByIndex = (page: Page, index: number): Locator => {
   return page.locator(`${BLOCK_SELECTOR}:nth-of-type(${index + 1})`);
 };
@@ -71,7 +71,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -420,8 +420,8 @@ test.describe('copy and paste', () => {
         'text/html': '<h2>First block</h2><p>Second block</p>',
       });
 
-      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="header"]`);
-      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="paragraph"]:nth-last-of-type(1)`);
+      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="header"]`);
+      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="paragraph"]:nth-last-of-type(1)`);
 
       await expect(headerBlock).toHaveText('First block');
       await expect(paragraphBlock).toHaveText('Second block');
@@ -535,7 +535,7 @@ test.describe('copy and paste', () => {
         render() {
           this.element = document.createElement('div');
           this.element.className = 'file-paste-tool';
-          this.element.setAttribute('data-testid', 'file-paste-tool');
+          this.element.setAttribute('data-blok-testid', 'file-paste-tool');
           this.element.contentEditable = 'true';
           this.element.textContent = this.data.text ?? 'Paste file here';
 
@@ -648,7 +648,7 @@ test.describe('copy and paste', () => {
           const block = document.createElement('div');
 
           block.className = 'ce-block-with-disabled-prevent-default';
-          block.setAttribute('data-testid', 'block-with-disabled-prevent-default');
+          block.setAttribute('data-blok-testid', 'block-with-disabled-prevent-default');
           block.contentEditable = 'true';
 
           block.addEventListener('paste', (event) => {

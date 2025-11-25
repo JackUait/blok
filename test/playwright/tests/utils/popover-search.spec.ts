@@ -12,13 +12,13 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const BLOCK_TUNES_SELECTOR = `[data-testid="block-tunes-popover"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
-const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-search-input"]`;
-const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-item"]`;
-const NOTHING_FOUND_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-nothing-found"]`;
-const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-container"]`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const BLOCK_TUNES_SELECTOR = `[data-blok-testid="block-tunes-popover"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-search-input"]`;
+const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item"]`;
+const NOTHING_FOUND_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-nothing-found"]`;
+const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"]`;
 
 /**
  * Clear the provided search input and emit an input event so filtering logic reacts
@@ -111,7 +111,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -252,7 +252,7 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
 
     const seenNames = new Set<string>();
 
-    settingsElement.querySelectorAll<HTMLElement>('[data-testid="popover-item"][data-blok-item-name]').forEach((item) => {
+    settingsElement.querySelectorAll<HTMLElement>('[data-blok-testid="popover-item"][data-blok-item-name]').forEach((item) => {
       const name = item.getAttribute('data-blok-item-name') ?? '';
 
       if (seenNames.has(name)) {
@@ -262,7 +262,7 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
       }
     });
 
-    const searchInput = settingsElement.querySelector<HTMLInputElement>('[data-testid="popover-search-input"]');
+    const searchInput = settingsElement.querySelector<HTMLInputElement>('[data-blok-testid="popover-search-input"]');
 
     searchInput?.focus();
   }, BLOCK_TUNES_SELECTOR);
@@ -906,7 +906,7 @@ test.describe('popover Search/Filter', () => {
         }
 
         return searchFieldElement.contains(range.startContainer);
-      }, `${BLOCK_TUNES_SELECTOR} [data-testid="popover-search-field"]`);
+      }, `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-search-field"]`);
 
       expect(containsCaret).toBe(true);
     });
@@ -946,7 +946,7 @@ test.describe('popover Search/Filter', () => {
 
       await openBlockTunes(page);
 
-      const separator = page.locator(`${BLOCK_TUNES_SELECTOR} [data-testid="popover-item-separator"]`);
+      const separator = page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-separator"]`);
 
       // Check separator is displayed initially
       await expect(separator).toBeVisible();
@@ -1059,7 +1059,7 @@ test.describe('popover Search/Filter', () => {
 
       // Check nested popover search input has placeholder text with i18n
       const nestedSearchInput = page.locator(
-        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-testid="popover-search-input"]`
+        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-search-input"]`
       );
 
       await expect(nestedSearchInput).toHaveAttribute('placeholder', 'Искать');
@@ -1069,7 +1069,7 @@ test.describe('popover Search/Filter', () => {
 
       // Check nested popover has nothing found message with i18n
       const nothingFoundMessage = page.locator(
-        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-testid="popover-nothing-found"]`
+        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-nothing-found"]`
       );
 
       await expect(nothingFoundMessage).toHaveText('Ничего не найдено');
@@ -1125,13 +1125,13 @@ test.describe('popover Search/Filter', () => {
 
       // Wait for nested popover to appear
       const nestedPopoverContainer = page.locator(
-        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-testid="popover-container"]`
+        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`
       );
 
       await expect(nestedPopoverContainer).toBeVisible();
 
       const nestedSearchInput = page.locator(
-        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-testid="popover-search-input"]`
+        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-search-input"]`
       );
 
       // Initially all child items should be visible

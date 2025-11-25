@@ -22,12 +22,12 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
-const CONVERT_TO_OPTION_SELECTOR = '[data-testid="popover-item"][data-blok-item-name="convert-to"]';
-const NESTED_POPOVER_SELECTOR = '[data-testid="popover"][data-blok-nested="true"]';
-const POPOVER_CONTAINER_SELECTOR = '[data-testid="block-tunes-popover"] > [data-testid="popover-container"]';
-const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-testid="popover-search-input"]`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const CONVERT_TO_OPTION_SELECTOR = '[data-blok-testid="popover-item"][data-blok-item-name="convert-to"]';
+const NESTED_POPOVER_SELECTOR = '[data-blok-testid="popover"][data-blok-nested="true"]';
+const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] > [data-blok-testid="popover-container"]';
+const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-search-input"]`;
 const DEFAULT_WAIT_TIMEOUT = 5_000;
 const BLOCK_TUNES_WAIT_BUFFER = 500;
 
@@ -60,7 +60,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -349,7 +349,7 @@ test.describe('ui.block-tunes', () => {
       await searchInput.waitFor({ state: 'visible' });
       await page.keyboard.press('Enter');
 
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`);
 
       await expect(paragraph).toHaveCount(1);
       await expect(paragraph).toHaveText('Some text');
@@ -573,11 +573,11 @@ test.describe('ui.block-tunes', () => {
 
       await expect(popoverContainer).toHaveCount(1);
 
-      const popoverItems = popoverContainer.locator('[data-testid="popover-item"]:not([data-blok-hidden="true"])');
+      const popoverItems = popoverContainer.locator('[data-blok-testid="popover-item"]:not([data-blok-hidden="true"])');
       const itemsCount = await popoverItems.count();
 
       expect(itemsCount).toBeGreaterThan(1);
-      const firstPopoverItem = popoverContainer.locator('[data-testid="popover-item"]:not([data-blok-hidden="true"]):first-of-type');
+      const firstPopoverItem = popoverContainer.locator('[data-blok-testid="popover-item"]:not([data-blok-hidden="true"]):first-of-type');
 
       await expect(firstPopoverItem).toContainText('Tune');
     });

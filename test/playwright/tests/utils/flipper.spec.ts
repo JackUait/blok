@@ -11,12 +11,12 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_TUNES_SELECTOR = '[data-testid="block-tunes-popover"]';
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
-const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-container"]`;
-const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-testid="popover-item"]`;
-const PLUGIN_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="some-plugin"]`;
-const INLINE_TOOLBAR_SELECTOR = '[data-testid="inline-toolbar"] [data-testid="popover"][data-blok-popover-opened="true"]';
+const BLOCK_TUNES_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"]`;
+const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"]`;
+const PLUGIN_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="some-plugin"]`;
+const INLINE_TOOLBAR_SELECTOR = '[data-blok-testid="inline-toolbar"] [data-blok-testid="popover"][data-blok-popover-opened="true"]';
 
 const KEY_CODES = {
   TAB: 9,
@@ -65,7 +65,7 @@ class SomePlugin {
     const wrapper = document.createElement('div');
 
     wrapper.classList.add('cdx-some-plugin');
-    wrapper.setAttribute('data-testid', 'some-plugin');
+    wrapper.setAttribute('data-blok-testid', 'some-plugin');
     wrapper.contentEditable = 'true';
     wrapper.addEventListener('keydown', SomePlugin.pluginInternalKeydownHandler);
 
@@ -119,7 +119,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -364,7 +364,7 @@ test.describe('flipper', () => {
       },
     });
 
-    const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`, {
+    const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`, {
       hasText: /^Workspace in classic editors/,
     });
 
@@ -984,7 +984,7 @@ test.describe('flipper', () => {
       },
       {
         targetIndex,
-        selector: `${BLOCK_TUNES_SELECTOR} [data-testid="popover-item"]`,
+        selector: `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item"]`,
       }
     );
 
@@ -1034,23 +1034,23 @@ test.describe('flipper', () => {
       }
 
       const originalItems = Array.from(
-        document.querySelectorAll('[data-testid="popover-item"]')
+        document.querySelectorAll('[data-blok-testid="popover-item"]')
       ) as HTMLElement[];
 
       // Create new items
       const newItem1 = document.createElement('div');
 
       newItem1.className = 'ce-popover-item';
-      newItem1.setAttribute('data-testid', 'popover-item');
+      newItem1.setAttribute('data-blok-testid', 'popover-item');
       newItem1.textContent = 'New Item 1';
 
       const newItem2 = document.createElement('div');
 
       newItem2.className = 'ce-popover-item';
-      newItem2.setAttribute('data-testid', 'popover-item');
+      newItem2.setAttribute('data-blok-testid', 'popover-item');
       newItem2.textContent = 'New Item 2';
 
-      const container = document.querySelector('[data-testid="popover-container"]');
+      const container = document.querySelector('[data-blok-testid="popover-container"]');
 
       if (container) {
         container.appendChild(newItem1);

@@ -160,7 +160,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.nodes = {
       toolbox: Dom.make('div', Toolbox.CSS.toolbox),
     };
-    this.nodes.toolbox.setAttribute('data-testid', 'toolbox');
+    this.nodes.toolbox.setAttribute('data-blok-testid', 'toolbox');
 
     this.initPopover();
 
@@ -285,7 +285,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
-    this.popover.getElement().setAttribute('data-testid', 'toolbox-popover');
+    this.popover.getElement().setAttribute('data-blok-testid', 'toolbox-popover');
   }
 
   /**

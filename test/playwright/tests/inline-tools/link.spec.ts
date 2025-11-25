@@ -16,7 +16,7 @@ const PARAGRAPH_CONTENT_SELECTOR = '[data-blok-block-tool="paragraph"] .ce-parag
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
 const LINK_INPUT_SELECTOR = `input[data-blok-link-tool-input-opened]`;
-const NOTIFIER_SELECTOR = '[data-testid="notifier-container"]';
+const NOTIFIER_SELECTOR = '[data-blok-testid="notifier-container"]';
 
 const getParagraphByText = (page: Page, text: string): Locator => {
   return page.locator(PARAGRAPH_CONTENT_SELECTOR, { hasText: text });
@@ -91,7 +91,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

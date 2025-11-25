@@ -301,9 +301,9 @@ export default class UI extends Module<UINodes> {
       ...(this.isRtl ? [ this.CSS.editorRtlFix ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, EDITOR_INTERFACE_VALUE);
-    this.nodes.wrapper.setAttribute('data-testid', 'codex-editor');
+    this.nodes.wrapper.setAttribute('data-blok-testid', 'codex-editor');
     this.nodes.redactor = $.make('div', this.CSS.editorZone);
-    this.nodes.redactor.setAttribute('data-testid', 'redactor');
+    this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
 
     /**
      * If Editor has injected into the narrow container, enable Narrow Mode

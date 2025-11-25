@@ -50,7 +50,7 @@ const setupEditor = (html: string): { block: HTMLElement } => {
 
   const toolbar = document.createElement('div');
 
-  toolbar.setAttribute('data-testid', 'inline-toolbar');
+  toolbar.setAttribute('data-blok-testid', 'inline-toolbar');
 
   const button = document.createElement('button');
 

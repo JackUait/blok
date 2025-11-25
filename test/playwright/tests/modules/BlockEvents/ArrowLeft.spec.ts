@@ -29,7 +29,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -199,7 +199,7 @@ const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
 };
 
 const getDelimiterBlock = (page: Page): Locator => {
-  return page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-block:has([data-testid-type="contentless-tool"])`);
+  return page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-block:has([data-blok-testid-type="contentless-tool"])`);
 };
 
 test.describe('arrowLeft keydown', () => {

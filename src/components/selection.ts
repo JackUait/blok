@@ -540,7 +540,7 @@ export default class SelectionUtils {
 
     const wrapper = $.make('span', 'codex-editor__fake-background');
 
-    wrapper.setAttribute('data-testid', 'fake-background');
+    wrapper.setAttribute('data-blok-testid', 'fake-background');
     wrapper.setAttribute('data-blok-fake-background', 'true');
     wrapper.setAttribute('data-blok-mutation-free', 'true');
     wrapper.style.backgroundColor = '#a8d6ff';

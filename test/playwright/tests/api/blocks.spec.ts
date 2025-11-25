@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
+const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const getBlockWrapperSelectorByIndex = (index: number): string => {
   return `:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`;
 };
@@ -44,7 +44,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -1247,7 +1247,7 @@ test.describe('api.blocks', () => {
    * These test the conversion options UI which uses getConvertibleToolsForBlock
    */
   test.describe('getConvertibleToolsForBlock (via UI)', () => {
-    const BLOCK_TUNES_SELECTOR = `[data-testid="block-tunes-popover"]`;
+    const BLOCK_TUNES_SELECTOR = `[data-blok-testid="block-tunes-popover"]`;
     const CONVERT_TO_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-item-name="convert-to"]`;
 
     const openConvertToMenu = async (page: Page): Promise<Locator> => {
@@ -1361,7 +1361,7 @@ test.describe('api.blocks', () => {
       await openBlockSettings(page);
 
       // Check if block tunes popover is visible
-      await expect(page.locator(BLOCK_TUNES_SELECTOR).locator('[data-testid="popover-container"]')).toBeVisible();
+      await expect(page.locator(BLOCK_TUNES_SELECTOR).locator('[data-blok-testid="popover-container"]')).toBeVisible();
 
       // Check if delete tune is visible (debug)
       await expect(page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-item-name="delete"]`)).toBeVisible();

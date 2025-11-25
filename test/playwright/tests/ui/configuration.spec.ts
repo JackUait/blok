@@ -17,9 +17,9 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
-const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="redactor"]`;
-const TOOLBOX_POPOVER_SELECTOR = '[data-testid="toolbox"][data-blok-popover-opened="true"]';
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
+const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
+const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox"][data-blok-popover-opened="true"]';
 const FAILING_TOOL_SOURCE = `
   class FailingTool {
     render() {
@@ -76,7 +76,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -895,7 +895,7 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('configurableTool');
     });
 
-    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="configurableTool"]`;
+    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="configurableTool"]`;
     const blockCount = await page.locator(configurableSelector).count();
 
     expect(blockCount).toBeGreaterThan(0);
@@ -970,7 +970,7 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('inlineToggleTool');
     });
 
-    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="inlineToggleTool"]`;
+    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="inlineToggleTool"]`;
     const inlineToggleBlocks = page.locator(inlineToggleSelector);
 
     await expect(inlineToggleBlocks).toHaveCount(1);

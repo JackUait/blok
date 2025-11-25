@@ -26,7 +26,7 @@ export class PopoverItemHtml extends PopoverItem {
     };
 
     this.nodes.root.appendChild(params.element);
-    this.nodes.root.setAttribute('data-testid', 'popover-item-html');
+    this.nodes.root.setAttribute('data-blok-testid', 'popover-item-html');
 
     if (params.name) {
       this.nodes.root.setAttribute('data-blok-item-name', params.name);

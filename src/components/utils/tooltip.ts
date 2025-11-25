@@ -346,7 +346,7 @@ class Tooltip {
   private prepare(): void {
     this.nodes.wrapper = this.make('div', this.CSS.tooltip);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, TOOLTIP_INTERFACE_VALUE);
-    this.nodes.wrapper.setAttribute('data-testid', 'tooltip');
+    this.nodes.wrapper.setAttribute('data-blok-testid', 'tooltip');
     this.nodes.content = this.make('div', this.CSS.tooltipContent);
 
     if (this.nodes.wrapper && this.nodes.content) {

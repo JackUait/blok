@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-blok-block-tool="paragraph"]`;
-const CONTENTLESS_TOOL_SELECTOR = '[data-testid-type="contentless-tool"]';
+const CONTENTLESS_TOOL_SELECTOR = '[data-blok-testid-type="contentless-tool"]';
 
 const resetEditor = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holderId }) => {
@@ -27,7 +27,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -77,7 +77,7 @@ const createEditorWithContentlessBlock = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const wrapper = document.createElement('div');
 
-        wrapper.setAttribute('data-testid', 'contentless-tool');
+        wrapper.setAttribute('data-blok-testid', 'contentless-tool');
         wrapper.setAttribute('data-blok-testid-type', 'contentless-tool');
         wrapper.textContent = '***';
 

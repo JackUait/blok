@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('@codexteam/icons', () => ({
-  IconDotCircle: '<svg data-testid="dot-circle"></svg>',
-  IconChevronRight: '<svg data-testid="chevron-right"></svg>',
+  IconDotCircle: '<svg data-blok-testid="dot-circle"></svg>',
+  IconChevronRight: '<svg data-blok-testid="chevron-right"></svg>',
 }));
 
 import {
@@ -24,7 +24,7 @@ const createItem = (overrides: Partial<PopoverItemDefaultParams> = {}): ItemSetu
   const params: PopoverItemDefaultParams = {
     title: 'Test item',
     name: 'test-item',
-    icon: '<svg data-testid="custom-icon"></svg>',
+    icon: '<svg data-blok-testid="custom-icon"></svg>',
     onActivate: vi.fn(),
     ...overrides,
   };

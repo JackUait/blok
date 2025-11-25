@@ -439,7 +439,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const wrapper = $.make('div', this.CSS.toolbar);
 
     this.nodes.wrapper = wrapper;
-    wrapper.setAttribute('data-testid', 'toolbar');
+    wrapper.setAttribute('data-blok-testid', 'toolbar');
 
     /**
      * Make Content Zone and Actions Zone
@@ -450,7 +450,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.nodes.content = content;
 
     this.nodes.actions = actions;
-    actions.setAttribute('data-testid', 'toolbar-actions');
+    actions.setAttribute('data-blok-testid', 'toolbar-actions');
 
     /**
      * Actions will be included to the toolbar content so we can align in to the right of the content
@@ -467,7 +467,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
       innerHTML: IconPlus,
     });
 
-    plusButton.setAttribute('data-testid', 'plus-button');
+    plusButton.setAttribute('data-blok-testid', 'plus-button');
 
     this.nodes.plusButton = plusButton;
     $.append(actions, plusButton);
@@ -501,7 +501,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
       innerHTML: IconMenu,
     });
 
-    settingsToggler.setAttribute('data-testid', 'settings-toggler');
+    settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
 
     this.nodes.settingsToggler = settingsToggler;
 

@@ -1006,7 +1006,7 @@ export default class BoldInlineTool implements InlineTool {
       return;
     }
 
-    const toolbar = editorWrapper.querySelector('[data-testid=inline-toolbar]');
+    const toolbar = editorWrapper.querySelector('[data-blok-testid=inline-toolbar]');
 
     if (!(toolbar instanceof HTMLElement)) {
       return;

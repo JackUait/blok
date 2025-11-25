@@ -20,8 +20,8 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const NOTIFIER_CONTAINER_SELECTOR = '[data-testid="notifier-container"]';
-const NOTIFICATION_SELECTOR = '[data-testid^="notification"]';
+const NOTIFIER_CONTAINER_SELECTOR = '[data-blok-testid="notifier-container"]';
+const NOTIFICATION_SELECTOR = '[data-blok-testid^="notification"]';
 
 const resetEditor = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holderId }) => {
@@ -35,12 +35,12 @@ const resetEditor = async (page: Page): Promise<void> => {
     holder?.remove();
 
     // Remove leftover notifications between tests to keep DOM deterministic
-    document.querySelectorAll('[data-testid="notifier-container"]').forEach((node) => node.remove());
+    document.querySelectorAll('[data-blok-testid="notifier-container"]').forEach((node) => node.remove());
 
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -77,7 +77,7 @@ test.describe('api.notifier', () => {
         window.editorInstance = undefined;
       }
 
-      document.querySelectorAll('[data-testid="notifier-container"]').forEach((node) => node.remove());
+      document.querySelectorAll('[data-blok-testid="notifier-container"]').forEach((node) => node.remove());
       document.getElementById(holderId)?.remove();
     }, { holderId: HOLDER_ID });
   });
@@ -100,7 +100,7 @@ test.describe('api.notifier', () => {
     const notification = page.locator(NOTIFICATION_SELECTOR).filter({ hasText: message });
 
     await expect(notification).toBeVisible();
-    await expect(notification).toHaveAttribute('data-testid', 'notification-success');
+    await expect(notification).toHaveAttribute('data-blok-testid', 'notification-success');
 
     await expect(page.locator(NOTIFIER_CONTAINER_SELECTOR)).toBeVisible();
   });
@@ -131,8 +131,8 @@ test.describe('api.notifier', () => {
     const notification = page.locator(NOTIFICATION_SELECTOR).filter({ hasText: message });
 
     await expect(notification).toBeVisible();
-    await expect(notification).toHaveAttribute('data-testid', 'notification-error');
-    await expect(notification.locator('[data-testid="notification-confirm-button"]')).toHaveText(okText);
-    await expect(notification.locator('[data-testid="notification-cancel-button"]')).toHaveText(cancelText);
+    await expect(notification).toHaveAttribute('data-blok-testid', 'notification-error');
+    await expect(notification.locator('[data-blok-testid="notification-confirm-button"]')).toHaveText(okText);
+    await expect(notification.locator('[data-blok-testid="notification-cancel-button"]')).toHaveText(cancelText);
   });
 });

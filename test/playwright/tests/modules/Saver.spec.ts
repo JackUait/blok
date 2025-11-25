@@ -18,10 +18,10 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const BLOCK_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-content"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
-const SETTINGS_ITEM_SELECTOR = '[data-testid="block-tunes-popover"] [data-testid="popover-item"]';
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const BLOCK_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-content"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const SETTINGS_ITEM_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-item"]';
 const BLOCK_TEXT = 'The block with some text';
 
 type SerializableToolConfig = {
@@ -53,7 +53,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

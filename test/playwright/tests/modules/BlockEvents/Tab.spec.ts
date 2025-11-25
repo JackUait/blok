@@ -11,11 +11,11 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="paragraph"] [contenteditable]`;
-const TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR = '[data-testid=tool-with-two-inputs-primary]';
-const TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR = '[data-testid=tool-with-two-inputs-secondary]';
-const CONTENTLESS_TOOL_SELECTOR = '[data-testid=contentless-tool]';
-const REGULAR_INPUT_SELECTOR = '[data-testid=regular-input]';
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="paragraph"] [contenteditable]`;
+const TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR = '[data-blok-testid=tool-with-two-inputs-primary]';
+const TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR = '[data-blok-testid=tool-with-two-inputs-secondary]';
+const CONTENTLESS_TOOL_SELECTOR = '[data-blok-testid=contentless-tool]';
+const REGULAR_INPUT_SELECTOR = '[data-blok-testid=regular-input]';
 
 const resetEditor = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holderId }) => {
@@ -29,7 +29,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -92,12 +92,12 @@ const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
         const input1 = document.createElement('div');
         const input2 = document.createElement('div');
 
-        wrapper.setAttribute('data-testid', 'tool-with-two-inputs');
+        wrapper.setAttribute('data-blok-testid', 'tool-with-two-inputs');
 
         input1.contentEditable = 'true';
         input2.contentEditable = 'true';
-        input1.setAttribute('data-testid', 'tool-with-two-inputs-primary');
-        input2.setAttribute('data-testid', 'tool-with-two-inputs-secondary');
+        input1.setAttribute('data-blok-testid', 'tool-with-two-inputs-primary');
+        input2.setAttribute('data-blok-testid', 'tool-with-two-inputs-secondary');
 
         wrapper.append(input1, input2);
 
@@ -153,7 +153,7 @@ const createEditorWithContentlessTool = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const wrapper = document.createElement('div');
 
-        wrapper.setAttribute('data-testid', 'contentless-tool');
+        wrapper.setAttribute('data-blok-testid', 'contentless-tool');
         wrapper.textContent = '***';
 
         return wrapper;
@@ -208,7 +208,7 @@ const addRegularInput = async (page: Page, position: 'before' | 'after'): Promis
       throw new Error('Editor holder is not available');
     }
 
-    input.setAttribute('data-testid', 'regular-input');
+    input.setAttribute('data-blok-testid', 'regular-input');
 
     if (placement === 'before') {
       holder.parentNode.insertBefore(input, holder);
@@ -267,7 +267,7 @@ test.describe('tab keydown', () => {
       ({ selector }) => {
         const element = document.querySelector(selector);
 
-        return element?.closest('[data-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true' ?? false;
+        return element?.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true' ?? false;
       },
       { selector: CONTENTLESS_TOOL_SELECTOR }
     );
@@ -289,7 +289,7 @@ test.describe('tab keydown', () => {
        * Hide block tune popovers to keep the tab order identical to the previous e2e plugin,
        * which skips hidden elements when emulating native Tab navigation.
        */
-      const elements = Array.from(document.querySelectorAll('[data-testid="popover-items"]'));
+      const elements = Array.from(document.querySelectorAll('[data-blok-testid="popover-items"]'));
 
       for (const element of elements) {
         (element as HTMLElement).style.display = 'none';
@@ -348,7 +348,7 @@ test.describe('shift+Tab keydown', () => {
       ({ selector }) => {
         const element = document.querySelector(selector);
 
-        return element?.closest('[data-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true' ?? false;
+        return element?.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true' ?? false;
       },
       { selector: CONTENTLESS_TOOL_SELECTOR }
     );

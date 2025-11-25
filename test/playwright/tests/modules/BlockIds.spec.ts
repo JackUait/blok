@@ -22,7 +22,7 @@ const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
-  `[data-testid="popover-item"][data-blok-item-name=${itemName}]`;
+  `[data-blok-testid="popover-item"][data-blok-item-name=${itemName}]`;
 
 type SerializableToolConfig = {
   className?: string;
@@ -53,7 +53,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.setAttribute('data-testid', holderId);
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

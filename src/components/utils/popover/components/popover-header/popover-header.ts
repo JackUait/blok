@@ -42,13 +42,13 @@ export class PopoverHeader {
 
     this.nodes = {
       root: Dom.make('div', [ css.root ], {
-        'data-testid': 'popover-header',
+        'data-blok-testid': 'popover-header',
       }),
       backButton: Dom.make('button', [ css.backButton ], {
-        'data-testid': 'popover-header-back-button',
+        'data-blok-testid': 'popover-header-back-button',
       }),
       text: Dom.make('div', [ css.text ], {
-        'data-testid': 'popover-header-text',
+        'data-blok-testid': 'popover-header-text',
       }),
     };
     this.nodes.backButton.innerHTML = IconChevronLeft;

@@ -151,6 +151,11 @@ const internalPlaywrightPlugin = {
               return;
             }
 
+            const nonSelectorOneArgMethods = new Set(['fill', 'type', 'press', 'check', 'uncheck', 'setInputFiles', 'selectOption']);
+            if (nonSelectorOneArgMethods.has(methodName) && node.arguments.length === 1) {
+              return;
+            }
+
             if (node.arguments.length === 0) {
               return;
             }
@@ -418,7 +423,7 @@ export default [
     },
     rules: {
       ...playwright.configs.recommended.rules,
-      'internal-playwright/no-classname-selectors': 'off',
+      'internal-playwright/no-classname-selectors': 'error',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
       'deprecation/deprecation': 'off',

@@ -230,11 +230,11 @@ const openInlineToolbarPopover = async (page: Page): Promise<Locator> => {
     window.editorInstance?.inlineToolbar?.open();
   });
 
-  const inlinePopover = inlineToolbar.locator(':scope > .ce-popover');
+  const inlinePopover = inlineToolbar.locator(':scope > [data-blok-testid="popover"]');
 
   await expect(inlinePopover).toHaveCount(1);
 
-  const inlinePopoverContainer = inlinePopover.locator(':scope > .ce-popover__container');
+  const inlinePopoverContainer = inlinePopover.locator(':scope > [data-blok-testid="popover-container"]');
 
   await expect(inlinePopoverContainer).toHaveCount(1);
   await expect(inlinePopoverContainer).toBeVisible();

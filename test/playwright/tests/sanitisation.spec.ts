@@ -18,7 +18,7 @@ const getBlockById = (page: Page, blockId: string): Locator => {
 };
 
 const getParagraphByBlockId = (page: Page, blockId: string): Locator => {
-  return getBlockById(page, blockId).locator('.ce-paragraph');
+  return getBlockById(page, blockId).locator('[contenteditable]');
 };
 
 /**

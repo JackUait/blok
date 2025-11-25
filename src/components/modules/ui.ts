@@ -982,7 +982,7 @@ export default class UI extends Module<UINodes> {
       /**
        * Case when we click on external tool elements,
        * for example some Block Tune element.
-       * If this external content editable element has data-blok-inline-toolbar="true"
+       * If this external content editable element has data-inline-toolbar="true"
        */
       return;
     }

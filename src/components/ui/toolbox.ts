@@ -285,7 +285,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
-    this.popover.getElement().setAttribute('data-testid', 'toolbox');
+    this.popover.getElement().setAttribute('data-testid', 'toolbox-popover');
   }
 
   /**

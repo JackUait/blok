@@ -43,11 +43,4 @@ export default class NotifierAPI extends Module {
   public show(options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions): void {
     return this.notifier.show(options);
   }
-
-  /**
-   * Clean up
-   */
-  public destroy(): void {
-    this.notifier.destroy();
-  }
 }

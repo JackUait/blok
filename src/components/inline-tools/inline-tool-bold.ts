@@ -542,7 +542,7 @@ export default class BoldInlineTool implements InlineTool {
     const marker = document.createElement('span');
     const fragment = range.extractContents();
 
-    marker.dataset.boldMarker = `unwrap-${BoldInlineTool.markerSequence++}`;
+    marker.setAttribute('data-blok-bold-marker', `unwrap-${BoldInlineTool.markerSequence++}`);
     marker.appendChild(fragment);
     this.removeNestedBold(marker);
 

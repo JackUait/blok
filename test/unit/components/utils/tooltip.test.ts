@@ -136,7 +136,7 @@ describe('Tooltip utility', () => {
     const target = createTargetElement();
     const customContent = document.createElement('div');
 
-    customContent.dataset.testid = 'content';
+    customContent.setAttribute('data-testid', 'content');
     customContent.textContent = 'node content';
 
     show(target, customContent, { delay: 0 });

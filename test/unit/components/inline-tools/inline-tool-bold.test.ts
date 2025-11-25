@@ -43,18 +43,18 @@ const setupEditor = (html: string): { block: HTMLElement } => {
 
   const block = document.createElement('div');
 
-  block.dataset.blockTool = 'paragraph';
+  block.setAttribute('data-blok-block-tool', 'paragraph');
   block.contentEditable = 'true';
   block.innerHTML = html;
   wrapper.appendChild(block);
 
   const toolbar = document.createElement('div');
 
-  toolbar.dataset.testid = 'inline-toolbar';
+  toolbar.setAttribute('data-testid', 'inline-toolbar');
 
   const button = document.createElement('button');
 
-  button.dataset.itemName = 'bold';
+  button.setAttribute('data-blok-item-name', 'bold');
   toolbar.appendChild(button);
   wrapper.appendChild(toolbar);
 

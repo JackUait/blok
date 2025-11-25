@@ -29,7 +29,7 @@ export class PopoverItemHtml extends PopoverItem {
     this.nodes.root.setAttribute('data-testid', 'popover-item-html');
 
     if (params.name) {
-      this.nodes.root.dataset.itemName = params.name;
+      this.nodes.root.setAttribute('data-blok-item-name', params.name);
     }
 
     if (params.hint !== undefined && renderParams?.hint?.enabled !== false) {

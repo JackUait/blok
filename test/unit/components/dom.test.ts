@@ -370,11 +370,11 @@ describe('Dom helper utilities', () => {
 
       element.textContent = '';
       toggleEmptyMark(element);
-      expect(element.dataset.empty).toBe('true');
+      expect(element.getAttribute('data-blok-empty')).toBe('true');
 
       element.textContent = 'filled';
       toggleEmptyMark(element);
-      expect(element.dataset.empty).toBe('false');
+      expect(element.getAttribute('data-blok-empty')).toBe('false');
     });
   });
 });

@@ -117,7 +117,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.testid = holderId;
+    container.setAttribute('data-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -856,7 +856,7 @@ test.describe('onChange callback', () => {
     await page.evaluate(() => {
       const toolWrapper = document.createElement('div');
 
-      toolWrapper.dataset.mutationFree = 'true';
+      toolWrapper.setAttribute('data-blok-mutation-free', 'true');
 
       const windowTestState = window as unknown as Window & WindowTestState;
 
@@ -911,7 +911,7 @@ test.describe('onChange callback', () => {
       const toolWrapper = document.createElement('div');
       const child = document.createElement('div');
 
-      toolWrapper.dataset.mutationFree = 'true';
+      toolWrapper.setAttribute('data-blok-mutation-free', 'true');
       toolWrapper.appendChild(child);
 
       const windowTestState = window as unknown as Window & WindowTestState;
@@ -972,7 +972,7 @@ test.describe('onChange callback', () => {
       child.setAttribute('contenteditable', 'true');
       child.textContent = '';
 
-      toolWrapper.dataset.mutationFree = 'true';
+      toolWrapper.setAttribute('data-blok-mutation-free', 'true');
       toolWrapper.appendChild(child);
 
       const windowTestState = window as unknown as Window & WindowTestState;

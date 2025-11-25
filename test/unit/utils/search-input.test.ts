@@ -47,7 +47,7 @@ describe('SearchInput', () => {
     expect(input.classList.contains(css.input)).toBe(true);
     expect((input as HTMLInputElement).type).toBe('search');
     expect((input as HTMLInputElement).tabIndex).toBe(-1);
-    expect((input as HTMLInputElement).dataset.flipperTabTarget).toBe('true');
+    expect((input as HTMLInputElement).getAttribute('data-blok-flipper-tab-target')).toBe('true');
     expect((input as HTMLInputElement).placeholder).toBe('Filter actions');
   });
 

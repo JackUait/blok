@@ -71,7 +71,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.testid = holderId;
+    container.setAttribute('data-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -535,7 +535,7 @@ test.describe('copy and paste', () => {
         render() {
           this.element = document.createElement('div');
           this.element.className = 'file-paste-tool';
-          this.element.dataset.testid = 'file-paste-tool';
+          this.element.setAttribute('data-testid', 'file-paste-tool');
           this.element.contentEditable = 'true';
           this.element.textContent = this.data.text ?? 'Paste file here';
 
@@ -648,7 +648,7 @@ test.describe('copy and paste', () => {
           const block = document.createElement('div');
 
           block.className = 'ce-block-with-disabled-prevent-default';
-          block.dataset.testid = 'block-with-disabled-prevent-default';
+          block.setAttribute('data-testid', 'block-with-disabled-prevent-default');
           block.contentEditable = 'true';
 
           block.addEventListener('paste', (event) => {

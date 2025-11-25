@@ -366,7 +366,7 @@ describe('SelectionUtils', () => {
 
     expect(wrappers.length).toBeGreaterThan(0);
     wrappers.forEach((wrapper) => {
-      expect((wrapper as HTMLElement).dataset.fakeBackground).toBe('true');
+      expect((wrapper as HTMLElement).getAttribute('data-blok-fake-background')).toBe('true');
     });
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(true);
 

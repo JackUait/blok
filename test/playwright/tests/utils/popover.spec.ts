@@ -98,7 +98,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.testid = holderId;
+    container.setAttribute('data-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -709,7 +709,7 @@ test.describe('popover', () => {
             const button = document.createElement('button');
 
             button.classList.add('ce-settings__button');
-            button.dataset.testid = 'settings-button';
+            button.setAttribute('data-testid', 'settings-button');
             button.innerText = 'Tune';
 
             return button;
@@ -767,7 +767,7 @@ test.describe('popover', () => {
             const button = document.createElement('button');
 
             button.classList.add('ce-settings__button');
-            button.dataset.testid = 'settings-button';
+            button.setAttribute('data-testid', 'settings-button');
             button.innerText = 'Tune1';
 
             return button;
@@ -787,7 +787,7 @@ test.describe('popover', () => {
             const button = document.createElement('button');
 
             button.classList.add('ce-settings__button');
-            button.dataset.testid = 'settings-button';
+            button.setAttribute('data-testid', 'settings-button');
             button.innerText = 'Tune2';
 
             return button;

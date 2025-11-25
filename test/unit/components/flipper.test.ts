@@ -230,7 +230,7 @@ describe('Flipper', () => {
 
     expect(flipper.hasFocus()).toBe(false);
 
-    input.dataset.flipperTabTarget = 'true';
+    input.setAttribute('data-blok-flipper-tab-target', 'true');
 
     const secondTabEvent = createKeyboardEvent('Tab', {
       target: input,
@@ -365,7 +365,7 @@ describe('Flipper', () => {
     const inlineToolInputWrapper = document.createElement('div');
     const inlineInput = document.createElement('input');
 
-    inlineToolInputWrapper.dataset.linkToolInputOpened = 'true';
+    inlineToolInputWrapper.setAttribute('data-blok-link-tool-input-opened', 'true');
     inlineToolInputWrapper.appendChild(inlineInput);
     document.body.appendChild(inlineToolInputWrapper);
 
@@ -379,7 +379,7 @@ describe('Flipper', () => {
     expect(flipper.hasFocus()).toBe(false);
 
     inlineToolInputWrapper.removeAttribute('data-blok-link-tool-input-opened');
-    inlineInput.dataset.flipperTabTarget = 'true';
+    inlineInput.setAttribute('data-blok-flipper-tab-target', 'true');
     const secondEvent = createKeyboardEvent('Tab', {
       target: inlineInput,
     });

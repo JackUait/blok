@@ -61,7 +61,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.testid = holderId;
+    container.setAttribute('data-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -200,7 +200,7 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
         const input = document.createElement('div');
         const input2 = document.createElement('div');
 
-        container.dataset.testid = 'quote-tool';
+        container.setAttribute('data-testid', 'quote-tool');
 
         input.contentEditable = 'true';
         input2.contentEditable = 'true';
@@ -257,7 +257,7 @@ const createUnmergeableToolEditor = async (page: Page, options: { hasConversionC
       public render(): HTMLElement {
         const container = document.createElement('div');
 
-        container.dataset.testid = 'unmergeable-tool';
+        container.setAttribute('data-testid', 'unmergeable-tool');
         container.contentEditable = 'true';
         container.innerHTML = 'Unmergeable not empty tool';
 

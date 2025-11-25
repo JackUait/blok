@@ -968,7 +968,7 @@ export default class UI extends Module<UINodes> {
     const closestBlock = focusedElement.closest(`.${Block.CSS.content}`);
     const clickedOutsideBlockContent = closestBlock === null || (closestBlock.closest(`.${Selection.CSS.editorWrapper}`) !== this.nodes.wrapper);
 
-    const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).dataset.inlineToolbar === 'true';
+    const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).getAttribute('data-blok-inline-toolbar') === 'true';
     const shouldCloseInlineToolbar = clickedOutsideBlockContent && !this.Editor.InlineToolbar.containsNode(focusedElement);
 
     if (shouldCloseInlineToolbar) {

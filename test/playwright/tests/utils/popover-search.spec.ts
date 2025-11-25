@@ -111,7 +111,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.testid = holderId;
+    container.setAttribute('data-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -253,7 +253,7 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
     const seenNames = new Set<string>();
 
     settingsElement.querySelectorAll<HTMLElement>('[data-testid="popover-item"][data-blok-item-name]').forEach((item) => {
-      const name = item.dataset.itemName ?? '';
+      const name = item.getAttribute('data-blok-item-name') ?? '';
 
       if (seenNames.has(name)) {
         item.remove();

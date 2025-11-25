@@ -168,7 +168,7 @@ export class PopoverItemDefault extends PopoverItem {
     el.setAttribute('data-testid', 'popover-item');
 
     if (params.name) {
-      el.dataset.itemName = params.name;
+      el.setAttribute('data-blok-item-name', params.name);
     }
 
     this.nodes.icon = Dom.make('div', [css.icon, css.iconTool], {

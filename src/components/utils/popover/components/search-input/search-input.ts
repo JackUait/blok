@@ -67,7 +67,7 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
        */
       tabIndex: -1,
     }) as HTMLInputElement;
-    this.input.dataset.flipperTabTarget = 'true';
+    this.input.setAttribute('data-blok-flipper-tab-target', 'true');
     this.input.setAttribute('data-testid', 'popover-search-input');
 
     this.wrapper.appendChild(iconWrapper);

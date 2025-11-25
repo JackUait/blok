@@ -703,7 +703,5 @@ export const calculateBaseline = (element: Element): number => {
  * @param element - The element to toggle the [data-blok-empty] attribute on
  */
 export const toggleEmptyMark = (element: HTMLElement): void => {
-  const { dataset } = element;
-
-  dataset.empty = Dom.isEmpty(element) ? 'true' : 'false';
+  element.setAttribute('data-blok-empty', Dom.isEmpty(element) ? 'true' : 'false');
 };

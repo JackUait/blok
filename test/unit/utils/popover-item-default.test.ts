@@ -60,7 +60,7 @@ describe('PopoverItemDefault', () => {
     const { element, params } = createItem({ secondaryLabel });
 
     expect(element.classList.contains(css.container)).toBe(true);
-    expect(element.dataset.itemName).toBe(params.name);
+    expect(element.getAttribute('data-blok-item-name')).toBe(params.name);
 
     const icon = element.querySelector<HTMLElement>(`.${css.icon}`);
     const title = element.querySelector<HTMLElement>(`.${css.title}`);

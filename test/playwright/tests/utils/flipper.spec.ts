@@ -119,7 +119,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.testid = holderId;
+    container.setAttribute('data-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -977,8 +977,8 @@ test.describe('flipper', () => {
 
         return {
           targetIndex: activeIndex,
-          itemNames: items.map(item => item.dataset.itemName),
-          focusedItemName: blockSettings.flipper['iterator']?.currentItem?.dataset?.itemName ?? null,
+          itemNames: items.map(item => item.getAttribute('data-blok-item-name')),
+          focusedItemName: blockSettings.flipper['iterator']?.currentItem?.getAttribute('data-item-name') ?? null,
           focusedItemClasses: blockSettings.flipper['iterator']?.currentItem ? Array.from(blockSettings.flipper['iterator'].currentItem.classList) : null,
         };
       },
@@ -1041,13 +1041,13 @@ test.describe('flipper', () => {
       const newItem1 = document.createElement('div');
 
       newItem1.className = 'ce-popover-item';
-      newItem1.dataset.testid = 'popover-item';
+      newItem1.setAttribute('data-testid', 'popover-item');
       newItem1.textContent = 'New Item 1';
 
       const newItem2 = document.createElement('div');
 
       newItem2.className = 'ce-popover-item';
-      newItem2.dataset.testid = 'popover-item';
+      newItem2.setAttribute('data-testid', 'popover-item');
       newItem2.textContent = 'New Item 2';
 
       const container = document.querySelector('[data-testid="popover-container"]');

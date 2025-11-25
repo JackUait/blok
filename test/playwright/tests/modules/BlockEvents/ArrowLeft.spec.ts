@@ -29,7 +29,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.testid = holderId;
+    container.setAttribute('data-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -81,7 +81,7 @@ const createEditorWithDelimiter = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const wrapper = document.createElement('div');
 
-        wrapper.dataset.testidType = 'contentless-tool';
+        wrapper.setAttribute('data-blok-testid-type', 'contentless-tool');
         wrapper.textContent = '***';
 
         return wrapper;

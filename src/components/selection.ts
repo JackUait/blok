@@ -364,7 +364,7 @@ export default class SelectionUtils {
 
     const fakeCursor = $.make('span', 'codex-editor__fake-cursor');
 
-    fakeCursor.dataset.mutationFree = 'true';
+    fakeCursor.setAttribute('data-blok-mutation-free', 'true');
 
     range.collapse();
     range.insertNode(fakeCursor);
@@ -541,8 +541,8 @@ export default class SelectionUtils {
     const wrapper = $.make('span', 'codex-editor__fake-background');
 
     wrapper.setAttribute('data-testid', 'fake-background');
-    wrapper.dataset.fakeBackground = 'true';
-    wrapper.dataset.mutationFree = 'true';
+    wrapper.setAttribute('data-blok-fake-background', 'true');
+    wrapper.setAttribute('data-blok-mutation-free', 'true');
     wrapper.style.backgroundColor = '#a8d6ff';
     wrapper.style.color = 'inherit';
     wrapper.style.display = 'inline';

@@ -417,7 +417,7 @@ export default class Flipper {
     }
 
     const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
-    const shouldHandleNativeInput = target.dataset?.flipperTabTarget === 'true' && event.key === 'Tab';
+    const shouldHandleNativeInput = target.getAttribute('data-blok-flipper-tab-target') === 'true' && event.key === 'Tab';
     const isContentEditable = target.isContentEditable;
     const isInlineToolInput = target.closest('[data-blok-link-tool-input-opened="true"]') !== null;
 

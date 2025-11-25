@@ -29,7 +29,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.testid = holderId;
+    container.setAttribute('data-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -92,12 +92,12 @@ const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
         const input1 = document.createElement('div');
         const input2 = document.createElement('div');
 
-        wrapper.dataset.testid = 'tool-with-two-inputs';
+        wrapper.setAttribute('data-testid', 'tool-with-two-inputs');
 
         input1.contentEditable = 'true';
         input2.contentEditable = 'true';
-        input1.dataset.testid = 'tool-with-two-inputs-primary';
-        input2.dataset.testid = 'tool-with-two-inputs-secondary';
+        input1.setAttribute('data-testid', 'tool-with-two-inputs-primary');
+        input2.setAttribute('data-testid', 'tool-with-two-inputs-secondary');
 
         wrapper.append(input1, input2);
 
@@ -153,7 +153,7 @@ const createEditorWithContentlessTool = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const wrapper = document.createElement('div');
 
-        wrapper.dataset.testid = 'contentless-tool';
+        wrapper.setAttribute('data-testid', 'contentless-tool');
         wrapper.textContent = '***';
 
         return wrapper;
@@ -208,7 +208,7 @@ const addRegularInput = async (page: Page, position: 'before' | 'after'): Promis
       throw new Error('Editor holder is not available');
     }
 
-    input.dataset.testid = 'regular-input';
+    input.setAttribute('data-testid', 'regular-input');
 
     if (placement === 'before') {
       holder.parentNode.insertBefore(input, holder);

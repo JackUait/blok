@@ -252,11 +252,11 @@ const getParagraphLocatorByBlockIndex = async (page: Page, blockIndex = 0): Prom
     throw new Error(`Unable to resolve block id for index ${blockIndex}`);
   }
 
-  const block = page.locator(`${BLOCK_SELECTOR}[data-id="${blockId}"]`);
+  const block = page.locator(`${BLOCK_SELECTOR}[data-blok-id="${blockId}"]`);
 
   await expect(block).toHaveCount(1);
 
-  return block.locator('[data-block-tool="paragraph"]');
+  return block.locator('[data-blok-block-tool="paragraph"]');
 };
 
 test.describe('editor i18n', () => {
@@ -341,7 +341,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const headerItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-item-name="header"]`);
+      const headerItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="header"]`);
 
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(toolNamesDictionary.Heading);
@@ -411,7 +411,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const testToolItems = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-item-name="testTool"]`);
+      const testToolItems = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="testTool"]`);
 
       await expect(testToolItems).toHaveCount(2);
       await expect(testToolItems).toContainText([
@@ -477,7 +477,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const testToolItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-item-name="testTool"]`);
+      const testToolItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="testTool"]`);
 
       await expect(testToolItem).toBeVisible();
       await expect(testToolItem).toContainText(toolNamesDictionary.TestTool);
@@ -516,7 +516,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
-      const deleteButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-item-name="delete"]`);
+      const deleteButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="delete"]`);
 
       await expect(deleteButton).toBeVisible();
       await expect(deleteButton).toContainText(blockTunesDictionary.delete.Delete);
@@ -555,7 +555,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
-      const deleteButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-item-name="delete"]`);
+      const deleteButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="delete"]`);
 
       await deleteButton.click();
 
@@ -665,13 +665,13 @@ test.describe('editor i18n', () => {
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
       // Open "Convert to" menu
-      const convertToButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-item-name="convert-to"]`);
+      const convertToButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="convert-to"]`);
 
       await expect(convertToButton).toBeVisible();
       await convertToButton.click();
 
       // Check item in convert to menu is internationalized
-      const headerItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} .ce-popover--nested [data-item-name="header"]`);
+      const headerItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} .ce-popover--nested [data-blok-item-name="header"]`);
 
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(toolNamesDictionary.Heading);
@@ -985,7 +985,7 @@ test.describe('editor i18n', () => {
       await page.waitForTimeout(200);
 
       const inlinePopover = await openInlineToolbarPopover(page);
-      const convertToButton = inlinePopover.locator('[data-item-name="convert-to"]');
+      const convertToButton = inlinePopover.locator('[data-blok-item-name="convert-to"]');
 
       await expect(convertToButton).toBeVisible();
       await expect(convertToButton).toHaveCount(1);
@@ -1215,7 +1215,7 @@ test.describe('editor i18n', () => {
       const inlinePopover = await openInlineToolbarPopover(page);
 
       // Look for "Convert to" button/item in inline toolbar
-      const convertToButton = inlinePopover.locator('[data-item-name="convert-to"]');
+      const convertToButton = inlinePopover.locator('[data-blok-item-name="convert-to"]');
 
       await expect(convertToButton).toHaveCount(1);
       const convertToTooltip = await getTooltipText(page, convertToButton);
@@ -1268,7 +1268,7 @@ test.describe('editor i18n', () => {
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for UI animation
       await page.waitForTimeout(200);
 
-      const linkInput = page.locator('input[data-link-tool-input-opened], input[placeholder*="link" i]');
+      const linkInput = page.locator('input[data-blok-link-tool-input-opened], input[placeholder*="link" i]');
 
       await expect(linkInput).toBeVisible();
 
@@ -1408,7 +1408,7 @@ test.describe('editor i18n', () => {
       const inlinePopover = await openInlineToolbarPopover(page);
 
       // Open "Convert to" menu
-      const convertToButton = inlinePopover.locator('[data-item-name="convert-to"]');
+      const convertToButton = inlinePopover.locator('[data-blok-item-name="convert-to"]');
 
       await expect(convertToButton).toBeVisible();
       await convertToButton.click();
@@ -1418,7 +1418,7 @@ test.describe('editor i18n', () => {
 
       await expect(nestedPopover).toHaveCount(1);
 
-      const headerItem = nestedPopover.locator('[data-item-name="header"]');
+      const headerItem = nestedPopover.locator('[data-blok-item-name="header"]');
 
       await expect(headerItem).toHaveCount(1);
       await expect(headerItem).toBeVisible();

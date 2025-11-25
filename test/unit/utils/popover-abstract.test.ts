@@ -245,7 +245,7 @@ describe('PopoverAbstract', () => {
       popover.show();
 
       expect(nodes.popover.classList.contains(css.popoverOpened)).toBe(true);
-      expect(nodes.popover.getAttribute('data-popover-opened')).toBe('true');
+      expect(nodes.popover.getAttribute('data-blok-popover-opened')).toBe('true');
       expect(focus).toHaveBeenCalledTimes(1);
     });
 
@@ -275,7 +275,7 @@ describe('PopoverAbstract', () => {
 
       expect(nodes.popover.classList.contains(css.popoverOpened)).toBe(false);
       expect(nodes.popover.classList.contains(css.popoverOpenTop)).toBe(false);
-      expect(nodes.popover.getAttribute('data-popover-opened')).toBeNull();
+      expect(nodes.popover.getAttribute('data-blok-popover-opened')).toBeNull();
       expect(resetSpy).toHaveBeenCalled();
       expect(searchMock.clear).toHaveBeenCalledTimes(1);
       expect(closedHandler).toHaveBeenCalledTimes(1);

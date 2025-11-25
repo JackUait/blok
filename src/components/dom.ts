@@ -698,9 +698,9 @@ export const calculateBaseline = (element: Element): number => {
 };
 
 /**
- * Toggles the [data-empty] attribute on element depending on its emptiness
+ * Toggles the [data-blok-empty] attribute on element depending on its emptiness
  * Used to mark empty inputs with a special attribute for placeholders feature
- * @param element - The element to toggle the [data-empty] attribute on
+ * @param element - The element to toggle the [data-blok-empty] attribute on
  */
 export const toggleEmptyMark = (element: HTMLElement): void => {
   const { dataset } = element;

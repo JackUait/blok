@@ -215,11 +215,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     return {
       hide: (): void => {
         this.nodes.actions?.classList.remove(this.CSS.actionsOpened);
-        this.nodes.actions?.removeAttribute('data-opened');
+        this.nodes.actions?.removeAttribute('data-blok-opened');
       },
       show: (): void => {
         this.nodes.actions?.classList.add(this.CSS.actionsOpened);
-        this.nodes.actions?.setAttribute('data-opened', 'true');
+        this.nodes.actions?.setAttribute('data-blok-opened', 'true');
       },
     };
   }
@@ -393,7 +393,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarOpened);
-    this.nodes.wrapper?.removeAttribute('data-opened');
+    this.nodes.wrapper?.removeAttribute('data-blok-opened');
 
     /** Close components */
     this.blockActions.hide();
@@ -423,7 +423,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private open(withBlockActions = true): void {
     this.nodes.wrapper?.classList.add(this.CSS.toolbarOpened);
-    this.nodes.wrapper?.setAttribute('data-opened', 'true');
+    this.nodes.wrapper?.setAttribute('data-blok-opened', 'true');
 
     if (withBlockActions) {
       this.blockActions.show();

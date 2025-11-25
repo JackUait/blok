@@ -13,17 +13,17 @@ const DIST_BUNDLE_PATH = path.resolve(__dirname, '../../../dist/editorjs.umd.js'
 
 const HOLDER_ID = 'editorjs';
 const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbar"]`;
-const TOOLBAR_OPENED_SELECTOR = `${TOOLBAR_SELECTOR}[data-opened="true"]`;
+const TOOLBAR_OPENED_SELECTOR = `${TOOLBAR_SELECTOR}[data-blok-opened="true"]`;
 const TOOLBAR_ACTIONS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbar-actions"]`;
-const TOOLBAR_ACTIONS_OPENED_SELECTOR = `${TOOLBAR_ACTIONS_SELECTOR}[data-opened="true"]`;
+const TOOLBAR_ACTIONS_OPENED_SELECTOR = `${TOOLBAR_ACTIONS_SELECTOR}[data-blok-opened="true"]`;
 const TOOLBOX_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbox"]`;
 const TOOLBOX_POPOVER_SELECTOR = `[data-testid=toolbox] .ce-popover__container`;
 const BLOCK_TUNES_SELECTOR = `[data-testid="block-tunes-popover"]`;
 const BLOCK_TUNES_POPOVER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
-const OPENED_BLOCK_TUNES_SELECTOR = `${BLOCK_TUNES_SELECTOR}[data-popover-opened="true"]`;
+const OPENED_BLOCK_TUNES_SELECTOR = `${BLOCK_TUNES_SELECTOR}[data-blok-popover-opened="true"]`;
 
 const expectToolbarToBeOpened = async (page: Page): Promise<void> => {
-  await expect(page.locator(TOOLBAR_SELECTOR)).toHaveAttribute('data-opened', 'true');
+  await expect(page.locator(TOOLBAR_SELECTOR)).toHaveAttribute('data-blok-opened', 'true');
 };
 
 /**

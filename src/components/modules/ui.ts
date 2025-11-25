@@ -424,7 +424,7 @@ export default class UI extends Module<UINodes> {
 
     /**
      * We have custom logic for providing placeholders for contenteditable elements.
-     * To make it work, we need to have data-empty mark on empty inputs.
+     * To make it work, we need to have data-blok-empty mark on empty inputs.
      */
     this.enableInputsEmptyMark();
   }
@@ -982,7 +982,7 @@ export default class UI extends Module<UINodes> {
       /**
        * Case when we click on external tool elements,
        * for example some Block Tune element.
-       * If this external content editable element has data-inline-toolbar="true"
+       * If this external content editable element has data-blok-inline-toolbar="true"
        */
       return;
     }
@@ -1000,13 +1000,13 @@ export default class UI extends Module<UINodes> {
   /**
    * Editor.js provides and ability to show placeholders for empty contenteditable elements
    *
-   * This method watches for input and focus events and toggles 'data-empty' attribute
+   * This method watches for input and focus events and toggles 'data-blok-empty' attribute
    * to workaroud the case, when inputs contains only <br>s and has no visible content
    * Then, CSS could rely on this attribute to show placeholders
    */
   private enableInputsEmptyMark(): void {
     /**
-     * Toggle data-empty attribute on input depending on its emptiness
+     * Toggle data-blok-empty attribute on input depending on its emptiness
      * @param event - input or focus event
      */
     const handleInputOrFocusChange = (event: Event): void => {

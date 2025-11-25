@@ -45,6 +45,7 @@ export default class EditorJS {
    * @param {EditorConfig|string|undefined} [configuration] - user configuration
    */
   constructor(configuration?: EditorConfig|string) {
+    console.log('EditorJS: constructor start');
     this.initialConfiguration = _.isObject(configuration)
       ? { ...configuration }
       : configuration;
@@ -60,7 +61,10 @@ export default class EditorJS {
     /**
      * Create a Editor.js instance
      */
+    console.log('EditorJS: creating Core');
     const editor = new Core(configuration);
+
+    console.log('EditorJS: Core created');
 
     /**
      * Initialize destroy with a no-op function that will be replaced in exportAPI
@@ -74,7 +78,9 @@ export default class EditorJS {
      * @type {Promise<void>}
      */
     this.isReady = editor.isReady.then(() => {
+      console.log('EditorJS: Core ready, exporting API');
       this.exportAPI(editor);
+      console.log('EditorJS: API exported, calling onReady');
       /**
        * @todo pass API as an argument. It will allow to use Editor's API when editor is ready
        */

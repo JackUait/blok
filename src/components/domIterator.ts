@@ -66,7 +66,7 @@ export default class DomIterator {
       this.dropCursor();
       this.cursor = cursorPosition;
       this.items[this.cursor].classList.add(this.focusedCssClass);
-      this.items[this.cursor].setAttribute('data-focused', 'true');
+      this.items[this.cursor].setAttribute('data-blok-focused', 'true');
     }
   }
 
@@ -108,7 +108,7 @@ export default class DomIterator {
     }
 
     this.items[this.cursor].classList.remove(this.focusedCssClass);
-    this.items[this.cursor].removeAttribute('data-focused');
+    this.items[this.cursor].removeAttribute('data-blok-focused');
     this.cursor = -1;
   }
 
@@ -147,7 +147,7 @@ export default class DomIterator {
      */
     if (startingIndex !== -1) {
       this.items[startingIndex].classList.remove(this.focusedCssClass);
-      this.items[startingIndex].removeAttribute('data-focused');
+      this.items[startingIndex].removeAttribute('data-blok-focused');
     }
 
     /**
@@ -178,7 +178,7 @@ export default class DomIterator {
      * Highlight new chosen Tool
      */
     this.items[focusedButtonIndex].classList.add(this.focusedCssClass);
-    this.items[focusedButtonIndex].setAttribute('data-focused', 'true');
+    this.items[focusedButtonIndex].setAttribute('data-blok-focused', 'true');
 
     /**
      * Return focused button's index

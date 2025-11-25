@@ -24,8 +24,8 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
-const CONVERT_TO_OPTION_SELECTOR = '[data-testid="popover-item"][data-item-name="convert-to"]';
-const NESTED_POPOVER_SELECTOR = '[data-testid="popover"][data-nested="true"]';
+const CONVERT_TO_OPTION_SELECTOR = '[data-testid="popover-item"][data-blok-item-name="convert-to"]';
+const NESTED_POPOVER_SELECTOR = '[data-testid="popover"][data-blok-nested="true"]';
 const POPOVER_CONTAINER_SELECTOR = '[data-testid="block-tunes-popover"] > [data-testid="popover-container"]';
 const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-testid="popover-search-input"]`;
 const DEFAULT_WAIT_TIMEOUT = 5_000;
@@ -349,7 +349,7 @@ test.describe('ui.block-tunes', () => {
       await searchInput.waitFor({ state: 'visible' });
       await page.keyboard.press('Enter');
 
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`);
 
       await expect(paragraph).toHaveCount(1);
       await expect(paragraph).toHaveText('Some text');
@@ -380,7 +380,7 @@ test.describe('ui.block-tunes', () => {
       const block = page.locator(BLOCK_SELECTOR);
 
       await expect(block).toHaveCount(1);
-      await expect(block).toHaveAttribute('data-selected', 'true');
+      await expect(block).toHaveAttribute('data-blok-selected', 'true');
     });
   });
 
@@ -415,7 +415,7 @@ test.describe('ui.block-tunes', () => {
       await convertToOption.click();
 
       await expect(
-        page.locator(`${NESTED_POPOVER_SELECTOR} [data-item-name="header"]`)
+        page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`)
       ).toBeVisible();
     });
 
@@ -492,13 +492,13 @@ test.describe('ui.block-tunes', () => {
 
       await expect(
         page
-          .locator(`${NESTED_POPOVER_SELECTOR} [data-item-name="testTool"]`)
+          .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="testTool"]`)
           .filter({ hasText: 'Title 1' })
       ).toHaveCount(0);
 
       await expect(
         page
-          .locator(`${NESTED_POPOVER_SELECTOR} [data-item-name="testTool"]`)
+          .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="testTool"]`)
           .filter({ hasText: 'Title 2' })
       ).toBeVisible();
     });
@@ -531,7 +531,7 @@ test.describe('ui.block-tunes', () => {
 
       await convertToOption.click();
       await page
-        .locator(`${NESTED_POPOVER_SELECTOR} [data-item-name="header"]`)
+        .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`)
         .click();
 
       const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-header`);
@@ -573,11 +573,11 @@ test.describe('ui.block-tunes', () => {
 
       await expect(popoverContainer).toHaveCount(1);
 
-      const popoverItems = popoverContainer.locator('[data-testid="popover-item"]:not([data-hidden="true"])');
+      const popoverItems = popoverContainer.locator('[data-testid="popover-item"]:not([data-blok-hidden="true"])');
       const itemsCount = await popoverItems.count();
 
       expect(itemsCount).toBeGreaterThan(1);
-      const firstPopoverItem = popoverContainer.locator('[data-testid="popover-item"]:not([data-hidden="true"]):first-of-type');
+      const firstPopoverItem = popoverContainer.locator('[data-testid="popover-item"]:not([data-blok-hidden="true"]):first-of-type');
 
       await expect(firstPopoverItem).toContainText('Tune');
     });

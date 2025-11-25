@@ -378,7 +378,7 @@ describe('Flipper', () => {
     flipper.handleExternalKeydown(initialEvent);
     expect(flipper.hasFocus()).toBe(false);
 
-    inlineToolInputWrapper.removeAttribute('data-link-tool-input-opened');
+    inlineToolInputWrapper.removeAttribute('data-blok-link-tool-input-opened');
     inlineInput.dataset.flipperTabTarget = 'true';
     const secondEvent = createKeyboardEvent('Tab', {
       target: inlineInput,

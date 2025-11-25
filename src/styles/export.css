@@ -25,7 +25,7 @@
    * Workaround Firefox bug with cursor position on empty content editable elements with ::before pseudo
    * https://bugzilla.mozilla.org/show_bug.cgi?id=904846
    */
-    &[data-placeholder]::before {
+    &[data-blok-placeholder]::before {
         position: static !important;
         display: inline-block;
         width: 0;

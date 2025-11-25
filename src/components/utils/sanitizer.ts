@@ -29,9 +29,9 @@ import * as _ from '../utils';
  */
 
 import HTMLJanitor from 'html-janitor';
-import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../types';
-import type { TagConfig } from '../../../types/configs/sanitizer-config';
-import type { SavedData } from '../../../types/data-formats';
+import type { BlockToolData, SanitizerConfig, SanitizerRule } from '@/types';
+import type { TagConfig } from '@/types/configs/sanitizer-config';
+import type { SavedData } from '@/types/data-formats';
 
 type DeepSanitizerRule = SanitizerConfig | SanitizerRule | boolean;
 

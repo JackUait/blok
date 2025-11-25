@@ -17,9 +17,9 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
 const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="redactor"]`;
-const TOOLBOX_POPOVER_SELECTOR = '[data-testid="toolbox"][data-popover-opened="true"]';
+const TOOLBOX_POPOVER_SELECTOR = '[data-testid="toolbox"][data-blok-popover-opened="true"]';
 const FAILING_TOOL_SOURCE = `
   class FailingTool {
     render() {
@@ -336,7 +336,7 @@ test.describe('editor configuration options', () => {
           return null;
         }
 
-        return paragraph.getAttribute('data-placeholder');
+        return paragraph.getAttribute('data-blok-placeholder');
       }, { paragraphSelector: PARAGRAPH_SELECTOR });
     };
 
@@ -687,7 +687,7 @@ test.describe('editor configuration options', () => {
           {
             type: 'paragraph',
             data: {
-              text: '<span data-test="allowed">Span content</span>',
+              text: '<span data-blok-test="allowed">Span content</span>',
             },
           },
         ],
@@ -707,7 +707,7 @@ test.describe('editor configuration options', () => {
     });
 
     expect(savedHtml).toContain('<span');
-    expect(savedHtml).toContain('data-test="allowed"');
+    expect(savedHtml).toContain('data-blok-test="allowed"');
   });
 
   test('uses default sanitizer rules when option is omitted', async ({ page }) => {
@@ -895,7 +895,7 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('configurableTool');
     });
 
-    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="configurableTool"]`;
+    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="configurableTool"]`;
     const blockCount = await page.locator(configurableSelector).count();
 
     expect(blockCount).toBeGreaterThan(0);
@@ -906,19 +906,19 @@ test.describe('editor configuration options', () => {
     await blockContent.click();
     await blockContent.type('Config text');
 
-    await expect(blockContent).toHaveAttribute('data-placeholder', 'Custom placeholder');
+    await expect(blockContent).toHaveAttribute('data-blok-placeholder', 'Custom placeholder');
 
     await blockContent.selectText();
 
     const inlineToolbar = page.locator(INLINE_TOOLBAR_INTERFACE_SELECTOR);
 
     await expect(inlineToolbar).toBeVisible();
-    await expect(inlineToolbar.locator('[data-item-name="bold"]')).toBeVisible();
-    await expect(inlineToolbar.locator('[data-item-name="link"]')).toHaveCount(0);
+    await expect(inlineToolbar.locator('[data-blok-item-name="bold"]')).toBeVisible();
+    await expect(inlineToolbar.locator('[data-blok-item-name="link"]')).toHaveCount(0);
 
     await openToolbox(page);
 
-    const toolboxItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-item-name="configurableTool"]`);
+    const toolboxItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="configurableTool"]`);
 
     await expect(toolboxItem).toContainText('Configured Tool');
 
@@ -970,7 +970,7 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('inlineToggleTool');
     });
 
-    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="inlineToggleTool"]`;
+    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="inlineToggleTool"]`;
     const inlineToggleBlocks = page.locator(inlineToggleSelector);
 
     await expect(inlineToggleBlocks).toHaveCount(1);

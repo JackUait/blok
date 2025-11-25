@@ -18,7 +18,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
 const TOOLBAR_PLUS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="plus-button"]`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="settings-toggler"]`;
 const WAIT_FOR_BATCH = modificationsObserverBatchTimeout + 100;
@@ -528,7 +528,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const delimiterOption = page.getByTestId('toolbox').locator('[data-testid="popover-item"][data-item-name=delimiter]');
+    const delimiterOption = page.getByTestId('toolbox').locator('[data-testid="popover-item"][data-blok-item-name=delimiter]');
 
     await delimiterOption.click();
 
@@ -588,7 +588,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const headerOption = page.getByTestId('toolbox').locator('[data-testid="popover-item"][data-item-name=header]');
+    const headerOption = page.getByTestId('toolbox').locator('[data-testid="popover-item"][data-blok-item-name=header]');
 
     await headerOption.click();
 
@@ -675,7 +675,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const deleteOption = page.getByTestId('block-tunes-popover').locator('[data-item-name=delete]:visible');
+    const deleteOption = page.getByTestId('block-tunes-popover').locator('[data-blok-item-name=delete]:visible');
 
     await deleteOption.click();
     await deleteOption.click();
@@ -852,7 +852,7 @@ test.describe('onChange callback', () => {
     }));
   });
 
-  test('should not be fired when element with the "data-mutation-free" mark changes some attribute', async ({ page }) => {
+  test('should not be fired when element with the "data-blok-mutation-free" mark changes some attribute', async ({ page }) => {
     await page.evaluate(() => {
       const toolWrapper = document.createElement('div');
 
@@ -906,7 +906,7 @@ test.describe('onChange callback', () => {
     expect(calls).toHaveLength(0);
   });
 
-  test('should not be fired when mutation happened in a child of element with the "data-mutation-free" mark', async ({ page }) => {
+  test('should not be fired when mutation happened in a child of element with the "data-blok-mutation-free" mark', async ({ page }) => {
     await page.evaluate(() => {
       const toolWrapper = document.createElement('div');
       const child = document.createElement('div');
@@ -963,7 +963,7 @@ test.describe('onChange callback', () => {
     expect(calls).toHaveLength(0);
   });
 
-  test('should not be fired when "characterData" mutation happened in a child of element with the "data-mutation-free" mark', async ({ page }) => {
+  test('should not be fired when "characterData" mutation happened in a child of element with the "data-blok-mutation-free" mark', async ({ page }) => {
     await page.evaluate(() => {
       const toolWrapper = document.createElement('div');
       const child = document.createElement('div');

@@ -16,7 +16,7 @@ const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="set
 const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-testid="popover-container"]`;
 const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-testid="popover-item"]`;
 const PLUGIN_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="some-plugin"]`;
-const INLINE_TOOLBAR_SELECTOR = '[data-testid="inline-toolbar"] [data-testid="popover"][data-popover-opened="true"]';
+const INLINE_TOOLBAR_SELECTOR = '[data-testid="inline-toolbar"] [data-testid="popover"][data-blok-popover-opened="true"]';
 
 const KEY_CODES = {
   TAB: 9,
@@ -292,7 +292,7 @@ const getPluginHandlerCallCount = async (page: Page): Promise<number> => {
 
 const getFocusedPopoverIndex = async (page: Page): Promise<number> => {
   const focusedIndex = await page.locator(POPOVER_ITEM_SELECTOR).evaluateAll(elements => {
-    return elements.findIndex(element => element.hasAttribute('data-focused'));
+    return elements.findIndex(element => element.hasAttribute('data-blok-focused'));
   });
 
   if (focusedIndex === -1) {
@@ -339,7 +339,7 @@ test.describe('flipper', () => {
 
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
-    await expect(page.locator('[data-item-name="delete"]')).toHaveAttribute('data-focused', 'true');
+    await expect(page.locator('[data-blok-item-name="delete"]')).toHaveAttribute('data-blok-focused', 'true');
 
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
@@ -364,7 +364,7 @@ test.describe('flipper', () => {
       },
     });
 
-    const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`, {
+    const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`, {
       hasText: /^Workspace in classic editors/,
     });
 
@@ -377,7 +377,7 @@ test.describe('flipper', () => {
     });
 
     await expect(page.locator(INLINE_TOOLBAR_SELECTOR)).toBeVisible();
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-focused="true"]`)).toHaveCount(0);
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-focused="true"]`)).toHaveCount(0);
   });
 
   test('cycles focus with Tab and Shift+Tab', async ({ page }) => {
@@ -441,10 +441,10 @@ test.describe('flipper', () => {
 
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
-    await expect(page.locator('[data-item-name="delete"]')).toHaveAttribute('data-focused', 'true');
+    await expect(page.locator('[data-blok-item-name="delete"]')).toHaveAttribute('data-blok-focused', 'true');
 
     await page.evaluate(() => {
-      const deleteItem = document.querySelector('[data-item-name="delete"]');
+      const deleteItem = document.querySelector('[data-blok-item-name="delete"]');
 
       if (!deleteItem) {
         throw new Error('Delete item not found');
@@ -725,7 +725,7 @@ test.describe('flipper', () => {
         throw new Error('No popover items found');
       }
 
-      return firstElement.hasAttribute('data-focused');
+      return firstElement.hasAttribute('data-blok-focused');
     });
 
     expect(isFirstItemFocused).toBe(true);
@@ -996,7 +996,7 @@ test.describe('flipper', () => {
           throw new Error(`No popover item found at index ${index}`);
         }
 
-        return target.hasAttribute('data-focused');
+        return target.hasAttribute('data-blok-focused');
       },
       targetIndex
     );
@@ -1089,7 +1089,7 @@ test.describe('flipper', () => {
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
     await page.evaluate(() => {
-      const focusedItem = document.querySelector('[data-focused="true"]');
+      const focusedItem = document.querySelector('[data-blok-focused="true"]');
 
       if (!focusedItem) {
         throw new Error('No focused item found');
@@ -1303,7 +1303,7 @@ test.describe('flipper', () => {
       code: 'Tab',
     });
 
-    const focusedItem = page.locator('[data-focused="true"]');
+    const focusedItem = page.locator('[data-blok-focused="true"]');
 
     await expect(focusedItem).toBeVisible();
     await expect(focusedItem).toHaveCount(1);
@@ -1325,7 +1325,7 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     await page.evaluate(() => {
-      const deleteItem = document.querySelector('[data-item-name="delete"]');
+      const deleteItem = document.querySelector('[data-blok-item-name="delete"]');
 
       if (!deleteItem) {
         throw new Error('Delete item not found');

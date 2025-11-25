@@ -153,7 +153,7 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
   await expect(
     page
       .getByTestId('block-tunes-popover')
-      .and(page.locator('[data-popover-opened="true"]'))
+      .and(page.locator('[data-blok-popover-opened="true"]'))
   ).toHaveCount(1);
 };
 
@@ -197,7 +197,7 @@ class TestTool {
     const element = document.createElement('div');
 
     element.contentEditable = 'true';
-    element.setAttribute('data-name', 'testBlock');
+    element.setAttribute('data-blok-name', 'testBlock');
     element.textContent = this.data?.text ?? '';
 
     return element;
@@ -314,7 +314,7 @@ test.describe('api.tools', () => {
 
       await openBlockSettings(page, 0);
 
-      await expect(page.locator('[data-item-name="testToolTune"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="testToolTune"]')).toBeVisible();
     });
 
     test('should render multiple tunes when renderSettings() returns array', async ({ page }) => {
@@ -356,8 +356,8 @@ test.describe('api.tools', () => {
 
       await openBlockSettings(page, 0);
 
-      await expect(page.locator('[data-item-name="testToolTune1"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="testToolTune2"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="testToolTune1"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="testToolTune2"]')).toBeVisible();
     });
 
     test('should support custom html returned from renderSettings()', async ({ page }) => {
@@ -392,7 +392,7 @@ test.describe('api.tools', () => {
       await openBlockSettings(page, 0);
 
       await expect(
-        page.getByTestId('block-tunes-popover').and(page.locator('[data-popover-opened="true"]'))
+        page.getByTestId('block-tunes-popover').and(page.locator('[data-blok-popover-opened="true"]'))
       ).toContainText(sampleText);
     });
   });

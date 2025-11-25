@@ -212,7 +212,7 @@ test.describe('api.tunes', () => {
     await focusBlockAndType(page, 'some text');
     await openBlockTunes(page);
 
-    await expect(page.locator('[data-item-name="testTune"]')).toBeVisible();
+    await expect(page.locator('[data-blok-item-name="testTune"]')).toBeVisible();
   });
 
   test('renders several popover entries for block tune if configured', async ({ page }) => {
@@ -235,8 +235,8 @@ test.describe('api.tunes', () => {
     await focusBlockAndType(page, 'some text');
     await openBlockTunes(page);
 
-    await expect(page.locator('[data-item-name="testTune1"]')).toBeVisible();
-    await expect(page.locator('[data-item-name="testTune2"]')).toBeVisible();
+    await expect(page.locator('[data-blok-item-name="testTune1"]')).toBeVisible();
+    await expect(page.locator('[data-blok-item-name="testTune2"]')).toBeVisible();
   });
 
   test('displays custom HTML returned by tune render method inside tunes menu', async ({ page }) => {
@@ -267,8 +267,8 @@ test.describe('api.tunes', () => {
     await focusBlockAndType(page, 'some text');
     await openBlockTunes(page);
 
-    await expect(page.locator(FIRST_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-item-name', 'test-tune');
-    await expect(page.locator(SECOND_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-item-name', 'delete');
+    await expect(page.locator(FIRST_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-blok-item-name', 'test-tune');
+    await expect(page.locator(SECOND_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-blok-item-name', 'delete');
   });
 });
 

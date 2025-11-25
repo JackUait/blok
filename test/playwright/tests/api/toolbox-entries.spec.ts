@@ -273,7 +273,7 @@ test.describe('editor Tools Api', () => {
       await expect(plusButton).toBeVisible();
       await plusButton.click();
 
-      const toolboxItems = page.locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="testTool"]`);
+      const toolboxItems = page.locator(`${POPOVER_ITEM_SELECTOR}[data-blok-item-name="testTool"]`);
 
       await expect(toolboxItems).toHaveCount(1);
 
@@ -361,7 +361,7 @@ test.describe('editor Tools Api', () => {
       await expect(plusButton).toBeVisible();
       await plusButton.click();
 
-      const toolboxItems = page.locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="testTool"]`);
+      const toolboxItems = page.locator(`${POPOVER_ITEM_SELECTOR}[data-blok-item-name="testTool"]`);
 
       await expect(toolboxItems).toHaveCount(2);
 
@@ -455,7 +455,7 @@ test.describe('editor Tools Api', () => {
       await plusButton.click();
 
       const toolboxEntryLocators = await page
-        .locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="testTool"]`)
+        .locator(`${POPOVER_ITEM_SELECTOR}[data-blok-item-name="testTool"]`)
         .all();
       const toolboxItem = getLocatorOrThrow(
         toolboxEntryLocators,

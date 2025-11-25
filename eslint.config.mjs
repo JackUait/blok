@@ -44,8 +44,8 @@ const NON_CSS_PREFIXES = [
   'xpath:',
   'id=',
   'data-testid=',
-  'data-test=',
-  'data-qa=',
+  'data-blok-test=',
+  'data-blok-qa=',
   'nth=',
   'aria/',
 ];
@@ -61,7 +61,7 @@ const internalPlaywrightPlugin = {
         schema: [],
         messages: {
           noClassSelector:
-            'Avoid using CSS class selectors in Playwright tests. Prefer role- or data-based locators.',
+            'Avoid using CSS class selectors in Playwright tests. Prefer role- or data-blok-based locators.',
         },
       },
       create(context) {
@@ -317,7 +317,7 @@ export default [
     },
     rules: {
       // Duplicate code detection
-      'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-testid,data-focused' }],
+      'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-testid,data-blok-focused' }],
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-identical-expressions': 'error',
       // Prevent UMD module patterns

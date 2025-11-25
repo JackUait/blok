@@ -22,7 +22,7 @@ const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
-  `[data-testid="popover-item"][data-item-name=${itemName}]`;
+  `[data-testid="popover-item"][data-blok-item-name=${itemName}]`;
 
 type SerializableToolConfig = {
   className?: string;
@@ -218,7 +218,7 @@ test.describe('block ids', () => {
 
     const firstParagraphId = await getBlockIdByIndex(page, 0);
     const firstParagraph = page.locator(
-      `${EDITOR_INTERFACE_SELECTOR} [data-id="${firstParagraphId}"] [data-block-tool="paragraph"]`
+      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"] [data-blok-block-tool="paragraph"]`
     );
 
     await firstParagraph.click();
@@ -234,7 +234,7 @@ test.describe('block ids', () => {
 
     const headerBlockId = await getLastBlockId(page);
     const headerBlock = page.locator(
-      `${EDITOR_INTERFACE_SELECTOR} [data-id="${headerBlockId}"] [data-block-tool="header"]`
+      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${headerBlockId}"] [data-blok-block-tool="header"]`
     );
 
     await headerBlock.click();
@@ -311,7 +311,7 @@ test.describe('block ids', () => {
     assertIsString(firstParagraphId, 'First block id was not provided');
 
     const firstParagraph = page.locator(
-      `${EDITOR_INTERFACE_SELECTOR} [data-id="${firstParagraphId}"] [data-block-tool="paragraph"]`
+      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"] [data-blok-block-tool="paragraph"]`
     );
 
     await firstParagraph.click();
@@ -325,7 +325,7 @@ test.describe('block ids', () => {
     expect(savedBlocks[2]?.id).toBe(blocks[1]?.id);
   });
 
-  test('exposes block id on wrapper via data-id attribute', async ({ page }) => {
+  test('exposes block id on wrapper via data-blok-id attribute', async ({ page }) => {
     const blocks: OutputData['blocks'] = [
       {
         id: nanoid(),
@@ -362,10 +362,10 @@ test.describe('block ids', () => {
             throw new Error('Block wrapper is not an HTMLElement');
           }
 
-          const dataId = element.getAttribute('data-id');
+          const dataId = element.getAttribute('data-blok-id');
 
           if (dataId !== expectedId) {
-            throw new Error(`Expected block data-id to equal "${expectedId}", but received "${dataId}"`);
+            throw new Error(`Expected block data-blok-id to equal "${expectedId}", but received "${dataId}"`);
           }
         }, blocks[index]?.id);
       })

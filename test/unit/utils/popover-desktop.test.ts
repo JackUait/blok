@@ -614,7 +614,7 @@ describe('PopoverDesktop', () => {
 
       const flipper = getMockFlipper();
 
-      expect(popover.getElement().hasAttribute('data-popover-opened')).toBe(false);
+      expect(popover.getElement().hasAttribute('data-blok-popover-opened')).toBe(false);
       expect(flipper.deactivate).toHaveBeenCalled();
       expect(popover.getElement().querySelector(`.${css.popoverNested}`)).toBeNull();
       expect(instance.nestedPopover).toBeNull();

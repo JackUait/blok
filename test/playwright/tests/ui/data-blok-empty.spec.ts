@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
 const PARAGRAPH_INDEX_ATTRIBUTE = 'data-testid-paragraph-index';
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 
@@ -89,7 +89,7 @@ const assignParagraphIndexes = async (page: Page): Promise<void> => {
   );
 };
 
-test.describe('data-empty attribute', () => {
+test.describe('data-blok-empty attribute', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
   });
@@ -111,8 +111,8 @@ test.describe('data-empty attribute', () => {
     );
 
     await expect(paragraphs).toHaveCount(2);
-    await expect(firstParagraph).toHaveAttribute('data-empty', 'false');
-    await expect(secondParagraph).toHaveAttribute('data-empty', 'true');
+    await expect(firstParagraph).toHaveAttribute('data-blok-empty', 'false');
+    await expect(secondParagraph).toHaveAttribute('data-blok-empty', 'true');
   });
 
   test('updates to "false" after typing', async ({ page }) => {
@@ -125,7 +125,7 @@ test.describe('data-empty attribute', () => {
 
     await lastParagraph.click();
     await lastParagraph.type('Some text');
-    await expect(lastParagraph).toHaveAttribute('data-empty', 'false');
+    await expect(lastParagraph).toHaveAttribute('data-blok-empty', 'false');
   });
 
   test('updates to "true" after removing content', async ({ page }) => {
@@ -139,7 +139,7 @@ test.describe('data-empty attribute', () => {
     await lastParagraph.click();
     await page.keyboard.press(SELECT_ALL_SHORTCUT);
     await page.keyboard.press('Backspace');
-    await expect(lastParagraph).toHaveAttribute('data-empty', 'true');
+    await expect(lastParagraph).toHaveAttribute('data-blok-empty', 'true');
   });
 
   test('applies to newly created blocks', async ({ page }) => {
@@ -161,7 +161,7 @@ test.describe('data-empty attribute', () => {
       `${PARAGRAPH_SELECTOR}[${PARAGRAPH_INDEX_ATTRIBUTE}="2"]`
     );
 
-    await expect(newestParagraph).toHaveAttribute('data-empty', 'true');
+    await expect(newestParagraph).toHaveAttribute('data-blok-empty', 'true');
   });
 });
 

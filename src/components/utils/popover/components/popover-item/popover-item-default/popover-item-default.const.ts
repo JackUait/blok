@@ -28,4 +28,4 @@ export const css = {
 /**
  * Data attribute name for active state
  */
-export const DATA_ATTRIBUTE_ACTIVE = 'data-popover-item-active';
+export const DATA_ATTRIBUTE_ACTIVE = 'data-blok-popover-item-active';

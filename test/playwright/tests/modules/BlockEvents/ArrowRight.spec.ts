@@ -12,7 +12,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-blok-block-tool="paragraph"]`;
 const CONTENTLESS_TOOL_SELECTOR = '[data-testid-type="contentless-tool"]';
 
 const resetEditor = async (page: Page): Promise<void> => {
@@ -350,11 +350,11 @@ test.describe('arrow right keydown', () => {
     await firstParagraph.press('End');
     await page.keyboard.press('ArrowRight');
 
-    await expect(contentlessBlock).toHaveAttribute('data-selected', 'true');
+    await expect(contentlessBlock).toHaveAttribute('data-blok-selected', 'true');
 
     await page.keyboard.press('ArrowRight');
 
-    await expect(contentlessBlock).not.toHaveAttribute('data-selected', 'true');
+    await expect(contentlessBlock).not.toHaveAttribute('data-blok-selected', 'true');
     const caretInfo = await getCaretInfoOrThrow(lastParagraph);
 
     expect(caretInfo).toMatchObject({

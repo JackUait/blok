@@ -12,7 +12,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="paragraph"]`;
 const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbar"]`;
 const QUOTE_TOOL_INPUT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="quote-tool"] div[contenteditable]`;
 
@@ -320,7 +320,7 @@ const expectCaretOffset = async (locator: Locator, expectedOffset: number, optio
 const expectToolbarClosed = async (page: Page): Promise<void> => {
   const toolbar = page.locator(TOOLBAR_SELECTOR);
 
-  await expect(toolbar).not.toHaveAttribute('data-opened', 'true');
+  await expect(toolbar).not.toHaveAttribute('data-blok-opened', 'true');
 };
 
 test.describe('delete keydown', () => {

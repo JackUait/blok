@@ -42,25 +42,36 @@ export default class Core {
      */
     // Initialize config to satisfy TypeScript's definite assignment check
     // The setter will properly assign and process the config
+    console.log('Core: constructor start');
     this.config = {};
 
     this.isReady = new Promise((resolve, reject) => {
       Promise.resolve()
         .then(async () => {
+          console.log('Core: Promise started');
           this.configuration = config;
 
+          console.log('Core: validating');
           this.validate();
+          console.log('Core: initializing');
           this.init();
+          console.log('Core: starting');
           await this.start();
+          console.log('Core: rendering');
           await this.render();
+          console.log('Core: rendered');
 
           const { BlockManager, Caret, UI, ModificationsObserver } = this.moduleInstances;
 
+          console.log('Core: checkEmptiness');
           UI.checkEmptiness();
+          console.log('Core: ModificationsObserver enable');
           ModificationsObserver.enable();
 
           if ((this.configuration as EditorConfig).autofocus === true && this.configuration.readOnly !== true) {
+            console.log('Core: setting Caret');
             Caret.setToBlock(BlockManager.blocks[0], Caret.positions.START);
+            console.log('Core: Caret set');
           }
 
           resolve();

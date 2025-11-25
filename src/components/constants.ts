@@ -11,25 +11,25 @@ export const selectionChangeDebounceTimeout = 180;
 export const modificationsObserverBatchTimeout = 400;
 
 /**
- * The data-interface attribute name
- * Used as a single source of truth for the data-interface attribute
+ * The data-blok-interface attribute name
+ * Used as a single source of truth for the data-blok-interface attribute
  */
-export const DATA_INTERFACE_ATTRIBUTE = 'data-interface';
+export const DATA_INTERFACE_ATTRIBUTE = 'data-blok-interface';
 
 /**
- * Value for the data-interface attribute on editor wrapper elements
+ * Value for the data-blok-interface attribute on editor wrapper elements
  * Used as a single source of truth for editor identification
  */
 export const EDITOR_INTERFACE_VALUE = 'editorjs';
 
 /**
- * Value for the data-interface attribute on inline toolbar elements
+ * Value for the data-blok-interface attribute on inline toolbar elements
  * Used as a single source of truth for inline toolbar identification
  */
 export const INLINE_TOOLBAR_INTERFACE_VALUE = 'inline-toolbar';
 
 /**
- * Value for the data-interface attribute on tooltip elements
+ * Value for the data-blok-interface attribute on tooltip elements
  * Used as a single source of truth for tooltip identification
  */
 export const TOOLTIP_INTERFACE_VALUE = 'tooltip';
@@ -38,19 +38,19 @@ export const TOOLTIP_INTERFACE_VALUE = 'tooltip';
  * CSS selector for the main editor wrapper element
  * Used to identify the editor container in the DOM
  */
-export const EDITOR_INTERFACE_SELECTOR = '[data-interface=editorjs]';
+export const EDITOR_INTERFACE_SELECTOR = '[data-blok-interface=editorjs]';
 
 /**
  * CSS selector for tooltip elements
  * Used to identify tooltip elements in the DOM
  */
-export const TOOLTIP_INTERFACE_SELECTOR = '[data-interface="tooltip"]';
+export const TOOLTIP_INTERFACE_SELECTOR = '[data-blok-interface="tooltip"]';
 
 /**
  * CSS selector for inline toolbar elements
  * Used to identify inline toolbar elements in the DOM
  */
-export const INLINE_TOOLBAR_INTERFACE_SELECTOR = '[data-interface=inline-toolbar]';
+export const INLINE_TOOLBAR_INTERFACE_SELECTOR = '[data-blok-interface=inline-toolbar]';
 
 /**
  * Platform-specific modifier key for keyboard shortcuts

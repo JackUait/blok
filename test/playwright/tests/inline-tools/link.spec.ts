@@ -12,10 +12,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_CONTENT_SELECTOR = '[data-block-tool="paragraph"] .ce-paragraph';
+const PARAGRAPH_CONTENT_SELECTOR = '[data-blok-block-tool="paragraph"] .ce-paragraph';
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
-const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-item-name="link"]`;
-const LINK_INPUT_SELECTOR = `input[data-link-tool-input-opened]`;
+const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
+const LINK_INPUT_SELECTOR = `input[data-blok-link-tool-input-opened]`;
 const NOTIFIER_SELECTOR = '[data-testid="notifier-container"]';
 
 const getParagraphByText = (page: Page, text: string): Locator => {
@@ -307,7 +307,7 @@ test.describe('inline tool link', () => {
     await expect(linkInput).toHaveValue('https://codex.so');
 
     // Verify button state - find button by data attributes directly
-    const linkButton = page.locator('button[data-link-tool-unlink="true"][data-link-tool-active="true"]');
+    const linkButton = page.locator('button[data-blok-link-tool-unlink="true"][data-blok-link-tool-active="true"]');
 
     await expect(linkButton).toBeVisible();
 
@@ -332,7 +332,7 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
 
     // Find the unlink button by its data attributes
-    const linkButton = page.locator('button[data-link-tool-unlink="true"]');
+    const linkButton = page.locator('button[data-blok-link-tool-unlink="true"]');
 
     await expect(linkButton).toBeVisible();
     await linkButton.click();
@@ -649,7 +649,7 @@ test.describe('inline tool link', () => {
     await expect(linkInput).toHaveValue('https://example.com');
 
     // Click the button again (it should be in unlink state)
-    const linkButton = page.locator('button[data-link-tool-unlink="true"]');
+    const linkButton = page.locator('button[data-blok-link-tool-unlink="true"]');
 
     await expect(linkButton).toBeVisible();
     await linkButton.click();

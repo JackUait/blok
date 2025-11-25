@@ -61,9 +61,9 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
    * Data attributes for e2e selectors
    */
   private readonly DATA_ATTRIBUTES = {
-    buttonActive: 'data-link-tool-active',
-    buttonUnlink: 'data-link-tool-unlink',
-    inputOpened: 'data-link-tool-input-opened',
+    buttonActive: 'data-blok-link-tool-active',
+    buttonUnlink: 'data-blok-link-tool-unlink',
+    inputOpened: 'data-blok-link-tool-input-opened',
   } as const;
 
   /**
@@ -241,7 +241,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
     }
 
     const button = document.querySelector<HTMLButtonElement>(
-      `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-item-name="link"]`
+      `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-item-name="link"]`
     );
 
     if (button) {

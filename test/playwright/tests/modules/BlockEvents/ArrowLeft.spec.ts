@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"] [contenteditable="true"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-blok-block-tool="paragraph"] [contenteditable="true"]`;
 
 const getParagraphByIndex = (page: Page, index: number): Locator => {
   return page.locator(`:nth-match(${PARAGRAPH_SELECTOR}, ${index + 1})`);
@@ -351,11 +351,11 @@ test.describe('arrowLeft keydown', () => {
 
     const delimiterBlock = getDelimiterBlock(page);
 
-    await expect(delimiterBlock).toHaveAttribute('data-selected', 'true');
+    await expect(delimiterBlock).toHaveAttribute('data-blok-selected', 'true');
 
     await page.keyboard.press('ArrowLeft');
 
-    await expect(delimiterBlock).not.toHaveAttribute('data-selected', 'true');
+    await expect(delimiterBlock).not.toHaveAttribute('data-blok-selected', 'true');
 
     const firstParagraph = getParagraphByIndex(page, 0);
 

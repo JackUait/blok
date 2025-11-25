@@ -14,7 +14,7 @@ const HOLDER_ID = 'editorjs';
 const INITIAL_BLOCK_ID = 'sanitisation-initial-block';
 
 const getBlockById = (page: Page, blockId: string): Locator => {
-  return page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-id="${blockId}"]`);
+  return page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${blockId}"]`);
 };
 
 const getParagraphByBlockId = (page: Page, blockId: string): Locator => {
@@ -258,7 +258,7 @@ test.describe('sanitizing', () => {
       await selectAllText(block);
 
       // Click bold button
-      const boldButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-item-name="bold"]`);
+      const boldButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-item-name="bold"]`);
 
       await boldButton.click();
 
@@ -351,7 +351,7 @@ test.describe('sanitizing', () => {
 
       await selectAllText(block);
 
-      const italicButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-item-name="italic"]`);
+      const italicButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-item-name="italic"]`);
 
       await italicButton.click();
       await block.click();
@@ -392,11 +392,11 @@ test.describe('sanitizing', () => {
 
       await selectAllText(block);
 
-      const linkButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-item-name="link"]`);
+      const linkButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-item-name="link"]`);
 
       await linkButton.click();
 
-      const linkInput = page.locator('input[data-link-tool-input-opened]');
+      const linkInput = page.locator('input[data-blok-link-tool-input-opened]');
 
       await linkInput.fill('https://example.com');
       await linkInput.press('Enter');

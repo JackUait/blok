@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"] [contenteditable]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="paragraph"] [contenteditable]`;
 const TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR = '[data-testid=tool-with-two-inputs-primary]';
 const TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR = '[data-testid=tool-with-two-inputs-secondary]';
 const CONTENTLESS_TOOL_SELECTOR = '[data-testid=contentless-tool]';
@@ -267,7 +267,7 @@ test.describe('tab keydown', () => {
       ({ selector }) => {
         const element = document.querySelector(selector);
 
-        return element?.closest('[data-testid="block-wrapper"]')?.getAttribute('data-selected') === 'true' ?? false;
+        return element?.closest('[data-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true' ?? false;
       },
       { selector: CONTENTLESS_TOOL_SELECTOR }
     );
@@ -348,7 +348,7 @@ test.describe('shift+Tab keydown', () => {
       ({ selector }) => {
         const element = document.querySelector(selector);
 
-        return element?.closest('[data-testid="block-wrapper"]')?.getAttribute('data-selected') === 'true' ?? false;
+        return element?.closest('[data-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true' ?? false;
       },
       { selector: CONTENTLESS_TOOL_SELECTOR }
     );

@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
 const PLACEHOLDER_TEXT = 'Write something or press / to select a tool';
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 
@@ -87,8 +87,8 @@ const getParagraphWithPlaceholder = (page: Page, placeholder: string): Locator =
   const escapedPlaceholder = escapeAttributeValue(placeholder);
 
   const selectors = [
-    `${PARAGRAPH_SELECTOR}[data-placeholder='${escapedPlaceholder}']`,
-    `${PARAGRAPH_SELECTOR}[data-placeholder-active='${escapedPlaceholder}']`,
+    `${PARAGRAPH_SELECTOR}[data-blok-placeholder='${escapedPlaceholder}']`,
+    `${PARAGRAPH_SELECTOR}[data-blok-placeholder-active='${escapedPlaceholder}']`,
   ].join(', ');
 
   return page.locator(selectors);

@@ -155,7 +155,7 @@ describe('BoldInlineTool', () => {
     const strong = block.querySelector('strong');
 
     expect(strong).not.toBeNull();
-    expect(strong?.getAttribute('data-bold-collapsed-active')).toBe('true');
+    expect(strong?.getAttribute('data-blok-bold-collapsed-active')).toBe('true');
     expect(typeof menu.isActive === 'function' ? menu.isActive() : menu.isActive).toBe(true);
     expect(window.getSelection()?.anchorNode).toBe(strong?.firstChild ?? null);
   });
@@ -178,8 +178,8 @@ describe('BoldInlineTool', () => {
 
     const strongAfter = block.querySelector('strong');
 
-    expect(strongAfter?.getAttribute('data-bold-collapsed-length')).toBe(length.toString());
-    expect(strongAfter?.getAttribute('data-bold-collapsed-active')).toBeNull();
+    expect(strongAfter?.getAttribute('data-blok-bold-collapsed-length')).toBe(length.toString());
+    expect(strongAfter?.getAttribute('data-blok-bold-collapsed-active')).toBeNull();
     expect(typeof menu.isActive === 'function' ? menu.isActive() : menu.isActive).toBe(false);
     expect(window.getSelection()?.anchorNode?.parentNode).toBe(block);
   });

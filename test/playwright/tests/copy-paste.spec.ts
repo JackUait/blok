@@ -420,8 +420,8 @@ test.describe('copy and paste', () => {
         'text/html': '<h2>First block</h2><p>Second block</p>',
       });
 
-      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="header"]`);
-      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"]:nth-last-of-type(1)`);
+      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="header"]`);
+      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="paragraph"]:nth-last-of-type(1)`);
 
       await expect(headerBlock).toHaveText('First block');
       await expect(paragraphBlock).toHaveText('Second block');

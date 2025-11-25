@@ -20,8 +20,8 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="paragraph"]`;
-const HEADER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-block-tool="header"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
+const HEADER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"] [data-blok-block-tool="header"]`;
 const INLINE_TOOLBAR_ITEMS_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-testid="popover-items"] > *`;
 const INLINE_TOOLBAR_CONTAINER_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-testid="popover-container"]`;
 const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-testid="popover-item"]`;
@@ -411,7 +411,7 @@ const getInlineToolbarSnapshot = async (page: Page): Promise<ToolbarItemSnapshot
 
     return elements.map((element) => {
       return {
-        name: element.getAttribute('data-item-name'),
+        name: element.getAttribute('data-blok-item-name'),
         hasSeparator: element.getAttribute('data-testid') === 'popover-item-separator',
       };
     });
@@ -551,7 +551,7 @@ test.describe('inline toolbar', () => {
     const toolbarItems = page.locator(INLINE_TOOL_SELECTOR);
 
     await expect(toolbarItems).toHaveCount(1);
-    await expect(toolbarItems).toHaveAttribute('data-item-name', 'test-tool');
+    await expect(toolbarItems).toHaveAttribute('data-blok-item-name', 'test-tool');
   });
 
   test('should not submit surrounding form when inline tool is activated', async ({ page }) => {
@@ -596,7 +596,7 @@ test.describe('inline toolbar', () => {
 
     await selectText(paragraph, 'Some text');
 
-    await page.locator('[data-item-name="bold"]').click();
+    await page.locator('[data-blok-item-name="bold"]').click();
 
     const submitCount = await page.evaluate(() => window.inlineToolbarFormSubmitCount ?? 0);
 
@@ -658,13 +658,13 @@ test.describe('inline toolbar', () => {
 
     await selectText(paragraph, 'Bold part');
 
-    const boldButton = page.locator(`${INLINE_TOOL_SELECTOR}[data-item-name="bold"]`);
+    const boldButton = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="bold"]`);
 
-    await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
+    await expect(boldButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
 
     await boldButton.click();
 
-    await expect(boldButton).toHaveAttribute('data-popover-item-active', 'true');
+    await expect(boldButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
     await selectText(paragraph, 'plain part');
 
@@ -672,7 +672,7 @@ test.describe('inline toolbar', () => {
       window.editorInstance?.inlineToolbar?.open();
     });
 
-    await expect(boldButton).not.toHaveAttribute('data-popover-item-active', 'true');
+    await expect(boldButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
   test('should restore caret after converting a block', async ({ page }) => {
@@ -702,8 +702,8 @@ test.describe('inline toolbar', () => {
 
     await selectText(paragraph, 'Some text');
 
-    await page.locator('[data-item-name="convert-to"]').click();
-    await page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-testid="popover-item"][data-item-name="header"]`).click();
+    await page.locator('[data-blok-item-name="convert-to"]').click();
+    await page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-testid="popover-item"][data-blok-item-name="header"]`).click();
 
     await expect(page.locator(HEADER_SELECTOR)).toHaveText('Some text');
 
@@ -763,7 +763,7 @@ test.describe('inline toolbar', () => {
 
     await selectText(nestedParagraph, 'document structures');
 
-    await page.locator(`[data-testid="${NESTED_EDITOR_ID}"] [data-item-name="link"]`).click();
+    await page.locator(`[data-testid="${NESTED_EDITOR_ID}"] [data-blok-item-name="link"]`).click();
 
     const input = page.locator(`[data-testid="${NESTED_EDITOR_ID}"] [data-testid="inline-tool-input"]`);
 
@@ -771,7 +771,7 @@ test.describe('inline toolbar', () => {
     await input.type('https://editorjs.io', { delay: 20 });
 
     const nestedToolbar = page.locator(
-      `[data-testid="${NESTED_EDITOR_ID}"] [data-interface="inline-toolbar"] > [data-testid="popover"] > [data-testid="popover-container"]`
+      `[data-testid="${NESTED_EDITOR_ID}"] [data-blok-interface="inline-toolbar"] > [data-testid="popover"] > [data-testid="popover-container"]`
     );
 
     await expect(nestedToolbar).toBeVisible();

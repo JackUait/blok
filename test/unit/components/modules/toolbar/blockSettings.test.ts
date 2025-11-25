@@ -116,7 +116,7 @@ vi.mock('@/types/utils/popover/popover-event', () => ({
 }));
 
 vi.mock('@codexteam/icons', () => ({
-  IconReplace: '<svg data-icon="replace" />',
+  IconReplace: '<svg data-blok-icon="replace" />',
 }));
 
 vi.mock('../../../../../src/components/i18n', () => ({

@@ -10,8 +10,13 @@
 
 .ce-block {
     position: relative;
+    /**
+     * Avoid animation-related opacity=0 states that can hide blocks in headless environments.
+     * Keeping blocks fully opaque prevents visibility checks from timing out in tests.
+     */
+    opacity: 1;
     animation: fade-in 300ms ease;
-    animation-fill-mode: initial;
+    animation-fill-mode: forwards;
 
     &:first-of-type {
         margin-top: 0;

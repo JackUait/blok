@@ -55,9 +55,9 @@ export class PopoverItemHtml extends PopoverItem {
     this.nodes.root?.classList.toggle(css.hidden, isHidden);
 
     if (isHidden) {
-      this.nodes.root?.setAttribute('data-hidden', 'true');
+      this.nodes.root?.setAttribute('data-blok-hidden', 'true');
     } else {
-      this.nodes.root?.removeAttribute('data-hidden');
+      this.nodes.root?.removeAttribute('data-blok-hidden');
     }
   }
 

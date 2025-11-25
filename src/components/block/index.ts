@@ -29,7 +29,7 @@ import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 
-const BLOCK_TOOL_ATTRIBUTE = 'data-block-tool';
+const BLOCK_TOOL_ATTRIBUTE = 'data-blok-block-tool';
 
 /**
  * Interface describes Block class constructor argument
@@ -267,7 +267,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       this.addInputEvents();
 
       /**
-       * We mark inputs with [data-empty] attribute
+       * We mark inputs with [data-blok-empty] attribute
        * It can be useful for developers, for example for correct placeholder behavior
        */
       this.toggleInputsEmptyMark();
@@ -801,9 +801,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     this.holder.classList.toggle(Block.CSS.selected, state);
 
     if (state) {
-      this.holder.setAttribute('data-selected', 'true');
+      this.holder.setAttribute('data-blok-selected', 'true');
     } else {
-      this.holder.removeAttribute('data-selected');
+      this.holder.removeAttribute('data-blok-selected');
     }
 
     const fakeCursorWillBeAdded = state === true && SelectionUtils.isRangeInsideContainer(this.holder);
@@ -878,6 +878,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private compose(): HTMLDivElement {
     const wrapper = $.make('div', Block.CSS.wrapper) as HTMLDivElement;
     const contentNode = $.make('div', Block.CSS.content);
+
     contentNode.setAttribute('data-testid', 'block-content');
     const pluginsContent = this.toolInstance.render();
 
@@ -950,7 +951,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   private addToolDataAttributes(element: HTMLElement, blockWrapper: HTMLDivElement): void {
     /**
-     * Add data-block-tool attribute to identify the tool type used for the block.
+     * Add data-blok-block-tool attribute to identify the tool type used for the block.
      * Some tools (like Paragraph) add their own class names, but we can rely on the tool name for all cases.
      */
     if (this.name && !blockWrapper.hasAttribute(BLOCK_TOOL_ATTRIBUTE)) {
@@ -961,7 +962,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       element.setAttribute(BLOCK_TOOL_ATTRIBUTE, this.name);
     }
 
-    const placeholderAttribute = 'data-placeholder';
+    const placeholderAttribute = 'data-blok-placeholder';
     const placeholder = this.config?.placeholder;
     const placeholderText = typeof placeholder === 'string' ? placeholder.trim() : '';
 
@@ -1068,7 +1069,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     }
 
     /**
-     * We won't fire a Block mutation event if mutation contain only nodes marked with 'data-mutation-free' attributes
+     * We won't fire a Block mutation event if mutation contain only nodes marked with 'data-blok-mutation-free' attributes
      */
     const shouldFireUpdate = (() => {
       if (isManuallyDispatched || isInputEventHandler) {
@@ -1099,7 +1100,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
             return false;
           }
 
-          return elementToCheck.closest('[data-mutation-free="true"]') !== null;
+          return elementToCheck.closest('[data-blok-mutation-free="true"]') !== null;
         });
       });
 
@@ -1121,7 +1122,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     this.updateCurrentInput();
 
     /**
-     * We mark inputs with 'data-empty' attribute, so new inputs should be marked as well
+     * We mark inputs with 'data-blok-empty' attribute, so new inputs should be marked as well
      */
     this.toggleInputsEmptyMark();
 
@@ -1195,7 +1196,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
-   * Mark inputs with 'data-empty' attribute with the empty state
+   * Mark inputs with 'data-blok-empty' attribute with the empty state
    */
   private toggleInputsEmptyMark(): void {
     this.inputs.forEach(toggleEmptyMark);

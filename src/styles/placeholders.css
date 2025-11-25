@@ -17,29 +17,29 @@
 
 .codex-editor {
   /**
-   * Use [data-placeholder="..."] to always show a placeholder on empty contenteditable.
+   * Use [data-blok-placeholder="..."] to always show a placeholder on empty contenteditable.
    */
-  [data-placeholder]:empty,
-  [data-placeholder][data-empty="true"] {
+  [data-blok-placeholder]:empty,
+  [data-blok-placeholder][data-blok-empty="true"] {
     &::before {
       @apply --placeholder;
 
-      content: attr(data-placeholder);
+      content: attr(data-blok-placeholder);
     }
   }
 
    /**
-    * Use [data-placeholder-active="..."] to show a placeholder on empty contenteditable in current block.
+    * Use [data-blok-placeholder-active="..."] to show a placeholder on empty contenteditable in current block.
     */
-  [data-placeholder-active]:empty,
-  [data-placeholder-active][data-empty="true"] {
+  [data-blok-placeholder-active]:empty,
+  [data-blok-placeholder-active][data-blok-empty="true"] {
     /* Paragraph tool shows the placeholder for the first block, event it is not focused, so we need to prepare styles for it */
     &::before {
       @apply --placeholder;
     }
 
     &:focus::before {
-      content: attr(data-placeholder-active);
+      content: attr(data-blok-placeholder-active);
     }
   }
 }

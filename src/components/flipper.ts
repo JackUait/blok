@@ -419,7 +419,7 @@ export default class Flipper {
     const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
     const shouldHandleNativeInput = target.dataset?.flipperTabTarget === 'true' && event.key === 'Tab';
     const isContentEditable = target.isContentEditable;
-    const isInlineToolInput = target.closest('[data-link-tool-input-opened="true"]') !== null;
+    const isInlineToolInput = target.closest('[data-blok-link-tool-input-opened="true"]') !== null;
 
     const shouldSkipContentEditable = isContentEditable && !this.handleContentEditableTargets;
 

@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-block-tool="paragraph"] [contenteditable]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-block-tool="paragraph"] [contenteditable]`;
 const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-testid="toolbar"]`;
 const HOLDER_ID = 'editorjs';
 
@@ -445,7 +445,7 @@ const expectCaretOffset = async (locator: Locator, expectedOffset: number, optio
 const expectToolbarClosed = async (page: Page): Promise<void> => {
   const toolbar = page.locator(TOOLBAR_SELECTOR);
 
-  await expect(toolbar).not.toHaveAttribute('data-opened', 'true');
+  await expect(toolbar).not.toHaveAttribute('data-blok-opened', 'true');
 };
 
 test.describe('backspace keydown', () => {
@@ -528,7 +528,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-id');
+        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-blok-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -622,7 +622,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-id');
+        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-blok-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -713,7 +713,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-id');
+        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-blok-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -804,7 +804,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-id');
+        const blockId = el.closest('[data-testid="block-wrapper"]')?.getAttribute('data-blok-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -1038,7 +1038,7 @@ test.describe('backspace keydown', () => {
       },
     ]);
 
-    const targetBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-id="block2"]`);
+    const targetBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-testid="block-wrapper"][data-blok-id="block2"]`);
 
     await targetBlock.click();
     await targetBlock.press('Home');

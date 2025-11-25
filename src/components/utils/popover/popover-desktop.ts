@@ -80,7 +80,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (this.nestingLevel > 0) {
       this.nodes.popover.classList.add(css.popoverNested);
-      this.nodes.popover.setAttribute('data-nested', 'true');
+      this.nodes.popover.setAttribute('data-blok-nested', 'true');
     }
 
     if (params.scopeElement !== undefined) {

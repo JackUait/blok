@@ -11,10 +11,10 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-blok-block-tool="paragraph"]`;
 const TOOLBOX_CONTAINER_SELECTOR = '[data-testid="toolbox"] .ce-popover__container';
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
-  `[data-testid="toolbox"] [data-testid="popover-item"][data-item-name=${itemName}]`;
+  `[data-testid="toolbox"] [data-testid="popover-item"][data-blok-item-name=${itemName}]`;
 const BLOCK_TUNES_SELECTOR = '[data-testid="block-tunes-popover"] [data-testid="popover-container"]';
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
 

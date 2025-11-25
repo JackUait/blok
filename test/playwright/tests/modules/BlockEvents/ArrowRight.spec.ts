@@ -11,9 +11,9 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
-const CONTENTLESS_TOOL_SELECTOR = '[data-cy-type="contentless-tool"]';
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const CONTENTLESS_TOOL_SELECTOR = '[data-blok-testid-type="contentless-tool"]';
 
 const resetEditor = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holderId }) => {
@@ -27,7 +27,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -77,8 +77,8 @@ const createEditorWithContentlessBlock = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const wrapper = document.createElement('div');
 
-        wrapper.dataset.cy = 'contentless-tool';
-        wrapper.dataset.cyType = 'contentless-tool';
+        wrapper.setAttribute('data-blok-testid', 'contentless-tool');
+        wrapper.setAttribute('data-blok-testid-type', 'contentless-tool');
         wrapper.textContent = '***';
 
         return wrapper;
@@ -350,11 +350,11 @@ test.describe('arrow right keydown', () => {
     await firstParagraph.press('End');
     await page.keyboard.press('ArrowRight');
 
-    await expect(contentlessBlock).toHaveClass(/ce-block--selected/);
+    await expect(contentlessBlock).toHaveAttribute('data-blok-selected', 'true');
 
     await page.keyboard.press('ArrowRight');
 
-    await expect(contentlessBlock).not.toHaveClass(/ce-block--selected/);
+    await expect(contentlessBlock).not.toHaveAttribute('data-blok-selected', 'true');
     const caretInfo = await getCaretInfoOrThrow(lastParagraph);
 
     expect(caretInfo).toMatchObject({

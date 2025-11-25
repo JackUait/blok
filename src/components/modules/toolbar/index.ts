@@ -215,9 +215,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     return {
       hide: (): void => {
         this.nodes.actions?.classList.remove(this.CSS.actionsOpened);
+        this.nodes.actions?.removeAttribute('data-blok-opened');
       },
       show: (): void => {
         this.nodes.actions?.classList.add(this.CSS.actionsOpened);
+        this.nodes.actions?.setAttribute('data-blok-opened', 'true');
       },
     };
   }
@@ -391,6 +393,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarOpened);
+    this.nodes.wrapper?.removeAttribute('data-blok-opened');
 
     /** Close components */
     this.blockActions.hide();
@@ -420,6 +423,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private open(withBlockActions = true): void {
     this.nodes.wrapper?.classList.add(this.CSS.toolbarOpened);
+    this.nodes.wrapper?.setAttribute('data-blok-opened', 'true');
 
     if (withBlockActions) {
       this.blockActions.show();
@@ -435,9 +439,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const wrapper = $.make('div', this.CSS.toolbar);
 
     this.nodes.wrapper = wrapper;
-    /**
-     * @todo detect test environment and add data-cy="toolbar" to use it in tests instead of class name
-     */
+    wrapper.setAttribute('data-blok-testid', 'toolbar');
 
     /**
      * Make Content Zone and Actions Zone
@@ -448,6 +450,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.nodes.content = content;
 
     this.nodes.actions = actions;
+    actions.setAttribute('data-blok-testid', 'toolbar-actions');
 
     /**
      * Actions will be included to the toolbar content so we can align in to the right of the content
@@ -463,6 +466,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const plusButton = $.make('div', this.CSS.plusButton, {
       innerHTML: IconPlus,
     });
+
+    plusButton.setAttribute('data-blok-testid', 'plus-button');
 
     this.nodes.plusButton = plusButton;
     $.append(actions, plusButton);
@@ -495,6 +500,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const settingsToggler = $.make('span', this.CSS.settingsToggler, {
       innerHTML: IconMenu,
     });
+
+    settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
 
     this.nodes.settingsToggler = settingsToggler;
 

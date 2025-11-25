@@ -17,12 +17,12 @@ describe('Dom helper utilities', () => {
         type: 'button',
         title: 'Action',
         disabled: true,
-        'data-testid': 'make-button',
+        'data-blok-testid': 'make-button',
       });
 
       expect(button.tagName).toBe('BUTTON');
       expect(button.className).toBe('btn primary');
-      expect(button.getAttribute('data-testid')).toBe('make-button');
+      expect(button.getAttribute('data-blok-testid')).toBe('make-button');
       expect((button as HTMLButtonElement).disabled).toBe(true);
 
       const input = Dom.make('input', 'field', {
@@ -370,11 +370,11 @@ describe('Dom helper utilities', () => {
 
       element.textContent = '';
       toggleEmptyMark(element);
-      expect(element.dataset.empty).toBe('true');
+      expect(element.getAttribute('data-blok-empty')).toBe('true');
 
       element.textContent = 'filled';
       toggleEmptyMark(element);
-      expect(element.dataset.empty).toBe('false');
+      expect(element.getAttribute('data-blok-empty')).toBe('false');
     });
   });
 });

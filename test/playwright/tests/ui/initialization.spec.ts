@@ -13,8 +13,8 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const EDITOR_ROOT_SELECTOR = EDITOR_INTERFACE_SELECTOR;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
-const STYLE_TAG_SELECTOR = '#editor-js-styles';
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const STYLE_TAG_SELECTOR = '[id="editor-js-styles"]';
 
 type InitializationOptions = {
   readOnly?: boolean;
@@ -58,7 +58,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -134,7 +134,8 @@ test.describe('editor basic initialization', () => {
           readOnly: true,
         });
 
-        const readOnlyParagraph = page.locator(`${PARAGRAPH_SELECTOR}[contenteditable="false"]`);
+        // The contenteditable attribute is on the paragraph element inside the block wrapper
+        const readOnlyParagraph = page.locator(`${PARAGRAPH_SELECTOR} [contenteditable="false"]`);
 
         await expect(readOnlyParagraph).toBeVisible();
       });

@@ -12,10 +12,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const FIRST_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block:first-of-type`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const POPOVER_SELECTOR = '.ce-popover[data-cy="block-tunes"]';
-const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} .ce-popover-item`;
+const FIRST_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]:first-of-type`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
+const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
 const FIRST_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(1)`;
 const SECOND_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(2)`;
 
@@ -53,7 +53,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -79,7 +79,7 @@ const ensureEditorBundleLoaded = async (page: Page): Promise<void> => {
       const script = document.createElement('script');
 
       script.src = new URL('../../../dist/editorjs.umd.js', window.location.href).href;
-      script.dataset.testEditorBundle = 'injected';
+      script.setAttribute('data-blok-test-editor-bundle', 'injected');
       document.head.appendChild(script);
     }
 
@@ -212,7 +212,7 @@ test.describe('api.tunes', () => {
     await focusBlockAndType(page, 'some text');
     await openBlockTunes(page);
 
-    await expect(page.locator('[data-item-name="testTune"]')).toBeVisible();
+    await expect(page.locator('[data-blok-item-name="testTune"]')).toBeVisible();
   });
 
   test('renders several popover entries for block tune if configured', async ({ page }) => {
@@ -235,8 +235,8 @@ test.describe('api.tunes', () => {
     await focusBlockAndType(page, 'some text');
     await openBlockTunes(page);
 
-    await expect(page.locator('[data-item-name="testTune1"]')).toBeVisible();
-    await expect(page.locator('[data-item-name="testTune2"]')).toBeVisible();
+    await expect(page.locator('[data-blok-item-name="testTune1"]')).toBeVisible();
+    await expect(page.locator('[data-blok-item-name="testTune2"]')).toBeVisible();
   });
 
   test('displays custom HTML returned by tune render method inside tunes menu', async ({ page }) => {
@@ -267,8 +267,8 @@ test.describe('api.tunes', () => {
     await focusBlockAndType(page, 'some text');
     await openBlockTunes(page);
 
-    await expect(page.locator(FIRST_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-item-name', 'test-tune');
-    await expect(page.locator(SECOND_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-item-name', 'delete');
+    await expect(page.locator(FIRST_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-blok-item-name', 'test-tune');
+    await expect(page.locator(SECOND_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-blok-item-name', 'delete');
   });
 });
 

@@ -10,9 +10,9 @@ import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constan
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
 const HOLDER_ID = 'editorjs';
 
 const getPositionalLocator = async (page: Page, selector: string, position: 'first' | 'last'): Promise<Locator> => {
@@ -34,13 +34,13 @@ const getBlockLocator = async (page: Page, position: 'first' | 'last'): Promise<
 };
 
 const getQuoteInputLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
-  const quoteInputSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy=quote-tool] div[contenteditable]`;
+  const quoteInputSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=quote-tool] div[contenteditable]`;
 
   return getPositionalLocator(page, quoteInputSelector, position);
 };
 
 const getBlockWrapperLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
-  const blockWrapperSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy=block-wrapper]`;
+  const blockWrapperSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=block-wrapper]`;
 
   return getPositionalLocator(page, blockWrapperSelector, position);
 };
@@ -61,7 +61,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -200,7 +200,7 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
         const input = document.createElement('div');
         const input2 = document.createElement('div');
 
-        container.dataset.cy = 'quote-tool';
+        container.setAttribute('data-blok-testid', 'quote-tool');
 
         input.contentEditable = 'true';
         input2.contentEditable = 'true';
@@ -257,7 +257,7 @@ const createUnmergeableToolEditor = async (page: Page, options: { hasConversionC
       public render(): HTMLElement {
         const container = document.createElement('div');
 
-        container.dataset.cy = 'unmergeable-tool';
+        container.setAttribute('data-blok-testid', 'unmergeable-tool');
         container.contentEditable = 'true';
         container.innerHTML = 'Unmergeable not empty tool';
 
@@ -445,7 +445,7 @@ const expectCaretOffset = async (locator: Locator, expectedOffset: number, optio
 const expectToolbarClosed = async (page: Page): Promise<void> => {
   const toolbar = page.locator(TOOLBAR_SELECTOR);
 
-  await expect(toolbar).not.toHaveClass(/ce-toolbar--opened/);
+  await expect(toolbar).not.toHaveAttribute('data-blok-opened', 'true');
 };
 
 test.describe('backspace keydown', () => {
@@ -528,7 +528,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -622,7 +622,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -713,7 +713,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -804,7 +804,7 @@ test.describe('backspace keydown', () => {
         selection?.addRange(range);
 
         // Ensure BlockManager knows about the current block
-        const blockId = el.closest('.ce-block')?.getAttribute('data-id');
+        const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const editor = window.editorInstance as any;
 
@@ -1038,7 +1038,7 @@ test.describe('backspace keydown', () => {
       },
     ]);
 
-    const targetBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"][data-id="block2"]`);
+    const targetBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-id="block2"]`);
 
     await targetBlock.click();
     await targetBlock.press('Home');
@@ -1068,7 +1068,7 @@ test.describe('backspace keydown', () => {
     const { blocks } = await saveEditor(page);
 
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=unmergeable-tool]`));
+    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
     await expectToolbarClosed(page);
   });
 
@@ -1084,7 +1084,7 @@ test.describe('backspace keydown', () => {
     const { blocks } = await saveEditor(page);
 
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=unmergeable-tool]`));
+    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
     await expectToolbarClosed(page);
   });
 

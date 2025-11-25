@@ -11,10 +11,10 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"]`;
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
-const QUOTE_TOOL_INPUT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="quote-tool"] div[contenteditable]`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
+const QUOTE_TOOL_INPUT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="quote-tool"] div[contenteditable]`;
 
 const getBlockByIndex = (page: Page, index: number): Locator => {
   return page.locator(`:nth-match(${BLOCK_SELECTOR}, ${index + 1})`);
@@ -24,7 +24,7 @@ const getLastBlock = async (page: Page): Promise<Locator> => {
   const blockCount = await page.locator(BLOCK_SELECTOR).count();
 
   if (blockCount === 0) {
-    throw new Error('No blocks found for selector: div.ce-block');
+    throw new Error('No blocks found for selector: [data-blok-testid="block-wrapper"]');
   }
 
   return page.locator(`:nth-match(${BLOCK_SELECTOR}, ${blockCount})`);
@@ -60,7 +60,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -106,7 +106,7 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
         const input = document.createElement('div');
         const input2 = document.createElement('div');
 
-        container.dataset.cy = 'quote-tool';
+        container.setAttribute('data-blok-testid', 'quote-tool');
 
         input.contentEditable = 'true';
         input2.contentEditable = 'true';
@@ -157,7 +157,7 @@ const createEditorWithUnmergeableTool = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const container = document.createElement('div');
 
-        container.dataset.cy = 'unmergeable-tool';
+        container.setAttribute('data-blok-testid', 'unmergeable-tool');
         container.contentEditable = 'true';
         container.innerHTML = 'Unmergeable not empty tool';
 
@@ -320,7 +320,7 @@ const expectCaretOffset = async (locator: Locator, expectedOffset: number, optio
 const expectToolbarClosed = async (page: Page): Promise<void> => {
   const toolbar = page.locator(TOOLBAR_SELECTOR);
 
-  await expect(toolbar).not.toHaveClass(/ce-toolbar--opened/);
+  await expect(toolbar).not.toHaveAttribute('data-blok-opened', 'true');
 };
 
 test.describe('delete keydown', () => {
@@ -338,7 +338,7 @@ test.describe('delete keydown', () => {
       await createParagraphEditor(page, ['1\u00A0', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const paragraphContent = firstParagraph.locator('.ce-paragraph');
+      const paragraphContent = firstParagraph.locator('[contenteditable]');
 
       await firstParagraph.click();
 
@@ -403,7 +403,7 @@ test.describe('delete keydown', () => {
       await createParagraphEditor(page, ['1\u00A0<b></b>', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const paragraphContent = firstParagraph.locator('.ce-paragraph');
+      const paragraphContent = firstParagraph.locator('[contenteditable]');
 
       await firstParagraph.click();
 
@@ -432,7 +432,7 @@ test.describe('delete keydown', () => {
       await createParagraphEditor(page, ['1<b></b>\u00A0', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const paragraphContent = firstParagraph.locator('.ce-paragraph');
+      const paragraphContent = firstParagraph.locator('[contenteditable]');
 
       await firstParagraph.click();
 
@@ -459,7 +459,7 @@ test.describe('delete keydown', () => {
       await createParagraphEditor(page, ['1\u00A0 ', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const paragraphContent = firstParagraph.locator('.ce-paragraph');
+      const paragraphContent = firstParagraph.locator('[contenteditable]');
 
       await firstParagraph.click();
 
@@ -496,7 +496,7 @@ test.describe('delete keydown', () => {
     await createParagraphEditor(page, ['The first block', 'The second block']);
 
     const firstParagraph = getParagraphByIndex(page, 0);
-    const paragraphContent = firstParagraph.locator('.ce-paragraph');
+    const paragraphContent = firstParagraph.locator('[contenteditable]');
 
     await firstParagraph.click();
     await selectText(paragraphContent, 'The ');
@@ -639,7 +639,7 @@ test.describe('delete keydown', () => {
     await firstParagraph.press('End');
     await firstParagraph.press('Delete');
 
-    const caretInfo = await getCaretInfo(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-cy=unmergeable-tool]`));
+    const caretInfo = await getCaretInfo(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
 
     expect(caretInfo?.inside).toBeTruthy();
     await expectToolbarClosed(page);
@@ -651,7 +651,7 @@ test.describe('delete keydown', () => {
 
       // Workaround for potential duplication: remove extra blocks if any
       await page.evaluate(() => {
-        const blocks = document.querySelectorAll('.ce-block');
+        const blocks = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
 
         Array.from(blocks).forEach((block) => {
           if (!block.textContent?.includes('The only block. Not empty')) {

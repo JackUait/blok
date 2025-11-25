@@ -104,10 +104,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    */
   public make(): void {
     this.nodes.wrapper = $.make('div', [ this.CSS.settings ]);
-
-    if (import.meta.env.MODE === 'test') {
-      this.nodes.wrapper.setAttribute('data-cy', 'block-tunes');
-    }
+    this.nodes.wrapper.setAttribute('data-blok-testid', 'block-tunes-wrapper');
 
     this.eventsDispatcher.on(EditorMobileLayoutToggled, this.close);
   }
@@ -171,10 +168,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     this.popover = new PopoverClass(popoverParams);
-
-    if (import.meta.env.MODE === 'test') {
-      this.popover.getElement().setAttribute('data-cy', 'block-tunes');
-    }
+    this.popover.getElement().setAttribute('data-blok-testid', 'block-tunes-popover');
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
 

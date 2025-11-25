@@ -1,4 +1,4 @@
-import {ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions} from 'codex-notifier';
+import {ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions} from '../configs/notifier';
 
 /**
  * Notifier API

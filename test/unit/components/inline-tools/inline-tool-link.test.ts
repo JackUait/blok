@@ -159,7 +159,7 @@ describe('LinkInlineTool', () => {
 
     expect(input.placeholder).toBe('Add a link');
     expect(input.classList.contains('ce-inline-tool-input')).toBe(true);
-    expect(input.getAttribute('data-link-tool-input-opened')).toBe('false');
+    expect(input.getAttribute('data-blok-link-tool-input-opened')).toBe('false');
 
     const event = createKeyboardEventWithKeyCode(13);
 

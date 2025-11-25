@@ -12,8 +12,8 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
-const DEFAULT_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
+const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const DEFAULT_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const ICON = '<svg width="17" height="15" viewBox="0 0 336 276" xmlns="http://www.w3.org/2000/svg"><path d="M291 150V79c0-19-15-34-34-34H79c-19 0-34 15-34 34v42l67-44 81 72 56-29 42 30zm0 52l-43-30-56 30-81-67-66 39v23c0 19 15 34 34 34h178c17 0 31-13 34-29zM79 0h178c44 0 79 35 79 79v118c0 44-35 79-79 79H79c-44 0-79-35-79-79V79C0 35 35 0 79 0z"></path></svg>';
 
 type ToolDefinition = {
@@ -55,7 +55,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -145,14 +145,15 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
   await block.click();
   await block.hover();
 
-  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`);
+  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
   await settingsButton.waitFor({ state: 'visible' });
   await settingsButton.click();
 
   await expect(
     page
-      .locator('.ce-popover[data-cy="block-tunes"][data-popover-opened="true"]')
+      .getByTestId('block-tunes-popover')
+      .and(page.locator('[data-blok-popover-opened="true"]'))
   ).toHaveCount(1);
 };
 
@@ -196,7 +197,7 @@ class TestTool {
     const element = document.createElement('div');
 
     element.contentEditable = 'true';
-    element.setAttribute('data-name', 'testBlock');
+    element.setAttribute('data-blok-name', 'testBlock');
     element.textContent = this.data?.text ?? '';
 
     return element;
@@ -313,7 +314,7 @@ test.describe('api.tools', () => {
 
       await openBlockSettings(page, 0);
 
-      await expect(page.locator('[data-item-name="testToolTune"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="testToolTune"]')).toBeVisible();
     });
 
     test('should render multiple tunes when renderSettings() returns array', async ({ page }) => {
@@ -355,8 +356,8 @@ test.describe('api.tools', () => {
 
       await openBlockSettings(page, 0);
 
-      await expect(page.locator('[data-item-name="testToolTune1"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="testToolTune2"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="testToolTune1"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="testToolTune2"]')).toBeVisible();
     });
 
     test('should support custom html returned from renderSettings()', async ({ page }) => {
@@ -391,9 +392,7 @@ test.describe('api.tools', () => {
       await openBlockSettings(page, 0);
 
       await expect(
-        page.locator(
-          '.ce-popover[data-cy="block-tunes"][data-popover-opened="true"]'
-        )
+        page.getByTestId('block-tunes-popover').and(page.locator('[data-blok-popover-opened="true"]'))
       ).toContainText(sampleText);
     });
   });

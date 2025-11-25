@@ -11,12 +11,12 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_TUNES_SELECTOR = '.ce-popover[data-cy=block-tunes]';
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
-const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} .ce-popover-item`;
-const PLUGIN_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-some-plugin`;
-const INLINE_TOOLBAR_SELECTOR = '[data-cy="inline-toolbar"] .ce-popover--opened';
+const BLOCK_TUNES_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"]`;
+const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"]`;
+const PLUGIN_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="some-plugin"]`;
+const INLINE_TOOLBAR_SELECTOR = '[data-blok-testid="inline-toolbar"] [data-blok-testid="popover"][data-blok-popover-opened="true"]';
 
 const KEY_CODES = {
   TAB: 9,
@@ -65,6 +65,7 @@ class SomePlugin {
     const wrapper = document.createElement('div');
 
     wrapper.classList.add('cdx-some-plugin');
+    wrapper.setAttribute('data-blok-testid', 'some-plugin');
     wrapper.contentEditable = 'true';
     wrapper.addEventListener('keydown', SomePlugin.pluginInternalKeydownHandler);
 
@@ -118,7 +119,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -291,7 +292,7 @@ const getPluginHandlerCallCount = async (page: Page): Promise<number> => {
 
 const getFocusedPopoverIndex = async (page: Page): Promise<number> => {
   const focusedIndex = await page.locator(POPOVER_ITEM_SELECTOR).evaluateAll(elements => {
-    return elements.findIndex(element => element.classList.contains('ce-popover-item--focused'));
+    return elements.findIndex(element => element.hasAttribute('data-blok-focused'));
   });
 
   if (focusedIndex === -1) {
@@ -338,7 +339,7 @@ test.describe('flipper', () => {
 
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
-    await expect(page.locator('[data-item-name="delete"]')).toHaveClass(/ce-popover-item--focused/);
+    await expect(page.locator('[data-blok-item-name="delete"]')).toHaveAttribute('data-blok-focused', 'true');
 
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
@@ -363,11 +364,13 @@ test.describe('flipper', () => {
       },
     });
 
-    const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`, {
+    const paragraphWrapper = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`, {
       hasText: /^Workspace in classic editors/,
     });
+    // The contenteditable element is inside the block wrapper
+    const paragraph = paragraphWrapper.locator('[contenteditable]');
 
-    await expect(paragraph).toBeVisible();
+    await expect(paragraphWrapper).toBeVisible();
     await selectTextByOffset(paragraph, 0, 10);
 
     await triggerKey(paragraph, KEY_CODES.ARROW_DOWN, {
@@ -376,7 +379,7 @@ test.describe('flipper', () => {
     });
 
     await expect(page.locator(INLINE_TOOLBAR_SELECTOR)).toBeVisible();
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} .ce-popover-item--focused`)).toHaveCount(0);
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-focused="true"]`)).toHaveCount(0);
   });
 
   test('cycles focus with Tab and Shift+Tab', async ({ page }) => {
@@ -440,10 +443,10 @@ test.describe('flipper', () => {
 
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
-    await expect(page.locator('[data-item-name="delete"]')).toHaveClass(/ce-popover-item--focused/);
+    await expect(page.locator('[data-blok-item-name="delete"]')).toHaveAttribute('data-blok-focused', 'true');
 
     await page.evaluate(() => {
-      const deleteItem = document.querySelector('[data-item-name="delete"]');
+      const deleteItem = document.querySelector('[data-blok-item-name="delete"]');
 
       if (!deleteItem) {
         throw new Error('Delete item not found');
@@ -724,7 +727,7 @@ test.describe('flipper', () => {
         throw new Error('No popover items found');
       }
 
-      return firstElement.classList.contains('ce-popover-item--focused');
+      return firstElement.hasAttribute('data-blok-focused');
     });
 
     expect(isFirstItemFocused).toBe(true);
@@ -976,14 +979,14 @@ test.describe('flipper', () => {
 
         return {
           targetIndex: activeIndex,
-          itemNames: items.map(item => item.dataset.itemName),
-          focusedItemName: blockSettings.flipper['iterator']?.currentItem?.dataset?.itemName ?? null,
+          itemNames: items.map(item => item.getAttribute('data-blok-item-name')),
+          focusedItemName: blockSettings.flipper['iterator']?.currentItem?.getAttribute('data-item-name') ?? null,
           focusedItemClasses: blockSettings.flipper['iterator']?.currentItem ? Array.from(blockSettings.flipper['iterator'].currentItem.classList) : null,
         };
       },
       {
         targetIndex,
-        selector: `${BLOCK_TUNES_SELECTOR} .ce-popover-item`,
+        selector: `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item"]`,
       }
     );
 
@@ -995,7 +998,7 @@ test.describe('flipper', () => {
           throw new Error(`No popover item found at index ${index}`);
         }
 
-        return target.classList.contains('ce-popover-item--focused');
+        return target.hasAttribute('data-blok-focused');
       },
       targetIndex
     );
@@ -1033,21 +1036,23 @@ test.describe('flipper', () => {
       }
 
       const originalItems = Array.from(
-        document.querySelectorAll('.ce-popover-item')
+        document.querySelectorAll('[data-blok-testid="popover-item"]')
       ) as HTMLElement[];
 
       // Create new items
       const newItem1 = document.createElement('div');
 
       newItem1.className = 'ce-popover-item';
+      newItem1.setAttribute('data-blok-testid', 'popover-item');
       newItem1.textContent = 'New Item 1';
 
       const newItem2 = document.createElement('div');
 
       newItem2.className = 'ce-popover-item';
+      newItem2.setAttribute('data-blok-testid', 'popover-item');
       newItem2.textContent = 'New Item 2';
 
-      const container = document.querySelector('.ce-popover__container');
+      const container = document.querySelector('[data-blok-testid="popover-container"]');
 
       if (container) {
         container.appendChild(newItem1);
@@ -1086,7 +1091,7 @@ test.describe('flipper', () => {
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
     await page.evaluate(() => {
-      const focusedItem = document.querySelector('.ce-popover-item--focused');
+      const focusedItem = document.querySelector('[data-blok-focused="true"]');
 
       if (!focusedItem) {
         throw new Error('No focused item found');
@@ -1300,7 +1305,7 @@ test.describe('flipper', () => {
       code: 'Tab',
     });
 
-    const focusedItem = page.locator('.ce-popover-item--focused');
+    const focusedItem = page.locator('[data-blok-focused="true"]');
 
     await expect(focusedItem).toBeVisible();
     await expect(focusedItem).toHaveCount(1);
@@ -1322,7 +1327,7 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     await page.evaluate(() => {
-      const deleteItem = document.querySelector('[data-item-name="delete"]');
+      const deleteItem = document.querySelector('[data-blok-item-name="delete"]');
 
       if (!deleteItem) {
         throw new Error('Delete item not found');
@@ -1488,4 +1493,3 @@ test.describe('flipper', () => {
     expect(true).toBe(true);
   });
 });
-

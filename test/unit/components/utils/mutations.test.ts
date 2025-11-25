@@ -22,11 +22,11 @@ const createMutation = (overrides: Partial<MutationRecord> = {}): MutationRecord
 };
 
 describe('isMutationBelongsToElement', () => {
-  it('ignores internal data-empty attribute updates', () => {
+  it('ignores internal data-blok-empty attribute updates', () => {
     const element = document.createElement('div');
     const mutation = createMutation({
       type: 'attributes',
-      attributeName: 'data-empty',
+      attributeName: 'data-blok-empty',
       target: element,
     });
 
@@ -53,7 +53,7 @@ describe('isMutationBelongsToElement', () => {
     const otherElement = document.createElement('div');
     const mutation = createMutation({
       type: 'attributes',
-      attributeName: 'data-test',
+      attributeName: 'data-blok-test',
       target: otherElement,
     });
 

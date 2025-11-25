@@ -300,7 +300,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     ]);
 
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE);
-    this.nodes.wrapper.setAttribute('data-cy', 'inline-toolbar');
+    this.nodes.wrapper.setAttribute('data-blok-testid', 'inline-toolbar');
 
     /**
      * Append the inline toolbar to the editor.
@@ -695,6 +695,15 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     popoverItems.push(popoverItem);
+
+    /**
+     * Append a separator after the item if it has children and not the last one
+     */
+    if ('children' in popoverItem && index < this.tools.size - 1) {
+      popoverItems.push({
+        type: PopoverItemType.Separator,
+      });
+    }
   }
 
   /**

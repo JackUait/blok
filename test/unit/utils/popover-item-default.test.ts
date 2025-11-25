@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('@codexteam/icons', () => ({
-  IconDotCircle: '<svg data-test-id="dot-circle"></svg>',
-  IconChevronRight: '<svg data-test-id="chevron-right"></svg>',
+  IconDotCircle: '<svg data-blok-testid="dot-circle"></svg>',
+  IconChevronRight: '<svg data-blok-testid="chevron-right"></svg>',
 }));
 
 import {
@@ -24,7 +24,7 @@ const createItem = (overrides: Partial<PopoverItemDefaultParams> = {}): ItemSetu
   const params: PopoverItemDefaultParams = {
     title: 'Test item',
     name: 'test-item',
-    icon: '<svg data-test-id="custom-icon"></svg>',
+    icon: '<svg data-blok-testid="custom-icon"></svg>',
     onActivate: vi.fn(),
     ...overrides,
   };
@@ -60,7 +60,7 @@ describe('PopoverItemDefault', () => {
     const { element, params } = createItem({ secondaryLabel });
 
     expect(element.classList.contains(css.container)).toBe(true);
-    expect(element.dataset.itemName).toBe(params.name);
+    expect(element.getAttribute('data-blok-item-name')).toBe(params.name);
 
     const icon = element.querySelector<HTMLElement>(`.${css.icon}`);
     const title = element.querySelector<HTMLElement>(`.${css.title}`);

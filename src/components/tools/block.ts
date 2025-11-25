@@ -168,6 +168,15 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
   }
 
   /**
+   * Returns true if Tool has onPaste handler
+   */
+  public get hasOnPasteHandler(): boolean {
+    const prototype = (this.constructable as unknown as { prototype?: { onPaste?: unknown } })?.prototype;
+
+    return typeof prototype?.onPaste === 'function';
+  }
+
+  /**
    * Returns sanitize configuration for Block Tool including configs from related Inline Tools and Block Tunes
    */
   public get sanitizeConfig(): SanitizerConfig {

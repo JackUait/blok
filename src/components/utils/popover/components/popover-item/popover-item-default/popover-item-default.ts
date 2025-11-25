@@ -130,6 +130,12 @@ export class PopoverItemDefault extends PopoverItem {
    */
   public override toggleHidden(isHidden: boolean): void {
     this.nodes.root?.classList.toggle(css.hidden, isHidden);
+
+    if (isHidden) {
+      this.nodes.root?.setAttribute('data-blok-hidden', 'true');
+    } else {
+      this.nodes.root?.removeAttribute('data-blok-hidden');
+    }
   }
 
   /**
@@ -159,12 +165,15 @@ export class PopoverItemDefault extends PopoverItem {
       type: tag === 'button' ? 'button' : undefined,
     });
 
+    el.setAttribute('data-blok-testid', 'popover-item');
+
     if (params.name) {
-      el.dataset.itemName = params.name;
+      el.setAttribute('data-blok-item-name', params.name);
     }
 
     this.nodes.icon = Dom.make('div', [css.icon, css.iconTool], {
       innerHTML: params.icon || IconDotCircle,
+      'data-blok-testid': 'popover-item-icon',
     });
 
     el.appendChild(this.nodes.icon);
@@ -175,18 +184,23 @@ export class PopoverItemDefault extends PopoverItem {
     if (title !== undefined) {
       el.appendChild(Dom.make('div', css.title, {
         innerHTML: title || '',
+        'data-blok-testid': 'popover-item-title',
       }));
     }
 
     if (params.secondaryLabel) {
-      el.appendChild(Dom.make('div', css.secondaryTitle, {
+      const secondaryTitle = Dom.make('div', css.secondaryTitle, {
         textContent: params.secondaryLabel,
-      }));
+      });
+
+      secondaryTitle.setAttribute('data-blok-testid', 'popover-item-secondary-title');
+      el.appendChild(secondaryTitle);
     }
 
     if (this.hasChildren) {
       el.appendChild(Dom.make('div', [css.icon, css.iconChevronRight], {
         innerHTML: IconChevronRight,
+        'data-blok-testid': 'popover-item-chevron-right',
       }));
     }
 
@@ -197,6 +211,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     if (params.isDisabled) {
       el.classList.add(css.disabled);
+      el.setAttribute('data-blok-disabled', 'true');
     }
 
     if (params.hint !== undefined && renderParams?.hint?.enabled !== false) {

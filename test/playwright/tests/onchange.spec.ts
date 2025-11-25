@@ -17,10 +17,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
-const TOOLBAR_PLUS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const TOOLBAR_PLUS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const WAIT_FOR_BATCH = modificationsObserverBatchTimeout + 100;
 
 const HEADER_TOOL_UMD_PATH = path.resolve(
@@ -117,7 +117,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -528,7 +528,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const delimiterOption = page.locator('[data-cy=toolbox] .ce-popover-item[data-item-name=delimiter]');
+    const delimiterOption = page.getByTestId('toolbox-popover').locator('[data-blok-testid="popover-item"][data-blok-item-name=delimiter]');
 
     await delimiterOption.click();
 
@@ -588,7 +588,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const headerOption = page.locator('[data-cy=toolbox] .ce-popover-item[data-item-name=header]');
+    const headerOption = page.getByTestId('toolbox-popover').locator('[data-blok-testid="popover-item"][data-blok-item-name=header]');
 
     await headerOption.click();
 
@@ -641,7 +641,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const tuneOption = page.locator('[data-cy=block-tunes] .ce-popover-item:nth-of-type(4)');
+    const tuneOption = page.getByTestId('block-tunes-popover').locator('[data-blok-testid="popover-item"]:nth-of-type(4)');
 
     await tuneOption.click();
 
@@ -675,7 +675,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const deleteOption = page.locator('[data-cy=block-tunes] [data-item-name=delete]:visible');
+    const deleteOption = page.getByTestId('block-tunes-popover').locator('[data-blok-item-name=delete]:visible');
 
     await deleteOption.click();
     await deleteOption.click();
@@ -777,7 +777,7 @@ test.describe('onChange callback', () => {
       ],
     });
 
-    const textarea = page.locator(`${EDITOR_INTERFACE_SELECTOR} textarea`);
+    const textarea = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="code"]`).getByRole('textbox');
 
     await textarea.click();
     await textarea.type('Some input to the textarea');
@@ -852,11 +852,11 @@ test.describe('onChange callback', () => {
     }));
   });
 
-  test('should not be fired when element with the "data-mutation-free" mark changes some attribute', async ({ page }) => {
+  test('should not be fired when element with the "data-blok-mutation-free" mark changes some attribute', async ({ page }) => {
     await page.evaluate(() => {
       const toolWrapper = document.createElement('div');
 
-      toolWrapper.dataset.mutationFree = 'true';
+      toolWrapper.setAttribute('data-blok-mutation-free', 'true');
 
       const windowTestState = window as unknown as Window & WindowTestState;
 
@@ -906,12 +906,12 @@ test.describe('onChange callback', () => {
     expect(calls).toHaveLength(0);
   });
 
-  test('should not be fired when mutation happened in a child of element with the "data-mutation-free" mark', async ({ page }) => {
+  test('should not be fired when mutation happened in a child of element with the "data-blok-mutation-free" mark', async ({ page }) => {
     await page.evaluate(() => {
       const toolWrapper = document.createElement('div');
       const child = document.createElement('div');
 
-      toolWrapper.dataset.mutationFree = 'true';
+      toolWrapper.setAttribute('data-blok-mutation-free', 'true');
       toolWrapper.appendChild(child);
 
       const windowTestState = window as unknown as Window & WindowTestState;
@@ -963,16 +963,16 @@ test.describe('onChange callback', () => {
     expect(calls).toHaveLength(0);
   });
 
-  test('should not be fired when "characterData" mutation happened in a child of element with the "data-mutation-free" mark', async ({ page }) => {
+  test('should not be fired when "characterData" mutation happened in a child of element with the "data-blok-mutation-free" mark', async ({ page }) => {
     await page.evaluate(() => {
       const toolWrapper = document.createElement('div');
       const child = document.createElement('div');
 
-      child.setAttribute('data-cy', 'tool-child');
+      child.setAttribute('data-blok-testid', 'tool-child');
       child.setAttribute('contenteditable', 'true');
       child.textContent = '';
 
-      toolWrapper.dataset.mutationFree = 'true';
+      toolWrapper.setAttribute('data-blok-mutation-free', 'true');
       toolWrapper.appendChild(child);
 
       const windowTestState = window as unknown as Window & WindowTestState;
@@ -1009,7 +1009,7 @@ test.describe('onChange callback', () => {
       ],
     });
 
-    const child = page.locator('[data-cy=tool-child]');
+    const child = page.getByTestId('tool-child');
 
     await child.click();
     await child.type('some text');
@@ -1157,7 +1157,7 @@ test.describe('onChange callback', () => {
 
             contenteditable.contentEditable = 'true';
             contenteditable.innerText = 'a';
-            contenteditable.setAttribute('data-cy', 'nested-contenteditable');
+            contenteditable.setAttribute('data-blok-testid', 'nested-contenteditable');
 
             const wrapper = document.createElement('div');
 
@@ -1187,7 +1187,7 @@ test.describe('onChange callback', () => {
       ],
     });
 
-    const nestedContentEditable = page.locator('[data-cy=nested-contenteditable]');
+    const nestedContentEditable = page.getByTestId('nested-contenteditable');
 
     await nestedContentEditable.click();
     await nestedContentEditable.clear();

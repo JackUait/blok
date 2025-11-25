@@ -51,6 +51,7 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
 
     /** Build ui */
     this.wrapper = Dom.make('div', css.wrapper);
+    this.wrapper.setAttribute('data-blok-testid', 'popover-search-field');
 
     const iconWrapper = Dom.make('div', css.icon, {
       innerHTML: IconSearch,
@@ -66,7 +67,8 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
        */
       tabIndex: -1,
     }) as HTMLInputElement;
-    this.input.dataset.flipperTabTarget = 'true';
+    this.input.setAttribute('data-blok-flipper-tab-target', 'true');
+    this.input.setAttribute('data-blok-testid', 'popover-search-input');
 
     this.wrapper.appendChild(iconWrapper);
     this.wrapper.appendChild(this.input);

@@ -48,7 +48,6 @@ export default class Core {
       Promise.resolve()
         .then(async () => {
           this.configuration = config;
-
           this.validate();
           this.init();
           await this.start();

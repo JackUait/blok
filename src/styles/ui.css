@@ -102,7 +102,7 @@
     }
 }
 
-.codex-editor--toolbox-opened [contentEditable=true][data-placeholder]:focus::before {
+.codex-editor--toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
     opacity: 0 !important;
 }
 

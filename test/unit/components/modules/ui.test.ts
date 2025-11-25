@@ -610,7 +610,7 @@ describe('UI module', () => {
 
       wrapper.appendChild(blockContent);
       wrapper.parentElement?.appendChild(external);
-      external.dataset.inlineToolbar = 'true';
+      external.setAttribute('data-blok-inline-toolbar', 'true');
 
       const anchorSpy = vi.spyOn(SelectionUtils, 'anchorElement', 'get');
 

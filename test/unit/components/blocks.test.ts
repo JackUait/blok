@@ -20,7 +20,7 @@ describe('Blocks', () => {
     const holder = document.createElement('div');
 
     holder.className = 'ce-block';
-    holder.setAttribute('data-id', id);
+    holder.setAttribute('data-blok-id', id);
 
     const mockBlock = {
       id,

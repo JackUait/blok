@@ -308,6 +308,9 @@ export default class RectangleSelection extends Module {
     const overlayContainer = $.make('div', RectangleSelection.CSS.overlayContainer, {});
     const overlayRectangle = $.make('div', RectangleSelection.CSS.rect, {});
 
+    overlay.setAttribute('data-blok-testid', 'overlay');
+    overlayRectangle.setAttribute('data-blok-testid', 'overlay-rectangle');
+
     if (!container) {
       throw new Error('RectangleSelection: editor wrapper not found');
     }

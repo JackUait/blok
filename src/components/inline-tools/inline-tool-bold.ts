@@ -96,10 +96,10 @@ export default class BoldInlineTool implements InlineTool {
   private static markerSequence = 0;
   private static mutationObserver?: MutationObserver;
   private static isProcessingMutation = false;
-  private static readonly DATA_ATTR_COLLAPSED_LENGTH = 'data-bold-collapsed-length';
-  private static readonly DATA_ATTR_COLLAPSED_ACTIVE = 'data-bold-collapsed-active';
-  private static readonly DATA_ATTR_PREV_LENGTH = 'data-bold-prev-length';
-  private static readonly DATA_ATTR_LEADING_WHITESPACE = 'data-bold-leading-ws';
+  private static readonly DATA_ATTR_COLLAPSED_LENGTH = 'data-blok-bold-collapsed-length';
+  private static readonly DATA_ATTR_COLLAPSED_ACTIVE = 'data-blok-bold-collapsed-active';
+  private static readonly DATA_ATTR_PREV_LENGTH = 'data-blok-bold-prev-length';
+  private static readonly DATA_ATTR_LEADING_WHITESPACE = 'data-blok-bold-leading-ws';
   private static readonly instances = new Set<BoldInlineTool>();
   private static readonly pendingBoundaryCaretAdjustments = new WeakSet<Text>();
 
@@ -542,7 +542,7 @@ export default class BoldInlineTool implements InlineTool {
     const marker = document.createElement('span');
     const fragment = range.extractContents();
 
-    marker.dataset.boldMarker = `unwrap-${BoldInlineTool.markerSequence++}`;
+    marker.setAttribute('data-blok-bold-marker', `unwrap-${BoldInlineTool.markerSequence++}`);
     marker.appendChild(fragment);
     this.removeNestedBold(marker);
 
@@ -637,6 +637,12 @@ export default class BoldInlineTool implements InlineTool {
     if (!parent) {
       return;
     }
+
+    Array.from(boldElement.childNodes).forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').length === 0) {
+        node.remove();
+      }
+    });
 
     const isOnlyChild = boldElement.childNodes.length === 1 && boldElement.firstChild === marker;
 
@@ -1000,13 +1006,13 @@ export default class BoldInlineTool implements InlineTool {
       return;
     }
 
-    const toolbar = editorWrapper.querySelector('[data-cy=inline-toolbar]');
+    const toolbar = editorWrapper.querySelector('[data-blok-testid=inline-toolbar]');
 
     if (!(toolbar instanceof HTMLElement)) {
       return;
     }
 
-    const button = toolbar.querySelector('[data-item-name="bold"]');
+    const button = toolbar.querySelector('[data-blok-item-name="bold"]');
 
     if (!(button instanceof HTMLElement)) {
       return;
@@ -1017,9 +1023,9 @@ export default class BoldInlineTool implements InlineTool {
     button.classList.toggle('ce-popover-item--active', isActive);
 
     if (isActive) {
-      button.setAttribute('data-popover-item-active', 'true');
+      button.setAttribute('data-blok-popover-item-active', 'true');
     } else {
-      button.removeAttribute('data-popover-item-active');
+      button.removeAttribute('data-blok-popover-item-active');
     }
   }
 
@@ -1056,8 +1062,8 @@ export default class BoldInlineTool implements InlineTool {
    * @param markerId - The ID of the markers used to mark the selection
    */
   private restoreSelectionFromMarkers(markerId: string): Range | undefined {
-    const startMarker = document.querySelector(`[data-bold-marker="${markerId}-start"]`);
-    const endMarker = document.querySelector(`[data-bold-marker="${markerId}-end"]`);
+    const startMarker = document.querySelector(`[data-blok-bold-marker="${markerId}-start"]`);
+    const endMarker = document.querySelector(`[data-blok-bold-marker="${markerId}-end"]`);
 
     if (!startMarker || !endMarker) {
       startMarker?.remove();
@@ -1161,7 +1167,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const block = element?.closest('[data-block-tool="paragraph"]');
+    const block = element?.closest('[data-blok-component="paragraph"]');
 
     if (!block) {
       return;
@@ -1190,7 +1196,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const block = element?.closest('[data-block-tool="paragraph"]');
+    const block = element?.closest('[data-blok-component="paragraph"]');
 
     if (!block) {
       return;

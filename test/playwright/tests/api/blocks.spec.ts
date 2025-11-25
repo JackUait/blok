@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
+const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const getBlockWrapperSelectorByIndex = (index: number): string => {
   return `:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`;
 };
@@ -44,7 +44,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -149,7 +149,7 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
   await block.click();
   await block.hover();
 
-  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`);
+  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
   await settingsButton.waitFor({ state: 'visible' });
   await settingsButton.click();
@@ -1247,8 +1247,8 @@ test.describe('api.blocks', () => {
    * These test the conversion options UI which uses getConvertibleToolsForBlock
    */
   test.describe('getConvertibleToolsForBlock (via UI)', () => {
-    const BLOCK_TUNES_SELECTOR = `[data-cy=block-tunes]`;
-    const CONVERT_TO_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-item-name="convert-to"]`;
+    const BLOCK_TUNES_SELECTOR = `[data-blok-testid="block-tunes-popover"]`;
+    const CONVERT_TO_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-item-name="convert-to"]`;
 
     const openConvertToMenu = async (page: Page): Promise<Locator> => {
       const convertToItem = page.locator(CONVERT_TO_SELECTOR);
@@ -1256,7 +1256,7 @@ test.describe('api.blocks', () => {
       await expect(convertToItem).toBeVisible();
       await convertToItem.hover();
 
-      const nestedMenu = page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover--nested`);
+      const nestedMenu = page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"]`);
 
       await nestedMenu.waitFor({ state: 'attached' });
 
@@ -1361,10 +1361,10 @@ test.describe('api.blocks', () => {
       await openBlockSettings(page);
 
       // Check if block tunes popover is visible
-      await expect(page.locator(BLOCK_TUNES_SELECTOR).locator('.ce-popover__container')).toBeVisible();
+      await expect(page.locator(BLOCK_TUNES_SELECTOR).locator('[data-blok-testid="popover-container"]')).toBeVisible();
 
       // Check if delete tune is visible (debug)
-      await expect(page.locator(`${BLOCK_TUNES_SELECTOR} [data-item-name="delete"]`)).toBeVisible();
+      await expect(page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-item-name="delete"]`)).toBeVisible();
 
       // Check that "Convert to" menu item is visible
       await expect(page.locator(CONVERT_TO_SELECTOR)).toBeVisible();
@@ -1373,8 +1373,8 @@ test.describe('api.blocks', () => {
       const convertToMenu = await openConvertToMenu(page);
 
       // Check that both header and list tools are available
-      await expect(convertToMenu.locator('[data-item-name="header"]')).toBeVisible();
-      await expect(convertToMenu.locator('[data-item-name="list"]')).toBeVisible();
+      await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
+      await expect(convertToMenu.locator('[data-blok-item-name="list"]')).toBeVisible();
     });
 
     test('should not show conversion options when block has no export config', async ({ page }) => {
@@ -1570,10 +1570,10 @@ test.describe('api.blocks', () => {
       const convertToMenu = await openConvertToMenu(page);
 
       // Check that header tool is available
-      await expect(convertToMenu.locator('[data-item-name="header"]')).toBeVisible();
+      await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
 
       // Check that tool without import config is NOT shown
-      await expect(convertToMenu.locator('[data-item-name="noImport"]')).toBeHidden();
+      await expect(convertToMenu.locator('[data-blok-item-name="noImport"]')).toBeHidden();
     });
 
     test('should filter out duplicate toolbox items with same data (isSameBlockData)', async ({ page }) => {
@@ -1656,8 +1656,8 @@ test.describe('api.blocks', () => {
 
       const convertToMenu = await openConvertToMenu(page);
 
-      const headerItems = convertToMenu.locator('[data-item-name="header"]');
-      const firstHeaderItem = convertToMenu.locator(':nth-match([data-item-name="header"], 1)');
+      const headerItems = convertToMenu.locator('[data-blok-item-name="header"]');
+      const firstHeaderItem = convertToMenu.locator(':nth-match([data-blok-item-name="header"], 1)');
 
       await expect(headerItems).toHaveCount(3);
       await expect(firstHeaderItem).toBeVisible();
@@ -1739,7 +1739,7 @@ test.describe('api.blocks', () => {
 
       // Header tool should be available, but H1 option should be filtered out (same data)
       // H2 should still be available
-      await expect(convertToMenu.locator('[data-item-name="header"]')).toBeVisible();
+      await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
     });
 
     test('should filter out tools without toolbox from conversion options', async ({ page }) => {
@@ -1837,10 +1837,10 @@ test.describe('api.blocks', () => {
       const convertToMenu = await openConvertToMenu(page);
 
       // Check that header tool is available
-      await expect(convertToMenu.locator('[data-item-name="header"]')).toBeVisible();
+      await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
 
       // Check that tool without toolbox is NOT shown
-      await expect(convertToMenu.locator('[data-item-name="noToolbox"]')).toBeHidden();
+      await expect(convertToMenu.locator('[data-blok-item-name="noToolbox"]')).toBeHidden();
     });
 
     test('should filter out toolbox items without icon', async ({ page }) => {
@@ -1910,7 +1910,7 @@ test.describe('api.blocks', () => {
       const convertToMenu = await openConvertToMenu(page);
 
       // Only the item with icon should be available
-      await expect(convertToMenu.locator('[data-item-name="header"]')).toBeVisible();
+      await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
     });
   });
 

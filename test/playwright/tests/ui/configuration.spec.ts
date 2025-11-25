@@ -17,9 +17,9 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
-const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .codex-editor__redactor`;
-const TOOLBOX_POPOVER_SELECTOR = '.ce-popover[data-popover-opened="true"]:not(.ce-popover--inline)';
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
+const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]';
 const FAILING_TOOL_SOURCE = `
   class FailingTool {
     render() {
@@ -76,7 +76,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -182,7 +182,7 @@ const openToolbox = async (page: Page): Promise<void> => {
 
   await paragraph.click();
 
-  const plusButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`);
+  const plusButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
 
   await plusButton.waitFor({ state: 'visible' });
   await plusButton.click();
@@ -330,13 +330,20 @@ test.describe('editor configuration options', () => {
   test.describe('placeholder', () => {
     const getPlaceholderValue = async (page: Page): Promise<string | null> => {
       return await page.evaluate(({ paragraphSelector }) => {
-        const paragraph = document.querySelector(paragraphSelector);
+        const paragraphWrapper = document.querySelector(paragraphSelector);
 
-        if (!(paragraph instanceof HTMLElement)) {
+        if (!(paragraphWrapper instanceof HTMLElement)) {
           return null;
         }
 
-        return paragraph.getAttribute('data-placeholder');
+        // The placeholder attribute is on the contenteditable element inside the block wrapper
+        const contentEditable = paragraphWrapper.querySelector('[contenteditable]');
+
+        if (!(contentEditable instanceof HTMLElement)) {
+          return null;
+        }
+
+        return contentEditable.getAttribute('data-blok-placeholder');
       }, { paragraphSelector: PARAGRAPH_SELECTOR });
     };
 
@@ -687,7 +694,7 @@ test.describe('editor configuration options', () => {
           {
             type: 'paragraph',
             data: {
-              text: '<span data-test="allowed">Span content</span>',
+              text: '<span data-blok-test="allowed">Span content</span>',
             },
           },
         ],
@@ -707,7 +714,7 @@ test.describe('editor configuration options', () => {
     });
 
     expect(savedHtml).toContain('<span');
-    expect(savedHtml).toContain('data-test="allowed"');
+    expect(savedHtml).toContain('data-blok-test="allowed"');
   });
 
   test('uses default sanitizer rules when option is omitted', async ({ page }) => {
@@ -850,7 +857,7 @@ test.describe('editor configuration options', () => {
           element.textContent = this.data.text || '';
 
           if (this.config.placeholderText) {
-            element.dataset.placeholder = this.config.placeholderText;
+            element.setAttribute('data-blok-placeholder', this.config.placeholderText);
           }
 
           return element;
@@ -895,7 +902,7 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('configurableTool');
     });
 
-    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"][data-block-tool="configurableTool"]`;
+    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="configurableTool"]`;
     const blockCount = await page.locator(configurableSelector).count();
 
     expect(blockCount).toBeGreaterThan(0);
@@ -906,19 +913,19 @@ test.describe('editor configuration options', () => {
     await blockContent.click();
     await blockContent.type('Config text');
 
-    await expect(blockContent).toHaveAttribute('data-placeholder', 'Custom placeholder');
+    await expect(blockContent).toHaveAttribute('data-blok-placeholder', 'Custom placeholder');
 
     await blockContent.selectText();
 
     const inlineToolbar = page.locator(INLINE_TOOLBAR_INTERFACE_SELECTOR);
 
     await expect(inlineToolbar).toBeVisible();
-    await expect(inlineToolbar.locator('[data-item-name="bold"]')).toBeVisible();
-    await expect(inlineToolbar.locator('[data-item-name="link"]')).toHaveCount(0);
+    await expect(inlineToolbar.locator('[data-blok-item-name="bold"]')).toBeVisible();
+    await expect(inlineToolbar.locator('[data-blok-item-name="link"]')).toHaveCount(0);
 
     await openToolbox(page);
 
-    const toolboxItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-item-name="configurableTool"]`);
+    const toolboxItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="configurableTool"]`);
 
     await expect(toolboxItem).toContainText('Configured Tool');
 
@@ -970,7 +977,7 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('inlineToggleTool');
     });
 
-    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"][data-block-tool="inlineToggleTool"]`;
+    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="inlineToggleTool"]`;
     const inlineToggleBlocks = page.locator(inlineToggleSelector);
 
     await expect(inlineToggleBlocks).toHaveCount(1);

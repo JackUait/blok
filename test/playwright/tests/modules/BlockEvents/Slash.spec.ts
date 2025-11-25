@@ -11,12 +11,12 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph[data-block-tool="paragraph"]`;
-const TOOLBOX_CONTAINER_SELECTOR = '[data-cy="toolbox"] .ce-popover__container';
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const TOOLBOX_CONTAINER_SELECTOR = '[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-container"]';
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
-  `[data-cy="toolbox"] .ce-popover-item[data-item-name=${itemName}]`;
-const BLOCK_TUNES_SELECTOR = '[data-cy="block-tunes"] .ce-popover__container';
-const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
+  `[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-item"][data-blok-item-name=${itemName}]`;
+const BLOCK_TUNES_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
+const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 
 const modifierKeyVariants: Array<{ description: string; key: 'Control' | 'Meta' }> = [
   { description: 'Ctrl',
@@ -37,7 +37,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -132,7 +132,7 @@ test.describe('slash keydown', () => {
       const title = document.querySelector('h1');
 
       if (title) {
-        title.setAttribute('data-cy', 'page-title');
+        title.setAttribute('data-blok-testid', 'page-title');
       }
     });
 
@@ -152,7 +152,7 @@ test.describe('slash keydown', () => {
 
     await textToolOption.click();
 
-    const pageTitle = page.locator('[data-cy="page-title"]');
+    const pageTitle = page.getByTestId('page-title');
 
     await pageTitle.evaluate((element) => {
       element.setAttribute('contenteditable', 'true');

@@ -301,7 +301,9 @@ export default class UI extends Module<UINodes> {
       ...(this.isRtl ? [ this.CSS.editorRtlFix ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, EDITOR_INTERFACE_VALUE);
+    this.nodes.wrapper.setAttribute('data-blok-testid', 'codex-editor');
     this.nodes.redactor = $.make('div', this.CSS.editorZone);
+    this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
 
     /**
      * If Editor has injected into the narrow container, enable Narrow Mode
@@ -422,7 +424,7 @@ export default class UI extends Module<UINodes> {
 
     /**
      * We have custom logic for providing placeholders for contenteditable elements.
-     * To make it work, we need to have data-empty mark on empty inputs.
+     * To make it work, we need to have data-blok-empty mark on empty inputs.
      */
     this.enableInputsEmptyMark();
   }
@@ -966,7 +968,7 @@ export default class UI extends Module<UINodes> {
     const closestBlock = focusedElement.closest(`.${Block.CSS.content}`);
     const clickedOutsideBlockContent = closestBlock === null || (closestBlock.closest(`.${Selection.CSS.editorWrapper}`) !== this.nodes.wrapper);
 
-    const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).dataset.inlineToolbar === 'true';
+    const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).getAttribute('data-blok-inline-toolbar') === 'true';
     const shouldCloseInlineToolbar = clickedOutsideBlockContent && !this.Editor.InlineToolbar.containsNode(focusedElement);
 
     if (shouldCloseInlineToolbar) {
@@ -998,13 +1000,13 @@ export default class UI extends Module<UINodes> {
   /**
    * Editor.js provides and ability to show placeholders for empty contenteditable elements
    *
-   * This method watches for input and focus events and toggles 'data-empty' attribute
+   * This method watches for input and focus events and toggles 'data-blok-empty' attribute
    * to workaroud the case, when inputs contains only <br>s and has no visible content
    * Then, CSS could rely on this attribute to show placeholders
    */
   private enableInputsEmptyMark(): void {
     /**
-     * Toggle data-empty attribute on input depending on its emptiness
+     * Toggle data-blok-empty attribute on input depending on its emptiness
      * @param event - input or focus event
      */
     const handleInputOrFocusChange = (event: Event): void => {

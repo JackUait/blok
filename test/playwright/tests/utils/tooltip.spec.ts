@@ -27,7 +27,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -142,7 +142,7 @@ test.describe('tooltip API', () => {
 
       const tooltip = await waitForTooltip(page);
 
-      await expect(tooltip.locator('strong')).toContainText('Bold');
+      await expect(tooltip.getByRole('strong')).toContainText('Bold');
       await expect(tooltip).toContainText('tooltip');
     });
 
@@ -514,7 +514,7 @@ test.describe('tooltip API', () => {
 
       const tooltip = await waitForTooltip(page);
 
-      await expect(tooltip.locator('em')).toContainText('Italic');
+      await expect(tooltip.getByRole('emphasis')).toContainText('Italic');
       await expect(tooltip).toContainText('content');
     });
 

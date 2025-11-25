@@ -43,18 +43,18 @@ const setupEditor = (html: string): { block: HTMLElement } => {
 
   const block = document.createElement('div');
 
-  block.dataset.blockTool = 'paragraph';
+  block.setAttribute('data-blok-component', 'paragraph');
   block.contentEditable = 'true';
   block.innerHTML = html;
   wrapper.appendChild(block);
 
   const toolbar = document.createElement('div');
 
-  toolbar.dataset.cy = 'inline-toolbar';
+  toolbar.setAttribute('data-blok-testid', 'inline-toolbar');
 
   const button = document.createElement('button');
 
-  button.dataset.itemName = 'bold';
+  button.setAttribute('data-blok-item-name', 'bold');
   toolbar.appendChild(button);
   wrapper.appendChild(toolbar);
 
@@ -155,7 +155,7 @@ describe('BoldInlineTool', () => {
     const strong = block.querySelector('strong');
 
     expect(strong).not.toBeNull();
-    expect(strong?.getAttribute('data-bold-collapsed-active')).toBe('true');
+    expect(strong?.getAttribute('data-blok-bold-collapsed-active')).toBe('true');
     expect(typeof menu.isActive === 'function' ? menu.isActive() : menu.isActive).toBe(true);
     expect(window.getSelection()?.anchorNode).toBe(strong?.firstChild ?? null);
   });
@@ -178,8 +178,8 @@ describe('BoldInlineTool', () => {
 
     const strongAfter = block.querySelector('strong');
 
-    expect(strongAfter?.getAttribute('data-bold-collapsed-length')).toBe(length.toString());
-    expect(strongAfter?.getAttribute('data-bold-collapsed-active')).toBeNull();
+    expect(strongAfter?.getAttribute('data-blok-bold-collapsed-length')).toBe(length.toString());
+    expect(strongAfter?.getAttribute('data-blok-bold-collapsed-active')).toBeNull();
     expect(typeof menu.isActive === 'function' ? menu.isActive() : menu.isActive).toBe(false);
     expect(window.getSelection()?.anchorNode?.parentNode).toBe(block);
   });

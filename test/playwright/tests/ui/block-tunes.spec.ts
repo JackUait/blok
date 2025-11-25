@@ -22,12 +22,12 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const CONVERT_TO_OPTION_SELECTOR = '.ce-popover-item[data-item-name="convert-to"]';
-const NESTED_POPOVER_SELECTOR = '.ce-popover--nested';
-const POPOVER_CONTAINER_SELECTOR = '.ce-popover.ce-popover--opened > .ce-popover__container';
-const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} .cdx-search-field__input`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const CONVERT_TO_OPTION_SELECTOR = '[data-blok-testid="popover-item"][data-blok-item-name="convert-to"]';
+const NESTED_POPOVER_SELECTOR = '[data-blok-testid="popover"][data-blok-nested="true"]';
+const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
+const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-search-input"]`;
 const DEFAULT_WAIT_TIMEOUT = 5_000;
 const BLOCK_TUNES_WAIT_BUFFER = 500;
 
@@ -60,7 +60,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -349,7 +349,7 @@ test.describe('ui.block-tunes', () => {
       await searchInput.waitFor({ state: 'visible' });
       await page.keyboard.press('Enter');
 
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await expect(paragraph).toHaveCount(1);
       await expect(paragraph).toHaveText('Some text');
@@ -380,7 +380,7 @@ test.describe('ui.block-tunes', () => {
       const block = page.locator(BLOCK_SELECTOR);
 
       await expect(block).toHaveCount(1);
-      await expect(block).toHaveClass(/ce-block--selected/);
+      await expect(block).toHaveAttribute('data-blok-selected', 'true');
     });
   });
 
@@ -408,14 +408,14 @@ test.describe('ui.block-tunes', () => {
       await openBlockTunesViaToolbar(page);
 
       const convertToOption = page
-        .locator('.ce-popover-item')
+        .getByTestId('popover-item')
         .filter({ hasText: 'Convert to' });
 
       await expect(convertToOption).toBeVisible();
       await convertToOption.click();
 
       await expect(
-        page.locator(`${NESTED_POPOVER_SELECTOR} [data-item-name="header"]`)
+        page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`)
       ).toBeVisible();
     });
 
@@ -485,20 +485,20 @@ test.describe('ui.block-tunes', () => {
       await openBlockTunesViaToolbar(page);
 
       const convertToOption = page
-        .locator('.ce-popover-item')
+        .getByTestId('popover-item')
         .filter({ hasText: 'Convert to' });
 
       await convertToOption.click();
 
       await expect(
         page
-          .locator(`${NESTED_POPOVER_SELECTOR} [data-item-name="testTool"]`)
+          .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="testTool"]`)
           .filter({ hasText: 'Title 1' })
       ).toHaveCount(0);
 
       await expect(
         page
-          .locator(`${NESTED_POPOVER_SELECTOR} [data-item-name="testTool"]`)
+          .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="testTool"]`)
           .filter({ hasText: 'Title 2' })
       ).toBeVisible();
     });
@@ -526,21 +526,21 @@ test.describe('ui.block-tunes', () => {
       await openBlockTunesViaToolbar(page);
 
       const convertToOption = page
-        .locator('.ce-popover-item')
+        .getByTestId('popover-item')
         .filter({ hasText: 'Convert to' });
 
       await convertToOption.click();
       await page
-        .locator(`${NESTED_POPOVER_SELECTOR} [data-item-name="header"]`)
+        .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`)
         .click();
 
-      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-header`);
+      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`);
 
       await expect(headerBlock).toHaveText('Some text');
       expect(
         await isSelectionInsideBlock(
           page,
-          `${EDITOR_INTERFACE_SELECTOR} .ce-header`
+          `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`
         )
       ).toBe(true);
     });
@@ -573,11 +573,11 @@ test.describe('ui.block-tunes', () => {
 
       await expect(popoverContainer).toHaveCount(1);
 
-      const popoverItems = popoverContainer.locator('.ce-popover-item:not(.ce-popover-item--hidden)');
+      const popoverItems = popoverContainer.locator('[data-blok-testid="popover-item"]:not([data-blok-hidden="true"])');
       const itemsCount = await popoverItems.count();
 
       expect(itemsCount).toBeGreaterThan(1);
-      const firstPopoverItem = popoverContainer.locator('.ce-popover-item:not(.ce-popover-item--hidden):first-of-type');
+      const firstPopoverItem = popoverContainer.locator('[data-blok-testid="popover-item"]:not([data-blok-hidden="true"]):first-of-type');
 
       await expect(firstPopoverItem).toContainText('Tune');
     });

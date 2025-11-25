@@ -18,10 +18,10 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
-const BLOCK_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block__content`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const SETTINGS_ITEM_SELECTOR = '[data-cy=block-tunes] .ce-popover-item';
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const BLOCK_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-content"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const SETTINGS_ITEM_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-item"]';
 const BLOCK_TEXT = 'The block with some text';
 
 type SerializableToolConfig = {
@@ -53,7 +53,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);

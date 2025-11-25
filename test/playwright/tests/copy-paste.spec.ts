@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
+import { Buffer } from 'node:buffer';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
@@ -22,13 +23,13 @@ const SIMPLE_IMAGE_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} div.ce-block`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const getBlockByIndex = (page: Page, index: number): Locator => {
   return page.locator(`${BLOCK_SELECTOR}:nth-of-type(${index + 1})`);
 };
 
 const getParagraphByIndex = (page: Page, index: number): Locator => {
-  return getBlockByIndex(page, index).locator('.ce-paragraph');
+  return getBlockByIndex(page, index).locator('[contenteditable]');
 };
 
 const getCommandModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
@@ -70,7 +71,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -325,7 +326,7 @@ test.describe('copy and paste', () => {
         'text/html': '<p><b>Some text</b></p>',
       });
 
-      await expect(block.locator('strong')).toHaveText('Some text');
+      await expect(block.getByRole('strong')).toHaveText('Some text');
     });
 
     test('should paste several blocks if plain text contains new lines', async ({ page }) => {
@@ -419,8 +420,8 @@ test.describe('copy and paste', () => {
         'text/html': '<h2>First block</h2><p>Second block</p>',
       });
 
-      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-header`);
-      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-paragraph:nth-last-of-type(1)`);
+      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`);
+      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]:nth-last-of-type(1)`);
 
       await expect(headerBlock).toHaveText('First block');
       await expect(paragraphBlock).toHaveText('Second block');
@@ -441,6 +442,12 @@ test.describe('copy and paste', () => {
     test('should parse pattern', async ({ page }) => {
       await page.addScriptTag({ path: SIMPLE_IMAGE_TOOL_UMD_PATH });
 
+      await page.route('**/codex2x.png', route => route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+      }));
+
       await createEditor(page, {
         tools: {
           image: {
@@ -458,7 +465,7 @@ test.describe('copy and paste', () => {
         'text/plain': imageUrl,
       });
 
-      const image = page.locator(`${EDITOR_INTERFACE_SELECTOR} img`);
+      const image = page.getByRole('img');
 
       await expect(image).toHaveAttribute('src', imageUrl, {
         timeout: 10_000,
@@ -528,6 +535,7 @@ test.describe('copy and paste', () => {
         render() {
           this.element = document.createElement('div');
           this.element.className = 'file-paste-tool';
+          this.element.setAttribute('data-blok-testid', 'file-paste-tool');
           this.element.contentEditable = 'true';
           this.element.textContent = this.data.text ?? 'Paste file here';
 
@@ -570,7 +578,7 @@ test.describe('copy and paste', () => {
         },
       });
 
-      const block = page.locator('.file-paste-tool');
+      const block = page.getByTestId('file-paste-tool');
 
       await expect(block).toHaveCount(1);
       await block.click();
@@ -627,7 +635,7 @@ test.describe('copy and paste', () => {
       await expect(blocks).toHaveCount(2);
       await expect(getParagraphByIndex(page, 0)).toContainText('Copied from Word');
       await expect(secondParagraph).toContainText('Styled paragraph');
-      await expect(secondParagraph.locator('strong')).toHaveText('Styled');
+      await expect(secondParagraph.getByRole('strong')).toHaveText('Styled');
     });
     test('should not prevent default behaviour if block paste config equals false', async ({ page }) => {
       const blockToolSource = `
@@ -640,6 +648,7 @@ test.describe('copy and paste', () => {
           const block = document.createElement('div');
 
           block.className = 'ce-block-with-disabled-prevent-default';
+          block.setAttribute('data-blok-testid', 'block-with-disabled-prevent-default');
           block.contentEditable = 'true';
 
           block.addEventListener('paste', (event) => {
@@ -677,7 +686,7 @@ test.describe('copy and paste', () => {
         },
       });
 
-      const block = page.locator('.ce-block-with-disabled-prevent-default');
+      const block = page.getByTestId('block-with-disabled-prevent-default');
 
       await expect(block).toHaveCount(1);
 

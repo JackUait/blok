@@ -5,18 +5,18 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { EDITOR_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_CONTENT_SELECTOR = '[data-block-tool="paragraph"] .ce-paragraph';
+const PARAGRAPH_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
-const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-item-name="link"]`;
-const LINK_INPUT_SELECTOR = `input[data-link-tool-input-opened]`;
-const NOTIFIER_SELECTOR = '.cdx-notifies';
+const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
+const LINK_INPUT_SELECTOR = '[data-blok-link-tool-input-opened]';
+const NOTIFIER_SELECTOR = '[data-blok-testid="notifier-container"]';
 
 const getParagraphByText = (page: Page, text: string): Locator => {
   return page.locator(PARAGRAPH_CONTENT_SELECTOR, { hasText: text });
@@ -91,7 +91,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -234,7 +234,7 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
     await submitLink(page, 'https://codex.so');
 
-    await expect(paragraph.locator('a')).toHaveAttribute('href', 'https://codex.so');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'https://codex.so');
   });
 
   test('should create a link via toolbar button', async ({ page }) => {
@@ -254,7 +254,7 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
     await submitLink(page, 'example.com');
 
-    const anchor = paragraph.locator('a');
+    const anchor = paragraph.getByRole('link');
 
     await expect(anchor).toHaveAttribute('href', 'http://example.com');
     await expect(anchor).toHaveText('Link me');
@@ -280,7 +280,7 @@ test.describe('inline tool link', () => {
 
     await expect(linkInput).toBeVisible();
     await expect(linkInput).toHaveValue('https://example .com');
-    await expect(paragraph.locator('a')).toHaveCount(0);
+    await expect(paragraph.getByRole('link')).toHaveCount(0);
 
     await page.waitForFunction(({ notifierSelector }) => {
       const notifier = document.querySelector(notifierSelector);
@@ -307,13 +307,13 @@ test.describe('inline tool link', () => {
     await expect(linkInput).toHaveValue('https://codex.so');
 
     // Verify button state - find button by data attributes directly
-    const linkButton = page.locator('button[data-link-tool-unlink="true"][data-link-tool-active="true"]');
+    const linkButton = page.locator('[data-blok-link-tool-unlink="true"][data-blok-link-tool-active="true"]');
 
     await expect(linkButton).toBeVisible();
 
     await submitLink(page, 'example.org');
 
-    await expect(paragraph.locator('a')).toHaveAttribute('href', 'http://example.org');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'http://example.org');
   });
 
   test('should remove link when toggled', async ({ page }) => {
@@ -332,12 +332,12 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
 
     // Find the unlink button by its data attributes
-    const linkButton = page.locator('button[data-link-tool-unlink="true"]');
+    const linkButton = page.locator('[data-blok-link-tool-unlink="true"]');
 
     await expect(linkButton).toBeVisible();
     await linkButton.click();
 
-    await expect(paragraph.locator('a')).toHaveCount(0);
+    await expect(paragraph.getByRole('link')).toHaveCount(0);
   });
 
   test('should persist link in saved output', async ({ page }) => {
@@ -385,7 +385,7 @@ test.describe('inline tool link', () => {
     await submitLink(page, 'https://example.com');
 
     // Verify link was created
-    const anchor = paragraph.locator('a');
+    const anchor = paragraph.getByRole('link');
 
     await expect(anchor).toHaveAttribute('href', 'https://example.com');
     await expect(anchor).toHaveText('Clickable link');
@@ -446,7 +446,7 @@ test.describe('inline tool link', () => {
     await expect(linkInput).toBeFocused();
 
     await submitLink(page, 'https://shortcut.com');
-    await expect(paragraph.locator('a')).toHaveAttribute('href', 'https://shortcut.com');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'https://shortcut.com');
   });
 
   test('should unlink if input is cleared and Enter is pressed', async ({ page }) => {
@@ -470,7 +470,7 @@ test.describe('inline tool link', () => {
     await linkInput.fill('');
     await linkInput.press('Enter');
 
-    await expect(paragraph.locator('a')).toHaveCount(0);
+    await expect(paragraph.getByRole('link')).toHaveCount(0);
   });
 
   test('should auto-prepend http:// to domain-only links', async ({ page }) => {
@@ -489,7 +489,7 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
     await submitLink(page, 'google.com');
 
-    await expect(paragraph.locator('a')).toHaveAttribute('href', 'http://google.com');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'http://google.com');
   });
 
   test('should NOT prepend protocol to internal links', async ({ page }) => {
@@ -508,7 +508,7 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
     await submitLink(page, '/about-us');
 
-    await expect(paragraph.locator('a')).toHaveAttribute('href', '/about-us');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', '/about-us');
   });
 
   test('should NOT prepend protocol to anchors', async ({ page }) => {
@@ -527,7 +527,7 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
     await submitLink(page, '#section-1');
 
-    await expect(paragraph.locator('a')).toHaveAttribute('href', '#section-1');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', '#section-1');
   });
 
   test('should NOT prepend protocol to protocol-relative URLs', async ({ page }) => {
@@ -546,7 +546,7 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
     await submitLink(page, '//cdn.example.com/lib.js');
 
-    await expect(paragraph.locator('a')).toHaveAttribute('href', '//cdn.example.com/lib.js');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', '//cdn.example.com/lib.js');
   });
 
   test('should close input when Escape is pressed', async ({ page }) => {
@@ -598,7 +598,7 @@ test.describe('inline tool link', () => {
     await linkInput.press('Enter');
 
     await expect(linkInput).toBeHidden();
-    await expect(paragraph.locator('a')).toHaveCount(0);
+    await expect(paragraph.getByRole('link')).toHaveCount(0);
   });
 
   test('should restore selection after Escape', async ({ page }) => {
@@ -649,12 +649,12 @@ test.describe('inline tool link', () => {
     await expect(linkInput).toHaveValue('https://example.com');
 
     // Click the button again (it should be in unlink state)
-    const linkButton = page.locator('button[data-link-tool-unlink="true"]');
+    const linkButton = page.locator('[data-blok-link-tool-unlink="true"]');
 
     await expect(linkButton).toBeVisible();
     await linkButton.click();
 
-    await expect(paragraph.locator('a')).toHaveCount(0);
+    await expect(paragraph.getByRole('link')).toHaveCount(0);
   });
 
   test('should support IDN URLs', async ({ page }) => {
@@ -674,7 +674,7 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
     await submitLink(page, url);
 
-    const anchor = paragraph.locator('a');
+    const anchor = paragraph.getByRole('link');
 
     await expect(anchor).toHaveAttribute('href', url);
   });
@@ -705,7 +705,7 @@ test.describe('inline tool link', () => {
 
     await linkInput.press('Enter');
 
-    const anchor = paragraph.locator('a');
+    const anchor = paragraph.getByRole('link');
 
     await expect(anchor).toHaveAttribute('href', url);
   });
@@ -754,7 +754,7 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
     await submitLink(page, url);
 
-    const anchor = paragraph.locator('a');
+    const anchor = paragraph.getByRole('link');
 
     // Current implementation does not strip javascript: protocol
     await expect(anchor).toHaveAttribute('href', url);

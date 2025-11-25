@@ -74,13 +74,16 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes = {} as Nodes;
 
     this.nodes.popoverContainer = Dom.make('div', [ css.popoverContainer ]);
+    this.nodes.popoverContainer.setAttribute('data-blok-testid', 'popover-container');
 
     this.nodes.nothingFoundMessage = Dom.make('div', [ css.nothingFoundMessage ], {
       textContent: this.messages.nothingFound,
     });
+    this.nodes.nothingFoundMessage.setAttribute('data-blok-testid', 'popover-nothing-found');
 
     this.nodes.popoverContainer.appendChild(this.nodes.nothingFoundMessage);
     this.nodes.items = Dom.make('div', [ css.items ]);
+    this.nodes.items.setAttribute('data-blok-testid', 'popover-items');
 
     this.items.forEach(item => {
       const itemEl = item.getElement();
@@ -100,6 +103,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       css.popover,
       this.params.class,
     ]);
+    this.nodes.popover.setAttribute('data-blok-testid', 'popover');
 
     this.nodes.popover.appendChild(this.nodes.popoverContainer);
   }
@@ -120,7 +124,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     this.nodes.popover.classList.add(css.popoverOpened);
-    this.nodes.popover.setAttribute('data-popover-opened', 'true');
+    this.nodes.popover.setAttribute('data-blok-popover-opened', 'true');
 
     if (this.search !== undefined) {
       this.search.focus();
@@ -133,7 +137,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   public hide(): void {
     this.nodes.popover.classList.remove(css.popoverOpened);
     this.nodes.popover.classList.remove(css.popoverOpenTop);
-    this.nodes.popover.removeAttribute('data-popover-opened');
+    this.nodes.popover.removeAttribute('data-blok-popover-opened');
 
     this.itemsDefault.forEach(item => item.reset());
 

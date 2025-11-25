@@ -16,10 +16,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar`;
-const SETTINGS_BUTTON_SELECTOR = `${TOOLBAR_SELECTOR} .ce-toolbar__settings-btn`;
-const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} .ce-popover-item`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
+const SETTINGS_BUTTON_SELECTOR = `${TOOLBAR_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-item"]`;
 
 const HEADER_TOOL_UMD_PATH = path.resolve(
   __dirname,
@@ -118,7 +118,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -307,9 +307,11 @@ test.describe('read-only mode', () => {
       },
     });
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+    const paragraphWrapper = page.locator(PARAGRAPH_SELECTOR);
+    // The contenteditable element is inside the block wrapper
+    const paragraph = paragraphWrapper.locator('[contenteditable]');
 
-    await expect(paragraph).toHaveCount(1);
+    await expect(paragraphWrapper).toHaveCount(1);
     await paragraph.click();
     await placeCursorAtEnd(paragraph);
     await page.keyboard.type(' + edit');
@@ -368,12 +370,12 @@ test.describe('read-only mode', () => {
       },
     });
 
-    const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-header`);
+    const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`);
 
     await selectText(headerBlock, 'Read me');
 
-    const readOnlyToolItem = page.locator(`${INLINE_TOOL_SELECTOR}[data-item-name="read-only-inline"]`);
-    const unsupportedToolItem = page.locator(`${INLINE_TOOL_SELECTOR}[data-item-name="unsupported-inline"]`);
+    const readOnlyToolItem = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="read-only-inline"]`);
+    const unsupportedToolItem = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="unsupported-inline"]`);
 
     await expect(readOnlyToolItem).toBeVisible();
     await expect(unsupportedToolItem).toHaveCount(0);

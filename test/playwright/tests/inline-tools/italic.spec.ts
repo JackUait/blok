@@ -12,8 +12,8 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-block-tool="paragraph"] .ce-paragraph`;
-const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy=inline-toolbar]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
+const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -31,7 +31,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -156,8 +156,8 @@ test.describe('inline tool italic', () => {
       doc.dispatchEvent(new Event('selectionchange'));
     });
 
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-popover-opened="true"]`)).toHaveCount(1);
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`)).toHaveAttribute('data-popover-item-active', 'true');
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-popover-opened="true"]`)).toHaveCount(1);
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`)).toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
   test('detects italic state within a single word', async ({ page }) => {
@@ -174,7 +174,7 @@ test.describe('inline tool italic', () => {
 
     await selectText(paragraph, 'italic');
 
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`)).toHaveAttribute('data-popover-item-active', 'true');
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`)).toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
   test('does not detect italic state in normal text', async ({ page }) => {
@@ -191,7 +191,7 @@ test.describe('inline tool italic', () => {
 
     await selectText(paragraph, 'normal');
 
-    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`)).not.toHaveAttribute('data-popover-item-active', 'true');
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`)).not.toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
   test('toggles italic across multiple italic elements', async ({ page }) => {
@@ -241,16 +241,16 @@ test.describe('inline tool italic', () => {
       doc.dispatchEvent(new Event('selectionchange'));
     });
 
-    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`);
+    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
 
     // Verify italic button is active (since all text is visually italic)
-    await expect(italicButton).toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
     // Click italic button - should remove italic on first click (since selection is visually italic)
     await italicButton.click();
 
     // Wait for the toolbar state to update (italic button should no longer be active)
-    await expect(italicButton).not.toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
 
     // Verify that italic has been removed
     const html = await paragraph.innerHTML();
@@ -308,7 +308,7 @@ test.describe('inline tool italic', () => {
     });
 
     // Click italic button (should unwrap existing italic, then wrap everything)
-    await page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`).click();
+    await page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`).click();
 
     // Wait for all selected text to be wrapped in a single <i> tag
     await page.waitForFunction(
@@ -345,13 +345,13 @@ test.describe('inline tool italic', () => {
 
     await selectText(paragraph, 'fully italic');
 
-    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`);
+    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
 
-    await expect(italicButton).toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
     await italicButton.click();
 
-    await expect(italicButton).not.toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
 
     const html = await paragraph.innerHTML();
 
@@ -373,11 +373,11 @@ test.describe('inline tool italic', () => {
     await selectText(paragraph, 'Keyboard');
     await paragraph.focus();
 
-    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`);
+    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
 
     await page.keyboard.press(`${MODIFIER_KEY}+i`);
 
-    await expect(italicButton).toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
     let html = await paragraph.innerHTML();
 
@@ -385,7 +385,7 @@ test.describe('inline tool italic', () => {
 
     await page.keyboard.press(`${MODIFIER_KEY}+i`);
 
-    await expect(italicButton).not.toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
 
     html = await paragraph.innerHTML();
 
@@ -449,7 +449,7 @@ test.describe('inline tool italic', () => {
 
     await selectText(paragraph, 'italic');
 
-    await page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`).click();
+    await page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`).click();
 
     const savedData = await page.evaluate<OutputData | undefined>(async () => {
       return window.editorInstance?.save();
@@ -478,7 +478,7 @@ test.describe('inline tool italic', () => {
     // Step 2: Select entire text and make it italic
     await selectText(paragraph, 'Some text');
 
-    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`);
+    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
 
     await italicButton.click();
 
@@ -503,13 +503,13 @@ test.describe('inline tool italic', () => {
     await selectText(paragraph, 'Some');
 
     // Verify italic button is active (since "Some" is italic)
-    await expect(italicButton).toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
     // Click to remove italic from "Some"
     await italicButton.click();
 
     // Wait for the toolbar state to update (italic button should no longer be active for "Some")
-    await expect(italicButton).not.toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
 
     // Step 4: Verify that "text" is still italic while "Some" is not
     html = await paragraph.innerHTML();
@@ -532,7 +532,7 @@ test.describe('inline tool italic', () => {
     ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
-    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-item-name="italic"]`);
+    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
 
     // Step 2: Make "some" italic
     await selectText(paragraph, 'some');
@@ -589,13 +589,13 @@ test.describe('inline tool italic', () => {
     });
 
     // Step 5: Verify the editor indicates the selection is italic (button is active)
-    await expect(italicButton).toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
     // Step 6: Click italic button - should remove italic on first click (not wrap again)
     await italicButton.click();
 
     // Verify italic button is no longer active
-    await expect(italicButton).not.toHaveAttribute('data-popover-item-active', 'true');
+    await expect(italicButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
 
     // Verify that italic has been removed from both words on first click
     html = await paragraph.innerHTML();

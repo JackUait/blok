@@ -116,7 +116,7 @@ vi.mock('@/types/utils/popover/popover-event', () => ({
 }));
 
 vi.mock('@codexteam/icons', () => ({
-  IconReplace: '<svg data-icon="replace" />',
+  IconReplace: '<svg data-blok-icon="replace" />',
 }));
 
 vi.mock('../../../../../src/components/i18n', () => ({
@@ -298,7 +298,7 @@ describe('BlockSettings', () => {
 
     expect(element).toBeInstanceOf(HTMLElement);
     expect(element?.classList.contains('ce-settings')).toBe(true);
-    expect(element?.dataset.cy).toBe('block-tunes');
+    expect(element?.getAttribute('data-blok-testid')).toBe('block-tunes-wrapper');
     expect(eventsDispatcher.on).toHaveBeenCalledWith(expect.anything(), blockSettings.close);
   });
 

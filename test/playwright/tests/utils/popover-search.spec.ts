@@ -12,13 +12,13 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .cdx-block`;
-const BLOCK_TUNES_SELECTOR = `.ce-popover[data-cy=block-tunes]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`;
-const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} .cdx-search-field__input`;
-const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover-item`;
-const NOTHING_FOUND_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__nothing-found-message`;
-const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const BLOCK_TUNES_SELECTOR = `[data-blok-testid="block-tunes-popover"]`;
+const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-search-input"]`;
+const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item"]`;
+const NOTHING_FOUND_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-nothing-found"]`;
+const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"]`;
 
 /**
  * Clear the provided search input and emit an input event so filtering logic reacts
@@ -111,7 +111,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -252,8 +252,8 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
 
     const seenNames = new Set<string>();
 
-    settingsElement.querySelectorAll<HTMLElement>('.ce-popover-item[data-item-name]').forEach((item) => {
-      const name = item.dataset.itemName ?? '';
+    settingsElement.querySelectorAll<HTMLElement>('[data-blok-testid="popover-item"][data-blok-item-name]').forEach((item) => {
+      const name = item.getAttribute('data-blok-item-name') ?? '';
 
       if (seenNames.has(name)) {
         item.remove();
@@ -262,7 +262,7 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
       }
     });
 
-    const searchInput = settingsElement.querySelector<HTMLInputElement>('.cdx-search-field__input');
+    const searchInput = settingsElement.querySelector<HTMLInputElement>('[data-blok-testid="popover-search-input"]');
 
     searchInput?.focus();
   }, BLOCK_TUNES_SELECTOR);
@@ -362,9 +362,9 @@ test.describe('popover Search/Filter', () => {
       const visibleItems = page.locator(`${POPOVER_ITEM_SELECTOR}:visible`);
 
       await expect(visibleItems).toHaveCount(1);
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeHidden();
-      await expect(page.locator('[data-item-name="delete"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeHidden();
     });
 
     /**
@@ -403,15 +403,15 @@ test.describe('popover Search/Filter', () => {
       await searchInput.fill('First');
 
       // Verify filtering works
-      await expect(page.locator('[data-item-name="first"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="second"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="first"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="second"]')).toBeHidden();
 
       // Clear search input
       await clearSearchInputField(searchInput);
 
       // All items should be visible again
-      await expect(page.locator('[data-item-name="first"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="second"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="first"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="second"]')).toBeVisible();
     });
 
     /**
@@ -450,7 +450,7 @@ test.describe('popover Search/Filter', () => {
 
       // "Nothing found" message should appear
       await expect(nothingFound).toBeVisible();
-      await expect(page.locator('[data-item-name="test"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="test"]')).toBeHidden();
     });
 
     /**
@@ -491,7 +491,7 @@ test.describe('popover Search/Filter', () => {
 
       // "Nothing found" should be hidden
       await expect(nothingFound).toBeHidden();
-      await expect(page.locator('[data-item-name="test"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="test"]')).toBeVisible();
     });
   });
 
@@ -530,18 +530,18 @@ test.describe('popover Search/Filter', () => {
 
       // Test lowercase search
       await searchInput.fill('move up');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="delete"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeHidden();
 
       // Test uppercase search
       await searchInput.fill('DELETE');
-      await expect(page.locator('[data-item-name="delete"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-up"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeHidden();
 
       // Test mixed case search
       await searchInput.fill('MoVe Up');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="delete"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeHidden();
     });
   });
 
@@ -585,21 +585,21 @@ test.describe('popover Search/Filter', () => {
 
       // Partial match at start
       await searchInput.fill('Move');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="delete"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeHidden();
 
       // Partial match in middle
       await searchInput.fill('Down');
-      await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-up"]')).toBeHidden();
-      await expect(page.locator('[data-item-name="delete"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeHidden();
 
       // Partial match at end
       await searchInput.fill('Block');
-      await expect(page.locator('[data-item-name="delete"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-up"]')).toBeHidden();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeHidden();
     });
   });
 
@@ -643,21 +643,21 @@ test.describe('popover Search/Filter', () => {
 
       // Search with brackets
       await searchInput.fill('brackets');
-      await expect(page.locator('[data-item-name="brackets"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="dash"]')).toBeHidden();
-      await expect(page.locator('[data-item-name="dot"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="brackets"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="dash"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="dot"]')).toBeHidden();
 
       // Search with dash
       await searchInput.fill('dash');
-      await expect(page.locator('[data-item-name="dash"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="brackets"]')).toBeHidden();
-      await expect(page.locator('[data-item-name="dot"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="dash"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="brackets"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="dot"]')).toBeHidden();
 
       // Search with dot
       await searchInput.fill('dot');
-      await expect(page.locator('[data-item-name="dot"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="brackets"]')).toBeHidden();
-      await expect(page.locator('[data-item-name="dash"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="dot"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="brackets"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="dash"]')).toBeHidden();
     });
 
     /**
@@ -693,8 +693,8 @@ test.describe('popover Search/Filter', () => {
       const searchInput = page.locator(SEARCH_INPUT_SELECTOR);
 
       // Empty search should show all items
-      await expect(page.locator('[data-item-name="first"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="second"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="first"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="second"]')).toBeVisible();
 
       // Type something
       await searchInput.fill('First');
@@ -703,8 +703,8 @@ test.describe('popover Search/Filter', () => {
       await clearSearchInputField(searchInput);
 
       // All items should be visible again
-      await expect(page.locator('[data-item-name="first"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="second"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="first"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="second"]')).toBeVisible();
     });
   });
 
@@ -748,24 +748,24 @@ test.describe('popover Search/Filter', () => {
 
       // Type character by character
       await searchInput.fill('M');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="delete"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeHidden();
 
       await searchInput.fill('Mo');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="delete"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeHidden();
 
       await searchInput.fill('Mov');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="delete"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeHidden();
 
       await searchInput.fill('Move U');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeHidden();
-      await expect(page.locator('[data-item-name="delete"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeHidden();
     });
 
     /**
@@ -807,30 +807,30 @@ test.describe('popover Search/Filter', () => {
 
       // Type full query
       await searchInput.fill('Move Up');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeHidden();
 
       // Delete characters one by one
       await searchInput.fill('Move U');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeHidden();
 
       await searchInput.fill('Move ');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeVisible();
 
       await searchInput.fill('Move');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeVisible();
 
       await searchInput.fill('Mo');
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeVisible();
 
       await clearSearchInputField(searchInput);
-      await expect(page.locator('[data-item-name="move-up"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="move-down"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="delete"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-up"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="move-down"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="delete"]')).toBeVisible();
     });
 
     /**
@@ -906,7 +906,7 @@ test.describe('popover Search/Filter', () => {
         }
 
         return searchFieldElement.contains(range.startContainer);
-      }, `${BLOCK_TUNES_SELECTOR} .cdx-search-field`);
+      }, `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-search-field"]`);
 
       expect(containsCaret).toBe(true);
     });
@@ -946,7 +946,7 @@ test.describe('popover Search/Filter', () => {
 
       await openBlockTunes(page);
 
-      const separator = page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover-item-separator`);
+      const separator = page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-separator"]`);
 
       // Check separator is displayed initially
       await expect(separator).toBeVisible();
@@ -963,15 +963,15 @@ test.describe('popover Search/Filter', () => {
       await page.keyboard.press('Tab');
 
       // Check first item is focused
-      await expect(page.locator('[data-item-name="test-item-1"].ce-popover-item--focused')).toBeVisible();
-      await expect(page.locator('[data-item-name="test-item-2"].ce-popover-item--focused')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="test-item-1"][data-blok-focused="true"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="test-item-2"][data-blok-focused="true"]')).toBeHidden();
 
       // Press Tab again
       await page.keyboard.press('Tab');
 
       // Check second item is focused
-      await expect(page.locator('[data-item-name="test-item-1"].ce-popover-item--focused')).toBeHidden();
-      await expect(page.locator('[data-item-name="test-item-2"].ce-popover-item--focused')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="test-item-1"][data-blok-focused="true"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="test-item-2"][data-blok-focused="true"]')).toBeVisible();
     });
   });
 
@@ -1055,11 +1055,11 @@ test.describe('popover Search/Filter', () => {
       await openBlockTunes(page);
 
       // Click the item to open nested popover
-      await page.locator('[data-item-name="test-item"]').click();
+      await page.locator('[data-blok-item-name="test-item"]').click();
 
       // Check nested popover search input has placeholder text with i18n
       const nestedSearchInput = page.locator(
-        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .cdx-search-field__input`
+        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-search-input"]`
       );
 
       await expect(nestedSearchInput).toHaveAttribute('placeholder', 'Искать');
@@ -1069,7 +1069,7 @@ test.describe('popover Search/Filter', () => {
 
       // Check nested popover has nothing found message with i18n
       const nothingFoundMessage = page.locator(
-        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .ce-popover__nothing-found-message`
+        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-nothing-found"]`
       );
 
       await expect(nothingFoundMessage).toHaveText('Ничего не найдено');
@@ -1121,31 +1121,31 @@ test.describe('popover Search/Filter', () => {
       await openBlockTunes(page);
 
       // Click parent item to open nested popover
-      await page.locator('[data-item-name="parent"]').click();
+      await page.locator('[data-blok-item-name="parent"]').click();
 
       // Wait for nested popover to appear
       const nestedPopoverContainer = page.locator(
-        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .ce-popover__container`
+        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`
       );
 
       await expect(nestedPopoverContainer).toBeVisible();
 
       const nestedSearchInput = page.locator(
-        `${BLOCK_TUNES_SELECTOR} .ce-popover--nested .cdx-search-field__input`
+        `${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-search-input"]`
       );
 
       // Initially all child items should be visible
-      await expect(page.locator('[data-item-name="child-one"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="child-two"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="child-three"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="child-one"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="child-two"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="child-three"]')).toBeVisible();
 
       // Filter in nested popover
       await nestedSearchInput.fill('One');
 
       // Only matching child should be visible
-      await expect(page.locator('[data-item-name="child-one"]')).toBeVisible();
-      await expect(page.locator('[data-item-name="child-two"]')).toBeHidden();
-      await expect(page.locator('[data-item-name="child-three"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="child-one"]')).toBeVisible();
+      await expect(page.locator('[data-blok-item-name="child-two"]')).toBeHidden();
+      await expect(page.locator('[data-blok-item-name="child-three"]')).toBeHidden();
     });
   });
 });

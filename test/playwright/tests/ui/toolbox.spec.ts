@@ -13,10 +13,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"]`;
-const POPOVER_SELECTOR = '.ce-popover';
-const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} .ce-popover-item`;
-const SECONDARY_TITLE_SELECTOR = '.ce-popover-item__secondary-title';
+const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
+const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
+const SECONDARY_TITLE_SELECTOR = '[data-blok-testid="popover-item-secondary-title"]';
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -34,7 +34,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -210,7 +210,7 @@ const isCaretInBlock = async (page: Page, blockId: string): Promise<boolean> => 
     }
 
     const range = selection.getRangeAt(0);
-    const blockElement = document.querySelector(`.ce-block[data-id="${id}"]`);
+    const blockElement = document.querySelector(`.ce-block[data-blok-id="${id}"]`);
 
     if (!blockElement) {
       return false;
@@ -503,7 +503,7 @@ test.describe('toolbox', () => {
       await page.keyboard.press('Backspace');
 
       // Wait for Editor.js to mark it as empty
-      await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-empty', 'true');
+      await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-blok-empty', 'true');
 
       // Open toolbox with "/" shortcut
       await page.keyboard.type('/');
@@ -511,13 +511,13 @@ test.describe('toolbox', () => {
       const popover = page.locator(POPOVER_SELECTOR);
 
       await popover.waitFor({ state: 'attached' });
-      await expect(popover).toHaveAttribute('data-popover-opened', 'true');
+      await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
 
       /**
        * Secondary title (shortcut) should exist for first toolbox item of the tool
        */
       const severalToolboxItems = page.locator(
-        `${POPOVER_ITEM_SELECTOR}[data-item-name="severalToolboxItemsTool"]`
+        `${POPOVER_ITEM_SELECTOR}[data-blok-item-name="severalToolboxItemsTool"]`
       );
       const firstItem = severalToolboxItems.filter({ hasText: 'first tool' });
       const firstSecondaryTitle = firstItem.locator(SECONDARY_TITLE_SELECTOR);
@@ -603,7 +603,7 @@ test.describe('toolbox', () => {
       await page.keyboard.press('Backspace');
 
       // Wait for Editor.js to mark it as empty
-      await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-empty', 'true');
+      await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-blok-empty', 'true');
 
       // Open toolbox with "/" shortcut
       await page.keyboard.type('/');
@@ -611,12 +611,12 @@ test.describe('toolbox', () => {
       const popover = page.locator(POPOVER_SELECTOR);
 
       await popover.waitFor({ state: 'attached' });
-      await expect(popover).toHaveAttribute('data-popover-opened', 'true');
+      await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
 
       /**
        * Secondary title (shortcut) should exist for toolbox item of the tool
        */
-      const item = page.locator(`${POPOVER_ITEM_SELECTOR}[data-item-name="oneToolboxItemTool"]`);
+      const item = page.locator(`${POPOVER_ITEM_SELECTOR}[data-blok-item-name="oneToolboxItemTool"]`);
 
       await expect(item).toHaveCount(1);
       const secondaryTitle = item.locator(SECONDARY_TITLE_SELECTOR);

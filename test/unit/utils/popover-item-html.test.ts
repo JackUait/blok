@@ -62,7 +62,7 @@ describe('PopoverItemHtml', () => {
       name: 'html-item' });
 
     expect(root.classList.contains(css.root)).toBe(true);
-    expect(root.dataset.itemName).toBe(params.name);
+    expect(root.getAttribute('data-blok-item-name')).toBe(params.name);
     expect(root.contains(customElement)).toBe(true);
     expect(customElement.parentElement).toBe(root);
   });

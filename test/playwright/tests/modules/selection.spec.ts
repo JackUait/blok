@@ -13,11 +13,10 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-cy="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-paragraph`;
+const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
-const FAKE_BACKGROUND_SELECTOR = '.codex-editor__fake-background';
-const BLOCK_SELECTED_CLASS = 'ce-block--selected';
+const FAKE_BACKGROUND_SELECTOR = '[data-blok-testid="fake-background"]';
 
 declare global {
   interface Window {
@@ -66,7 +65,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -282,7 +281,7 @@ const EditableTitleTool = class {
     const wrapper = document.createElement('div');
 
     wrapper.contentEditable = 'true';
-    wrapper.dataset.cy = 'editable-title-block';
+    wrapper.setAttribute('data-blok-testid', 'editable-title-block');
     wrapper.textContent = this.data.text ?? 'Editable block';
 
     return wrapper;
@@ -363,7 +362,7 @@ test.describe('modules/selection', () => {
     await expect(blocks).toHaveCount(3);
 
     for (const index of [0, 1, 2]) {
-      await expect(getBlockByIndex(page, index)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
+      await expect(getBlockByIndex(page, index)).toHaveAttribute('data-blok-selected', 'true');
     }
   });
 
@@ -406,10 +405,10 @@ test.describe('modules/selection', () => {
     await page.mouse.move(thirdCenter.x, thirdCenter.y, { steps: 10 });
     await page.mouse.up();
 
-    await expect(getBlockByIndex(page, 0)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 1)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 2)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 3)).not.toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 3)).not.toHaveAttribute('data-blok-selected', 'true');
   });
 
   test('selection API exposes save/restore, expandToTag, fake background helpers', async ({ page }) => {
@@ -445,7 +444,7 @@ test.describe('modules/selection', () => {
 
       selection?.removeAllRanges();
 
-      const paragraphEl = document.querySelector('.ce-paragraph');
+      const paragraphEl = document.querySelector('[data-blok-testid="block-wrapper"] [contenteditable]');
       const textNode = paragraphEl?.firstChild as Text | null;
 
       if (textNode) {
@@ -528,9 +527,9 @@ test.describe('modules/selection', () => {
     await page.keyboard.press('ArrowDown');
 
     await page.keyboard.up('Shift');
-    await expect(getBlockByIndex(page, 0)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 1)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
-    await expect(getBlockByIndex(page, 2)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
 
     await page.keyboard.press('Backspace');
 
@@ -604,7 +603,7 @@ test.describe('modules/selection', () => {
     await page.keyboard.up('Shift');
 
     for (const index of [0, 1, 2]) {
-      await expect(getBlockByIndex(page, index)).toHaveClass(new RegExp(BLOCK_SELECTED_CLASS));
+      await expect(getBlockByIndex(page, index)).toHaveAttribute('data-blok-selected', 'true');
     }
   });
 });

@@ -22,6 +22,7 @@ export class PopoverItemSeparator extends PopoverItem {
       line: Dom.make('div', css.line),
     };
 
+    this.nodes.root.setAttribute('data-blok-testid', 'popover-item-separator');
     this.nodes.root.appendChild(this.nodes.line);
   }
 
@@ -38,5 +39,11 @@ export class PopoverItemSeparator extends PopoverItem {
    */
   public toggleHidden(isHidden: boolean): void {
     this.nodes.root?.classList.toggle(css.hidden, isHidden);
+
+    if (isHidden) {
+      this.nodes.root?.setAttribute('data-blok-hidden', 'true');
+    } else {
+      this.nodes.root?.removeAttribute('data-blok-hidden');
+    }
   }
 }

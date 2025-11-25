@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block[data-block-tool="paragraph"] [contenteditable="true"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable="true"]`;
 
 const getParagraphByIndex = (page: Page, index: number): Locator => {
   return page.locator(`:nth-match(${PARAGRAPH_SELECTOR}, ${index + 1})`);
@@ -29,7 +29,7 @@ const resetEditor = async (page: Page): Promise<void> => {
     const container = document.createElement('div');
 
     container.id = holderId;
-    container.dataset.cy = holderId;
+    container.setAttribute('data-blok-testid', holderId);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
@@ -81,7 +81,7 @@ const createEditorWithDelimiter = async (page: Page): Promise<void> => {
       public render(): HTMLElement {
         const wrapper = document.createElement('div');
 
-        wrapper.dataset.cyType = 'contentless-tool';
+        wrapper.setAttribute('data-blok-testid-type', 'contentless-tool');
         wrapper.textContent = '***';
 
         return wrapper;
@@ -199,7 +199,7 @@ const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
 };
 
 const getDelimiterBlock = (page: Page): Locator => {
-  return page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-block:has([data-cy-type="contentless-tool"])`);
+  return page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]:has([data-blok-testid-type="contentless-tool"])`);
 };
 
 test.describe('arrowLeft keydown', () => {
@@ -343,19 +343,20 @@ test.describe('arrowLeft keydown', () => {
   test('should move caret to previous block when focused block is contentless', async ({ page }) => {
     await createEditorWithDelimiter(page);
 
-    const secondParagraph = getParagraphByIndex(page, 1);
-
-    await secondParagraph.click();
+    // Move cursor to start of second block
+    await page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-id="block3"]`).click();
     await page.keyboard.press('Home');
+
+    // Move left to cross block boundary
     await page.keyboard.press('ArrowLeft');
 
     const delimiterBlock = getDelimiterBlock(page);
 
-    await expect(delimiterBlock).toHaveClass(/ce-block--selected/);
+    await expect(delimiterBlock).toHaveAttribute('data-blok-selected', 'true');
 
     await page.keyboard.press('ArrowLeft');
 
-    await expect(delimiterBlock).not.toHaveClass(/ce-block--selected/);
+    await expect(delimiterBlock).not.toHaveAttribute('data-blok-selected', 'true');
 
     const firstParagraph = getParagraphByIndex(page, 0);
 

@@ -1,8 +1,7 @@
 /**
- * Use external package module for notifications
- * @see https://github.com/codex-team/js-notifier
+ * Use local module for notifications
  */
-import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } from 'codex-notifier';
+import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } from './codex-notifier/types';
 
 type CodexNotifierModule = {
   show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void;
@@ -32,7 +31,7 @@ export default class Notifier {
     }
 
     if (this.loadingPromise === null) {
-      this.loadingPromise = import('codex-notifier')
+      this.loadingPromise = import('./codex-notifier/index')
         .then((module) => {
           const resolvedModule = (module?.default ?? module) as unknown;
 

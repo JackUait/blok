@@ -90,7 +90,6 @@
   "dependencies": {
     "@editorjs/caret": "1.0.1",
     "@types/lodash": "4.17.20",
-    "codex-notifier": "1.1.2",
     "lodash": "4.17.21",
     "sortablejs": "^1.15.6"
   },

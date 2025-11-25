@@ -235,6 +235,7 @@ describe('Paste module', () => {
     const tool = {
       name: 'handler',
       create: vi.fn(() => ({ onPaste: vi.fn() })),
+      hasOnPasteHandler: true,
       pasteConfig: {
         tags: [ 'P' ],
         files: {

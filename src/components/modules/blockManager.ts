@@ -476,6 +476,13 @@ export default class BlockManager extends Module {
        */
       await block.ready;
       block.call(BlockToolAPI.ON_PASTE, pasteEvent);
+
+      /**
+       * onPaste might cause the tool to replace its root element (e.g., Header changing level).
+       * Since mutation observers are set up asynchronously via requestIdleCallback,
+       * we need to manually refresh the tool element reference here.
+       */
+      block.refreshToolRootElement();
     } catch (e) {
       _.log(`${toolName}: onPaste callback call is failed`, 'error', e);
     }

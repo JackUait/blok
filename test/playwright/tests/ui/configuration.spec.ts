@@ -17,9 +17,9 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
-const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox"][data-blok-popover-opened="true"]';
+const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]';
 const FAILING_TOOL_SOURCE = `
   class FailingTool {
     render() {
@@ -182,7 +182,7 @@ const openToolbox = async (page: Page): Promise<void> => {
 
   await paragraph.click();
 
-  const plusButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`);
+  const plusButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
 
   await plusButton.waitFor({ state: 'visible' });
   await plusButton.click();
@@ -330,13 +330,20 @@ test.describe('editor configuration options', () => {
   test.describe('placeholder', () => {
     const getPlaceholderValue = async (page: Page): Promise<string | null> => {
       return await page.evaluate(({ paragraphSelector }) => {
-        const paragraph = document.querySelector(paragraphSelector);
+        const paragraphWrapper = document.querySelector(paragraphSelector);
 
-        if (!(paragraph instanceof HTMLElement)) {
+        if (!(paragraphWrapper instanceof HTMLElement)) {
           return null;
         }
 
-        return paragraph.getAttribute('data-blok-placeholder');
+        // The placeholder attribute is on the contenteditable element inside the block wrapper
+        const contentEditable = paragraphWrapper.querySelector('[contenteditable]');
+
+        if (!(contentEditable instanceof HTMLElement)) {
+          return null;
+        }
+
+        return contentEditable.getAttribute('data-blok-placeholder');
       }, { paragraphSelector: PARAGRAPH_SELECTOR });
     };
 
@@ -895,7 +902,7 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('configurableTool');
     });
 
-    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="configurableTool"]`;
+    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="configurableTool"]`;
     const blockCount = await page.locator(configurableSelector).count();
 
     expect(blockCount).toBeGreaterThan(0);
@@ -970,7 +977,7 @@ test.describe('editor configuration options', () => {
       editor.blocks.insert('inlineToggleTool');
     });
 
-    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="inlineToggleTool"]`;
+    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="inlineToggleTool"]`;
     const inlineToggleBlocks = page.locator(inlineToggleSelector);
 
     await expect(inlineToggleBlocks).toHaveCount(1);

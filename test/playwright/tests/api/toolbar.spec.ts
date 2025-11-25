@@ -17,9 +17,9 @@ const TOOLBAR_OPENED_SELECTOR = `${TOOLBAR_SELECTOR}[data-blok-opened="true"]`;
 const TOOLBAR_ACTIONS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar-actions"]`;
 const TOOLBAR_ACTIONS_OPENED_SELECTOR = `${TOOLBAR_ACTIONS_SELECTOR}[data-blok-opened="true"]`;
 const TOOLBOX_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbox"]`;
-const TOOLBOX_POPOVER_SELECTOR = `[data-blok-testid=toolbox] .ce-popover__container`;
+const TOOLBOX_POPOVER_SELECTOR = `[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-container"]`;
 const BLOCK_TUNES_SELECTOR = `[data-blok-testid="block-tunes-popover"]`;
-const BLOCK_TUNES_POPOVER_SELECTOR = `${BLOCK_TUNES_SELECTOR} .ce-popover__container`;
+const BLOCK_TUNES_POPOVER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"]`;
 const OPENED_BLOCK_TUNES_SELECTOR = `${BLOCK_TUNES_SELECTOR}[data-blok-popover-opened="true"]`;
 
 const expectToolbarToBeOpened = async (page: Page): Promise<void> => {

@@ -1106,7 +1106,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "First"
@@ -1141,7 +1141,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "block"
@@ -1185,7 +1185,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "block"
@@ -1229,7 +1229,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "First"
@@ -1241,7 +1241,7 @@ test.describe('popover', () => {
       await page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"] [data-blok-item-name="header"]`).click();
 
       // Check block converted
-      const header = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-header`);
+      const header = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`);
 
       await expect(header).toBeVisible();
       await expect(header).toHaveText('First block text');

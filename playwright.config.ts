@@ -1,6 +1,8 @@
 import './test/playwright/support/suppress-css-import';
 import { defineConfig } from '@playwright/test';
 
+const AMOUNT_OF_LOCAL_WORKERS = 3;
+
 /**
  * Playwright Configuration
  *
@@ -27,6 +29,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
+    testIdAttribute: 'data-blok-testid',
   },
   retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : AMOUNT_OF_LOCAL_WORKERS,
 });

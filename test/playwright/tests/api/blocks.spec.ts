@@ -149,7 +149,7 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
   await block.click();
   await block.hover();
 
-  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__settings-btn`);
+  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
   await settingsButton.waitFor({ state: 'visible' });
   await settingsButton.click();
@@ -1256,7 +1256,7 @@ test.describe('api.blocks', () => {
       await expect(convertToItem).toBeVisible();
       await convertToItem.hover();
 
-      const nestedMenu = page.locator(`${BLOCK_TUNES_SELECTOR} .ce-popover--nested`);
+      const nestedMenu = page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"]`);
 
       await nestedMenu.waitFor({ state: 'attached' });
 

@@ -13,7 +13,7 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const PARAGRAPH_INDEX_ATTRIBUTE = 'data-blok-testid-paragraph-index';
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 
@@ -103,43 +103,69 @@ test.describe('data-blok-empty attribute', () => {
     await assignParagraphIndexes(page);
 
     const paragraphs = page.locator(PARAGRAPH_SELECTOR);
-    const firstParagraph = page.locator(
+    const firstParagraphWrapper = page.locator(
       `${PARAGRAPH_SELECTOR}[${PARAGRAPH_INDEX_ATTRIBUTE}="0"]`
     );
-    const secondParagraph = page.locator(
+    const secondParagraphWrapper = page.locator(
       `${PARAGRAPH_SELECTOR}[${PARAGRAPH_INDEX_ATTRIBUTE}="1"]`
     );
 
+    // The data-blok-empty attribute is on the contenteditable element inside the block wrapper
+    const firstParagraph = firstParagraphWrapper.locator('[contenteditable]');
+    const secondParagraph = secondParagraphWrapper.locator('[contenteditable]');
+
     await expect(paragraphs).toHaveCount(2);
-    await expect(firstParagraph).toHaveAttribute('data-blok-empty', 'false');
-    await expect(secondParagraph).toHaveAttribute('data-blok-empty', 'true');
+
+    // Trigger focus to ensure the attribute is set (via focusin event listener)
+    await firstParagraph.focus();
+    await secondParagraph.focus();
+
+    // Wait for the data-blok-empty attribute to be set
+    await expect.poll(async () => {
+      return await firstParagraph.getAttribute('data-blok-empty');
+    }).toBe('false');
+    await expect.poll(async () => {
+      return await secondParagraph.getAttribute('data-blok-empty');
+    }).toBe('true');
   });
 
   test('updates to "false" after typing', async ({ page }) => {
     await createEditorWithTextBlocks(page, ['First', '']);
     await assignParagraphIndexes(page);
 
-    const lastParagraph = page.locator(
+    const lastParagraphWrapper = page.locator(
       `${PARAGRAPH_SELECTOR}[${PARAGRAPH_INDEX_ATTRIBUTE}="1"]`
     );
+    // The data-blok-empty attribute is on the contenteditable element inside the block wrapper
+    const lastParagraph = lastParagraphWrapper.locator('[contenteditable]');
 
     await lastParagraph.click();
-    await lastParagraph.type('Some text');
-    await expect(lastParagraph).toHaveAttribute('data-blok-empty', 'false');
+    await lastParagraph.pressSequentially('Some text');
+
+    // Wait for the data-blok-empty attribute to update
+    await expect.poll(async () => {
+      return await lastParagraph.getAttribute('data-blok-empty');
+    }).toBe('false');
   });
 
   test('updates to "true" after removing content', async ({ page }) => {
     await createEditorWithTextBlocks(page, ['', 'Some text']);
     await assignParagraphIndexes(page);
 
-    const lastParagraph = page.locator(
+    const lastParagraphWrapper = page.locator(
       `${PARAGRAPH_SELECTOR}[${PARAGRAPH_INDEX_ATTRIBUTE}="1"]`
     );
+    // The data-blok-empty attribute is on the contenteditable element inside the block wrapper
+    const lastParagraph = lastParagraphWrapper.locator('[contenteditable]');
 
     await lastParagraph.click();
     await page.keyboard.press(SELECT_ALL_SHORTCUT);
     await page.keyboard.press('Backspace');
-    await expect(lastParagraph).toHaveAttribute('data-blok-empty', 'true');
+
+    // Wait for the data-blok-empty attribute to update
+    await expect.poll(async () => {
+      return await lastParagraph.getAttribute('data-blok-empty');
+    }).toBe('true');
   });
 
   test('applies to newly created blocks', async ({ page }) => {
@@ -147,9 +173,11 @@ test.describe('data-blok-empty attribute', () => {
     await assignParagraphIndexes(page);
 
     const paragraphs = page.locator(PARAGRAPH_SELECTOR);
-    const secondParagraph = page.locator(
+    const secondParagraphWrapper = page.locator(
       `${PARAGRAPH_SELECTOR}[${PARAGRAPH_INDEX_ATTRIBUTE}="1"]`
     );
+    // The contenteditable element is inside the block wrapper
+    const secondParagraph = secondParagraphWrapper.locator('[contenteditable]');
 
     await secondParagraph.click();
     await page.keyboard.press('Enter');
@@ -157,11 +185,16 @@ test.describe('data-blok-empty attribute', () => {
     await assignParagraphIndexes(page);
 
     await expect(paragraphs).toHaveCount(3);
-    const newestParagraph = page.locator(
+    const newestParagraphWrapper = page.locator(
       `${PARAGRAPH_SELECTOR}[${PARAGRAPH_INDEX_ATTRIBUTE}="2"]`
     );
+    // The data-blok-empty attribute is on the contenteditable element inside the block wrapper
+    const newestParagraph = newestParagraphWrapper.locator('[contenteditable]');
 
-    await expect(newestParagraph).toHaveAttribute('data-blok-empty', 'true');
+    // Wait for the data-blok-empty attribute to be set on newly created block
+    await expect.poll(async () => {
+      return await newestParagraph.getAttribute('data-blok-empty');
+    }).toBe('true');
   });
 });
 

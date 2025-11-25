@@ -15,7 +15,7 @@ const TEST_PAGE_URL = pathToFileURL(
 const EDITOR_BUNDLE_PATH = path.resolve(__dirname, '../../../../dist/editorjs.umd.js');
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 
 type ToolDefinition = {
   name: string;

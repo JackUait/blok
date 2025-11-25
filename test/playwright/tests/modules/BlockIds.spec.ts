@@ -19,8 +19,8 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-block`;
-const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} .ce-toolbar__plus`;
+const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
   `[data-blok-testid="popover-item"][data-blok-item-name=${itemName}]`;
 
@@ -218,7 +218,7 @@ test.describe('block ids', () => {
 
     const firstParagraphId = await getBlockIdByIndex(page, 0);
     const firstParagraph = page.locator(
-      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"] [data-blok-block-tool="paragraph"]`
+      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"][data-blok-component="paragraph"] [contenteditable]`
     );
 
     await firstParagraph.click();
@@ -234,7 +234,7 @@ test.describe('block ids', () => {
 
     const headerBlockId = await getLastBlockId(page);
     const headerBlock = page.locator(
-      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${headerBlockId}"] [data-blok-block-tool="header"]`
+      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${headerBlockId}"][data-blok-component="header"] [contenteditable]`
     );
 
     await headerBlock.click();
@@ -311,7 +311,7 @@ test.describe('block ids', () => {
     assertIsString(firstParagraphId, 'First block id was not provided');
 
     const firstParagraph = page.locator(
-      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"] [data-blok-block-tool="paragraph"]`
+      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"][data-blok-component="paragraph"] [contenteditable]`
     );
 
     await firstParagraph.click();

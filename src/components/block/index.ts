@@ -29,8 +29,6 @@ import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 
-const BLOCK_TOOL_ATTRIBUTE = 'data-blok-block-tool';
-
 /**
  * Interface describes Block class constructor argument
  */
@@ -185,6 +183,16 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private readonly defaultTunesInstances: Map<string, IBlockTune> = new Map();
 
   /**
+   * Promise that resolves when the block is ready (rendered)
+   */
+  public ready: Promise<void>;
+
+  /**
+   * Resolver for ready promise
+   */
+  private readyResolver: (() => void) | null = null;
+
+  /**
    * If there is saved data for Tune which is not available at the moment,
    * we will store it here and provide back on save so data is not lost
    */
@@ -223,6 +231,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     tunesData,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<EditorEventMap>) {
     super();
+    this.ready = new Promise((resolve) => {
+      this.readyResolver = resolve;
+    });
     this.name = tool.name;
     this.id = id;
     this.settings = tool.settings;
@@ -884,8 +895,8 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
     wrapper.setAttribute('data-blok-testid', 'block-wrapper');
 
-    if (this.name && !wrapper.hasAttribute(BLOCK_TOOL_ATTRIBUTE)) {
-      wrapper.setAttribute(BLOCK_TOOL_ATTRIBUTE, this.name);
+    if (this.name && !wrapper.hasAttribute('data-blok-component')) {
+      wrapper.setAttribute('data-blok-component', this.name);
     }
 
     /**
@@ -904,14 +915,17 @@ export default class Block extends EventsDispatcher<BlockEvents> {
         this.toolRenderedElement = resolvedElement;
         this.addToolDataAttributes(resolvedElement, wrapper);
         contentNode.appendChild(resolvedElement);
+        this.readyResolver?.();
       }).catch((error) => {
         _.log(`Tool render promise rejected: %o`, 'error', error);
+        this.readyResolver?.();
       });
     } else {
       // Handle synchronous render
       this.toolRenderedElement = pluginsContent;
       this.addToolDataAttributes(pluginsContent, wrapper);
       contentNode.appendChild(pluginsContent);
+      this.readyResolver?.();
     }
 
     /**
@@ -951,15 +965,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   private addToolDataAttributes(element: HTMLElement, blockWrapper: HTMLDivElement): void {
     /**
-     * Add data-blok-block-tool attribute to identify the tool type used for the block.
+     * Add data-blok-component attribute to identify the tool type used for the block.
      * Some tools (like Paragraph) add their own class names, but we can rely on the tool name for all cases.
      */
-    if (this.name && !blockWrapper.hasAttribute(BLOCK_TOOL_ATTRIBUTE)) {
-      blockWrapper.setAttribute(BLOCK_TOOL_ATTRIBUTE, this.name);
-    }
-
-    if (this.name && !element.hasAttribute(BLOCK_TOOL_ATTRIBUTE)) {
-      element.setAttribute(BLOCK_TOOL_ATTRIBUTE, this.name);
+    if (this.name && !blockWrapper.hasAttribute('data-blok-component')) {
+      blockWrapper.setAttribute('data-blok-component', this.name);
     }
 
     const placeholderAttribute = 'data-blok-placeholder';
@@ -1163,6 +1173,26 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   private unwatchBlockMutations(): void {
     this.editorEventBus?.off(RedactorDomChanged, this.redactorDomChangedCallback);
+  }
+
+  /**
+   * Refreshes the reference to the tool's root element by inspecting the block content.
+   * Call this after operations (like onPaste) that might cause the tool to replace its element,
+   * especially when mutation observers haven't been set up yet.
+   */
+  public refreshToolRootElement(): void {
+    const contentNode = this.holder.querySelector(`.${Block.CSS.content}`);
+
+    if (!contentNode) {
+      return;
+    }
+
+    const firstChild = contentNode.firstElementChild as HTMLElement | null;
+
+    if (firstChild && firstChild !== this.toolRenderedElement) {
+      this.toolRenderedElement = firstChild;
+      this.dropInputsCache();
+    }
   }
 
   /**

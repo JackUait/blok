@@ -695,6 +695,15 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     popoverItems.push(popoverItem);
+
+    /**
+     * Append a separator after the item if it has children and not the last one
+     */
+    if ('children' in popoverItem && index < this.tools.size - 1) {
+      popoverItems.push({
+        type: PopoverItemType.Separator,
+      });
+    }
   }
 
   /**

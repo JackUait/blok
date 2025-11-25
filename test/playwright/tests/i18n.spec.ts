@@ -15,7 +15,7 @@ const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wr
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
-const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox"]';
+const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
 const BLOCK_TUNES_POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
 
 /**
@@ -230,11 +230,11 @@ const openInlineToolbarPopover = async (page: Page): Promise<Locator> => {
     window.editorInstance?.inlineToolbar?.open();
   });
 
-  const inlinePopover = inlineToolbar.locator(':scope > [data-blok-testid="popover"]');
+  const inlinePopover = inlineToolbar.locator('[data-blok-testid="popover"]');
 
   await expect(inlinePopover).toHaveCount(1);
 
-  const inlinePopoverContainer = inlinePopover.locator(':scope > [data-blok-testid="popover-container"]');
+  const inlinePopoverContainer = inlinePopover.locator('[data-blok-testid="popover-container"]');
 
   await expect(inlinePopoverContainer).toHaveCount(1);
   await expect(inlinePopoverContainer).toBeVisible();
@@ -252,11 +252,11 @@ const getParagraphLocatorByBlockIndex = async (page: Page, blockIndex = 0): Prom
     throw new Error(`Unable to resolve block id for index ${blockIndex}`);
   }
 
-  const block = page.locator(`${BLOCK_SELECTOR}[data-blok-id="${blockId}"]`);
+  const block = page.locator(`${BLOCK_SELECTOR}[data-blok-id="${blockId}"][data-blok-component="paragraph"]`);
 
   await expect(block).toHaveCount(1);
 
-  return block.locator('[data-blok-block-tool="paragraph"]');
+  return block;
 };
 
 test.describe('editor i18n', () => {
@@ -671,7 +671,7 @@ test.describe('editor i18n', () => {
       await convertToButton.click();
 
       // Check item in convert to menu is internationalized
-      const headerItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} .ce-popover--nested [data-blok-item-name="header"]`);
+      const headerItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-nested="true"] [data-blok-item-name="header"]`);
 
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(toolNamesDictionary.Heading);
@@ -700,7 +700,7 @@ test.describe('editor i18n', () => {
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const searchInput = page.locator(`${TOOLBOX_POPOVER_SELECTOR} input[type="search"], ${TOOLBOX_POPOVER_SELECTOR} input[placeholder*="Filter"]`);
+      const searchInput = page.locator(`${TOOLBOX_POPOVER_SELECTOR}`).getByRole('searchbox');
 
       await expect(searchInput).toBeVisible();
 
@@ -732,13 +732,13 @@ test.describe('editor i18n', () => {
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
       const popoverContainer = page
-        .locator(`${TOOLBOX_POPOVER_SELECTOR} .ce-popover__container:visible`)
-        .filter({ has: page.locator('input[type="search"]') });
+        .locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-testid="popover-container"]`)
+        .filter({ has: page.getByRole('searchbox') });
 
       await expect(popoverContainer).toHaveCount(1);
       await expect(popoverContainer).toBeVisible();
 
-      const searchInput = popoverContainer.locator('input[type="search"]');
+      const searchInput = popoverContainer.getByRole('searchbox');
 
       await expect(searchInput).toHaveCount(1);
       await expect(searchInput).toBeVisible();
@@ -848,8 +848,8 @@ test.describe('editor i18n', () => {
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
       const popoverContainer = page
-        .locator(`${BLOCK_TUNES_POPOVER_SELECTOR} .ce-popover__container:visible`)
-        .filter({ has: page.locator(`input[placeholder*="${uiDictionary.popover.Filter}"]`) });
+        .locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-testid="popover-container"]`)
+        .filter({ has: page.getByRole('searchbox', { name: uiDictionary.popover.Filter }) });
 
       await expect(popoverContainer).toHaveCount(1);
       await expect(popoverContainer).toBeVisible();
@@ -988,10 +988,9 @@ test.describe('editor i18n', () => {
       const convertToButton = inlinePopover.locator('[data-blok-item-name="convert-to"]');
 
       await expect(convertToButton).toBeVisible();
-      await expect(convertToButton).toHaveCount(1);
       await convertToButton.click();
 
-      const nestedPopover = page.locator(`${INLINE_TOOLBAR_SELECTOR} .ce-popover--nested`);
+      const nestedPopover = page.locator('[data-blok-nested="true"]');
 
       await expect(nestedPopover).toHaveCount(1);
 
@@ -1268,7 +1267,7 @@ test.describe('editor i18n', () => {
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for UI animation
       await page.waitForTimeout(200);
 
-      const linkInput = page.locator('input[data-blok-link-tool-input-opened], input[placeholder*="link" i]');
+      const linkInput = page.locator('[data-blok-link-tool-input-opened]');
 
       await expect(linkInput).toBeVisible();
 
@@ -1414,7 +1413,7 @@ test.describe('editor i18n', () => {
       await convertToButton.click();
 
       // Check item in convert to menu is internationalized
-      const nestedPopover = page.locator(`${INLINE_TOOLBAR_SELECTOR} .ce-popover--nested`);
+      const nestedPopover = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-nested="true"]`);
 
       await expect(nestedPopover).toHaveCount(1);
 

@@ -4,18 +4,18 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { EDITOR_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_CONTENT_SELECTOR = '[data-blok-block-tool="paragraph"] .ce-paragraph';
+const PARAGRAPH_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 // The link tool renders the item itself as a button, not a nested button
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
-const LINK_INPUT_SELECTOR = `input[data-blok-link-tool-input-opened]`;
+const LINK_INPUT_SELECTOR = '[data-blok-link-tool-input-opened]';
 const NOTIFIER_SELECTOR = '[data-blok-testid="notifier-container"]';
 
 const getParagraphByText = (page: Page, text: string): Locator => {
@@ -181,7 +181,7 @@ test.describe('inline tool link - edge cases', () => {
     await linkInput.press('Enter');
 
     // Check the result - entire "here" should be linked to very-distinct-url.com
-    const anchor = paragraph.locator('a');
+    const anchor = paragraph.getByRole('link');
 
     await expect(anchor).toHaveAttribute('href', 'https://very-distinct-url.com');
     await expect(anchor).toHaveText('here');
@@ -207,7 +207,7 @@ test.describe('inline tool link - edge cases', () => {
     // Expect error notification
     await expect(page.locator(NOTIFIER_SELECTOR)).toContainText('Pasted link is not valid');
     // Link should not be created
-    await expect(paragraph.locator('a')).toHaveCount(0);
+    await expect(paragraph.getByRole('link')).toHaveCount(0);
   });
 
   test('should accept encoded spaces in URL', async ({ page }) => {
@@ -226,7 +226,7 @@ test.describe('inline tool link - edge cases', () => {
     await linkInput.fill('http://example.com/foo%20bar');
     await linkInput.press('Enter');
 
-    await expect(paragraph.locator('a')).toHaveAttribute('href', 'http://example.com/foo%20bar');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'http://example.com/foo%20bar');
   });
 
   test('should preserve target="_blank" on existing links after edit', async ({ page }) => {
@@ -245,7 +245,7 @@ test.describe('inline tool link - edge cases', () => {
     await linkInput.fill('https://bing.com');
     await linkInput.press('Enter');
 
-    const anchor = paragraph.locator('a');
+    const anchor = paragraph.getByRole('link');
 
     await expect(anchor).toHaveAttribute('href', 'https://bing.com');
   });
@@ -267,7 +267,7 @@ test.describe('inline tool link - edge cases', () => {
     await linkInput.press('Enter');
 
     // In the DOM, it might exist
-    const anchor = paragraph.locator('a');
+    const anchor = paragraph.getByRole('link');
 
     await expect(anchor).toHaveAttribute('href', 'javascript:alert(1)');
 
@@ -305,8 +305,8 @@ test.describe('inline tool link - edge cases', () => {
     await page.locator(LINK_INPUT_SELECTOR).fill('http://link2.com');
     await page.keyboard.press('Enter');
 
-    await expect(paragraph.locator('a[href="http://link1.com"]')).toBeVisible();
-    await expect(paragraph.locator('a[href="http://link2.com"]')).toBeVisible();
+    await expect(paragraph.getByRole('link', { name: 'Link1' })).toHaveAttribute('href', 'http://link1.com');
+    await expect(paragraph.getByRole('link', { name: 'Link2' })).toHaveAttribute('href', 'http://link2.com');
   });
 
   test('cMD+K on collapsed selection in plain text should NOT open tool', async ({ page }) => {
@@ -360,7 +360,7 @@ test.describe('inline tool link - edge cases', () => {
 
     // Based on logic: shortcut typically ignores collapsed selection, so nothing happens.
     // The anchor should remain, and input should not appear.
-    const anchor = paragraph.locator('a');
+    const anchor = paragraph.getByRole('link');
 
     await expect(anchor).toHaveCount(1);
     const linkInput = page.locator(LINK_INPUT_SELECTOR);

@@ -2,7 +2,6 @@ import Module from '../__module';
 import $ from '../dom';
 import * as _ from '../utils';
 import type {
-  BlockAPI,
   PasteEvent,
   PasteEventDetail,
   SanitizerConfig,
@@ -385,15 +384,13 @@ export default class Paste extends Module {
    */
   private processTool = (tool: BlockToolAdapter): void => {
     try {
-      const toolInstance = tool.create({}, {} as BlockAPI, false);
-
       if (tool.pasteConfig === false) {
         this.exceptionList.push(tool.name);
 
         return;
       }
 
-      if (!_.isFunction(toolInstance.onPaste)) {
+      if (!tool.hasOnPasteHandler) {
         return;
       }
 

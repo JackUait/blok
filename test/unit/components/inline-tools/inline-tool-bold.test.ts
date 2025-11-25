@@ -43,7 +43,7 @@ const setupEditor = (html: string): { block: HTMLElement } => {
 
   const block = document.createElement('div');
 
-  block.setAttribute('data-blok-block-tool', 'paragraph');
+  block.setAttribute('data-blok-component', 'paragraph');
   block.contentEditable = 'true';
   block.innerHTML = html;
   wrapper.appendChild(block);

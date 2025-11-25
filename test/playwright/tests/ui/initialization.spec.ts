@@ -13,8 +13,8 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const EDITOR_ROOT_SELECTOR = EDITOR_INTERFACE_SELECTOR;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
-const STYLE_TAG_SELECTOR = '#editor-js-styles';
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const STYLE_TAG_SELECTOR = '[id="editor-js-styles"]';
 
 type InitializationOptions = {
   readOnly?: boolean;
@@ -134,7 +134,8 @@ test.describe('editor basic initialization', () => {
           readOnly: true,
         });
 
-        const readOnlyParagraph = page.locator(`${PARAGRAPH_SELECTOR}[contenteditable="false"]`);
+        // The contenteditable attribute is on the paragraph element inside the block wrapper
+        const readOnlyParagraph = page.locator(`${PARAGRAPH_SELECTOR} [contenteditable="false"]`);
 
         await expect(readOnlyParagraph).toBeVisible();
       });

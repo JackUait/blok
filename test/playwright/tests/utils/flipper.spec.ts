@@ -364,11 +364,13 @@ test.describe('flipper', () => {
       },
     });
 
-    const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`, {
+    const paragraphWrapper = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`, {
       hasText: /^Workspace in classic editors/,
     });
+    // The contenteditable element is inside the block wrapper
+    const paragraph = paragraphWrapper.locator('[contenteditable]');
 
-    await expect(paragraph).toBeVisible();
+    await expect(paragraphWrapper).toBeVisible();
     await selectTextByOffset(paragraph, 0, 10);
 
     await triggerKey(paragraph, KEY_CODES.ARROW_DOWN, {

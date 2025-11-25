@@ -446,11 +446,17 @@ export const composeSanitizerConfig = (
         continue;
       }
 
+      const sourceValue = config[tag];
+
+      /**
+       * If the tag doesn't exist in base, add it from the config
+       */
       if (!Object.prototype.hasOwnProperty.call(base, tag)) {
+        base[tag] = cloneTagConfig(sourceValue as SanitizerRule);
+
         continue;
       }
 
-      const sourceValue = config[tag];
       const targetValue = base[tag];
 
       if (_.isFunction(sourceValue)) {

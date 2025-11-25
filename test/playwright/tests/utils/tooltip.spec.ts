@@ -142,7 +142,7 @@ test.describe('tooltip API', () => {
 
       const tooltip = await waitForTooltip(page);
 
-      await expect(tooltip.locator('strong')).toContainText('Bold');
+      await expect(tooltip.getByRole('strong')).toContainText('Bold');
       await expect(tooltip).toContainText('tooltip');
     });
 
@@ -514,7 +514,7 @@ test.describe('tooltip API', () => {
 
       const tooltip = await waitForTooltip(page);
 
-      await expect(tooltip.locator('em')).toContainText('Italic');
+      await expect(tooltip.getByRole('emphasis')).toContainText('Italic');
       await expect(tooltip).toContainText('content');
     });
 

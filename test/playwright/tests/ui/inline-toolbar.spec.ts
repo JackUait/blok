@@ -20,9 +20,9 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
-const HEADER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="header"]`;
-const INLINE_TOOLBAR_ITEMS_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-items"] > *`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const HEADER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`;
+const INLINE_TOOLBAR_ITEMS_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-items"] [data-blok-testid]`;
 const INLINE_TOOLBAR_CONTAINER_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-container"]`;
 const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-item"]`;
 const NESTED_EDITOR_ID = 'nested-editor';
@@ -409,12 +409,19 @@ const getInlineToolbarSnapshot = async (page: Page): Promise<ToolbarItemSnapshot
   return page.evaluate((selector) => {
     const elements = Array.from(document.querySelectorAll(selector));
 
-    return elements.map((element) => {
-      return {
-        name: element.getAttribute('data-blok-item-name'),
-        hasSeparator: element.getAttribute('data-blok-testid') === 'popover-item-separator',
-      };
-    });
+    // Filter to only include popover items and separators (exclude icons and other nested elements)
+    return elements
+      .filter((element) => {
+        const testid = element.getAttribute('data-blok-testid');
+
+        return testid === 'popover-item' || testid === 'popover-item-separator';
+      })
+      .map((element) => {
+        return {
+          name: element.getAttribute('data-blok-item-name'),
+          hasSeparator: element.getAttribute('data-blok-testid') === 'popover-item-separator',
+        };
+      });
   }, INLINE_TOOLBAR_ITEMS_SELECTOR);
 };
 
@@ -489,9 +496,11 @@ test.describe('inline toolbar', () => {
       },
     });
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+    const paragraphWrapper = page.locator(PARAGRAPH_SELECTOR);
+    // The contenteditable element is inside the block wrapper
+    const paragraph = paragraphWrapper.locator('[contenteditable]');
 
-    await expect(paragraph).toHaveCount(1);
+    await expect(paragraphWrapper).toHaveCount(1);
     const [ firstLineWrapIndex ] = await getLineWrapPositions(paragraph);
 
     expect(firstLineWrapIndex).toBeGreaterThan(4);
@@ -503,6 +512,7 @@ test.describe('inline toolbar', () => {
     await expect(toolbar).toBeVisible();
 
     const toolbarBox = await toolbar.boundingBox();
+    // Use the contenteditable element's bounding box for more accurate comparison
     const paragraphBox = await paragraph.boundingBox();
 
     expect(toolbarBox).not.toBeNull();
@@ -755,7 +765,7 @@ test.describe('inline toolbar', () => {
       },
     });
 
-    const nestedParagraph = page.locator(`[data-blok-testid="${NESTED_EDITOR_ID}"] ${PARAGRAPH_SELECTOR}`);
+    const nestedParagraph = page.locator(`[data-blok-testid="${NESTED_EDITOR_ID}"] [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
     await expect(nestedParagraph).toHaveCount(1);
 
@@ -768,10 +778,10 @@ test.describe('inline toolbar', () => {
     const input = page.locator(`[data-blok-testid="${NESTED_EDITOR_ID}"] [data-blok-testid="inline-tool-input"]`);
 
     await input.click();
-    await input.type('https://editorjs.io', { delay: 20 });
+    await input.pressSequentially('https://editorjs.io', { delay: 20 });
 
     const nestedToolbar = page.locator(
-      `[data-blok-testid="${NESTED_EDITOR_ID}"] [data-blok-interface="inline-toolbar"] > [data-blok-testid="popover"] > [data-blok-testid="popover-container"]`
+      `[data-blok-testid="${NESTED_EDITOR_ID}"] [data-blok-interface="inline-toolbar"] [data-blok-testid="popover"][data-blok-popover-opened="true"]:not([data-blok-nested="true"])`
     );
 
     await expect(nestedToolbar).toBeVisible();

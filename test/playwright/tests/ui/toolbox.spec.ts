@@ -13,8 +13,8 @@ const TEST_PAGE_URL = pathToFileURL(
 ).href;
 
 const HOLDER_ID = 'editorjs';
-const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="paragraph"]`;
-const POPOVER_SELECTOR = '[data-blok-testid="toolbox"].ce-popover';
+const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
 const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
 const SECONDARY_TITLE_SELECTOR = '[data-blok-testid="popover-item-secondary-title"]';
 

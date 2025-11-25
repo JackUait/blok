@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { NotifierOptions } from 'codex-notifier';
+import type { NotifierOptions } from '../../../../src/components/utils/codex-notifier/types';
 
 import Notifier from '../../../../src/components/utils/notifier';
 
@@ -55,7 +55,7 @@ const hoisted = vi.hoisted(() => {
 
 const { showSpy, getModuleExports, setModuleExports, resetModuleExports } = hoisted;
 
-vi.mock('codex-notifier', () => getModuleExports());
+vi.mock('../../../../src/components/utils/codex-notifier/index', () => getModuleExports());
 
 const exposeInternals = (notifier: Notifier): NotifierInternals => {
   const loadModule = (Reflect.get(notifier as object, 'loadNotifierModule') as () => Promise<CodexNotifierModule>).bind(notifier);

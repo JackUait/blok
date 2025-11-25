@@ -1167,7 +1167,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const block = element?.closest('[data-blok-block-tool="paragraph"]');
+    const block = element?.closest('[data-blok-component="paragraph"]');
 
     if (!block) {
       return;
@@ -1196,7 +1196,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const block = element?.closest('[data-blok-block-tool="paragraph"]');
+    const block = element?.closest('[data-blok-component="paragraph"]');
 
     if (!block) {
       return;

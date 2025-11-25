@@ -6,9 +6,11 @@ import playwright from 'eslint-plugin-playwright';
 import sonarjs from 'eslint-plugin-sonarjs';
 import jest from 'eslint-plugin-jest';
 
-const CLASS_SELECTOR_PATTERN = /(^|\s|[>+~,])\.[_a-zA-Z][_a-zA-Z0-9-]*/;
-const CLASS_SELECTOR_START_PATTERN = /^\s*\.[_a-zA-Z][_a-zA-Z0-9-]*/;
+const CLASS_SELECTOR_PATTERN = /\.[_a-zA-Z][_a-zA-Z0-9-]*/;
+const ID_SELECTOR_PATTERN = /#[_a-zA-Z][_a-zA-Z0-9-]*/;
+const TAG_SELECTOR_PATTERN = /^(?:div|span|p|a|button|input|form|ul|ol|li|table|tr|td|th|thead|tbody|tfoot|h[1-6]|img|nav|header|footer|main|section|article|aside|label|select|textarea|option|fieldset|legend|iframe|canvas|video|audio|source|svg|path|circle|rect|line|polyline|polygon|ellipse|g|defs|use|symbol|text|tspan|strong|em|b|i|u|s|small|mark|del|ins|sub|sup|code|pre|blockquote|hr|br|figure|figcaption|details|summary|dialog|menu|menuitem|datalist|output|progress|meter|time|address|abbr|cite|dfn|kbd|samp|var|ruby|rt|rp|bdi|bdo|wbr|area|map|track|embed|object|param|picture|portal|slot|template|noscript|script|style|link|meta|base|head|body|html)(?:\s|$|\[|:|>|\+|~|,)/i;
 const CSS_ENGINE_PATTERN = /^css(?::(light|dark))?=\s*.*\.[_a-zA-Z][_a-zA-Z0-9-]*/;
+const CSS_COMBINATOR_PATTERN = /(?:^|[^>])\s*>\s*|\s+\+\s+|\s+~\s+/;
 const SELECTOR_METHODS = new Set([
   '$',
   '$$',
@@ -52,16 +54,16 @@ const NON_CSS_PREFIXES = [
 
 const internalPlaywrightPlugin = {
   rules: {
-    'no-classname-selectors': {
+    'no-css-selectors': {
       meta: {
         type: 'problem',
         docs: {
-          description: 'Disallow CSS class selectors in Playwright E2E tests.',
+          description: 'Disallow CSS selectors in Playwright E2E tests. Prefer role- or data-attribute-based locators.',
         },
         schema: [],
         messages: {
-          noClassSelector:
-            'Avoid using CSS class selectors in Playwright tests. Prefer role- or data-blok-based locators.',
+          noCssSelector:
+            'Avoid using CSS selectors in Playwright tests. Prefer getByRole(), getByTestId(), or data-blok-* attribute locators.',
         },
       },
       create(context) {
@@ -91,23 +93,23 @@ const internalPlaywrightPlugin = {
           return null;
         };
 
-        const getStaticStringValue = (node) => {
+        const getSelectorParts = (node) => {
           if (!node) {
-            return null;
+            return [];
           }
 
           if (node.type === 'Literal' && typeof node.value === 'string') {
-            return node.value;
+            return [node.value];
           }
 
-          if (node.type === 'TemplateLiteral' && node.expressions.length === 0 && node.quasis.length === 1) {
-            return node.quasis[0].value.cooked ?? node.quasis[0].value.raw;
+          if (node.type === 'TemplateLiteral') {
+            return node.quasis.map((element) => element.value.cooked ?? element.value.raw);
           }
 
-          return null;
+          return [];
         };
 
-        const usesClassSelector = (rawSelector) => {
+        const usesCssSelector = (rawSelector) => {
           if (!rawSelector) {
             return false;
           }
@@ -128,18 +130,40 @@ const internalPlaywrightPlugin = {
               return false;
             }
 
-            if (CSS_ENGINE_PATTERN.test(segment)) {
-              const cssValue = segment.replace(/^css(?::(light|dark))?=/i, '').trim();
-
-              return (
-                CLASS_SELECTOR_START_PATTERN.test(cssValue) || CLASS_SELECTOR_PATTERN.test(cssValue)
-              );
+            // Allow pure data-attribute selectors like [data-blok-testid="foo"]
+            if (/^\[data-[a-z-]+(?:=["'][^"']*["'])?\]$/.test(segment)) {
+              return false;
             }
 
-            return (
-              CLASS_SELECTOR_START_PATTERN.test(segment) ||
-              CLASS_SELECTOR_PATTERN.test(segment)
-            );
+            // Explicit css= prefix is always a CSS selector
+            if (/^css(?::(light|dark))?=/i.test(segment)) {
+              return true;
+            }
+
+            // Strip attribute selectors to avoid false positives in values
+            const stripped = segment.replace(/\[.*?\]/g, '');
+
+            // Check for class selectors (.className)
+            if (CLASS_SELECTOR_PATTERN.test(stripped)) {
+              return true;
+            }
+
+            // Check for ID selectors (#id)
+            if (ID_SELECTOR_PATTERN.test(stripped)) {
+              return true;
+            }
+
+            // Check for tag selectors (div, span, etc.)
+            if (TAG_SELECTOR_PATTERN.test(stripped)) {
+              return true;
+            }
+
+            // Check for CSS combinators (>, +, ~)
+            if (CSS_COMBINATOR_PATTERN.test(stripped)) {
+              return true;
+            }
+
+            return false;
           });
         };
 
@@ -160,16 +184,38 @@ const internalPlaywrightPlugin = {
               return;
             }
 
-            const selectorValue = getStaticStringValue(node.arguments[0]);
+            const selectorParts = getSelectorParts(node.arguments[0]);
 
-            if (!selectorValue) {
+            if (selectorParts.length === 0) {
               return;
             }
 
-            if (usesClassSelector(selectorValue)) {
+            if (selectorParts.some((part) => usesCssSelector(part))) {
               context.report({
                 node: node.arguments[0],
-                messageId: 'noClassSelector',
+                messageId: 'noCssSelector',
+              });
+            }
+          },
+          VariableDeclarator(node) {
+            if (node.id.type !== 'Identifier' || !node.id.name.endsWith('SELECTOR')) {
+              return;
+            }
+
+            if (!node.init) {
+              return;
+            }
+
+            const selectorParts = getSelectorParts(node.init);
+
+            if (selectorParts.length === 0) {
+              return;
+            }
+
+            if (selectorParts.some((part) => usesCssSelector(part))) {
+              context.report({
+                node: node.init,
+                messageId: 'noCssSelector',
               });
             }
           },
@@ -322,7 +368,7 @@ export default [
     },
     rules: {
       // Duplicate code detection
-      'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-blok-testid,data-blok-focused' }],
+      'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-blok-testid,data-blok-focused,data-blok-opened,data-blok-component' }],
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-identical-expressions': 'error',
       // Prevent UMD module patterns
@@ -423,7 +469,7 @@ export default [
     },
     rules: {
       ...playwright.configs.recommended.rules,
-      'internal-playwright/no-classname-selectors': 'error',
+      'internal-playwright/no-css-selectors': 'error',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
       'deprecation/deprecation': 'off',

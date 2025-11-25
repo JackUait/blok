@@ -18,7 +18,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'editorjs';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`;
+const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const TOOLBAR_PLUS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const WAIT_FOR_BATCH = modificationsObserverBatchTimeout + 100;
@@ -528,7 +528,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const delimiterOption = page.getByTestId('toolbox').locator('[data-blok-testid="popover-item"][data-blok-item-name=delimiter]');
+    const delimiterOption = page.getByTestId('toolbox-popover').locator('[data-blok-testid="popover-item"][data-blok-item-name=delimiter]');
 
     await delimiterOption.click();
 
@@ -588,7 +588,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const headerOption = page.getByTestId('toolbox').locator('[data-blok-testid="popover-item"][data-blok-item-name=header]');
+    const headerOption = page.getByTestId('toolbox-popover').locator('[data-blok-testid="popover-item"][data-blok-item-name=header]');
 
     await headerOption.click();
 
@@ -777,7 +777,7 @@ test.describe('onChange callback', () => {
       ],
     });
 
-    const textarea = page.locator(`${EDITOR_INTERFACE_SELECTOR} textarea`);
+    const textarea = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="code"]`).getByRole('textbox');
 
     await textarea.click();
     await textarea.type('Some input to the textarea');

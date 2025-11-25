@@ -26,7 +26,7 @@ const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wr
 const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const CONVERT_TO_OPTION_SELECTOR = '[data-blok-testid="popover-item"][data-blok-item-name="convert-to"]';
 const NESTED_POPOVER_SELECTOR = '[data-blok-testid="popover"][data-blok-nested="true"]';
-const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] > [data-blok-testid="popover-container"]';
+const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-search-input"]`;
 const DEFAULT_WAIT_TIMEOUT = 5_000;
 const BLOCK_TUNES_WAIT_BUFFER = 500;
@@ -349,7 +349,7 @@ test.describe('ui.block-tunes', () => {
       await searchInput.waitFor({ state: 'visible' });
       await page.keyboard.press('Enter');
 
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [data-blok-block-tool="paragraph"]`);
+      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await expect(paragraph).toHaveCount(1);
       await expect(paragraph).toHaveText('Some text');
@@ -534,13 +534,13 @@ test.describe('ui.block-tunes', () => {
         .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`)
         .click();
 
-      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} .ce-header`);
+      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`);
 
       await expect(headerBlock).toHaveText('Some text');
       expect(
         await isSelectionInsideBlock(
           page,
-          `${EDITOR_INTERFACE_SELECTOR} .ce-header`
+          `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`
         )
       ).toBe(true);
     });

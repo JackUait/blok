@@ -396,7 +396,7 @@ test.describe('sanitizing', () => {
 
       await linkButton.click();
 
-      const linkInput = page.locator('input[data-blok-link-tool-input-opened]');
+      const linkInput = page.locator('[data-blok-link-tool-input-opened]');
 
       await linkInput.fill('https://example.com');
       await linkInput.press('Enter');

@@ -326,7 +326,7 @@ test.describe('copy and paste', () => {
         'text/html': '<p><b>Some text</b></p>',
       });
 
-      await expect(block.locator('strong')).toHaveText('Some text');
+      await expect(block.getByRole('strong')).toHaveText('Some text');
     });
 
     test('should paste several blocks if plain text contains new lines', async ({ page }) => {
@@ -420,8 +420,8 @@ test.describe('copy and paste', () => {
         'text/html': '<h2>First block</h2><p>Second block</p>',
       });
 
-      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="header"]`);
-      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-block-tool="paragraph"]:nth-last-of-type(1)`);
+      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`);
+      const paragraphBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]:nth-last-of-type(1)`);
 
       await expect(headerBlock).toHaveText('First block');
       await expect(paragraphBlock).toHaveText('Second block');
@@ -465,7 +465,7 @@ test.describe('copy and paste', () => {
         'text/plain': imageUrl,
       });
 
-      const image = page.locator(`${EDITOR_INTERFACE_SELECTOR} img`);
+      const image = page.getByRole('img');
 
       await expect(image).toHaveAttribute('src', imageUrl, {
         timeout: 10_000,
@@ -635,7 +635,7 @@ test.describe('copy and paste', () => {
       await expect(blocks).toHaveCount(2);
       await expect(getParagraphByIndex(page, 0)).toContainText('Copied from Word');
       await expect(secondParagraph).toContainText('Styled paragraph');
-      await expect(secondParagraph.locator('strong')).toHaveText('Styled');
+      await expect(secondParagraph.getByRole('strong')).toHaveText('Styled');
     });
     test('should not prevent default behaviour if block paste config equals false', async ({ page }) => {
       const blockToolSource = `

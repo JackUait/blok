@@ -94,7 +94,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codexteam/icons@npm:0.3.3":
+"@codexteam/icons@npm:0.3.3, @codexteam/icons@npm:^0.3.2":
   version: 0.3.3
   resolution: "@codexteam/icons@npm:0.3.3"
   checksum: 10c0/336245f38a2b2a53626a552a5f0f32c822ee1265be6827670ba157c9fa101cb23e6c75e625aa067e4577c2d805e261f4ffcb61097ea94c034c0a3c0cae7d7271
@@ -494,10 +494,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@editorjs/code@npm:2.7.0":
-  version: 2.7.0
-  resolution: "@editorjs/code@npm:2.7.0"
-  checksum: 10c0/f8b627f82739ad8de4ddeba02f31f9f95628de4770fa89db19d1c03c26f02bee7f451bc7466b783fbad7dac4d7774c8bd2ca573472f35837c6f0e7a029c3e15d
+"@editorjs/code@npm:2.9.3":
+  version: 2.9.3
+  resolution: "@editorjs/code@npm:2.9.3"
+  dependencies:
+    "@codexteam/icons": "npm:^0.3.2"
+  checksum: 10c0/e467a857cb48aeccaa6fccf3efb949f59549d0d9d031b64c7f7439b1f693299316188a27f30446cf2ce782fe4e2b4f55796677dfff150b823c89e3aebe0c7b7a
   languageName: node
   linkType: hard
 
@@ -1017,7 +1019,7 @@ __metadata:
     "@codexteam/icons": "npm:0.3.3"
     "@codexteam/shortcuts": "npm:1.2.0"
     "@editorjs/caret": "npm:1.0.3"
-    "@editorjs/code": "npm:2.7.0"
+    "@editorjs/code": "npm:2.9.3"
     "@editorjs/delimiter": "npm:1.2.0"
     "@editorjs/header": "npm:2.8.8"
     "@editorjs/paragraph": "npm:2.11.6"

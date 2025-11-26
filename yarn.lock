@@ -925,9 +925,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/eslintrc@npm:3.1.0":
-  version: 3.1.0
-  resolution: "@eslint/eslintrc@npm:3.1.0"
+"@eslint/eslintrc@npm:3.3.1":
+  version: 3.3.1
+  resolution: "@eslint/eslintrc@npm:3.3.1"
   dependencies:
     ajv: "npm:^6.12.4"
     debug: "npm:^4.3.2"
@@ -938,7 +938,7 @@ __metadata:
     js-yaml: "npm:^4.1.0"
     minimatch: "npm:^3.1.2"
     strip-json-comments: "npm:^3.1.1"
-  checksum: 10c0/5b7332ed781edcfc98caa8dedbbb843abfb9bda2e86538529c843473f580e40c69eb894410eddc6702f487e9ee8f8cfa8df83213d43a8fdb549f23ce06699167
+  checksum: 10c0/b0e63f3bc5cce4555f791a4e487bf999173fcf27c65e1ab6e7d63634d8a43b33c3693e79f192cbff486d7df1be8ebb2bd2edc6e70ddd486cbfa84a359a3e3b41
   languageName: node
   linkType: hard
 
@@ -1035,7 +1035,7 @@ __metadata:
     "@editorjs/header": "npm:2.8.8"
     "@editorjs/paragraph": "npm:2.11.7"
     "@editorjs/simple-image": "npm:1.6.0"
-    "@eslint/eslintrc": "npm:3.1.0"
+    "@eslint/eslintrc": "npm:3.3.1"
     "@playwright/test": "npm:1.56.1"
     "@types/lodash": "npm:4.17.20"
     "@types/node": "npm:18.15.11"

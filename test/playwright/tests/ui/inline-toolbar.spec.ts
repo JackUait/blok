@@ -482,7 +482,11 @@ test.describe('inline toolbar', () => {
     expect(Math.abs(toolbarLeft - selectionRect.left)).toBeLessThanOrEqual(1);
   });
 
-  test('should align with the right edge when toolbar width exceeds available space', async ({ page }) => {
+  // Firefox has different text layout behavior for selections near line wraps,
+  // causing the selection bounding box to be positioned differently than in Chromium/WebKit
+  test('should align with the right edge when toolbar width exceeds available space', async ({ page, browserName }) => {
+    // eslint-disable-next-line playwright/no-skipped-test -- conditional skip for browser-specific behavior
+    test.skip(browserName === 'firefox', 'Firefox has different text layout behavior near line wraps');
     await createEditor(page, {
       data: {
         blocks: [

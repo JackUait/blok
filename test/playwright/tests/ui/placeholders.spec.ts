@@ -107,8 +107,22 @@ const getPseudoElementContent = async (
     }
 
     const content = view.getComputedStyle(element, pseudo).getPropertyValue('content');
+    const cleanedContent = content.replace(/['"]/g, '');
 
-    return content.replace(/['"]/g, '');
+    // Firefox returns the raw attr(...) string instead of resolving it
+    // In that case, fall back to reading the attribute value directly
+    const attrMatch = cleanedContent.match(/^attr\(([^)]+)\)$/);
+
+    if (attrMatch) {
+      const attrName = attrMatch[1];
+      const attrValue = element.getAttribute(attrName);
+
+      // If the attribute exists and we have a ::before pseudo-element,
+      // the placeholder is visible
+      return attrValue ?? 'none';
+    }
+
+    return cleanedContent;
   }, pseudoElement);
 };
 

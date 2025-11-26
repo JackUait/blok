@@ -810,15 +810,45 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       await this.tryToShow();
     }
 
-    const selection = SelectionUtils.get();
-
-    if (!selection) {
-      this.popover?.activateItemByName(toolName);
+    /**
+     * If popover is available (toolbar is open), use it to activate the tool
+     */
+    if (this.popover) {
+      this.popover.activateItemByName(toolName);
 
       return;
     }
 
-    this.popover?.activateItemByName(toolName);
+    /**
+     * Toolbar couldn't open (e.g., collapsed selection for typing mode).
+     * Invoke the tool action directly.
+     */
+    this.invokeToolActionDirectly(toolName);
+  }
+
+  /**
+   * Invokes the tool's action directly without relying on the popover.
+   * Used when shortcuts are triggered but toolbar can't be shown (e.g., collapsed selection).
+   * @param toolName - name of the tool to invoke
+   */
+  private invokeToolActionDirectly(toolName: string): void {
+    const tool = this.Editor.Tools.inlineTools.get(toolName);
+
+    if (!tool) {
+      return;
+    }
+
+    const instance = tool.create();
+    const rendered = instance.render();
+    const items = Array.isArray(rendered) ? rendered : [ rendered ];
+
+    for (const item of items) {
+      if ('onActivate' in item && typeof item.onActivate === 'function') {
+        item.onActivate(item);
+
+        return;
+      }
+    }
   }
 
   /**

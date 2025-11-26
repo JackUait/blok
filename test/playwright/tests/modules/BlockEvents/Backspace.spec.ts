@@ -921,7 +921,7 @@ test.describe('backspace keydown', () => {
     const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
-    await lastParagraph.press('Home');
+    await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
     const { blocks } = await saveEditor(page);
@@ -977,7 +977,7 @@ test.describe('backspace keydown', () => {
     const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
-    await lastParagraph.press('Home');
+    await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
     const { blocks } = await saveEditor(page);
@@ -1009,7 +1009,7 @@ test.describe('backspace keydown', () => {
     const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
-    await lastParagraph.press('Home');
+    await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
     const { blocks } = await saveEditor(page);
@@ -1040,8 +1040,10 @@ test.describe('backspace keydown', () => {
 
     const targetBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-id="block2"]`);
 
+    const targetBlockContentEditable = targetBlock.locator('[contenteditable]');
+
     await targetBlock.click();
-    await targetBlock.press('Home');
+    await setCaret(targetBlockContentEditable, 0, 0);
     await targetBlock.press('Backspace');
 
     const { blocks } = await saveEditor(page);
@@ -1062,7 +1064,7 @@ test.describe('backspace keydown', () => {
     const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
-    await lastParagraph.press('Home');
+    await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
     const { blocks } = await saveEditor(page);
@@ -1078,7 +1080,7 @@ test.describe('backspace keydown', () => {
     const lastParagraph = await getParagraphLocator(page, 'last');
 
     await lastParagraph.click();
-    await lastParagraph.press('Home');
+    await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
     const { blocks } = await saveEditor(page);

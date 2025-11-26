@@ -542,9 +542,7 @@ test.describe('flipper', () => {
 
     await plugin.click();
 
-    expect(async () => {
-      await openBlockTunesWithShortcut(page, plugin);
-    }).not.toThrow();
+    await openBlockTunesWithShortcut(page, plugin);
 
     await closeBlockTunes(page);
 

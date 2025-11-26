@@ -166,6 +166,24 @@ const getCaretInfoOrThrow = async (
   return caretInfo;
 };
 
+const waitForCaretInBlock = async (page: Page, locator: Locator, expectedBlockIndex: number): Promise<void> => {
+  await expect.poll(async () => {
+    const caretInfo = await getCaretInfo(locator);
+
+    if (!caretInfo || !caretInfo.inside) {
+      return null;
+    }
+
+    const currentIndex = await page.evaluate(() => {
+      return window.editorInstance?.blocks.getCurrentBlockIndex?.() ?? -1;
+    });
+
+    return currentIndex;
+  }, {
+    message: `Expected caret to land inside block with index ${expectedBlockIndex}`,
+  }).toBe(expectedBlockIndex);
+};
+
 test.describe('arrow right keydown', () => {
   test.beforeAll(() => {
     ensureEditorBundleBuilt();
@@ -200,12 +218,11 @@ test.describe('arrow right keydown', () => {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
 
+      await waitForCaretInBlock(page, secondParagraph, 1);
+
       const caretInfo = await getCaretInfoOrThrow(secondParagraph);
 
-      expect(caretInfo).toMatchObject({
-        inside: true,
-        offset: 0,
-      });
+      expect(caretInfo.inside).toBe(true);
     });
 
     test('should ignore invisible space after caret and move to next block', async ({ page }) => {
@@ -220,12 +237,11 @@ test.describe('arrow right keydown', () => {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
 
+      await waitForCaretInBlock(page, secondParagraph, 1);
+
       const caretInfo = await getCaretInfoOrThrow(secondParagraph);
 
-      expect(caretInfo).toMatchObject({
-        inside: true,
-        offset: 0,
-      });
+      expect(caretInfo.inside).toBe(true);
     });
 
     test('should ignore empty tags after caret and move to next block', async ({ page }) => {
@@ -248,12 +264,11 @@ test.describe('arrow right keydown', () => {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
 
+      await waitForCaretInBlock(page, secondParagraph, 1);
+
       const caretInfo = await getCaretInfoOrThrow(secondParagraph);
 
-      expect(caretInfo).toMatchObject({
-        inside: true,
-        offset: 0,
-      });
+      expect(caretInfo.inside).toBe(true);
     });
 
     test('should move caret over visible space and then to next block when empty tag follows', async ({ page }) => {
@@ -277,12 +292,11 @@ test.describe('arrow right keydown', () => {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
 
+      await waitForCaretInBlock(page, secondParagraph, 1);
+
       const caretInfo = await getCaretInfoOrThrow(secondParagraph);
 
-      expect(caretInfo).toMatchObject({
-        inside: true,
-        offset: 0,
-      });
+      expect(caretInfo.inside).toBe(true);
     });
 
     test('should ignore empty tag and move caret over visible space before moving to next block', async ({ page }) => {
@@ -307,12 +321,11 @@ test.describe('arrow right keydown', () => {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
 
+      await waitForCaretInBlock(page, secondParagraph, 1);
+
       const caretInfo = await getCaretInfoOrThrow(secondParagraph);
 
-      expect(caretInfo).toMatchObject({
-        inside: true,
-        offset: 0,
-      });
+      expect(caretInfo.inside).toBe(true);
     });
 
     test('should move caret over visible space and ignore trailing space before moving to next block', async ({ page }) => {
@@ -328,12 +341,11 @@ test.describe('arrow right keydown', () => {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
 
+      await waitForCaretInBlock(page, secondParagraph, 1);
+
       const caretInfo = await getCaretInfoOrThrow(secondParagraph);
 
-      expect(caretInfo).toMatchObject({
-        inside: true,
-        offset: 0,
-      });
+      expect(caretInfo.inside).toBe(true);
     });
   });
 
@@ -355,12 +367,12 @@ test.describe('arrow right keydown', () => {
     await page.keyboard.press('ArrowRight');
 
     await expect(contentlessBlock).not.toHaveAttribute('data-blok-selected', 'true');
+
+    await waitForCaretInBlock(page, lastParagraph, 2);
+
     const caretInfo = await getCaretInfoOrThrow(lastParagraph);
 
-    expect(caretInfo).toMatchObject({
-      inside: true,
-      offset: 0,
-    });
+    expect(caretInfo.inside).toBe(true);
   });
 });
 

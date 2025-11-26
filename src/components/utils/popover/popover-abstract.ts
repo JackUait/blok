@@ -230,6 +230,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     this.toggleItemActivenessIfNeeded(item);
 
+    /**
+     * Refresh item's active state based on isActive() callback.
+     * This is needed for inline tools that dynamically determine their active state.
+     */
+    this.refreshItemActiveState(item);
+
     if (item.closeOnActivate === true) {
       this.hide();
 
@@ -284,6 +290,29 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     itemsInToggleGroup.forEach(item => {
       item.toggleActive(item === clickedItem);
     });
+  }
+
+  /**
+   * Refreshes the item's active state based on its isActive callback.
+   * This is useful for items that determine their active state dynamically (e.g., inline tools).
+   * @param item - popover item to refresh
+   */
+  private refreshItemActiveState(item: PopoverItem): void {
+    if (!(item instanceof PopoverItemDefault)) {
+      return;
+    }
+
+    /**
+     * Only refresh if the item doesn't use toggle (which is handled by toggleItemActivenessIfNeeded)
+     */
+    if (item.toggle !== undefined) {
+      return;
+    }
+
+    /**
+     * Update the visual state based on the isActive callback
+     */
+    item.toggleActive(item.isActive);
   }
 
   /**

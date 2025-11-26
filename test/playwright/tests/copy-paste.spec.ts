@@ -200,6 +200,18 @@ const pasteFiles = async (page: Page, locator: Locator, files: ClipboardFileDesc
       clipboardData: dataTransfer,
     });
 
+    /**
+     * Firefox doesn't always honor the clipboardData passed to the constructor.
+     * We force-set it using Object.defineProperty if it differs from our DataTransfer.
+     */
+    if (pasteEvent.clipboardData !== dataTransfer) {
+      Object.defineProperty(pasteEvent, 'clipboardData', {
+        value: dataTransfer,
+        writable: false,
+        configurable: true,
+      });
+    }
+
     element.dispatchEvent(pasteEvent);
   }, files);
 };
@@ -263,17 +275,49 @@ const withClipboardEvent = async (
       }
 
       const dataTransfer = new DataTransfer();
+
+      /**
+       * Firefox doesn't properly expose data set via setData() when reading
+       * from the DataTransfer after event dispatch. We wrap setData to capture
+       * the data directly as it's being set by the event handler.
+       */
+      const originalSetData = dataTransfer.setData.bind(dataTransfer);
+
+      dataTransfer.setData = (format: string, data: string): void => {
+        clipboardStore[format] = data;
+        originalSetData(format, data);
+      };
+
       const event = new ClipboardEvent(type, {
         bubbles: true,
         cancelable: true,
         clipboardData: dataTransfer,
       });
 
+      /**
+       * Firefox doesn't always honor the clipboardData passed to the constructor.
+       * We force-set it using Object.defineProperty if it differs from our DataTransfer.
+       */
+      if (event.clipboardData !== dataTransfer) {
+        Object.defineProperty(event, 'clipboardData', {
+          value: dataTransfer,
+          writable: false,
+          configurable: true,
+        });
+      }
+
       element.dispatchEvent(event);
 
       setTimeout(() => {
+        /**
+         * Also try reading from DataTransfer directly (works in Chromium).
+         * This ensures we capture any data that might have been set without
+         * going through our wrapped setData (though this shouldn't happen).
+         */
         Array.from(dataTransfer.types).forEach((format) => {
-          clipboardStore[format] = dataTransfer.getData(format);
+          if (!(format in clipboardStore)) {
+            clipboardStore[format] = dataTransfer.getData(format);
+          }
         });
 
         resolve(clipboardStore);

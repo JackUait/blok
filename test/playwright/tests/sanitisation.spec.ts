@@ -152,6 +152,38 @@ const paste = async (page: Page, locator: Locator, data: Record<string, string>)
 };
 
 /**
+ * Set caret to beginning of element
+ * @param locator - The locator for the element
+ */
+const setCaretToStart = async (locator: Locator): Promise<void> => {
+  await locator.evaluate((element) => {
+    const el = element as HTMLElement;
+    const doc = el.ownerDocument;
+    const selection = doc.getSelection();
+
+    if (!selection) {
+      throw new Error('Selection not available');
+    }
+
+    const range = doc.createRange();
+
+    // Find first text node or use the element itself
+    const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const firstTextNode = walker.nextNode();
+
+    if (firstTextNode) {
+      range.setStart(firstTextNode, 0);
+    } else {
+      range.setStart(el, 0);
+    }
+    range.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+};
+
+/**
  * Select all text in a block
  * @param locator - The locator for the block element
  */
@@ -312,7 +344,7 @@ test.describe('sanitizing', () => {
     const lastParagraph = getParagraphByBlockId(page, 'paragraph');
 
     await lastParagraph.click();
-    await page.keyboard.press('Home');
+    await setCaretToStart(lastParagraph);
     await page.keyboard.press('Backspace');
 
     const { blocks } = await saveEditor(page);
@@ -756,7 +788,7 @@ test.describe('sanitizing', () => {
       const lastParagraph = getParagraphByBlockId(page, 'block2');
 
       await lastParagraph.click();
-      await page.keyboard.press('Home');
+      await setCaretToStart(lastParagraph);
       await page.keyboard.press('Backspace');
 
       const { blocks } = await saveEditor(page);
@@ -787,7 +819,7 @@ test.describe('sanitizing', () => {
       const lastParagraph = getParagraphByBlockId(page, 'block2');
 
       await lastParagraph.click();
-      await page.keyboard.press('Home');
+      await setCaretToStart(lastParagraph);
       await page.keyboard.press('Backspace');
 
       const { blocks } = await saveEditor(page);

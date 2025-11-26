@@ -1180,11 +1180,11 @@ __metadata:
     "@playwright/test": "npm:1.57.0"
     "@types/lodash": "npm:4.17.21"
     "@types/node": "npm:22.19.0"
-    "@types/sortablejs": "npm:^1.15.9"
+    "@types/sortablejs": "npm:1.15.9"
     "@typescript-eslint/eslint-plugin": "npm:8.48.0"
     "@typescript-eslint/parser": "npm:8.48.0"
     "@vitest/coverage-v8": "npm:4.0.14"
-    eslint: "npm:^9.39.1"
+    eslint: "npm:9.39.1"
     eslint-plugin-import: "npm:2.32.0"
     eslint-plugin-jest: "npm:29.2.1"
     eslint-plugin-jsdoc: "npm:61.4.1"
@@ -1194,19 +1194,19 @@ __metadata:
     jscpd: "npm:4.0.5"
     jsdom: "npm:27.2.0"
     lodash: "npm:4.17.21"
-    nanoid: "npm:4.0.2"
+    nanoid: "npm:5.1.6"
     postcss-apply: "npm:0.12.0"
     postcss-nested: "npm:4.1.2"
     postcss-preset-env: "npm:8.3.0"
     rollup-plugin-license: "npm:3.0.1"
-    sortablejs: "npm:^1.15.6"
+    sortablejs: "npm:1.15.6"
     stylelint: "npm:15.4.0"
     tslint: "npm:6.1.1"
     typescript: "npm:5.0.3"
     vite: "npm:4.2.1"
     vite-plugin-css-injected-by-js: "npm:3.1.0"
     vitest: "npm:4.0.14"
-    yaml: "npm:^2.8.1"
+    yaml: "npm:2.8.1"
   languageName: unknown
   linkType: soft
 
@@ -1600,7 +1600,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/sortablejs@npm:^1.15.9":
+"@types/sortablejs@npm:1.15.9":
   version: 1.15.9
   resolution: "@types/sortablejs@npm:1.15.9"
   checksum: 10c0/d8ddf3da28a84a023d3003aa64b6495a7112e3945ac05d937afdb7c182b04a1025f126b2977ed8d5a9ede229b4bab85f037efbc97fde8a71128e056ac3122fa9
@@ -3407,7 +3407,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint@npm:^9.39.1":
+"eslint@npm:9.39.1":
   version: 9.39.1
   resolution: "eslint@npm:9.39.1"
   dependencies:
@@ -5322,12 +5322,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nanoid@npm:4.0.2":
-  version: 4.0.2
-  resolution: "nanoid@npm:4.0.2"
+"nanoid@npm:5.1.6":
+  version: 5.1.6
+  resolution: "nanoid@npm:5.1.6"
   bin:
     nanoid: bin/nanoid.js
-  checksum: 10c0/3fec62f422bc4727918eda0e7aa43e9cbb2e759be72813a0587b9dac99727d3c7ad972efce7f4f1d4cb5c7c554136a1ec3b1043d1d91d28d818d6acbe98200e5
+  checksum: 10c0/27b5b055ad8332cf4f0f9f6e2a494aa7e5ded89df4cab8c8490d4eabefe72c4423971d2745d22002868b1d50576a5e42b7b05214733b19f576382323282dd26e
   languageName: node
   linkType: hard
 
@@ -7047,7 +7047,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sortablejs@npm:^1.15.6":
+"sortablejs@npm:1.15.6":
   version: 1.15.6
   resolution: "sortablejs@npm:1.15.6"
   checksum: 10c0/a75dcf53e5613b4106d46434e40114830f9c6449b3b439bc1925c1fbf0a0c1f044727a8f3d4ae1759fa7beaa33e7eb0c4a413e6aa88d6026577b59f3658ff727
@@ -8258,7 +8258,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yaml@npm:^2.8.1":
+"yaml@npm:2.8.1":
   version: 2.8.1
   resolution: "yaml@npm:2.8.1"
   bin:

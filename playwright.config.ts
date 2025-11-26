@@ -31,6 +31,20 @@ export default defineConfig({
     video: 'retain-on-failure',
     testIdAttribute: 'data-blok-testid',
   },
+  projects: [
+    {
+      name: 'chromium',
+      use: { browserName: 'chromium' },
+    },
+    {
+      name: 'firefox',
+      use: { browserName: 'firefox' },
+    },
+    {
+      name: 'webkit',
+      use: { browserName: 'webkit' },
+    },
+  ],
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : AMOUNT_OF_LOCAL_WORKERS,
 });

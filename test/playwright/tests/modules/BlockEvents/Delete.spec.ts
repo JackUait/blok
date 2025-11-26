@@ -369,10 +369,11 @@ test.describe('delete keydown', () => {
       await createParagraphEditor(page, ['1 ', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
+      const paragraphContent = firstParagraph.locator('[contenteditable]');
 
       await firstParagraph.click();
-      await firstParagraph.press('Home');
-      await firstParagraph.press('ArrowRight');
+      // Position caret after '1', before the trailing space
+      await setCaret(paragraphContent, 0, 1);
       await firstParagraph.press('Delete');
 
       const lastBlock = await getLastBlock(page);

@@ -1101,7 +1101,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
           target,
         ];
 
-        return changedNodes.some((node) => {
+        return changedNodes.every((node) => {
           const elementToCheck: Element | null = !$.isElement(node)
             ? node.parentElement ?? null
             : node;
@@ -1157,11 +1157,20 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       const { mutations } = payload;
 
       const toolElement = this.toolRenderedElement;
-      const mutationBelongsToBlock = toolElement !== null
-        && mutations.some(record => isMutationBelongsToElement(record, toolElement));
 
-      if (mutationBelongsToBlock) {
-        this.didMutated(mutations);
+      if (toolElement === null) {
+        return;
+      }
+
+      /**
+       * Filter mutations to only include those that belong to this block.
+       * Previously, all mutations were passed when any belonged to the block,
+       * which could include mutations from other parts of the editor.
+       */
+      const blockMutations = mutations.filter(record => isMutationBelongsToElement(record, toolElement));
+
+      if (blockMutations.length > 0) {
+        this.didMutated(blockMutations);
       }
     };
 

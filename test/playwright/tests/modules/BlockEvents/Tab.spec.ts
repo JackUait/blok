@@ -267,7 +267,7 @@ test.describe('tab keydown', () => {
       ({ selector }) => {
         const element = document.querySelector(selector);
 
-        return element?.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true' ?? false;
+        return element?.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true';
       },
       { selector: CONTENTLESS_TOOL_SELECTOR }
     );
@@ -348,7 +348,7 @@ test.describe('shift+Tab keydown', () => {
       ({ selector }) => {
         const element = document.querySelector(selector);
 
-        return element?.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true' ?? false;
+        return element?.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true';
       },
       { selector: CONTENTLESS_TOOL_SELECTOR }
     );

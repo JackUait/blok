@@ -1038,7 +1038,7 @@ __metadata:
     "@eslint/eslintrc": "npm:3.3.1"
     "@playwright/test": "npm:1.57.0"
     "@types/lodash": "npm:4.17.21"
-    "@types/node": "npm:18.15.11"
+    "@types/node": "npm:22.19.0"
     "@types/sortablejs": "npm:^1.15.9"
     "@vitest/coverage-v8": "npm:1.6.1"
     "@vitest/ui": "npm:1.6.1"
@@ -1439,10 +1439,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:18.15.11":
-  version: 18.15.11
-  resolution: "@types/node@npm:18.15.11"
-  checksum: 10c0/670deb1a9daa812dc86b1e8964c0c6b0bef7c32672833c10578c1e5dd2682f2bd99b86d814fde86a5dd4a3da48ea039f41db30a835b245aa7c34c62fa1f23f0d
+"@types/node@npm:22.19.0":
+  version: 22.19.0
+  resolution: "@types/node@npm:22.19.0"
+  dependencies:
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/66b98fcd38efb4ae58c628d61fed2b8f17c830eb665d8bceabc4174cae1dd81b8e4caac4c70d7dc929f9f76a3dc46cb21f480e904d0b898297bd12c0a2d1571a
   languageName: node
   linkType: hard
 
@@ -8132,6 +8134,13 @@ __metadata:
     has-symbols: "npm:^1.1.0"
     which-boxed-primitive: "npm:^1.1.1"
   checksum: 10c0/7dbd35ab02b0e05fe07136c72cb9355091242455473ec15057c11430129bab38b7b3624019b8778d02a881c13de44d63cd02d122ee782fb519e1de7775b5b982
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10c0/c01ed51829b10aa72fc3ce64b747f8e74ae9b60eafa19a7b46ef624403508a54c526ffab06a14a26b3120d055e1104d7abe7c9017e83ced038ea5cf52f8d5e04
   languageName: node
   linkType: hard
 

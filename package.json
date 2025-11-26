@@ -65,7 +65,7 @@
     "@editorjs/simple-image": "1.6.0",
     "@eslint/eslintrc": "3.3.1",
     "@playwright/test": "1.57.0",
-    "@types/node": "18.15.11",
+    "@types/node": "22.19.0",
     "@types/sortablejs": "^1.15.9",
     "@vitest/coverage-v8": "1.6.1",
     "@vitest/ui": "1.6.1",

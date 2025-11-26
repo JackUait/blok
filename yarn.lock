@@ -1045,7 +1045,6 @@ __metadata:
     "@types/node": "npm:22.19.0"
     "@types/sortablejs": "npm:^1.15.9"
     "@vitest/coverage-v8": "npm:4.0.14"
-    core-js: "npm:3.30.0"
     eslint: "npm:^8.57.0"
     eslint-config-codex: "npm:1.7.1"
     eslint-plugin-chai-friendly: "npm:0.7.2"
@@ -2453,13 +2452,6 @@ __metadata:
     "@babel/parser": "npm:^7.6.0"
     "@babel/types": "npm:^7.6.1"
   checksum: 10c0/15129adef19b1af2c3ade8bd38f97c34781bf461472a30ab414384b28d072be83070c8d2175787c045ef7c222c415101ae609936e7903427796a0c0eca8449fd
-  languageName: node
-  linkType: hard
-
-"core-js@npm:3.30.0":
-  version: 3.30.0
-  resolution: "core-js@npm:3.30.0"
-  checksum: 10c0/b96be6526e025f8b3382d6e7823c406987425c72d24efb27f64d7c4c38372b47dddb80ccf44cf4e198ab27765e8fa680f30e251b4758426701f252c2a0c49b4e
   languageName: node
   linkType: hard
 

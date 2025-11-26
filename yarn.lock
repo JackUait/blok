@@ -549,12 +549,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@editorjs/paragraph@npm:2.11.6":
-  version: 2.11.6
-  resolution: "@editorjs/paragraph@npm:2.11.6"
+"@editorjs/paragraph@npm:2.11.7":
+  version: 2.11.7
+  resolution: "@editorjs/paragraph@npm:2.11.7"
   dependencies:
     "@codexteam/icons": "npm:^0.0.4"
-  checksum: 10c0/cd67f7b2264b91fb4d6d146308b6837a4d8442c7e6e09853e13f643fca06d123b4f71208cd39b937611984b6932945d16b0fd0ddb1abca33d5bea5d915d58184
+  checksum: 10c0/0a81d900196378fb8603a5a8bbc91a65aa3eae78612dddf4fdb1f039eaafca4a9b2e13bf9607faed413cbd7f42bb7d287cdafdd9e08117c825808df907de17f3
   languageName: node
   linkType: hard
 
@@ -1024,7 +1024,7 @@ __metadata:
     "@editorjs/code": "npm:2.9.3"
     "@editorjs/delimiter": "npm:1.4.2"
     "@editorjs/header": "npm:2.8.8"
-    "@editorjs/paragraph": "npm:2.11.6"
+    "@editorjs/paragraph": "npm:2.11.7"
     "@editorjs/simple-image": "npm:1.4.1"
     "@eslint/eslintrc": "npm:3.1.0"
     "@playwright/test": "npm:1.56.1"

@@ -115,6 +115,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@codexteam/icons@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "@codexteam/icons@npm:0.0.6"
+  checksum: 10c0/b29d2f4b931f763999354781199ab60ada31bc1b8c419df916d4e5857a68c73e5b8615a1c5b72434367e23f95c75e62c1053090f6b34d52d66add9d686a950cb
+  languageName: node
+  linkType: hard
+
 "@codexteam/shortcuts@npm:1.2.0":
   version: 1.2.0
   resolution: "@codexteam/shortcuts@npm:1.2.0"
@@ -558,10 +565,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@editorjs/simple-image@npm:1.4.1":
-  version: 1.4.1
-  resolution: "@editorjs/simple-image@npm:1.4.1"
-  checksum: 10c0/f3a740a72cf1bf4757ff4d318ef6a350af701f41f49379fcd3e363e38b96d76a5e3d72662567437a98a9eca74712a957cea5e64056062664ba7468b83aabc74b
+"@editorjs/simple-image@npm:1.6.0":
+  version: 1.6.0
+  resolution: "@editorjs/simple-image@npm:1.6.0"
+  dependencies:
+    "@codexteam/icons": "npm:^0.0.6"
+  checksum: 10c0/b178e05e785e60dab8fc6985e940e3a952b8f2b4266402f043ecbaa1046590bb61f47192d486682cb1a755883ed2664c62cd8587572a2223c3487d3a5ca701be
   languageName: node
   linkType: hard
 
@@ -1025,7 +1034,7 @@ __metadata:
     "@editorjs/delimiter": "npm:1.4.2"
     "@editorjs/header": "npm:2.8.8"
     "@editorjs/paragraph": "npm:2.11.7"
-    "@editorjs/simple-image": "npm:1.4.1"
+    "@editorjs/simple-image": "npm:1.6.0"
     "@eslint/eslintrc": "npm:3.1.0"
     "@playwright/test": "npm:1.56.1"
     "@types/lodash": "npm:4.17.20"

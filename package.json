@@ -58,7 +58,7 @@
     "@editorjs/delimiter": "1.4.2",
     "@editorjs/header": "2.8.8",
     "@editorjs/paragraph": "2.11.7",
-    "@editorjs/simple-image": "1.4.1",
+    "@editorjs/simple-image": "1.6.0",
     "@eslint/eslintrc": "3.1.0",
     "@playwright/test": "1.56.1",
     "@types/node": "18.15.11",

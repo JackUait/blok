@@ -115,10 +115,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codexteam/shortcuts@npm:1.1.1":
-  version: 1.1.1
-  resolution: "@codexteam/shortcuts@npm:1.1.1"
-  checksum: 10c0/ad4f7c57fe8955ea0b590cf7806641ef697997597977a84655977f7ce0e46c27bd7635e2038961af75e91371f1a88009136f3ac6e319afe98db505e5bb8346ab
+"@codexteam/shortcuts@npm:1.2.0":
+  version: 1.2.0
+  resolution: "@codexteam/shortcuts@npm:1.2.0"
+  checksum: 10c0/0afb0ca49e04a89b2ad9e86a20fd8ffbb2f08a2a3f2f3a93b82afbe2875bfadaa591d95bd334d2231d3ac979f430d70c0f21cafd9937d014710d81a308fc8585
   languageName: node
   linkType: hard
 
@@ -1024,7 +1024,7 @@ __metadata:
     "@axe-core/playwright": "npm:4.11.0"
     "@babel/register": "npm:7.28.3"
     "@codexteam/icons": "npm:0.3.3"
-    "@codexteam/shortcuts": "npm:1.1.1"
+    "@codexteam/shortcuts": "npm:1.2.0"
     "@editorjs/caret": "npm:1.0.1"
     "@editorjs/code": "npm:2.7.0"
     "@editorjs/delimiter": "npm:1.2.0"

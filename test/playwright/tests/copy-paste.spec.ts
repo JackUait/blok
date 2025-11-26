@@ -19,7 +19,7 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 
 const SIMPLE_IMAGE_TOOL_UMD_PATH = path.resolve(
   __dirname,
-  '../../../node_modules/@editorjs/simple-image/dist/bundle.js'
+  '../../../node_modules/@editorjs/simple-image/dist/simple-image.umd.js'
 );
 
 const HOLDER_ID = 'editorjs';

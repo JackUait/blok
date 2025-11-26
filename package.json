@@ -67,8 +67,7 @@
     "@playwright/test": "1.57.0",
     "@types/node": "22.19.0",
     "@types/sortablejs": "^1.15.9",
-    "@vitest/coverage-v8": "1.6.1",
-    "@vitest/ui": "1.6.1",
+    "@vitest/coverage-v8": "4.0.14",
     "core-js": "3.30.0",
     "eslint": "^8.57.0",
     "eslint-config-codex": "1.7.1",
@@ -91,7 +90,7 @@
     "typescript": "5.0.3",
     "vite": "4.2.1",
     "vite-plugin-css-injected-by-js": "3.1.0",
-    "vitest": "1.6.1"
+    "vitest": "4.0.14"
   },
   "dependencies": {
     "@editorjs/caret": "1.0.3",

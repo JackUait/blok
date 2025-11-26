@@ -34,7 +34,7 @@ export class PopoverItemDefault extends PopoverItem {
    * Item title
    */
   public get title(): string | undefined {
-    // eslint-disable-next-line deprecation/deprecation -- TODO: remove this once label is removed
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
     return this.params.title || this.params.label;
   }
 
@@ -178,7 +178,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     el.appendChild(this.nodes.icon);
 
-    // eslint-disable-next-line deprecation/deprecation -- TODO: remove this once label is removed
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
     const title = params.title || params.label;
 
     if (title !== undefined) {

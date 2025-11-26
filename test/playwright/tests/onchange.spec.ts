@@ -157,7 +157,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
         }
 
         if (!toolClass && tool.classCode) {
-          // eslint-disable-next-line no-new-func -- evaluated in browser context to reconstruct tool class
+
           toolClass = new Function(`return (${tool.classCode});`)();
         }
 
@@ -204,7 +204,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
         try {
           return JSON.parse(JSON.stringify(value));
-        } catch (error) {
+        } catch (_error) {
           return value;
         }
       };

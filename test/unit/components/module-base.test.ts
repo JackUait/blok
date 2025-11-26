@@ -1,4 +1,4 @@
-/* eslint-disable jsdoc/require-jsdoc */
+ 
 import { describe, it, expect, vi } from 'vitest';
 
 import Module from '../../../src/components/__module';

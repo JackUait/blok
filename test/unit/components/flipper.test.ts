@@ -68,7 +68,7 @@ describe('Flipper', () => {
         value: originalScrollIntoViewIfNeeded,
       });
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function -- restoring prototype to original state
+       
       Object.defineProperty(HTMLElement.prototype, 'scrollIntoViewIfNeeded', {
         configurable: true,
         value: () => {},

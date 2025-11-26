@@ -101,9 +101,9 @@ describe('InlineToolbar', () => {
   const CONTENT_RECT_RIGHT = 1000;
   const OVERFLOW_ADJUSTMENT = 800;
 
-  // eslint-disable-next-line no-restricted-syntax -- Test setup variables need to be reassigned in beforeEach
+   
   let inlineToolbar: InlineToolbar;
-  // eslint-disable-next-line no-restricted-syntax -- Test setup variables need to be reassigned in beforeEach
+   
   let mockEditor: {
     BlockManager: {
       getBlock: ReturnType<typeof vi.fn>;
@@ -223,7 +223,7 @@ describe('InlineToolbar', () => {
     // Mock requestIdleCallback and setTimeout to execute immediately but asynchronously to avoid recursion in constructor
     vi.useFakeTimers();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (global as any).requestIdleCallback = vi.fn((callback: () => void) => {
       setTimeout(callback, 0);
 

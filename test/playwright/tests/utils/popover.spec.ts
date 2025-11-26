@@ -121,7 +121,7 @@ const createEditorWithBlocks = async (
   await resetEditor(page);
   await page.evaluate(
     async ({ holderId, editorBlocks, editorTools, editorTunes, PopoverItemTypeValues }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- augment window object in test environment
+       
       const testWindow = window as typeof window & Record<string, any>;
 
       testWindow.edjsTestActivations = [];
@@ -205,7 +205,7 @@ const createEditorWithBlocks = async (
 
           if (typeof toolConfig === 'object' && toolConfig !== null && 'fromGlobal' in toolConfig) {
             const { fromGlobal, config, ...rest } = toolConfig as GlobalToolConfig;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- access runtime global object
+             
             const runtimeWindow = window as typeof window & Record<string, any>;
             const globalTool = runtimeWindow[fromGlobal];
 
@@ -254,7 +254,7 @@ const createEditorWithBlocks = async (
               value: isTune ?? true,
               configurable: true,
             });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- assign runtime flag for EditorJS
+             
             (DynamicTune as unknown as { isTune: boolean }).isTune = isTune ?? true;
 
             return [toolName, { class: DynamicTune } ] as const;
@@ -275,7 +275,7 @@ const createEditorWithBlocks = async (
             value: isTune ?? true,
             configurable: true,
           });
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- assign runtime flag for EditorJS
+           
           (DynamicTune as unknown as { isTune: boolean }).isTune = isTune ?? true;
 
           return [toolName, { class: DynamicTune } ] as const;

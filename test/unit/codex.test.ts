@@ -5,7 +5,7 @@ import type { EditorModules } from '../../src/types-internal/editor-modules';
 
 // Mock VERSION global variable
 declare global {
-  // eslint-disable-next-line no-var -- TypeScript requires 'var' for global declarations
+   
   var VERSION: string;
 }
 

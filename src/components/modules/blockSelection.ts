@@ -511,7 +511,7 @@ export default class BlockSelection extends Module {
        * @see https://developer.mozilla.org/ru/docs/Web/API/KeyboardEvent/key
        */
       Caret.insertContentAtCaretPosition(eventKey.length > 1 ? '' : eventKey);
-    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+     
     }, 20)();
   }
 }

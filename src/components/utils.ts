@@ -250,7 +250,7 @@ const _log = (
 
   try {
     consoleRef[type](...callArguments);
-  } catch (ignored) {}
+  } catch (_ignored) {}
 };
 
 /**
@@ -381,7 +381,7 @@ export const isPrintableKey = (keyCode: number): boolean => {
  * @param {ArrayLike} collection - collection to convert to array
  * @returns {Array}
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export const array = (collection: ArrayLike<any>): any[] => {
   return lodashToArray(collection);
 };
@@ -569,7 +569,7 @@ export const getValidUrl = (url: string): string => {
     const urlObject = new URL(url);
 
     return urlObject.href;
-  } catch (e) {
+  } catch (_e) {
     // do nothing but handle below
   }
 
@@ -865,6 +865,7 @@ export const isIosDevice = (() => {
   // Only access deprecated platform property when necessary
   const hasTouchSupport = (navigatorRef.maxTouchPoints ?? 0) > 1;
   const getLegacyPlatform = (): string | undefined =>
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for older browsers that don't support User-Agent Client Hints
     (navigatorRef as Navigator & { platform?: string })['platform'];
   const platformHint = platform !== undefined && platform !== '' ? platform : undefined;
   const platformValue = hasTouchSupport ? platformHint ?? getLegacyPlatform() : undefined;

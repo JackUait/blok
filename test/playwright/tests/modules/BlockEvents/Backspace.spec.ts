@@ -529,7 +529,7 @@ test.describe('backspace keydown', () => {
 
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const editor = window.editorInstance as any;
 
         if (blockId && editor && editor.module && editor.module.blockManager) {
@@ -623,7 +623,7 @@ test.describe('backspace keydown', () => {
 
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const editor = window.editorInstance as any;
 
         if (blockId && editor && editor.module && editor.module.blockManager) {
@@ -714,7 +714,7 @@ test.describe('backspace keydown', () => {
 
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const editor = window.editorInstance as any;
 
         if (blockId && editor && editor.module && editor.module.blockManager) {
@@ -805,7 +805,7 @@ test.describe('backspace keydown', () => {
 
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const editor = window.editorInstance as any;
 
         if (blockId && editor && editor.module && editor.module.blockManager) {

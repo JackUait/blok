@@ -419,7 +419,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
             this.api.caret.setToBlock(newBlock, 'end');
 
             return;
-          } catch (error) {}
+          } catch (_error) {}
         }
 
         await this.insertNewBlock(toolName);

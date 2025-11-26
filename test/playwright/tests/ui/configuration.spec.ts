@@ -91,7 +91,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   await page.evaluate(
     async ({ holderId, editorData, editorConfig, toolDefinitions }) => {
       const reviveToolClass = (source: string): unknown => {
-        // eslint-disable-next-line no-new-func -- revive tool class inside the page context
+
         return new Function(`return (${source});`)();
       };
 
@@ -202,7 +202,7 @@ const insertFailingToolAndTriggerSave = async (page: Page): Promise<void> => {
 
     try {
       await editor.save();
-    } catch (error) {
+    } catch (_error) {
       // Intentionally swallow to observe console logging side effects
     }
   });

@@ -202,7 +202,7 @@ export const findNbspAfterEmptyInline = (root: HTMLElement): { node: Text; offse
     try {
       pathRange.setStart(caretNode, caretOffset);
       pathRange.setEnd(nextTextNode, 0);
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
 

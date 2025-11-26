@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, jsdoc/require-jsdoc */
+ 
 import { expect, test } from '@playwright/test';
 import BlockTuneAdapter from '../../../../src/components/tools/tune';
 import { ToolType } from '../../../../types/tools/adapters/tool-type';

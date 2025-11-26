@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import Module from '../../__module';
 import $ from '../../dom';
 import SelectionUtils from '../../selection';
@@ -51,7 +51,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   /**
    * Margin above/below the Toolbar
    */
-  // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+
   private readonly toolbarVerticalMargin: number = _.isMobileScreen() ? 20 : 6;
 
   /**
@@ -244,7 +244,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     for (const toolInstance of this.tools.values()) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+
       toolInstance;
     }
 
@@ -600,7 +600,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
     try {
       this.enableShortcuts(toolName, shortcut);
-    } catch (e) {
+    } catch (_e) {
       // Ignore errors when enabling shortcuts
     }
   }

@@ -20,7 +20,7 @@ export default class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBl
    * @param block - Block API object
    */
   public create(data: BlockTuneData, block: BlockAPI): IBlockTune {
-    // eslint-disable-next-line new-cap
+     
     const BlockTuneClass = this.constructable as BlockTuneConstructable;
 
     return new BlockTuneClass({

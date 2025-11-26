@@ -151,7 +151,7 @@ export default class Core {
      * Height of Editor's bottom area that allows to set focus on the last Block
      * @type {number}
      */
-    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+     
     this.config.minHeight = this.config.minHeight !== undefined ? this.config.minHeight : 300;
 
     /**
@@ -173,9 +173,9 @@ export default class Core {
     this.config.tools = this.config.tools || {};
     this.config.i18n = this.config.i18n || {};
     this.config.data = this.config.data || { blocks: [] };
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
+     
     this.config.onReady = this.config.onReady || ((): void => {});
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
+     
     this.config.onChange = this.config.onChange || ((): void => {});
     this.config.inlineToolbar = this.config.inlineToolbar !== undefined ? this.config.inlineToolbar : true;
 

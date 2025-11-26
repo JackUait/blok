@@ -277,7 +277,7 @@ export default class Paste extends Module {
         this.insertEditorJSData(JSON.parse(editorJSData));
 
         return;
-      } catch (e) { } // Do nothing and continue execution as usual if error appears
+      } catch (_e) { } // Do nothing and continue execution as usual if error appears
     }
 
     /** Add all tags that can be substituted to sanitizer configuration */
@@ -638,7 +638,7 @@ export default class Paste extends Module {
 
     const foundConfig = Object
       .entries(this.toolsFiles)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       .find(([toolName, { mimeTypes, extensions } ]) => {
         const [fileType, fileSubtype] = file.type.split('/');
 

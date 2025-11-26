@@ -51,10 +51,10 @@ class SomePlugin {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+     
     const context = globalThis as typeof globalThis & { __pluginHandlerCallCount?: number };
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+     
     context.__pluginHandlerCallCount = (context.__pluginHandlerCallCount ?? 0) + 1;
   }
 
@@ -164,7 +164,7 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
       window.editorInstance = editor;
       await editor.isReady;
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       (globalThis as typeof globalThis & { __pluginHandlerCallCount?: number }).__pluginHandlerCallCount = 0;
     },
     {
@@ -275,17 +275,17 @@ const selectTextByOffset = async (locator: Locator, start: number, end: number):
 
 const resetPluginHandlerCallCount = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+     
     (globalThis as typeof globalThis & { __pluginHandlerCallCount?: number }).__pluginHandlerCallCount = 0;
   });
 };
 
 const getPluginHandlerCallCount = async (page: Page): Promise<number> => {
   return await page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+     
     const context = globalThis as typeof globalThis & { __pluginHandlerCallCount?: number };
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+     
     return context.__pluginHandlerCallCount ?? 0;
   });
 };
@@ -452,14 +452,14 @@ test.describe('flipper', () => {
         throw new Error('Delete item not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __deleteItemClicks?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       context.__deleteItemClicks = 0;
 
       deleteItem.addEventListener('click', () => {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         context.__deleteItemClicks = (context.__deleteItemClicks ?? 0) + 1;
       });
     });
@@ -467,10 +467,10 @@ test.describe('flipper', () => {
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
 
     const deleteItemClickCount = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __deleteItemClicks?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       return context.__deleteItemClicks ?? 0;
     });
 
@@ -572,7 +572,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -593,7 +593,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -614,7 +614,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -649,7 +649,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -673,7 +673,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -708,7 +708,7 @@ test.describe('flipper', () => {
         throw new Error('Editor not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -753,21 +753,21 @@ test.describe('flipper', () => {
         return null;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
       }
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       context.__flipCallbackCount = 0;
 
       const callback = (): void => {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         context.__flipCallbackCount = (context.__flipCallbackCount ?? 0) + 1;
       };
 
@@ -775,7 +775,7 @@ test.describe('flipper', () => {
 
       return {
         flipper: blockSettings.flipper,
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         getCount: (): number => context.__flipCallbackCount ?? 0,
       };
     });
@@ -788,10 +788,10 @@ test.describe('flipper', () => {
     });
 
     const countAfterInitialTab = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       return context.__flipCallbackCount ?? 0;
     });
 
@@ -803,10 +803,10 @@ test.describe('flipper', () => {
     });
 
     const countAfterFirstFlip = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       return context.__flipCallbackCount ?? 0;
     });
 
@@ -818,10 +818,10 @@ test.describe('flipper', () => {
     });
 
     const countAfterSecondFlip = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       return context.__flipCallbackCount ?? 0;
     });
 
@@ -850,28 +850,28 @@ test.describe('flipper', () => {
         throw new Error('Editor not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       context.__flipCallbackCount = 0;
 
       const callback = (): void => {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         context.__flipCallbackCount = (context.__flipCallbackCount ?? 0) + 1;
       };
 
       blockSettings.flipper.onFlip(callback);
 
       // Store callback reference for removal
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       (globalThis as typeof globalThis & { __flipCallback?: () => void }).__flipCallback = callback;
     });
 
@@ -886,10 +886,10 @@ test.describe('flipper', () => {
     });
 
     const countBeforeRemoval = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       return context.__flipCallbackCount ?? 0;
     });
 
@@ -902,19 +902,19 @@ test.describe('flipper', () => {
         throw new Error('Editor not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __flipCallback?: () => void };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       if (context.__flipCallback) {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         blockSettings.flipper.removeOnFlip(context.__flipCallback);
       }
     });
@@ -925,10 +925,10 @@ test.describe('flipper', () => {
     });
 
     const countAfterRemoval = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       return context.__flipCallbackCount ?? 0;
     });
 
@@ -961,7 +961,7 @@ test.describe('flipper', () => {
           throw new Error('Editor not found');
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+         
         const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
         if (!blockSettings || !blockSettings.flipper) {
@@ -1026,7 +1026,7 @@ test.describe('flipper', () => {
         throw new Error('Editor not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1095,19 +1095,19 @@ test.describe('flipper', () => {
         throw new Error('No focused item found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __activateCallbackCount?: number; __activateCallbackItem?: HTMLElement };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       context.__activateCallbackCount = 0;
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       context.__activateCallbackItem = undefined;
 
       // Simulate what activateCallback would do
       focusedItem.addEventListener('click', () => {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         context.__activateCallbackCount = (context.__activateCallbackCount ?? 0) + 1;
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         context.__activateCallbackItem = focusedItem as HTMLElement;
       }, { once: true });
     });
@@ -1115,13 +1115,13 @@ test.describe('flipper', () => {
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
 
     const callbackResult = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __activateCallbackCount?: number; __activateCallbackItem?: HTMLElement };
 
       return {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         count: context.__activateCallbackCount ?? 0,
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         itemText: context.__activateCallbackItem?.textContent ?? null,
       };
     });
@@ -1142,7 +1142,7 @@ test.describe('flipper', () => {
         return { error: 'Editor not found' };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1193,7 +1193,7 @@ test.describe('flipper', () => {
         throw new Error('Editor not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1220,7 +1220,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1241,7 +1241,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1331,14 +1331,14 @@ test.describe('flipper', () => {
         throw new Error('Delete item not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __deleteItemClicks?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       context.__deleteItemClicks = 0;
 
       deleteItem.addEventListener('click', () => {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         context.__deleteItemClicks = (context.__deleteItemClicks ?? 0) + 1;
       });
     });
@@ -1348,10 +1348,10 @@ test.describe('flipper', () => {
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
 
     const deleteItemClickCount = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __deleteItemClicks?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       return context.__deleteItemClicks ?? 0;
     });
 
@@ -1381,35 +1381,35 @@ test.describe('flipper', () => {
         throw new Error('Editor not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __callback1Count?: number; __callback2Count?: number; __callback3Count?: number };
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       context.__callback1Count = 0;
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       context.__callback2Count = 0;
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       context.__callback3Count = 0;
 
       const callback1 = (): void => {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         context.__callback1Count = (context.__callback1Count ?? 0) + 1;
       };
 
       const callback2 = (): void => {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         context.__callback2Count = (context.__callback2Count ?? 0) + 1;
       };
 
       const callback3 = (): void => {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         context.__callback3Count = (context.__callback3Count ?? 0) + 1;
       };
 
@@ -1434,15 +1434,15 @@ test.describe('flipper', () => {
     });
 
     const callbackCounts = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+       
       const context = globalThis as typeof globalThis & { __callback1Count?: number; __callback2Count?: number; __callback3Count?: number };
 
       return {
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         callback1: context.__callback1Count ?? 0,
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         callback2: context.__callback2Count ?? 0,
-        // eslint-disable-next-line @typescript-eslint/naming-convention -- test-only property
+         
         callback3: context.__callback3Count ?? 0,
       };
     });
@@ -1474,7 +1474,7 @@ test.describe('flipper', () => {
         throw new Error('Editor not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing runtime property
+       
       const blockSettings = (editor as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {

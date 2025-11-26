@@ -51,7 +51,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * @param readOnly - True if Editor is in read-only mode
    */
   public create(data: BlockToolData, block: BlockAPI, readOnly: boolean): IBlockTool {
-    // eslint-disable-next-line new-cap
+     
     return new this.constructable({
       data,
       block,

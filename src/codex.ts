@@ -52,7 +52,7 @@ export default class EditorJS {
     /**
      * Set default onReady function or use the one from configuration if provided
      */
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
+     
     const onReady = (_.isObject(configuration) && _.isFunction(configuration.onReady))
       ? configuration.onReady
       : () => {};
@@ -65,7 +65,7 @@ export default class EditorJS {
     /**
      * Initialize destroy with a no-op function that will be replaced in exportAPI
      */
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
+     
     this.destroy = (): void => {};
 
     /**

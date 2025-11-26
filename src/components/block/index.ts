@@ -81,7 +81,7 @@ export enum BlockToolAPI {
   MOVED = 'moved',
   UPDATED = 'updated',
   REMOVED = 'removed',
-  // eslint-disable-next-line @typescript-eslint/naming-convention
+   
   ON_PASTE = 'onPaste',
 }
 
@@ -303,7 +303,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     }
 
     try {
-      // eslint-disable-next-line no-useless-call
+       
       method.call(this.toolInstance, params);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);

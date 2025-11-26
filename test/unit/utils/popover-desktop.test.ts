@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance, type Mock } from 'vitest';
 
-/* eslint-disable jsdoc/require-jsdoc */
+ 
 
 type SearchPayload = { query: string; items: unknown[] };
 

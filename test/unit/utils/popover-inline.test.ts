@@ -21,7 +21,7 @@ vi.mock('../../../src/components/utils', async () => {
 vi.mock('../../../src/components/flipper');
 
 describe('PopoverInline', () => {
-  /* eslint-disable prefer-const */
+   
   const OFFSET_LEFT_VALUE = 50;
   const ITEM_OFFSET_LEFT_VALUE = 30;
 

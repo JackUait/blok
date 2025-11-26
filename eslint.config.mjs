@@ -247,7 +247,7 @@ export default [
   },
   ...compat.config({
     root: true,
-    plugins: ['@typescript-eslint', 'deprecation', 'jsdoc'],
+    plugins: ['@typescript-eslint', 'jsdoc'],
     parser: '@typescript-eslint/parser',
     parserOptions: {
       project: ['./tsconfig.json'],
@@ -317,7 +317,7 @@ export default [
       '@typescript-eslint/consistent-type-exports': 'error',
       'prefer-arrow-callback': 'error',
       'prefer-const': 'error',
-      'deprecation/deprecation': 'error',
+      '@typescript-eslint/no-deprecated': 'error',
       'no-param-reassign': ['error', { props: true }],
       'no-global-assign': 'error',
       'no-implicit-globals': 'error',
@@ -399,7 +399,7 @@ export default [
       ...jest.configs.recommended.rules,
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
-      'deprecation/deprecation': 'off',
+      '@typescript-eslint/no-deprecated': 'off',
       // Disable rules that require Jest to be installed (we use Vitest)
       'jest/no-deprecated-functions': 'off',
       // Disable require-hook: vi.mock() MUST be top-level in Vitest (hoisting requirement)
@@ -471,7 +471,7 @@ export default [
       'internal-playwright/no-css-selectors': 'error',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
-      'deprecation/deprecation': 'off',
+      '@typescript-eslint/no-deprecated': 'off',
       // Prevent anti-patterns
       'playwright/no-wait-for-timeout': 'error',
       'playwright/no-wait-for-selector': 'error',

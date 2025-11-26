@@ -1,4 +1,4 @@
-/* eslint-disable jsdoc/require-jsdoc, @typescript-eslint/explicit-function-return-type */
+ 
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';

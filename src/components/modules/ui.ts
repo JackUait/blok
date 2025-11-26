@@ -1,4 +1,4 @@
-/* eslint-disable jsdoc/no-undefined-types */
+
 /**
  * Module UI
  * @type {UI}
@@ -108,7 +108,7 @@ export default class UI extends Module<UINodes> {
    */
   private resizeDebouncer: () => void = _.debounce(() => {
     this.windowResize();
-  // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+
   }, 200);
 
   /**
@@ -220,7 +220,7 @@ export default class UI extends Module<UINodes> {
       return true;
     }
 
-    /* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
+
     return Object.entries(this.Editor).filter(([_moduleName, moduleClass]) => {
       return moduleClass.flipper instanceof Flipper;
     })
@@ -228,7 +228,7 @@ export default class UI extends Module<UINodes> {
         return moduleClass.flipper.hasFocus();
       });
 
-    /* eslint-enable @typescript-eslint/no-unused-vars, no-unused-vars */
+
   }
 
   /**
@@ -331,7 +331,7 @@ export default class UI extends Module<UINodes> {
     /**
      * Load CSS
      */
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+
     const styleTagId = 'editor-js-styles';
 
     /**
@@ -481,7 +481,7 @@ export default class UI extends Module<UINodes> {
 
     const throttledHandleBlockHovered = _.throttle(
       handleBlockHovered as (...args: unknown[]) => unknown,
-      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+
       20
     );
 
@@ -826,7 +826,7 @@ export default class UI extends Module<UINodes> {
      */
     try {
       this.Editor.BlockManager.setCurrentBlockByChildNode(clickedNode);
-    } catch (e) {
+    } catch (_e) {
       /**
        * If clicked outside first-level Blocks and it is not RectSelection, set Caret to the last empty Block
        */

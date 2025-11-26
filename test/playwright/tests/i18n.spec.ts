@@ -526,7 +526,7 @@ test.describe('editor i18n', () => {
     test('should translate "Click to delete" confirmation message', async ({ page }) => {
       const blockTunesDictionary = {
         delete: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention -- Dictionary keys must match i18n structure
+           
           'Click to delete': 'Нажмите для удаления',
         },
       };
@@ -712,7 +712,7 @@ test.describe('editor i18n', () => {
     test('should translate "Nothing found" message in toolbox', async ({ page }) => {
       const uiDictionary = {
         popover: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention -- Dictionary keys must match i18n structure
+           
           'Nothing found': 'Ничего не найдено',
         },
       };
@@ -757,7 +757,7 @@ test.describe('editor i18n', () => {
       const uiDictionary = {
         popover: {
           Filter: 'Поиск',
-          // eslint-disable-next-line @typescript-eslint/naming-convention -- Dictionary keys must match i18n structure
+           
           'Nothing found': 'Ничего не найдено',
         },
       };
@@ -876,7 +876,7 @@ test.describe('editor i18n', () => {
       const uiDictionary = {
         popover: {
           Filter: 'Поиск',
-          // eslint-disable-next-line @typescript-eslint/naming-convention -- Dictionary keys must match i18n structure
+           
           'Nothing found': 'Ничего не найдено',
         },
       };
@@ -1056,7 +1056,7 @@ test.describe('editor i18n', () => {
       const uiDictionary = {
         blockTunes: {
           toggler: {
-            // eslint-disable-next-line @typescript-eslint/naming-convention -- Dictionary keys must match i18n structure
+             
             'Click to tune': 'Нажмите, чтобы настроить',
           },
         },
@@ -1100,7 +1100,7 @@ test.describe('editor i18n', () => {
       const uiDictionary = {
         inlineToolbar: {
           converter: {
-            // eslint-disable-next-line @typescript-eslint/naming-convention -- Dictionary keys must match i18n structure
+             
             'Convert to': 'Конвертировать в',
           },
         },
@@ -1227,7 +1227,7 @@ test.describe('editor i18n', () => {
     test('should translate "Add a link" placeholder for link tool', async ({ page }) => {
       const toolsDictionary = {
         link: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention -- Dictionary keys must match i18n structure
+           
           'Add a link': 'Вставьте ссылку',
         },
       };
@@ -1279,7 +1279,7 @@ test.describe('editor i18n', () => {
     test('should translate stub tool message', async ({ page }) => {
       const toolsDictionary = {
         stub: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention -- Dictionary keys must match i18n structure
+           
           'The block can not be displayed correctly.': 'Блок не может быть отображен корректно.',
         },
       };

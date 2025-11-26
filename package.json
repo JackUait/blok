@@ -25,9 +25,9 @@
     "serve": "vite --no-open",
     "build": "vite build --mode production",
     "build:test": "vite build --mode test",
-    "lint": "sh -c 'ESLINT_USE_FLAT_CONFIG=true eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
-    "lint:fix": "ESLINT_USE_FLAT_CONFIG=true eslint . --fix",
-    "lint:tests": "ESLINT_USE_FLAT_CONFIG=true eslint test/",
+    "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
+    "lint:fix": "eslint . --fix",
+    "lint:tests": "eslint test/",
     "lint:types": "tsc --noEmit",
     "e2e": "playwright test",
     "e2e:chrome": "playwright test --project=chromium",
@@ -70,8 +70,7 @@
     "@typescript-eslint/eslint-plugin": "8.48.0",
     "@typescript-eslint/parser": "8.48.0",
     "@vitest/coverage-v8": "4.0.14",
-    "eslint": "^8.57.0",
-    "eslint-plugin-deprecation": "3.0.0",
+    "eslint": "^9.39.0",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-jest": "29.2.1",
     "eslint-plugin-jsdoc": "61.4.1",
@@ -98,16 +97,5 @@
     "@types/lodash": "4.17.21",
     "lodash": "4.17.21",
     "sortablejs": "^1.15.6"
-  },
-  "resolutions": {
-    "@typescript-eslint/eslint-plugin": "6.0.0",
-    "@typescript-eslint/parser": "6.0.0",
-    "@typescript-eslint/typescript-estree": "6.0.0",
-    "@typescript-eslint/scope-manager": "6.0.0",
-    "@typescript-eslint/types": "6.0.0",
-    "@typescript-eslint/utils": "6.0.0",
-    "@typescript-eslint/visitor-keys": "6.0.0",
-    "@typescript-eslint/type-utils": "6.0.0",
-    "eslint-plugin-jsdoc": "48.0.0"
   }
 }

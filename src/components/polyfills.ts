@@ -83,7 +83,7 @@ if (typeof window.requestIdleCallback === 'undefined') {
       cb({
         didTimeout: false,
         timeRemaining: function () {
-          // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+           
           return Math.max(0, 50 - (Date.now() - start));
         },
       });

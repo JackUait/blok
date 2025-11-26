@@ -485,16 +485,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@editorjs/caret@npm:1.0.1":
-  version: 1.0.1
-  resolution: "@editorjs/caret@npm:1.0.1"
-  dependencies:
-    "@editorjs/dom": "npm:^1.0.0"
-  checksum: 10c0/83f33d635061ffb1dacc41fdb61472f6e9ed666b517ebbf6cc3d2cd74935128bb3a8549092ff3ffccc71bd8eb47f6dfdb04ed290236e0775250b9c95aa20fd46
-  languageName: node
-  linkType: hard
-
-"@editorjs/caret@npm:^1.0.1":
+"@editorjs/caret@npm:1.0.3, @editorjs/caret@npm:^1.0.1":
   version: 1.0.3
   resolution: "@editorjs/caret@npm:1.0.3"
   dependencies:
@@ -517,7 +508,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@editorjs/dom@npm:^1.0.0, @editorjs/dom@npm:^1.0.1":
+"@editorjs/dom@npm:^1.0.1":
   version: 1.0.1
   resolution: "@editorjs/dom@npm:1.0.1"
   dependencies:
@@ -1025,7 +1016,7 @@ __metadata:
     "@babel/register": "npm:7.28.3"
     "@codexteam/icons": "npm:0.3.3"
     "@codexteam/shortcuts": "npm:1.2.0"
-    "@editorjs/caret": "npm:1.0.1"
+    "@editorjs/caret": "npm:1.0.3"
     "@editorjs/code": "npm:2.7.0"
     "@editorjs/delimiter": "npm:1.2.0"
     "@editorjs/header": "npm:2.8.8"

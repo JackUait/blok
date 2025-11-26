@@ -247,8 +247,7 @@ export default [
   },
   ...compat.config({
     root: true,
-    extends: ['codex/ts'],
-    plugins: ['deprecation'],
+    plugins: ['@typescript-eslint', 'deprecation', 'jsdoc'],
     parser: '@typescript-eslint/parser',
     parserOptions: {
       project: ['./tsconfig.json'],

@@ -503,10 +503,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@editorjs/delimiter@npm:1.2.0":
-  version: 1.2.0
-  resolution: "@editorjs/delimiter@npm:1.2.0"
-  checksum: 10c0/e2f5c9334fcdff86306935cca68a0bfaacfd4126462a488edf240679ca0837a97e0884db5398f56d67513af59d74150c2b52fbbcb174893813183d118dcc6d42
+"@editorjs/delimiter@npm:1.4.2":
+  version: 1.4.2
+  resolution: "@editorjs/delimiter@npm:1.4.2"
+  dependencies:
+    "@codexteam/icons": "npm:^0.3.2"
+  checksum: 10c0/635e96097529484e3db69b565de6dd153c5b4564906f1e4ad5883c3f97236badbc2b964a512a7456f0f3819eac0809e061f4a5a0e27b49054b28b2e8e13b1d7c
   languageName: node
   linkType: hard
 
@@ -1020,7 +1022,7 @@ __metadata:
     "@codexteam/shortcuts": "npm:1.2.0"
     "@editorjs/caret": "npm:1.0.3"
     "@editorjs/code": "npm:2.9.3"
-    "@editorjs/delimiter": "npm:1.2.0"
+    "@editorjs/delimiter": "npm:1.4.2"
     "@editorjs/header": "npm:2.8.8"
     "@editorjs/paragraph": "npm:2.11.6"
     "@editorjs/simple-image": "npm:1.4.1"

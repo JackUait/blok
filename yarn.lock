@@ -94,10 +94,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codexteam/icons@npm:0.3.2":
-  version: 0.3.2
-  resolution: "@codexteam/icons@npm:0.3.2"
-  checksum: 10c0/10eee48300a9272a8f2b451e057e1b56edaddb55594bbb0612849003a63dc2ef74c0f990ed20c3debe9b6f6eb44874c22f498ab08965f69b7d286b65103afdf2
+"@codexteam/icons@npm:0.3.3":
+  version: 0.3.3
+  resolution: "@codexteam/icons@npm:0.3.3"
+  checksum: 10c0/336245f38a2b2a53626a552a5f0f32c822ee1265be6827670ba157c9fa101cb23e6c75e625aa067e4577c2d805e261f4ffcb61097ea94c034c0a3c0cae7d7271
   languageName: node
   linkType: hard
 
@@ -1023,7 +1023,7 @@ __metadata:
   dependencies:
     "@axe-core/playwright": "npm:4.11.0"
     "@babel/register": "npm:7.28.3"
-    "@codexteam/icons": "npm:0.3.2"
+    "@codexteam/icons": "npm:0.3.3"
     "@codexteam/shortcuts": "npm:1.1.1"
     "@editorjs/caret": "npm:1.0.1"
     "@editorjs/code": "npm:2.7.0"

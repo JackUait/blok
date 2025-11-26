@@ -442,7 +442,10 @@ export default class UI extends Module<UINodes> {
     };
 
     const handleBlockHovered = (event: Event): void => {
-      if (!(event instanceof MouseEvent) && !(event instanceof TouchEvent)) {
+      const isMouseEvent = typeof MouseEvent !== 'undefined' && event instanceof MouseEvent;
+      const isTouchEvent = typeof TouchEvent !== 'undefined' && event instanceof TouchEvent;
+
+      if (!isMouseEvent && !isTouchEvent) {
         return;
       }
 

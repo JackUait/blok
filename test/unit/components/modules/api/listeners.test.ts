@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
 import ListenersAPI from '../../../../../src/components/modules/api/listeners';
 import EventsDispatcher from '../../../../../src/components/utils/events';
@@ -8,9 +8,9 @@ import type { ModuleConfig } from '../../../../../src/types-internal/module-conf
 import type { EditorConfig } from '../../../../../types';
 
 type ListenersMock = {
-  on: MockInstance<[HTMLElement, string, () => void, boolean?], string | undefined>;
-  off: MockInstance<[Element, string, () => void, boolean?], void>;
-  offById: MockInstance<[string], void>;
+  on: Mock<(element: HTMLElement, eventType: string, handler: () => void, useCapture?: boolean) => string | undefined>;
+  off: Mock<(element: Element, eventType: string, handler: () => void, useCapture?: boolean) => void>;
+  offById: Mock<(id: string) => void>;
 };
 
 const createListenersApi = (): ListenersAPI => {
@@ -31,9 +31,9 @@ describe('ListenersAPI', () => {
     listenersApi = createListenersApi();
 
     listenersMock = {
-      on: vi.fn<[HTMLElement, string, () => void, boolean?], string | undefined>(),
-      off: vi.fn<[Element, string, () => void, boolean?], void>(),
-      offById: vi.fn<[string], void>(),
+      on: vi.fn(),
+      off: vi.fn(),
+      offById: vi.fn(),
     };
 
     (listenersApi as unknown as { listeners: ListenersMock }).listeners = listenersMock;

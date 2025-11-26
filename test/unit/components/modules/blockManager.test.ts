@@ -20,12 +20,12 @@ type BlockManagerContext = {
 
 type BlocksStub = {
   proxy: Block[] & Record<PropertyKey, unknown>;
-  insert: Mock<[index: number, block: Block, replace?: boolean], void>;
-  insertMany: Mock<[items: Block[], index?: number], void>;
-  replace: Mock<[index: number, block: Block], void>;
-  move: Mock<[toIndex: number, fromIndex: number, skipDOM?: boolean], void>;
-  remove: Mock<[index: number], void>;
-  indexOf: Mock<[block: Block], number>;
+  insert: Mock<(index: number, block: Block, replace?: boolean) => void>;
+  insertMany: Mock<(items: Block[], index?: number) => void>;
+  replace: Mock<(index: number, block: Block) => void>;
+  move: Mock<(toIndex: number, fromIndex: number, skipDOM?: boolean) => void>;
+  remove: Mock<(index: number) => void>;
+  indexOf: Mock<(block: Block) => number>;
   blocks: Block[];
 };
 
@@ -241,7 +241,7 @@ type ComposeBlock = BlockManager['composeBlock'];
 
 const getBlockDidMutatedSpy = (
   blockManager: BlockManager
-): MockInstance<Parameters<BlockDidMutated>, ReturnType<BlockDidMutated>> => {
+): MockInstance<BlockDidMutated> => {
   return vi.spyOn(
     blockManager as unknown as { blockDidMutated: BlockDidMutated },
     'blockDidMutated'
@@ -250,7 +250,7 @@ const getBlockDidMutatedSpy = (
 
 const getComposeBlockSpy = (
   blockManager: BlockManager
-): MockInstance<Parameters<ComposeBlock>, ReturnType<ComposeBlock>> => {
+): MockInstance<ComposeBlock> => {
   return vi.spyOn(
     blockManager as unknown as { composeBlock: ComposeBlock },
     'composeBlock'

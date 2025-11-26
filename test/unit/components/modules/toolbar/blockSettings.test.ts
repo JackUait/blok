@@ -9,11 +9,11 @@ import type { PopoverItemParams } from '../../../../../types/utils/popover/popov
 import SelectionUtils from '../../../../../src/components/selection';
 
 type PopoverMock = {
-  on: Mock<[string, () => void], void>;
-  off: Mock<[string, () => void], void>;
-  destroy: Mock<[], void>;
-  getElement: Mock<[], HTMLDivElement>;
-  show: Mock<[], void>;
+  on: Mock<(event: string, handler: () => void) => void>;
+  off: Mock<(event: string, handler: () => void) => void>;
+  destroy: Mock<() => void>;
+  getElement: Mock<() => HTMLDivElement>;
+  show: Mock<() => void>;
   params?: unknown;
 };
 
@@ -55,9 +55,9 @@ vi.mock('../../../../../src/components/utils/popover', () => {
 });
 
 type FlipperMock = {
-  focusItem: Mock<[number], void>;
-  setHandleContentEditableTargets: Mock<[boolean], void>;
-  handleExternalKeydown: Mock<[KeyboardEvent], void>;
+  focusItem: Mock<(index: number) => void>;
+  setHandleContentEditableTargets: Mock<(handle: boolean) => void>;
+  handleExternalKeydown: Mock<(event: KeyboardEvent) => void>;
 };
 
 const flipperInstances: FlipperMock[] = [];
@@ -151,9 +151,9 @@ const { domModuleMock } = vi.hoisted(() => {
 vi.mock('../../../../../src/components/dom', () => domModuleMock);
 
 type EventsDispatcherMock = {
-  on: Mock<[unknown, () => void], void>;
-  off: Mock<[unknown, () => void], void>;
-  emit: Mock<[unknown], void>;
+  on: Mock<(event: unknown, handler: () => void) => void>;
+  off: Mock<(event: unknown, handler: () => void) => void>;
+  emit: Mock<(event: unknown) => void>;
 };
 
 const createBlock = (): Block => ({
@@ -167,17 +167,17 @@ const createBlock = (): Block => ({
 
 type EditorMock = {
   BlockSelection: {
-    selectBlock: Mock<[Block], void>;
-    clearCache: Mock<[], void>;
-    unselectBlock: Mock<[Block], void>;
+    selectBlock: Mock<(block: Block) => void>;
+    clearCache: Mock<() => void>;
+    unselectBlock: Mock<(block: Block) => void>;
   };
   BlockManager: {
     currentBlock?: Block;
-    convert: Mock<[Block, string, unknown?], Promise<Block>>;
+    convert: Mock<(block: Block, tool: string, data?: unknown) => Promise<Block>>;
   };
   CrossBlockSelection: {
     isCrossBlockSelectionStarted: boolean;
-    clear: Mock<[Event?], void>;
+    clear: Mock<(event?: Event) => void>;
   };
   API: {
     methods: {
@@ -201,10 +201,10 @@ type EditorMock = {
       END: string;
       DEFAULT: string;
     };
-    setToBlock: Mock<[Block, string], void>;
+    setToBlock: Mock<(block: Block, position: string) => void>;
   };
   Toolbar: {
-    close: Mock<[], void>;
+    close: Mock<() => void>;
   };
 };
 
@@ -217,7 +217,7 @@ const createEditorMock = (): EditorMock => {
   };
   const blockManager = {
     currentBlock: undefined as Block | undefined,
-    convert: vi.fn<[Block, string, unknown?], Promise<Block>>(async () => createBlock()),
+    convert: vi.fn(async (_block: Block, _tool: string, _data?: unknown) => createBlock()),
   };
   const crossBlockSelection = {
     isCrossBlockSelectionStarted: false,

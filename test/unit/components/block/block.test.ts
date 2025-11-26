@@ -14,9 +14,9 @@ import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet } from '../../../../s
 import SelectionUtils from '../../../../src/components/selection';
 
 interface MockToolInstance {
-  render: Mock<[], HTMLElement>;
-  save: Mock<[HTMLElement], Promise<BlockToolData>>;
-  validate: Mock<[BlockToolData], Promise<boolean>>;
+  render: Mock<() => HTMLElement>;
+  save: Mock<(el: HTMLElement) => Promise<BlockToolData>>;
+  validate: Mock<(data: BlockToolData) => Promise<boolean>>;
   renderSettings?: () => unknown;
   merge?: (data: BlockToolData) => void | Promise<void>;
   destroy?: () => void;
@@ -26,9 +26,9 @@ interface TuneFactoryResult {
   name: string;
   adapter: BlockTuneAdapter;
   instance: {
-    render: Mock<[], HTMLElement | { title: string }>;
-    wrap: Mock<[HTMLElement], HTMLElement>;
-    save: Mock<[], BlockTuneData>;
+    render: Mock<() => HTMLElement | { title: string }>;
+    wrap: Mock<(node: HTMLElement) => HTMLElement>;
+    save: Mock<() => BlockTuneData>;
   };
 }
 
@@ -49,7 +49,7 @@ interface CreateBlockResult {
   renderElement: HTMLElement;
 }
 
-const requestIdleCallbackMock = vi.fn<[IdleRequestCallback], number>((callback) => {
+const requestIdleCallbackMock = vi.fn((callback: IdleRequestCallback): number => {
   callback({
     didTimeout: false,
     timeRemaining: () => 1,
@@ -58,7 +58,7 @@ const requestIdleCallbackMock = vi.fn<[IdleRequestCallback], number>((callback) 
   return 1;
 });
 
-const cancelIdleCallbackMock = vi.fn<[number], void>();
+const cancelIdleCallbackMock = vi.fn((_id: number): void => {});
 
 beforeAll(() => {
   Object.defineProperty(window, 'requestIdleCallback', {
@@ -94,9 +94,9 @@ const createTuneAdapter = (name: string, {
   saveReturn?: BlockTuneData;
 } = {}): TuneFactoryResult => {
   const instance = {
-    render: vi.fn<[], HTMLElement | { title: string }>(() => renderReturn ?? { title: `${name}-action` }),
-    wrap: vi.fn<[HTMLElement], HTMLElement>((node) => node),
-    save: vi.fn<[], BlockTuneData>(() => saveReturn ?? { [`${name}Enabled`]: true }),
+    render: vi.fn((): HTMLElement | { title: string } => renderReturn ?? { title: `${name}-action` }),
+    wrap: vi.fn((node: HTMLElement): HTMLElement => node),
+    save: vi.fn((): BlockTuneData => saveReturn ?? { [`${name}Enabled`]: true }),
   };
 
   const adapter = {
@@ -118,10 +118,10 @@ const createBlock = (options: CreateBlockOptions = {}): CreateBlockResult => {
   renderElement.setAttribute('contenteditable', 'true');
 
   const toolInstance: MockToolInstance = {
-    render: options.toolOverrides?.render ?? vi.fn<[], HTMLElement>(() => renderElement),
+    render: options.toolOverrides?.render ?? vi.fn((): HTMLElement => renderElement),
     save: options.toolOverrides?.save
-      ?? vi.fn<[HTMLElement], Promise<BlockToolData>>(async () => ({ text: 'saved' } as BlockToolData)),
-    validate: options.toolOverrides?.validate ?? vi.fn<[BlockToolData], Promise<boolean>>(async () => true),
+      ?? vi.fn(async (_el: HTMLElement): Promise<BlockToolData> => ({ text: 'saved' } as BlockToolData)),
+    validate: options.toolOverrides?.validate ?? vi.fn(async (_data: BlockToolData): Promise<boolean> => true),
     renderSettings: options.renderSettings ?? options.toolOverrides?.renderSettings,
     merge: options.toolOverrides?.merge,
     destroy: options.toolOverrides?.destroy,

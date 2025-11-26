@@ -13,24 +13,24 @@ type PartialModules = Partial<EditorModules>;
 
 type ToolbarModuleMock = {
   CSS: { toolbar: string };
-  close: Mock<[], void>;
+  close: Mock<() => void>;
 };
 
 type InlineToolbarModuleMock = {
   CSS: { inlineToolbar: string };
-  close: Mock<[], void>;
+  close: Mock<() => void>;
 };
 
 type BlockSelectionModuleMock = {
   allBlocksSelected: boolean;
-  selectBlockByIndex: Mock<[number], void>;
-  unSelectBlockByIndex: Mock<[number], void>;
+  selectBlockByIndex: Mock<(index: number) => void>;
+  unSelectBlockByIndex: Mock<(index: number) => void>;
 };
 
 type BlockManagerModuleMock = {
   blocks: BlockType[];
-  getBlockByChildNode: Mock<[Node], BlockType | undefined>;
-  getBlockByIndex: Mock<[number], BlockType | undefined>;
+  getBlockByChildNode: Mock<(node: Node) => BlockType | undefined>;
+  getBlockByIndex: Mock<(index: number) => BlockType | undefined>;
   lastBlock: { holder: HTMLElement };
 };
 
@@ -75,26 +75,26 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
     CSS: {
       toolbar: 'codex-editor-toolbar',
     },
-    close: vi.fn<[], void>(),
+    close: vi.fn<() => void>(),
   };
 
   const inlineToolbarMock: InlineToolbarModuleMock = {
     CSS: {
       inlineToolbar: 'codex-editor-inline-toolbar',
     },
-    close: vi.fn<[], void>(),
+    close: vi.fn<() => void>(),
   };
 
   const blockSelectionMock: BlockSelectionModuleMock = {
     allBlocksSelected: false,
-    selectBlockByIndex: vi.fn<[number], void>(),
-    unSelectBlockByIndex: vi.fn<[number], void>(),
+    selectBlockByIndex: vi.fn<(index: number) => void>(),
+    unSelectBlockByIndex: vi.fn<(index: number) => void>(),
   };
 
   const blockManagerMock: BlockManagerModuleMock = {
     blocks,
-    getBlockByChildNode: vi.fn<[Node], BlockType | undefined>(),
-    getBlockByIndex: vi.fn<[number], BlockType | undefined>((index) => blocks[index]),
+    getBlockByChildNode: vi.fn<(node: Node) => BlockType | undefined>(),
+    getBlockByIndex: vi.fn<(index: number) => BlockType | undefined>((index: number) => blocks[index]),
     lastBlock: {
       holder: lastBlockHolder,
     },

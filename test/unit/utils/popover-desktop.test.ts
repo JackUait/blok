@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance, type Mock } from 'vitest';
 
 /* eslint-disable jsdoc/require-jsdoc */
 
 type SearchPayload = { query: string; items: unknown[] };
 
 type MockFlipperShape = {
-  activate: ReturnType<typeof vi.fn>;
-  deactivate: ReturnType<typeof vi.fn>;
-  focusFirst: ReturnType<typeof vi.fn>;
-  onFlip: ReturnType<typeof vi.fn>;
-  removeOnFlip: ReturnType<typeof vi.fn>;
+  activate: Mock<(items?: HTMLElement[]) => void>;
+  deactivate: Mock<() => void>;
+  focusFirst: Mock<() => void>;
+  onFlip: Mock<(callback: () => void) => void>;
+  removeOnFlip: Mock<(callback: () => void) => void>;
   triggerFlip: () => void;
   lastActivatedWith: HTMLElement[] | undefined;
   readonly isActivated: boolean;
@@ -17,11 +17,11 @@ type MockFlipperShape = {
 };
 
 type MockSearchInputShape = {
-  on: ReturnType<typeof vi.fn>;
-  getElement: ReturnType<typeof vi.fn>;
-  focus: ReturnType<typeof vi.fn>;
-  clear: ReturnType<typeof vi.fn>;
-  destroy: ReturnType<typeof vi.fn>;
+  on: Mock<(event: string, handler: (payload: SearchPayload) => void) => void>;
+  getElement: Mock<() => HTMLElement>;
+  focus: Mock<() => void>;
+  clear: Mock<() => void>;
+  destroy: Mock<() => void>;
   emitSearch: (payload: SearchPayload) => void;
   element: HTMLElement;
   items: unknown[];
@@ -218,7 +218,7 @@ const createPopover = (params: Partial<PopoverParams> = {}): PopoverDesktop => {
   return new PopoverDesktop(popoverParams);
 };
 
-let rafSpy: MockInstance<[FrameRequestCallback], number> | undefined;
+let rafSpy: MockInstance<(callback: FrameRequestCallback) => number> | undefined;
 
 beforeEach(() => {
   document.body.innerHTML = '';

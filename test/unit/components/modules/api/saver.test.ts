@@ -12,8 +12,8 @@ import type { EditorModules } from '../../../../../src/types-internal/editor-mod
 const READ_ONLY_ERROR_TEXT = 'Editor\'s content can not be saved in read-only mode';
 const SAVE_FALLBACK_ERROR_TEXT = 'Editor\'s content can not be saved because collecting data failed';
 
-type SaverSaveMock = ReturnType<typeof vi.fn<[], Promise<OutputData | undefined>>>;
-type SaverLastErrorMock = ReturnType<typeof vi.fn<[], unknown>>;
+type SaverSaveMock = ReturnType<typeof vi.fn<() => Promise<OutputData | undefined>>>;
+type SaverLastErrorMock = ReturnType<typeof vi.fn<() => unknown>>;
 
 type EditorStub = {
   ReadOnly: { isEnabled: boolean };
@@ -41,7 +41,7 @@ const createSaverApi = (overrides: EditorStubOverrides = {}): { saverApi: SaverA
       isEnabled: false,
     },
     Saver: {
-      save: vi.fn<[], Promise<OutputData | undefined>>().mockResolvedValue({ blocks: [] }),
+      save: vi.fn((): Promise<OutputData | undefined> => Promise.resolve({ blocks: [] })),
       getLastSaveError: vi.fn(),
     },
   };

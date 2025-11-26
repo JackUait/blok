@@ -9,7 +9,7 @@ import type { EditorEventMap } from '../../../../../src/components/events';
 import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
 
 type ReadOnlyModuleStub = {
-  toggle: ReturnType<typeof vi.fn<[boolean | undefined], Promise<boolean>>>;
+  toggle: ReturnType<typeof vi.fn<(state?: boolean) => Promise<boolean>>>;
   isEnabled: boolean;
 };
 
@@ -29,7 +29,7 @@ const createReadOnlyApi = (overrides: Partial<ReadOnlyModuleStub> = {}): {
   const readOnlyApi = new ReadOnlyAPI(moduleConfig);
 
   const defaultReadOnlyModule: ReadOnlyModuleStub = {
-    toggle: vi.fn<[boolean | undefined], Promise<boolean>>().mockResolvedValue(false),
+    toggle: vi.fn((_state?: boolean): Promise<boolean> => Promise.resolve(false)),
     isEnabled: false,
   };
 

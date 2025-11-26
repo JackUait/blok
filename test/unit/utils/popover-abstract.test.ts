@@ -27,7 +27,7 @@ import { css as popoverItemCss } from '../../../src/components/utils/popover/com
  * Test implementation of PopoverAbstract for unit testing
  */
 class TestPopover extends PopoverAbstract {
-  public readonly showNestedItemsMock = vi.fn<[item: PopoverItemDefault | PopoverItemHtml], void>();
+  public readonly showNestedItemsMock = vi.fn<(item: PopoverItemDefault | PopoverItemHtml) => void>();
 
   /**
    * Override to track calls to showNestedItems

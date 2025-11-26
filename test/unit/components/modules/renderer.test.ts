@@ -13,12 +13,12 @@ type BlockManagerInsertMany = RendererBlockManager['insertMany'];
 type BlockManagerComposeBlock = RendererBlockManager['composeBlock'];
 type ComposeBlockArgs = Parameters<BlockManagerComposeBlock>[0];
 type ComposeBlockReturn = ReturnType<BlockManagerComposeBlock>;
-type IdleCallback = (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void;
+type RequestIdleCallbackFn = Window['requestIdleCallback'];
 
 interface MockBlockManager {
-  insert: MockInstance<Parameters<BlockManagerInsert>, ReturnType<BlockManagerInsert>>;
-  insertMany: MockInstance<Parameters<BlockManagerInsertMany>, ReturnType<BlockManagerInsertMany>>;
-  composeBlock: MockInstance<Parameters<BlockManagerComposeBlock>, ComposeBlockReturn>;
+  insert: MockInstance<BlockManagerInsert>;
+  insertMany: MockInstance<BlockManagerInsertMany>;
+  composeBlock: MockInstance<BlockManagerComposeBlock>;
 }
 
 interface MockTools {
@@ -48,14 +48,18 @@ const createRenderer = (
   }
 ): RendererTestContext => {
   const defaultBlockManager: MockBlockManager = {
-    insert: vi.fn<Parameters<BlockManagerInsert>, ReturnType<BlockManagerInsert>>(({ id, tool = 'default' } = {}) => {
+    insert: vi.fn<BlockManagerInsert>((insertOptions) => {
+      const { id, tool = 'default' } = insertOptions ?? {};
+
       return createMockBlock({
         id,
         tool,
       });
     }),
-    insertMany: vi.fn<Parameters<BlockManagerInsertMany>, ReturnType<BlockManagerInsertMany>>(() => undefined),
-    composeBlock: vi.fn<Parameters<BlockManagerComposeBlock>, ComposeBlockReturn>(({ id, tool }) => {
+    insertMany: vi.fn<BlockManagerInsertMany>(() => undefined),
+    composeBlock: vi.fn<BlockManagerComposeBlock>((composeOptions) => {
+      const { id, tool } = composeOptions;
+
       return createMockBlock({
         id,
         tool,
@@ -101,9 +105,9 @@ const createRenderer = (
   };
 };
 
-let originalRequestIdleCallback: typeof window.requestIdleCallback;
+let originalRequestIdleCallback: RequestIdleCallbackFn;
 
-type RequestIdleCallbackMock = MockInstance<[IdleCallback], number>;
+type RequestIdleCallbackMock = MockInstance<RequestIdleCallbackFn>;
 let requestIdleCallbackMock: RequestIdleCallbackMock;
 
 beforeAll(() => {
@@ -111,7 +115,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  requestIdleCallbackMock = vi.fn<[IdleCallback], number>((callback) => {
+  requestIdleCallbackMock = vi.fn<RequestIdleCallbackFn>((callback) => {
     callback({
       didTimeout: false,
       timeRemaining: () => 0,
@@ -160,10 +164,9 @@ describe('Renderer module', () => {
 
     tools.available.set('paragraph', {});
 
-    const composeBlock: MockBlockManager['composeBlock'] = vi.fn<
-      Parameters<BlockManagerComposeBlock>,
-      ComposeBlockReturn
-    >(({ id, tool }) => {
+    const composeBlock: MockBlockManager['composeBlock'] = vi.fn<BlockManagerComposeBlock>((options) => {
+      const { id, tool } = options;
+
       return createMockBlock({
         id,
         tool,
@@ -240,10 +243,7 @@ describe('Renderer module', () => {
   it('renders stub blocks when a tool throws during composition', async () => {
     const failingTool = 'unstable';
 
-    const composeBlock: MockBlockManager['composeBlock'] = vi.fn<
-      Parameters<BlockManagerComposeBlock>,
-      ComposeBlockReturn
-    >(() => {
+    const composeBlock: MockBlockManager['composeBlock'] = vi.fn<BlockManagerComposeBlock>(() => {
       throw new Error('Tool error');
     });
 

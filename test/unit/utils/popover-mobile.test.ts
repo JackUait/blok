@@ -15,7 +15,7 @@ interface MockScrollLockerInstance {
 
 interface MockPopoverHeaderInstance {
   destroy: ReturnType<typeof vi.fn>;
-  getElement: ReturnType<typeof vi.fn<[], HTMLElement>>;
+  getElement: ReturnType<typeof vi.fn>;
   element: HTMLElement;
   params: PopoverHeaderParams;
 }
@@ -47,7 +47,7 @@ const popoverHeaderMock = vi.hoisted(() => {
     const element = document.createElement('div');
     const instance: MockPopoverHeaderInstance = {
       destroy: vi.fn(),
-      getElement: vi.fn<[], HTMLElement>(() => element),
+      getElement: vi.fn(() => element),
       element,
       params,
     };

@@ -62,18 +62,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/register@npm:7.21.0":
-  version: 7.21.0
-  resolution: "@babel/register@npm:7.21.0"
+"@babel/register@npm:7.28.3":
+  version: 7.28.3
+  resolution: "@babel/register@npm:7.28.3"
   dependencies:
     clone-deep: "npm:^4.0.1"
     find-cache-dir: "npm:^2.0.0"
     make-dir: "npm:^2.1.0"
-    pirates: "npm:^4.0.5"
+    pirates: "npm:^4.0.6"
     source-map-support: "npm:^0.5.16"
   peerDependencies:
     "@babel/core": ^7.0.0-0
-  checksum: 10c0/2ab2c8bbf033e8e6bfc22860a9f8efebfae0153d7a862357b9c3b66be90c55318d13bfe8b9066e61df06783b5f0895b3aa6e3282c3c96b986330c1151c52af6c
+  checksum: 10c0/ff31870a24e862fca36d5c481eda40be610af215a922560834333a78000b0e159a209dae606d4d93d7456d35ea8caeaaea674cdeaa0c0362e7e30d7f095d2436
   languageName: node
   linkType: hard
 
@@ -1022,7 +1022,7 @@ __metadata:
   resolution: "@jackuait/blok@workspace:."
   dependencies:
     "@axe-core/playwright": "npm:4.11.0"
-    "@babel/register": "npm:7.21.0"
+    "@babel/register": "npm:7.28.3"
     "@codexteam/icons": "npm:0.3.2"
     "@codexteam/shortcuts": "npm:1.1.1"
     "@editorjs/caret": "npm:1.0.1"
@@ -1038,7 +1038,6 @@ __metadata:
     "@types/sortablejs": "npm:^1.15.9"
     "@vitest/coverage-v8": "npm:1.6.1"
     "@vitest/ui": "npm:1.6.1"
-    codex-notifier: "npm:1.1.2"
     core-js: "npm:3.30.0"
     eslint: "npm:^8.57.0"
     eslint-config-codex: "npm:1.7.1"
@@ -2353,7 +2352,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"codex-notifier@npm:1.1.2, codex-notifier@npm:^1.1.2":
+"codex-notifier@npm:^1.1.2":
   version: 1.1.2
   resolution: "codex-notifier@npm:1.1.2"
   checksum: 10c0/fef16977cdc067802004a29f3e52862f28a2821e7079c716ba27a8d51b218e566201a560614d54d3d4ea9c8ece3ffe49304ec9df38cde75da551db32afc508c8
@@ -6041,7 +6040,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pirates@npm:^4.0.5":
+"pirates@npm:^4.0.6":
   version: 4.0.7
   resolution: "pirates@npm:4.0.7"
   checksum: 10c0/a51f108dd811beb779d58a76864bbd49e239fa40c7984cd11596c75a121a8cc789f1c8971d8bb15f0dbf9d48b76c05bb62fcbce840f89b688c0fa64b37e8478a

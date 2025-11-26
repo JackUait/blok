@@ -95,7 +95,7 @@
   },
   "dependencies": {
     "@editorjs/caret": "1.0.3",
-    "@types/lodash": "4.17.20",
+    "@types/lodash": "4.17.21",
     "lodash": "4.17.21",
     "sortablejs": "^1.15.6"
   },

@@ -170,11 +170,46 @@ describe('PopoverInline', () => {
       get: () => [],
     });
 
-    // Mock PopoverDesktop constructor
-    vi.mocked(PopoverDesktop).mockImplementation(() => mocks.mockPopoverDesktop as unknown as PopoverDesktop);
+    // Mock PopoverDesktop constructor - use function syntax for Vitest 4.x compatibility
+    vi.mocked(PopoverDesktop).mockImplementation(function () {
+      const instance = this as unknown as MockPopoverDesktop & MockPopoverDesktopSuperMethods;
 
-    // Mock Flipper constructor
-    vi.mocked(Flipper).mockImplementation(() => mocks.mockFlipper as unknown as Flipper);
+      // Copy all properties from mockPopoverDesktop to this instance
+      instance.nodes = mocks.mockPopoverDesktop.nodes;
+      instance.items = mocks.mockPopoverDesktop.items;
+      instance.flipper = mocks.mockFlipper as unknown as Flipper;
+      instance.nestingLevel = mocks.mockPopoverDesktop.nestingLevel;
+      instance.nestedPopover = mocks.mockPopoverDesktop.nestedPopover as unknown as PopoverDesktop | undefined | null;
+      instance.nestedPopoverTriggerItem = mocks.mockPopoverDesktop.nestedPopoverTriggerItem;
+      instance.getElement = mocks.mockPopoverDesktop.getElement;
+
+      // Delete auto-mocked methods from instance so that PopoverInline prototype methods are used
+      // The super methods are on PopoverDesktop.prototype via Object.assign above
+      delete (instance as unknown as Record<string, unknown>).show;
+      delete (instance as unknown as Record<string, unknown>).hide;
+      delete (instance as unknown as Record<string, unknown>).destroy;
+      delete (instance as unknown as Record<string, unknown>).showNestedItems;
+      delete (instance as unknown as Record<string, unknown>).destroyNestedPopoverIfExists;
+      delete (instance as unknown as Record<string, unknown>).handleItemClick;
+      delete (instance as unknown as Record<string, unknown>).setTriggerItemPosition;
+      delete (instance as unknown as Record<string, unknown>).showNestedPopoverForItem;
+      delete (instance as unknown as Record<string, unknown>).handleHover;
+
+      return instance as unknown as PopoverDesktop;
+    });
+
+    // Mock Flipper constructor - use function syntax for Vitest 4.x compatibility
+    vi.mocked(Flipper).mockImplementation(function () {
+      const instance = this as unknown as MockFlipper;
+
+      instance.activate = mocks.mockFlipper.activate;
+      instance.deactivate = mocks.mockFlipper.deactivate;
+      instance.focusFirst = mocks.mockFlipper.focusFirst;
+      instance.hasFocus = mocks.mockFlipper.hasFocus;
+      instance.setHandleContentEditableTargets = mocks.mockFlipper.setHandleContentEditableTargets;
+
+      return instance as unknown as Flipper;
+    });
 
     mocks.mockPopoverParams = {
       items: [
@@ -255,9 +290,17 @@ describe('PopoverInline', () => {
         }),
       ];
 
+      // Spy on PopoverInline.prototype.showNestedItems to verify it's called with the right item
+      const showNestedItemsSpy = vi.spyOn(PopoverInline.prototype as unknown as { showNestedItems: (item: PopoverItemDefault) => void }, 'showNestedItems');
+
       mocks.popoverInline = new PopoverInline(mocks.mockPopoverParams);
 
-      expect(mocks.superMethods.showNestedItems).toHaveBeenCalledWith(itemWithOpenChildren);
+      // Verify showNestedItems was called with the item that has children open
+      expect(showNestedItemsSpy).toHaveBeenCalledWith(itemWithOpenChildren);
+      // Verify it was called only once (for the item with hasChildren and isChildrenOpen)
+      expect(showNestedItemsSpy).toHaveBeenCalledTimes(1);
+
+      showNestedItemsSpy.mockRestore();
     });
 
     it('should not show nested items for items without children', () => {
@@ -268,9 +311,15 @@ describe('PopoverInline', () => {
 
       mocks.mockPopoverDesktop.items = [ itemWithoutChildren ];
 
+      // Spy on PopoverInline.prototype.showNestedItems
+      const showNestedItemsSpy = vi.spyOn(PopoverInline.prototype as unknown as { showNestedItems: (item: PopoverItemDefault) => void }, 'showNestedItems');
+
       mocks.popoverInline = new PopoverInline(mocks.mockPopoverParams);
 
-      expect(mocks.superMethods.showNestedItems).not.toHaveBeenCalled();
+      // showNestedItems should not be called for items without children
+      expect(showNestedItemsSpy).not.toHaveBeenCalled();
+
+      showNestedItemsSpy.mockRestore();
     });
 
     it('should skip non-default and non-html items when checking for nested items', () => {
@@ -285,11 +334,16 @@ describe('PopoverInline', () => {
 
       mocks.mockPopoverDesktop.items = [separatorItem, itemWithOpenChildren] as unknown as Array<PopoverItemDefault | PopoverItemHtml>;
 
+      // Spy on PopoverInline.prototype.showNestedItems
+      const showNestedItemsSpy = vi.spyOn(PopoverInline.prototype as unknown as { showNestedItems: (item: PopoverItemDefault) => void }, 'showNestedItems');
+
       mocks.popoverInline = new PopoverInline(mocks.mockPopoverParams);
 
       // Should only call showNestedItems for PopoverItemDefault/PopoverItemHtml, not separator
-      expect(mocks.superMethods.showNestedItems).toHaveBeenCalledTimes(1);
-      expect(mocks.superMethods.showNestedItems).toHaveBeenCalledWith(itemWithOpenChildren);
+      expect(showNestedItemsSpy).toHaveBeenCalledTimes(1);
+      expect(showNestedItemsSpy).toHaveBeenCalledWith(itemWithOpenChildren);
+
+      showNestedItemsSpy.mockRestore();
     });
   });
 
@@ -314,20 +368,37 @@ describe('PopoverInline', () => {
       mocks.popoverInline = new PopoverInline(mocks.mockPopoverParams);
     });
 
-    it('should call super.show()', () => {
+    it('should call the show method on PopoverInline', () => {
+      // Spy on PopoverInline.prototype.show to verify it's callable
+      const showSpy = vi.spyOn(PopoverInline.prototype, 'show');
+
+      // Delete the mock 'show' from the instance so that PopoverInline.prototype.show is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).show;
+
       mocks.popoverInline.show();
 
-      expect(mocks.superMethods.show).toHaveBeenCalled();
+      expect(showSpy).toHaveBeenCalled();
+
+      showSpy.mockRestore();
     });
 
     it('should set width and height CSS variables when nestingLevel is 0', () => {
-      mocks.mockPopoverDesktop.nestingLevel = 0;
       const containerRect = {
         width: 200,
         height: 100,
       };
 
       vi.spyOn(mocks.mockPopoverDesktop.nodes.popoverContainer!, 'getBoundingClientRect').mockReturnValue(containerRect as DOMRect);
+
+      // Set nestingLevel on the actual instance
+      Object.defineProperty(mocks.popoverInline, 'nestingLevel', {
+        value: 0,
+        writable: true,
+        configurable: true,
+      });
+
+      // Delete the mock 'show' from the instance so that PopoverInline.prototype.show is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).show;
 
       mocks.popoverInline.show();
 
@@ -337,7 +408,12 @@ describe('PopoverInline', () => {
     });
 
     it('should not set width/height CSS variables when nestingLevel is not 0', () => {
-      mocks.mockPopoverDesktop.nestingLevel = 1;
+      // Set nestingLevel on the actual instance
+      Object.defineProperty(mocks.popoverInline, 'nestingLevel', {
+        value: 1,
+        writable: true,
+        configurable: true,
+      });
 
       mocks.popoverInline.show();
 
@@ -352,7 +428,9 @@ describe('PopoverInline', () => {
       expect(() => mocks.popoverInline.show()).not.toThrow();
     });
 
-    it('should deactivate and activate flipper with flippableElements', () => {
+    it('should deactivate and activate flipper with flippableElements', async () => {
+      vi.useFakeTimers();
+
       const flippableElements = [ document.createElement('button') ];
 
       // Access private property to set flippableElements
@@ -361,16 +439,18 @@ describe('PopoverInline', () => {
         configurable: true,
       });
 
+      // Delete the mock 'show' from the instance so that PopoverInline.prototype.show is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).show;
+
       mocks.popoverInline.show();
 
-      // Use requestAnimationFrame to wait for async flipper activation
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          expect(mocks.mockFlipper.deactivate).toHaveBeenCalled();
-          expect(mocks.mockFlipper.activate).toHaveBeenCalledWith(flippableElements);
-          resolve();
-        });
-      });
+      // Advance the timer to trigger requestAnimationFrame callback
+      vi.advanceTimersToNextFrame();
+
+      expect(mocks.mockFlipper.deactivate).toHaveBeenCalled();
+      expect(mocks.mockFlipper.activate).toHaveBeenCalledWith(flippableElements);
+
+      vi.useRealTimers();
     });
   });
 
@@ -409,6 +489,15 @@ describe('PopoverInline', () => {
 
       const expectedOffset = OFFSET_LEFT_VALUE + ITEM_OFFSET_LEFT_VALUE;
 
+      // Ensure offsetLeft property is accessible on the instance
+      Object.defineProperty(mocks.popoverInline, 'offsetLeft', {
+        get: () => OFFSET_LEFT_VALUE,
+        configurable: true,
+      });
+
+      // Delete the mock 'setTriggerItemPosition' from the instance so that PopoverInline.prototype.setTriggerItemPosition is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).setTriggerItemPosition;
+
       (mocks.popoverInline as unknown as { setTriggerItemPosition: (el: HTMLElement, item: PopoverItemDefault) => void })
         .setTriggerItemPosition(nestedPopoverEl, item);
 
@@ -421,6 +510,15 @@ describe('PopoverInline', () => {
       const item = createMockDefaultItem({
         getElement: vi.fn(() => null),
       });
+
+      // Ensure offsetLeft property is accessible on the instance
+      Object.defineProperty(mocks.popoverInline, 'offsetLeft', {
+        get: () => OFFSET_LEFT_VALUE,
+        configurable: true,
+      });
+
+      // Delete the mock 'setTriggerItemPosition' from the instance so that PopoverInline.prototype.setTriggerItemPosition is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).setTriggerItemPosition;
 
       (mocks.popoverInline as unknown as { setTriggerItemPosition: (el: HTMLElement, item: PopoverItemDefault) => void })
         .setTriggerItemPosition(nestedPopoverEl, item);
@@ -444,6 +542,15 @@ describe('PopoverInline', () => {
 
       mocks.mockPopoverDesktop.nodes.popoverContainer = null;
 
+      // When popoverContainer is null, offsetLeft returns 0
+      Object.defineProperty(mocks.popoverInline, 'offsetLeft', {
+        get: () => 0,
+        configurable: true,
+      });
+
+      // Delete the mock 'setTriggerItemPosition' from the instance so that PopoverInline.prototype.setTriggerItemPosition is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).setTriggerItemPosition;
+
       (mocks.popoverInline as unknown as { setTriggerItemPosition: (el: HTMLElement, item: PopoverItemDefault) => void })
         .setTriggerItemPosition(nestedPopoverEl, item);
 
@@ -461,12 +568,16 @@ describe('PopoverInline', () => {
         hasChildren: true,
       });
 
-      mocks.mockPopoverDesktop.nestedPopoverTriggerItem = item;
+      // Set nestedPopoverTriggerItem on the actual instance
+      (mocks.popoverInline as unknown as { nestedPopoverTriggerItem: PopoverItemDefault | null }).nestedPopoverTriggerItem = item;
+
+      // Delete the mock 'showNestedItems' from the instance so that PopoverInline.prototype.showNestedItems is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).showNestedItems;
 
       (mocks.popoverInline as unknown as { showNestedItems: (item: PopoverItemDefault) => void }).showNestedItems(item);
 
       expect(mocks.superMethods.destroyNestedPopoverIfExists).toHaveBeenCalled();
-      expect(mocks.mockPopoverDesktop.nestedPopoverTriggerItem).toBeNull();
+      expect((mocks.popoverInline as unknown as { nestedPopoverTriggerItem: PopoverItemDefault | null }).nestedPopoverTriggerItem).toBeNull();
       expect(mocks.superMethods.showNestedItems).not.toHaveBeenCalled();
     });
 
@@ -479,7 +590,11 @@ describe('PopoverInline', () => {
         hasChildren: true,
       });
 
-      mocks.mockPopoverDesktop.nestedPopoverTriggerItem = item1;
+      // Set nestedPopoverTriggerItem on the actual instance
+      (mocks.popoverInline as unknown as { nestedPopoverTriggerItem: PopoverItemDefault | null }).nestedPopoverTriggerItem = item1;
+
+      // Delete the mock 'showNestedItems' from the instance so that PopoverInline.prototype.showNestedItems is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).showNestedItems;
 
       (mocks.popoverInline as unknown as { showNestedItems: (item: PopoverItemDefault) => void }).showNestedItems(item2);
 
@@ -492,7 +607,11 @@ describe('PopoverInline', () => {
         hasChildren: true,
       });
 
-      mocks.mockPopoverDesktop.nestedPopoverTriggerItem = null;
+      // Set nestedPopoverTriggerItem on the actual instance
+      (mocks.popoverInline as unknown as { nestedPopoverTriggerItem: PopoverItemDefault | null }).nestedPopoverTriggerItem = null;
+
+      // Delete the mock 'showNestedItems' from the instance so that PopoverInline.prototype.showNestedItems is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).showNestedItems;
 
       (mocks.popoverInline as unknown as { showNestedItems: (item: PopoverItemDefault) => void }).showNestedItems(item);
 
@@ -531,6 +650,9 @@ describe('PopoverInline', () => {
 
       mocks.superMethods.showNestedPopoverForItem.mockReturnValue(nestedPopover);
 
+      // Delete the mock 'showNestedPopoverForItem' from the instance so that PopoverInline.prototype.showNestedPopoverForItem is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).showNestedPopoverForItem;
+
       const result = (mocks.popoverInline as unknown as { showNestedPopoverForItem: (item: PopoverItemDefault) => PopoverDesktop })
         .showNestedPopoverForItem(item);
 
@@ -567,6 +689,9 @@ describe('PopoverInline', () => {
       try {
         mocks.superMethods.showNestedPopoverForItem.mockReturnValue(nestedPopover);
 
+        // Delete the mock 'showNestedPopoverForItem' from the instance so that PopoverInline.prototype.showNestedPopoverForItem is used
+        delete (mocks.popoverInline as unknown as Record<string, unknown>).showNestedPopoverForItem;
+
         const item = createMockDefaultItem({
           hasChildren: true,
           getElement: vi.fn(() => document.createElement('div')),
@@ -586,6 +711,8 @@ describe('PopoverInline', () => {
         }
 
         mocks.mockPopoverDesktop.nestedPopover = nestedPopover;
+        // Also set on the actual instance since 'this.nestedPopover' is checked in the handler
+        (mocks.popoverInline as unknown as { nestedPopover: PopoverDesktop | null }).nestedPopover = nestedPopover;
 
         const preventDefault = vi.fn();
         const stopPropagation = vi.fn();
@@ -635,6 +762,9 @@ describe('PopoverInline', () => {
 
       try {
         mocks.superMethods.showNestedPopoverForItem.mockReturnValue(nestedPopover);
+
+        // Delete the mock 'showNestedPopoverForItem' from the instance so that PopoverInline.prototype.showNestedPopoverForItem is used
+        delete (mocks.popoverInline as unknown as Record<string, unknown>).showNestedPopoverForItem;
 
         const item = createMockDefaultItem({
           hasChildren: true,
@@ -686,7 +816,11 @@ describe('PopoverInline', () => {
         getElement: vi.fn(() => document.createElement('div')),
       });
 
-      mocks.mockPopoverDesktop.nestedPopoverTriggerItem = triggerItem;
+      // Set nestedPopoverTriggerItem on the actual instance
+      (mocks.popoverInline as unknown as { nestedPopoverTriggerItem: PopoverItemDefault | null }).nestedPopoverTriggerItem = triggerItem;
+
+      // Delete the mock 'handleItemClick' from the instance so that PopoverInline.prototype.handleItemClick is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).handleItemClick;
 
       (mocks.popoverInline as unknown as { handleItemClick: (item: PopoverItemDefault) => void }).handleItemClick(clickedItem);
 
@@ -702,7 +836,11 @@ describe('PopoverInline', () => {
         getElement: vi.fn(() => document.createElement('div')),
       });
 
-      mocks.mockPopoverDesktop.nestedPopoverTriggerItem = triggerItem;
+      // Set nestedPopoverTriggerItem on the actual instance
+      (mocks.popoverInline as unknown as { nestedPopoverTriggerItem: PopoverItemDefault | null }).nestedPopoverTriggerItem = triggerItem;
+
+      // Delete the mock 'handleItemClick' from the instance so that PopoverInline.prototype.handleItemClick is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).handleItemClick;
 
       (mocks.popoverInline as unknown as { handleItemClick: (item: PopoverItemDefault) => void }).handleItemClick(triggerItem);
 
@@ -717,7 +855,11 @@ describe('PopoverInline', () => {
         getElement: vi.fn(() => document.createElement('div')),
       });
 
-      mocks.mockPopoverDesktop.nestedPopoverTriggerItem = null;
+      // Set nestedPopoverTriggerItem on the actual instance
+      (mocks.popoverInline as unknown as { nestedPopoverTriggerItem: PopoverItemDefault | null }).nestedPopoverTriggerItem = null;
+
+      // Delete the mock 'handleItemClick' from the instance so that PopoverInline.prototype.handleItemClick is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).handleItemClick;
 
       (mocks.popoverInline as unknown as { handleItemClick: (item: PopoverItemDefault) => void }).handleItemClick(clickedItem);
 

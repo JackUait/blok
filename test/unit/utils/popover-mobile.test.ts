@@ -22,47 +22,38 @@ interface MockPopoverHeaderInstance {
 
 const scrollLockerMock = vi.hoisted(() => {
   const instances: MockScrollLockerInstance[] = [];
-  const factory = vi.fn(() => {
-    const instance: MockScrollLockerInstance = {
-      lock: vi.fn(),
-      unlock: vi.fn(),
-    };
 
-    instances.push(instance);
-
-    return instance;
+  const MockScrollLocker = vi.fn(function (this: MockScrollLockerInstance) {
+    this.lock = vi.fn();
+    this.unlock = vi.fn();
+    instances.push(this);
   });
 
   return { instances,
-    factory };
+    MockScrollLocker };
 });
 
 vi.mock('../../../src/components/utils/scroll-locker', () => ({
-  default: scrollLockerMock.factory,
+  default: scrollLockerMock.MockScrollLocker,
 }));
 
 const popoverHeaderMock = vi.hoisted(() => {
   const instances: MockPopoverHeaderInstance[] = [];
-  const factory = vi.fn((params: PopoverHeaderParams) => {
-    const element = document.createElement('div');
-    const instance: MockPopoverHeaderInstance = {
-      destroy: vi.fn(),
-      getElement: vi.fn(() => element),
-      element,
-      params,
-    };
 
-    instances.push(instance);
-
-    return instance;
+  const MockPopoverHeader = vi.fn(function (this: MockPopoverHeaderInstance, params: PopoverHeaderParams) {
+    this.element = document.createElement('div');
+    this.params = params;
+    this.destroy = vi.fn();
+    this.getElement = vi.fn(() => this.element);
+    instances.push(this);
   });
 
   return { instances,
-    factory };
+    MockPopoverHeader };
 });
 
 vi.mock('../../../src/components/utils/popover/components/popover-header', () => ({
-  PopoverHeader: popoverHeaderMock.factory,
+  PopoverHeader: popoverHeaderMock.MockPopoverHeader,
 }));
 
 const getLatestScrollLocker = (): MockScrollLockerInstance => {
@@ -271,7 +262,7 @@ describe('PopoverMobile', () => {
 
       popoverPrivate.updateItemsAndHeader(nextItems, 'Nested title');
 
-      expect(popoverHeaderMock.factory).toHaveBeenCalledTimes(1);
+      expect(popoverHeaderMock.MockPopoverHeader).toHaveBeenCalledTimes(1);
       expect(popoverHeaderMock.instances[0].element).toBe(nodes.popoverContainer.firstChild);
       expect(nodes.items.childElementCount).toBe(nextItems.length);
       initialItems.forEach(element => {
@@ -302,7 +293,7 @@ describe('PopoverMobile', () => {
       popoverPrivate.updateItemsAndHeader(secondItems, 'Second title');
 
       expect(firstHeader.destroy).toHaveBeenCalledTimes(1);
-      expect(popoverHeaderMock.factory).toHaveBeenCalledTimes(2);
+      expect(popoverHeaderMock.MockPopoverHeader).toHaveBeenCalledTimes(2);
       expect(popoverHeaderMock.instances[1].element).toBe(nodes.popoverContainer.firstChild);
     });
   });

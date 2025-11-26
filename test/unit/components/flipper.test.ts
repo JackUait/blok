@@ -263,6 +263,8 @@ describe('Flipper', () => {
     });
     const scrollSpy = vi.spyOn(items[0], 'scrollIntoViewIfNeeded');
 
+    scrollSpy.mockClear();
+
     flipper.activate();
     flipper.focusFirst();
 

@@ -90,7 +90,8 @@
     "typescript": "5.0.3",
     "vite": "4.2.1",
     "vite-plugin-css-injected-by-js": "3.1.0",
-    "vitest": "4.0.14"
+    "vitest": "4.0.14",
+    "yaml": "^2.8.1"
   },
   "dependencies": {
     "@editorjs/caret": "1.0.3",

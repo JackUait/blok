@@ -20,9 +20,18 @@ const mockPopoverInstance = {
   },
 };
 
-vi.mock('../../../../src/components/utils/popover/popover-inline', () => ({
-  PopoverInline: vi.fn().mockImplementation(() => mockPopoverInstance),
-}));
+vi.mock('../../../../src/components/utils/popover/popover-inline', () => {
+  return {
+    PopoverInline: class MockPopoverInline {
+      public show = mockPopoverInstance.show;
+      public hide = mockPopoverInstance.hide;
+      public destroy = mockPopoverInstance.destroy;
+      public getElement = mockPopoverInstance.getElement;
+      public activateItemByName = mockPopoverInstance.activateItemByName;
+      public size = mockPopoverInstance.size;
+    },
+  };
+});
 
 vi.mock('../../../../src/components/utils/shortcuts', () => ({
   default: {

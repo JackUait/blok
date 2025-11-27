@@ -1,5 +1,0 @@
-node_modules
-*.d.ts
-src/components/tools/paragraph
-src/polyfills.ts
-dist

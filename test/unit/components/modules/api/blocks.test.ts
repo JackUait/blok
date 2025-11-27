@@ -10,10 +10,19 @@ import type { EditorEventMap } from '../../../../../src/components/events';
 import type { BlockTuneData } from '../../../../../types/block-tunes/block-tune-data';
 import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
 
+type MockBlockConstructorOptions = {
+  tool?: { name: string };
+  data?: BlockToolData;
+};
+
 const { blockConstructorSpy, blockAPIConstructorSpy } = vi.hoisted(() => {
   return {
-    blockConstructorSpy: vi.fn(),
-    blockAPIConstructorSpy: vi.fn(),
+    blockConstructorSpy: vi.fn<(options?: MockBlockConstructorOptions) => object>(function (this: object) {
+      return this;
+    }),
+    blockAPIConstructorSpy: vi.fn<(block: unknown) => object>(function (this: object) {
+      return this;
+    }),
   };
 });
 
@@ -42,11 +51,6 @@ type BlockManagerInsertOptions = {
   index?: number;
   needToFocus?: boolean;
   replace?: boolean;
-};
-
-type MockBlockConstructorOptions = {
-  tool?: { name: string };
-  data?: BlockToolData;
 };
 
 const createBlockStub = (overrides: Partial<BlockStub> = {}): BlockStub => {
@@ -301,21 +305,23 @@ const createBlocksApi = (options: {
 describe('BlocksAPI', () => {
   beforeEach(() => {
     blockConstructorSpy.mockReset();
-    blockConstructorSpy.mockImplementation((options: MockBlockConstructorOptions = {}) => {
+    blockConstructorSpy.mockImplementation(function (this: { data: BlockToolData }, options: MockBlockConstructorOptions = {}) {
       if (!options?.tool) {
         throw new Error('Tool is required');
       }
 
-      return {
-        data: options.data ?? {
-          mock: true,
-        },
+      this.data = options.data ?? {
+        mock: true,
       };
+
+      return this;
     });
 
     blockAPIConstructorSpy.mockReset();
-    blockAPIConstructorSpy.mockImplementation((block: unknown) => {
-      return { wrappedBlock: block };
+    blockAPIConstructorSpy.mockImplementation(function (this: { wrappedBlock: unknown }, block: unknown) {
+      this.wrappedBlock = block;
+
+      return this;
     });
   });
 
@@ -591,12 +597,12 @@ describe('BlocksAPI', () => {
       const { blocksApi, editor } = createBlocksApi();
 
       editor.Tools.blockTools.set(toolName, tool as { conversionConfig?: { export?: () => unknown; import?: () => unknown } });
-      blockConstructorSpy.mockImplementationOnce((options: MockBlockConstructorOptions & { tool: { name: string } }) => {
-        return {
-          data: {
-            createdFrom: options.tool.name,
-          },
+      blockConstructorSpy.mockImplementationOnce(function (this: { data: { createdFrom: string } }, options?: MockBlockConstructorOptions) {
+        this.data = {
+          createdFrom: options?.tool?.name ?? '',
         };
+
+        return this;
       });
 
       const data = await blocksApi.composeBlockData(toolName);

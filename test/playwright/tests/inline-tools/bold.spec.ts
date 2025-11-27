@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import type EditorJS from '@/types';
 import type { OutputData } from '@/types';
 import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
+import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
@@ -14,6 +14,19 @@ const TEST_PAGE_URL = pathToFileURL(
 const HOLDER_ID = 'editorjs';
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
 const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
+
+/**
+ * Get the correct modifier key based on the browser's user agent.
+ * WebKit always uses a macOS-style user agent, so it expects Meta regardless of host OS.
+ * @param page - The Playwright page object
+ */
+const getModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
+  const isMac = await page.evaluate(() => {
+    return navigator.userAgent.toLowerCase().includes('mac');
+  });
+
+  return isMac ? 'Meta' : 'Control';
+};
 
 /**
  * Reset the editor holder and destroy any existing instance
@@ -370,7 +383,29 @@ test.describe('inline tool bold', () => {
 
     const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
 
-    await page.keyboard.press(`${MODIFIER_KEY}+b`);
+    // Wait for toolbar to appear first (ensures shortcuts are registered)
+    await expect(boldButton).toBeVisible();
+
+    // Re-select text since toolbar appearance might affect selection
+    await selectText(paragraph, 'Keyboard');
+
+    // Get the modifier key based on browser's user agent
+    // WebKit always uses macOS user agent, so it expects Meta even on Linux
+    const modifierKey = await getModifierKey(page);
+
+    // Now use the keyboard shortcut
+    await page.keyboard.press(`${modifierKey}+b`);
+
+    // Wait for the action to complete
+    await page.waitForFunction(
+      ({ selector }) => {
+        const el = document.querySelector(selector);
+
+        return el && /<strong>Keyboard<\/strong>/.test(el.innerHTML);
+      },
+      { selector: PARAGRAPH_SELECTOR },
+      { timeout: 5000 }
+    );
 
     await expect(boldButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
@@ -378,7 +413,19 @@ test.describe('inline tool bold', () => {
 
     expect(html).toMatch(/<strong>Keyboard<\/strong> shortcut/);
 
-    await page.keyboard.press(`${MODIFIER_KEY}+b`);
+    // Toggle off
+    await page.keyboard.press(`${modifierKey}+b`);
+
+    // Wait for the action to complete
+    await page.waitForFunction(
+      ({ selector }) => {
+        const el = document.querySelector(selector);
+
+        return el && el.innerHTML === 'Keyboard shortcut';
+      },
+      { selector: PARAGRAPH_SELECTOR },
+      { timeout: 5000 }
+    );
 
     await expect(boldButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
 

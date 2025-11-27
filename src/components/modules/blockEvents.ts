@@ -673,7 +673,7 @@ export default class BlockEvents extends Module {
       if (this.Editor.BlockManager.currentBlock) {
         this.Editor.BlockManager.currentBlock.updateCurrentInput();
       }
-      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+       
     }, 20)();
 
     /**
@@ -767,7 +767,7 @@ export default class BlockEvents extends Module {
       if (this.Editor.BlockManager.currentBlock) {
         this.Editor.BlockManager.currentBlock.updateCurrentInput();
       }
-      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+       
     }, 20)();
 
     /**

@@ -15,7 +15,7 @@ type SelectionMock = Pick<SelectionUtils,
   'clearSaved' |
   'collapseToEnd'> & {
   isFakeBackgroundEnabled: boolean;
-  findParentTag: Mock<[tagName: string, className?: string, searchDepth?: number], HTMLElement | null>;
+  findParentTag: Mock<(tagName: string, className?: string, searchDepth?: number) => HTMLElement | null>;
 };
 
 const setDocumentCommand = (implementation: Document['execCommand']): void => {
@@ -32,7 +32,7 @@ const createSelectionMock = (): SelectionMock => {
     save: vi.fn(),
     restore: vi.fn(),
     removeFakeBackground: vi.fn(),
-    findParentTag: vi.fn<[string, string?, number?], HTMLElement | null>(() => null),
+    findParentTag: vi.fn((_tagName: string, _className?: string, _searchDepth?: number): HTMLElement | null => null),
     expandToTag: vi.fn(),
     clearSaved: vi.fn(),
     collapseToEnd: vi.fn(),
@@ -99,10 +99,7 @@ const createKeyboardEventWithKeyCode = (keyCode: number): KeyboardEvent => {
   return event;
 };
 
-type KeyboardEventStub = Pick<KeyboardEvent,
-  'preventDefault' |
-  'stopPropagation' |
-  'stopImmediatePropagation'> & {
+type KeyboardEventStub = {
   preventDefault: ReturnType<typeof vi.fn>;
   stopPropagation: ReturnType<typeof vi.fn>;
   stopImmediatePropagation: ReturnType<typeof vi.fn>;

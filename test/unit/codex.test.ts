@@ -5,7 +5,7 @@ import type { EditorModules } from '../../src/types-internal/editor-modules';
 
 // Mock VERSION global variable
 declare global {
-  // eslint-disable-next-line no-var -- TypeScript requires 'var' for global declarations
+   
   var VERSION: string;
 }
 
@@ -24,8 +24,10 @@ vi.mock('../../src/components/utils/tooltip', () => {
 
 vi.mock('../../src/components/utils', async () => {
   const actual = await vi.importActual('../../src/components/utils');
-  const mockIsObject = vi.fn((v: unknown) => typeof v === 'object' && v !== null && !Array.isArray(v));
-  const mockIsFunction = vi.fn((fn: unknown) => typeof fn === 'function');
+  const defaultIsObject = (v: unknown): boolean => typeof v === 'object' && v !== null && !Array.isArray(v);
+  const defaultIsFunction = (fn: unknown): boolean => typeof fn === 'function';
+  const mockIsObject = vi.fn().mockImplementation(defaultIsObject);
+  const mockIsFunction = vi.fn().mockImplementation(defaultIsFunction);
 
   return {
     ...actual,
@@ -33,6 +35,8 @@ vi.mock('../../src/components/utils', async () => {
     isFunction: mockIsFunction,
     mockIsObject,
     mockIsFunction,
+    defaultIsObject,
+    defaultIsFunction,
   };
 });
 
@@ -125,6 +129,8 @@ describe('EditorJS', () => {
     const utilsModule = await import('../../src/components/utils') as {
       mockIsObject?: ReturnType<typeof vi.fn>;
       mockIsFunction?: ReturnType<typeof vi.fn>;
+      defaultIsObject?: (v: unknown) => boolean;
+      defaultIsFunction?: (fn: unknown) => boolean;
     };
 
     const tooltipModule = await import('../../src/components/utils/tooltip') as {
@@ -137,6 +143,15 @@ describe('EditorJS', () => {
     mocks.mockDestroyTooltip = tooltipModule.mockDestroyTooltip as ReturnType<typeof vi.fn>;
 
     vi.clearAllMocks();
+
+    // Restore default implementations after clearing mocks
+    if (utilsModule.defaultIsObject && mocks.mockIsObject) {
+      mocks.mockIsObject.mockImplementation(utilsModule.defaultIsObject);
+    }
+    if (utilsModule.defaultIsFunction && mocks.mockIsFunction) {
+      mocks.mockIsFunction.mockImplementation(utilsModule.defaultIsFunction);
+    }
+
     mocks.mockModuleInstances!.API = {
       methods: {
         blocks: {

@@ -310,7 +310,7 @@ test.describe('sanitizing', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<p>Text</p><p><strong>Bold text</strong></p>',
       });
 
@@ -848,7 +848,7 @@ test.describe('sanitizing', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<p>Text<script>alert("XSS")</script></p>',
       });
 
@@ -866,7 +866,7 @@ test.describe('sanitizing', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<p><strong>Bold</strong> <span id="bad">bad</span> <i>italic</i></p>',
       });
 
@@ -886,7 +886,7 @@ test.describe('sanitizing', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<p><strong>Bold <span>nested</span></strong></p>',
       });
 
@@ -905,7 +905,7 @@ test.describe('sanitizing', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<p><strong onclick="alert(1)">Bold</strong></p>',
       });
 

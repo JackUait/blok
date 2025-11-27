@@ -7,20 +7,20 @@ import type { API } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
 
 type BlocksMocks = {
-  delete: Mock<[], void>;
+  delete: Mock<() => void>;
 };
 
 type I18nMocks = {
-  t: Mock<[string], string>;
+  t: Mock<(text: string) => string>;
 };
 
 const createApiMocks = (): { api: API; blocks: BlocksMocks; i18n: I18nMocks } => {
   const blocks: BlocksMocks = {
-    delete: vi.fn<[], void>(),
+    delete: vi.fn(),
   };
 
   const i18n: I18nMocks = {
-    t: vi.fn<[string], string>().mockImplementation((text) => text),
+    t: vi.fn((text: string) => text),
   };
 
   return {

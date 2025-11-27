@@ -29,11 +29,11 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 );
 const CODE_TOOL_UMD_PATH = path.resolve(
   __dirname,
-  '../../../node_modules/@editorjs/code/dist/bundle.js'
+  '../../../node_modules/@editorjs/code/dist/code.umd.js'
 );
 const DELIMITER_TOOL_UMD_PATH = path.resolve(
   __dirname,
-  '../../../node_modules/@editorjs/delimiter/dist/bundle.js'
+  '../../../node_modules/@editorjs/delimiter/dist/delimiter.umd.js'
 );
 
 type BoundingBox = {
@@ -157,7 +157,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
         }
 
         if (!toolClass && tool.classCode) {
-          // eslint-disable-next-line no-new-func -- evaluated in browser context to reconstruct tool class
+
           toolClass = new Function(`return (${tool.classCode});`)();
         }
 
@@ -204,7 +204,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
         try {
           return JSON.parse(JSON.stringify(value));
-        } catch (error) {
+        } catch (_error) {
           return value;
         }
       };

@@ -23,7 +23,7 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
   /**
    * Each module can provide some UI elements that will be stored in this property
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   public nodes: T = {} as any;
 
   /**

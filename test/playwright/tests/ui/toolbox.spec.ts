@@ -185,7 +185,7 @@ const runShortcutBehaviour = async (page: Page, toolName: string): Promise<void>
         const newBlockId = newBlock?.id ?? currentBlock.id;
 
         caret.setToBlock(newBlockId, 'end');
-      } catch (error) {
+      } catch (_error) {
         const insertionIndex = currentBlockIndex + Number(!currentBlock.isEmpty);
 
         blocks.insert(shortcutTool, undefined, undefined, insertionIndex, undefined, currentBlock.isEmpty);
@@ -628,7 +628,7 @@ test.describe('toolbox', () => {
 
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/naming-convention -- test-specific property
+
     __playwrightToolRegistry?: Record<string, BlockToolConstructable>;
     editorInstance?: EditorJS;
     EditorJS: new (...args: unknown[]) => EditorJS;

@@ -194,7 +194,7 @@ export default class RectangleSelection extends Module {
       if (event instanceof MouseEvent) {
         this.processMouseMove(event);
       }
-    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+     
     }, 10) as EventListener;
 
     this.listeners.on(document.body, 'mousemove', throttledMouseMove, {
@@ -207,7 +207,7 @@ export default class RectangleSelection extends Module {
 
     const throttledScroll = _.throttle((event: unknown) => {
       this.processScroll(event as MouseEvent);
-    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+     
     }, 10) as EventListener;
 
     this.listeners.on(window, 'scroll', throttledScroll, {

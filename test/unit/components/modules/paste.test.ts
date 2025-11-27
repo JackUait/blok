@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { SpyInstance } from 'vitest';
+import type { MockInstance } from 'vitest';
 
 import Paste from '../../../../src/components/modules/paste';
 import type BlockToolAdapter from '../../../../src/components/tools/block';
@@ -16,14 +16,8 @@ interface CreatePasteOptions {
 
 type ListenersMock = {
   instance: Listeners;
-  on: SpyInstance<
-    Parameters<Listeners['on']> extends Array<unknown> ? Parameters<Listeners['on']> : never,
-    ReturnType<Listeners['on']>
-  >;
-  off: SpyInstance<
-    Parameters<Listeners['off']> extends Array<unknown> ? Parameters<Listeners['off']> : never,
-    ReturnType<Listeners['off']>
-  >;
+  on: MockInstance<Listeners['on']>;
+  off: MockInstance<Listeners['off']>;
 };
 
 type BlockManagerMock = {
@@ -36,27 +30,27 @@ type BlockManagerMock = {
     name?: string;
     currentInput?: HTMLElement | null;
   } | null;
-  paste: ReturnType<typeof vi.fn<[string, CustomEvent, boolean?], unknown>>;
-  insert: ReturnType<typeof vi.fn<[{ tool: string; data: unknown; replace: boolean }], unknown>>;
-  setCurrentBlockByChildNode: ReturnType<typeof vi.fn<[HTMLElement], unknown>>;
+  paste: ReturnType<typeof vi.fn<(tool: string, event: CustomEvent, replace?: boolean) => unknown>>;
+  insert: ReturnType<typeof vi.fn<(payload: { tool: string; data: unknown; replace: boolean }) => unknown>>;
+  setCurrentBlockByChildNode: ReturnType<typeof vi.fn<(node: HTMLElement) => unknown>>;
 };
 
 type CaretMock = {
   positions: {
     END: string;
   };
-  setToBlock: ReturnType<typeof vi.fn<[unknown, string], void>>;
-  insertContentAtCaretPosition: ReturnType<typeof vi.fn<[string], void>>;
+  setToBlock: ReturnType<typeof vi.fn<(block: unknown, position: string) => void>>;
+  insertContentAtCaretPosition: ReturnType<typeof vi.fn<(content: string) => void>>;
 };
 
 type ToolsMock = {
   blockTools: Map<string, BlockToolAdapter>;
   defaultTool: BlockToolAdapter;
-  getAllInlineToolsSanitizeConfig: ReturnType<typeof vi.fn<[], SanitizerConfig>>;
+  getAllInlineToolsSanitizeConfig: ReturnType<typeof vi.fn<() => SanitizerConfig>>;
 };
 
 type ToolbarMock = {
-  close: ReturnType<typeof vi.fn<[], void>>;
+  close: ReturnType<typeof vi.fn<() => void>>;
 };
 
 type PasteMocks = {
@@ -86,27 +80,27 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
 
   const blockManager: BlockManagerMock = {
     currentBlock: null,
-    paste: vi.fn<[string, CustomEvent, boolean?], unknown>(),
-    insert: vi.fn<[{ tool: string; data: unknown; replace: boolean }], unknown>(),
-    setCurrentBlockByChildNode: vi.fn<[HTMLElement], unknown>(),
+    paste: vi.fn<(tool: string, event: CustomEvent, replace?: boolean) => unknown>(),
+    insert: vi.fn<(payload: { tool: string; data: unknown; replace: boolean }) => unknown>(),
+    setCurrentBlockByChildNode: vi.fn<(node: HTMLElement) => unknown>(),
   };
 
   const caret: CaretMock = {
     positions: {
       END: 'end',
     },
-    setToBlock: vi.fn<[unknown, string], void>(),
-    insertContentAtCaretPosition: vi.fn<[string], void>(),
+    setToBlock: vi.fn<(block: unknown, position: string) => void>(),
+    insertContentAtCaretPosition: vi.fn<(content: string) => void>(),
   };
 
   const tools: ToolsMock = {
     blockTools: new Map<string, BlockToolAdapter>(),
     defaultTool,
-    getAllInlineToolsSanitizeConfig: vi.fn<[], SanitizerConfig>(() => ({})),
+    getAllInlineToolsSanitizeConfig: vi.fn<() => SanitizerConfig>(() => ({})),
   };
 
   const toolbar: ToolbarMock = {
-    close: vi.fn<[], void>(),
+    close: vi.fn<() => void>(),
   };
 
   const paste = new Paste({

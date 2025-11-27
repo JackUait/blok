@@ -12,7 +12,7 @@ export default class ReadOnlyAPI extends Module {
   public get methods(): ReadOnly {
     const getIsEnabled = (): boolean => this.isEnabled;
 
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
+     
     return {
       toggle: (state): Promise<boolean> => this.toggle(state),
       get isEnabled(): boolean {

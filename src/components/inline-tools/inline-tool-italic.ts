@@ -155,7 +155,7 @@ export default class ItalicInlineTool implements InlineTool {
         acceptNode: (node) => {
           try {
             return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (error) {
+          } catch (_error) {
             const nodeRange = document.createRange();
 
             nodeRange.selectNodeContents(node);
@@ -327,7 +327,7 @@ export default class ItalicInlineTool implements InlineTool {
         acceptNode: (node) => {
           try {
             return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (error) {
+          } catch (_error) {
             const nodeRange = document.createRange();
 
             nodeRange.selectNodeContents(node);

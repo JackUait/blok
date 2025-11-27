@@ -202,7 +202,7 @@ export default class Tools extends Module {
         try {
           await chainData.function(chainData.data);
           handlePrepareSuccess(callbackData);
-        } catch (error) {
+        } catch (_error) {
           handlePrepareFallback(callbackData);
         }
       });

@@ -196,7 +196,7 @@ export default class Caret extends Module {
     this.set(nodeToSet as HTMLElement, offsetToSet);
 
     BlockManager.setCurrentBlockByChildNode(block.holder);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+     
     BlockManager.currentBlock!.currentInput = element;
   }
 

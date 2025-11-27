@@ -723,7 +723,7 @@ export default class BoldInlineTool implements InlineTool {
         acceptNode: (node) => {
           try {
             return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (error) {
+          } catch (_error) {
             /**
              * Safari might throw if node is detached from DOM.
              * In that case, fall back to manual comparison by wrapping node into a range.
@@ -1111,7 +1111,7 @@ export default class BoldInlineTool implements InlineTool {
         acceptNode: (node) => {
           try {
             return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (error) {
+          } catch (_error) {
             const nodeRange = document.createRange();
 
             nodeRange.selectNodeContents(node);
@@ -2150,7 +2150,7 @@ export default class BoldInlineTool implements InlineTool {
         acceptNode: (node) => {
           try {
             return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (error) {
+          } catch (_error) {
             const nodeRange = document.createRange();
 
             nodeRange.selectNodeContents(node);

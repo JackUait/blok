@@ -35,7 +35,7 @@ export default class BlocksAPI extends Module {
       composeBlockData: this.composeBlockData,
       convert: this.convert,
       // @ts-expect-error stretchBlock is deprecated
-      // eslint-disable-next-line deprecation/deprecation
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       stretchBlock: (index: number, status = true): void => this.stretchBlock(index, status),
     };
   }

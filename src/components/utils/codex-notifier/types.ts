@@ -1,1 +1,1 @@
-export * from '@/types/configs/notifier';
+export type * from '@/types/configs/notifier';

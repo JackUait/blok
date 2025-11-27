@@ -4,48 +4,43 @@ import type Block from '../../../../../src/components/block';
 import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
 import type { EditorConfig } from '../../../../../types';
 import type { MenuConfigItem } from '../../../../../types/tools';
-import { PopoverItemType, PopoverDesktop, PopoverMobile } from '../../../../../src/components/utils/popover';
+import { PopoverItemType } from '../../../../../src/components/utils/popover';
 import type { PopoverItemParams } from '../../../../../types/utils/popover/popover-item';
 import SelectionUtils from '../../../../../src/components/selection';
 
 type PopoverMock = {
-  on: Mock<[string, () => void], void>;
-  off: Mock<[string, () => void], void>;
-  destroy: Mock<[], void>;
-  getElement: Mock<[], HTMLDivElement>;
-  show: Mock<[], void>;
+  on: Mock<(event: string, handler: () => void) => void>;
+  off: Mock<(event: string, handler: () => void) => void>;
+  destroy: Mock<() => void>;
+  getElement: Mock<() => HTMLDivElement>;
+  show: Mock<() => void>;
   params?: unknown;
+  type?: 'desktop' | 'mobile';
 };
 
 const popoverInstances: PopoverMock[] = [];
 
-const buildPopoverMock = (): PopoverMock => {
-  const element = document.createElement('div');
-
-  return {
-    on: vi.fn(),
-    off: vi.fn(),
-    destroy: vi.fn(),
-    getElement: vi.fn(() => element),
-    show: vi.fn(),
-  };
-};
-
 const getLastPopover = (): PopoverMock | undefined => popoverInstances.at(-1);
 
 vi.mock('../../../../../src/components/utils/popover', () => {
-  const createPopover = (params: unknown): PopoverMock => {
-    const instance = buildPopoverMock();
+  const createPopoverClass = (type: 'desktop' | 'mobile'): new (params: unknown) => PopoverMock => {
+    return function (this: PopoverMock, params: unknown) {
+      const element = document.createElement('div');
 
-    instance.params = params;
-    popoverInstances.push(instance);
-
-    return instance;
+      this.on = vi.fn();
+      this.off = vi.fn();
+      this.destroy = vi.fn();
+      this.getElement = vi.fn(() => element);
+      this.show = vi.fn();
+      this.params = params;
+      this.type = type;
+      popoverInstances.push(this);
+    } as unknown as new (params: unknown) => PopoverMock;
   };
 
   return {
-    PopoverDesktop: vi.fn(createPopover),
-    PopoverMobile: vi.fn(createPopover),
+    PopoverDesktop: createPopoverClass('desktop'),
+    PopoverMobile: createPopoverClass('mobile'),
     PopoverItemType: {
       Default: 'default',
       Separator: 'separator',
@@ -55,26 +50,25 @@ vi.mock('../../../../../src/components/utils/popover', () => {
 });
 
 type FlipperMock = {
-  focusItem: Mock<[number], void>;
-  setHandleContentEditableTargets: Mock<[boolean], void>;
-  handleExternalKeydown: Mock<[KeyboardEvent], void>;
+  focusItem: Mock<(index: number) => void>;
+  setHandleContentEditableTargets: Mock<(handle: boolean) => void>;
+  handleExternalKeydown: Mock<(event: KeyboardEvent) => void>;
 };
 
 const flipperInstances: FlipperMock[] = [];
 
-vi.mock('../../../../../src/components/flipper', () => ({
-  default: vi.fn().mockImplementation(() => {
-    const instance: FlipperMock = {
-      focusItem: vi.fn(),
-      setHandleContentEditableTargets: vi.fn(),
-      handleExternalKeydown: vi.fn(),
-    };
+vi.mock('../../../../../src/components/flipper', () => {
+  const FlipperMockClass = function (this: FlipperMock) {
+    this.focusItem = vi.fn();
+    this.setHandleContentEditableTargets = vi.fn();
+    this.handleExternalKeydown = vi.fn();
+    flipperInstances.push(this);
+  } as unknown as new () => FlipperMock;
 
-    flipperInstances.push(instance);
-
-    return instance;
-  }),
-}));
+  return {
+    default: FlipperMockClass,
+  };
+});
 
 const { getConvertibleToolsForBlockMock } = vi.hoisted(() => ({
   getConvertibleToolsForBlockMock: vi.fn(),
@@ -151,9 +145,9 @@ const { domModuleMock } = vi.hoisted(() => {
 vi.mock('../../../../../src/components/dom', () => domModuleMock);
 
 type EventsDispatcherMock = {
-  on: Mock<[unknown, () => void], void>;
-  off: Mock<[unknown, () => void], void>;
-  emit: Mock<[unknown], void>;
+  on: Mock<(event: unknown, handler: () => void) => void>;
+  off: Mock<(event: unknown, handler: () => void) => void>;
+  emit: Mock<(event: unknown) => void>;
 };
 
 const createBlock = (): Block => ({
@@ -167,17 +161,17 @@ const createBlock = (): Block => ({
 
 type EditorMock = {
   BlockSelection: {
-    selectBlock: Mock<[Block], void>;
-    clearCache: Mock<[], void>;
-    unselectBlock: Mock<[Block], void>;
+    selectBlock: Mock<(block: Block) => void>;
+    clearCache: Mock<() => void>;
+    unselectBlock: Mock<(block: Block) => void>;
   };
   BlockManager: {
     currentBlock?: Block;
-    convert: Mock<[Block, string, unknown?], Promise<Block>>;
+    convert: Mock<(block: Block, tool: string, data?: unknown) => Promise<Block>>;
   };
   CrossBlockSelection: {
     isCrossBlockSelectionStarted: boolean;
-    clear: Mock<[Event?], void>;
+    clear: Mock<(event?: Event) => void>;
   };
   API: {
     methods: {
@@ -201,10 +195,10 @@ type EditorMock = {
       END: string;
       DEFAULT: string;
     };
-    setToBlock: Mock<[Block, string], void>;
+    setToBlock: Mock<(block: Block, position: string) => void>;
   };
   Toolbar: {
-    close: Mock<[], void>;
+    close: Mock<() => void>;
   };
 };
 
@@ -217,7 +211,7 @@ const createEditorMock = (): EditorMock => {
   };
   const blockManager = {
     currentBlock: undefined as Block | undefined,
-    convert: vi.fn<[Block, string, unknown?], Promise<Block>>(async () => createBlock()),
+    convert: vi.fn(async (_block: Block, _tool: string, _data?: unknown) => createBlock()),
   };
   const crossBlockSelection = {
     isCrossBlockSelectionStarted: false,
@@ -375,8 +369,7 @@ describe('BlockSettings', () => {
 
     await blockSettings.open();
 
-    expect(PopoverMobile).toHaveBeenCalledTimes(1);
-    expect(PopoverDesktop).not.toHaveBeenCalled();
+    expect(getLastPopover()?.type).toBe('mobile');
     expect(selectionStub.save).toHaveBeenCalledTimes(1);
     expect(flipperInstances[0]?.focusItem).not.toHaveBeenCalled();
 

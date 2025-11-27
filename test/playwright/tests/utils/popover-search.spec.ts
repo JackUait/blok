@@ -193,7 +193,7 @@ const createEditorWithBlocks = async (
             value: isTune ?? true,
             configurable: true,
           });
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- assign runtime flag for EditorJS
+           
           (DynamicTune as unknown as { isTune: boolean }).isTune = isTune ?? true;
 
           return [toolName, { class: DynamicTune } ] as const;
@@ -993,7 +993,7 @@ test.describe('popover Search/Filter', () => {
             /**
              *
              */
-            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- return type inferred from usage
+             
             public render() {
               return {
                 icon: 'Icon',
@@ -1036,7 +1036,7 @@ test.describe('popover Search/Filter', () => {
                 ui: {
                   popover: {
                     'Filter': 'Искать',
-                    // eslint-disable-next-line @typescript-eslint/naming-convention -- i18n
+                     
                     'Nothing found': 'Ничего не найдено',
                   },
                 },

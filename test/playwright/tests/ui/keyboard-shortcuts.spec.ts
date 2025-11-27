@@ -1,4 +1,4 @@
-/* eslint-disable jsdoc/require-jsdoc */
+ 
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
@@ -178,7 +178,7 @@ const createEditorWithTools = async (
   await page.evaluate(
     async ({ holderId, serializedTools: toolConfigs, initialData }) => {
       const reviveToolClass = (classSource: string): unknown => {
-        // eslint-disable-next-line no-new-func -- executed inside the browser context to revive tool classes
+         
         return new Function(`return (${classSource});`)();
       };
 

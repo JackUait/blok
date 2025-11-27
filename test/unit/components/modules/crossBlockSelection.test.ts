@@ -28,7 +28,7 @@ const setPrivate = <T>(instance: CrossBlockSelection, key: string, value: T): vo
 const createBlockStub = (): BlockWithSelection => {
   const holder = document.createElement('div');
 
-  holder.scrollIntoView = vi.fn() as ReturnType<typeof vi.fn>;
+  holder.scrollIntoView = vi.fn();
   let selected = false;
 
   const stub = {

@@ -8,8 +8,8 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { EditorMobileLayoutToggled } from '../../../src/components/events';
 import Shortcuts from '../../../src/components/utils/shortcuts';
 
-// Mock dependencies at module level
-const mockPopoverInstance = {
+// Use vi.hoisted to create mock instance that can be shared between factory and tests
+const mockPopoverInstance = vi.hoisted(() => ({
   show: vi.fn(),
   hide: vi.fn(),
   destroy: vi.fn(),
@@ -17,7 +17,7 @@ const mockPopoverInstance = {
   on: vi.fn(),
   off: vi.fn(),
   hasFocus: vi.fn(() => false),
-};
+}));
 
 vi.mock('../../../src/components/dom', () => ({
   default: {
@@ -31,10 +31,28 @@ vi.mock('../../../src/components/dom', () => ({
   },
 }));
 
-vi.mock('../../../src/components/utils/popover', () => ({
-  PopoverDesktop: vi.fn().mockImplementation(() => mockPopoverInstance),
-  PopoverMobile: vi.fn().mockImplementation(() => mockPopoverInstance),
-}));
+vi.mock('../../../src/components/utils/popover', () => {
+  return {
+    PopoverDesktop: class MockPopoverDesktop {
+      public show = mockPopoverInstance.show;
+      public hide = mockPopoverInstance.hide;
+      public destroy = mockPopoverInstance.destroy;
+      public getElement = mockPopoverInstance.getElement;
+      public on = mockPopoverInstance.on;
+      public off = mockPopoverInstance.off;
+      public hasFocus = mockPopoverInstance.hasFocus;
+    },
+    PopoverMobile: class MockPopoverMobile {
+      public show = mockPopoverInstance.show;
+      public hide = mockPopoverInstance.hide;
+      public destroy = mockPopoverInstance.destroy;
+      public getElement = mockPopoverInstance.getElement;
+      public on = mockPopoverInstance.on;
+      public off = mockPopoverInstance.off;
+      public hasFocus = mockPopoverInstance.hasFocus;
+    },
+  };
+});
 
 vi.mock('../../../src/components/utils/shortcuts', () => ({
   default: {

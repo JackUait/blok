@@ -13,24 +13,24 @@ interface CreateReadOnlyOptions {
 
 type ReadOnlyMocks = {
   modificationsObserver: {
-    disable: MockInstance<[], void>;
-    enable: MockInstance<[], void>;
+    disable: MockInstance<() => void>;
+    enable: MockInstance<() => void>;
   };
   saver: {
-    save: MockInstance<[], Promise<{ blocks: unknown[] }>>;
+    save: MockInstance<() => Promise<{ blocks: unknown[] }>>;
   };
   blockManager: {
-    clear: MockInstance<[], Promise<void>>;
-    toggleReadOnly: MockInstance<[boolean], void>;
+    clear: MockInstance<() => Promise<void>>;
+    toggleReadOnly: MockInstance<(state: boolean) => void>;
   };
   renderer: {
-    render: MockInstance<[unknown[]], Promise<void>>;
+    render: MockInstance<(blocks: unknown[]) => Promise<void>>;
   };
   toolbar: {
-    toggleReadOnly: MockInstance<[boolean], void>;
+    toggleReadOnly: MockInstance<(state: boolean) => void>;
   };
   inlineToolbar: {
-    toggleReadOnly: MockInstance<[boolean], void>;
+    toggleReadOnly: MockInstance<(state: boolean) => void>;
   };
 };
 
@@ -51,32 +51,32 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
     } as unknown as ReadOnly['eventsDispatcher'],
   });
 
-  const modificationsObserver = {
-    disable: vi.fn(() => undefined) as MockInstance<[], void>,
-    enable: vi.fn(() => undefined) as MockInstance<[], void>,
+  const modificationsObserver: ReadOnlyMocks['modificationsObserver'] = {
+    disable: vi.fn<() => void>(() => undefined),
+    enable: vi.fn<() => void>(() => undefined),
   };
 
-  const saver = {
-    save: vi.fn(async () => ({
+  const saver: ReadOnlyMocks['saver'] = {
+    save: vi.fn<() => Promise<{ blocks: unknown[] }>>(async () => ({
       blocks: options?.saverBlocks ?? [],
-    })) as MockInstance<[], Promise<{ blocks: unknown[] }>>,
+    })),
   };
 
-  const blockManager = {
-    clear: vi.fn(async () => undefined) as MockInstance<[], Promise<void>>,
-    toggleReadOnly: vi.fn((_state: boolean) => undefined) as MockInstance<[boolean], void>,
+  const blockManager: ReadOnlyMocks['blockManager'] = {
+    clear: vi.fn<() => Promise<void>>(async () => undefined),
+    toggleReadOnly: vi.fn<(state: boolean) => void>((_state) => undefined),
   };
 
-  const renderer = {
-    render: vi.fn(async (_blocks: unknown[]) => undefined) as MockInstance<[unknown[]], Promise<void>>,
+  const renderer: ReadOnlyMocks['renderer'] = {
+    render: vi.fn<(blocks: unknown[]) => Promise<void>>(async (_blocks) => undefined),
   };
 
-  const toolbar = {
-    toggleReadOnly: vi.fn((_state: boolean) => undefined) as MockInstance<[boolean], void>,
+  const toolbar: ReadOnlyMocks['toolbar'] = {
+    toggleReadOnly: vi.fn<(state: boolean) => void>((_state) => undefined),
   };
 
-  const inlineToolbar = {
-    toggleReadOnly: vi.fn((_state: boolean) => undefined) as MockInstance<[boolean], void>,
+  const inlineToolbar: ReadOnlyMocks['inlineToolbar'] = {
+    toggleReadOnly: vi.fn<(state: boolean) => void>((_state) => undefined),
   };
 
   const modules = {

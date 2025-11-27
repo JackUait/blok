@@ -38,11 +38,11 @@ import {
 
 // Mock VERSION global variable
 declare global {
-  // eslint-disable-next-line no-var
+   
   var VERSION: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, no-undef
+ 
 (globalThis as { VERSION?: string }).VERSION = 'test-version';
 
 /**

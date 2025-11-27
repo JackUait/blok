@@ -46,6 +46,7 @@ const createItem = (
 describe('PopoverItemHtml', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+    vi.clearAllMocks();
   });
 
   afterEach(() => {

@@ -19,7 +19,7 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
 
 const SIMPLE_IMAGE_TOOL_UMD_PATH = path.resolve(
   __dirname,
-  '../../../node_modules/@editorjs/simple-image/dist/bundle.js'
+  '../../../node_modules/@editorjs/simple-image/dist/simple-image.umd.js'
 );
 
 const HOLDER_ID = 'editorjs';
@@ -114,7 +114,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
             }
 
             if (!toolClass && classCode) {
-              // eslint-disable-next-line no-new-func -- constructing helper class inside page context
+               
               toolClass = new Function(`return (${classCode});`)();
             }
 
@@ -352,7 +352,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/plain': 'Some plain text',
       });
 
@@ -366,7 +366,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<p><b>Some text</b></p>',
       });
 
@@ -380,7 +380,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/plain': 'First block\n\nSecond block',
       });
 
@@ -397,7 +397,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/plain': specialText,
       });
 
@@ -411,7 +411,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<p>First block</p><p>Second block</p>',
       });
 
@@ -427,7 +427,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'application/x-editor-js': JSON.stringify([
           {
             tool: 'paragraph',
@@ -460,7 +460,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<h2>First block</h2><p>Second block</p>',
       });
 
@@ -505,7 +505,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/plain': imageUrl,
       });
 
@@ -530,7 +530,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': maliciousHtml,
       });
 
@@ -550,9 +550,9 @@ test.describe('copy and paste', () => {
 
       await paragraph.click();
       await paste(page, paragraph, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'application/x-editor-js': '{not-valid-json',
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/plain': 'Fallback plain text',
       });
 
@@ -667,9 +667,9 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': externalHtml,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/plain': plainFallback,
       });
 
@@ -735,7 +735,7 @@ test.describe('copy and paste', () => {
       await expect(block).toHaveCount(1);
 
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/plain': 'Hello',
       });
 

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
+ 
 /**
  * CodeX Sanitizer
  *

@@ -1,2 +1,2 @@
 export * from './popover-header';
-export * from './popover-header.types';
+export type * from './popover-header.types';

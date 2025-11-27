@@ -23,18 +23,16 @@ type MockBlockShape = {
   getActiveToolboxEntry: () => Promise<ToolboxConfigEntry | undefined>;
 };
 
-type MockFn<T> = T extends (...args: infer TArgs) => infer TReturn ? Mock<TArgs, TReturn> : never;
-
 const createMockBlock = (): {
   block: Block;
   shape: MockBlockShape;
   mocks: {
-    setStretchState: MockFn<MockBlockShape['setStretchState']>;
-    call: MockFn<MockBlockShape['call']>;
-    save: MockFn<MockBlockShape['save']>;
-    validate: MockFn<MockBlockShape['validate']>;
-    dispatchChange: MockFn<MockBlockShape['dispatchChange']>;
-    getActiveToolboxEntry: MockFn<MockBlockShape['getActiveToolboxEntry']>;
+    setStretchState: Mock<MockBlockShape['setStretchState']>;
+    call: Mock<MockBlockShape['call']>;
+    save: Mock<MockBlockShape['save']>;
+    validate: Mock<MockBlockShape['validate']>;
+    dispatchChange: Mock<MockBlockShape['dispatchChange']>;
+    getActiveToolboxEntry: Mock<MockBlockShape['getActiveToolboxEntry']>;
   };
   config: ToolConfig;
   holder: HTMLElement;
@@ -55,16 +53,16 @@ const createMockBlock = (): {
     data: { preset: 'default' } as BlockToolData,
   };
 
-  const callMock: MockFn<MockBlockShape['call']> = vi.fn<Parameters<MockBlockShape['call']>, ReturnType<MockBlockShape['call']>>()
+  const callMock = vi.fn<MockBlockShape['call']>()
     .mockReturnValue('call-result');
-  const saveMock: MockFn<MockBlockShape['save']> = vi.fn<Parameters<MockBlockShape['save']>, ReturnType<MockBlockShape['save']>>()
+  const saveMock = vi.fn<MockBlockShape['save']>()
     .mockResolvedValue(savedData);
-  const validateMock: MockFn<MockBlockShape['validate']> = vi.fn<Parameters<MockBlockShape['validate']>, ReturnType<MockBlockShape['validate']>>()
+  const validateMock = vi.fn<MockBlockShape['validate']>()
     .mockResolvedValue(true);
-  const dispatchChangeMock: MockFn<MockBlockShape['dispatchChange']> = vi.fn<Parameters<MockBlockShape['dispatchChange']>, ReturnType<MockBlockShape['dispatchChange']>>();
-  const getActiveToolboxEntryMock: MockFn<MockBlockShape['getActiveToolboxEntry']> = vi.fn<Parameters<MockBlockShape['getActiveToolboxEntry']>, ReturnType<MockBlockShape['getActiveToolboxEntry']>>()
+  const dispatchChangeMock = vi.fn<MockBlockShape['dispatchChange']>();
+  const getActiveToolboxEntryMock = vi.fn<MockBlockShape['getActiveToolboxEntry']>()
     .mockResolvedValue(toolboxEntry);
-  const setStretchStateMock: MockFn<MockBlockShape['setStretchState']> = vi.fn<Parameters<MockBlockShape['setStretchState']>, ReturnType<MockBlockShape['setStretchState']>>();
+  const setStretchStateMock = vi.fn<MockBlockShape['setStretchState']>();
 
   const shape: MockBlockShape = {
     id: 'block-id',

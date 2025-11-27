@@ -13,8 +13,8 @@ type BlockSaveResult = SavedData & { tunes?: Record<string, unknown> };
 interface BlockMock {
   block: Block;
   savedData: BlockSaveResult;
-  saveMock: Mock<[], Promise<BlockSaveResult>>;
-  validateMock: Mock<[BlockSaveResult['data']], Promise<boolean>>;
+  saveMock: Mock<() => Promise<BlockSaveResult>>;
+  validateMock: Mock<(data: BlockSaveResult['data']) => Promise<boolean>>;
 }
 
 interface BlockMockOptions {
@@ -41,9 +41,8 @@ const createBlockMock = (options: BlockMockOptions): BlockMock => {
     ...(options.tunes ? { tunes: options.tunes } : {}),
   };
 
-  const saveMock = vi.fn<[], Promise<BlockSaveResult>>().mockResolvedValue(savedData);
-  const validateMock = vi.fn<[BlockSaveResult['data']], Promise<boolean>>()
-    .mockResolvedValue(options.isValid ?? true);
+  const saveMock = vi.fn((): Promise<BlockSaveResult> => Promise.resolve(savedData));
+  const validateMock = vi.fn((_data: BlockSaveResult['data']): Promise<boolean> => Promise.resolve(options.isValid ?? true));
 
   const block = {
     save: saveMock,

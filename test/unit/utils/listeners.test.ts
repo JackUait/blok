@@ -22,7 +22,7 @@ describe('Listeners', () => {
   it('registers a listener and returns generated id', () => {
     const generateIdSpy = vi.spyOn(Utils, 'generateId').mockReturnValue('l-test');
     const addEventListenerSpy = vi.spyOn(element, 'addEventListener');
-    const handler = vi.fn<[Event], void>();
+    const handler = vi.fn<(event: Event) => void>();
 
     const id = listeners.on(element, 'click', handler);
 
@@ -48,7 +48,7 @@ describe('Listeners', () => {
       .mockReturnValueOnce('first-id')
       .mockReturnValueOnce('second-id');
     const addEventListenerSpy = vi.spyOn(element, 'addEventListener');
-    const handler = vi.fn<[Event], void>();
+    const handler = vi.fn<(event: Event) => void>();
 
     const firstId = listeners.on(element, 'click', handler);
     const secondId = listeners.on(element, 'click', handler);
@@ -63,7 +63,7 @@ describe('Listeners', () => {
     vi.spyOn(Utils, 'generateId').mockReturnValue('listener-id');
     const addEventListenerSpy = vi.spyOn(element, 'addEventListener');
     const removeEventListenerSpy = vi.spyOn(element, 'removeEventListener');
-    const handler = vi.fn<[Event], void>();
+    const handler = vi.fn<(event: Event) => void>();
     const options: AddEventListenerOptions = { capture: true,
       once: true };
 
@@ -78,8 +78,8 @@ describe('Listeners', () => {
   });
 
   it('removes all listeners for an element and event when handler is omitted', () => {
-    const handlerA = vi.fn<[Event], void>();
-    const handlerB = vi.fn<[Event], void>();
+    const handlerA = vi.fn<(event: Event) => void>();
+    const handlerB = vi.fn<(event: Event) => void>();
 
     listeners.on(element, 'mousemove', handlerA);
     listeners.on(element, 'mousemove', handlerB);
@@ -95,7 +95,7 @@ describe('Listeners', () => {
 
   it('removes a listener by its id', () => {
     vi.spyOn(Utils, 'generateId').mockReturnValue('listener-id');
-    const handler = vi.fn<[Event], void>();
+    const handler = vi.fn<(event: Event) => void>();
     const removeEventListenerSpy = vi.spyOn(element, 'removeEventListener');
 
     const id = listeners.on(element, 'wheel', handler);
@@ -111,8 +111,8 @@ describe('Listeners', () => {
   });
 
   it('finds the first matching listener', () => {
-    const handlerA = vi.fn<[Event], void>();
-    const handlerB = vi.fn<[Event], void>();
+    const handlerA = vi.fn<(event: Event) => void>();
+    const handlerB = vi.fn<(event: Event) => void>();
 
     listeners.on(element, 'click', handlerA);
     listeners.on(element, 'click', handlerB);
@@ -130,9 +130,9 @@ describe('Listeners', () => {
   });
 
   it('returns all listeners for the provided element when event type is omitted', () => {
-    const secondHandler = vi.fn<[Event], void>();
+    const secondHandler = vi.fn<(event: Event) => void>();
 
-    listeners.on(element, 'click', vi.fn<[Event], void>());
+    listeners.on(element, 'click', vi.fn<(event: Event) => void>());
     listeners.on(element, 'keydown', secondHandler);
 
     const found = listeners.findAll(element);
@@ -143,8 +143,8 @@ describe('Listeners', () => {
 
   it('removes every registered listener on removeAll', () => {
     const otherElement = document.createElement('button');
-    const clickHandler = vi.fn<[Event], void>();
-    const keydownHandler = vi.fn<[Event], void>();
+    const clickHandler = vi.fn<(event: Event) => void>();
+    const keydownHandler = vi.fn<(event: Event) => void>();
 
     listeners.on(element, 'click', clickHandler);
     listeners.on(otherElement, 'keydown', keydownHandler);

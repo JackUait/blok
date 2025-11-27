@@ -189,7 +189,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
             }
 
             if (!toolClass && classCode) {
-              // eslint-disable-next-line no-new-func -- constructing helper class inside page context
+               
               toolClass = new Function(`return (${classCode});`)();
             }
 

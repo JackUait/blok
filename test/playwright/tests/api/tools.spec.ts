@@ -71,7 +71,7 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
   await page.evaluate(
     async ({ holderId, rawData, serializedTools, rawConfig }) => {
       const reviveToolClass = (classSource: string): unknown => {
-        // eslint-disable-next-line no-new-func -- constructing helper class inside page context
+         
         return new Function(`return (${classSource});`)();
       };
 
@@ -421,7 +421,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<img>',
       });
 
@@ -455,7 +455,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<img src="foo" onerror="alert(123)"/>',
       });
 
@@ -491,7 +491,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<ol start="50"><li>Ordered List</li><li>Unordered List</li></ol>',
       });
 
@@ -538,7 +538,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<img src="foo" onerror="alert(123)"/>',
       });
 
@@ -585,7 +585,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<video width="100"><source src="movie.mp4" type="video/mp4"></video>',
       });
 
@@ -639,7 +639,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<video width="100"><source src="movie.mp4" type="video/mp4"></video>',
       });
 
@@ -699,7 +699,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+         
         'text/html': '<table><tr height="50"><td width="300">Ho-Ho-Ho</td></tr></table>',
       });
 

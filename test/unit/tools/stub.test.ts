@@ -6,18 +6,18 @@ import Stub, { type StubData } from '../../../src/tools/stub';
 
 interface CreateStubOptions {
   data?: Partial<StubData>;
-  translator?: MockInstance<[string], string>;
+  translator?: MockInstance<(key: string) => string>;
 }
 
 const createStub = (
   options: CreateStubOptions = {}
 ): {
   stub: Stub;
-  translator: MockInstance<[string], string>;
+  translator: MockInstance<(key: string) => string>;
   data: StubData;
   savedData: StubData['savedData'];
 } => {
-  const translator = options.translator ?? vi.fn<[string], string>((key) => `translated:${key}`);
+  const translator = options.translator ?? vi.fn((key: string) => `translated:${key}`);
   const savedData = options.data?.savedData ?? {
     type: 'missing-tool',
     data: { payload: true },

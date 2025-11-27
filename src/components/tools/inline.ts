@@ -31,7 +31,7 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
    * Constructs new InlineTool instance from constructable
    */
   public create(): IInlineTool {
-    // eslint-disable-next-line new-cap
+
     const InlineToolClass = this.constructable as InlineToolConstructable;
 
     return new InlineToolClass({
@@ -56,6 +56,7 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
   public get title(): string {
     const constructable = this.constructable as InlineToolConstructable;
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Backward compatibility: title is deprecated but still needs to be supported
     return constructable['title'] || '';
   }
 }

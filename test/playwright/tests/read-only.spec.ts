@@ -160,7 +160,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
             }
 
             if (!toolClass && classCode) {
-              // eslint-disable-next-line no-new-func -- executed in browser context to recreate the tool class
+               
               toolClass = new Function(`return (${classCode});`)();
             }
 
@@ -436,7 +436,7 @@ test.describe('read-only mode', () => {
 
     await expect(paragraph).toHaveCount(1);
     await paste(page, paragraph, {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
+       
       'text/plain': ' + pasted text',
     });
 
@@ -447,7 +447,7 @@ test.describe('read-only mode', () => {
     await paragraph.click();
 
     await paste(page, paragraph, {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
+       
       'text/plain': ' + pasted text',
     });
 

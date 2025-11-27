@@ -8,7 +8,7 @@ import type { EditorEventMap } from '../../../../../src/components/events';
 
 type InlineToolbarEditorMock = {
   InlineToolbar: {
-    tryToShow: ReturnType<typeof vi.fn<[], Promise<void>>>;
+    tryToShow: ReturnType<typeof vi.fn<() => Promise<void>>>;
     close: ReturnType<typeof vi.fn>;
   };
 };
@@ -27,7 +27,7 @@ describe('InlineToolbarAPI', () => {
     inlineToolbarApi = new InlineToolbarAPI(moduleConfig);
     editorMock = {
       InlineToolbar: {
-        tryToShow: vi.fn<[], Promise<void>>(() => Promise.resolve()),
+        tryToShow: vi.fn((): Promise<void> => Promise.resolve()),
         close: vi.fn(),
       },
       ...overrides,

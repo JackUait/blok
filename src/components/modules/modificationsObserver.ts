@@ -114,12 +114,18 @@ export default class ModificationsObserver extends Module {
     }
 
     this.batchingTimeout = setTimeout(() => {
+      const queuedEvents = Array.from(this.batchingOnChangeQueue.values());
+
+      if (queuedEvents.length === 0) {
+        return;
+      }
+
       /**
        * If we have only 1 event in a queue, unwrap it
        */
-      const eventsToEmit = this.batchingOnChangeQueue.size === 1
-        ? this.batchingOnChangeQueue.values().next().value
-        : Array.from(this.batchingOnChangeQueue.values());
+      const eventsToEmit = queuedEvents.length === 1
+        ? queuedEvents[0]
+        : queuedEvents;
 
       if (this.config.onChange) {
         this.config.onChange(this.Editor.API.methods, eventsToEmit);

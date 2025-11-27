@@ -1,15 +1,16 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FlatCompat } from '@eslint/eslintrc';
+import { defineConfig } from 'eslint/config';
 import eslintPluginImport from 'eslint-plugin-import';
 import playwright from 'eslint-plugin-playwright';
 import sonarjs from 'eslint-plugin-sonarjs';
 import jest from 'eslint-plugin-jest';
+import tseslint from 'typescript-eslint';
+import jsdoc from 'eslint-plugin-jsdoc';
 
 const CLASS_SELECTOR_PATTERN = /\.[_a-zA-Z][_a-zA-Z0-9-]*/;
 const ID_SELECTOR_PATTERN = /#[_a-zA-Z][_a-zA-Z0-9-]*/;
 const TAG_SELECTOR_PATTERN = /^(?:div|span|p|a|button|input|form|ul|ol|li|table|tr|td|th|thead|tbody|tfoot|h[1-6]|img|nav|header|footer|main|section|article|aside|label|select|textarea|option|fieldset|legend|iframe|canvas|video|audio|source|svg|path|circle|rect|line|polyline|polygon|ellipse|g|defs|use|symbol|text|tspan|strong|em|b|i|u|s|small|mark|del|ins|sub|sup|code|pre|blockquote|hr|br|figure|figcaption|details|summary|dialog|menu|menuitem|datalist|output|progress|meter|time|address|abbr|cite|dfn|kbd|samp|var|ruby|rt|rp|bdi|bdo|wbr|area|map|track|embed|object|param|picture|portal|slot|template|noscript|script|style|link|meta|base|head|body|html)(?:\s|$|\[|:|>|\+|~|,)/i;
-const CSS_ENGINE_PATTERN = /^css(?::(light|dark))?=\s*.*\.[_a-zA-Z][_a-zA-Z0-9-]*/;
 const CSS_COMBINATOR_PATTERN = /(?:^|[^>])\s*>\s*|\s+\+\s+|\s+~\s+/;
 const SELECTOR_METHODS = new Set([
   '$',
@@ -228,11 +229,7 @@ const internalPlaywrightPlugin = {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-export default [
+export default defineConfig(
   {
     ignores: [
       'node_modules/**',
@@ -245,47 +242,53 @@ export default [
       '**/public/assets/**',
     ],
   },
-  ...compat.config({
-    root: true,
-    plugins: ['@typescript-eslint', 'jsdoc'],
-    parser: '@typescript-eslint/parser',
-    parserOptions: {
-      project: ['./tsconfig.json'],
-      tsconfigRootDir: __dirname,
+  // TypeScript ESLint base config
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+      jsdoc,
     },
-    globals: {
-      Node: true,
-      Range: true,
-      HTMLElement: true,
-      HTMLDivElement: true,
-      Element: true,
-      Selection: true,
-      SVGElement: true,
-      Text: true,
-      InsertPosition: true,
-      PropertyKey: true,
-      MouseEvent: true,
-      TouchEvent: true,
-      KeyboardEvent: true,
-      ClipboardEvent: true,
-      DragEvent: true,
-      Event: true,
-      EventTarget: true,
-      Document: true,
-      NodeList: true,
-      File: true,
-      FileList: true,
-      MutationRecord: true,
-      AddEventListenerOptions: true,
-      DataTransfer: true,
-      DOMRect: true,
-      ClientRect: true,
-      ArrayLike: true,
-      InputEvent: true,
-      unknown: true,
-      requestAnimationFrame: true,
-      navigator: true,
-      globalThis: true,
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        project: ['./tsconfig.json'],
+        tsconfigRootDir: __dirname,
+      },
+      globals: {
+        Node: true,
+        Range: true,
+        HTMLElement: true,
+        HTMLDivElement: true,
+        Element: true,
+        Selection: true,
+        SVGElement: true,
+        Text: true,
+        InsertPosition: true,
+        PropertyKey: true,
+        MouseEvent: true,
+        TouchEvent: true,
+        KeyboardEvent: true,
+        ClipboardEvent: true,
+        DragEvent: true,
+        Event: true,
+        EventTarget: true,
+        Document: true,
+        NodeList: true,
+        File: true,
+        FileList: true,
+        MutationRecord: true,
+        AddEventListenerOptions: true,
+        DataTransfer: true,
+        DOMRect: true,
+        ClientRect: true,
+        ArrayLike: true,
+        InputEvent: true,
+        unknown: true,
+        requestAnimationFrame: true,
+        navigator: true,
+        globalThis: true,
+      },
     },
     rules: {
       'no-restricted-syntax': [
@@ -334,31 +337,10 @@ export default [
           destructuredArrayIgnorePattern: '^_',
         },
       ],
+      '@typescript-eslint/no-floating-promises': 'error',
+      'no-unused-vars': 'off',
     },
-    overrides: [
-      {
-        files: ['*.ts', '*.tsx'],
-        parserOptions: {
-          project: ['./tsconfig.json'],
-          tsconfigRootDir: __dirname,
-        },
-        rules: {
-          '@typescript-eslint/no-floating-promises': 'error',
-          'no-unused-vars': 'off',
-        },
-      },
-      {
-        files: ['tsconfig.json', 'package.json', 'tsconfig.*.json', 'tslint.json'],
-        rules: {
-          quotes: [1, 'double'],
-          semi: [1, 'never'],
-          'comma-dangle': 'off',
-          '@typescript-eslint/consistent-type-imports': 'off',
-          '@typescript-eslint/consistent-type-exports': 'off',
-        },
-      },
-    ],
-  }),
+  },
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     plugins: {
@@ -538,4 +520,4 @@ export default [
       'no-restricted-syntax': 'off',
     },
   },
-];
+);

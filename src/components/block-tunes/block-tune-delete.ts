@@ -17,7 +17,7 @@ export default class DeleteTune implements BlockTune {
   public static readonly isTune = true;
 
   /**
-   * Property that contains Editor.js API methods
+   * Property that contains Blok API methods
    * @see {@link docs/api.md}
    */
   private readonly api: API;

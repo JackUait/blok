@@ -277,7 +277,7 @@ test.describe('inline tool link - edge cases', () => {
 
     const blockData = savedData?.blocks[0].data.text;
 
-    // Editor.js sanitizer should strip javascript: hrefs
+    // Blok sanitizer should strip javascript: hrefs
     expect(blockData).not.toContain('href="javascript:alert(1)"');
   });
 

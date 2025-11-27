@@ -4,7 +4,7 @@ import path from 'node:path';
 let didBuild = false;
 
 /**
- * Ensure the Editor.js bundle is freshly built before running Playwright tests.
+ * Ensure the Blok bundle is freshly built before running Playwright tests.
  *
  * Necessary because the Playwright fixtures load the UMD bundle directly from the dist folder.
  * Without rebuilding we might exercise stale code that doesn't match the current TypeScript sources.
@@ -26,7 +26,7 @@ export const ensureEditorBundleBuilt = (): void => {
   }
 
   if (result.status !== 0) {
-    throw new Error(`Building Editor.js for Playwright failed with exit code ${result.status ?? 'unknown'}.`);
+    throw new Error(`Building Blok for Playwright failed with exit code ${result.status ?? 'unknown'}.`);
   }
 
   didBuild = true;

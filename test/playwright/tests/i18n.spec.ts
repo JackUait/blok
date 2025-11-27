@@ -283,7 +283,7 @@ test.describe('editor i18n', () => {
 
           /**
            * Creates a `SimpleHeader` instance with initial block data.
-           * @param root0 - Editor.js constructor arguments containing the block data.
+           * @param root0 - Blok constructor arguments containing the block data.
            */
           constructor({ data }: { data: { text: string } }) {
             this.data = data;
@@ -302,7 +302,7 @@ test.describe('editor i18n', () => {
           }
 
           /**
-           * Persists the heading content to the Editor.js data format.
+           * Persists the heading content to the Blok data format.
            * @param element - Heading element that contains the current block content.
            */
           public save(element: HTMLHeadingElement): { text: string; level: number } {
@@ -586,7 +586,7 @@ test.describe('editor i18n', () => {
 
           /**
            * Creates a `SimpleHeader` instance with initial block data.
-           * @param root0 - Editor.js constructor arguments containing the block data.
+           * @param root0 - Blok constructor arguments containing the block data.
            */
           constructor({ data }: { data: { text: string } }) {
             this.data = data;
@@ -605,7 +605,7 @@ test.describe('editor i18n', () => {
           }
 
           /**
-           * Persists the heading content to the Editor.js data format.
+           * Persists the heading content to the Blok data format.
            * @param element - Heading element that contains the current block content.
            */
           public save(element: HTMLHeadingElement): { text: string; level: number } {
@@ -1114,7 +1114,7 @@ test.describe('editor i18n', () => {
 
           /**
            * Creates a `SimpleHeader` instance with initial block data.
-           * @param root0 - Editor.js constructor arguments containing the block data.
+           * @param root0 - Blok constructor arguments containing the block data.
            */
           constructor({ data }: { data: { text: string } }) {
             this.data = data;
@@ -1133,7 +1133,7 @@ test.describe('editor i18n', () => {
           }
 
           /**
-           * Persists the heading content to the Editor.js data format.
+           * Persists the heading content to the Blok data format.
            * @param element - Heading element that contains the current block content.
            */
           public save(element: HTMLHeadingElement): { text: string; level: number } {
@@ -1321,7 +1321,7 @@ test.describe('editor i18n', () => {
 
           /**
            * Creates a `SimpleHeader` instance with initial block data.
-           * @param root0 - Editor.js constructor arguments containing the block data.
+           * @param root0 - Blok constructor arguments containing the block data.
            */
           constructor({ data }: { data: { text: string } }) {
             this.data = data;
@@ -1340,7 +1340,7 @@ test.describe('editor i18n', () => {
           }
 
           /**
-           * Persists the heading content to the Editor.js data format.
+           * Persists the heading content to the Blok data format.
            * @param element - Heading element that contains the current block content.
            */
           public save(element: HTMLHeadingElement): { text: string; level: number } {

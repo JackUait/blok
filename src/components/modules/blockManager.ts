@@ -801,7 +801,7 @@ export default class BlockManager extends Module {
     }
 
     /**
-     * Support multiple Editor.js instances,
+     * Support multiple Blok instances,
      * by checking whether the found block belongs to the current instance
      * @see {@link Ui#documentTouched}
      */

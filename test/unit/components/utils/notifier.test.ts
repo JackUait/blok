@@ -178,7 +178,7 @@ describe('Notifier utility', () => {
       expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
       const [message, errorInstance] = consoleErrorSpy.mock.calls[0];
 
-      expect(message).toBe('[Editor.js] Failed to display notification. Reason:');
+      expect(message).toBe('[Blok] Failed to display notification. Reason:');
       expect(errorInstance).toBeInstanceOf(Error);
       expect((errorInstance as Error).message).toBe('codex-notifier module does not expose a "show" method.');
     });

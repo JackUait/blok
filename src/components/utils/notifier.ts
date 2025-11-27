@@ -63,7 +63,7 @@ export default class Notifier {
         notifier.show(options);
       })
       .catch((error) => {
-        console.error('[Editor.js] Failed to display notification. Reason:', error);
+        console.error('[Blok] Failed to display notification. Reason:', error);
       });
   }
 

@@ -34,7 +34,7 @@ export default class Stub implements BlockTool {
   private readonly wrapper: HTMLElement;
 
   /**
-   * Editor.js API
+   * Blok API
    */
   private readonly api: API;
 
@@ -56,7 +56,7 @@ export default class Stub implements BlockTool {
   /**
    * @param options - constructor options
    * @param options.data - stub tool data
-   * @param options.api - Editor.js API
+   * @param options.api - Blok API
    */
   constructor({ data, api }: BlockToolConstructorOptions<StubData>) {
     this.api = api;

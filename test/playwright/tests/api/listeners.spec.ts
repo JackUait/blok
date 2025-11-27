@@ -33,22 +33,22 @@ type EditorWithListeners = EditorJS & { listeners: ListenersAPI };
 type CreateEditorOptions = Partial<EditorConfig>;
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
@@ -56,9 +56,9 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   await page.waitForFunction(() => typeof window.EditorJS === 'function');
 
   await page.evaluate(
-    async (params: { holderId: string; editorOptions: Record<string, unknown> }) => {
+    async (params: { holder: string; editorOptions: Record<string, unknown> }) => {
       const config = Object.assign(
-        { holder: params.holderId },
+        { holder: params.holder },
         params.editorOptions
       ) as EditorConfig;
 
@@ -68,7 +68,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
       await editor.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       editorOptions: options as Record<string, unknown>,
     }
   );

@@ -123,8 +123,8 @@ export default class Paste extends Module {
   /** If string`s length is greater than this number we don't check paste patterns */
   public static readonly PATTERN_PROCESSING_MAX_LENGTH = 450;
 
-  /** Custom EditorJS mime-type to handle in-editor copy/paste actions */
-  public readonly MIME_TYPE = 'application/x-editor-js';
+  /** Custom Blok mime-type to handle in-editor copy/paste actions */
+  public readonly MIME_TYPE = 'application/x-blok';
 
   /**
    * Tags` substitutions parameters
@@ -264,17 +264,17 @@ export default class Paste extends Module {
       return;
     }
 
-    const editorJSData = dataTransfer.getData(this.MIME_TYPE);
+    const blokData = dataTransfer.getData(this.MIME_TYPE);
     const plainData = dataTransfer.getData('text/plain');
     const rawHtmlData = dataTransfer.getData('text/html');
     const normalizedHtmlData = rawHtmlData;
 
     /**
-     * If EditorJS json is passed, insert it
+     * If Blok json is passed, insert it
      */
-    if (editorJSData) {
+    if (blokData) {
       try {
-        this.insertEditorJSData(JSON.parse(editorJSData));
+        this.insertBlokData(JSON.parse(blokData));
 
         return;
       } catch (_e) { } // Do nothing and continue execution as usual if error appears
@@ -957,11 +957,11 @@ export default class Paste extends Module {
   }
 
   /**
-   * Insert data passed as application/x-editor-js JSON
+   * Insert data passed as application/x-blok JSON
    * @param {Array} blocks — Blocks' data to insert
    * @returns {void}
    */
-  private insertEditorJSData(blocks: Pick<SavedData, 'id' | 'data' | 'tool'>[]): void {
+  private insertBlokData(blocks: Pick<SavedData, 'id' | 'data' | 'tool'>[]): void {
     const { BlockManager, Caret, Tools } = this.Editor;
     const sanitizedBlocks = sanitizeBlocks(
       blocks,

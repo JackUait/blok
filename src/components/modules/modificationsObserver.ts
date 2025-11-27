@@ -99,7 +99,7 @@ export default class ModificationsObserver extends Module {
   }
 
   /**
-   * Call onChange event passed to Editor.js configuration
+   * Call onChange event passed to Blok configuration
    * @param event - some of our custom change events
    */
   private particularBlockChanged(event: BlockMutationEvent): void {

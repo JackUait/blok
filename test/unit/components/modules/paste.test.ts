@@ -532,7 +532,7 @@ describe('Paste module', () => {
     expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
   });
 
-  it('inserts sanitized EditorJS data and updates caret position', () => {
+  it('inserts sanitized Blok data and updates caret position', () => {
     const { paste, mocks } = createPaste();
 
     const sanitizeBlocksSpy = vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
@@ -562,8 +562,8 @@ describe('Paste module', () => {
     });
 
     (paste as unknown as {
-      insertEditorJSData(blocks: Array<{ id: string; tool: string; data: unknown }>): void;
-    }).insertEditorJSData([
+      insertBlokData(blocks: Array<{ id: string; tool: string; data: unknown }>): void;
+    }).insertBlokData([
       {
         id: '1',
         tool: 'image',

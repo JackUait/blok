@@ -1,5 +1,5 @@
 /**
- * Fired when blocks wrapper (.codex-editor-redactor) dom changed
+ * Fired when blocks wrapper (.blok-editor-redactor) dom changed
  */
 export const RedactorDomChanged = 'redactor dom changed';
 

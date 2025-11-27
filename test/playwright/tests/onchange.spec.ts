@@ -106,22 +106,22 @@ declare global {
 }
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
@@ -138,7 +138,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
   await page.evaluate(
     async ({
-      holderId,
+      holder,
       blocks: initialBlocks,
       readOnly: readOnlyOption,
       tools: serializedTools,
@@ -175,7 +175,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
       }, {});
 
       const editorConfig: Record<string, unknown> = {
-        holder: holderId,
+        holder: holder,
         ...editorConfigOptions,
       };
 
@@ -247,7 +247,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
       await editor.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       blocks: blocks ?? null,
       readOnly,
       tools,

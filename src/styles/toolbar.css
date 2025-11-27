@@ -107,13 +107,13 @@
 /**
  * Styles for Narrow mode
  */
-.codex-editor--narrow .ce-toolbar__plus {
+.blok-editor--narrow .ce-toolbar__plus {
     @media (--not-mobile) {
         left: 5px;
     }
 }
 
-.codex-editor--toolbox-opened .ce-toolbar__settings-btn {
+.blok-editor--toolbox-opened .ce-toolbar__settings-btn {
     @media (--can-hover) {
         &:hover {
             cursor: pointer;

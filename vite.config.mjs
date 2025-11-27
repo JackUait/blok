@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
     build: {
       copyPublicDir: false,
       lib: {
-        entry: path.resolve(__dirname, 'src', 'codex.ts'),
+        entry: path.resolve(__dirname, 'src', 'blok.ts'),
         name: 'Blok',
         fileName: 'blok',
       },

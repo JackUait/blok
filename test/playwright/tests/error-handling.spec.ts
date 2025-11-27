@@ -25,22 +25,22 @@ type SerializableOutputData = {
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 test.describe('editor error handling', () => {
@@ -56,10 +56,10 @@ test.describe('editor error handling', () => {
   test('reports a descriptive error when tool configuration is invalid', async ({ page }) => {
     await resetEditor(page);
 
-    const errorMessage = await page.evaluate(async ({ holderId }) => {
+    const errorMessage = await page.evaluate(async ({ holder }) => {
       try {
         const editor = new window.EditorJS({
-          holder: holderId,
+          holder: holder,
           tools: {
             brokenTool: {
               inlineToolbar: true,
@@ -74,7 +74,7 @@ test.describe('editor error handling', () => {
       } catch (error) {
         return (error as Error).message;
       }
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     expect(errorMessage).toBe('Tool «brokenTool» must be a constructor function or an object with function in the «class» property');
   });
@@ -86,13 +86,13 @@ test.describe('editor error handling', () => {
       predicate: (message) => message.type() === 'warning' && message.text().includes('Incorrect Inline Tool'),
     });
 
-    await page.evaluate(async ({ holderId }) => {
+    await page.evaluate(async ({ holder }) => {
       class InlineWithoutRender {
         public static isInline = true;
       }
 
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         tools: {
           inlineWithoutRender: {
             class: InlineWithoutRender,
@@ -102,7 +102,7 @@ test.describe('editor error handling', () => {
 
       window.editorInstance = editor;
       await editor.isReady;
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     const warningMessage = await warningPromise;
 
@@ -122,15 +122,15 @@ test.describe('editor error handling', () => {
       ],
     };
 
-    await page.evaluate(async ({ holderId, data }) => {
+    await page.evaluate(async ({ holder, data }) => {
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         data,
       });
 
       window.editorInstance = editor;
       await editor.isReady;
-    }, { holderId: HOLDER_ID,
+    }, { holder: HOLDER_ID,
       data: initialData });
 
     const errorMessage = await page.evaluate(async () => {
@@ -153,7 +153,7 @@ test.describe('editor error handling', () => {
   test('blocks read-only initialization when tools do not support read-only mode', async ({ page }) => {
     await resetEditor(page);
 
-    const errorMessage = await page.evaluate(async ({ holderId }) => {
+    const errorMessage = await page.evaluate(async ({ holder }) => {
       try {
         class NonReadOnlyTool {
           public static get toolbox() {
@@ -179,7 +179,7 @@ test.describe('editor error handling', () => {
         }
 
         const editor = new window.EditorJS({
-          holder: holderId,
+          holder: holder,
           readOnly: true,
           tools: {
             nonReadOnly: {
@@ -203,16 +203,16 @@ test.describe('editor error handling', () => {
       } catch (error) {
         return (error as Error).message;
       }
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     expect(errorMessage).toContain('To enable read-only mode all connected tools should support it.');
     expect(errorMessage).toContain('nonReadOnly');
   });
 
   test('throws a descriptive error when default holder element is missing', async ({ page }) => {
-    await page.evaluate(({ holderId }) => {
-      document.getElementById(holderId)?.remove();
-    }, { holderId: HOLDER_ID });
+    await page.evaluate(({ holder }) => {
+      document.getElementById(holder)?.remove();
+    }, { holder: HOLDER_ID });
 
     const errorMessage = await page.evaluate(async () => {
       try {
@@ -227,15 +227,15 @@ test.describe('editor error handling', () => {
       }
     });
 
-    expect(errorMessage).toBe('element with ID «editorjs» is missing. Pass correct holder\'s ID.');
+    expect(errorMessage).toBe('element with ID «blok» is missing. Pass correct holder\'s ID.');
   });
 
   test('throws a descriptive error when holder config is not an Element node', async ({ page }) => {
     await resetEditor(page);
 
-    const errorMessage = await page.evaluate(async ({ holderId }) => {
+    const errorMessage = await page.evaluate(async ({ holder }) => {
       try {
-        const fakeHolder = { id: holderId };
+        const fakeHolder = { id: holder };
         const editor = new window.EditorJS({
           holder: fakeHolder as unknown as HTMLElement,
         });
@@ -247,7 +247,7 @@ test.describe('editor error handling', () => {
       } catch (error) {
         return (error as Error).message;
       }
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     expect(errorMessage).toBe('«holder» value must be an Element node');
   });

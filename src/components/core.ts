@@ -10,7 +10,7 @@ import type { EditorEventMap } from './events';
 import type Renderer from './modules/renderer';
 
 /**
- * Editor.js core class. Bootstraps modules.
+ * Blok core class. Bootstraps modules.
  */
 export default class Core {
   /**
@@ -38,7 +38,7 @@ export default class Core {
    */
   constructor(config?: EditorConfig|string) {
     /**
-     * Ready promise. Resolved if Editor.js is ready to work, rejected otherwise
+     * Ready promise. Resolved if Blok is ready to work, rejected otherwise
      */
     // Initialize config to satisfy TypeScript's definite assignment check
     // The setter will properly assign and process the config
@@ -65,7 +65,7 @@ export default class Core {
           resolve();
         })
         .catch((error) => {
-          _.log(`Editor.js is not ready because of ${error}`, 'error');
+          _.log(`Blok is not ready because of ${error}`, 'error');
 
           /**
            * Reject this.isReady promise
@@ -102,7 +102,7 @@ export default class Core {
      * If holder is empty then set a default value
      */
     if (this.config.holder == null) {
-      this.config.holder = 'editorjs';
+      this.config.holder = 'blok';
     }
 
     if (this.config.logLevel == null) {
@@ -151,7 +151,7 @@ export default class Core {
      * Height of Editor's bottom area that allows to set focus on the last Block
      * @type {number}
      */
-     
+
     this.config.minHeight = this.config.minHeight !== undefined ? this.config.minHeight : 300;
 
     /**
@@ -173,9 +173,9 @@ export default class Core {
     this.config.tools = this.config.tools || {};
     this.config.i18n = this.config.i18n || {};
     this.config.data = this.config.data || { blocks: [] };
-     
+
     this.config.onReady = this.config.onReady || ((): void => {});
-     
+
     this.config.onChange = this.config.onChange || ((): void => {});
     this.config.inlineToolbar = this.config.inlineToolbar !== undefined ? this.config.inlineToolbar : true;
 

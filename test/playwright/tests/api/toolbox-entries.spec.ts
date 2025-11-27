@@ -56,22 +56,22 @@ const getLastBlock = async (page: Page): Promise<Locator> => {
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -119,7 +119,7 @@ const createEditorWithTools = async (
   const serializedTools = serializeTools(tools);
 
   const registeredToolNames = await page.evaluate(
-    async ({ holderId, editorTools, globals }) => {
+    async ({ holder, editorTools, globals }) => {
       const reviveToolClass = (classSource: string, classGlobals: Record<string, unknown>): BlockToolConstructable => {
         const globalKeys = Object.keys(classGlobals);
         const factoryBody = `${globalKeys
@@ -154,7 +154,7 @@ return (${classSource});
       );
 
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         tools: toolsMap,
       });
 
@@ -164,7 +164,7 @@ return (${classSource});
       return Object.keys(toolsMap);
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       editorTools: serializedTools,
       globals: options.globals ?? {},
     }

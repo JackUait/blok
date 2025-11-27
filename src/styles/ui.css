@@ -1,7 +1,7 @@
 /**
 * Editor wrapper
 */
-.codex-editor {
+.blok-editor {
     position: relative;
     box-sizing: border-box;
     z-index: 1;
@@ -102,7 +102,7 @@
     }
 }
 
-.codex-editor--toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
+.blok-editor--toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
     opacity: 0 !important;
 }
 

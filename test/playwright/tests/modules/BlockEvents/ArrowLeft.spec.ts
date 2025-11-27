@@ -18,36 +18,36 @@ const getParagraphByIndex = (page: Page, index: number): Locator => {
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
+  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: { blocks: editorBlocks },
     });
 
     window.editorInstance = editor;
     await editor.isReady;
   }, {
-    holderId: HOLDER_ID,
+    holder: HOLDER_ID,
     blocks,
   });
 };
@@ -63,7 +63,7 @@ const createParagraphEditor = async (page: Page, textBlocks: string[]): Promise<
 
 const createEditorWithDelimiter = async (page: Page): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     /**
      *
      */
@@ -96,7 +96,7 @@ const createEditorWithDelimiter = async (page: Page): Promise<void> => {
     }
 
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       tools: {
         delimiter: ContentlessToolMock,
       },
@@ -127,7 +127,7 @@ const createEditorWithDelimiter = async (page: Page): Promise<void> => {
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const getCaretInfo = (locator: Locator, options: { normalize?: boolean } = {}): Promise<{ inside: boolean; offset: number; textLength: number } | null> => {

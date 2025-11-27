@@ -26,22 +26,22 @@ const modifierKeyVariants: Array<{ description: string; key: 'Control' | 'Meta' 
 ];
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<void> => {
@@ -51,15 +51,15 @@ const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<
   }));
 
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
+  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: { blocks: editorBlocks },
     });
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID,
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
@@ -178,7 +178,7 @@ test.describe('slash keydown', () => {
       );
     });
 
-    await expect(pageTitle).toHaveText('Editor.js test page');
+    await expect(pageTitle).toHaveText('Blok test page');
   });
 
   test('should open Block Tunes when cmd+slash pressed', async ({ page }) => {

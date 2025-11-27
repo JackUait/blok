@@ -14,12 +14,10 @@ import * as _ from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 
 /**
- * Editor.js
+ * Blok
  * @license Apache-2.0
- * @see Editor.js <https://editorjs.io>
- * @author CodeX Team <https://codex.so>
  */
-export default class EditorJS {
+export default class Blok {
   /**
    * Store user-provided configuration for later export
    */
@@ -52,20 +50,20 @@ export default class EditorJS {
     /**
      * Set default onReady function or use the one from configuration if provided
      */
-     
+
     const onReady = (_.isObject(configuration) && _.isFunction(configuration.onReady))
       ? configuration.onReady
       : () => {};
 
     /**
-     * Create a Editor.js instance
+     * Create a Blok instance
      */
     const editor = new Core(configuration);
 
     /**
      * Initialize destroy with a no-op function that will be replaced in exportAPI
      */
-     
+
     this.destroy = (): void => {};
 
     /**
@@ -157,8 +155,8 @@ export default class EditorJS {
       defineDispatcher(this as Record<string, unknown>);
     }
 
-    if (Object.getPrototypeOf(apiMethods) !== EditorJS.prototype) {
-      Object.setPrototypeOf(apiMethods, EditorJS.prototype);
+    if (Object.getPrototypeOf(apiMethods) !== Blok.prototype) {
+      Object.setPrototypeOf(apiMethods, Blok.prototype);
     }
 
     Object.setPrototypeOf(this, apiMethods);
@@ -209,7 +207,7 @@ export default class EditorJS {
       writable: false,
     });
 
-    delete (this as Partial<EditorJS>).exportAPI;
+    delete (this as Partial<Blok>).exportAPI;
 
     const shorthands = {
       blocks: {

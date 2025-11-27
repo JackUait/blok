@@ -162,7 +162,7 @@ export default class BlockSelection extends Module {
         }
 
         /**
-         * When one page consist of two or more EditorJS instances
+         * When one page consist of two or more Blok instances
          * Shortcut module tries to handle all events.
          * Thats why Editor's selection works inside the target Editor, but
          * for others error occurs because nothing to select.
@@ -511,7 +511,7 @@ export default class BlockSelection extends Module {
        * @see https://developer.mozilla.org/ru/docs/Web/API/KeyboardEvent/key
        */
       Caret.insertContentAtCaretPosition(eventKey.length > 1 ? '' : eventKey);
-     
+
     }, 20)();
   }
 }

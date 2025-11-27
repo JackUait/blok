@@ -23,22 +23,22 @@ const SECONDARY_TITLE_SELECTOR = '[data-blok-testid="popover-item-secondary-titl
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -98,7 +98,7 @@ const createEditorWithTools = async (
   await registerToolClasses(page, serializedTools);
 
   const registeredToolNames = await page.evaluate(
-    async ({ holderId, editorTools, editorData }) => {
+    async ({ holder, editorTools, editorData }) => {
       const registry = window.__playwrightToolRegistry ?? {};
 
       const toolsMap = editorTools.reduce<
@@ -120,7 +120,7 @@ const createEditorWithTools = async (
       }, {});
 
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         tools: toolsMap,
         ...(editorData ? { data: editorData } : {}),
       });
@@ -131,7 +131,7 @@ const createEditorWithTools = async (
       return Object.keys(toolsMap);
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       editorTools: serializedTools.map(({ name, config }) => ({
         name,
         config,

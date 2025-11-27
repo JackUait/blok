@@ -24,41 +24,41 @@ const NOTIFIER_CONTAINER_SELECTOR = '[data-blok-testid="notifier-container"]';
 const NOTIFICATION_SELECTOR = '[data-blok-testid^="notification"]';
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    const holder = document.getElementById(holderId);
+    const holderElement = document.getElementById(holder);
 
-    holder?.remove();
+    holderElement?.remove();
 
     // Remove leftover notifications between tests to keep DOM deterministic
     document.querySelectorAll('[data-blok-testid="notifier-container"]').forEach((node) => node.remove());
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditor = async (page: Page): Promise<void> => {
   await resetEditor(page);
   await page.waitForFunction(() => typeof window.EditorJS === 'function');
 
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
     });
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 test.describe('api.notifier', () => {
@@ -71,15 +71,15 @@ test.describe('api.notifier', () => {
   });
 
   test.afterEach(async ({ page }) => {
-    await page.evaluate(async ({ holderId }) => {
+    await page.evaluate(async ({ holder }) => {
       if (window.editorInstance) {
         await window.editorInstance.destroy?.();
         window.editorInstance = undefined;
       }
 
       document.querySelectorAll('[data-blok-testid="notifier-container"]').forEach((node) => node.remove());
-      document.getElementById(holderId)?.remove();
-    }, { holderId: HOLDER_ID });
+      document.getElementById(holder)?.remove();
+    }, { holder: HOLDER_ID });
   });
 
   test('should display notification message through the notifier API', async ({ page }) => {

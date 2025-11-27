@@ -23,22 +23,22 @@ const BLOCK_TUNES_POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -56,7 +56,7 @@ const createEditorWithI18n = async (
 ): Promise<void> => {
   await resetEditor(page);
   await page.evaluate(
-    async ({ holderId, editorConfig }) => {
+    async ({ holder, editorConfig }) => {
       const resolveFromWindow = (value: unknown): unknown => {
         if (typeof value === 'string') {
           return value.split('.').reduce<unknown>((acc, key) => {
@@ -136,7 +136,7 @@ const createEditorWithI18n = async (
       const normalizedTools = normalizeTools(tools as Record<string, unknown> | undefined);
 
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         ...restConfig,
         ...(normalizedTools ? { tools: normalizedTools } : {}),
       });
@@ -154,7 +154,7 @@ const createEditorWithI18n = async (
         setTimeout(resolve, 0);
       });
     },
-    { holderId: HOLDER_ID,
+    { holder: HOLDER_ID,
       editorConfig: config }
   );
 };
@@ -941,12 +941,12 @@ test.describe('editor i18n', () => {
 
       await resetEditor(page);
       await page.evaluate(
-        async ({ holderId, uiDict }) => {
+        async ({ holder, uiDict }) => {
           // @ts-expect-error - Get SimpleHeader from window
           const SimpleHeader = window.SimpleHeader;
 
           const editor = new window.EditorJS({
-            holder: holderId,
+            holder: holder,
             tools: {
               header: SimpleHeader,
             },
@@ -970,7 +970,7 @@ test.describe('editor i18n', () => {
           window.editorInstance = editor;
           await editor.isReady;
         },
-        { holderId: HOLDER_ID,
+        { holder: HOLDER_ID,
           uiDict: uiDictionary }
       );
 
@@ -1168,12 +1168,12 @@ test.describe('editor i18n', () => {
       // Create editor with header tool
       await resetEditor(page);
       await page.evaluate(
-        async ({ holderId, uiDict }) => {
+        async ({ holder, uiDict }) => {
           // @ts-expect-error - Get SimpleHeader from window
           const SimpleHeader = window.SimpleHeader;
 
           const editor = new window.EditorJS({
-            holder: holderId,
+            holder: holder,
             tools: {
               header: SimpleHeader,
             },
@@ -1197,7 +1197,7 @@ test.describe('editor i18n', () => {
           window.editorInstance = editor;
           await editor.isReady;
         },
-        { holderId: HOLDER_ID,
+        { holder: HOLDER_ID,
           uiDict: uiDictionary }
       );
 

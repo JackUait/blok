@@ -1,4 +1,4 @@
-.codex-editor.codex-editor--rtl {
+.blok-editor.blok-editor--rtl {
     direction: rtl;
 
     .cdx-list {
@@ -63,7 +63,7 @@
     }
 }
 
-.codex-editor--narrow.codex-editor--rtl {
+.blok-editor--narrow.blok-editor--rtl {
     .ce-toolbar__plus {
         @media (--not-mobile) {
             left: 0;

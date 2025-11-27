@@ -40,7 +40,7 @@ describe('Blocks', () => {
    */
   const createBlocks = (): Blocks => {
     // Reset working area for each test
-    workingArea.className = 'codex-editor';
+    workingArea.className = 'blok-editor';
     workingArea.innerHTML = '';
     if (!document.body.contains(workingArea)) {
       document.body.appendChild(workingArea);

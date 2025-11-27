@@ -120,30 +120,30 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
     const container = document.createElement('div');
 
-    container.id = holderId;
+    container.id = holder;
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
+  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: { blocks: editorBlocks },
     });
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID,
+  }, { holder: HOLDER_ID,
     blocks });
 };
 

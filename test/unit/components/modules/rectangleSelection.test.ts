@@ -54,7 +54,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
 
   const holder = document.createElement('div');
   const editorWrapper = document.createElement('div');
-  const editorWrapperClass = 'codex-editor__redactor';
+  const editorWrapperClass = 'blok-editor__redactor';
 
   editorWrapper.className = editorWrapperClass;
   holder.appendChild(editorWrapper);
@@ -73,14 +73,14 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
 
   const toolbarMock: ToolbarModuleMock = {
     CSS: {
-      toolbar: 'codex-editor-toolbar',
+      toolbar: 'blok-editor-toolbar',
     },
     close: vi.fn<() => void>(),
   };
 
   const inlineToolbarMock: InlineToolbarModuleMock = {
     CSS: {
-      inlineToolbar: 'codex-editor-inline-toolbar',
+      inlineToolbar: 'blok-editor-inline-toolbar',
     },
     close: vi.fn<() => void>(),
   };

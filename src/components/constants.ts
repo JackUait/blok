@@ -20,7 +20,7 @@ export const DATA_INTERFACE_ATTRIBUTE = 'data-blok-interface';
  * Value for the data-blok-interface attribute on editor wrapper elements
  * Used as a single source of truth for editor identification
  */
-export const EDITOR_INTERFACE_VALUE = 'editorjs';
+export const EDITOR_INTERFACE_VALUE = 'blok';
 
 /**
  * Value for the data-blok-interface attribute on inline toolbar elements
@@ -38,7 +38,7 @@ export const TOOLTIP_INTERFACE_VALUE = 'tooltip';
  * CSS selector for the main editor wrapper element
  * Used to identify the editor container in the DOM
  */
-export const EDITOR_INTERFACE_SELECTOR = '[data-blok-interface=editorjs]';
+export const EDITOR_INTERFACE_SELECTOR = '[data-blok-interface=blok]';
 
 /**
  * CSS selector for tooltip elements

@@ -5,11 +5,11 @@ import type { EditorModules } from '../../src/types-internal/editor-modules';
 
 // Mock VERSION global variable
 declare global {
-   
+
   var VERSION: string;
 }
 
-// Define VERSION before importing codex
+// Define VERSION before importing blok
 (global as { VERSION?: string }).VERSION = '2.31.0-test';
 
 // Mock dependencies
@@ -107,10 +107,10 @@ vi.mock('@babel/register', () => ({}));
 // Mock polyfills
 vi.mock('../../src/components/polyfills', () => ({}));
 
-// Import EditorJS after mocks are set up
-import EditorJS from '../../src/codex';
+// Import Blok after mocks are set up
+import Blok from '../../src/blok';
 
-describe('EditorJS', () => {
+describe('Blok', () => {
   // Get mocked instances
   const mocks = {
     mockModuleInstances: undefined as Partial<EditorModules> | undefined,
@@ -185,7 +185,7 @@ describe('EditorJS', () => {
 
   describe('constructor', () => {
     it('should initialize with no configuration', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       expect(editor.isReady).toBeInstanceOf(Promise);
       expect(editor.destroy).toBeDefined();
@@ -194,10 +194,10 @@ describe('EditorJS', () => {
       await editor.isReady;
     });
 
-    it('should initialize with string configuration (holderId)', async () => {
-      const holderId = 'my-editor';
+    it('should initialize with string configuration (holder)', async () => {
+      const holder = 'my-editor';
 
-      const editor = new EditorJS(holderId);
+      const editor = new Blok(holder);
 
       expect(editor.isReady).toBeInstanceOf(Promise);
 
@@ -206,11 +206,11 @@ describe('EditorJS', () => {
 
     it('should initialize with EditorConfig object', async () => {
       const config: EditorConfig = {
-        holder: 'editorjs',
+        holder: 'blok',
         placeholder: 'Start typing...',
       };
 
-      const editor = new EditorJS(config);
+      const editor = new Blok(config);
 
       expect(editor.isReady).toBeInstanceOf(Promise);
 
@@ -220,14 +220,14 @@ describe('EditorJS', () => {
     it('should call onReady callback when provided', async () => {
       const onReady = vi.fn();
       const config: EditorConfig = {
-        holder: 'editorjs',
+        holder: 'blok',
         onReady,
       };
 
       mocks.mockIsObject!.mockReturnValue(true);
       mocks.mockIsFunction!.mockReturnValue(true);
 
-      const editor = new EditorJS(config);
+      const editor = new Blok(config);
 
       await editor.isReady;
 
@@ -236,13 +236,13 @@ describe('EditorJS', () => {
 
     it('should use default empty onReady function when not provided', async () => {
       const config: EditorConfig = {
-        holder: 'editorjs',
+        holder: 'blok',
       };
 
       mocks.mockIsObject!.mockReturnValue(true);
       mocks.mockIsFunction!.mockReturnValue(false);
 
-      const editor = new EditorJS(config);
+      const editor = new Blok(config);
 
       await editor.isReady;
 
@@ -251,7 +251,7 @@ describe('EditorJS', () => {
     });
 
     it('should initialize destroy as no-op before exportAPI', () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       // Before isReady resolves, destroy should be a no-op
       expect(editor.destroy).toBeDefined();
@@ -261,13 +261,13 @@ describe('EditorJS', () => {
 
   describe('isReady promise', () => {
     it('should resolve when Core is ready', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await expect(editor.isReady).resolves.toBeUndefined();
     });
 
     it('should call exportAPI when Core is ready', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
       const exportAPISpy = vi.spyOn(editor, 'exportAPI');
 
       await editor.isReady;
@@ -288,11 +288,11 @@ describe('EditorJS', () => {
   describe('exportAPI', () => {
     it('should export configuration field', async () => {
       const config: EditorConfig = {
-        holder: 'editorjs',
+        holder: 'blok',
         placeholder: 'Test placeholder',
       };
 
-      const editor = new EditorJS(config);
+      const editor = new Blok(config);
 
       await editor.isReady;
 
@@ -300,7 +300,7 @@ describe('EditorJS', () => {
     });
 
     it('should set prototype to API methods', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -315,7 +315,7 @@ describe('EditorJS', () => {
     });
 
     it('should create module aliases', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -326,7 +326,7 @@ describe('EditorJS', () => {
     });
 
     it('should create lowercase aliases for uppercase module names', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -355,7 +355,7 @@ describe('EditorJS', () => {
     });
 
     it('should create camelCase aliases for PascalCase module names', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -380,7 +380,7 @@ describe('EditorJS', () => {
     });
 
     it('should skip undefined module instances', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -409,7 +409,7 @@ describe('EditorJS', () => {
       const mockToolbar = {
         blockSettings: undefined,
       };
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -438,7 +438,7 @@ describe('EditorJS', () => {
       const mockToolbar = {
         blockSettings: existingBlockSettings,
       };
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -467,7 +467,7 @@ describe('EditorJS', () => {
       const mockToolbar = {
         inlineToolbar: undefined,
       };
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -496,7 +496,7 @@ describe('EditorJS', () => {
       const mockToolbar = {
         inlineToolbar: existingInlineToolbar,
       };
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -522,7 +522,7 @@ describe('EditorJS', () => {
     });
 
     it('should create shorthands for blocks methods', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -542,7 +542,7 @@ describe('EditorJS', () => {
     });
 
     it('should create shorthands for caret methods', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -561,7 +561,7 @@ describe('EditorJS', () => {
     });
 
     it('should create shorthands for events methods', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -582,7 +582,7 @@ describe('EditorJS', () => {
     });
 
     it('should create shorthands for saver methods', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -601,7 +601,7 @@ describe('EditorJS', () => {
     });
 
     it('should delete exportAPI method after export', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -610,7 +610,7 @@ describe('EditorJS', () => {
     });
 
     it('should make module property non-enumerable', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -635,7 +635,7 @@ describe('EditorJS', () => {
       mocks.mockModuleInstances!.BlockSettings = mockModule2 as unknown as EditorModules['BlockSettings'];
       mocks.mockModuleInstances!.InlineToolbar = mockModule3 as unknown as EditorModules['InlineToolbar'];
 
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
       editor.destroy();
@@ -654,7 +654,7 @@ describe('EditorJS', () => {
 
       mocks.mockModuleInstances!.Toolbar = mockModule as unknown as EditorModules['Toolbar'];
 
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
       editor.destroy();
@@ -663,7 +663,7 @@ describe('EditorJS', () => {
     });
 
     it('should call destroyTooltip', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
       editor.destroy();
@@ -672,7 +672,7 @@ describe('EditorJS', () => {
     });
 
     it('should delete all own properties', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -692,7 +692,7 @@ describe('EditorJS', () => {
     });
 
     it('should set prototype to null', async () => {
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -713,7 +713,7 @@ describe('EditorJS', () => {
 
       mocks.mockModuleInstances!.Toolbar = mockModule as unknown as EditorModules['Toolbar'];
 
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -731,7 +731,7 @@ describe('EditorJS', () => {
 
       mocks.mockModuleInstances!.Toolbar = mockModule as unknown as EditorModules['Toolbar'];
 
-      const editor = new EditorJS();
+      const editor = new Blok();
 
       await editor.isReady;
 
@@ -743,8 +743,8 @@ describe('EditorJS', () => {
 
   describe('static version', () => {
     it('should expose version as static property', () => {
-      expect(EditorJS.version).toBeDefined();
-      expect(typeof EditorJS.version).toBe('string');
+      expect(Blok.version).toBeDefined();
+      expect(typeof Blok.version).toBe('string');
     });
   });
 });

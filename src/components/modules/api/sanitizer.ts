@@ -5,7 +5,7 @@ import { clean } from '../../utils/sanitizer';
 
 /**
  * @class SanitizerAPI
- * Provides Editor.js Sanitizer that allows developers to clean their HTML
+ * Provides Blok Sanitizer that allows developers to clean their HTML
  */
 export default class SanitizerAPI extends Module {
   /**

@@ -19,31 +19,31 @@ declare global {
 }
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditor = async (page: Page): Promise<void> => {
   await resetEditor(page);
   await page.waitForFunction(() => typeof window.EditorJS === 'function');
 
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: {
         blocks: [
           {
@@ -58,7 +58,7 @@ const createEditor = async (page: Page): Promise<void> => {
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 test.describe('api.sanitizer', () => {

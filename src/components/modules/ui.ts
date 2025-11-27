@@ -27,23 +27,23 @@ interface UINodes {
 
 /**
  * @class
- * @classdesc Makes Editor.js UI:
- *                <codex-editor>
+ * @classdesc Makes Blok UI:
+ *                <blok-editor>
  *                    <ce-redactor />
  *                    <ce-toolbar />
  *                    <ce-inline-toolbar />
- *                </codex-editor>
+ *                </blok-editor>
  * @typedef {UI} UI
- * @property {EditorConfig} config   - editor configuration {@link EditorJS#configuration}
- * @property {object} Editor         - available editor modules {@link EditorJS#moduleInstances}
+ * @property {EditorConfig} config   - editor configuration {@link Blok#configuration}
+ * @property {object} Editor         - available editor modules {@link Blok#moduleInstances}
  * @property {object} nodes          -
  * @property {Element} nodes.holder  - element where we need to append redactor
- * @property {Element} nodes.wrapper  - <codex-editor>
+ * @property {Element} nodes.wrapper  - <blok-editor>
  * @property {Element} nodes.redactor - <ce-redactor>
  */
 export default class UI extends Module<UINodes> {
   /**
-   * Editor.js UI CSS class names
+   * Blok UI CSS class names
    * @returns {{editorWrapper: string, editorZone: string}}
    */
   public get CSS(): {
@@ -51,13 +51,13 @@ export default class UI extends Module<UINodes> {
     editorEmpty: string; editorRtlFix: string; editorDragging: string;
     } {
     return {
-      editorWrapper: 'codex-editor',
-      editorWrapperNarrow: 'codex-editor--narrow',
-      editorZone: 'codex-editor__redactor',
-      editorZoneHidden: 'codex-editor__redactor--hidden',
-      editorEmpty: 'codex-editor--empty',
-      editorRtlFix: 'codex-editor--rtl',
-      editorDragging: 'codex-editor--dragging',
+      editorWrapper: 'blok-editor',
+      editorWrapperNarrow: 'blok-editor--narrow',
+      editorZone: 'blok-editor__redactor',
+      editorZoneHidden: 'blok-editor__redactor--hidden',
+      editorEmpty: 'blok-editor--empty',
+      editorRtlFix: 'blok-editor--rtl',
+      editorDragging: 'blok-editor--dragging',
     };
   }
 
@@ -278,11 +278,11 @@ export default class UI extends Module<UINodes> {
   }
 
   /**
-   * Makes Editor.js interface
+   * Makes Blok interface
    */
   private make(): void {
     /**
-     * Element where we need to append Editor.js
+     * Element where we need to append Blok
      * @type {Element}
      */
     const holder = this.config.holder;
@@ -301,7 +301,7 @@ export default class UI extends Module<UINodes> {
       ...(this.isRtl ? [ this.CSS.editorRtlFix ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, EDITOR_INTERFACE_VALUE);
-    this.nodes.wrapper.setAttribute('data-blok-testid', 'codex-editor');
+    this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');
     this.nodes.redactor = $.make('div', this.CSS.editorZone);
     this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
 
@@ -991,7 +991,7 @@ export default class UI extends Module<UINodes> {
     }
 
     /**
-     * Set current block when entering to Editor.js by tab key
+     * Set current block when entering to Blok by tab key
      */
     if (!this.Editor.BlockManager.currentBlock) {
       this.Editor.BlockManager.setCurrentBlockByChildNode(focusedElement);
@@ -1001,7 +1001,7 @@ export default class UI extends Module<UINodes> {
   }
 
   /**
-   * Editor.js provides and ability to show placeholders for empty contenteditable elements
+   * Blok provides and ability to show placeholders for empty contenteditable elements
    *
    * This method watches for input and focus events and toggles 'data-blok-empty' attribute
    * to workaroud the case, when inputs contains only <br>s and has no visible content

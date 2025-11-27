@@ -16,22 +16,22 @@ const HOLDER_ID = 'editorjs';
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -41,14 +41,14 @@ const resetEditor = async (page: Page): Promise<void> => {
 const createEditor = async (page: Page): Promise<void> => {
   await page.waitForFunction(() => typeof window.EditorJS === 'function');
 
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
     });
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -87,8 +87,8 @@ test.describe('tooltip API', () => {
 
   test.describe('show()', () => {
     test('should show tooltip with text content', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Test Button';
@@ -98,7 +98,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -115,8 +115,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should show tooltip with HTML content', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('div');
 
         element.textContent = 'Hover me';
@@ -126,7 +126,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -147,8 +147,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should show tooltip with options', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('span');
 
         element.textContent = 'Test';
@@ -158,7 +158,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -179,8 +179,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should replace existing tooltip when showing new one', async ({ page }) => {
-      const testElements = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElements = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element1 = document.createElement('button');
 
         element1.textContent = 'Button 1';
@@ -196,7 +196,7 @@ test.describe('tooltip API', () => {
           id1: element1.id,
           id2: element2.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // Show first tooltip
       await page.evaluate(({ elementId }) => {
@@ -228,8 +228,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should throw when content is neither string nor Node', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('div');
 
         element.textContent = 'Invalid content test';
@@ -239,7 +239,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       const errorMessage = await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -266,14 +266,14 @@ test.describe('tooltip API', () => {
 
       expect(errorMessage).not.toBeNull();
       expect(errorMessage).not.toBe('no error');
-      expect(errorMessage).toContain('[CodeX Tooltip] Wrong type');
+      expect(errorMessage).toContain('[Blok Tooltip] Wrong type');
     });
   });
 
   test.describe('hide()', () => {
     test('should hide visible tooltip', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Test Button';
@@ -283,7 +283,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // Show tooltip
       await page.evaluate(({ elementId }) => {
@@ -312,8 +312,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should hide tooltip when hide() is called', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('div');
 
         element.textContent = 'Test';
@@ -323,7 +323,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // Show tooltip with hiding delay
       await page.evaluate(({ elementId }) => {
@@ -355,8 +355,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should bypass hiding delay when hide(true) is called', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('span');
 
         element.textContent = 'Skip delay element';
@@ -366,7 +366,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -413,8 +413,8 @@ test.describe('tooltip API', () => {
 
   test.describe('onHover()', () => {
     test('should show tooltip on mouseenter', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Hover me';
@@ -424,7 +424,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -445,8 +445,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should hide tooltip on mouseleave', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('div');
 
         element.textContent = 'Hover area';
@@ -457,7 +457,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -483,8 +483,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should show tooltip on hover with HTML content', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('span');
 
         element.textContent = 'Rich tooltip';
@@ -494,7 +494,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -519,8 +519,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should show tooltip on hover with options', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Configured tooltip';
@@ -530,7 +530,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -558,8 +558,8 @@ test.describe('tooltip API', () => {
 
   test.describe('integration', () => {
     test('should handle multiple show/hide cycles', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Toggle';
@@ -569,7 +569,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // First cycle
       await page.evaluate(({ elementId }) => {
@@ -611,8 +611,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should work with different element types', async ({ page }) => {
-      const testElements = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElements = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const button = document.createElement('button');
 
         button.textContent = 'Button';
@@ -634,7 +634,7 @@ test.describe('tooltip API', () => {
           divId: div.id,
           spanId: span.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // Test with button
       await page.evaluate(({ elementId }) => {
@@ -700,8 +700,8 @@ test.describe('tooltip API', () => {
 
   test.describe('destroy()', () => {
     test('should destroy tooltip library and allow reinitialization', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Test';
@@ -711,7 +711,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // Show tooltip before destroy
       await page.evaluate(({ elementId }) => {
@@ -737,8 +737,8 @@ test.describe('tooltip API', () => {
       await createEditor(page);
 
       // Recreate test element if the holder was cleared during destroy
-      await page.evaluate(({ holderId, elementId }) => {
-        const container = document.getElementById(holderId);
+      await page.evaluate(({ holder, elementId }) => {
+        const container = document.getElementById(holder);
         let element = document.getElementById(elementId);
 
         if (!element && container) {
@@ -747,7 +747,7 @@ test.describe('tooltip API', () => {
           element.id = elementId;
           container.appendChild(element);
         }
-      }, { holderId: HOLDER_ID,
+      }, { holder: HOLDER_ID,
         elementId: testElement.id });
 
       // Tooltip should work after reinitialization
@@ -766,8 +766,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should reuse existing tooltip stylesheet across reinitializations', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Stylesheet check';
@@ -777,7 +777,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -793,7 +793,7 @@ test.describe('tooltip API', () => {
       await waitForTooltip(page);
 
       const initialStyleCount = await page.evaluate(() => {
-        return document.querySelectorAll('#codex-tooltips-style').length;
+        return document.querySelectorAll('#blok-tooltips-style').length;
       });
 
       expect(initialStyleCount).toBe(1);
@@ -806,15 +806,15 @@ test.describe('tooltip API', () => {
       });
 
       const afterDestroyStyleCount = await page.evaluate(() => {
-        return document.querySelectorAll('#codex-tooltips-style').length;
+        return document.querySelectorAll('#blok-tooltips-style').length;
       });
 
       expect(afterDestroyStyleCount).toBe(1);
 
       await createEditor(page);
 
-      await page.evaluate(({ holderId, elementId }) => {
-        const container = document.getElementById(holderId);
+      await page.evaluate(({ holder, elementId }) => {
+        const container = document.getElementById(holder);
         let element = document.getElementById(elementId);
 
         if (!element && container) {
@@ -823,7 +823,7 @@ test.describe('tooltip API', () => {
           element.id = elementId;
           container.appendChild(element);
         }
-      }, { holderId: HOLDER_ID,
+      }, { holder: HOLDER_ID,
         elementId: testElement.id });
 
       await page.evaluate(({ elementId }) => {
@@ -840,7 +840,7 @@ test.describe('tooltip API', () => {
       await waitForTooltip(page);
 
       const afterReinitStyleCount = await page.evaluate(() => {
-        return document.querySelectorAll('#codex-tooltips-style').length;
+        return document.querySelectorAll('#blok-tooltips-style').length;
       });
 
       expect(afterReinitStyleCount).toBe(1);
@@ -849,8 +849,8 @@ test.describe('tooltip API', () => {
 
   test.describe('edge cases', () => {
     test('should handle calling onHover() multiple times on same element', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Hover me';
@@ -860,7 +860,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // First onHover binding
       await page.evaluate(({ elementId }) => {
@@ -894,8 +894,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should handle calling show() multiple times on same element', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('div');
 
         element.textContent = 'Test';
@@ -905,7 +905,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // First show
       await page.evaluate(({ elementId }) => {
@@ -939,8 +939,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should handle empty string content', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Test';
@@ -950,7 +950,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -969,8 +969,8 @@ test.describe('tooltip API', () => {
 
     test('should handle very long content', async ({ page }) => {
       const longText = 'A'.repeat(500);
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('div');
 
         element.textContent = 'Test';
@@ -980,7 +980,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId, text }) => {
         const editor = window.editorInstance;
@@ -999,8 +999,8 @@ test.describe('tooltip API', () => {
 
     test('should handle special characters in content', async ({ page }) => {
       const specialChars = '<>&"\'`';
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('span');
 
         element.textContent = 'Test';
@@ -1010,7 +1010,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId, text }) => {
         const editor = window.editorInstance;
@@ -1028,8 +1028,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should handle interaction between show() and onHover()', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Test';
@@ -1039,7 +1039,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // First bind onHover
       await page.evaluate(({ elementId }) => {
@@ -1088,8 +1088,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should handle hide() called multiple times', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('div');
 
         element.textContent = 'Test';
@@ -1099,7 +1099,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // Show tooltip
       await page.evaluate(({ elementId }) => {
@@ -1131,8 +1131,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should hide tooltip when window scrolls', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Scroll target';
@@ -1143,7 +1143,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(() => {
         document.body.style.height = '2000px';
@@ -1178,8 +1178,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should sync aria-hidden and visibility with tooltip state', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('button');
 
         element.textContent = 'Accessibility target';
@@ -1189,7 +1189,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -1253,8 +1253,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should update aria-hidden when tooltip class changes', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('span');
 
         element.textContent = 'Mutation target';
@@ -1264,7 +1264,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       await page.evaluate(({ elementId }) => {
         const editor = window.editorInstance;
@@ -1310,8 +1310,8 @@ test.describe('tooltip API', () => {
     });
 
     test('should apply placement offsets for left and right positions', async ({ page }) => {
-      const testElement = await page.evaluate(({ holderId }) => {
-        const container = document.getElementById(holderId);
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
         const element = document.createElement('div');
 
         element.textContent = 'Placement target';
@@ -1324,7 +1324,7 @@ test.describe('tooltip API', () => {
         return {
           id: element.id,
         };
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       // Left placement without margin
       await page.evaluate(({ elementId }) => {

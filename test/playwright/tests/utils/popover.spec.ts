@@ -87,22 +87,22 @@ const buildTestToolsConfig = (
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -120,7 +120,7 @@ const createEditorWithBlocks = async (
 ): Promise<void> => {
   await resetEditor(page);
   await page.evaluate(
-    async ({ holderId, editorBlocks, editorTools, editorTunes, PopoverItemTypeValues }) => {
+    async ({ holder, editorBlocks, editorTools, editorTunes, PopoverItemTypeValues }) => {
        
       const testWindow = window as typeof window & Record<string, any>;
 
@@ -309,7 +309,7 @@ const createEditorWithBlocks = async (
       const toolsOption = buildTools(editorTools);
 
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         data: { blocks: editorBlocks },
         ...(toolsOption && { tools: toolsOption }),
         ...(tunesList && { tunes: tunesList }),
@@ -319,7 +319,7 @@ const createEditorWithBlocks = async (
       await editor.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       editorBlocks: blocks,
       editorTools: tools,
       editorTunes: tunes,
@@ -695,7 +695,7 @@ test.describe('popover', () => {
   test('should display item with custom html', async ({ page }) => {
     await resetEditor(page);
     await page.evaluate(
-      async ({ holderId }) => {
+      async ({ holder }) => {
         /**
          *
          */
@@ -717,7 +717,7 @@ test.describe('popover', () => {
         }
 
         const editor = new window.EditorJS({
-          holder: holderId,
+          holder: holder,
           tools: {
             testTool: TestTune,
           },
@@ -737,7 +737,7 @@ test.describe('popover', () => {
         window.editorInstance = editor;
         await editor.isReady;
       },
-      { holderId: HOLDER_ID }
+      { holder: HOLDER_ID }
     );
 
     // Open block tunes menu
@@ -753,7 +753,7 @@ test.describe('popover', () => {
   test('should support flipping between custom content items', async ({ page }) => {
     await resetEditor(page);
     await page.evaluate(
-      async ({ holderId }) => {
+      async ({ holder }) => {
         /**
          *
          */
@@ -795,7 +795,7 @@ test.describe('popover', () => {
         }
 
         const editor = new window.EditorJS({
-          holder: holderId,
+          holder: holder,
           tools: {
             testTool1: TestTune1,
             testTool2: TestTune2,
@@ -816,7 +816,7 @@ test.describe('popover', () => {
         window.editorInstance = editor;
         await editor.isReady;
       },
-      { holderId: HOLDER_ID }
+      { holder: HOLDER_ID }
     );
 
     // Open block tunes menu

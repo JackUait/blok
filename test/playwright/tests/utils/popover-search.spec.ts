@@ -100,22 +100,22 @@ const buildTestToolsConfig = (
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -133,7 +133,7 @@ const createEditorWithBlocks = async (
 ): Promise<void> => {
   await resetEditor(page);
   await page.evaluate(
-    async ({ holderId, editorBlocks, editorTools, editorTunes, PopoverItemTypeValues }) => {
+    async ({ holder, editorBlocks, editorTools, editorTunes, PopoverItemTypeValues }) => {
       const mapMenuItem = (item: SerializableMenuItem): unknown => {
         if (item.type === PopoverItemTypeValues.Separator) {
           return { type: PopoverItemTypeValues.Separator };
@@ -214,7 +214,7 @@ const createEditorWithBlocks = async (
       const toolsOption = buildTools(editorTools);
 
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         data: { blocks: editorBlocks },
         ...(toolsOption && { tools: toolsOption }),
         ...(tunesList && { tunes: tunesList }),
@@ -224,7 +224,7 @@ const createEditorWithBlocks = async (
       await editor.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       editorBlocks: blocks,
       editorTools: tools,
       editorTunes: tunes,
@@ -982,7 +982,7 @@ test.describe('popover Search/Filter', () => {
     test('should support i18n in nested popover', async ({ page }) => {
       await resetEditor(page);
       await page.evaluate(
-        async ({ holderId }) => {
+        async ({ holder }) => {
           /**
            * Block Tune with nested children
            * @class TestTune
@@ -1016,7 +1016,7 @@ test.describe('popover Search/Filter', () => {
           }
 
           const editor = new window.EditorJS({
-            holder: holderId,
+            holder: holder,
             data: {
               blocks: [
                 {
@@ -1048,7 +1048,7 @@ test.describe('popover Search/Filter', () => {
           await editor.isReady;
         },
         {
-          holderId: HOLDER_ID,
+          holder: HOLDER_ID,
         }
       );
 

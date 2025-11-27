@@ -21,11 +21,11 @@ export default class RectangleSelection extends Module {
    */
   public static get CSS(): {[name: string]: string} {
     return {
-      overlay: 'codex-editor-overlay',
-      overlayContainer: 'codex-editor-overlay__container',
-      rect: 'codex-editor-overlay__rectangle',
-      topScrollZone: 'codex-editor-overlay__scroll-zone--top',
-      bottomScrollZone: 'codex-editor-overlay__scroll-zone--bottom',
+      overlay: 'blok-editor-overlay',
+      overlayContainer: 'blok-editor-overlay__container',
+      rect: 'blok-editor-overlay__rectangle',
+      topScrollZone: 'blok-editor-overlay__scroll-zone--top',
+      bottomScrollZone: 'blok-editor-overlay__scroll-zone--bottom',
     };
   }
 
@@ -194,7 +194,7 @@ export default class RectangleSelection extends Module {
       if (event instanceof MouseEvent) {
         this.processMouseMove(event);
       }
-     
+
     }, 10) as EventListener;
 
     this.listeners.on(document.body, 'mousemove', throttledMouseMove, {
@@ -207,7 +207,7 @@ export default class RectangleSelection extends Module {
 
     const throttledScroll = _.throttle((event: unknown) => {
       this.processScroll(event as MouseEvent);
-     
+
     }, 10) as EventListener;
 
     this.listeners.on(window, 'scroll', throttledScroll, {

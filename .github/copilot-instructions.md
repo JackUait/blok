@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Blok is a headless, block-based rich text editor (fork of Editor.js). Content is structured as JSON blocks, not raw HTML.
+Blok is a headless, block-based rich text editor. Content is structured as JSON blocks, not raw HTML.
 
 ## Architecture
 
@@ -44,7 +44,7 @@ yarn e2e:safari     # Playwright Safari only
 
 ### Unit Tests (`test/unit/`)
 - Use Vitest with `vi.mock()` for module mocking
-- Mock Core and modules to test in isolation (see `codex.test.ts` for pattern)
+- Mock Core and modules to test in isolation (see `blok.test.ts` for pattern)
 
 ### E2E Tests (`test/playwright/tests/`)
 - Use resilient locators: `page.getByRole()`, `page.getByText()` over CSS selectors
@@ -83,7 +83,7 @@ Tools implement `BlockTool` interface (`types/tools/block-tool.d.ts`):
 - Lifecycle: `rendered()`, `updated()`, `removed()`, `moved()`
 
 ### Editor Configuration
-Entry point: `src/codex.ts` exports `EditorJS` class
+Entry point: `src/blok.ts` exports `Blok` class
 Key config options: `holder`, `tools`, `data`, `autofocus`, `defaultBlock`, `readOnly`
 
 ## File Naming

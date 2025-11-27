@@ -113,7 +113,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   private i18n: I18n;
 
   /**
-   * @param api - Editor.js API
+   * @param api - Blok API
    */
   constructor({ api }: InlineToolConstructorOptions) {
     this.toolbar = api.toolbar;

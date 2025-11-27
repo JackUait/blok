@@ -34,7 +34,7 @@ export default class Renderer extends Module {
               };
             }
 
-            _.logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Editor.js config.`, 'warn');
+            _.logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Blok config.`, 'warn');
 
             return {
               tool: Tools.stubTool,

@@ -56,22 +56,22 @@ const waitForToolbarReady = async (page: Page): Promise<void> => {
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -83,9 +83,9 @@ const createEditor = async (page: Page, data?: OutputData): Promise<void> => {
   await waitForEditorBundle(page);
   await resetEditor(page);
   await page.evaluate(
-    async ({ holderId, editorData }) => {
+    async ({ holder, editorData }) => {
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         ...(editorData ? { data: editorData } : {}),
       });
 
@@ -93,7 +93,7 @@ const createEditor = async (page: Page, data?: OutputData): Promise<void> => {
       await editor.isReady;
       editor.caret.setToFirstBlock();
     },
-    { holderId: HOLDER_ID,
+    { holder: HOLDER_ID,
       editorData: data }
   );
   await waitForToolbarReady(page);

@@ -15,22 +15,22 @@ const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wr
 const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<void> => {
@@ -40,15 +40,15 @@ const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<
   }));
 
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
+  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: { blocks: editorBlocks },
     });
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID,
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
@@ -192,11 +192,11 @@ test.describe('enter keydown', () => {
 
     await resetEditor(page);
 
-    await page.evaluate(async ({ holderId, toolSource }) => {
+    await page.evaluate(async ({ holder, toolSource }) => {
       const PreventDefaultTool = new Function(`return (${toolSource});`)();
 
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         tools: {
           preventDefaultTool: {
             class: PreventDefaultTool,
@@ -216,7 +216,7 @@ test.describe('enter keydown', () => {
 
       window.editorInstance = editor;
       await editor.isReady;
-    }, { holderId: HOLDER_ID,
+    }, { holder: HOLDER_ID,
       toolSource: PREVENT_DEFAULT_TOOL_SOURCE });
 
     const block = page.locator('[contenteditable=true]');

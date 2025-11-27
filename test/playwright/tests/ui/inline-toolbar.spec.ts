@@ -87,14 +87,14 @@ class NestedEditorTool {
 
   render() {
     const wrapper = document.createElement('div');
-    const holder = document.createElement('div');
+    const holderEl = document.createElement('div');
     const holderId = '${NESTED_EDITOR_ID}-holder-' + Math.random().toString(16).slice(2);
 
     wrapper.setAttribute('data-blok-testid', '${NESTED_EDITOR_ID}');
-    holder.id = holderId;
-    holder.setAttribute('data-blok-testid', '${NESTED_EDITOR_ID}-holder');
+    holderEl.id = holderId;
+    holderEl.setAttribute('data-blok-testid', '${NESTED_EDITOR_ID}-holder');
 
-    wrapper.appendChild(holder);
+    wrapper.appendChild(holderEl);
 
     this.nestedEditor = new window.EditorJS({
       holder: holderId,
@@ -131,22 +131,22 @@ class NestedEditorTool {
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -169,9 +169,9 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   });
 
   await page.evaluate(
-    async ({ holderId, editorOptions, editorData, editorTools }) => {
+    async ({ holder, editorOptions, editorData, editorTools }) => {
       const editorConfig: Record<string, unknown> = {
-        holder: holderId,
+        holder: holder,
         ...editorOptions,
       };
 
@@ -218,7 +218,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
       await editor.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       editorOptions: restOptions,
       editorData: data ?? null,
       editorTools: serializedTools,
@@ -582,7 +582,7 @@ test.describe('inline toolbar', () => {
       },
     });
 
-    await page.evaluate(({ holderId }) => {
+    await page.evaluate(({ holder }) => {
       const form = document.createElement('form');
 
       form.id = 'inline-toolbar-form';
@@ -593,7 +593,7 @@ test.describe('inline toolbar', () => {
 
       document.body.appendChild(form);
 
-      const editorElement = document.getElementById(holderId);
+      const editorElement = document.getElementById(holder);
 
       if (!editorElement) {
         throw new Error('Editor element not found');
@@ -602,7 +602,7 @@ test.describe('inline toolbar', () => {
       form.appendChild(editorElement);
 
       window.inlineToolbarFormSubmitCount = 0;
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 

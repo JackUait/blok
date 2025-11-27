@@ -22,7 +22,7 @@ const SIMPLE_IMAGE_TOOL_UMD_PATH = path.resolve(
   '../../../node_modules/@editorjs/simple-image/dist/simple-image.umd.js'
 );
 
-const HOLDER_ID = 'editorjs';
+const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const getBlockByIndex = (page: Page, index: number): Locator => {
   return page.locator(`${BLOCK_SELECTOR}:nth-of-type(${index + 1})`);
@@ -60,22 +60,22 @@ type ClipboardFileDescriptor = {
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
@@ -93,10 +93,10 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   });
 
   await page.evaluate(
-    async ({ holderId, editorOptions: rawOptions, serializedTools: toolsConfig }) => {
+    async ({ holder, editorOptions: rawOptions, serializedTools: toolsConfig }) => {
       const { data, ...restOptions } = rawOptions;
       const config: Record<string, unknown> = {
-        holder: holderId,
+        holder: holder,
         ...restOptions,
       };
 
@@ -114,7 +114,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
             }
 
             if (!toolClass && classCode) {
-               
+
               toolClass = new Function(`return (${classCode});`)();
             }
 
@@ -143,7 +143,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
       await editor.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       editorOptions,
       serializedTools,
     }
@@ -352,7 +352,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/plain': 'Some plain text',
       });
 
@@ -366,7 +366,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<p><b>Some text</b></p>',
       });
 
@@ -380,7 +380,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/plain': 'First block\n\nSecond block',
       });
 
@@ -397,7 +397,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/plain': specialText,
       });
 
@@ -411,7 +411,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<p>First block</p><p>Second block</p>',
       });
 
@@ -427,8 +427,8 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
-        'application/x-editor-js': JSON.stringify([
+
+        'application/x-blok': JSON.stringify([
           {
             tool: 'paragraph',
             data: { text: 'First block' },
@@ -460,7 +460,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<h2>First block</h2><p>Second block</p>',
       });
 
@@ -505,7 +505,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/plain': imageUrl,
       });
 
@@ -530,7 +530,7 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': maliciousHtml,
       });
 
@@ -543,16 +543,16 @@ test.describe('copy and paste', () => {
       expect(scriptExecuted).toBe(false);
     });
 
-    test('should fall back to plain text when invalid EditorJS data is pasted', async ({ page }) => {
+    test('should fall back to plain text when invalid Blok data is pasted', async ({ page }) => {
       await createEditor(page);
 
       const paragraph = getParagraphByIndex(page, 0);
 
       await paragraph.click();
       await paste(page, paragraph, {
-         
-        'application/x-editor-js': '{not-valid-json',
-         
+
+        'application/x-blok': '{not-valid-json',
+
         'text/plain': 'Fallback plain text',
       });
 
@@ -667,9 +667,9 @@ test.describe('copy and paste', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': externalHtml,
-         
+
         'text/plain': plainFallback,
       });
 
@@ -735,7 +735,7 @@ test.describe('copy and paste', () => {
       await expect(block).toHaveCount(1);
 
       await paste(page, block, {
-         
+
         'text/plain': 'Hello',
       });
 
@@ -790,9 +790,9 @@ test.describe('copy and paste', () => {
       expect(clipboardData['text/html']).toMatch(/<p>First block(<br>)?<\/p><p>Second block(<br>)?<\/p>/);
       expect(clipboardData['text/plain']).toBe('First block\n\nSecond block');
 
-      expect(clipboardData['application/x-editor-js']).toBeDefined();
+      expect(clipboardData['application/x-blok']).toBeDefined();
 
-      const data = JSON.parse(clipboardData['application/x-editor-js']);
+      const data = JSON.parse(clipboardData['application/x-blok']);
 
       expect(data[0]?.tool).toBe('paragraph');
       expect(data[0]?.data?.text).toMatch(/First block(<br>)?/);
@@ -841,7 +841,7 @@ test.describe('copy and paste', () => {
       expect(clipboardData['text/html']).toMatch(/<p>First block(<br>)?<\/p><p>Second block(<br>)?<\/p>/);
       expect(clipboardData['text/plain']).toBe('First block\n\nSecond block');
 
-      const serializedBlocks = clipboardData['application/x-editor-js'];
+      const serializedBlocks = clipboardData['application/x-blok'];
 
       expect(serializedBlocks).toBeDefined();
 
@@ -874,7 +874,7 @@ test.describe('copy and paste', () => {
       await page.keyboard.press('Control+A');
 
       const clipboardData = await cutFromElement(firstParagraph);
-      const serializedBlocks = clipboardData['application/x-editor-js'];
+      const serializedBlocks = clipboardData['application/x-blok'];
 
       expect(serializedBlocks).toBeDefined();
 

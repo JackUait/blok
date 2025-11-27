@@ -13,7 +13,7 @@ import type { API as APIInterfaces } from '../../../../types';
  */
 export default class API extends Module {
   /**
-   * Editor.js Core API modules
+   * Blok Core API modules
    */
   public get methods(): APIInterfaces {
     return {
@@ -37,7 +37,7 @@ export default class API extends Module {
   }
 
   /**
-   * Returns Editor.js Core API methods for passed tool
+   * Returns Blok Core API methods for passed tool
    * @param toolName - tool name
    * @param isTune - is tool a block tune
    */

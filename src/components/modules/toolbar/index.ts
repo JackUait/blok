@@ -120,7 +120,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
       actionsOpened: 'ce-toolbar__actions--opened',
 
       toolbarOpened: 'ce-toolbar--opened',
-      openedToolboxHolderModifier: 'codex-editor--toolbox-opened',
+      openedToolboxHolderModifier: 'blok-editor--toolbox-opened',
 
       plusButton: 'ce-toolbar__plus',
       plusButtonShortcut: 'ce-toolbar__plus-shortcut',

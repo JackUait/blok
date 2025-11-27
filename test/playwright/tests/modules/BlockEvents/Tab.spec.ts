@@ -18,22 +18,22 @@ const CONTENTLESS_TOOL_SELECTOR = '[data-blok-testid=contentless-tool]';
 const REGULAR_INPUT_SELECTOR = '[data-blok-testid=regular-input]';
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<void> => {
@@ -43,23 +43,23 @@ const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<
   }));
 
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
+  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: { blocks: editorBlocks },
     });
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID,
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
 const createDefaultEditor = async (page: Page): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: {
         blocks: [
           {
@@ -74,12 +74,12 @@ const createDefaultEditor = async (page: Page): Promise<void> => {
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     /**
      *
      */
@@ -113,7 +113,7 @@ const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
     }
 
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       tools: {
         toolWithTwoInputs: ToolWithTwoInputs,
       },
@@ -135,12 +135,12 @@ const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditorWithContentlessTool = async (page: Page): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     /**
      *
      */
@@ -168,7 +168,7 @@ const createEditorWithContentlessTool = async (page: Page): Promise<void> => {
     }
 
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       tools: {
         contentlessTool: ContentlessTool,
       },
@@ -196,29 +196,29 @@ const createEditorWithContentlessTool = async (page: Page): Promise<void> => {
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const addRegularInput = async (page: Page, position: 'before' | 'after'): Promise<void> => {
-  await page.evaluate(({ placement, holderId }) => {
+  await page.evaluate(({ placement, holder }) => {
     const input = document.createElement('input');
-    const holder = document.getElementById(holderId);
+    const holderElement = document.getElementById(holder);
 
-    if (!holder || !holder.parentNode) {
+    if (!holderElement || !holderElement.parentNode) {
       throw new Error('Editor holder is not available');
     }
 
     input.setAttribute('data-blok-testid', 'regular-input');
 
     if (placement === 'before') {
-      holder.parentNode.insertBefore(input, holder);
-    } else if (holder.nextSibling) {
-      holder.parentNode.insertBefore(input, holder.nextSibling);
+      holderElement.parentNode.insertBefore(input, holderElement);
+    } else if (holderElement.nextSibling) {
+      holderElement.parentNode.insertBefore(input, holderElement.nextSibling);
     } else {
-      holder.parentNode.appendChild(input);
+      holderElement.parentNode.appendChild(input);
     }
   }, { placement: position,
-    holderId: HOLDER_ID });
+    holder: HOLDER_ID });
 };
 
 test.describe('tab keydown', () => {

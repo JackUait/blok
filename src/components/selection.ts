@@ -63,8 +63,8 @@ export default class SelectionUtils {
    */
   public static get CSS(): { editorWrapper: string; editorZone: string } {
     return {
-      editorWrapper: 'codex-editor',
-      editorZone: 'codex-editor__redactor',
+      editorWrapper: 'blok-editor',
+      editorZone: 'blok-editor__redactor',
     };
   }
 
@@ -362,7 +362,7 @@ export default class SelectionUtils {
       return;
     }
 
-    const fakeCursor = $.make('span', 'codex-editor__fake-cursor');
+    const fakeCursor = $.make('span', 'blok-editor__fake-cursor');
 
     fakeCursor.setAttribute('data-blok-mutation-free', 'true');
 
@@ -375,7 +375,7 @@ export default class SelectionUtils {
    * @param el - where to check
    */
   public static isFakeCursorInsideContainer(el: HTMLElement): boolean {
-    return $.find(el, `.codex-editor__fake-cursor`) !== null;
+    return $.find(el, `.blok-editor__fake-cursor`) !== null;
   }
 
   /**
@@ -383,7 +383,7 @@ export default class SelectionUtils {
    * @param container - container to look for
    */
   public static removeFakeCursor(container: HTMLElement = document.body): void {
-    const fakeCursor = $.find(container, `.codex-editor__fake-cursor`);
+    const fakeCursor = $.find(container, `.blok-editor__fake-cursor`);
 
     if (!fakeCursor) {
       return;
@@ -538,7 +538,7 @@ export default class SelectionUtils {
       return null;
     }
 
-    const wrapper = $.make('span', 'codex-editor__fake-background');
+    const wrapper = $.make('span', 'blok-editor__fake-background');
 
     wrapper.setAttribute('data-blok-testid', 'fake-background');
     wrapper.setAttribute('data-blok-fake-background', 'true');

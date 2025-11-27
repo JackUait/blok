@@ -136,22 +136,22 @@ const serializeTools = (tools: ToolDefinition[]): SerializedToolConfig[] => {
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const ensureEditorBundleAvailable = async (page: Page): Promise<void> => {
@@ -176,7 +176,7 @@ const createEditorWithTools = async (
   await ensureEditorBundleAvailable(page);
 
   await page.evaluate(
-    async ({ holderId, serializedTools: toolConfigs, initialData }) => {
+    async ({ holder, serializedTools: toolConfigs, initialData }) => {
       const reviveToolClass = (classSource: string): unknown => {
          
         return new Function(`return (${classSource});`)();
@@ -219,7 +219,7 @@ const createEditorWithTools = async (
       }
 
       const editorConfig: Record<string, unknown> = {
-        holder: holderId,
+        holder: holder,
         ...(inlineToolNames.length > 0 ? { inlineToolbar: inlineToolNames } : {}),
       };
 
@@ -237,7 +237,7 @@ const createEditorWithTools = async (
       await editor.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       serializedTools,
       initialData: data,
     }

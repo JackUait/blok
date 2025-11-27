@@ -1,6 +1,6 @@
- 
+
 /**
- * CodeX Sanitizer
+ * Blok Sanitizer
  *
  * Clears HTML from taint tags
  * @version 2.0.0

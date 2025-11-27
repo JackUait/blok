@@ -1,7 +1,7 @@
 /**
- * Editor.js Saver
+ * Blok Saver
  * @module Saver
- * @author Codex Team
+ * @author Blok Team
  * @version 2.0.0
  */
 import Module from '../__module';

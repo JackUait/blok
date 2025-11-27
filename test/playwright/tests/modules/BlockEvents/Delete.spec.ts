@@ -49,7 +49,7 @@ const getLastQuoteToolInput = async (page: Page): Promise<Locator> => {
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
@@ -59,26 +59,26 @@ const resetEditor = async (page: Page): Promise<void> => {
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
+  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
     console.log('createEditorWithBlocks: blocks count', editorBlocks.length);
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: { blocks: editorBlocks },
     });
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID,
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
@@ -93,7 +93,7 @@ const createParagraphEditor = async (page: Page, textBlocks: string[]): Promise<
 
 const createMultiInputToolEditor = async (page: Page): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     /**
      *
      */
@@ -125,7 +125,7 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
     }
 
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       tools: {
         quote: ExampleOfToolWithSeveralInputs,
       },
@@ -141,12 +141,12 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditorWithUnmergeableTool = async (page: Page): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     /**
      *
      */
@@ -173,7 +173,7 @@ const createEditorWithUnmergeableTool = async (page: Page): Promise<void> => {
     }
 
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       tools: {
         code: ExampleOfUnmergeableTool,
       },
@@ -195,7 +195,7 @@ const createEditorWithUnmergeableTool = async (page: Page): Promise<void> => {
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const saveEditor = async (page: Page): Promise<OutputData> => {

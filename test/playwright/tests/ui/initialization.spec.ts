@@ -47,22 +47,22 @@ const waitForEditorConstructor = async (page: Page): Promise<void> => {
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const normalizeEditorConstructor = async (page: Page): Promise<void> => {
@@ -88,12 +88,14 @@ const createEditor = async (page: Page, options: InitializationOptions = {}): Pr
   await waitForEditorConstructor(page);
   await normalizeEditorConstructor(page);
 
-  await page.evaluate(async ({ serializedOptions }) => {
+  await page.evaluate(async ({ serializedOptions, holder }) => {
     if (typeof window.EditorJS !== 'function') {
       throw new Error('EditorJS constructor is not available on window');
     }
 
-    const editorConfig: Record<string, unknown> = {};
+    const editorConfig: Record<string, unknown> = {
+      holder: holder,
+    };
 
     if (serializedOptions.readOnly !== undefined) {
       editorConfig.readOnly = serializedOptions.readOnly;
@@ -107,7 +109,7 @@ const createEditor = async (page: Page, options: InitializationOptions = {}): Pr
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { serializedOptions: options });
+  }, { serializedOptions: options, holder: HOLDER_ID });
 };
 
 test.describe('editor basic initialization', () => {
@@ -121,7 +123,7 @@ test.describe('editor basic initialization', () => {
 
   test.describe('zero-config initialization', () => {
     test('creates a visible UI', async ({ page }) => {
-      await createEditor(page);
+      await createEditor(page, {});
 
       await expect(page.locator(EDITOR_ROOT_SELECTOR)).toBeVisible();
     });

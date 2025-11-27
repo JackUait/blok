@@ -26,22 +26,22 @@ const getParagraphByBlockId = (page: Page, blockId: string): Locator => {
  * @param page - The Playwright page object
  */
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -51,9 +51,9 @@ const resetEditor = async (page: Page): Promise<void> => {
  */
 const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
+  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: { blocks: editorBlocks },
       tools: {
         paragraph: {
@@ -67,7 +67,7 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID,
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
@@ -77,9 +77,9 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
  */
 const createEditor = async (page: Page): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, initialBlockId }) => {
+  await page.evaluate(async ({ holder, initialBlockId }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       data: {
         blocks: [
           {
@@ -103,7 +103,7 @@ const createEditor = async (page: Page): Promise<void> => {
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID,
+  }, { holder: HOLDER_ID,
     initialBlockId: INITIAL_BLOCK_ID });
 };
 
@@ -229,9 +229,9 @@ const selectAllText = async (locator: Locator): Promise<void> => {
  */
 const createEditorWithSanitizer = async (page: Page, sanitizerConfig: Record<string, unknown>): Promise<void> => {
   await resetEditor(page);
-  await page.evaluate(async ({ holderId, sanitizer }) => {
+  await page.evaluate(async ({ holder, sanitizer }) => {
     const editor = new window.EditorJS({
-      holder: holderId,
+      holder: holder,
       sanitizer,
       tools: {
         paragraph: {
@@ -244,7 +244,7 @@ const createEditorWithSanitizer = async (page: Page, sanitizerConfig: Record<str
 
     window.editorInstance = editor;
     await editor.isReady;
-  }, { holderId: HOLDER_ID,
+  }, { holder: HOLDER_ID,
     sanitizer: sanitizerConfig });
 };
 
@@ -921,7 +921,7 @@ test.describe('sanitizing', () => {
     test('should sanitize nested objects with HTML strings', async ({ page }) => {
       await resetEditor(page);
 
-      await page.evaluate(async ({ holderId }) => {
+      await page.evaluate(async ({ holder }) => {
         /**
          * Custom tool with nested data structure
          */
@@ -969,7 +969,7 @@ test.describe('sanitizing', () => {
         }
 
         const editor = new window.EditorJS({
-          holder: holderId,
+          holder: holder,
           tools: {
             custom: CustomTool,
           },
@@ -990,7 +990,7 @@ test.describe('sanitizing', () => {
 
         window.editorInstance = editor;
         await editor.isReady;
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       const output = await saveEditor(page);
       const blockData = output.blocks[0].data;
@@ -1004,7 +1004,7 @@ test.describe('sanitizing', () => {
     test('should sanitize arrays containing HTML strings', async ({ page }) => {
       await resetEditor(page);
 
-      await page.evaluate(async ({ holderId }) => {
+      await page.evaluate(async ({ holder }) => {
         /**
          * Custom tool with array data structure
          */
@@ -1049,7 +1049,7 @@ test.describe('sanitizing', () => {
         }
 
         const editor = new window.EditorJS({
-          holder: holderId,
+          holder: holder,
           tools: {
             custom: CustomTool,
           },
@@ -1071,7 +1071,7 @@ test.describe('sanitizing', () => {
 
         window.editorInstance = editor;
         await editor.isReady;
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       const output = await saveEditor(page);
       const blockData = output.blocks[0].data;
@@ -1086,7 +1086,7 @@ test.describe('sanitizing', () => {
     test('should apply function-based sanitization rules', async ({ page }) => {
       await resetEditor(page);
 
-      await page.evaluate(async ({ holderId }) => {
+      await page.evaluate(async ({ holder }) => {
         /**
          * Custom tool with function-based sanitization
          */
@@ -1144,7 +1144,7 @@ test.describe('sanitizing', () => {
         }
 
         const editor = new window.EditorJS({
-          holder: holderId,
+          holder: holder,
           tools: {
             custom: CustomTool,
           },
@@ -1162,7 +1162,7 @@ test.describe('sanitizing', () => {
 
         window.editorInstance = editor;
         await editor.isReady;
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       const output = await saveEditor(page);
       const text = output.blocks[0].data.text;
@@ -1176,7 +1176,7 @@ test.describe('sanitizing', () => {
     test('should apply conditional sanitization based on content', async ({ page }) => {
       await resetEditor(page);
 
-      await page.evaluate(async ({ holderId }) => {
+      await page.evaluate(async ({ holder }) => {
         /**
          * Custom tool with conditional sanitization
          */
@@ -1224,7 +1224,7 @@ test.describe('sanitizing', () => {
         }
 
         const editor = new window.EditorJS({
-          holder: holderId,
+          holder: holder,
           tools: {
             custom: CustomTool,
           },
@@ -1242,7 +1242,7 @@ test.describe('sanitizing', () => {
 
         window.editorInstance = editor;
         await editor.isReady;
-      }, { holderId: HOLDER_ID });
+      }, { holder: HOLDER_ID });
 
       const output = await saveEditor(page);
       const text = output.blocks[0].data.text;

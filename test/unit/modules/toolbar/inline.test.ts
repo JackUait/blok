@@ -242,12 +242,12 @@ describe('InlineToolbar', () => {
     // Create mock UI nodes
     const wrapper = document.createElement('div');
 
-    wrapper.className = 'codex-editor';
+    wrapper.className = 'blok-editor';
     document.body.appendChild(wrapper);
 
     const redactor = document.createElement('div');
 
-    redactor.className = 'codex-editor__redactor';
+    redactor.className = 'blok-editor__redactor';
     wrapper.appendChild(redactor);
 
     // Create mock Editor

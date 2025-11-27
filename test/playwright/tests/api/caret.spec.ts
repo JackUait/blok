@@ -26,22 +26,22 @@ type EditorSetupOptions = {
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promise<void> => {
@@ -50,7 +50,7 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
   await resetEditor(page);
 
   await page.evaluate(
-    async ({ holderId, rawData, rawConfig, serializedTools }) => {
+    async ({ holder, rawData, rawConfig, serializedTools }) => {
       const reviveToolClass = (classSource: string): unknown => {
         return new Function(`return (${classSource});`)();
       };
@@ -70,7 +70,7 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
       }, {});
 
       const editorConfig = {
-        holder: holderId,
+        holder: holder,
         ...rawConfig,
         ...(serializedTools.length > 0 ? { tools: revivedTools } : {}),
         ...(rawData ? { data: rawData } : {}),
@@ -82,7 +82,7 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
       await editor.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       rawData: data ?? null,
       rawConfig: config ?? {},
       serializedTools: tools,

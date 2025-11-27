@@ -78,23 +78,23 @@ declare global {
 const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
   const { data = null, config = {} } = options;
 
-  await page.evaluate(async ({ holderId, data: initialData, config: editorConfig }) => {
+  await page.evaluate(async ({ holder, data: initialData, config: editorConfig }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
+    container.id = holder;
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
 
     const configToUse: Record<string, unknown> = {
-      holder: holderId,
+      holder: holder,
       ...editorConfig,
     };
 
@@ -107,7 +107,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
     window.editorInstance = editor;
     await editor.isReady;
   }, {
-    holderId: HOLDER_ID,
+    holder: HOLDER_ID,
     data,
     config,
   });

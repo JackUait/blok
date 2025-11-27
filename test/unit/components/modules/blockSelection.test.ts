@@ -105,7 +105,7 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
       },
     } as unknown as EditorModules['UI'],
     Paste: {
-      MIME_TYPE: 'application/editorjs',
+      MIME_TYPE: 'application/x-blok',
     } as unknown as EditorModules['Paste'],
   };
 

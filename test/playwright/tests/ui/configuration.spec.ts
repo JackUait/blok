@@ -65,22 +65,22 @@ const getParagraphByIndex = (page: Page, index = 0): ReturnType<Page['locator']>
 };
 
 const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
+  await page.evaluate(async ({ holder }) => {
     if (window.editorInstance) {
       await window.editorInstance.destroy?.();
       window.editorInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
@@ -89,14 +89,14 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   await resetEditor(page);
 
   await page.evaluate(
-    async ({ holderId, editorData, editorConfig, toolDefinitions }) => {
+    async ({ holder, editorData, editorConfig, toolDefinitions }) => {
       const reviveToolClass = (source: string): unknown => {
 
         return new Function(`return (${source});`)();
       };
 
       const finalConfig: Record<string, unknown> = {
-        holder: holderId,
+        holder: holder,
         ...editorConfig,
       };
 
@@ -150,7 +150,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
       await editor.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       editorData: data,
       editorConfig: config,
       toolDefinitions: tools,
@@ -750,11 +750,11 @@ test.describe('editor configuration options', () => {
   test('invokes onReady callback after initialization', async ({ page }) => {
     await resetEditor(page);
 
-    const onReadyCalls = await page.evaluate(async ({ holderId }) => {
+    const onReadyCalls = await page.evaluate(async ({ holder }) => {
       window.__onReadyCalls = 0;
 
       const editor = new window.EditorJS({
-        holder: holderId,
+        holder: holder,
         onReady() {
           window.__onReadyCalls = (window.__onReadyCalls ?? 0) + 1;
         },
@@ -764,7 +764,7 @@ test.describe('editor configuration options', () => {
       await editor.isReady;
 
       return window.__onReadyCalls ?? 0;
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     expect(onReadyCalls).toBe(1);
   });

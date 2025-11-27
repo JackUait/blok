@@ -43,7 +43,7 @@ const toToolConstructable = (constructable: unknown): ToolConstructable => {
 };
 
 /**
- * @module Editor.js Tools Submodule
+ * @module Blok Tools Submodule
  *
  * Creates Instances from Plugins and binds external config to the instances
  */

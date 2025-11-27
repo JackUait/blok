@@ -18,20 +18,20 @@ export default class ToolsFactory {
   private config: {[name: string]: ToolSettings & { isInternal?: boolean }};
 
   /**
-   * EditorJS API Module
+   * Blok API Module
    */
   private api: ApiModule;
 
   /**
-   * EditorJS configuration
+   * Blok configuration
    */
   private editorConfig: EditorConfig;
 
   /**
    * @class
    * @param config - tools config
-   * @param editorConfig - EditorJS config
-   * @param api - EditorJS API module
+   * @param editorConfig - Blok config
+   * @param api - Blok API module
    */
   constructor(
     config: {[name: string]: ToolSettings & { isInternal?: boolean }},

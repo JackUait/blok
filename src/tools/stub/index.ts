@@ -22,10 +22,10 @@ export default class Stub implements BlockTool {
    * @type {{wrapper: string, info: string, title: string, subtitle: string}}
    */
   private CSS = {
-    wrapper: 'ce-stub',
-    info: 'ce-stub__info',
-    title: 'ce-stub__title',
-    subtitle: 'ce-stub__subtitle',
+    wrapper: 'blok-stub',
+    info: 'blok-stub__info',
+    title: 'blok-stub__title',
+    subtitle: 'blok-stub__subtitle',
   };
 
   /**

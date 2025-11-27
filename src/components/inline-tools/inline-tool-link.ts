@@ -50,12 +50,12 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
    * Styles
    */
   private readonly CSS = {
-    button: 'ce-inline-tool',
-    buttonActive: 'ce-inline-tool--active',
-    buttonModifier: 'ce-inline-tool--link',
-    buttonUnlink: 'ce-inline-tool--unlink',
-    input: 'ce-inline-tool-input',
-    inputShowed: 'ce-inline-tool-input--showed',
+    button: 'blok-inline-tool',
+    buttonActive: 'blok-inline-tool--active',
+    buttonModifier: 'blok-inline-tool--link',
+    buttonUnlink: 'blok-inline-tool--unlink',
+    input: 'blok-inline-tool-input',
+    inputShowed: 'blok-inline-tool-input--showed',
   };
   /**
    * Data attributes for e2e selectors

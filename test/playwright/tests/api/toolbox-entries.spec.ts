@@ -235,7 +235,7 @@ test.describe('editor Tools Api', () => {
           const contenteditable = document.createElement('div');
 
           contenteditable.contentEditable = 'true';
-          contenteditable.classList.add('cdx-block');
+          contenteditable.classList.add('blok-base-element');
           // Always initialize textContent to ensure it's never null
           contenteditable.textContent = this.data.text;
 
@@ -323,7 +323,7 @@ test.describe('editor Tools Api', () => {
           const contenteditable = document.createElement('div');
 
           contenteditable.contentEditable = 'true';
-          contenteditable.classList.add('cdx-block');
+          contenteditable.classList.add('blok-base-element');
           // Always initialize textContent to ensure it's never null
           contenteditable.textContent = this.data.text;
 
@@ -415,7 +415,7 @@ test.describe('editor Tools Api', () => {
           const wrapper = document.createElement('div');
 
           wrapper.setAttribute('contenteditable', 'true');
-          wrapper.classList.add('cdx-block');
+          wrapper.classList.add('blok-base-element');
 
           return wrapper;
         }

@@ -708,7 +708,7 @@ test.describe('popover', () => {
           public render(): HTMLElement {
             const button = document.createElement('button');
 
-            button.classList.add('ce-settings__button');
+            button.classList.add('blok-settings__button');
             button.setAttribute('data-blok-testid', 'settings-button');
             button.innerText = 'Tune';
 
@@ -766,7 +766,7 @@ test.describe('popover', () => {
           public render(): HTMLElement {
             const button = document.createElement('button');
 
-            button.classList.add('ce-settings__button');
+            button.classList.add('blok-settings__button');
             button.setAttribute('data-blok-testid', 'settings-button');
             button.innerText = 'Tune1';
 
@@ -786,7 +786,7 @@ test.describe('popover', () => {
           public render(): HTMLElement {
             const button = document.createElement('button');
 
-            button.classList.add('ce-settings__button');
+            button.classList.add('blok-settings__button');
             button.setAttribute('data-blok-testid', 'settings-button');
             button.innerText = 'Tune2';
 

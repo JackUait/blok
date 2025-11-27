@@ -19,7 +19,7 @@ describe('Blocks', () => {
   const createMockBlock = (id: string, name: string = 'paragraph'): Block => {
     const holder = document.createElement('div');
 
-    holder.className = 'ce-block';
+    holder.className = 'blok-element';
     holder.setAttribute('data-blok-id', id);
 
     const mockBlock = {

@@ -4,35 +4,35 @@ import { bem } from '../../../src/components/utils/bem';
 
 describe('bem', () => {
   it('returns block class when no element or modifier is provided', () => {
-    const className = bem('ce-popover');
+    const className = bem('blok-popover');
 
-    expect(className()).toBe('ce-popover');
+    expect(className()).toBe('blok-popover');
   });
 
   it('appends element to block when element is provided', () => {
-    const className = bem('ce-popover');
+    const className = bem('blok-popover');
 
-    expect(className('container')).toBe('ce-popover__container');
+    expect(className('container')).toBe('blok-popover__container');
   });
 
   it('appends modifier to element when modifier is provided', () => {
-    const className = bem('ce-popover');
+    const className = bem('blok-popover');
 
-    expect(className('container', 'hidden')).toBe('ce-popover__container--hidden');
+    expect(className('container', 'hidden')).toBe('blok-popover__container--hidden');
   });
 
   it('appends modifier to block when element is not provided', () => {
-    const className = bem('ce-popover');
+    const className = bem('blok-popover');
 
-    expect(className(null, 'hidden')).toBe('ce-popover--hidden');
-    expect(className(undefined, 'hidden')).toBe('ce-popover--hidden');
+    expect(className(null, 'hidden')).toBe('blok-popover--hidden');
+    expect(className(undefined, 'hidden')).toBe('blok-popover--hidden');
   });
 
   it('omits falsy element or modifier values', () => {
-    const className = bem('ce-popover');
+    const className = bem('blok-popover');
 
-    expect(className('')).toBe('ce-popover');
-    expect(className('container', '')).toBe('ce-popover__container');
+    expect(className('')).toBe('blok-popover');
+    expect(className('container', '')).toBe('blok-popover__container');
   });
 });
 

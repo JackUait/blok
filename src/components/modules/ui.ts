@@ -29,9 +29,9 @@ interface UINodes {
  * @class
  * @classdesc Makes Blok UI:
  *                <blok-editor>
- *                    <ce-redactor />
- *                    <ce-toolbar />
- *                    <ce-inline-toolbar />
+ *                    <blok-redactor />
+ *                    <blok-toolbar />
+ *                    <blok-inline-toolbar />
  *                </blok-editor>
  * @typedef {UI} UI
  * @property {EditorConfig} config   - editor configuration {@link Blok#configuration}
@@ -39,7 +39,7 @@ interface UINodes {
  * @property {object} nodes          -
  * @property {Element} nodes.holder  - element where we need to append redactor
  * @property {Element} nodes.wrapper  - <blok-editor>
- * @property {Element} nodes.redactor - <ce-redactor>
+ * @property {Element} nodes.redactor - <blok-redactor>
  */
 export default class UI extends Module<UINodes> {
   /**
@@ -449,7 +449,7 @@ export default class UI extends Module<UINodes> {
         return;
       }
 
-      const hoveredBlock = (event.target as Element | null)?.closest('.ce-block');
+      const hoveredBlock = (event.target as Element | null)?.closest('.blok-element');
 
       /**
        * Do not trigger 'block-hovered' for cross-block selection

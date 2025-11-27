@@ -181,7 +181,7 @@ describe('InlineToolbar', () => {
   } => {
     const blockElement = document.createElement('div');
 
-    blockElement.className = 'ce-block';
+    blockElement.className = 'blok-element';
     blockElement.setAttribute('contenteditable', 'true');
 
     const toolAdapter = createMockInlineToolAdapter('bold', {
@@ -274,7 +274,7 @@ describe('InlineToolbar', () => {
           right: CONTENT_RECT_RIGHT,
         },
         CSS: {
-          editorRtlFix: 'ce-editor--rtl',
+          editorRtlFix: 'blok-editor--rtl',
         },
       },
       Toolbar: {

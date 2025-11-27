@@ -96,7 +96,7 @@ describe('Tooltip utility', () => {
       destroy();
     }
 
-    document.getElementById('codex-tooltips-style')?.remove();
+    document.getElementById('blok-tooltips-style')?.remove();
     document.body.innerHTML = '';
     if (document.documentElement) {
       document.documentElement.scrollTop = 0;

@@ -3,7 +3,7 @@ import { bem } from '../../../../bem';
 /**
  * Popover separator block CSS class constructor
  */
-const className = bem('ce-popover-item-separator');
+const className = bem('blok-popover-item-separator');
 
 /**
  * CSS class names to be used in popover separator class

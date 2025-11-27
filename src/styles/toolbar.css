@@ -1,4 +1,4 @@
-.ce-toolbar {
+.blok-toolbar {
     position: absolute;
     left: 0;
     right: 0;
@@ -107,13 +107,13 @@
 /**
  * Styles for Narrow mode
  */
-.blok-editor--narrow .ce-toolbar__plus {
+.blok-editor--narrow .blok-toolbar__plus {
     @media (--not-mobile) {
         left: 5px;
     }
 }
 
-.blok-editor--toolbox-opened .ce-toolbar__settings-btn {
+.blok-editor--toolbox-opened .blok-toolbar__settings-btn {
     @media (--can-hover) {
         &:hover {
             cursor: pointer;

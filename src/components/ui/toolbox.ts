@@ -126,7 +126,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     toolbox: string;
     } {
     return {
-      toolbox: 'ce-toolbox',
+      toolbox: 'blok-toolbox',
     };
   }
 

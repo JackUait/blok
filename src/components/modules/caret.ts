@@ -101,7 +101,7 @@ export default class Caret extends Module {
    */
   private static get CSS(): { shadowCaret: string } {
     return {
-      shadowCaret: 'cdx-shadow-caret',
+      shadowCaret: 'blok-shadow-caret',
     };
   }
 

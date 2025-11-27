@@ -1020,7 +1020,7 @@ export default class BoldInlineTool implements InlineTool {
 
     const isActive = this.isSelectionVisuallyBold(selection);
 
-    button.classList.toggle('ce-popover-item--active', isActive);
+    button.classList.toggle('blok-popover-item--active', isActive);
 
     if (isActive) {
       button.setAttribute('data-blok-popover-item-active', 'true');

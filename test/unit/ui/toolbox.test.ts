@@ -166,7 +166,7 @@ describe('Toolbox', () => {
       const element = toolbox.getElement();
 
       expect(element).not.toBeNull();
-      expect(element?.classList.contains('ce-toolbox')).toBe(true);
+      expect(element?.classList.contains('blok-toolbox')).toBe(true);
     });
 
     it('should set data-blok-testid attribute in test mode', () => {

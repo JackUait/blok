@@ -218,7 +218,7 @@ test.describe('saver module', () => {
 
     await page.waitForFunction(
       ({ editorSelector }) => {
-        const headerElement = document.querySelector(`${editorSelector} .ce-header`);
+        const headerElement = document.querySelector(`${editorSelector} .blok-header`);
 
         return headerElement?.tagName === 'H3';
       },

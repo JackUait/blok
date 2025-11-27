@@ -56,7 +56,7 @@
     --icon-size--mobile: 28px;
 
     /**
-   * The main `.cdx-block` wrapper has such vertical paddings
+   * The main `.blok-base-element` wrapper has such vertical paddings
    * And the Block Actions toggler too
    */
     --block-padding-vertical: 0.4em;

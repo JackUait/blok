@@ -65,7 +65,7 @@ const attachInput = (holder: HTMLElement, input?: HTMLElement): HTMLElement | un
 const createBlock = (options: BlockOptions = {}): Block => {
   const holder = document.createElement('div');
 
-  holder.classList.add('ce-block');
+  holder.classList.add('blok-element');
 
   const defaultInput = attachInput(holder, options.inputs?.current) ?? createContentEditable();
 
@@ -510,13 +510,13 @@ describe('Caret module', () => {
 
       caret.createShadow(container);
 
-      const shadow = container.querySelector('.cdx-shadow-caret');
+      const shadow = container.querySelector('.blok-shadow-caret');
 
       expect(shadow).not.toBeNull();
 
       caret.restoreCaret(container);
 
-      expect(container.querySelector('.cdx-shadow-caret')).toBeNull();
+      expect(container.querySelector('.blok-shadow-caret')).toBeNull();
     });
   });
 

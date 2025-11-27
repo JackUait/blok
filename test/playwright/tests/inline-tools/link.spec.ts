@@ -232,9 +232,9 @@ test.describe('inline tool link', () => {
 
     await selectText(paragraph, 'First block text');
     await ensureLinkInputOpen(page);
-    await submitLink(page, 'https://codex.so');
+    await submitLink(page, 'https://google.com');
 
-    await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'https://codex.so');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'https://google.com');
   });
 
   test('should create a link via toolbar button', async ({ page }) => {
@@ -294,7 +294,7 @@ test.describe('inline tool link', () => {
       {
         type: 'paragraph',
         data: {
-          text: '<a href="https://codex.so">First block text</a>',
+          text: '<a href="https://google.com">First block text</a>',
         },
       },
     ]);
@@ -304,7 +304,7 @@ test.describe('inline tool link', () => {
     await selectAll(paragraph);
     const linkInput = await ensureLinkInputOpen(page);
 
-    await expect(linkInput).toHaveValue('https://codex.so');
+    await expect(linkInput).toHaveValue('https://google.com');
 
     // Verify button state - find button by data attributes directly
     const linkButton = page.locator('[data-blok-link-tool-unlink="true"][data-blok-link-tool-active="true"]');
@@ -321,7 +321,7 @@ test.describe('inline tool link', () => {
       {
         type: 'paragraph',
         data: {
-          text: '<a href="https://codex.so">Link to remove</a>',
+          text: '<a href="https://google.com">Link to remove</a>',
         },
       },
     ]);
@@ -354,7 +354,7 @@ test.describe('inline tool link', () => {
 
     await selectText(paragraph, 'Persist me');
     await ensureLinkInputOpen(page);
-    await submitLink(page, 'https://codex.so');
+    await submitLink(page, 'https://google.com');
 
     const savedData = await page.evaluate<OutputData | undefined>(async () => {
       return window.editorInstance?.save();
@@ -364,7 +364,7 @@ test.describe('inline tool link', () => {
 
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
-    expect(paragraphBlock?.data.text).toContain('<a href="https://codex.so" target="_blank" rel="nofollow">Persist me</a>');
+    expect(paragraphBlock?.data.text).toContain('<a href="https://google.com" target="_blank" rel="nofollow">Persist me</a>');
   });
 
   test('should work in read-only mode', async ({ page }) => {
@@ -454,7 +454,7 @@ test.describe('inline tool link', () => {
       {
         type: 'paragraph',
         data: {
-          text: '<a href="https://codex.so">Link to remove</a>',
+          text: '<a href="https://google.com">Link to remove</a>',
         },
       },
     ]);
@@ -465,7 +465,7 @@ test.describe('inline tool link', () => {
     // Opening link tool on existing link opens the input pre-filled
     const linkInput = await ensureLinkInputOpen(page);
 
-    await expect(linkInput).toHaveValue('https://codex.so');
+    await expect(linkInput).toHaveValue('https://google.com');
 
     await linkInput.fill('');
     await linkInput.press('Enter');

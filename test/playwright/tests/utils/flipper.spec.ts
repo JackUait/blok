@@ -64,7 +64,7 @@ class SomePlugin {
   public render(): HTMLElement {
     const wrapper = document.createElement('div');
 
-    wrapper.classList.add('cdx-some-plugin');
+    wrapper.classList.add('blok-some-plugin');
     wrapper.setAttribute('data-blok-testid', 'some-plugin');
     wrapper.contentEditable = 'true';
     wrapper.addEventListener('keydown', SomePlugin.pluginInternalKeydownHandler);
@@ -1040,13 +1040,13 @@ test.describe('flipper', () => {
       // Create new items
       const newItem1 = document.createElement('div');
 
-      newItem1.className = 'ce-popover-item';
+      newItem1.className = 'blok-popover-item';
       newItem1.setAttribute('data-blok-testid', 'popover-item');
       newItem1.textContent = 'New Item 1';
 
       const newItem2 = document.createElement('div');
 
-      newItem2.className = 'ce-popover-item';
+      newItem2.className = 'blok-popover-item';
       newItem2.setAttribute('data-blok-testid', 'popover-item');
       newItem2.textContent = 'New Item 2';
 
@@ -1297,7 +1297,7 @@ test.describe('flipper', () => {
     await plugin.click();
     await openBlockTunesWithShortcut(page, plugin);
 
-    // Test that the focusedItemClass (ce-popover-item--focused) is applied
+    // Test that the focusedItemClass (blok-popover-item--focused) is applied
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
       code: 'Tab',

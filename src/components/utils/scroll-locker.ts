@@ -8,8 +8,8 @@ export default class ScrollLocker {
    * Style classes
    */
   private static CSS = {
-    scrollLocked: 'ce-scroll-locked',
-    scrollLockedHard: 'ce-scroll-locked--hard',
+    scrollLocked: 'blok-scroll-locked',
+    scrollLockedHard: 'blok-scroll-locked--hard',
   };
 
   /**

@@ -35,7 +35,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * CSS styles
    */
   public CSS = {
-    inlineToolbar: 'ce-inline-toolbar',
+    inlineToolbar: 'blok-inline-toolbar',
   };
 
   /**

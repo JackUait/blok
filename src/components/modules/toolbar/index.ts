@@ -114,19 +114,19 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   public get CSS(): { [name: string]: string } {
     return {
-      toolbar: 'ce-toolbar',
-      content: 'ce-toolbar__content',
-      actions: 'ce-toolbar__actions',
-      actionsOpened: 'ce-toolbar__actions--opened',
+      toolbar: 'blok-toolbar',
+      content: 'blok-toolbar__content',
+      actions: 'blok-toolbar__actions',
+      actionsOpened: 'blok-toolbar__actions--opened',
 
-      toolbarOpened: 'ce-toolbar--opened',
+      toolbarOpened: 'blok-toolbar--opened',
       openedToolboxHolderModifier: 'blok-editor--toolbox-opened',
 
-      plusButton: 'ce-toolbar__plus',
-      plusButtonShortcut: 'ce-toolbar__plus-shortcut',
-      settingsToggler: 'ce-toolbar__settings-btn',
-      settingsTogglerHidden: 'ce-toolbar__settings-btn--hidden',
-      settingsTogglerOpened: 'ce-toolbar__settings-btn--opened',
+      plusButton: 'blok-toolbar__plus',
+      plusButtonShortcut: 'blok-toolbar__plus-shortcut',
+      settingsToggler: 'blok-toolbar__settings-btn',
+      settingsTogglerHidden: 'blok-toolbar__settings-btn--hidden',
+      settingsTogglerOpened: 'blok-toolbar__settings-btn--opened',
     };
   }
 

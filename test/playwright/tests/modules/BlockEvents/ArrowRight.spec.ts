@@ -193,7 +193,7 @@ test.describe('arrow right keydown', () => {
     page.on('console', msg => console.log(msg.text()));
     await page.goto(TEST_PAGE_URL);
     await page.waitForFunction(() => typeof window.EditorJS === 'function');
-    await page.addStyleTag({ content: '.ce-paragraph { white-space: pre-wrap !important; }' });
+    await page.addStyleTag({ content: '.blok-paragraph { white-space: pre-wrap !important; }' });
   });
 
   test.describe('starting whitespaces handling', () => {
@@ -205,7 +205,7 @@ test.describe('arrow right keydown', () => {
 
       // Explicitly set textContent to ensure NBSP is preserved
       await firstParagraph.evaluate((node) => {
-        const content = node.querySelector('.ce-paragraph');
+        const content = node.querySelector('.blok-paragraph');
 
         if (content) {
           content.textContent = '1\\u00A0';
@@ -252,7 +252,7 @@ test.describe('arrow right keydown', () => {
 
       // Explicitly set innerHTML to ensure empty tags are preserved
       await firstParagraph.evaluate((node) => {
-        const content = node.querySelector('.ce-paragraph');
+        const content = node.querySelector('.blok-paragraph');
 
         if (content) {
           content.innerHTML = '1<b></b>';
@@ -279,7 +279,7 @@ test.describe('arrow right keydown', () => {
 
       // Explicitly set innerHTML to ensure empty tags and NBSP are preserved
       await firstParagraph.evaluate((node) => {
-        const content = node.querySelector('.ce-paragraph');
+        const content = node.querySelector('.blok-paragraph');
 
         if (content) {
           content.innerHTML = '1&nbsp;<b></b>';
@@ -307,7 +307,7 @@ test.describe('arrow right keydown', () => {
 
       // Explicitly set innerHTML to ensure empty tags and NBSP are preserved
       await firstParagraph.evaluate((node) => {
-        const content = node.querySelector('.ce-paragraph');
+        const content = node.querySelector('.blok-paragraph');
 
         if (content) {
           content.innerHTML = '1<b></b>&nbsp;';

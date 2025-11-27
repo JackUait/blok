@@ -357,7 +357,7 @@ describe('UI module', () => {
       const { ui, wrapper } = createUI();
       const blockContent = document.createElement('div');
 
-      blockContent.classList.add('ce-block__content');
+      blockContent.classList.add('blok-element__content');
       const measuredRect = { width: 777 } as DOMRect;
 
       vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue(measuredRect);
@@ -604,7 +604,7 @@ describe('UI module', () => {
       const { ui, editor, wrapper } = createUI();
       const blockContent = document.createElement('div');
 
-      blockContent.classList.add('ce-block__content');
+      blockContent.classList.add('blok-element__content');
       wrapper.classList.add(SelectionUtils.CSS.editorWrapper);
       const external = document.createElement('div');
 
@@ -692,7 +692,7 @@ describe('UI module', () => {
       const { ui, editor, redactor, eventsDispatcher } = createUI();
       const blockElement = document.createElement('div');
 
-      blockElement.classList.add('ce-block');
+      blockElement.classList.add('blok-element');
       redactor.appendChild(blockElement);
 
       const blockStub = {

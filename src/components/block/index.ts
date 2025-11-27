@@ -95,7 +95,7 @@ interface BlockEvents {
 /**
  * @classdesc Abstract Block class that contains Block information, Tool name and Tool class instance
  * @property {BlockToolAdapter} tool - Tool instance
- * @property {HTMLElement} holder - Div element that wraps block content with Tool's content. Has `ce-block` CSS class
+ * @property {HTMLElement} holder - Div element that wraps block content with Tool's content. Has `blok-element` CSS class
  * @property {HTMLElement} pluginsContent - HTML content that returns by Tool's render function
  */
 export default class Block extends EventsDispatcher<BlockEvents> {
@@ -105,10 +105,10 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   public static get CSS(): { [name: string]: string } {
     return {
-      wrapper: 'ce-block',
-      wrapperStretched: 'ce-block--stretched',
-      content: 'ce-block__content',
-      selected: 'ce-block--selected',
+      wrapper: 'blok-element',
+      wrapperStretched: 'blok-element--stretched',
+      content: 'blok-element__content',
+      selected: 'blok-element--selected',
     };
   }
 

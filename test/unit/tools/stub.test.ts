@@ -62,10 +62,10 @@ describe('Stub tool', () => {
     });
 
     const element = stub.render();
-    const titleEl = element.querySelector('.ce-stub__title');
-    const subtitleEl = element.querySelector('.ce-stub__subtitle');
+    const titleEl = element.querySelector('.blok-stub__title');
+    const subtitleEl = element.querySelector('.blok-stub__subtitle');
 
-    expect(element.classList.contains('ce-stub')).toBe(true);
+    expect(element.classList.contains('blok-stub')).toBe(true);
     expect(titleEl?.textContent).toBe('Broken block');
     expect(subtitleEl?.textContent).toBe('t:The block can not be displayed correctly.');
     expect(translator).toHaveBeenCalledTimes(1);
@@ -82,7 +82,7 @@ describe('Stub tool', () => {
     });
 
     const element = stub.render();
-    const titleEl = element.querySelector('.ce-stub__title');
+    const titleEl = element.querySelector('.blok-stub__title');
 
     expect(translator).toHaveBeenNthCalledWith(1, 'Error');
     expect(translator).toHaveBeenNthCalledWith(2, 'The block can not be displayed correctly.');

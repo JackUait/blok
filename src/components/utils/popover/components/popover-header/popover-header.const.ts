@@ -3,7 +3,7 @@ import { bem } from '../../../bem';
 /**
  * Popover header block CSS class constructor
  */
-const className = bem('ce-popover-header');
+const className = bem('blok-popover-header');
 
 /**
  * CSS class names to be used in popover header class

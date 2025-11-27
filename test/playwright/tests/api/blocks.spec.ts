@@ -536,7 +536,7 @@ test.describe('api.blocks', () => {
         }
 
         const type = 'paragraph';
-        const data = { text: 'codex' };
+        const data = { text: 'blok' };
         const config = undefined;
         const index = undefined;
         const needToFocus = undefined;
@@ -988,7 +988,7 @@ test.describe('api.blocks', () => {
           const element = document.createElement('div');
 
           element.contentEditable = 'true';
-          element.classList.add('cdx-block');
+          element.classList.add('blok-base-element');
           element.innerHTML = this.data?.text ?? '';
 
           return element;
@@ -1027,7 +1027,7 @@ test.describe('api.blocks', () => {
           const element = document.createElement('div');
 
           element.contentEditable = 'true';
-          element.classList.add('cdx-block');
+          element.classList.add(' blok-base-element');
           element.innerHTML = this.data?.text ?? '';
 
           return element;
@@ -1137,7 +1137,7 @@ test.describe('api.blocks', () => {
           const element = document.createElement('div');
 
           element.contentEditable = 'true';
-          element.classList.add('cdx-block');
+          element.classList.add('blok-base-element');
           element.innerHTML = this.data?.text ?? '';
 
           return element;
@@ -1170,7 +1170,7 @@ test.describe('api.blocks', () => {
           const element = document.createElement('div');
 
           element.contentEditable = 'true';
-          element.classList.add('cdx-block');
+          element.classList.add('blok-base-element');
           element.innerHTML = this.data?.text ?? '';
 
           return element;

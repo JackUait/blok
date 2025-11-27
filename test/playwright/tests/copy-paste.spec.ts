@@ -486,7 +486,7 @@ test.describe('copy and paste', () => {
     test('should parse pattern', async ({ page }) => {
       await page.addScriptTag({ path: SIMPLE_IMAGE_TOOL_UMD_PATH });
 
-      await page.route('**/codex2x.png', route => route.fulfill({
+      await page.route('**/test.png', route => route.fulfill({
         status: 200,
         contentType: 'image/png',
         body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
@@ -501,7 +501,7 @@ test.describe('copy and paste', () => {
       });
 
       const block = getBlockByIndex(page, 0);
-      const imageUrl = 'https://codex.so/public/app/img/external/codex2x.png';
+      const imageUrl = 'https://github.com/JackUait/blok/blob/master/static/blok.webp';
 
       await block.click();
       await paste(page, block, {
@@ -691,7 +691,7 @@ test.describe('copy and paste', () => {
         render() {
           const block = document.createElement('div');
 
-          block.className = 'ce-block-with-disabled-prevent-default';
+          block.className = 'blok-element-with-disabled-prevent-default';
           block.setAttribute('data-blok-testid', 'block-with-disabled-prevent-default');
           block.contentEditable = 'true';
 

@@ -44,9 +44,9 @@
     "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report",
     "prepublishOnly": "yarn build"
   },
-  "author": "CodeX",
+  "author": "JackUait",
   "contributors": [
-    "JackUait"
+    "CodeX (the author of initial solution)"
   ],
   "license": "Apache-2.0",
   "repository": {

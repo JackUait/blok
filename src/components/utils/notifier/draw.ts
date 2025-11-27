@@ -1,14 +1,14 @@
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './types';
 
 export const CSS = {
-  wrapper: 'cdx-notifies',
-  notification: 'cdx-notify',
-  crossBtn: 'cdx-notify__cross',
-  okBtn: 'cdx-notify__button--confirm',
-  cancelBtn: 'cdx-notify__button--cancel',
-  input: 'cdx-notify__input',
-  btn: 'cdx-notify__button',
-  btnsWrapper: 'cdx-notify__btns-wrapper',
+  wrapper: 'blok-notifies',
+  notification: 'blok-notify',
+  crossBtn: 'blok-notify__cross',
+  okBtn: 'blok-notify__button--confirm',
+  cancelBtn: 'blok-notify__button--cancel',
+  input: 'blok-notify__input',
+  btn: 'blok-notify__button',
+  btnsWrapper: 'blok-notify__btns-wrapper',
 };
 
 /**

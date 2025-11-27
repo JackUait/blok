@@ -46,7 +46,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    */
   public get CSS(): { [name: string]: string } {
     return {
-      settings: 'ce-settings',
+      settings: 'blok-settings',
     };
   }
 

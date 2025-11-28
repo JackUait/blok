@@ -3,11 +3,11 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import {
-  EDITOR_INTERFACE_SELECTOR,
+  BLOK_INTERFACE_SELECTOR,
   MODIFIER_KEY,
   selectionChangeDebounceTimeout
 } from '../../../../src/components/constants';
@@ -21,9 +21,9 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
   '../../../../node_modules/@editorjs/header/dist/header.umd.js'
 );
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const CONVERT_TO_OPTION_SELECTOR = '[data-blok-testid="popover-item"][data-blok-item-name="convert-to"]';
 const NESTED_POPOVER_SELECTOR = '[data-blok-testid="popover"][data-blok-nested="true"]';
 const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
@@ -37,22 +37,22 @@ type SerializableToolConfig = {
   config?: Record<string, unknown>;
 };
 
-type CreateEditorOptions = {
+type CreateBlokOptions = {
   data?: OutputData;
   tools?: Record<string, SerializableToolConfig>;
 };
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -67,11 +67,11 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   const { data = null, tools = {} } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   const serializedTools = Object.entries(tools).map(([name, tool]) => ({
     name,
@@ -82,12 +82,12 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
   await page.evaluate(
     async ({ holder, data: initialData, serializedTools: toolsConfig }) => {
-      const editorConfig: Record<string, unknown> = {
+      const blokConfig: Record<string, unknown> = {
         holder: holder,
       };
 
       if (initialData) {
-        editorConfig.data = initialData;
+        blokConfig.data = initialData;
       }
 
       if (toolsConfig.length > 0) {
@@ -118,13 +118,13 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
           };
         }, {});
 
-        editorConfig.tools = resolvedTools;
+        blokConfig.tools = resolvedTools;
       }
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
@@ -318,17 +318,17 @@ const isSelectionInsideBlock = async (page: Page, selector: string): Promise<boo
 
 test.describe('ui.block-tunes', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test.describe('keyboard interactions', () => {
     test('keeps block content when pressing Enter inside search input', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [
             {
@@ -349,14 +349,14 @@ test.describe('ui.block-tunes', () => {
       await searchInput.waitFor({ state: 'visible' });
       await page.keyboard.press('Enter');
 
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
+      const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await expect(paragraph).toHaveCount(1);
       await expect(paragraph).toHaveText('Some text');
     });
 
     test('keeps block selection when pressing Enter on a block tune', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [
             {
@@ -387,7 +387,7 @@ test.describe('ui.block-tunes', () => {
   test.describe('convert to', () => {
     test('shows available tools when conversion is possible', async ({ page }) => {
       await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-      await createEditor(page, {
+      await createBlok(page, {
         tools: {
           header: {
             className: 'Header',
@@ -420,7 +420,7 @@ test.describe('ui.block-tunes', () => {
     });
 
     test('hides convert option when there is nothing to convert to', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [
             {
@@ -439,7 +439,7 @@ test.describe('ui.block-tunes', () => {
     });
 
     test('hides convert option when export is not configured', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         tools: {
           testTool: {
             classCode: toolWithoutConversionExportClass(),
@@ -463,7 +463,7 @@ test.describe('ui.block-tunes', () => {
     });
 
     test('filters out options with identical data', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         tools: {
           testTool: {
             classCode: toolWithToolboxVariantsClass(),
@@ -505,7 +505,7 @@ test.describe('ui.block-tunes', () => {
 
     test('converts block and keeps caret inside the new block', async ({ page }) => {
       await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-      await createEditor(page, {
+      await createBlok(page, {
         tools: {
           header: {
             className: 'Header',
@@ -534,13 +534,13 @@ test.describe('ui.block-tunes', () => {
         .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`)
         .click();
 
-      const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`);
+      const headerBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`);
 
       await expect(headerBlock).toHaveText('Some text');
       expect(
         await isSelectionInsideBlock(
           page,
-          `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`
+          `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`
         )
       ).toBe(true);
     });
@@ -548,7 +548,7 @@ test.describe('ui.block-tunes', () => {
 
   test.describe('tunes order', () => {
     test('renders block-specific tunes before common tunes', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         tools: {
           testTool: {
             classCode: toolWithCustomTuneClass(),

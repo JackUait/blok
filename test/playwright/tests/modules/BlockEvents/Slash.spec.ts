@@ -2,21 +2,21 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '../../../../../types';
+import type Blok from '../../../../../types';
 import type { OutputData } from '../../../../../types';
-import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
 const TOOLBOX_CONTAINER_SELECTOR = '[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-container"]';
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
   `[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-item"][data-blok-item-name=${itemName}]`;
 const BLOCK_TUNES_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
-const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 
 const modifierKeyVariants: Array<{ description: string; key: 'Control' | 'Meta' }> = [
   { description: 'Ctrl',
@@ -25,11 +25,11 @@ const modifierKeyVariants: Array<{ description: string; key: 'Control' | 'Meta' 
     key: 'Meta' },
 ];
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -44,21 +44,21 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<void> => {
+const createParagraphBlok = async (page: Page, paragraphs: string[]): Promise<void> => {
   const blocks: OutputData['blocks'] = paragraphs.map((text) => ({
     type: 'paragraph',
     data: { text },
   }));
 
-  await resetEditor(page);
-  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
       holder: holder,
-      data: { blocks: editorBlocks },
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID,
     blocks });
 };
@@ -69,16 +69,16 @@ const getTextContent = async (locator: Locator): Promise<string> => {
 
 test.describe('slash keydown', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should add "/" in empty block and open Toolbox', async ({ page }) => {
-    await createParagraphEditor(page, [ '' ]);
+    await createParagraphBlok(page, [ '' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
@@ -94,7 +94,7 @@ test.describe('slash keydown', () => {
 
   for (const { description, key } of modifierKeyVariants) {
     test(`should not open Toolbox if Slash pressed with ${description}`, async ({ page }) => {
-      await createParagraphEditor(page, [ '' ]);
+      await createParagraphBlok(page, [ '' ]);
 
       const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
@@ -111,7 +111,7 @@ test.describe('slash keydown', () => {
   }
 
   test('should not open Toolbox in non-empty block and append slash character', async ({ page }) => {
-    await createParagraphEditor(page, [ 'Hello' ]);
+    await createParagraphBlok(page, [ 'Hello' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
@@ -125,8 +125,8 @@ test.describe('slash keydown', () => {
     expect(textContent).toBe('Hello/');
   });
 
-  test('should not modify text outside editor when slash pressed', async ({ page }) => {
-    await createParagraphEditor(page, [ '' ]);
+  test('should not modify text outside blok when slash pressed', async ({ page }) => {
+    await createParagraphBlok(page, [ '' ]);
 
     await page.evaluate(() => {
       const title = document.querySelector('h1');
@@ -182,7 +182,7 @@ test.describe('slash keydown', () => {
   });
 
   test('should open Block Tunes when cmd+slash pressed', async ({ page }) => {
-    await createParagraphEditor(page, [ '' ]);
+    await createParagraphBlok(page, [ '' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
@@ -197,8 +197,8 @@ test.describe('slash keydown', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }
 

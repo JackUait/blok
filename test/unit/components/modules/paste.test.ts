@@ -114,11 +114,11 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     } as unknown as Paste['eventsDispatcher'],
   });
 
-  const pasteWithInternals = paste as unknown as { listeners: Listeners; state: Paste['Editor'] };
+  const pasteWithInternals = paste as unknown as { listeners: Listeners; state: Paste['Blok'] };
 
   pasteWithInternals.listeners = listeners.instance;
 
-  const editorState = {
+  const blokState = {
     BlockManager: blockManager,
     Caret: caret,
     Tools: tools,
@@ -130,7 +130,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     },
   };
 
-  pasteWithInternals.state = editorState as unknown as Paste['Editor'];
+  pasteWithInternals.state = blokState as unknown as Paste['Blok'];
 
   return {
     paste,

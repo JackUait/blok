@@ -2,19 +2,19 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '../../../../../types';
+import type Blok from '../../../../../types';
 import type { OutputData } from '../../../../../types';
-import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
-const QUOTE_TOOL_INPUT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="quote-tool"] div[contenteditable]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
+const QUOTE_TOOL_INPUT_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="quote-tool"] div[contenteditable]`;
 
 const getBlockByIndex = (page: Page, index: number): Locator => {
   return page.locator(`:nth-match(${BLOCK_SELECTOR}, ${index + 1})`);
@@ -48,11 +48,11 @@ const getLastQuoteToolInput = async (page: Page): Promise<Locator> => {
   return page.locator(`:nth-match(${QUOTE_TOOL_INPUT_SELECTOR}, ${inputCount})`);
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.body.innerHTML = '';
@@ -67,32 +67,32 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
-    console.log('createEditorWithBlocks: blocks count', editorBlocks.length);
-    const editor = new window.EditorJS({
+const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    console.log('createBlokWithBlocks: blocks count', blokBlocks.length);
+    const blok = new window.Blok({
       holder: holder,
-      data: { blocks: editorBlocks },
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID,
     blocks });
 };
 
-const createParagraphEditor = async (page: Page, textBlocks: string[]): Promise<void> => {
+const createParagraphBlok = async (page: Page, textBlocks: string[]): Promise<void> => {
   const blocks: OutputData['blocks'] = textBlocks.map((text) => ({
     type: 'paragraph',
     data: { text },
   }));
 
-  await createEditorWithBlocks(page, blocks);
+  await createBlokWithBlocks(page, blocks);
 };
 
-const createMultiInputToolEditor = async (page: Page): Promise<void> => {
-  await resetEditor(page);
+const createMultiInputToolBlok = async (page: Page): Promise<void> => {
+  await resetBlok(page);
   await page.evaluate(async ({ holder }) => {
     /**
      *
@@ -124,7 +124,7 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
       }
     }
 
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
       tools: {
         quote: ExampleOfToolWithSeveralInputs,
@@ -139,13 +139,13 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID });
 };
 
-const createEditorWithUnmergeableTool = async (page: Page): Promise<void> => {
-  await resetEditor(page);
+const createBlokWithUnmergeableTool = async (page: Page): Promise<void> => {
+  await resetBlok(page);
   await page.evaluate(async ({ holder }) => {
     /**
      *
@@ -172,7 +172,7 @@ const createEditorWithUnmergeableTool = async (page: Page): Promise<void> => {
       }
     }
 
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
       tools: {
         code: ExampleOfUnmergeableTool,
@@ -193,18 +193,18 @@ const createEditorWithUnmergeableTool = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID });
 };
 
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return page.evaluate(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance is not initialized');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance is not initialized');
     }
 
-    return window.editorInstance.save();
+    return window.blokInstance.save();
   });
 };
 
@@ -325,17 +325,17 @@ const expectToolbarClosed = async (page: Page): Promise<void> => {
 
 test.describe('delete keydown', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test.describe('ending whitespaces handling', () => {
     test('should delete visible non-breaking space', async ({ page }) => {
-      await createParagraphEditor(page, ['1\u00A0', '2']);
+      await createParagraphBlok(page, ['1\u00A0', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const paragraphContent = firstParagraph.locator('[contenteditable]');
@@ -366,7 +366,7 @@ test.describe('delete keydown', () => {
     });
 
     test('should merge blocks when invisible space follows caret', async ({ page }) => {
-      await createParagraphEditor(page, ['1 ', '2']);
+      await createParagraphBlok(page, ['1 ', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const paragraphContent = firstParagraph.locator('[contenteditable]');
@@ -382,7 +382,7 @@ test.describe('delete keydown', () => {
     });
 
     test('should ignore empty tags after caret when merging', async ({ page }) => {
-      await createParagraphEditor(page, ['1<b></b>', '2']);
+      await createParagraphBlok(page, ['1<b></b>', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
 
@@ -401,7 +401,7 @@ test.describe('delete keydown', () => {
     });
 
     test('should remove non-breaking space and ignore empty tag', async ({ page }) => {
-      await createParagraphEditor(page, ['1\u00A0<b></b>', '2']);
+      await createParagraphBlok(page, ['1\u00A0<b></b>', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const paragraphContent = firstParagraph.locator('[contenteditable]');
@@ -430,7 +430,7 @@ test.describe('delete keydown', () => {
     });
 
     test('should remove non-breaking space placed after empty tag', async ({ page }) => {
-      await createParagraphEditor(page, ['1<b></b>\u00A0', '2']);
+      await createParagraphBlok(page, ['1<b></b>\u00A0', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const paragraphContent = firstParagraph.locator('[contenteditable]');
@@ -457,7 +457,7 @@ test.describe('delete keydown', () => {
     });
 
     test('should remove non-breaking space and ignore regular space', async ({ page }) => {
-      await createParagraphEditor(page, ['1\u00A0 ', '2']);
+      await createParagraphBlok(page, ['1\u00A0 ', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const paragraphContent = firstParagraph.locator('[contenteditable]');
@@ -494,7 +494,7 @@ test.describe('delete keydown', () => {
   });
 
   test('should delete selected fragment using native behaviour', async ({ page }) => {
-    await createParagraphEditor(page, ['The first block', 'The second block']);
+    await createParagraphBlok(page, ['The first block', 'The second block']);
 
     const firstParagraph = getParagraphByIndex(page, 0);
     const paragraphContent = firstParagraph.locator('[contenteditable]');
@@ -507,7 +507,7 @@ test.describe('delete keydown', () => {
   });
 
   test('should delete character using native behaviour when caret is not at block end', async ({ page }) => {
-    await createParagraphEditor(page, ['The first block', 'The second block']);
+    await createParagraphBlok(page, ['The first block', 'The second block']);
 
     const firstParagraph = getParagraphByIndex(page, 0);
 
@@ -519,7 +519,7 @@ test.describe('delete keydown', () => {
   });
 
   test('should focus next input when caret is not in the last input', async ({ page }) => {
-    await createMultiInputToolEditor(page);
+    await createMultiInputToolBlok(page);
 
     const firstInput = getQuoteToolInputByIndex(page, 0);
 
@@ -533,7 +533,7 @@ test.describe('delete keydown', () => {
   });
 
   test('should remove next empty block and close toolbox when caret at block end', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         id: 'block1',
         type: 'paragraph',
@@ -556,7 +556,7 @@ test.describe('delete keydown', () => {
     await firstParagraph.press('End');
     await firstParagraph.press('Delete');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block1');
@@ -565,7 +565,7 @@ test.describe('delete keydown', () => {
   });
 
   test('should remove current empty block and place caret at next block start', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         id: 'block1',
         type: 'paragraph',
@@ -588,7 +588,7 @@ test.describe('delete keydown', () => {
     await firstParagraph.press('Backspace');
     await firstParagraph.press('Delete');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block2');
@@ -598,7 +598,7 @@ test.describe('delete keydown', () => {
   });
 
   test('should merge blocks when both are mergeable and caret at block end', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         id: 'block1',
         type: 'paragraph',
@@ -621,7 +621,7 @@ test.describe('delete keydown', () => {
     await firstParagraph.press('End');
     await firstParagraph.press('Delete');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block1');
@@ -632,7 +632,7 @@ test.describe('delete keydown', () => {
   });
 
   test('should place caret at start of next unmergeable block', async ({ page }) => {
-    await createEditorWithUnmergeableTool(page);
+    await createBlokWithUnmergeableTool(page);
 
     const firstParagraph = getParagraphByIndex(page, 0);
 
@@ -640,7 +640,7 @@ test.describe('delete keydown', () => {
     await firstParagraph.press('End');
     await firstParagraph.press('Delete');
 
-    const caretInfo = await getCaretInfo(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
+    const caretInfo = await getCaretInfo(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
 
     expect(caretInfo?.inside).toBeTruthy();
     await expectToolbarClosed(page);
@@ -648,7 +648,7 @@ test.describe('delete keydown', () => {
 
   test.describe('at the end of the last block', () => {
     test('should do nothing for non-empty block', async ({ page }) => {
-      await createParagraphEditor(page, [ 'The only block. Not empty' ]);
+      await createParagraphBlok(page, [ 'The only block. Not empty' ]);
 
       // Workaround for potential duplication: remove extra blocks if any
       await page.evaluate(() => {
@@ -677,7 +677,7 @@ test.describe('delete keydown', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }

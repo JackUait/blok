@@ -21,13 +21,13 @@ export default class InlineToolbarAPI extends Module {
    * Open Inline Toolbar
    */
   public open(): void {
-    void this.Editor.InlineToolbar.tryToShow();
+    void this.Blok.InlineToolbar.tryToShow();
   }
 
   /**
    * Close Inline Toolbar
    */
   public close(): void {
-    this.Editor.InlineToolbar.close();
+    this.Blok.InlineToolbar.close();
   }
 }

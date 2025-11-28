@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import TooltipAPI from '../../../../../src/components/modules/api/tooltip';
 import EventsDispatcher from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorConfig } from '../../../../../types';
-import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
-import type { EditorEventMap } from '../../../../../src/components/events';
+import type { BlokConfig } from '../../../../../types';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type { BlokEventMap } from '../../../../../src/components/events';
 
 const { showMock, hideMock, onHoverMock } = vi.hoisted(() => ({
   showMock: vi.fn(),
@@ -19,15 +19,15 @@ vi.mock('../../../../../src/components/utils/tooltip', () => ({
 }));
 
 const createTooltipApi = (): TooltipAPI => {
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as EditorConfig,
+    config: {} as BlokConfig,
     eventsDispatcher,
   };
 
   const tooltipApi = new TooltipAPI(moduleConfig);
 
-  tooltipApi.state = {} as EditorModules;
+  tooltipApi.state = {} as BlokModules;
 
   return tooltipApi;
 };

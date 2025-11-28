@@ -23,14 +23,14 @@ export default class ToolbarAPI extends Module {
    * Open toolbar
    */
   public open(): void {
-    this.Editor.Toolbar.moveAndOpen();
+    this.Blok.Toolbar.moveAndOpen();
   }
 
   /**
    * Close toolbar and all included elements
    */
   public close(): void {
-    this.Editor.Toolbar.close();
+    this.Blok.Toolbar.close();
   }
 
   /**
@@ -38,20 +38,20 @@ export default class ToolbarAPI extends Module {
    * @param {boolean} openingState —  opening state of Block Setting
    */
   public toggleBlockSettings(openingState?: boolean): void {
-    if (this.Editor.BlockManager.currentBlockIndex === -1) {
+    if (this.Blok.BlockManager.currentBlockIndex === -1) {
       _.logLabeled('Could\'t toggle the Toolbar because there is no block selected ', 'warn');
 
       return;
     }
 
     /** Check that opening state is set or not */
-    const canOpenBlockSettings = openingState ?? !this.Editor.BlockSettings.opened;
+    const canOpenBlockSettings = openingState ?? !this.Blok.BlockSettings.opened;
 
     if (canOpenBlockSettings) {
-      this.Editor.Toolbar.moveAndOpen();
-      void this.Editor.BlockSettings.open();
+      this.Blok.Toolbar.moveAndOpen();
+      void this.Blok.BlockSettings.open();
     } else {
-      this.Editor.BlockSettings.close();
+      this.Blok.BlockSettings.close();
     }
   }
 
@@ -61,19 +61,19 @@ export default class ToolbarAPI extends Module {
    * @param {boolean} openingState - Opening state of toolbox
    */
   public toggleToolbox(openingState?: boolean): void {
-    if (this.Editor.BlockManager.currentBlockIndex === -1) {
+    if (this.Blok.BlockManager.currentBlockIndex === -1) {
       _.logLabeled('Could\'t toggle the Toolbox because there is no block selected ', 'warn');
 
       return;
     }
 
-    const canOpenToolbox = openingState ?? !this.Editor.Toolbar.toolbox.opened;
+    const canOpenToolbox = openingState ?? !this.Blok.Toolbar.toolbox.opened;
 
     if (canOpenToolbox) {
-      this.Editor.Toolbar.moveAndOpen();
-      this.Editor.Toolbar.toolbox.open();
+      this.Blok.Toolbar.moveAndOpen();
+      this.Blok.Toolbar.toolbox.open();
     } else {
-      this.Editor.Toolbar.toolbox.close();
+      this.Blok.Toolbar.toolbox.close();
     }
   }
 }

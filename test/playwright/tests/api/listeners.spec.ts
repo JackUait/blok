@@ -3,20 +3,20 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import type { EditorConfig } from '@/types';
+import type Blok from '@/types';
+import type { BlokConfig } from '@/types';
 import type { Listeners as ListenersAPI } from '@/types/api/listeners';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
+const HOLDER_ID = 'blok';
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
     listenerCallCount?: number;
     lifecycleCallCount?: number;
     listenersTestTarget?: HTMLElement;
@@ -28,15 +28,15 @@ declare global {
   }
 }
 
-type EditorWithListeners = EditorJS & { listeners: ListenersAPI };
+type BlokWithListeners = Blok & { listeners: ListenersAPI };
 
-type CreateEditorOptions = Partial<EditorConfig>;
+type CreateBlokOptions = Partial<BlokConfig>;
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -51,25 +51,25 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
-    async (params: { holder: string; editorOptions: Record<string, unknown> }) => {
+    async (params: { holder: string; blokOptions: Record<string, unknown> }) => {
       const config = Object.assign(
         { holder: params.holder },
-        params.editorOptions
-      ) as EditorConfig;
+        params.blokOptions
+      ) as BlokConfig;
 
-      const editor = new window.EditorJS(config);
+      const blok = new window.Blok(config);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
-      editorOptions: options as Record<string, unknown>,
+      blokOptions: options as Record<string, unknown>,
     }
   );
 };
@@ -84,7 +84,7 @@ const clickElement = async (page: Page, selector: string): Promise<void> => {
 
 test.describe('api.listeners', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -92,13 +92,13 @@ test.describe('api.listeners', () => {
   });
 
   test('registers and removes DOM listeners via the public API', async ({ page }) => {
-    await createEditor(page);
+    await createBlok(page);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance as EditorWithListeners | undefined;
+      const blok = window.blokInstance as BlokWithListeners | undefined;
 
-      if (!editor) {
-        throw new Error('Editor instance not found');
+      if (!blok) {
+        throw new Error('Blok instance not found');
       }
 
       const target = document.createElement('button');
@@ -115,7 +115,7 @@ test.describe('api.listeners', () => {
         window.listenerCallCount = (window.listenerCallCount ?? 0) + 1;
       };
 
-      const listenerId = editor.listeners.on(target, 'click', window.listenersTestHandler);
+      const listenerId = blok.listeners.on(target, 'click', window.listenersTestHandler);
 
       window.firstListenerId = listenerId ?? null;
     });
@@ -128,13 +128,13 @@ test.describe('api.listeners', () => {
     await page.waitForFunction(() => window.listenerCallCount === 1);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance as EditorWithListeners | undefined;
+      const blok = window.blokInstance as BlokWithListeners | undefined;
 
-      if (!editor || !window.listenersTestTarget || !window.listenersTestHandler) {
+      if (!blok || !window.listenersTestTarget || !window.listenersTestHandler) {
         throw new Error('Listener prerequisites were not set');
       }
 
-      editor.listeners.off(window.listenersTestTarget, 'click', window.listenersTestHandler);
+      blok.listeners.off(window.listenersTestTarget, 'click', window.listenersTestHandler);
     });
 
     await clickElement(page, '#listeners-target');
@@ -144,14 +144,14 @@ test.describe('api.listeners', () => {
     expect(callCount).toBe(1);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance as EditorWithListeners | undefined;
+      const blok = window.blokInstance as BlokWithListeners | undefined;
 
-      if (!editor || !window.listenersTestTarget || !window.listenersTestHandler) {
+      if (!blok || !window.listenersTestTarget || !window.listenersTestHandler) {
         throw new Error('Listener prerequisites were not set');
       }
 
       window.listenerCallCount = 0;
-      const listenerId = editor.listeners.on(
+      const listenerId = blok.listeners.on(
         window.listenersTestTarget,
         'click',
         window.listenersTestHandler
@@ -164,10 +164,10 @@ test.describe('api.listeners', () => {
     await page.waitForFunction(() => window.listenerCallCount === 1);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance as EditorWithListeners | undefined;
+      const blok = window.blokInstance as BlokWithListeners | undefined;
 
-      if (window.secondListenerId && editor) {
-        editor.listeners.offById(window.secondListenerId);
+      if (window.secondListenerId && blok) {
+        blok.listeners.offById(window.secondListenerId);
       }
     });
 
@@ -178,14 +178,14 @@ test.describe('api.listeners', () => {
     expect(callCount).toBe(1);
   });
 
-  test('cleans up registered listeners when the editor is destroyed', async ({ page }) => {
-    await createEditor(page);
+  test('cleans up registered listeners when the blok is destroyed', async ({ page }) => {
+    await createBlok(page);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance as EditorWithListeners | undefined;
+      const blok = window.blokInstance as BlokWithListeners | undefined;
 
-      if (!editor) {
-        throw new Error('Editor instance not found');
+      if (!blok) {
+        throw new Error('Blok instance not found');
       }
 
       const target = document.createElement('button');
@@ -200,15 +200,15 @@ test.describe('api.listeners', () => {
         window.lifecycleCallCount = (window.lifecycleCallCount ?? 0) + 1;
       };
 
-      editor.listeners.on(target, 'click', window.listenersLifecycleHandler);
+      blok.listeners.on(target, 'click', window.listenersLifecycleHandler);
     });
 
     await clickElement(page, '#listeners-lifecycle-target');
     await page.waitForFunction(() => window.lifecycleCallCount === 1);
 
     await page.evaluate(() => {
-      window.editorInstance?.destroy?.();
-      window.editorInstance = undefined;
+      window.blokInstance?.destroy?.();
+      window.blokInstance = undefined;
     });
 
     await clickElement(page, '#listeners-lifecycle-target');

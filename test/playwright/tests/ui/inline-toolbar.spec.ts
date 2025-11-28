@@ -2,11 +2,11 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '@/types';
-import type { EditorConfig, OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import type Blok from '@/types';
+import type { BlokConfig, OutputData } from '@/types';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import {
-  EDITOR_INTERFACE_SELECTOR,
+  BLOK_INTERFACE_SELECTOR,
   INLINE_TOOLBAR_INTERFACE_SELECTOR
 } from '../../../../src/components/constants';
 
@@ -19,13 +19,13 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
   '../../../../node_modules/@editorjs/header/dist/header.umd.js'
 );
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const HEADER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const HEADER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`;
 const INLINE_TOOLBAR_ITEMS_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-items"] [data-blok-testid]`;
 const INLINE_TOOLBAR_CONTAINER_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-container"]`;
 const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-item"]`;
-const NESTED_EDITOR_ID = 'nested-editor';
+const NESTED_BLOK_ID = 'nested-blok';
 
 type SerializableToolConfig = {
   className?: string;
@@ -33,7 +33,7 @@ type SerializableToolConfig = {
   config?: Record<string, unknown>;
 };
 
-type CreateEditorOptions = Pick<EditorConfig, 'readOnly' | 'placeholder'> & {
+type CreateBlokOptions = Pick<BlokConfig, 'readOnly' | 'placeholder'> & {
   data?: OutputData;
   tools?: Record<string, SerializableToolConfig>;
 };
@@ -78,25 +78,25 @@ class ReadOnlyInlineTool {
 }
 `;
 
-const NESTED_EDITOR_TOOL_SOURCE = `
-class NestedEditorTool {
+const NESTED_BLOK_TOOL_SOURCE = `
+class NestedBlokTool {
   constructor({ data }) {
     this.data = data || {};
-    this.nestedEditor = null;
+    this.nestedBlok = null;
   }
 
   render() {
     const wrapper = document.createElement('div');
     const holderEl = document.createElement('div');
-    const holderId = '${NESTED_EDITOR_ID}-holder-' + Math.random().toString(16).slice(2);
+    const holderId = '${NESTED_BLOK_ID}-holder-' + Math.random().toString(16).slice(2);
 
-    wrapper.setAttribute('data-blok-testid', '${NESTED_EDITOR_ID}');
+    wrapper.setAttribute('data-blok-testid', '${NESTED_BLOK_ID}');
     holderEl.id = holderId;
-    holderEl.setAttribute('data-blok-testid', '${NESTED_EDITOR_ID}-holder');
+    holderEl.setAttribute('data-blok-testid', '${NESTED_BLOK_ID}-holder');
 
     wrapper.appendChild(holderEl);
 
-    this.nestedEditor = new window.EditorJS({
+    this.nestedBlok = new window.Blok({
       holder: holderId,
       data: {
         blocks: [
@@ -115,8 +115,8 @@ class NestedEditorTool {
   }
 
   async destroy() {
-    if (this.nestedEditor && typeof this.nestedEditor.destroy === 'function') {
-      await this.nestedEditor.destroy();
+    if (this.nestedBlok && typeof this.nestedBlok.destroy === 'function') {
+      await this.nestedBlok.destroy();
     }
   }
 
@@ -127,14 +127,14 @@ class NestedEditorTool {
 `;
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -150,12 +150,12 @@ const resetEditor = async (page: Page): Promise<void> => {
 };
 
 /**
- * Initialize the editor with the provided configuration
+ * Initialize the blok with the provided configuration
  * @param page - The Playwright page object
- * @param options - Editor configuration options
+ * @param options - Blok configuration options
  */
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
-  await resetEditor(page);
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
+  await resetBlok(page);
 
   const { tools = {}, data, ...restOptions } = options;
 
@@ -169,18 +169,18 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   });
 
   await page.evaluate(
-    async ({ holder, editorOptions, editorData, editorTools }) => {
-      const editorConfig: Record<string, unknown> = {
+    async ({ holder, blokOptions, blokData, blokTools }) => {
+      const blokConfig: Record<string, unknown> = {
         holder: holder,
-        ...editorOptions,
+        ...blokOptions,
       };
 
-      if (editorData) {
-        editorConfig.data = editorData;
+      if (blokData) {
+        blokConfig.data = blokData;
       }
 
-      if (editorTools.length > 0) {
-        const toolsConfig = editorTools.reduce<Record<string, { class: unknown } & Record<string, unknown>>>(
+      if (blokTools.length > 0) {
+        const toolsConfig = blokTools.reduce<Record<string, { class: unknown } & Record<string, unknown>>>(
           (accumulator, { name, className, classCode, config }) => {
             let toolClass: unknown;
 
@@ -208,20 +208,20 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
           {}
         );
 
-        editorConfig.tools = toolsConfig;
+        blokConfig.tools = toolsConfig;
       }
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
+      window.blokInstance = blok;
 
-      await editor.isReady;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
-      editorOptions: restOptions,
-      editorData: data ?? null,
-      editorTools: serializedTools,
+      blokOptions: restOptions,
+      blokData: data ?? null,
+      blokTools: serializedTools,
     }
   );
 };
@@ -427,16 +427,16 @@ const getInlineToolbarSnapshot = async (page: Page): Promise<ToolbarItemSnapshot
 
 test.describe('inline toolbar', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should align with the left coordinate of the selection range', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -487,7 +487,7 @@ test.describe('inline toolbar', () => {
   test('should align with the right edge when toolbar width exceeds available space', async ({ page, browserName }) => {
     // eslint-disable-next-line playwright/no-skipped-test -- conditional skip for browser-specific behavior
     test.skip(browserName === 'firefox', 'Firefox has different text layout behavior near line wraps');
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -531,7 +531,7 @@ test.describe('inline toolbar', () => {
   test('should display inline toolbar in read-only mode when tool supports it', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       readOnly: true,
       data: {
         blocks: [
@@ -569,7 +569,7 @@ test.describe('inline toolbar', () => {
   });
 
   test('should not submit surrounding form when inline tool is activated', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -593,13 +593,13 @@ test.describe('inline toolbar', () => {
 
       document.body.appendChild(form);
 
-      const editorElement = document.getElementById(holder);
+      const blokElement = document.getElementById(holder);
 
-      if (!editorElement) {
-        throw new Error('Editor element not found');
+      if (!blokElement) {
+        throw new Error('Blok element not found');
       }
 
-      form.appendChild(editorElement);
+      form.appendChild(blokElement);
 
       window.inlineToolbarFormSubmitCount = 0;
     }, { holder: HOLDER_ID });
@@ -618,7 +618,7 @@ test.describe('inline toolbar', () => {
   });
 
   test('allows controlling inline toolbar visibility via API', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -640,7 +640,7 @@ test.describe('inline toolbar', () => {
     await expect(toolbarContainer).toBeVisible();
 
     await page.evaluate(() => {
-      window.editorInstance?.inlineToolbar?.close();
+      window.blokInstance?.inlineToolbar?.close();
     });
 
     await expect(toolbarContainer).toHaveCount(0);
@@ -648,14 +648,14 @@ test.describe('inline toolbar', () => {
     await selectText(paragraph, 'toolbar');
 
     await page.evaluate(() => {
-      window.editorInstance?.inlineToolbar?.open();
+      window.blokInstance?.inlineToolbar?.open();
     });
 
     await expect(page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR)).toBeVisible();
   });
 
   test('reflects inline tool state changes based on current selection', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -683,7 +683,7 @@ test.describe('inline toolbar', () => {
     await selectText(paragraph, 'plain part');
 
     await page.evaluate(() => {
-      window.editorInstance?.inlineToolbar?.open();
+      window.blokInstance?.inlineToolbar?.open();
     });
 
     await expect(boldButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
@@ -692,7 +692,7 @@ test.describe('inline toolbar', () => {
   test('should restore caret after converting a block', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: {
         header: {
           className: 'Header',
@@ -744,11 +744,11 @@ test.describe('inline toolbar', () => {
     expect(selectionState.isInsideHeader).toBe(true);
   });
 
-  test('should keep nested inline toolbar open while interacting with nested editor', async ({ page }) => {
-    await createEditor(page, {
+  test('should keep nested inline toolbar open while interacting with nested blok', async ({ page }) => {
+    await createBlok(page, {
       tools: {
-        nestedEditor: {
-          classCode: NESTED_EDITOR_TOOL_SOURCE,
+        nestedBlok: {
+          classCode: NESTED_BLOK_TOOL_SOURCE,
         },
       },
       data: {
@@ -760,16 +760,16 @@ test.describe('inline toolbar', () => {
             },
           },
           {
-            type: 'nestedEditor',
+            type: 'nestedBlok',
             data: {
-              text: 'The nested editor allows for complex document structures and hierarchical content organization',
+              text: 'The nested blok allows for complex document structures and hierarchical content organization',
             },
           },
         ],
       },
     });
 
-    const nestedParagraph = page.locator(`[data-blok-testid="${NESTED_EDITOR_ID}"] [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
+    const nestedParagraph = page.locator(`[data-blok-testid="${NESTED_BLOK_ID}"] [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
     await expect(nestedParagraph).toHaveCount(1);
 
@@ -777,22 +777,22 @@ test.describe('inline toolbar', () => {
 
     await selectText(nestedParagraph, 'document structures');
 
-    await page.locator(`[data-blok-testid="${NESTED_EDITOR_ID}"] [data-blok-item-name="link"]`).click();
+    await page.locator(`[data-blok-testid="${NESTED_BLOK_ID}"] [data-blok-item-name="link"]`).click();
 
-    const input = page.locator(`[data-blok-testid="${NESTED_EDITOR_ID}"] [data-blok-testid="inline-tool-input"]`);
+    const input = page.locator(`[data-blok-testid="${NESTED_BLOK_ID}"] [data-blok-testid="inline-tool-input"]`);
 
     await input.click();
-    await input.pressSequentially('https://editorjs.io', { delay: 20 });
+    await input.pressSequentially('https://google.com', { delay: 20 });
 
     const nestedToolbar = page.locator(
-      `[data-blok-testid="${NESTED_EDITOR_ID}"] [data-blok-interface="inline-toolbar"] [data-blok-testid="popover"][data-blok-popover-opened="true"]:not([data-blok-nested="true"])`
+      `[data-blok-testid="${NESTED_BLOK_ID}"] [data-blok-interface="inline-toolbar"] [data-blok-testid="popover"][data-blok-popover-opened="true"]:not([data-blok-nested="true"])`
     );
 
     await expect(nestedToolbar).toBeVisible();
   });
 
   test('should have a separator after the first item if it has children', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -820,7 +820,7 @@ test.describe('inline toolbar', () => {
   test('should have separators from both sides of item if it is in the middle and has children', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -861,7 +861,7 @@ test.describe('inline toolbar', () => {
   test('should have separator before the item with children if it is the last of all items', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -902,8 +902,8 @@ test.describe('inline toolbar', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
     toolSurround?: () => void;
     inlineToolbarFormSubmitCount?: number;
   }

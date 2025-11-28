@@ -31,12 +31,12 @@ export enum LogLevels {
  */
 declare const VERSION: string;
 
-const fallbackEditorVersion = 'dev';
+const fallbackBlokVersion = 'dev';
 
 /**
  * Returns Blok version injected by bundler or a globally provided fallback.
  */
-export const getEditorVersion = (): string => {
+export const getBlokVersion = (): string => {
   if (typeof VERSION !== 'undefined') {
     return VERSION;
   }
@@ -49,7 +49,7 @@ export const getEditorVersion = (): string => {
     return globalVersion;
   }
 
-  return fallbackEditorVersion;
+  return fallbackBlokVersion;
 };
 
 
@@ -210,8 +210,8 @@ const _log = (
     argsToPass.push(args);
   }
 
-  const editorLabelText = `Blok ${getEditorVersion()}`;
-  const editorLabelStyle = `line-height: 1em;
+  const blokLabelText = `Blok ${getBlokVersion()}`;
+  const blokLabelStyle = `line-height: 1em;
             color: #006FEA;
             display: inline-block;
             font-size: 11px;
@@ -228,12 +228,12 @@ const _log = (
     }
 
     if (isSimpleType) {
-      argsToPass.unshift(editorLabelStyle, style);
+      argsToPass.unshift(blokLabelStyle, style);
 
-      return `%c${editorLabelText}%c ${msg}`;
+      return `%c${blokLabelText}%c ${msg}`;
     }
 
-    return `( ${editorLabelText} )${msg}`;
+    return `( ${blokLabelText} )${msg}`;
   })();
 
   const callArguments = (() => {

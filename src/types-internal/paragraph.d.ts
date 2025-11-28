@@ -4,7 +4,7 @@ declare module '@editorjs/paragraph' {
   /**
    * @typedef {object} ParagraphConfig
    * @property {string} placeholder - placeholder for the empty paragraph
-   * @property {boolean} preserveBlank - Whether or not to keep blank paragraphs when saving editor data
+   * @property {boolean} preserveBlank - Whether or not to keep blank paragraphs when saving blok data
    */
   export interface ParagraphConfig extends ToolConfig {
     /**
@@ -12,7 +12,7 @@ declare module '@editorjs/paragraph' {
      */
     placeholder?: string;
     /**
-     * Whether or not to keep blank paragraphs when saving editor data
+     * Whether or not to keep blank paragraphs when saving blok data
      */
     preserveBlank?: boolean;
   }
@@ -128,7 +128,7 @@ declare module '@editorjs/paragraph' {
     save(toolsContent: HTMLDivElement): ParagraphData;
 
     /**
-     * On paste callback fired from Editor.
+     * On paste callback fired from Blok.
      *
      * @param {HTMLPasteEvent} event - event with pasted data
      */
@@ -154,7 +154,7 @@ declare module '@editorjs/paragraph' {
     static get isReadOnlySupported(): boolean;
 
     /**
-     * Used by Editor paste handling API.
+     * Used by Blok paste handling API.
      * Provides configuration to handle P tags.
      *
      * @returns {PasteConfig} - Paragraph Paste Setting

@@ -23,7 +23,7 @@ const globalSetup = async (): Promise<void> => {
     throw new Error(`Building Blok for Playwright failed with exit code ${result.status ?? 'unknown'}.`);
   }
 
-  process.env.EDITOR_JS_BUILT = 'true';
+  process.env.BLOK_BUILT = 'true';
 };
 
 export default globalSetup;

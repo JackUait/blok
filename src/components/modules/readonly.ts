@@ -33,7 +33,7 @@ export default class ReadOnly extends Module {
    * Set initial state
    */
   public async prepare(): Promise<void> {
-    const { Tools } = this.Editor;
+    const { Tools } = this.Blok;
     const { blockTools } = Tools;
     const toolsDontSupportReadOnly: string[] = [];
 
@@ -56,9 +56,9 @@ export default class ReadOnly extends Module {
 
   /**
    * Set read-only mode or toggle current state
-   * Call all Modules `toggleReadOnly` method and re-render Editor
+   * Call all Modules `toggleReadOnly` method and re-render Blok
    * @param state - (optional) read-only state or toggle
-   * @param isInitial - (optional) true when editor is initializing
+   * @param isInitial - (optional) true when blok is initializing
    */
   public async toggle(state = !this.readOnlyEnabled, isInitial = false): Promise<boolean> {
     if (state && this.toolsDontSupportReadOnly.length > 0) {
@@ -69,7 +69,7 @@ export default class ReadOnly extends Module {
 
     this.readOnlyEnabled = state;
 
-    for (const module of Object.values(this.Editor)) {
+    for (const module of Object.values(this.Blok)) {
       /**
        * Verify module has method `toggleReadOnly` method
        */
@@ -104,23 +104,23 @@ export default class ReadOnly extends Module {
     /**
      * Mutex for modifications observer to prevent onChange call when read-only mode is enabled
      */
-    this.Editor.ModificationsObserver.disable();
+    this.Blok.ModificationsObserver.disable();
 
     /**
-     * Save current Editor Blocks and render again
+     * Save current Blok Blocks and render again
      */
-    const savedBlocks = await this.Editor.Saver.save();
+    const savedBlocks = await this.Blok.Saver.save();
 
     if (savedBlocks === undefined) {
-      this.Editor.ModificationsObserver.enable();
+      this.Blok.ModificationsObserver.enable();
 
       return this.readOnlyEnabled;
     }
 
-    await this.Editor.BlockManager.clear();
-    await this.Editor.Renderer.render(savedBlocks.blocks);
+    await this.Blok.BlockManager.clear();
+    await this.Blok.Renderer.render(savedBlocks.blocks);
 
-    this.Editor.ModificationsObserver.enable();
+    this.Blok.ModificationsObserver.enable();
 
     return this.readOnlyEnabled;
   }

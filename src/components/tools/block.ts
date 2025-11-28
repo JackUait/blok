@@ -48,7 +48,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * Creates new Tool instance
    * @param data - Tool data
    * @param block - BlockAPI for current Block
-   * @param readOnly - True if Editor is in read-only mode
+   * @param readOnly - True if Blok is in read-only mode
    */
   public create(data: BlockToolData, block: BlockAPI, readOnly: boolean): IBlockTool {
      

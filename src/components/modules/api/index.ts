@@ -2,7 +2,7 @@
  * @module API
  * @copyright <CodeX> 2018
  *
- * Each block has an Editor API instance to use provided public methods
+ * Each block has a Blok API instance to use provided public methods
  * if you cant to read more about how API works, please see docs
  */
 import Module from '../../__module';
@@ -17,22 +17,22 @@ export default class API extends Module {
    */
   public get methods(): APIInterfaces {
     return {
-      blocks: this.Editor.BlocksAPI.methods,
-      caret: this.Editor.CaretAPI.methods,
-      tools: this.Editor.ToolsAPI.methods,
-      events: this.Editor.EventsAPI.methods,
-      listeners: this.Editor.ListenersAPI.methods,
-      notifier: this.Editor.NotifierAPI.methods,
-      sanitizer: this.Editor.SanitizerAPI.methods,
-      saver: this.Editor.SaverAPI.methods,
-      selection: this.Editor.SelectionAPI.methods,
-      styles: this.Editor.StylesAPI.classes,
-      toolbar: this.Editor.ToolbarAPI.methods,
-      inlineToolbar: this.Editor.InlineToolbarAPI.methods,
-      tooltip: this.Editor.TooltipAPI.methods,
-      i18n: this.Editor.I18nAPI.methods,
-      readOnly: this.Editor.ReadOnlyAPI.methods,
-      ui: this.Editor.UiAPI.methods,
+      blocks: this.Blok.BlocksAPI.methods,
+      caret: this.Blok.CaretAPI.methods,
+      tools: this.Blok.ToolsAPI.methods,
+      events: this.Blok.EventsAPI.methods,
+      listeners: this.Blok.ListenersAPI.methods,
+      notifier: this.Blok.NotifierAPI.methods,
+      sanitizer: this.Blok.SanitizerAPI.methods,
+      saver: this.Blok.SaverAPI.methods,
+      selection: this.Blok.SelectionAPI.methods,
+      styles: this.Blok.StylesAPI.classes,
+      toolbar: this.Blok.ToolbarAPI.methods,
+      inlineToolbar: this.Blok.InlineToolbarAPI.methods,
+      tooltip: this.Blok.TooltipAPI.methods,
+      i18n: this.Blok.I18nAPI.methods,
+      readOnly: this.Blok.ReadOnlyAPI.methods,
+      ui: this.Blok.UiAPI.methods,
     };
   }
 
@@ -45,7 +45,7 @@ export default class API extends Module {
     return Object.assign(
       this.methods,
       {
-        i18n: this.Editor.I18nAPI.getMethodsForTool(toolName, isTune),
+        i18n: this.Blok.I18nAPI.getMethodsForTool(toolName, isTune),
       }
     ) as APIInterfaces;
   }

@@ -4,26 +4,26 @@ import ReadOnlyAPI from '../../../../../src/components/modules/api/readonly';
 import EventsDispatcher from '../../../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorConfig } from '../../../../../types';
-import type { EditorEventMap } from '../../../../../src/components/events';
-import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
+import type { BlokConfig } from '../../../../../types';
+import type { BlokEventMap } from '../../../../../src/components/events';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
 type ReadOnlyModuleStub = {
   toggle: ReturnType<typeof vi.fn<(state?: boolean) => Promise<boolean>>>;
   isEnabled: boolean;
 };
 
-type EditorStub = {
+type BlokStub = {
   ReadOnly: ReadOnlyModuleStub;
 };
 
 const createReadOnlyApi = (overrides: Partial<ReadOnlyModuleStub> = {}): {
   readOnlyApi: ReadOnlyAPI;
-  editor: EditorStub;
+  blok: BlokStub;
 } => {
   const moduleConfig: ModuleConfig = {
-    config: {} as EditorConfig,
-    eventsDispatcher: new EventsDispatcher<EditorEventMap>(),
+    config: {} as BlokConfig,
+    eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   };
 
   const readOnlyApi = new ReadOnlyAPI(moduleConfig);
@@ -33,18 +33,18 @@ const createReadOnlyApi = (overrides: Partial<ReadOnlyModuleStub> = {}): {
     isEnabled: false,
   };
 
-  const editor: EditorStub = {
+  const blok: BlokStub = {
     ReadOnly: {
       ...defaultReadOnlyModule,
       ...overrides,
     },
   };
 
-  readOnlyApi.state = editor as unknown as EditorModules;
+  readOnlyApi.state = blok as unknown as BlokModules;
 
   return {
     readOnlyApi,
-    editor,
+    blok,
   };
 };
 
@@ -62,31 +62,31 @@ describe('ReadOnlyAPI', () => {
   });
 
   it('reflects current state via the methods getter', () => {
-    const { readOnlyApi, editor } = createReadOnlyApi();
+    const { readOnlyApi, blok } = createReadOnlyApi();
 
     expect(readOnlyApi.methods.isEnabled).toBe(false);
 
-    editor.ReadOnly.isEnabled = true;
+    blok.ReadOnly.isEnabled = true;
 
     expect(readOnlyApi.methods.isEnabled).toBe(true);
   });
 
-  it('delegates toggle calls to the Editor module', async () => {
-    const { readOnlyApi, editor } = createReadOnlyApi();
+  it('delegates toggle calls to the Blok module', async () => {
+    const { readOnlyApi, blok } = createReadOnlyApi();
 
-    editor.ReadOnly.toggle.mockResolvedValueOnce(true);
+    blok.ReadOnly.toggle.mockResolvedValueOnce(true);
 
     await expect(readOnlyApi.toggle(true)).resolves.toBe(true);
-    expect(editor.ReadOnly.toggle).toHaveBeenCalledWith(true);
+    expect(blok.ReadOnly.toggle).toHaveBeenCalledWith(true);
   });
 
-  it('reads isEnabled from the Editor module', () => {
-    const { readOnlyApi, editor } = createReadOnlyApi();
+  it('reads isEnabled from the Blok module', () => {
+    const { readOnlyApi, blok } = createReadOnlyApi();
 
-    editor.ReadOnly.isEnabled = true;
+    blok.ReadOnly.isEnabled = true;
     expect(readOnlyApi.isEnabled).toBe(true);
 
-    editor.ReadOnly.isEnabled = false;
+    blok.ReadOnly.isEnabled = false;
     expect(readOnlyApi.isEnabled).toBe(false);
   });
 });

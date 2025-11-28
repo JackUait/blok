@@ -116,7 +116,7 @@ export default class Caret extends Module {
    * @param {number} offset - caret offset regarding to the block content
    */
   public setToBlock(block: Block, position: string = this.positions.DEFAULT, offset = 0): void {
-    const { BlockManager, BlockSelection } = this.Editor;
+    const { BlockManager, BlockSelection } = this.Blok;
 
     /**
      * Clear previous selection since we possible will select the new Block
@@ -244,7 +244,7 @@ export default class Caret extends Module {
    * @param {number} offset - caret offset regarding to the text node
    */
   public setToInput(input: HTMLElement, position: string = this.positions.DEFAULT, offset = 0): void {
-    const { currentBlock } = this.Editor.BlockManager;
+    const { currentBlock } = this.Blok.BlockManager;
     const nodeToSet = $.getDeepestNode(input);
 
     switch (position) {
@@ -298,7 +298,7 @@ export default class Caret extends Module {
    * If last block is not empty, append another empty block
    */
   public setToTheLastBlock(): void {
-    const lastBlock = this.Editor.BlockManager.lastBlock;
+    const lastBlock = this.Blok.BlockManager.lastBlock;
 
     if (!lastBlock) {
       return;
@@ -311,7 +311,7 @@ export default class Caret extends Module {
     if (lastBlock.tool.isDefault && lastBlock.isEmpty) {
       this.setToBlock(lastBlock);
     } else {
-      const newBlock = this.Editor.BlockManager.insertAtEnd();
+      const newBlock = this.Blok.BlockManager.insertAtEnd();
 
       this.setToBlock(newBlock);
     }
@@ -328,7 +328,7 @@ export default class Caret extends Module {
     }
 
     const selectRange = selection.getRangeAt(0);
-    const currentBlock = this.Editor.BlockManager.currentBlock;
+    const currentBlock = this.Blok.BlockManager.currentBlock;
 
     if (!currentBlock) {
       return;
@@ -376,7 +376,7 @@ export default class Caret extends Module {
    * @param {boolean} force - pass true to skip check for caret position
    */
   public navigateNext(force = false): boolean {
-    const { BlockManager } = this.Editor;
+    const { BlockManager } = this.Blok;
     const { currentBlock, nextBlock } = BlockManager;
 
     if (currentBlock === undefined) {
@@ -445,7 +445,7 @@ export default class Caret extends Module {
    * @param {boolean} force - pass true to skip check for caret position
    */
   public navigatePrevious(force = false): boolean {
-    const { currentBlock, previousBlock } = this.Editor.BlockManager;
+    const { currentBlock, previousBlock } = this.Blok.BlockManager;
 
     if (!currentBlock) {
       return false;

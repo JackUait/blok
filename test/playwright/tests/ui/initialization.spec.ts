@@ -3,18 +3,18 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import type Blok from '@/types';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const EDITOR_ROOT_SELECTOR = EDITOR_INTERFACE_SELECTOR;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const STYLE_TAG_SELECTOR = '[id="editor-js-styles"]';
+const HOLDER_ID = 'blok';
+const BLOK_ROOT_SELECTOR = BLOK_INTERFACE_SELECTOR;
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const STYLE_TAG_SELECTOR = '[id="blok-styles"]';
 
 type InitializationOptions = {
   readOnly?: boolean;
@@ -24,13 +24,13 @@ type InitializationOptions = {
 };
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const waitForEditorConstructor = async (page: Page): Promise<void> => {
+const waitForBlokConstructor = async (page: Page): Promise<void> => {
   await page.waitForFunction(() => {
-    const candidate = (window as unknown as { EditorJS?: unknown }).EditorJS;
+    const candidate = (window as unknown as { Blok?: unknown }).Blok;
 
     if (typeof candidate === 'function') {
       return true;
@@ -46,11 +46,11 @@ const waitForEditorConstructor = async (page: Page): Promise<void> => {
   });
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -65,56 +65,56 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const normalizeEditorConstructor = async (page: Page): Promise<void> => {
+const normalizeBlokConstructor = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
-    const candidate = (window as unknown as { EditorJS?: unknown }).EditorJS;
+    const candidate = (window as unknown as { Blok?: unknown }).Blok;
 
     if (!candidate) {
-      throw new Error('EditorJS constructor is not available on window');
+      throw new Error('Blok constructor is not available on window');
     }
 
     if (typeof candidate === 'object') {
       const defaultExport = (candidate as { default?: unknown }).default;
 
       if (typeof defaultExport === 'function') {
-        (window as unknown as { EditorJS: unknown }).EditorJS = defaultExport;
+        (window as unknown as { Blok: unknown }).Blok = defaultExport;
       }
     }
   });
 };
 
-const createEditor = async (page: Page, options: InitializationOptions = {}): Promise<void> => {
-  await resetEditor(page);
-  await waitForEditorConstructor(page);
-  await normalizeEditorConstructor(page);
+const createBlok = async (page: Page, options: InitializationOptions = {}): Promise<void> => {
+  await resetBlok(page);
+  await waitForBlokConstructor(page);
+  await normalizeBlokConstructor(page);
 
   await page.evaluate(async ({ serializedOptions, holder }) => {
-    if (typeof window.EditorJS !== 'function') {
-      throw new Error('EditorJS constructor is not available on window');
+    if (typeof window.Blok !== 'function') {
+      throw new Error('Blok constructor is not available on window');
     }
 
-    const editorConfig: Record<string, unknown> = {
+    const blokConfig: Record<string, unknown> = {
       holder: holder,
     };
 
     if (serializedOptions.readOnly !== undefined) {
-      editorConfig.readOnly = serializedOptions.readOnly;
+      blokConfig.readOnly = serializedOptions.readOnly;
     }
 
     if (serializedOptions.style) {
-      editorConfig.style = serializedOptions.style;
+      blokConfig.style = serializedOptions.style;
     }
 
-    const editor = new window.EditorJS(editorConfig);
+    const blok = new window.Blok(blokConfig);
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { serializedOptions: options, holder: HOLDER_ID });
 };
 
-test.describe('editor basic initialization', () => {
+test.describe('blok basic initialization', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -123,16 +123,16 @@ test.describe('editor basic initialization', () => {
 
   test.describe('zero-config initialization', () => {
     test('creates a visible UI', async ({ page }) => {
-      await createEditor(page, {});
+      await createBlok(page, {});
 
-      await expect(page.locator(EDITOR_ROOT_SELECTOR)).toBeVisible();
+      await expect(page.locator(BLOK_ROOT_SELECTOR)).toBeVisible();
     });
   });
 
   test.describe('configuration', () => {
     test.describe('readOnly', () => {
-      test('creates editor without editing ability when true passed', async ({ page }) => {
-        await createEditor(page, {
+      test('creates blok without editing ability when true passed', async ({ page }) => {
+        await createBlok(page, {
           readOnly: true,
         });
 
@@ -143,8 +143,8 @@ test.describe('editor basic initialization', () => {
       });
     });
 
-    test('adds passed nonce attribute to editor styles when nonce provided', async ({ page }) => {
-      await createEditor(page, {
+    test('adds passed nonce attribute to blok styles when nonce provided', async ({ page }) => {
+      await createBlok(page, {
         style: {
           nonce: 'test-nonce',
         },

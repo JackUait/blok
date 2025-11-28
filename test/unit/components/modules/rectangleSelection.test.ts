@@ -4,12 +4,12 @@ import RectangleSelection from '../../../../src/components/modules/rectangleSele
 import Block from '../../../../src/components/block';
 import SelectionUtils from '../../../../src/components/selection';
 import EventsDispatcher from '../../../../src/components/utils/events';
-import type { EditorEventMap } from '../../../../src/components/events';
-import type { EditorModules } from '../../../../src/types-internal/editor-modules';
-import type { EditorConfig } from '../../../../types';
+import type { BlokEventMap } from '../../../../src/components/events';
+import type { BlokModules } from '../../../../src/types-internal/blok-modules';
+import type { BlokConfig } from '../../../../types';
 import type BlockType from '../../../../src/components/block';
 
-type PartialModules = Partial<EditorModules>;
+type PartialModules = Partial<BlokModules>;
 
 type ToolbarModuleMock = {
   CSS: { toolbar: string };
@@ -37,7 +37,7 @@ type BlockManagerModuleMock = {
 interface RectangleSelectionTestSetup {
   rectangleSelection: RectangleSelection;
   modules: PartialModules;
-  editorWrapper: HTMLDivElement;
+  blokWrapper: HTMLDivElement;
   holder: HTMLDivElement;
   blockContent: HTMLDivElement;
   toolbar: ToolbarModuleMock;
@@ -48,16 +48,16 @@ interface RectangleSelectionTestSetup {
 
 const createRectangleSelection = (overrides: PartialModules = {}): RectangleSelectionTestSetup => {
   const rectangleSelection = new RectangleSelection({
-    config: {} as EditorConfig,
-    eventsDispatcher: new EventsDispatcher<EditorEventMap>(),
+    config: {} as BlokConfig,
+    eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 
   const holder = document.createElement('div');
-  const editorWrapper = document.createElement('div');
-  const editorWrapperClass = 'blok-editor__redactor';
+  const blokWrapper = document.createElement('div');
+  const blokWrapperClass = 'blok-editor__redactor';
 
-  editorWrapper.className = editorWrapperClass;
-  holder.appendChild(editorWrapper);
+  blokWrapper.className = blokWrapperClass;
+  holder.appendChild(blokWrapper);
   document.body.appendChild(holder);
 
   const blockContent = document.createElement('div');
@@ -106,18 +106,18 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
         holder,
       },
       CSS: {
-        editorWrapper: editorWrapperClass,
+        blokWrapper: blokWrapperClass,
       },
-    } as unknown as EditorModules['UI'],
-    Toolbar: toolbarMock as unknown as EditorModules['Toolbar'],
-    InlineToolbar: inlineToolbarMock as unknown as EditorModules['InlineToolbar'],
-    BlockSelection: blockSelectionMock as unknown as EditorModules['BlockSelection'],
-    BlockManager: blockManagerMock as unknown as EditorModules['BlockManager'],
+    } as unknown as BlokModules['UI'],
+    Toolbar: toolbarMock as unknown as BlokModules['Toolbar'],
+    InlineToolbar: inlineToolbarMock as unknown as BlokModules['InlineToolbar'],
+    BlockSelection: blockSelectionMock as unknown as BlokModules['BlockSelection'],
+    BlockManager: blockManagerMock as unknown as BlokModules['BlockManager'],
   };
 
   const mergedState: PartialModules = { ...defaults };
 
-  for (const [moduleName, moduleOverrides] of Object.entries(overrides) as Array<[keyof EditorModules, unknown]>) {
+  for (const [moduleName, moduleOverrides] of Object.entries(overrides) as Array<[keyof BlokModules, unknown]>) {
     if (moduleOverrides === undefined) {
       continue;
     }
@@ -136,16 +136,16 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
         moduleOverrides as unknown as Record<string, unknown>
       );
     } else {
-      (mergedState as Record<keyof EditorModules, EditorModules[keyof EditorModules]>)[moduleName] = moduleOverrides as EditorModules[typeof moduleName];
+      (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = moduleOverrides as BlokModules[typeof moduleName];
     }
   }
 
-  rectangleSelection.state = mergedState as EditorModules;
+  rectangleSelection.state = mergedState as BlokModules;
 
   return {
     rectangleSelection,
     modules: mergedState,
-    editorWrapper,
+    blokWrapper,
     holder,
     blockContent,
     toolbar: toolbarMock,
@@ -178,23 +178,23 @@ describe('RectangleSelection', () => {
   it('creates overlay container on prepare', () => {
     const {
       rectangleSelection,
-      editorWrapper,
+      blokWrapper,
     } = createRectangleSelection();
 
     rectangleSelection.prepare();
 
-    const overlay = editorWrapper.querySelector(`.${RectangleSelection.CSS.overlay}`);
-    const rectangle = editorWrapper.querySelector(`.${RectangleSelection.CSS.rect}`);
+    const overlay = blokWrapper.querySelector(`.${RectangleSelection.CSS.overlay}`);
+    const rectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`);
 
     expect(overlay).not.toBeNull();
     expect(rectangle).not.toBeNull();
   });
 
-  it('starts selection inside the editor and resets selection state', () => {
+  it('starts selection inside the blok and resets selection state', () => {
     const {
       rectangleSelection,
       blockSelection,
-      editorWrapper,
+      blokWrapper,
     } = createRectangleSelection();
 
     const internal = rectangleSelection as unknown as {
@@ -212,7 +212,7 @@ describe('RectangleSelection', () => {
 
     const startTarget = document.createElement('div');
 
-    editorWrapper.appendChild(startTarget);
+    blokWrapper.appendChild(startTarget);
 
     const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
 
@@ -261,7 +261,7 @@ describe('RectangleSelection', () => {
   it('ignores selection attempts outside of selectable area', () => {
     const {
       rectangleSelection,
-      editorWrapper,
+      blokWrapper,
     } = createRectangleSelection();
 
     const internal = rectangleSelection as unknown as { mousedown: boolean };
@@ -279,7 +279,7 @@ describe('RectangleSelection', () => {
     const blockContent = document.createElement('div');
 
     blockContent.className = Block.CSS.content;
-    editorWrapper.appendChild(blockContent);
+    blokWrapper.appendChild(blockContent);
     elementFromPointSpy.mockReturnValue(blockContent);
 
     rectangleSelection.startSelection(20, 25);
@@ -313,7 +313,7 @@ describe('RectangleSelection', () => {
   it('resets selection parameters on endSelection', () => {
     const {
       rectangleSelection,
-      editorWrapper,
+      blokWrapper,
     } = createRectangleSelection();
 
     rectangleSelection.prepare();
@@ -328,7 +328,7 @@ describe('RectangleSelection', () => {
     internal.mousedown = true;
     internal.startX = 50;
     internal.startY = 60;
-    internal.overlayRectangle = editorWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
     internal.overlayRectangle.style.display = 'block';
 
     rectangleSelection.endSelection();
@@ -505,7 +505,7 @@ describe('RectangleSelection', () => {
   it('shrinks overlay rectangle to the starting point', () => {
     const {
       rectangleSelection,
-      editorWrapper,
+      blokWrapper,
     } = createRectangleSelection();
 
     rectangleSelection.prepare();
@@ -517,7 +517,7 @@ describe('RectangleSelection', () => {
       startY: number;
     };
 
-    internal.overlayRectangle = editorWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
     internal.startX = 150;
     internal.startY = 260;
 
@@ -601,7 +601,7 @@ describe('RectangleSelection', () => {
   it('updates rectangle size based on cursor position', () => {
     const {
       rectangleSelection,
-      editorWrapper,
+      blokWrapper,
     } = createRectangleSelection();
 
     rectangleSelection.prepare();
@@ -615,7 +615,7 @@ describe('RectangleSelection', () => {
       updateRectangleSize: () => void;
     };
 
-    internal.overlayRectangle = editorWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
     internal.startX = 100;
     internal.startY = 150;
     internal.mouseX = 200;
@@ -678,7 +678,7 @@ describe('RectangleSelection', () => {
     const {
       rectangleSelection,
       toolbar,
-      editorWrapper,
+      blokWrapper,
     } = createRectangleSelection();
 
     rectangleSelection.prepare();
@@ -692,7 +692,7 @@ describe('RectangleSelection', () => {
 
     internal.mousedown = true;
     internal.isRectSelectionActivated = false;
-    internal.overlayRectangle = editorWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
 
     const genInfoSpy = vi.spyOn(
       rectangleSelection as unknown as { genInfoForMouseSelection: () => { rightPos: number; leftPos: number; index: number } },
@@ -735,7 +735,7 @@ describe('RectangleSelection', () => {
     const {
       rectangleSelection,
       toolbar,
-      editorWrapper,
+      blokWrapper,
     } = createRectangleSelection();
 
     rectangleSelection.prepare();
@@ -749,7 +749,7 @@ describe('RectangleSelection', () => {
 
     internal.mousedown = true;
     internal.isRectSelectionActivated = true;
-    internal.overlayRectangle = editorWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
 
     const genInfoSpy = vi.spyOn(
       rectangleSelection as unknown as { genInfoForMouseSelection: () => { rightPos: number; leftPos: number; index: number | undefined } },

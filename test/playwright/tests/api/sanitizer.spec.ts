@@ -3,26 +3,26 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import type Blok from '@/types';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
+const HOLDER_ID = 'blok';
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -37,12 +37,12 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page): Promise<void> => {
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+const createBlok = async (page: Page): Promise<void> => {
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(async ({ holder }) => {
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
       data: {
         blocks: [
@@ -56,30 +56,30 @@ const createEditor = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID });
 };
 
 test.describe('api.sanitizer', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await createEditor(page);
+    await createBlok(page);
   });
 
   test('clean removes disallowed HTML', async ({ page }) => {
     const sanitized = await page.evaluate(() => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
       const dirtyHtml = '<p>Safe<script>alert("XSS")</script></p>';
 
-      return window.editorInstance.sanitizer.clean(dirtyHtml, {
+      return window.blokInstance.sanitizer.clean(dirtyHtml, {
         p: true,
       });
     });
@@ -91,13 +91,13 @@ test.describe('api.sanitizer', () => {
 
   test('clean applies custom sanitizer config', async ({ page }) => {
     const sanitized = await page.evaluate(() => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
       const dirtyHtml = '<span data-blok-id="allowed" style="color:red">Span <em>content</em></span>';
 
-      return window.editorInstance.sanitizer.clean(dirtyHtml, {
+      return window.blokInstance.sanitizer.clean(dirtyHtml, {
         span: {
           'data-blok-id': true,
         },

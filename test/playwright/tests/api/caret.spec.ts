@@ -2,15 +2,15 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const HOLDER_ID = 'blok-';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const BLOCK_SELECTED_CLASS = 'blok-element--selected';
 
 type ToolDefinition = {
@@ -19,17 +19,17 @@ type ToolDefinition = {
   config?: Record<string, unknown>;
 };
 
-type EditorSetupOptions = {
+type BlokSetupOptions = {
   data?: Record<string, unknown>;
   config?: Record<string, unknown>;
   tools?: ToolDefinition[];
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -44,10 +44,10 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: BlokSetupOptions = {}): Promise<void> => {
   const { data, config, tools = [] } = options;
 
-  await resetEditor(page);
+  await resetBlok(page);
 
   await page.evaluate(
     async ({ holder, rawData, rawConfig, serializedTools }) => {
@@ -69,17 +69,17 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
         };
       }, {});
 
-      const editorConfig = {
+      const blokConfig = {
         holder: holder,
         ...rawConfig,
         ...(serializedTools.length > 0 ? { tools: revivedTools } : {}),
         ...(rawData ? { data: rawData } : {}),
       };
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
@@ -141,7 +141,7 @@ const NON_FOCUSABLE_TOOL_SOURCE = NonFocusableBlockTool.toString();
 
 test.describe('caret API', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -153,7 +153,7 @@ test.describe('caret API', () => {
       const blockId = 'block-index';
       const paragraphBlock = createParagraphBlock(blockId, 'The first block content mock.');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -162,11 +162,11 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const returnedValue = window.editorInstance.caret.setToBlock(0);
+        const returnedValue = window.blokInstance.caret.setToBlock(0);
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const blockElement = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
@@ -187,7 +187,7 @@ test.describe('caret API', () => {
       const blockId = 'block-id';
       const paragraphBlock = createParagraphBlock(blockId, 'Paragraph content.');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -196,11 +196,11 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector, id }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const returnedValue = window.editorInstance.caret.setToBlock(id);
+        const returnedValue = window.blokInstance.caret.setToBlock(id);
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const blockElement = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
@@ -222,7 +222,7 @@ test.describe('caret API', () => {
       const blockId = 'block-api';
       const paragraphBlock = createParagraphBlock(blockId, 'Paragraph api block.');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -231,17 +231,16 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getBlockByIndex(0);
-
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
         if (!block) {
           throw new Error('Block not found');
         }
 
-        const returnedValue = window.editorInstance.caret.setToBlock(block);
+        const returnedValue = window.blokInstance.caret.setToBlock(block);
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const blockElement = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
@@ -262,7 +261,7 @@ test.describe('caret API', () => {
       const blockId = 'offset-text';
       const paragraphBlock = createParagraphBlock(blockId, 'Plain text content.');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -271,17 +270,16 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ id, offset }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getById(id);
-
+        const block = window.blokInstance.blocks.getById(id);
         if (!block) {
           throw new Error('Block not found');
         }
 
-        window.editorInstance.caret.setToBlock(block, 'default', offset);
+        window.blokInstance.caret.setToBlock(block, 'default', offset);
 
         const selection = window.getSelection();
 
@@ -306,7 +304,7 @@ test.describe('caret API', () => {
       const blockId = 'offset-html';
       const paragraphBlock = createParagraphBlock(blockId, '1234<b>567</b>!');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -315,17 +313,16 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ id, offset }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getById(id);
-
+        const block = window.blokInstance.blocks.getById(id);
         if (!block) {
           throw new Error('Block not found');
         }
 
-        window.editorInstance.caret.setToBlock(block, 'default', offset);
+        window.blokInstance.caret.setToBlock(block, 'default', offset);
 
         const selection = window.getSelection();
 
@@ -350,7 +347,7 @@ test.describe('caret API', () => {
       const blockId = 'offset-beyond';
       const paragraphBlock = createParagraphBlock(blockId, '1234567890');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -361,17 +358,16 @@ test.describe('caret API', () => {
       const contentLength = '1234567890'.length;
 
       const result = await page.evaluate(({ id, offset }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getById(id);
-
+        const block = window.blokInstance.blocks.getById(id);
         if (!block) {
           throw new Error('Block not found');
         }
 
-        window.editorInstance.caret.setToBlock(block, 'default', offset);
+        window.blokInstance.caret.setToBlock(block, 'default', offset);
 
         const selection = window.getSelection();
 
@@ -394,7 +390,7 @@ test.describe('caret API', () => {
       const blockId = 'offset-nested';
       const paragraphBlock = createParagraphBlock(blockId, '123<b>456<i>789</i></b>!');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -403,17 +399,16 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ id, offset }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getById(id);
-
+        const block = window.blokInstance.blocks.getById(id);
         if (!block) {
           throw new Error('Block not found');
         }
 
-        window.editorInstance.caret.setToBlock(block, 'default', offset);
+        window.blokInstance.caret.setToBlock(block, 'default', offset);
 
         const selection = window.getSelection();
 
@@ -438,7 +433,7 @@ test.describe('caret API', () => {
       const blockId = 'position-start';
       const paragraphBlock = createParagraphBlock(blockId, 'Starts at the beginning.');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -447,17 +442,16 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ id, offset }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getById(id);
-
+        const block = window.blokInstance.blocks.getById(id);
         if (!block) {
           throw new Error('Block not found');
         }
 
-        window.editorInstance.caret.setToBlock(block, 'start', offset);
+        window.blokInstance.caret.setToBlock(block, 'start', offset);
 
         const selection = window.getSelection();
 
@@ -482,7 +476,7 @@ test.describe('caret API', () => {
       const blockId = 'position-end';
       const paragraphBlock = createParagraphBlock(blockId, 'Hello <b>world</b>!');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -491,17 +485,16 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ id }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getById(id);
-
+        const block = window.blokInstance.blocks.getById(id);
         if (!block) {
           throw new Error('Block not found');
         }
 
-        window.editorInstance.caret.setToBlock(block, 'end');
+        window.blokInstance.caret.setToBlock(block, 'end');
 
         const selection = window.getSelection();
 
@@ -525,7 +518,7 @@ test.describe('caret API', () => {
       const blockId = 'invalid-index';
       const paragraphBlock = createParagraphBlock(blockId, 'Block index invalid.');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -534,13 +527,13 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector, selectedClass }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         window.getSelection()?.removeAllRanges();
 
-        const returnedValue = window.editorInstance.caret.setToBlock(99);
+        const returnedValue = window.blokInstance.caret.setToBlock(99);
         const selection = window.getSelection();
         const selectedBlocks = document.querySelectorAll(`${blockSelector}.${selectedClass}`).length;
 
@@ -561,7 +554,7 @@ test.describe('caret API', () => {
       const blockId = 'invalid-id';
       const paragraphBlock = createParagraphBlock(blockId, 'Block id invalid.');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [ paragraphBlock ],
         },
@@ -570,13 +563,13 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector, selectedClass }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         window.getSelection()?.removeAllRanges();
 
-        const returnedValue = window.editorInstance.caret.setToBlock('missing-block-id');
+        const returnedValue = window.blokInstance.caret.setToBlock('missing-block-id');
         const selection = window.getSelection();
         const selectedBlocks = document.querySelectorAll(`${blockSelector}.${selectedClass}`).length;
 
@@ -596,7 +589,7 @@ test.describe('caret API', () => {
     test('does not change selection when Block API instance is stale', async ({ page }) => {
       const paragraphBlock = createParagraphBlock('stale-block', 'Block api stale.');
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [paragraphBlock, createParagraphBlock('second-block', 'Second block')],
         },
@@ -605,20 +598,19 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector, selectedClass }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getBlockByIndex(0);
-
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
         if (!block) {
           throw new Error('Block not found');
         }
 
-        window.editorInstance.blocks.delete(0);
+        window.blokInstance.blocks.delete(0);
         window.getSelection()?.removeAllRanges();
 
-        const returnedValue = window.editorInstance.caret.setToBlock(block);
+        const returnedValue = window.blokInstance.caret.setToBlock(block);
         const selection = window.getSelection();
         const selectedBlocks = document.querySelectorAll(`${blockSelector}.${selectedClass}`).length;
 
@@ -644,7 +636,7 @@ test.describe('caret API', () => {
         data: {},
       };
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [paragraphBlock, staticBlock],
         },
@@ -659,11 +651,11 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector, selectedClass }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const returnedValue = window.editorInstance.caret.setToBlock(1);
+        const returnedValue = window.blokInstance.caret.setToBlock(1);
         const selection = window.getSelection();
         const blocks = document.querySelectorAll(blockSelector);
         const secondBlock = blocks.item(1) as HTMLElement | null;
@@ -692,7 +684,7 @@ test.describe('caret API', () => {
         createParagraphBlock('second-block', 'Second block content'),
       ];
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks,
         },
@@ -701,11 +693,11 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const returnedValue = window.editorInstance.caret.setToFirstBlock('start');
+        const returnedValue = window.blokInstance.caret.setToFirstBlock('start');
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const firstBlock = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
@@ -732,7 +724,7 @@ test.describe('caret API', () => {
         createParagraphBlock('last-block', 'Last block text'),
       ];
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks,
         },
@@ -741,11 +733,11 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const returnedValue = window.editorInstance.caret.setToLastBlock('end');
+        const returnedValue = window.blokInstance.caret.setToLastBlock('end');
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const blocksCollection = document.querySelectorAll(blockSelector);
@@ -775,31 +767,30 @@ test.describe('caret API', () => {
         createParagraphBlock('last-block', 'Last block'),
       ];
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks,
         },
       });
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const currentSet = window.editorInstance.caret.setToBlock(2);
-
+        const currentSet = window.blokInstance.caret.setToBlock(2);
         if (!currentSet) {
           throw new Error('Failed to set initial caret position');
         }
 
-        const returnedValue = window.editorInstance.caret.setToPreviousBlock('default');
+        const returnedValue = window.blokInstance.caret.setToPreviousBlock('default');
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const middleBlock = document.querySelectorAll(blockSelector).item(1) as HTMLElement | null;
 
-        const currentBlockIndex = window.editorInstance.blocks.getCurrentBlockIndex();
+        const currentBlockIndex = window.blokInstance.blocks.getCurrentBlockIndex();
         const currentBlockId = currentBlockIndex !== undefined
-          ? window.editorInstance.blocks.getBlockByIndex(currentBlockIndex)?.id ?? null
+          ? window.blokInstance.blocks.getBlockByIndex(currentBlockIndex)?.id ?? null
           : null;
 
         return {
@@ -825,31 +816,30 @@ test.describe('caret API', () => {
         createParagraphBlock('last-block', 'Last block'),
       ];
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks,
         },
       });
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const currentSet = window.editorInstance.caret.setToBlock(0);
-
+        const currentSet = window.blokInstance.caret.setToBlock(0);
         if (!currentSet) {
           throw new Error('Failed to set initial caret position');
         }
 
-        const returnedValue = window.editorInstance.caret.setToNextBlock('default');
+        const returnedValue = window.blokInstance.caret.setToNextBlock('default');
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const middleBlock = document.querySelectorAll(blockSelector).item(1) as HTMLElement | null;
 
-        const currentBlockIndex = window.editorInstance.blocks.getCurrentBlockIndex();
+        const currentBlockIndex = window.blokInstance.blocks.getCurrentBlockIndex();
         const currentBlockId = currentBlockIndex !== undefined
-          ? window.editorInstance.blocks.getBlockByIndex(currentBlockIndex)?.id ?? null
+          ? window.blokInstance.blocks.getBlockByIndex(currentBlockIndex)?.id ?? null
           : null;
 
         return {
@@ -874,7 +864,7 @@ test.describe('caret API', () => {
         createParagraphBlock('focus-second', 'Second block content'),
       ];
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks,
         },
@@ -883,11 +873,11 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const returnedValue = window.editorInstance.focus();
+        const returnedValue = window.blokInstance.focus();
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const firstBlock = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
@@ -912,7 +902,7 @@ test.describe('caret API', () => {
         createParagraphBlock('focus-last', 'Last block content'),
       ];
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks,
         },
@@ -921,11 +911,11 @@ test.describe('caret API', () => {
       await clearSelection(page);
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const returnedValue = window.editorInstance.focus(true);
+        const returnedValue = window.blokInstance.focus(true);
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const blocksCollection = document.querySelectorAll(blockSelector);
@@ -949,7 +939,7 @@ test.describe('caret API', () => {
     test('autofocus configuration moves caret to the first block after initialization', async ({ page }) => {
       const blocks = [ createParagraphBlock('autofocus-block', 'Autofocus content') ];
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks,
         },
@@ -959,17 +949,17 @@ test.describe('caret API', () => {
       });
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const firstBlock = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
 
-        const currentBlockIndex = window.editorInstance.blocks.getCurrentBlockIndex();
+        const currentBlockIndex = window.blokInstance.blocks.getCurrentBlockIndex();
         const currentBlockId = currentBlockIndex !== undefined
-          ? window.editorInstance.blocks.getBlockByIndex(currentBlockIndex)?.id ?? null
+          ? window.blokInstance.blocks.getBlockByIndex(currentBlockIndex)?.id ?? null
           : null;
 
         return {
@@ -984,34 +974,34 @@ test.describe('caret API', () => {
       expect(result.currentBlockId).toBe('autofocus-block');
     });
 
-    test('focus can be restored after editor operations clear the selection', async ({ page }) => {
+    test('focus can be restored after blok operations clear the selection', async ({ page }) => {
       const blocks = [
         createParagraphBlock('restore-first', 'First block'),
         createParagraphBlock('restore-second', 'Second block'),
       ];
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks,
         },
       });
 
       const result = await page.evaluate(({ blockSelector }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const initialFocusResult = window.editorInstance.focus();
+        const initialFocusResult = window.blokInstance.focus();
         const initialSelection = window.getSelection();
         const initialRangeCount = initialSelection?.rangeCount ?? 0;
 
-        window.editorInstance.blocks.insert('paragraph', { text: 'Inserted block' }, undefined, 1, false);
+        window.blokInstance.blocks.insert('paragraph', { text: 'Inserted block' }, undefined, 1, false);
         window.getSelection()?.removeAllRanges();
 
         const selectionAfterOperation = window.getSelection();
         const afterRangeCount = selectionAfterOperation?.rangeCount ?? 0;
 
-        const returnedValue = window.editorInstance.focus();
+        const returnedValue = window.blokInstance.focus();
         const selection = window.getSelection();
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         const firstBlock = document.querySelectorAll(blockSelector).item(0) as HTMLElement | null;
@@ -1023,7 +1013,7 @@ test.describe('caret API', () => {
           returnedValue,
           rangeExists: !!range,
           selectionInFirstBlock: !!(range && firstBlock && firstBlock.contains(range.startContainer)),
-          blocksCount: window.editorInstance.blocks.getBlocksCount(),
+          blocksCount: window.blokInstance.blocks.getBlocksCount(),
         };
       }, { blockSelector: BLOCK_SELECTOR });
 

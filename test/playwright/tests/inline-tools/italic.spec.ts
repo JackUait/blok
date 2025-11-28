@@ -2,28 +2,28 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
-const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
+const INLINE_TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -39,20 +39,20 @@ const resetEditor = async (page: Page): Promise<void> => {
 };
 
 /**
- * Create editor with provided blocks
+ * Create blok with provided blocks
  * @param page - The Playwright page object
- * @param blocks - The blocks data to initialize the editor with
+ * @param blocks - The blocks data to initialize the blok with
  */
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
+const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
       holder: holder,
-      data: { blocks: editorBlocks },
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID,
     blocks });
 };
@@ -101,17 +101,17 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
 
 test.describe('inline tool italic', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('detects italic state across multiple italic words', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -161,7 +161,7 @@ test.describe('inline tool italic', () => {
   });
 
   test('detects italic state within a single word', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -178,7 +178,7 @@ test.describe('inline tool italic', () => {
   });
 
   test('does not detect italic state in normal text', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -195,7 +195,7 @@ test.describe('inline tool italic', () => {
   });
 
   test('toggles italic across multiple italic elements', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -260,7 +260,7 @@ test.describe('inline tool italic', () => {
   });
 
   test('makes mixed selection (italic and normal text) italic', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -332,7 +332,7 @@ test.describe('inline tool italic', () => {
   });
 
   test('removes italic from fully italic selection', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -359,7 +359,7 @@ test.describe('inline tool italic', () => {
   });
 
   test('toggles italic with keyboard shortcut', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -425,7 +425,7 @@ test.describe('inline tool italic', () => {
   test('applies italic to typed text', async ({ page, browserName }) => {
     // eslint-disable-next-line playwright/no-skipped-test
     test.skip(browserName !== 'chromium', 'Collapsed selection shortcuts work differently on Firefox/WebKit');
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -455,7 +455,7 @@ test.describe('inline tool italic', () => {
   });
 
   test('persists italic in saved output', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -471,7 +471,7 @@ test.describe('inline tool italic', () => {
     await page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`).click();
 
     const savedData = await page.evaluate<OutputData | undefined>(async () => {
-      return window.editorInstance?.save();
+      return window.blokInstance?.save();
     });
 
     expect(savedData).toBeDefined();
@@ -482,8 +482,8 @@ test.describe('inline tool italic', () => {
   });
 
   test('removes italic from selection within italic text', async ({ page }) => {
-    // Step 1: Create editor with "Some text"
-    await createEditorWithBlocks(page, [
+    // Step 1: Create blok with "Some text"
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -541,7 +541,7 @@ test.describe('inline tool italic', () => {
 
   test('removes italic from separately italic words', async ({ page }) => {
     // Step 1: Start with normal text "some text"
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -607,7 +607,7 @@ test.describe('inline tool italic', () => {
       doc.dispatchEvent(new Event('selectionchange'));
     });
 
-    // Step 5: Verify the editor indicates the selection is italic (button is active)
+    // Step 5: Verify the blok indicates the selection is italic (button is active)
     await expect(italicButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
     // Step 6: Click italic button - should remove italic on first click (not wrap again)
@@ -626,7 +626,7 @@ test.describe('inline tool italic', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }

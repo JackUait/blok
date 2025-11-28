@@ -3,11 +3,11 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import type { EditorConfig } from '@/types';
-import { ensureEditorBundleBuilt } from './helpers/ensure-build';
+import type Blok from '@/types';
+import type { BlokConfig } from '@/types';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import {
-  EDITOR_INTERFACE_SELECTOR,
+  BLOK_INTERFACE_SELECTOR,
   INLINE_TOOLBAR_INTERFACE_SELECTOR
 } from '../../../src/components/constants';
 
@@ -15,9 +15,9 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
 const SETTINGS_BUTTON_SELECTOR = `${TOOLBAR_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-item"]`;
 
@@ -95,22 +95,22 @@ type SerializableToolConfig = {
   config?: Record<string, unknown>;
 };
 
-type CreateEditorOptions = Partial<Pick<EditorConfig, 'data' | 'inlineToolbar' | 'placeholder' | 'readOnly'>> & {
+type CreateBlokOptions = Partial<Pick<BlokConfig, 'data' | 'inlineToolbar' | 'placeholder' | 'readOnly'>> & {
   tools?: Record<string, SerializableToolConfig>;
 };
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -125,10 +125,10 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
-  await resetEditor(page);
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
+  await resetBlok(page);
 
-  const { tools = {}, ...editorOptions } = options;
+  const { tools = {}, ...blokOptions } = options;
   const serializedTools = Object.entries(tools).map(([name, tool]) => {
     return {
       name,
@@ -139,15 +139,15 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   });
 
   await page.evaluate(
-    async ({ holder, editorOptions: rawOptions, serializedTools: toolsConfig }) => {
+    async ({ holder, blokOptions: rawOptions, serializedTools: toolsConfig }) => {
       const { data, ...restOptions } = rawOptions;
-      const editorConfig: Record<string, unknown> = {
+      const blokConfig: Record<string, unknown> = {
         holder: holder,
         ...restOptions,
       };
 
       if (data) {
-        editorConfig.data = data;
+        blokConfig.data = data;
       }
 
       if (toolsConfig.length > 0) {
@@ -179,17 +179,17 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
           {}
         );
 
-        editorConfig.tools = resolvedTools;
+        blokConfig.tools = resolvedTools;
       }
 
-      const editor = new window.EditorJS(editorConfig as EditorConfig);
+      const blok = new window.Blok(blokConfig as BlokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
-      editorOptions,
+      blokOptions,
       serializedTools,
     }
   );
@@ -197,11 +197,11 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
 const toggleReadOnly = async (page: Page, state: boolean): Promise<void> => {
   await page.evaluate(async ({ targetState }) => {
-    const editor = window.editorInstance ?? (() => {
-      throw new Error('Editor instance not found');
+    const blok = window.blokInstance ?? (() => {
+      throw new Error('Blok instance not found');
     })();
 
-    await editor.readOnly.toggle(targetState);
+    await blok.readOnly.toggle(targetState);
   }, { targetState: state });
 };
 
@@ -279,22 +279,22 @@ const expectSettingsButtonToDisappear = async (page: Page): Promise<void> => {
 
 const waitForReadOnlyState = async (page: Page, expected: boolean): Promise<void> => {
   await page.waitForFunction(({ expectedState }) => {
-    return window.editorInstance?.readOnly.isEnabled === expectedState;
+    return window.blokInstance?.readOnly.isEnabled === expectedState;
   }, { expectedState: expected });
 };
 
 test.describe('read-only mode', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('allows toggling editing state dynamically', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -339,10 +339,10 @@ test.describe('read-only mode', () => {
     await expect(paragraph).toContainText('writable again');
   });
 
-  test('only shows read-only inline tools when editor is locked', async ({ page }) => {
+  test('only shows read-only inline tools when blok is locked', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       readOnly: true,
       data: {
         blocks: [
@@ -370,7 +370,7 @@ test.describe('read-only mode', () => {
       },
     });
 
-    const headerBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`);
+    const headerBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`);
 
     await selectText(headerBlock, 'Read me');
 
@@ -389,7 +389,7 @@ test.describe('read-only mode', () => {
   });
 
   test('removes block settings UI while read-only is enabled', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -418,7 +418,7 @@ test.describe('read-only mode', () => {
   });
 
   test('prevents paste operations while read-only is enabled', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       readOnly: true,
       data: {
         blocks: [
@@ -455,7 +455,7 @@ test.describe('read-only mode', () => {
   });
 
   test('throws descriptive error when enabling read-only with unsupported tools', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -474,12 +474,12 @@ test.describe('read-only mode', () => {
     });
 
     const errorMessage = await page.evaluate(async () => {
-      const editor = window.editorInstance ?? (() => {
-        throw new Error('Editor instance not found');
+      const blok = window.blokInstance ?? (() => {
+        throw new Error('Blok instance not found');
       })();
 
       try {
-        await editor.readOnly.toggle(true);
+        await blok.readOnly.toggle(true);
 
         return null;
       } catch (error) {
@@ -490,7 +490,7 @@ test.describe('read-only mode', () => {
     expect(errorMessage).toContain('Tools legacy don\'t support read-only mode');
 
     const isReadOnlyEnabled = await page.evaluate(() => {
-      return window.editorInstance?.readOnly.isEnabled ?? false;
+      return window.blokInstance?.readOnly.isEnabled ?? false;
     });
 
     expect(isReadOnlyEnabled).toBe(false);

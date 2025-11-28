@@ -27,13 +27,13 @@ export default class ReadOnlyAPI extends Module {
    * @returns {boolean} current value
    */
   public toggle(state?: boolean): Promise<boolean> {
-    return this.Editor.ReadOnly.toggle(state);
+    return this.Blok.ReadOnly.toggle(state);
   }
 
   /**
    * Returns current read-only state
    */
   public get isEnabled(): boolean {
-    return this.Editor.ReadOnly.isEnabled;
+    return this.Blok.ReadOnly.isEnabled;
   }
 }

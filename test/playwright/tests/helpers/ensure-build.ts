@@ -9,8 +9,8 @@ let didBuild = false;
  * Necessary because the Playwright fixtures load the UMD bundle directly from the dist folder.
  * Without rebuilding we might exercise stale code that doesn't match the current TypeScript sources.
  */
-export const ensureEditorBundleBuilt = (): void => {
-  if (didBuild || process.env.EDITOR_JS_BUILT === 'true') {
+export const ensureBlokBundleBuilt = (): void => {
+  if (didBuild || process.env.BLOK_BUILT === 'true') {
     return;
   }
 

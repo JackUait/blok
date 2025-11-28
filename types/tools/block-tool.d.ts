@@ -51,7 +51,7 @@ export interface BlockTool extends BaseTool {
 
   /**
    * Cleanup resources used by your tool here
-   * Called when the editor is destroyed
+   * Called when the blok is destroyed
    */
   destroy?(): void;
 

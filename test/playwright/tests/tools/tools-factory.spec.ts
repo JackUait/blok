@@ -12,7 +12,7 @@ import type {
   ToolConstructable,
   ToolSettings
 } from '../../../../types';
-import type { EditorConfig } from '../../../../types/configs/editor-config';
+import type { BlokConfig } from '../../../../types/configs/blok-config';
 
 const paragraphClass = Paragraph as unknown as BlockToolConstructable;
 
@@ -28,7 +28,7 @@ const toolsConfig = {
   },
 } as Record<string, ToolSettings & { class: ToolConstructable; isInternal?: boolean }>;
 
-const editorConfig: EditorConfig = {
+const blokConfig: BlokConfig = {
   placeholder: 'Placeholder',
   defaultBlock: 'paragraph',
 };
@@ -66,7 +66,7 @@ test.describe('toolsFactory', () => {
   test.beforeEach(() => {
     factory = new ToolsFactory(
       toolsConfig,
-      editorConfig,
+      blokConfig,
       apiMock as unknown as ApiModule
     );
   });

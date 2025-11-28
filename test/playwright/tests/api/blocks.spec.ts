@@ -3,8 +3,8 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { nanoid } from 'nanoid';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import type { BlockMutationEvent } from '../../../../types';
 
@@ -12,8 +12,8 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const HOLDER_ID = 'blok-';
+const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const getBlockWrapperSelectorByIndex = (index: number): string => {
   return `:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`;
 };
@@ -24,7 +24,7 @@ type ToolDefinition = {
   config?: Record<string, unknown>;
 };
 
-type EditorSetupOptions = {
+type BlokSetupOptions = {
   data?: Record<string, unknown>;
   config?: Record<string, unknown>;
   tools?: ToolDefinition[];
@@ -32,11 +32,11 @@ type EditorSetupOptions = {
   onChange?: boolean; // If true, track onChange events in window.onChangeEvents
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -51,12 +51,11 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: BlokSetupOptions = {}): Promise<void> => {
   const { data, config, tools = [], tunes, onChange } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
-
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
   // Initialize onChange tracking in window if onChange callback is provided
   if (onChange) {
     await page.evaluate(() => {
@@ -88,7 +87,7 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
         };
       }, {});
 
-      const editorConfig: Record<string, unknown> = {
+      const blokConfig: Record<string, unknown> = {
         holder: holder,
         ...rawConfig,
         ...(serializedTools.length > 0 ? { tools: revivedTools } : {}),
@@ -96,11 +95,11 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
       };
 
       if (tunesArray && tunesArray.length > 0) {
-        editorConfig.tunes = tunesArray;
+        blokConfig.tunes = tunesArray;
       }
 
       if (hasOnChange) {
-        editorConfig.onChange = (api: unknown, event: unknown) => {
+        blokConfig.onChange = (api: unknown, event: unknown) => {
           const windowObj = window as unknown as { onChangeEvents?: unknown[]; onChangeCalled?: boolean };
 
           if (windowObj.onChangeEvents) {
@@ -110,10 +109,10 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
         };
       }
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
@@ -128,12 +127,11 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
 
 const focusBlockByIndex = async (page: Page, index: number = 0): Promise<void> => {
   await page.evaluate(({ blockIndex }) => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    const didSetCaret = window.editorInstance.caret.setToBlock(blockIndex);
-
+    const didSetCaret = window.blokInstance.caret.setToBlock(blockIndex);
     if (!didSetCaret) {
       throw new Error(`Failed to set caret to block at index ${blockIndex}`);
     }
@@ -149,7 +147,7 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
   await block.click();
   await block.hover();
 
-  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
+  const settingsButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
   await settingsButton.waitFor({ state: 'visible' });
   await settingsButton.click();
@@ -167,14 +165,14 @@ test.describe('api.blocks', () => {
       text: 'The first block content mock.',
     },
   };
-  const editorDataMock = {
+  const blokDataMock = {
     blocks: [
       firstBlock,
     ],
   };
 
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -189,17 +187,16 @@ test.describe('api.blocks', () => {
      * Check that api.blocks.getById(id) returns the Block for existed id
      */
     test('should return Block API for existed id', async ({ page }) => {
-      await createEditor(page, {
-        data: editorDataMock,
+      await createBlok(page, {
+        data: blokDataMock,
       });
 
       const result = await page.evaluate(({ blockId }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getById(blockId);
-
+        const block = window.blokInstance.blocks.getById(blockId);
         return {
           blockExists: block !== null && block !== undefined,
           blockId: block?.id,
@@ -214,16 +211,16 @@ test.describe('api.blocks', () => {
      * Check that api.blocks.getById(id) returns null for the not-existed id
      */
     test('should return null for not-existed id', async ({ page }) => {
-      await createEditor(page, {
-        data: editorDataMock,
+      await createBlok(page, {
+        data: blokDataMock,
       });
 
       const result = await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return window.editorInstance.blocks.getById('not-existed-id');
+        return window.blokInstance.blocks.getById('not-existed-id');
       });
 
       expect(result).toBeNull();
@@ -232,7 +229,7 @@ test.describe('api.blocks', () => {
 
   test.describe('.renderFromHTML()', () => {
     test('should clear existing content and render provided HTML string', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [
             {
@@ -244,11 +241,11 @@ test.describe('api.blocks', () => {
       });
 
       await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        await window.editorInstance.blocks.renderFromHTML('<p>Rendered from HTML</p>');
+        await window.blokInstance.blocks.renderFromHTML('<p>Rendered from HTML</p>');
       });
 
       const blocks = page.locator(BLOCK_WRAPPER_SELECTOR);
@@ -257,11 +254,11 @@ test.describe('api.blocks', () => {
       await expect(blocks).toHaveText([ 'Rendered from HTML' ]);
 
       const savedData = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return await window.editorInstance.save();
+        return await window.blokInstance.save();
       });
 
       expect(savedData.blocks).toHaveLength(1);
@@ -299,7 +296,7 @@ test.describe('api.blocks', () => {
     }`;
 
     test('should compose default block data for an existing tool', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'prefilled',
@@ -309,27 +306,26 @@ test.describe('api.blocks', () => {
       });
 
       const data = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return await window.editorInstance.blocks.composeBlockData('prefilled');
+        return await window.blokInstance.blocks.composeBlockData('prefilled');
       });
 
       expect(data).toStrictEqual({ text: 'Composed paragraph' });
     });
 
     test('should throw when tool is not registered', async ({ page }) => {
-      await createEditor(page);
+      await createBlok(page);
 
       const error = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         try {
-          await window.editorInstance.blocks.composeBlockData('missing-tool');
-
+          await window.blokInstance.blocks.composeBlockData('missing-tool');
           return null;
         } catch (err) {
           return {
@@ -350,8 +346,8 @@ test.describe('api.blocks', () => {
      * Check if block is updated in DOM
      */
     test('should update block in DOM', async ({ page }) => {
-      await createEditor(page, {
-        data: editorDataMock,
+      await createBlok(page, {
+        data: blokDataMock,
       });
 
       const idToUpdate = firstBlock.id;
@@ -360,11 +356,11 @@ test.describe('api.blocks', () => {
       };
 
       await page.evaluate(async ({ id, newData }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        await window.editorInstance.blocks.update(id, newData);
+        await window.blokInstance.blocks.update(id, newData);
       }, { id: idToUpdate,
         newData: newBlockData });
 
@@ -375,8 +371,8 @@ test.describe('api.blocks', () => {
      * Check if block's data is updated after saving
      */
     test('should update block in saved data', async ({ page }) => {
-      await createEditor(page, {
-        data: editorDataMock,
+      await createBlok(page, {
+        data: blokDataMock,
       });
 
       const idToUpdate = firstBlock.id;
@@ -385,11 +381,11 @@ test.describe('api.blocks', () => {
       };
 
       await page.evaluate(async ({ id, newData }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        await window.editorInstance.blocks.update(id, newData);
+        await window.blokInstance.blocks.update(id, newData);
       }, { id: idToUpdate,
         newData: newBlockData });
 
@@ -397,11 +393,11 @@ test.describe('api.blocks', () => {
       await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveText(newBlockData.text);
 
       const output = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return await window.editorInstance.save();
+        return await window.blokInstance.save();
       });
 
       const text = output.blocks[0].data.text;
@@ -435,7 +431,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'exampleTune',
@@ -462,21 +458,20 @@ test.describe('api.blocks', () => {
       // Update the tunes data of a block
       // Check if it is updated
       const data = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getBlockByIndex(0);
-
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
         if (!block) {
           throw new Error('Block at index 0 not found');
         }
 
-        await window.editorInstance.blocks.update(block.id, undefined, {
+        await window.blokInstance.blocks.update(block.id, undefined, {
           exampleTune: 'test',
         });
 
-        return await window.editorInstance.save();
+        return await window.blokInstance.save();
       });
 
       const actual = JSON.stringify(data.blocks[0].tunes);
@@ -486,11 +481,11 @@ test.describe('api.blocks', () => {
     });
 
     /**
-     * When incorrect id passed, editor should not update any block
+     * When incorrect id passed, blok should not update any block
      */
     test('shouldn\'t update any block if not-existed id passed', async ({ page }) => {
-      await createEditor(page, {
-        data: editorDataMock,
+      await createBlok(page, {
+        data: blokDataMock,
       });
 
       const idToUpdate = 'wrong-id-123';
@@ -499,12 +494,12 @@ test.describe('api.blocks', () => {
       };
 
       const error = await page.evaluate(async ({ id, newData }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         try {
-          await window.editorInstance.blocks.update(id, newData);
+          await window.blokInstance.blocks.update(id, newData);
 
           return null;
         } catch (err) {
@@ -526,13 +521,13 @@ test.describe('api.blocks', () => {
    */
   test.describe('.insert()', () => {
     test('should preserve block id if it is passed', async ({ page }) => {
-      await createEditor(page, {
-        data: editorDataMock,
+      await createBlok(page, {
+        data: blokDataMock,
       });
 
       const result = await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         const type = 'paragraph';
@@ -543,7 +538,7 @@ test.describe('api.blocks', () => {
         const replace = undefined;
         const id = 'test-id-123';
 
-        const block = window.editorInstance.blocks.insert(type, data, config, index, needToFocus, replace, id);
+        const block = window.blokInstance.blocks.insert(type, data, config, index, needToFocus, replace, id);
 
         return {
           blockExists: block !== null && block !== undefined,
@@ -561,7 +556,7 @@ test.describe('api.blocks', () => {
    */
   test.describe('.insertMany()', () => {
     test('should insert several blocks to passed index', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [
             {
@@ -573,13 +568,13 @@ test.describe('api.blocks', () => {
       });
 
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         const index = 0;
 
-        window.editorInstance.blocks.insertMany([
+        window.blokInstance.blocks.insertMany([
           {
             type: 'paragraph',
             data: { text: 'inserting block #1' },
@@ -651,7 +646,7 @@ test.describe('api.blocks', () => {
         },
       };
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'convertableTool',
@@ -666,12 +661,11 @@ test.describe('api.blocks', () => {
       });
 
       const convertedBlock = await page.evaluate(async ({ blockId }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const { convert } = window.editorInstance.blocks;
-
+        const { convert } = window.blokInstance.blocks;
         const result = await convert(blockId, 'convertableTool');
 
         return {
@@ -682,12 +676,11 @@ test.describe('api.blocks', () => {
 
       // wait for block to be converted - wait until saved data shows converted type
       await page.waitForFunction(async () => {
-        if (!window.editorInstance) {
+        if (!window.blokInstance) {
           return false;
         }
 
-        const { blocks } = await window.editorInstance.save();
-
+        const { blocks } = await window.blokInstance.save();
         return blocks.length > 0 && blocks[0].type === 'convertableTool';
       });
 
@@ -695,11 +688,11 @@ test.describe('api.blocks', () => {
        * Check that block was converted
        */
       const { blocks } = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return await window.editorInstance.save();
+        return await window.blokInstance.save();
       });
 
       expect(blocks).toHaveLength(1);
@@ -714,18 +707,18 @@ test.describe('api.blocks', () => {
     });
 
     test('should throw an error if nonexisting Block id passed', async ({ page }) => {
-      await createEditor(page, {});
+      await createBlok(page, {});
 
       const error = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         /**
          * Call the 'convert' api method with nonexisting Block id
          */
         const fakeId = 'WRONG_ID';
-        const { convert } = window.editorInstance.blocks;
+        const { convert } = window.blokInstance.blocks;
 
         try {
           await convert(fakeId, 'convertableTool');
@@ -750,7 +743,7 @@ test.describe('api.blocks', () => {
         },
       };
 
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [
             existingBlock,
@@ -759,15 +752,15 @@ test.describe('api.blocks', () => {
       });
 
       const error = await page.evaluate(async ({ blockId }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         /**
          * Call the 'convert' api method with nonexisting tool name
          */
         const nonexistingToolName = 'WRONG_TOOL_NAME';
-        const { convert } = window.editorInstance.blocks;
+        const { convert } = window.blokInstance.blocks;
 
         try {
           await convert(blockId, nonexistingToolName);
@@ -819,7 +812,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'nonConvertableTool',
@@ -837,14 +830,14 @@ test.describe('api.blocks', () => {
       });
 
       const error = await page.evaluate(async ({ blockId }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         /**
          * Call the 'convert' api method with tool that does not provide "conversionConfig"
          */
-        const { convert } = window.editorInstance.blocks;
+        const { convert } = window.blokInstance.blocks;
 
         try {
           await convert(blockId, 'nonConvertableTool');
@@ -909,7 +902,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'conversionTargetTool',
@@ -925,23 +918,21 @@ test.describe('api.blocks', () => {
       });
 
       await page.evaluate(async ({ blockId }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const { convert } = window.editorInstance.blocks;
-
+        const { convert } = window.blokInstance.blocks;
         await convert(blockId, 'conversionTargetTool');
       }, { blockId: existingBlock.id });
 
       // wait for block to be converted - wait until saved data shows converted type
       await page.waitForFunction(async () => {
-        if (!window.editorInstance) {
+        if (!window.blokInstance) {
           return false;
         }
 
-        const { blocks } = await window.editorInstance.save();
-
+        const { blocks } = await window.blokInstance.save();
         return blocks.length > 0 && blocks[0].type === 'conversionTargetTool';
       });
 
@@ -949,11 +940,11 @@ test.describe('api.blocks', () => {
        * Check that block was converted
        */
       const { blocks } = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return await window.editorInstance.save();
+        return await window.blokInstance.save();
       });
 
       expect(blocks).toHaveLength(1);
@@ -1027,7 +1018,7 @@ test.describe('api.blocks', () => {
           const element = document.createElement('div');
 
           element.contentEditable = 'true';
-          element.classList.add(' blok-base-element');
+          element.classList.add('blok-base-element');
           element.innerHTML = this.data?.text ?? '';
 
           return element;
@@ -1048,7 +1039,7 @@ test.describe('api.blocks', () => {
         customStyle: 'attention',
       };
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'sourceTool',
@@ -1077,32 +1068,30 @@ test.describe('api.blocks', () => {
       });
 
       await page.evaluate(async ({ targetBlockId, overrides }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const { convert } = window.editorInstance.blocks;
-
+        const { convert } = window.blokInstance.blocks;
         await convert(targetBlockId, 'targetTool', overrides);
       }, { targetBlockId: blockId,
         overrides: dataOverrides });
 
       await page.waitForFunction(async () => {
-        if (!window.editorInstance) {
+        if (!window.blokInstance) {
           return false;
         }
 
-        const saved = await window.editorInstance.save();
-
+        const saved = await window.blokInstance.save();
         return saved.blocks.length > 0 && saved.blocks[0].type === 'targetTool';
       });
 
       const savedData = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return await window.editorInstance.save();
+        return await window.blokInstance.save();
       });
 
       expect(savedData.blocks).toHaveLength(1);
@@ -1185,7 +1174,7 @@ test.describe('api.blocks', () => {
 
       const blockId = 'non-savable-block';
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'nonSavable',
@@ -1210,11 +1199,11 @@ test.describe('api.blocks', () => {
       });
 
       const error = await page.evaluate(async ({ targetBlockId }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const { convert } = window.editorInstance.blocks;
+        const { convert } = window.blokInstance.blocks;
 
         try {
           await convert(targetBlockId, 'convertibleTarget');
@@ -1230,11 +1219,11 @@ test.describe('api.blocks', () => {
       expect(error?.message).toBe('Could not convert Block. Failed to extract original Block data.');
 
       const savedData = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return await window.editorInstance.save();
+        return await window.blokInstance.save();
       });
 
       expect(savedData.blocks).toHaveLength(1);
@@ -1334,7 +1323,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'header',
@@ -1440,7 +1429,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'nonConvertable',
@@ -1541,7 +1530,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'header',
@@ -1632,7 +1621,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'header',
@@ -1712,7 +1701,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'header',
@@ -1808,7 +1797,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'header',
@@ -1885,7 +1874,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'header',
@@ -1964,7 +1953,7 @@ test.describe('api.blocks', () => {
         },
       };
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'functionExport',
@@ -1979,32 +1968,30 @@ test.describe('api.blocks', () => {
       });
 
       await page.evaluate(async ({ blockId }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const { convert } = window.editorInstance.blocks;
-
+        const { convert } = window.blokInstance.blocks;
         await convert(blockId, 'functionExport');
       }, { blockId: existingBlock.id });
 
       // Wait for conversion
       await page.waitForFunction(async () => {
-        if (!window.editorInstance) {
+        if (!window.blokInstance) {
           return false;
         }
 
-        const { blocks } = await window.editorInstance.save();
-
+        const { blocks } = await window.blokInstance.save();
         return blocks.length > 0 && blocks[0].type === 'functionExport';
       });
 
       const { blocks } = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return await window.editorInstance.save();
+        return await window.blokInstance.save();
       });
 
       expect(blocks).toHaveLength(1);
@@ -2060,7 +2047,7 @@ test.describe('api.blocks', () => {
         },
       };
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'functionImport',
@@ -2075,32 +2062,30 @@ test.describe('api.blocks', () => {
       });
 
       await page.evaluate(async ({ blockId }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const { convert } = window.editorInstance.blocks;
-
+        const { convert } = window.blokInstance.blocks;
         await convert(blockId, 'functionImport');
       }, { blockId: existingBlock.id });
 
       // Wait for conversion
       await page.waitForFunction(async () => {
-        if (!window.editorInstance) {
+        if (!window.blokInstance) {
           return false;
         }
 
-        const { blocks } = await window.editorInstance.save();
-
+        const { blocks } = await window.blokInstance.save();
         return blocks.length > 0 && blocks[0].type === 'functionImport';
       });
 
       const { blocks } = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        return await window.editorInstance.save();
+        return await window.blokInstance.save();
       });
 
       expect(blocks).toHaveLength(1);
@@ -2115,21 +2100,20 @@ test.describe('api.blocks', () => {
    */
   test.describe('block.dispatchChange()', () => {
     /**
-     * Check that block.dispatchChange() triggers Editor 'onChange' callback
+     * Check that block.dispatchChange() triggers Blok's 'onChange' callback
      */
     test('should trigger onChange with corresponded block', async ({ page }) => {
-      await createEditor(page, {
-        data: editorDataMock,
+      await createBlok(page, {
+        data: blokDataMock,
         onChange: true,
       });
 
       const result = await page.evaluate(({ blockId }) => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        const block = window.editorInstance.blocks.getById(blockId);
-
+        const block = window.blokInstance.blocks.getById(blockId);
         if (!block) {
           throw new Error(`Block with id ${blockId} not found`);
         }

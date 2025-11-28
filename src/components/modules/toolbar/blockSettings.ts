@@ -12,7 +12,7 @@ import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { isMobileScreen, keyCodes } from '../../utils';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
-import { BlockSettingsClosed, BlockSettingsOpened, EditorMobileLayoutToggled } from '../../events';
+import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { IconReplace } from '@codexteam/icons';
 import { getConvertibleToolsForBlock } from '../../utils/blocks';
 
@@ -106,7 +106,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     this.nodes.wrapper = $.make('div', [ this.CSS.settings ]);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'block-tunes-wrapper');
 
-    this.eventsDispatcher.on(EditorMobileLayoutToggled, this.close);
+    this.eventsDispatcher.on(BlokMobileLayoutToggled, this.close);
   }
 
   /**
@@ -116,7 +116,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     this.detachFlipperKeydownListener();
     this.removeAllNodes();
     this.listeners.destroy();
-    this.eventsDispatcher.off(EditorMobileLayoutToggled, this.close);
+    this.eventsDispatcher.off(BlokMobileLayoutToggled, this.close);
   }
 
   /**
@@ -125,7 +125,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    * @param trigger - element to position the popover relative to
    */
   public async open(targetBlock?: Block, trigger?: HTMLElement): Promise<void> {
-    const block = targetBlock ?? this.Editor.BlockManager.currentBlock;
+    const block = targetBlock ?? this.Blok.BlockManager.currentBlock;
 
     if (block === undefined) {
       return;
@@ -142,8 +142,8 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     /**
      * Highlight content of a Block we are working with
      */
-    this.Editor.BlockSelection.selectBlock(block);
-    this.Editor.BlockSelection.clearCache();
+    this.Blok.BlockSelection.selectBlock(block);
+    this.Blok.BlockSelection.clearCache();
 
     /** Get tool's settings data */
     const { toolTunes, commonTunes } = block.getTunes();
@@ -156,7 +156,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       searchable: true,
       trigger: trigger || this.nodes.wrapper,
       items: await this.getTunesItems(block, commonTunes, toolTunes),
-      scopeElement: this.Editor.API.methods.ui.nodes.redactor,
+      scopeElement: this.Blok.API.methods.ui.nodes.redactor,
       messages: {
         nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
         search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
@@ -213,13 +213,13 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     this.opened = false;
 
     /**
-     * If selection is at editor on Block Settings closing,
+     * If selection is at blok on Block Settings closing,
      * it means that caret placed at some editable element inside the Block Settings.
      * Previously we have saved the selection, then open the Block Settings and set caret to the input
      *
      * So, we need to restore selection back to Block after closing the Block Settings
      */
-    if (!SelectionUtils.isAtEditor) {
+    if (!SelectionUtils.isAtBlok) {
       this.selection.restore();
     }
 
@@ -229,8 +229,8 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     /**
      * Remove highlighted content of a Block we are working with
      */
-    if (!this.Editor.CrossBlockSelection.isCrossBlockSelectionStarted && this.Editor.BlockManager.currentBlock) {
-      this.Editor.BlockSelection.unselectBlock(this.Editor.BlockManager.currentBlock);
+    if (!this.Blok.CrossBlockSelection.isCrossBlockSelectionStarted && this.Blok.BlockManager.currentBlock) {
+      this.Blok.BlockSelection.unselectBlock(this.Blok.BlockManager.currentBlock);
     }
 
     /** Tell to subscribers that block settings is closed */
@@ -261,7 +261,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       });
     }
 
-    const allBlockTools = Array.from(this.Editor.Tools.blockTools.values());
+    const allBlockTools = Array.from(this.Blok.Tools.blockTools.values());
     const convertibleTools = await getConvertibleToolsForBlock(currentBlock, allBlockTools);
     const convertToItems = convertibleTools.reduce<PopoverItemParams[]>((result, tool) => {
       if (tool.toolbox === undefined) {
@@ -277,7 +277,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
           name: tool.name,
           closeOnActivate: true,
           onActivate: async () => {
-            const { BlockManager, Caret, Toolbar } = this.Editor;
+            const { BlockManager, Caret, Toolbar } = this.Blok;
 
             const newBlock = await BlockManager.convert(currentBlock, tool.name, toolboxItem.data);
 

@@ -2,26 +2,26 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '../../../../../types';
+import type Blok from '../../../../../types';
 import type { OutputData } from '../../../../../types';
-import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
 const TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR = '[data-blok-testid=tool-with-two-inputs-primary]';
 const TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR = '[data-blok-testid=tool-with-two-inputs-secondary]';
 const CONTENTLESS_TOOL_SELECTOR = '[data-blok-testid=contentless-tool]';
 const REGULAR_INPUT_SELECTOR = '[data-blok-testid=regular-input]';
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -36,29 +36,29 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<void> => {
+const createParagraphBlok = async (page: Page, paragraphs: string[]): Promise<void> => {
   const blocks: OutputData['blocks'] = paragraphs.map((text) => ({
     type: 'paragraph',
     data: { text },
   }));
 
-  await resetEditor(page);
-  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
       holder: holder,
-      data: { blocks: editorBlocks },
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID,
     blocks });
 };
 
-const createDefaultEditor = async (page: Page): Promise<void> => {
-  await resetEditor(page);
+const createDefaultBlok = async (page: Page): Promise<void> => {
+  await resetBlok(page);
   await page.evaluate(async ({ holder }) => {
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
       data: {
         blocks: [
@@ -72,13 +72,13 @@ const createDefaultEditor = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID });
 };
 
-const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
-  await resetEditor(page);
+const createBlokWithTwoInputTool = async (page: Page): Promise<void> => {
+  await resetBlok(page);
   await page.evaluate(async ({ holder }) => {
     /**
      *
@@ -112,7 +112,7 @@ const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
       }
     }
 
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
       tools: {
         toolWithTwoInputs: ToolWithTwoInputs,
@@ -133,13 +133,13 @@ const createEditorWithTwoInputTool = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID });
 };
 
-const createEditorWithContentlessTool = async (page: Page): Promise<void> => {
-  await resetEditor(page);
+const createBlokWithContentlessTool = async (page: Page): Promise<void> => {
+  await resetBlok(page);
   await page.evaluate(async ({ holder }) => {
     /**
      *
@@ -167,7 +167,7 @@ const createEditorWithContentlessTool = async (page: Page): Promise<void> => {
       }
     }
 
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
       tools: {
         contentlessTool: ContentlessTool,
@@ -194,8 +194,8 @@ const createEditorWithContentlessTool = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID });
 };
 
@@ -205,7 +205,7 @@ const addRegularInput = async (page: Page, position: 'before' | 'after'): Promis
     const holderElement = document.getElementById(holder);
 
     if (!holderElement || !holderElement.parentNode) {
-      throw new Error('Editor holder is not available');
+      throw new Error('Blok holder is not available');
     }
 
     input.setAttribute('data-blok-testid', 'regular-input');
@@ -223,16 +223,16 @@ const addRegularInput = async (page: Page, position: 'before' | 'after'): Promis
 
 test.describe('tab keydown', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should focus next block when current block has single input', async ({ page }) => {
-    await createParagraphEditor(page, ['first paragraph', 'second paragraph']);
+    await createParagraphBlok(page, ['first paragraph', 'second paragraph']);
 
     const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'first paragraph' });
     const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'second paragraph' });
@@ -244,7 +244,7 @@ test.describe('tab keydown', () => {
   });
 
   test('should focus next input within same block when block has multiple inputs', async ({ page }) => {
-    await createEditorWithTwoInputTool(page);
+    await createBlokWithTwoInputTool(page);
 
     const firstInput = page.locator(TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR);
     const secondInput = page.locator(TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR);
@@ -256,7 +256,7 @@ test.describe('tab keydown', () => {
   });
 
   test('should highlight next block when it is contentless (has no inputs)', async ({ page }) => {
-    await createEditorWithContentlessTool(page);
+    await createBlokWithContentlessTool(page);
 
     const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'second paragraph' });
 
@@ -281,8 +281,8 @@ test.describe('tab keydown', () => {
     expect(isSelected).toBeTruthy();
   });
 
-  test('should focus input outside editor when Tab pressed in last block', async ({ page }) => {
-    await createDefaultEditor(page);
+  test('should focus input outside blok when Tab pressed in last block', async ({ page }) => {
+    await createDefaultBlok(page);
     await addRegularInput(page, 'after');
     await page.evaluate(() => {
       /**
@@ -309,11 +309,11 @@ test.describe('tab keydown', () => {
 test.describe('shift+Tab keydown', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should focus previous block when current block has single input', async ({ page }) => {
-    await createParagraphEditor(page, ['first paragraph', 'second paragraph']);
+    await createParagraphBlok(page, ['first paragraph', 'second paragraph']);
 
     const lastParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'second paragraph' });
     const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'first paragraph' });
@@ -325,7 +325,7 @@ test.describe('shift+Tab keydown', () => {
   });
 
   test('should focus previous input within same block when block has multiple inputs', async ({ page }) => {
-    await createEditorWithTwoInputTool(page);
+    await createBlokWithTwoInputTool(page);
 
     const firstInput = page.locator(TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR);
     const secondInput = page.locator(TOOL_WITH_TWO_INPUTS_SECONDARY_SELECTOR);
@@ -337,7 +337,7 @@ test.describe('shift+Tab keydown', () => {
   });
 
   test('should highlight previous block when it is contentless (has no inputs)', async ({ page }) => {
-    await createEditorWithContentlessTool(page);
+    await createBlokWithContentlessTool(page);
 
     const lastParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'third paragraph' });
 
@@ -361,8 +361,8 @@ test.describe('shift+Tab keydown', () => {
     expect(isSelected).toBeTruthy();
   });
 
-  test('should focus input outside editor when Shift+Tab pressed in first block', async ({ page }) => {
-    await createDefaultEditor(page);
+  test('should focus input outside blok when Shift+Tab pressed in first block', async ({ page }) => {
+    await createDefaultBlok(page);
     await addRegularInput(page, 'before');
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'default paragraph' });
@@ -377,7 +377,7 @@ test.describe('shift+Tab keydown', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }

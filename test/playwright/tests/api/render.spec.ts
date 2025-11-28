@@ -3,16 +3,16 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import type Blok from '@/types';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 
 const getBlockWrapperByIndex = (page: Page, index: number = 0): Locator => {
   return page.locator(`:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`);
@@ -31,15 +31,15 @@ type SerializableOutputData = {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -54,24 +54,24 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, data?: SerializableOutputData): Promise<void> => {
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+const createBlok = async (page: Page, data?: SerializableOutputData): Promise<void> => {
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
     async ({ holder, rawData }) => {
-      const editorConfig: Record<string, unknown> = {
+      const blokConfig: Record<string, unknown> = {
         holder: holder,
       };
 
       if (rawData) {
-        editorConfig.data = rawData;
+        blokConfig.data = rawData;
       }
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
@@ -94,15 +94,15 @@ const defaultInitialData: SerializableOutputData = {
 
 test.describe('api.render', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test('editor.render replaces existing document content', async ({ page }) => {
-    await createEditor(page, defaultInitialData);
+  test('blok.render replaces existing document content', async ({ page }) => {
+    await createBlok(page, defaultInitialData);
 
     const initialBlock = getBlockWrapperByIndex(page);
 
@@ -119,11 +119,11 @@ test.describe('api.render', () => {
     };
 
     await page.evaluate(async ({ data }) => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      await window.editorInstance.render(data);
+      await window.blokInstance.render(data);
     }, { data: newData });
 
     await expect(initialBlock).toHaveText('Rendered via API');
@@ -162,14 +162,14 @@ test.describe('api.render', () => {
 
     for (const variant of dataVariants) {
       test(`renders data ${variant.title}`, async ({ page }) => {
-        await createEditor(page, defaultInitialData);
+        await createBlok(page, defaultInitialData);
 
         await page.evaluate(async ({ data }) => {
-          if (!window.editorInstance) {
-            throw new Error('Editor instance not found');
+          if (!window.blokInstance) {
+            throw new Error('Blok instance not found');
           }
 
-          await window.editorInstance.render(data);
+          await window.blokInstance.render(data);
         }, { data: variant.data });
 
         await expect(getBlockWrapperByIndex(page)).toHaveText(variant.expectedText);
@@ -179,16 +179,16 @@ test.describe('api.render', () => {
 
   test.describe('edge cases', () => {
     test('inserts a default block when empty data is rendered', async ({ page }) => {
-      await createEditor(page, defaultInitialData);
+      await createBlok(page, defaultInitialData);
 
       const blockCount = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        await window.editorInstance.render({ blocks: [] });
+        await window.blokInstance.render({ blocks: [] });
 
-        return window.editorInstance.blocks.getBlocksCount();
+        return window.blokInstance.blocks.getBlocksCount();
       });
 
       await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
@@ -196,15 +196,15 @@ test.describe('api.render', () => {
     });
 
     test('throws a descriptive error when data is invalid', async ({ page }) => {
-      await createEditor(page, defaultInitialData);
+      await createBlok(page, defaultInitialData);
 
       const errorMessage = await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
         try {
-          await window.editorInstance.render({} as SerializableOutputData);
+          await window.blokInstance.render({} as SerializableOutputData);
 
           return null;
         } catch (error) {

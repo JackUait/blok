@@ -4,10 +4,10 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { nanoid } from 'nanoid';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
@@ -18,9 +18,9 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
   '../../../../node_modules/@editorjs/header/dist/header.umd.js'
 );
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
   `[data-blok-testid="popover-item"][data-blok-item-name=${itemName}]`;
 
@@ -30,22 +30,22 @@ type SerializableToolConfig = {
   config?: Record<string, unknown>;
 };
 
-type CreateEditorOptions = {
+type CreateBlokOptions = {
   data?: OutputData;
   tools?: Record<string, SerializableToolConfig>;
 };
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -60,11 +60,11 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   const { data = null, tools = {} } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   const serializedTools = Object.entries(tools).map(([name, tool]) => {
     return {
@@ -77,12 +77,12 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
   await page.evaluate(
     async ({ holder, data: initialData, serializedTools: toolsConfig }) => {
-      const editorConfig: Record<string, unknown> = {
+      const blokConfig: Record<string, unknown> = {
         holder: holder,
       };
 
       if (initialData) {
-        editorConfig.data = initialData;
+        blokConfig.data = initialData;
       }
 
       if (toolsConfig.length > 0) {
@@ -114,13 +114,13 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
           {}
         );
 
-        editorConfig.tools = resolvedTools;
+        blokConfig.tools = resolvedTools;
       }
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
@@ -130,13 +130,13 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   );
 };
 
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return await page.evaluate(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    return await window.editorInstance.save();
+    return await window.blokInstance.save();
   });
 };
 
@@ -156,13 +156,13 @@ const assertIsString: (value: unknown, errorMessage: string) => asserts value is
 
 const getBlockIdByIndex = async (page: Page, blockIndex: number): Promise<string> => {
   return await page.evaluate((index) => {
-    const editor = window.editorInstance;
+    const blok = window.blokInstance;
 
-    if (!editor) {
-      throw new Error('Editor instance not found');
+    if (!blok) {
+      throw new Error('Blok instance not found');
     }
 
-    const block = editor.blocks.getBlockByIndex(index);
+    const block = blok.blocks.getBlockByIndex(index);
 
     if (!block) {
       throw new Error(`Block at index ${index} was not found`);
@@ -180,17 +180,17 @@ const getBlockIdByIndex = async (page: Page, blockIndex: number): Promise<string
 
 const getLastBlockId = async (page: Page): Promise<string> => {
   const blocksCount = await page.evaluate(() => {
-    const editor = window.editorInstance;
+    const blok = window.blokInstance;
 
-    if (!editor) {
-      throw new Error('Editor instance not found');
+    if (!blok) {
+      throw new Error('Blok instance not found');
     }
 
-    return editor.blocks.getBlocksCount();
+    return blok.blocks.getBlocksCount();
   });
 
   if (blocksCount <= 0) {
-    throw new Error('Editor does not contain any blocks');
+    throw new Error('Blok does not contain any blocks');
   }
 
   return await getBlockIdByIndex(page, blocksCount - 1);
@@ -198,7 +198,7 @@ const getLastBlockId = async (page: Page): Promise<string> => {
 
 test.describe('block ids', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -208,7 +208,7 @@ test.describe('block ids', () => {
   test('generates unique ids for new blocks', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: {
         header: {
           className: 'Header',
@@ -218,7 +218,7 @@ test.describe('block ids', () => {
 
     const firstParagraphId = await getBlockIdByIndex(page, 0);
     const firstParagraph = page.locator(
-      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"][data-blok-component="paragraph"] [contenteditable]`
+      `${BLOK_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"][data-blok-component="paragraph"] [contenteditable]`
     );
 
     await firstParagraph.click();
@@ -234,13 +234,13 @@ test.describe('block ids', () => {
 
     const headerBlockId = await getLastBlockId(page);
     const headerBlock = page.locator(
-      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${headerBlockId}"][data-blok-component="header"] [contenteditable]`
+      `${BLOK_INTERFACE_SELECTOR} [data-blok-id="${headerBlockId}"][data-blok-component="header"] [contenteditable]`
     );
 
     await headerBlock.click();
     await page.keyboard.type('Header');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
     const blockIds = blocks.map((block) => block.id);
 
     expect(blocks).not.toHaveLength(0);
@@ -268,13 +268,13 @@ test.describe('block ids', () => {
       },
     ];
 
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks,
       },
     });
 
-    const { blocks: savedBlocks } = await saveEditor(page);
+    const { blocks: savedBlocks } = await saveBlok(page);
 
     expect(savedBlocks).toHaveLength(blocks.length);
     savedBlocks.forEach((block, index) => {
@@ -300,7 +300,7 @@ test.describe('block ids', () => {
       },
     ];
 
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks,
       },
@@ -311,14 +311,14 @@ test.describe('block ids', () => {
     assertIsString(firstParagraphId, 'First block id was not provided');
 
     const firstParagraph = page.locator(
-      `${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"][data-blok-component="paragraph"] [contenteditable]`
+      `${BLOK_INTERFACE_SELECTOR} [data-blok-id="${firstParagraphId}"][data-blok-component="paragraph"] [contenteditable]`
     );
 
     await firstParagraph.click();
     await page.keyboard.press('Enter');
     await page.keyboard.type('Middle block');
 
-    const { blocks: savedBlocks } = await saveEditor(page);
+    const { blocks: savedBlocks } = await saveBlok(page);
 
     expect(savedBlocks).toHaveLength(3);
     expect(savedBlocks[0]?.id).toBe(blocks[0]?.id);
@@ -343,7 +343,7 @@ test.describe('block ids', () => {
       },
     ];
 
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks,
       },

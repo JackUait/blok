@@ -16,7 +16,7 @@ export interface I18nDictionary {
 
   /**
    * Section for passing translations to the external tools classes
-   * The first-level keys of this object should be equal of keys ot the 'tools' property of EditorConfig
+   * The first-level keys of this object should be equal of keys ot the 'tools' property of BlokConfig
    * Includes internal tools: "paragraph", "stub"
    *
    * Example:
@@ -34,7 +34,7 @@ export interface I18nDictionary {
 
   /**
    * Section allows to translate Block Tunes
-   * The first-level keys of this object should be equal of 'name' ot the 'tools.<toolName>.tunes' property of EditorConfig
+   * The first-level keys of this object should be equal of 'name' ot the 'tools.<toolName>.tunes' property of BlokConfig
    * Including some internal block-tunes: "delete", "moveUp", "moveDown
    *
    * Example:
@@ -53,7 +53,7 @@ export interface I18nDictionary {
   blockTunes?: Dictionary;
 
   /**
-   * Translation of internal UI components of the editor.js core
+   * Translation of internal UI components of the blok.js core
    */
   ui?: Dictionary;
 }

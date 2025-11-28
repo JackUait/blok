@@ -11,7 +11,7 @@ import Listeners from '../utils/listeners';
 import Dom from '../dom';
 import type { Popover } from '../utils/popover';
 import { PopoverDesktop, PopoverMobile } from '../utils/popover';
-import { EditorMobileLayoutToggled } from '../events';
+import { BlokMobileLayoutToggled } from '../events';
 
 /**
  * @todo the first Tab on the Block — focus Plus Button, the second — focus Block Tunes Toggler, the third — focus next Block
@@ -82,7 +82,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   protected listeners: Listeners = new Listeners();
 
   /**
-   * Editor API
+   * Blok API
    */
   private api: API;
 
@@ -138,7 +138,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   /**
    * Toolbox constructor
    * @param options - available parameters
-   * @param options.api - Editor API methods
+   * @param options.api - Blok API methods
    * @param options.tools - Tools available to check whether some of them should be displayed at the Toolbox or not
    * @param options.triggerElement - Element relative to which the popover should be positioned
    */
@@ -164,7 +164,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.initPopover();
 
-    this.api.events.on(EditorMobileLayoutToggled, this.handleMobileLayoutToggle);
+    this.api.events.on(BlokMobileLayoutToggled, this.handleMobileLayoutToggle);
   }
 
   /**
@@ -214,7 +214,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.removeAllShortcuts();
     this.popover?.off(PopoverEvent.Closed, this.onPopoverClose);
     this.listeners.destroy();
-    this.api.events.off(EditorMobileLayoutToggled, this.handleMobileLayoutToggle);
+    this.api.events.off(BlokMobileLayoutToggled, this.handleMobileLayoutToggle);
   }
 
   /**

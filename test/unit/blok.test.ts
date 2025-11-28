@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type { EditorConfig } from '../../types';
+import type { BlokConfig } from '../../types';
 import type Core from '../../src/components/core';
-import type { EditorModules } from '../../src/types-internal/editor-modules';
+import type { BlokModules } from '../../src/types-internal/blok-modules';
 
 // Mock VERSION global variable
 declare global {
@@ -42,16 +42,16 @@ vi.mock('../../src/components/utils', async () => {
 
 // Mock Core class - use factory function to avoid hoisting issues
 vi.mock('../../src/components/core', () => {
-  const createMockModuleInstances = (): Partial<EditorModules> => ({
+  const createMockModuleInstances = (): Partial<BlokModules> => ({
     API: {
       methods: {
         blocks: {
           clear: vi.fn(),
           render: vi.fn(),
-        } as unknown as EditorModules['API']['methods']['blocks'],
+        } as unknown as BlokModules['API']['methods']['blocks'],
         caret: {
           focus: vi.fn(),
-        } as unknown as EditorModules['API']['methods']['caret'],
+        } as unknown as BlokModules['API']['methods']['caret'],
         events: {
           on: vi.fn(),
           off: vi.fn(),
@@ -60,14 +60,14 @@ vi.mock('../../src/components/core', () => {
         saver: {
           save: vi.fn(),
         },
-      } as unknown as EditorModules['API']['methods'],
-    } as unknown as EditorModules['API'],
+      } as unknown as BlokModules['API']['methods'],
+    } as unknown as BlokModules['API'],
     Toolbar: {
       blockSettings: undefined,
       inlineToolbar: undefined,
-    } as unknown as EditorModules['Toolbar'],
-    BlockSettings: {} as unknown as EditorModules['BlockSettings'],
-    InlineToolbar: {} as unknown as EditorModules['InlineToolbar'],
+    } as unknown as BlokModules['Toolbar'],
+    BlockSettings: {} as unknown as BlokModules['BlockSettings'],
+    InlineToolbar: {} as unknown as BlokModules['InlineToolbar'],
   });
 
   const mockModuleInstances = createMockModuleInstances();
@@ -78,7 +78,7 @@ vi.mock('../../src/components/core', () => {
    */
   class MockCore {
     public configuration: Record<string, unknown> = {};
-    public moduleInstances: Partial<EditorModules>;
+    public moduleInstances: Partial<BlokModules>;
     public isReady: Promise<void>;
 
     /**
@@ -113,7 +113,7 @@ import Blok from '../../src/blok';
 describe('Blok', () => {
   // Get mocked instances
   const mocks = {
-    mockModuleInstances: undefined as Partial<EditorModules> | undefined,
+    mockModuleInstances: undefined as Partial<BlokModules> | undefined,
     mockIsObject: undefined as ReturnType<typeof vi.fn> | undefined,
     mockIsFunction: undefined as ReturnType<typeof vi.fn> | undefined,
     mockDestroyTooltip: undefined as ReturnType<typeof vi.fn> | undefined,
@@ -123,7 +123,7 @@ describe('Blok', () => {
     // Import the mocked modules to access the mock instances
     const coreModule = await import('../../src/components/core') as {
       default: new (...args: unknown[]) => Core;
-      mockModuleInstances?: Partial<EditorModules>;
+      mockModuleInstances?: Partial<BlokModules>;
     };
 
     const utilsModule = await import('../../src/components/utils') as {
@@ -137,7 +137,7 @@ describe('Blok', () => {
       mockDestroyTooltip?: ReturnType<typeof vi.fn>;
     };
 
-    mocks.mockModuleInstances = coreModule.mockModuleInstances as Partial<EditorModules>;
+    mocks.mockModuleInstances = coreModule.mockModuleInstances as Partial<BlokModules>;
     mocks.mockIsObject = utilsModule.mockIsObject as ReturnType<typeof vi.fn>;
     mocks.mockIsFunction = utilsModule.mockIsFunction as ReturnType<typeof vi.fn>;
     mocks.mockDestroyTooltip = tooltipModule.mockDestroyTooltip as ReturnType<typeof vi.fn>;
@@ -157,10 +157,10 @@ describe('Blok', () => {
         blocks: {
           clear: vi.fn(),
           render: vi.fn(),
-        } as unknown as EditorModules['API']['methods']['blocks'],
+        } as unknown as BlokModules['API']['methods']['blocks'],
         caret: {
           focus: vi.fn(),
-        } as unknown as EditorModules['API']['methods']['caret'],
+        } as unknown as BlokModules['API']['methods']['caret'],
         events: {
           on: vi.fn(),
           off: vi.fn(),
@@ -169,14 +169,14 @@ describe('Blok', () => {
         saver: {
           save: vi.fn(),
         },
-      } as unknown as EditorModules['API']['methods'],
-    } as unknown as EditorModules['API'];
+      } as unknown as BlokModules['API']['methods'],
+    } as unknown as BlokModules['API'];
     mocks.mockModuleInstances!.Toolbar = {
       blockSettings: undefined,
       inlineToolbar: undefined,
-    } as unknown as EditorModules['Toolbar'];
-    mocks.mockModuleInstances!.BlockSettings = {} as unknown as EditorModules['BlockSettings'];
-    mocks.mockModuleInstances!.InlineToolbar = {} as unknown as EditorModules['InlineToolbar'];
+    } as unknown as BlokModules['Toolbar'];
+    mocks.mockModuleInstances!.BlockSettings = {} as unknown as BlokModules['BlockSettings'];
+    mocks.mockModuleInstances!.InlineToolbar = {} as unknown as BlokModules['InlineToolbar'];
   });
 
   afterEach(() => {
@@ -185,41 +185,41 @@ describe('Blok', () => {
 
   describe('constructor', () => {
     it('should initialize with no configuration', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      expect(editor.isReady).toBeInstanceOf(Promise);
-      expect(editor.destroy).toBeDefined();
-      expect(typeof editor.destroy).toBe('function');
+      expect(blok.isReady).toBeInstanceOf(Promise);
+      expect(blok.destroy).toBeDefined();
+      expect(typeof blok.destroy).toBe('function');
 
-      await editor.isReady;
+      await blok.isReady;
     });
 
     it('should initialize with string configuration (holder)', async () => {
-      const holder = 'my-editor';
+      const holder = 'my-blok';
 
-      const editor = new Blok(holder);
+      const blok = new Blok(holder);
 
-      expect(editor.isReady).toBeInstanceOf(Promise);
+      expect(blok.isReady).toBeInstanceOf(Promise);
 
-      await editor.isReady;
+      await blok.isReady;
     });
 
-    it('should initialize with EditorConfig object', async () => {
-      const config: EditorConfig = {
+    it('should initialize with BlokConfig object', async () => {
+      const config: BlokConfig = {
         holder: 'blok',
         placeholder: 'Start typing...',
       };
 
-      const editor = new Blok(config);
+      const blok = new Blok(config);
 
-      expect(editor.isReady).toBeInstanceOf(Promise);
+      expect(blok.isReady).toBeInstanceOf(Promise);
 
-      await editor.isReady;
+      await blok.isReady;
     });
 
     it('should call onReady callback when provided', async () => {
       const onReady = vi.fn();
-      const config: EditorConfig = {
+      const config: BlokConfig = {
         holder: 'blok',
         onReady,
       };
@@ -227,50 +227,50 @@ describe('Blok', () => {
       mocks.mockIsObject!.mockReturnValue(true);
       mocks.mockIsFunction!.mockReturnValue(true);
 
-      const editor = new Blok(config);
+      const blok = new Blok(config);
 
-      await editor.isReady;
+      await blok.isReady;
 
       expect(onReady).toHaveBeenCalledTimes(1);
     });
 
     it('should use default empty onReady function when not provided', async () => {
-      const config: EditorConfig = {
+      const config: BlokConfig = {
         holder: 'blok',
       };
 
       mocks.mockIsObject!.mockReturnValue(true);
       mocks.mockIsFunction!.mockReturnValue(false);
 
-      const editor = new Blok(config);
+      const blok = new Blok(config);
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Should not throw
-      expect(editor.isReady).toBeInstanceOf(Promise);
+      expect(blok.isReady).toBeInstanceOf(Promise);
     });
 
     it('should initialize destroy as no-op before exportAPI', () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
       // Before isReady resolves, destroy should be a no-op
-      expect(editor.destroy).toBeDefined();
-      expect(() => editor.destroy()).not.toThrow();
+      expect(blok.destroy).toBeDefined();
+      expect(() => blok.destroy()).not.toThrow();
     });
   });
 
   describe('isReady promise', () => {
     it('should resolve when Core is ready', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await expect(editor.isReady).resolves.toBeUndefined();
+      await expect(blok.isReady).resolves.toBeUndefined();
     });
 
     it('should call exportAPI when Core is ready', async () => {
-      const editor = new Blok();
-      const exportAPISpy = vi.spyOn(editor, 'exportAPI');
+      const blok = new Blok();
+      const exportAPISpy = vi.spyOn(blok, 'exportAPI');
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -287,22 +287,22 @@ describe('Blok', () => {
 
   describe('exportAPI', () => {
     it('should export configuration field', async () => {
-      const config: EditorConfig = {
+      const config: BlokConfig = {
         holder: 'blok',
         placeholder: 'Test placeholder',
       };
 
-      const editor = new Blok(config);
+      const blok = new Blok(config);
 
-      await editor.isReady;
+      await blok.isReady;
 
-      expect((editor as unknown as Record<string, unknown>).configuration).toEqual(config);
+      expect((blok as unknown as Record<string, unknown>).configuration).toEqual(config);
     });
 
     it('should set prototype to API methods', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -311,24 +311,24 @@ describe('Blok', () => {
       };
       const lastCall = coreModule.lastInstance?.();
 
-      expect(Object.getPrototypeOf(editor)).toBe(lastCall?.moduleInstances.API?.methods);
+      expect(Object.getPrototypeOf(blok)).toBe(lastCall?.moduleInstances.API?.methods);
     });
 
     it('should create module aliases', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
-      const moduleAliases = (editor as unknown as { module: Record<string, unknown> }).module;
+      const moduleAliases = (blok as unknown as { module: Record<string, unknown> }).module;
 
       expect(moduleAliases).toBeDefined();
       expect(typeof moduleAliases).toBe('object');
     });
 
     it('should create lowercase aliases for uppercase module names', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -343,10 +343,10 @@ describe('Blok', () => {
 
       instances.API = {
         methods: {},
-      } as EditorModules['API'];
-      instances.Toolbar = {} as EditorModules['Toolbar'];
+      } as BlokModules['API'];
+      instances.Toolbar = {} as BlokModules['Toolbar'];
 
-      const moduleAliases = (editor as unknown as { module: Record<string, unknown> }).module;
+      const moduleAliases = (blok as unknown as { module: Record<string, unknown> }).module;
 
       // API should become 'api'
       expect(moduleAliases.api).toBe(instances.API);
@@ -355,9 +355,9 @@ describe('Blok', () => {
     });
 
     it('should create camelCase aliases for PascalCase module names', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -370,19 +370,19 @@ describe('Blok', () => {
         throw new Error('Core instance not found');
       }
 
-      instances.BlockSettings = {} as EditorModules['BlockSettings'];
-      instances.InlineToolbar = {} as EditorModules['InlineToolbar'];
+      instances.BlockSettings = {} as BlokModules['BlockSettings'];
+      instances.InlineToolbar = {} as BlokModules['InlineToolbar'];
 
-      const moduleAliases = (editor as unknown as { module: Record<string, unknown> }).module;
+      const moduleAliases = (blok as unknown as { module: Record<string, unknown> }).module;
 
       expect(moduleAliases.blockSettings).toBe(instances.BlockSettings);
       expect(moduleAliases.inlineToolbar).toBe(instances.InlineToolbar);
     });
 
     it('should skip undefined module instances', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -397,10 +397,10 @@ describe('Blok', () => {
 
       instances.API = {
         methods: {},
-      } as EditorModules['API'];
-      instances.Toolbar = undefined as unknown as EditorModules['Toolbar'];
+      } as BlokModules['API'];
+      instances.Toolbar = undefined as unknown as BlokModules['Toolbar'];
 
-      const moduleAliases = (editor as unknown as { module: Record<string, unknown> }).module;
+      const moduleAliases = (blok as unknown as { module: Record<string, unknown> }).module;
 
       expect(moduleAliases.toolbar).toBeUndefined();
     });
@@ -409,9 +409,9 @@ describe('Blok', () => {
       const mockToolbar = {
         blockSettings: undefined,
       };
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -424,11 +424,11 @@ describe('Blok', () => {
         throw new Error('Core instance not found');
       }
 
-      instances.Toolbar = mockToolbar as unknown as EditorModules['Toolbar'];
-      instances.BlockSettings = {} as unknown as EditorModules['BlockSettings'];
+      instances.Toolbar = mockToolbar as unknown as BlokModules['Toolbar'];
+      instances.BlockSettings = {} as unknown as BlokModules['BlockSettings'];
 
       // Re-export API to apply the changes
-      (editor as unknown as { exportAPI: (core: Core) => void }).exportAPI(lastCall);
+      (blok as unknown as { exportAPI: (core: Core) => void }).exportAPI(lastCall);
 
       expect(mockToolbar.blockSettings).toBe(instances.BlockSettings);
     });
@@ -438,9 +438,9 @@ describe('Blok', () => {
       const mockToolbar = {
         blockSettings: existingBlockSettings,
       };
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -453,11 +453,11 @@ describe('Blok', () => {
         throw new Error('Core instance not found');
       }
 
-      instances.Toolbar = mockToolbar as unknown as EditorModules['Toolbar'];
-      instances.BlockSettings = {} as unknown as EditorModules['BlockSettings'];
+      instances.Toolbar = mockToolbar as unknown as BlokModules['Toolbar'];
+      instances.BlockSettings = {} as unknown as BlokModules['BlockSettings'];
 
       // Re-export API to apply the changes
-      (editor as unknown as { exportAPI: (core: Core) => void }).exportAPI(lastCall);
+      (blok as unknown as { exportAPI: (core: Core) => void }).exportAPI(lastCall);
 
       expect(mockToolbar.blockSettings).toBe(existingBlockSettings);
       expect(mockToolbar.blockSettings).not.toBe(instances.BlockSettings);
@@ -467,9 +467,9 @@ describe('Blok', () => {
       const mockToolbar = {
         inlineToolbar: undefined,
       };
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -482,11 +482,11 @@ describe('Blok', () => {
         throw new Error('Core instance not found');
       }
 
-      instances.Toolbar = mockToolbar as unknown as EditorModules['Toolbar'];
-      instances.InlineToolbar = {} as unknown as EditorModules['InlineToolbar'];
+      instances.Toolbar = mockToolbar as unknown as BlokModules['Toolbar'];
+      instances.InlineToolbar = {} as unknown as BlokModules['InlineToolbar'];
 
       // Re-export API to apply the changes
-      (editor as unknown as { exportAPI: (core: Core) => void }).exportAPI(lastCall);
+      (blok as unknown as { exportAPI: (core: Core) => void }).exportAPI(lastCall);
 
       expect(mockToolbar.inlineToolbar).toBe(instances.InlineToolbar);
     });
@@ -496,9 +496,9 @@ describe('Blok', () => {
       const mockToolbar = {
         inlineToolbar: existingInlineToolbar,
       };
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -511,20 +511,20 @@ describe('Blok', () => {
         throw new Error('Core instance not found');
       }
 
-      instances.Toolbar = mockToolbar as unknown as EditorModules['Toolbar'];
-      instances.InlineToolbar = {} as unknown as EditorModules['InlineToolbar'];
+      instances.Toolbar = mockToolbar as unknown as BlokModules['Toolbar'];
+      instances.InlineToolbar = {} as unknown as BlokModules['InlineToolbar'];
 
       // Re-export API to apply the changes
-      (editor as unknown as { exportAPI: (core: Core) => void }).exportAPI(lastCall);
+      (blok as unknown as { exportAPI: (core: Core) => void }).exportAPI(lastCall);
 
       expect(mockToolbar.inlineToolbar).toBe(existingInlineToolbar);
       expect(mockToolbar.inlineToolbar).not.toBe(instances.InlineToolbar);
     });
 
     it('should create shorthands for blocks methods', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -537,14 +537,14 @@ describe('Blok', () => {
         throw new Error('Core instance not found');
       }
 
-      expect((editor as unknown as { clear: unknown }).clear).toBe(instances.API?.methods.blocks.clear);
-      expect((editor as unknown as { render: unknown }).render).toBe(instances.API?.methods.blocks.render);
+      expect((blok as unknown as { clear: unknown }).clear).toBe(instances.API?.methods.blocks.clear);
+      expect((blok as unknown as { render: unknown }).render).toBe(instances.API?.methods.blocks.render);
     });
 
     it('should create shorthands for caret methods', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -557,13 +557,13 @@ describe('Blok', () => {
         throw new Error('Core instance not found');
       }
 
-      expect((editor as unknown as { focus: unknown }).focus).toBe(instances.API?.methods.caret.focus);
+      expect((blok as unknown as { focus: unknown }).focus).toBe(instances.API?.methods.caret.focus);
     });
 
     it('should create shorthands for events methods', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -576,15 +576,15 @@ describe('Blok', () => {
         throw new Error('Core instance not found');
       }
 
-      expect((editor as unknown as { on: unknown }).on).toBe(instances.API?.methods.events.on);
-      expect((editor as unknown as { off: unknown }).off).toBe(instances.API?.methods.events.off);
-      expect((editor as unknown as { emit: unknown }).emit).toBe(instances.API?.methods.events.emit);
+      expect((blok as unknown as { on: unknown }).on).toBe(instances.API?.methods.events.on);
+      expect((blok as unknown as { off: unknown }).off).toBe(instances.API?.methods.events.off);
+      expect((blok as unknown as { emit: unknown }).emit).toBe(instances.API?.methods.events.emit);
     });
 
     it('should create shorthands for saver methods', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
@@ -597,24 +597,24 @@ describe('Blok', () => {
         throw new Error('Core instance not found');
       }
 
-      expect((editor as unknown as { save: unknown }).save).toBe(instances.API?.methods.saver.save);
+      expect((blok as unknown as { save: unknown }).save).toBe(instances.API?.methods.saver.save);
     });
 
     it('should delete exportAPI method after export', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
-      expect(Object.prototype.hasOwnProperty.call(editor, 'exportAPI')).toBe(false);
-      expect(typeof (editor as unknown as { exportAPI: unknown }).exportAPI).toBe('function');
+      expect(Object.prototype.hasOwnProperty.call(blok, 'exportAPI')).toBe(false);
+      expect(typeof (blok as unknown as { exportAPI: unknown }).exportAPI).toBe('function');
     });
 
     it('should make module property non-enumerable', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
-      const descriptor = Object.getOwnPropertyDescriptor(editor, 'module');
+      const descriptor = Object.getOwnPropertyDescriptor(blok, 'module');
 
       expect(descriptor).toBeDefined();
       expect(descriptor?.enumerable).toBe(false);
@@ -631,14 +631,14 @@ describe('Blok', () => {
       const mockModule2 = { destroy: mockDestroy2 };
       const mockModule3 = { noDestroy: true };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule1 as unknown as EditorModules['Toolbar'];
-      mocks.mockModuleInstances!.BlockSettings = mockModule2 as unknown as EditorModules['BlockSettings'];
-      mocks.mockModuleInstances!.InlineToolbar = mockModule3 as unknown as EditorModules['InlineToolbar'];
+      mocks.mockModuleInstances!.Toolbar = mockModule1 as unknown as BlokModules['Toolbar'];
+      mocks.mockModuleInstances!.BlockSettings = mockModule2 as unknown as BlokModules['BlockSettings'];
+      mocks.mockModuleInstances!.InlineToolbar = mockModule3 as unknown as BlokModules['InlineToolbar'];
 
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
-      editor.destroy();
+      await blok.isReady;
+      blok.destroy();
 
       expect(mockDestroy1).toHaveBeenCalledTimes(1);
       expect(mockDestroy2).toHaveBeenCalledTimes(1);
@@ -652,57 +652,57 @@ describe('Blok', () => {
         },
       };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as EditorModules['Toolbar'];
+      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
 
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
-      editor.destroy();
+      await blok.isReady;
+      blok.destroy();
 
       expect(mockRemoveAll).toHaveBeenCalled();
     });
 
     it('should call destroyTooltip', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
-      editor.destroy();
+      await blok.isReady;
+      blok.destroy();
 
       expect(mocks.mockDestroyTooltip).toHaveBeenCalledTimes(1);
     });
 
     it('should delete all own properties', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Add some test properties
       const testValue = 123;
 
-      (editor as unknown as Record<string, unknown>).testProperty = 'test';
-      (editor as unknown as Record<string, unknown>).anotherProperty = testValue;
+      (blok as unknown as Record<string, unknown>).testProperty = 'test';
+      (blok as unknown as Record<string, unknown>).anotherProperty = testValue;
 
-      expect((editor as unknown as Record<string, unknown>).testProperty).toBe('test');
-      expect((editor as unknown as Record<string, unknown>).anotherProperty).toBe(testValue);
+      expect((blok as unknown as Record<string, unknown>).testProperty).toBe('test');
+      expect((blok as unknown as Record<string, unknown>).anotherProperty).toBe(testValue);
 
-      editor.destroy();
+      blok.destroy();
 
-      expect((editor as unknown as Record<string, unknown>).testProperty).toBeUndefined();
-      expect((editor as unknown as Record<string, unknown>).anotherProperty).toBeUndefined();
+      expect((blok as unknown as Record<string, unknown>).testProperty).toBeUndefined();
+      expect((blok as unknown as Record<string, unknown>).anotherProperty).toBeUndefined();
     });
 
     it('should set prototype to null', async () => {
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Before destroy, prototype should be API methods
-      expect(Object.getPrototypeOf(editor)).toBe(mocks.mockModuleInstances!.API?.methods);
+      expect(Object.getPrototypeOf(blok)).toBe(mocks.mockModuleInstances!.API?.methods);
 
-      editor.destroy();
+      blok.destroy();
 
       // After destroy, prototype should be null
-      expect(Object.getPrototypeOf(editor)).toBeNull();
+      expect(Object.getPrototypeOf(blok)).toBeNull();
     });
 
     it('should handle modules without listeners property', async () => {
@@ -711,14 +711,14 @@ describe('Blok', () => {
         // No listeners property
       };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as EditorModules['Toolbar'];
+      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
 
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Should not throw
-      expect(() => editor.destroy()).not.toThrow();
+      expect(() => blok.destroy()).not.toThrow();
     });
 
     it('should handle modules without destroy method', async () => {
@@ -729,14 +729,14 @@ describe('Blok', () => {
         // No destroy method
       };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as EditorModules['Toolbar'];
+      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
 
-      const editor = new Blok();
+      const blok = new Blok();
 
-      await editor.isReady;
+      await blok.isReady;
 
       // Should not throw
-      expect(() => editor.destroy()).not.toThrow();
+      expect(() => blok.destroy()).not.toThrow();
       expect(mockModule.listeners.removeAll).toHaveBeenCalled();
     });
   });

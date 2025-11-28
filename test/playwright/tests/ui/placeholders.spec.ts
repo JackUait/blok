@@ -3,31 +3,31 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import type { EditorConfig } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import type Blok from '@/types';
+import type { BlokConfig } from '@/types';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const PLACEHOLDER_TEXT = 'Write something or press / to select a tool';
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -42,36 +42,36 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-type CreateEditorOptions = Pick<EditorConfig, 'placeholder' | 'autofocus'>;
+type CreateBlokOptions = Pick<BlokConfig, 'placeholder' | 'autofocus'>;
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   const { placeholder = null, autofocus = null } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
-    async ({ holder, editorOptions }) => {
+    async ({ holder, blokOptions }) => {
       const config: Record<string, unknown> = {
         holder: holder,
       };
 
-      if (editorOptions.placeholder !== null) {
-        config.placeholder = editorOptions.placeholder;
+      if (blokOptions.placeholder !== null) {
+        config.placeholder = blokOptions.placeholder;
       }
 
-      if (editorOptions.autofocus !== null) {
-        config.autofocus = editorOptions.autofocus;
+      if (blokOptions.autofocus !== null) {
+        config.autofocus = blokOptions.autofocus;
       }
 
-      const editor = new window.EditorJS(config);
+      const blok = new window.Blok(config);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
-      editorOptions: {
+      blokOptions: {
         placeholder,
         autofocus,
       },
@@ -134,7 +134,7 @@ const expectPlaceholderContent = async (locator: Locator, expected: string): Pro
 
 test.describe('placeholders', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -142,7 +142,7 @@ test.describe('placeholders', () => {
   });
 
   test('shows placeholder when provided in config', async ({ page }) => {
-    await createEditor(page, { placeholder: PLACEHOLDER_TEXT });
+    await createBlok(page, { placeholder: PLACEHOLDER_TEXT });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
@@ -150,8 +150,8 @@ test.describe('placeholders', () => {
     await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
   });
 
-  test('shows placeholder when editor is autofocusable', async ({ page }) => {
-    await createEditor(page, {
+  test('shows placeholder when blok is autofocusable', async ({ page }) => {
+    await createBlok(page, {
       placeholder: PLACEHOLDER_TEXT,
       autofocus: true,
     });
@@ -163,7 +163,7 @@ test.describe('placeholders', () => {
   });
 
   test('keeps placeholder visible when block receives focus', async ({ page }) => {
-    await createEditor(page, { placeholder: PLACEHOLDER_TEXT });
+    await createBlok(page, { placeholder: PLACEHOLDER_TEXT });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
@@ -173,7 +173,7 @@ test.describe('placeholders', () => {
   });
 
   test('restores placeholder after clearing typed content', async ({ page }) => {
-    await createEditor(page, { placeholder: PLACEHOLDER_TEXT });
+    await createBlok(page, { placeholder: PLACEHOLDER_TEXT });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
@@ -187,7 +187,7 @@ test.describe('placeholders', () => {
   });
 
   test('hides placeholder after typing characters', async ({ page }) => {
-    await createEditor(page, { placeholder: PLACEHOLDER_TEXT });
+    await createBlok(page, { placeholder: PLACEHOLDER_TEXT });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
@@ -200,7 +200,7 @@ test.describe('placeholders', () => {
   });
 
   test('hides placeholder after typing whitespace', async ({ page }) => {
-    await createEditor(page, { placeholder: PLACEHOLDER_TEXT });
+    await createBlok(page, { placeholder: PLACEHOLDER_TEXT });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 

@@ -98,8 +98,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
   /**
    * @class
    * @param moduleConfiguration - Module Configuration
-   * @param moduleConfiguration.config - Editor's config
-   * @param moduleConfiguration.eventsDispatcher - Editor's event dispatcher
+   * @param moduleConfiguration.config - Blok's config
+   * @param moduleConfiguration.eventsDispatcher - Blok's event dispatcher
    */
   constructor({ config, eventsDispatcher }: ModuleConfig) {
     super({
@@ -151,7 +151,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
       return true;
     }
 
-    if (this.Editor.BlockSettings.contains(element)) {
+    if (this.Blok.BlockSettings.contains(element)) {
       return true;
     }
 
@@ -187,7 +187,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
          * Set current block to cover the case when the Toolbar showed near hovered Block but caret is set to another Block.
          */
         if (this.hoveredBlock) {
-          this.Editor.BlockManager.currentBlock = this.hoveredBlock;
+          this.Blok.BlockManager.currentBlock = this.hoveredBlock;
         }
 
         this.toolboxInstance.open();
@@ -247,7 +247,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
       }, { timeout: 2000 });
     } else {
       this.destroy();
-      this.Editor.BlockSettings.destroy();
+      this.Blok.BlockSettings.destroy();
       this.disableModuleBindings();
     }
   }
@@ -261,7 +261,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
      * Some UI elements creates inside requestIdleCallback, so the can be not ready yet
      */
     if (this.toolboxInstance === null)  {
-      _.log('Can\'t open Toolbar since Editor initialization is not finished yet', 'warn');
+      _.log('Can\'t open Toolbar since Blok initialization is not finished yet', 'warn');
 
       return;
     }
@@ -273,14 +273,14 @@ export default class Toolbar extends Module<ToolbarNodes> {
       this.toolboxInstance.close();
     }
 
-    if (this.Editor.BlockSettings.opened) {
-      this.Editor.BlockSettings.close();
+    if (this.Blok.BlockSettings.opened) {
+      this.Blok.BlockSettings.close();
     }
 
     /**
      * If no one Block selected as a Current
      */
-    const targetBlock = block ?? this.Editor.BlockManager.currentBlock;
+    const targetBlock = block ?? this.Blok.BlockManager.currentBlock;
 
     if (!targetBlock) {
       return;
@@ -295,7 +295,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     }
 
     const targetBlockHolder = targetBlock.holder;
-    const { isMobile } = this.Editor.UI;
+    const { isMobile } = this.Blok.UI;
 
 
     /**
@@ -375,7 +375,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const tunes = targetBlock.getTunes();
     const hasAnyTunes = tunes.toolTunes.length > 0 || tunes.commonTunes.length > 0;
 
-    if (this.Editor.BlockManager.blocks.length === 1 && targetBlock.isEmpty && !hasAnyTunes) {
+    if (this.Blok.BlockManager.blocks.length === 1 && targetBlock.isEmpty && !hasAnyTunes) {
       this.blockTunesToggler.hide();
     } else {
       this.blockTunesToggler.show();
@@ -388,7 +388,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Close the Toolbar
    */
   public close(): void {
-    if (this.Editor.ReadOnly.isEnabled) {
+    if (this.Blok.ReadOnly.isEnabled) {
       return;
     }
 
@@ -398,7 +398,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     /** Close components */
     this.blockActions.hide();
     this.toolboxInstance?.close();
-    this.Editor.BlockSettings.close();
+    this.Blok.BlockSettings.close();
     this.reset();
   }
 
@@ -410,9 +410,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
       this.nodes.wrapper.style.top = 'unset';
 
       /**
-       * Move Toolbar back to the Editor wrapper to save it from deletion
+       * Move Toolbar back to the Blok wrapper to save it from deletion
        */
-      this.Editor.UI.nodes.wrapper.appendChild(this.nodes.wrapper);
+      this.Blok.UI.nodes.wrapper.appendChild(this.nodes.wrapper);
     }
   }
 
@@ -525,7 +525,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     $.append(actions, this.makeToolbox());
 
-    const blockSettingsElement = this.Editor.BlockSettings.getElement();
+    const blockSettingsElement = this.Blok.BlockSettings.getElement();
 
     if (!blockSettingsElement) {
       throw new Error('Block Settings element was not created');
@@ -534,9 +534,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
     $.append(actions, blockSettingsElement);
 
     /**
-     * Append toolbar to the Editor
+     * Append toolbar to the Blok
      */
-    $.append(this.Editor.UI.nodes.wrapper, wrapper);
+    $.append(this.Blok.UI.nodes.wrapper, wrapper);
   }
 
   /**
@@ -547,8 +547,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
      * Make the Toolbox
      */
     this.toolboxInstance = new Toolbox({
-      api: this.Editor.API.methods,
-      tools: this.Editor.Tools.blockTools,
+      api: this.Blok.API.methods,
+      tools: this.Blok.Tools.blockTools,
       i18nLabels: {
         filter: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
         nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
@@ -557,15 +557,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
     });
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {
-      this.Editor.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
+      this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {
-      this.Editor.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
+      this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
     });
 
     this.toolboxInstance.on(ToolboxEvent.BlockAdded, ({ block }) => {
-      const { BlockManager, Caret } = this.Editor;
+      const { BlockManager, Caret } = this.Blok;
       const newBlock = BlockManager.getBlockById(block.id);
 
       if (!newBlock) {
@@ -608,11 +608,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private plusButtonClicked(): void {
     /**
-     * We need to update Current Block because user can click on the Plus Button (thanks to appearing by hover) without any clicks on editor
+     * We need to update Current Block because user can click on the Plus Button (thanks to appearing by hover) without any clicks on blok
      * In this case currentBlock will point last block
      */
     if (this.hoveredBlock) {
-      this.Editor.BlockManager.currentBlock = this.hoveredBlock;
+      this.Blok.BlockManager.currentBlock = this.hoveredBlock;
     }
 
     this.toolboxInstance?.toggle();
@@ -667,7 +667,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
         /**
          * Do not move toolbar if Block Settings or Toolbox opened
          */
-        if (this.Editor.BlockSettings.opened || this.toolboxInstance?.opened) {
+        if (this.Blok.BlockSettings.opened || this.toolboxInstance?.opened) {
           return;
         }
 
@@ -710,7 +710,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private settingsTogglerClicked(): void {
     /**
-     * We need to update Current Block because user can click on toggler (thanks to appearing by hover) without any clicks on editor
+     * We need to update Current Block because user can click on toggler (thanks to appearing by hover) without any clicks on blok
      * In this case currentBlock will point last block
      */
     const hoveredBlock = this.hoveredBlock;
@@ -719,12 +719,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
-    this.Editor.BlockManager.currentBlock = hoveredBlock;
+    this.Blok.BlockManager.currentBlock = hoveredBlock;
 
-    if (this.Editor.BlockSettings.opened) {
-      this.Editor.BlockSettings.close();
+    if (this.Blok.BlockSettings.opened) {
+      this.Blok.BlockSettings.close();
     } else {
-      void this.Editor.BlockSettings.open(hoveredBlock, this.nodes.settingsToggler);
+      void this.Blok.BlockSettings.open(hoveredBlock, this.nodes.settingsToggler);
     }
   }
 
@@ -743,7 +743,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     /**
      * Make BlockSettings Panel
      */
-    this.Editor.BlockSettings.make();
+    this.Blok.BlockSettings.make();
 
     /**
      * Make Toolbar

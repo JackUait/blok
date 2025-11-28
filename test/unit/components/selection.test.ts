@@ -85,7 +85,7 @@ const createContentEditable = (text = 'Hello world'): { element: HTMLDivElement;
     textNode };
 };
 
-const createEditorZone = (text = 'Hello world'): {
+const createBlokZone = (text = 'Hello world'): {
   wrapper: HTMLDivElement;
   zone: HTMLDivElement;
   paragraph: HTMLParagraphElement;
@@ -106,7 +106,7 @@ const createEditorZone = (text = 'Hello world'): {
   const textNode = paragraph.firstChild;
 
   if (!(textNode instanceof Text)) {
-    throw new Error('Failed to create text node inside editor zone');
+    throw new Error('Failed to create text node inside blok zone');
   }
 
   return { wrapper,
@@ -196,11 +196,11 @@ describe('SelectionUtils', () => {
     expect(SelectionUtils.isCollapsed).toBe(false);
   });
 
-  it('checks whether selection is inside the editor zone', () => {
-    const { textNode } = createEditorZone();
+  it('checks whether selection is inside the blok zone', () => {
+    const { textNode } = createBlokZone();
 
     setSelectionRange(textNode, 0, textNode.textContent?.length ?? 0);
-    expect(SelectionUtils.isAtEditor).toBe(true);
+    expect(SelectionUtils.isAtBlok).toBe(true);
 
     const outside = document.createElement('p');
 
@@ -214,17 +214,17 @@ describe('SelectionUtils', () => {
     }
 
     setSelectionRange(outsideText, 0, 3);
-    expect(SelectionUtils.isAtEditor).toBe(false);
+    expect(SelectionUtils.isAtBlok).toBe(false);
   });
 
-  it('validates whether a specific range belongs to the editor zone', () => {
-    const { textNode } = createEditorZone();
+  it('validates whether a specific range belongs to the blok zone', () => {
+    const { textNode } = createBlokZone();
     const insideRange = document.createRange();
 
     insideRange.setStart(textNode, 0);
     insideRange.setEnd(textNode, 2);
 
-    expect(SelectionUtils.isRangeAtEditor(insideRange)).toBe(true);
+    expect(SelectionUtils.isRangeAtBlok(insideRange)).toBe(true);
 
     const outsideParagraph = document.createElement('p');
 
@@ -242,7 +242,7 @@ describe('SelectionUtils', () => {
     outsideRange.setStart(outsideText, 0);
     outsideRange.setEnd(outsideText, 5);
 
-    expect(SelectionUtils.isRangeAtEditor(outsideRange)).toBe(false);
+    expect(SelectionUtils.isRangeAtBlok(outsideRange)).toBe(false);
   });
 
   it('reports whether any selection exists', () => {
@@ -343,7 +343,7 @@ describe('SelectionUtils', () => {
 
   it('manages fake background wrappers around selection', () => {
     const utilsInstance = new SelectionUtils();
-    const { zone, paragraph } = createEditorZone('Highlighted text');
+    const { zone, paragraph } = createBlokZone('Highlighted text');
     const selection = ensureSelection();
     const range = document.createRange();
 
@@ -379,7 +379,7 @@ describe('SelectionUtils', () => {
 
   it('restores selection correctly after using fake background', () => {
     const utilsInstance = new SelectionUtils();
-    const { zone, paragraph } = createEditorZone('Text to select');
+    const { zone, paragraph } = createBlokZone('Text to select');
 
     // Create a text node and select a part of it
     const textNode = paragraph.firstChild as Text;
@@ -415,7 +415,7 @@ describe('SelectionUtils', () => {
 
   it('does not enable fake background when selection is collapsed', () => {
     const utilsInstance = new SelectionUtils();
-    const { paragraph } = createEditorZone('Single word');
+    const { paragraph } = createBlokZone('Single word');
     const selection = ensureSelection();
     const range = document.createRange();
 

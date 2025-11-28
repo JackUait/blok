@@ -5,13 +5,13 @@ import type SelectionUtils from '../../../../../src/components/selection';
 import EventsDispatcher from '../../../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorConfig } from '../../../../../types';
-import type { EditorEventMap } from '../../../../../src/components/events';
+import type { BlokConfig } from '../../../../../types';
+import type { BlokEventMap } from '../../../../../src/components/events';
 
 const createSelectionApi = (): SelectionAPI => {
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as EditorConfig,
+    config: {} as BlokConfig,
     eventsDispatcher,
   };
 

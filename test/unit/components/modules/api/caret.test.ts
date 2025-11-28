@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import CaretAPI from '../../../../../src/components/modules/api/caret';
 import EventsDispatcher from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorConfig } from '../../../../../types';
-import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
-import type { EditorEventMap } from '../../../../../src/components/events';
+import type { BlokConfig } from '../../../../../types';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlockAPI } from '../../../../../types/api';
 
 const resolveBlockMock = vi.hoisted(() => vi.fn());
@@ -29,7 +29,7 @@ type CaretModuleStub = {
   setToBlock: ReturnType<typeof vi.fn>;
 };
 
-type EditorStub = {
+type BlokStub = {
   BlockManager: BlockManagerStub;
   Caret: CaretModuleStub;
 };
@@ -38,16 +38,16 @@ const createBlock = (id: string): BlockAPI => ({
   id,
 } as BlockAPI);
 
-const createCaretApi = (): { caretApi: CaretAPI; editor: EditorStub } => {
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+const createCaretApi = (): { caretApi: CaretAPI; blok: BlokStub } => {
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as EditorConfig,
+    config: {} as BlokConfig,
     eventsDispatcher,
   };
 
   const caretApi = new CaretAPI(moduleConfig);
 
-  const editor: EditorStub = {
+  const blok: BlokStub = {
     BlockManager: {},
     Caret: {
       positions: {
@@ -59,10 +59,10 @@ const createCaretApi = (): { caretApi: CaretAPI; editor: EditorStub } => {
     },
   };
 
-  caretApi.state = editor as unknown as EditorModules;
+  caretApi.state = blok as unknown as BlokModules;
 
   return { caretApi,
-    editor };
+    blok };
 };
 
 describe('CaretAPI', () => {
@@ -91,15 +91,15 @@ describe('CaretAPI', () => {
     });
 
     it('moves caret to the first block using provided params', () => {
-      const { caretApi, editor } = createCaretApi();
+      const { caretApi, blok } = createCaretApi();
       const block = createBlock('first');
 
-      editor.BlockManager.firstBlock = block;
+      blok.BlockManager.firstBlock = block;
 
       const result = caretApi.methods.setToFirstBlock('start', 3);
 
       expect(result).toBe(true);
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(block, 'start', 3);
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(block, 'start', 3);
     });
   });
 
@@ -111,15 +111,15 @@ describe('CaretAPI', () => {
     });
 
     it('moves caret to the last block', () => {
-      const { caretApi, editor } = createCaretApi();
+      const { caretApi, blok } = createCaretApi();
       const block = createBlock('last');
 
-      editor.BlockManager.lastBlock = block;
+      blok.BlockManager.lastBlock = block;
 
       const result = caretApi.methods.setToLastBlock('end');
 
       expect(result).toBe(true);
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(block, 'end', 0);
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(block, 'end', 0);
     });
   });
 
@@ -131,15 +131,15 @@ describe('CaretAPI', () => {
     });
 
     it('moves caret to the previous block', () => {
-      const { caretApi, editor } = createCaretApi();
+      const { caretApi, blok } = createCaretApi();
       const block = createBlock('previous');
 
-      editor.BlockManager.previousBlock = block;
+      blok.BlockManager.previousBlock = block;
 
       const result = caretApi.methods.setToPreviousBlock('start', 1);
 
       expect(result).toBe(true);
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(block, 'start', 1);
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(block, 'start', 1);
     });
   });
 
@@ -151,33 +151,33 @@ describe('CaretAPI', () => {
     });
 
     it('moves caret to the next block', () => {
-      const { caretApi, editor } = createCaretApi();
+      const { caretApi, blok } = createCaretApi();
       const block = createBlock('next');
 
-      editor.BlockManager.nextBlock = block;
+      blok.BlockManager.nextBlock = block;
 
       const result = caretApi.methods.setToNextBlock('default', 2);
 
       expect(result).toBe(true);
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(block, 'default', 2);
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(block, 'default', 2);
     });
   });
 
   describe('setToBlock', () => {
     it('returns false when block cannot be resolved', () => {
-      const { caretApi, editor } = createCaretApi();
+      const { caretApi, blok } = createCaretApi();
 
       resolveBlockMock.mockReturnValueOnce(undefined);
 
       const result = caretApi.methods.setToBlock('missing');
 
       expect(result).toBe(false);
-      expect(resolveBlockMock).toHaveBeenCalledWith('missing', editor);
-      expect(editor.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(resolveBlockMock).toHaveBeenCalledWith('missing', blok);
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
     });
 
     it('delegates caret placement to resolved block', () => {
-      const { caretApi, editor } = createCaretApi();
+      const { caretApi, blok } = createCaretApi();
       const resolvedBlock = createBlock('resolved');
 
       resolveBlockMock.mockReturnValueOnce(resolvedBlock);
@@ -185,34 +185,34 @@ describe('CaretAPI', () => {
       const result = caretApi.methods.setToBlock('any', 'default', 4);
 
       expect(result).toBe(true);
-      expect(resolveBlockMock).toHaveBeenCalledWith('any', editor);
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(resolvedBlock, 'default', 4);
+      expect(resolveBlockMock).toHaveBeenCalledWith('any', blok);
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(resolvedBlock, 'default', 4);
     });
   });
 
   describe('focus', () => {
     it('focuses the first block when atEnd is false', () => {
-      const { caretApi, editor } = createCaretApi();
+      const { caretApi, blok } = createCaretApi();
       const firstBlock = createBlock('first');
 
-      editor.BlockManager.firstBlock = firstBlock;
+      blok.BlockManager.firstBlock = firstBlock;
 
       const result = caretApi.methods.focus();
 
       expect(result).toBe(true);
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(firstBlock, editor.Caret.positions.START, 0);
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(firstBlock, blok.Caret.positions.START, 0);
     });
 
     it('focuses the last block when atEnd is true', () => {
-      const { caretApi, editor } = createCaretApi();
+      const { caretApi, blok } = createCaretApi();
       const lastBlock = createBlock('last');
 
-      editor.BlockManager.lastBlock = lastBlock;
+      blok.BlockManager.lastBlock = lastBlock;
 
       const result = caretApi.methods.focus(true);
 
       expect(result).toBe(true);
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(lastBlock, editor.Caret.positions.END, 0);
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(lastBlock, blok.Caret.positions.END, 0);
     });
   });
 });

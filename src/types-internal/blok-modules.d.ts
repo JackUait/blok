@@ -37,7 +37,7 @@ import Tools from '../components/modules/tools';
 import UI from '../components/modules/ui';
 import ToolsAPI from '../components/modules/api/tools';
 
-export interface EditorModules {
+export interface BlokModules {
   // API Modules
   BlocksAPI: BlocksAPI,
   CaretAPI: CaretAPI,

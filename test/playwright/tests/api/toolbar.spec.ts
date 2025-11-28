@@ -3,20 +3,20 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 const DIST_BUNDLE_PATH = path.resolve(__dirname, '../../../dist/editorjs.umd.js');
 
-const HOLDER_ID = 'editorjs';
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
+const HOLDER_ID = 'blok';
+const TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
 const TOOLBAR_OPENED_SELECTOR = `${TOOLBAR_SELECTOR}[data-blok-opened="true"]`;
-const TOOLBAR_ACTIONS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar-actions"]`;
+const TOOLBAR_ACTIONS_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar-actions"]`;
 const TOOLBAR_ACTIONS_OPENED_SELECTOR = `${TOOLBAR_ACTIONS_SELECTOR}[data-blok-opened="true"]`;
-const TOOLBOX_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbox"]`;
+const TOOLBOX_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbox"]`;
 const TOOLBOX_POPOVER_SELECTOR = `[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-container"]`;
 const BLOCK_TUNES_SELECTOR = `[data-blok-testid="block-tunes-popover"]`;
 const BLOCK_TUNES_POPOVER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"]`;
@@ -27,20 +27,20 @@ const expectToolbarToBeOpened = async (page: Page): Promise<void> => {
 };
 
 /**
- * Wait until the Editor bundle exposed the global constructor
+ * Wait until the Blok bundle exposed the global constructor
  * @param page - Playwright page instance
  */
-const waitForEditorBundle = async (page: Page): Promise<void> => {
+const waitForBlokBundle = async (page: Page): Promise<void> => {
   await page.waitForLoadState('domcontentloaded');
 
-  const editorAlreadyLoaded = await page.evaluate(() => typeof window.EditorJS === 'function');
+  const blokAlreadyLoaded = await page.evaluate(() => typeof window.Blok === 'function');
 
-  if (editorAlreadyLoaded) {
+  if (blokAlreadyLoaded) {
     return;
   }
 
   await page.addScriptTag({ path: DIST_BUNDLE_PATH });
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 };
 
 /**
@@ -52,14 +52,14 @@ const waitForToolbarReady = async (page: Page): Promise<void> => {
 };
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -75,26 +75,26 @@ const resetEditor = async (page: Page): Promise<void> => {
 };
 
 /**
- * Create editor with initial data
+ * Create blok with initial data
  * @param page - The Playwright page object
- * @param data - Initial editor data
+ * @param data - Initial blok data
  */
-const createEditor = async (page: Page, data?: OutputData): Promise<void> => {
-  await waitForEditorBundle(page);
-  await resetEditor(page);
+const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
+  await waitForBlokBundle(page);
+  await resetBlok(page);
   await page.evaluate(
-    async ({ holder, editorData }) => {
-      const editor = new window.EditorJS({
+    async ({ holder, blokData }) => {
+      const blok = new window.Blok({
         holder: holder,
-        ...(editorData ? { data: editorData } : {}),
+        ...(blokData ? { data: blokData } : {}),
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
-      editor.caret.setToFirstBlock();
+      window.blokInstance = blok;
+      await blok.isReady;
+      blok.caret.setToFirstBlock();
     },
     { holder: HOLDER_ID,
-      editorData: data }
+      blokData: data }
   );
   await waitForToolbarReady(page);
 };
@@ -110,29 +110,29 @@ test.describe('api.toolbar', () => {
       text: 'The first block content mock.',
     },
   };
-  const editorDataMock: OutputData = {
+  const blokDataMock: OutputData = {
     blocks: [
       firstBlock,
     ],
   };
 
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await createEditor(page, editorDataMock);
+    await createBlok(page, blokDataMock);
   });
 
   test.describe('*.open()', () => {
     test('should open the toolbar and reveal block actions', async ({ page }) => {
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.open();
+        window.blokInstance.toolbar.open();
       });
 
       await expectToolbarToBeOpened(page);
@@ -143,33 +143,33 @@ test.describe('api.toolbar', () => {
   test.describe('*.close()', () => {
     test('should close toolbar, toolbox and block settings', async ({ page }) => {
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.open();
-        window.editorInstance.toolbar.toggleToolbox(true);
+        window.blokInstance.toolbar.open();
+        window.blokInstance.toolbar.toggleToolbox(true);
       });
 
       await expectToolbarToBeOpened(page);
       await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
 
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleBlockSettings(true);
+        window.blokInstance.toolbar.toggleBlockSettings(true);
       });
 
       await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
 
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.close();
+        window.blokInstance.toolbar.close();
       });
 
       await expect(page.locator(TOOLBAR_OPENED_SELECTOR)).toHaveCount(0);
@@ -182,11 +182,11 @@ test.describe('api.toolbar', () => {
   test.describe('*.toggleBlockSettings()', () => {
     test('should open block settings when opening state is true', async ({ page }) => {
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleBlockSettings(true);
+        window.blokInstance.toolbar.toggleBlockSettings(true);
       });
 
       await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
@@ -194,21 +194,21 @@ test.describe('api.toolbar', () => {
 
     test('should close block settings when opening state is false', async ({ page }) => {
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleBlockSettings(true);
+        window.blokInstance.toolbar.toggleBlockSettings(true);
       });
 
       await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
 
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleBlockSettings(false);
+        window.blokInstance.toolbar.toggleBlockSettings(false);
       });
 
       await expect(page.locator(OPENED_BLOCK_TUNES_SELECTOR)).toHaveCount(0);
@@ -216,21 +216,21 @@ test.describe('api.toolbar', () => {
 
     test('should toggle block settings when opening state is omitted', async ({ page }) => {
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleBlockSettings();
+        window.blokInstance.toolbar.toggleBlockSettings();
       });
 
       await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
 
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleBlockSettings();
+        window.blokInstance.toolbar.toggleBlockSettings();
       });
 
       await expect(page.locator(OPENED_BLOCK_TUNES_SELECTOR)).toHaveCount(0);
@@ -240,11 +240,11 @@ test.describe('api.toolbar', () => {
   test.describe('*.toggleToolbox()', () => {
     test('should open the toolbox', async ({ page }) => {
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleToolbox(true);
+        window.blokInstance.toolbar.toggleToolbox(true);
       });
 
       const toolboxPopover = page.locator(TOOLBOX_POPOVER_SELECTOR);
@@ -254,22 +254,22 @@ test.describe('api.toolbar', () => {
 
     test('should close the toolbox', async ({ page }) => {
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleToolbox(true);
+        window.blokInstance.toolbar.toggleToolbox(true);
       });
 
       // Wait for toolbox to be visible
       await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
 
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleToolbox(false);
+        window.blokInstance.toolbar.toggleToolbox(false);
       });
 
       // Wait for toolbox to be hidden
@@ -278,22 +278,22 @@ test.describe('api.toolbar', () => {
 
     test('should toggle the toolbox', async ({ page }) => {
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleToolbox();
+        window.blokInstance.toolbar.toggleToolbox();
       });
 
       // Wait for toolbox to be visible
       await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
 
       await page.evaluate(() => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.toolbar.toggleToolbox();
+        window.blokInstance.toolbar.toggleToolbox();
       });
 
       // Wait for toolbox to be hidden

@@ -2,26 +2,26 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '../../../../../types';
+import type Blok from '../../../../../types';
 import type { OutputData } from '../../../../../types';
-import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable="true"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable="true"]`;
 
 const getParagraphByIndex = (page: Page, index: number): Locator => {
   return page.locator(`:nth-match(${PARAGRAPH_SELECTOR}, ${index + 1})`);
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -36,33 +36,33 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
+const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
       holder: holder,
-      data: { blocks: editorBlocks },
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, {
     holder: HOLDER_ID,
     blocks,
   });
 };
 
-const createParagraphEditor = async (page: Page, textBlocks: string[]): Promise<void> => {
+const createParagraphBlok = async (page: Page, textBlocks: string[]): Promise<void> => {
   const blocks: OutputData['blocks'] = textBlocks.map((text) => ({
     type: 'paragraph',
     data: { text },
   }));
 
-  await createEditorWithBlocks(page, blocks);
+  await createBlokWithBlocks(page, blocks);
 };
 
-const createEditorWithDelimiter = async (page: Page): Promise<void> => {
-  await resetEditor(page);
+const createBlokWithDelimiter = async (page: Page): Promise<void> => {
+  await resetBlok(page);
   await page.evaluate(async ({ holder }) => {
     /**
      *
@@ -95,7 +95,7 @@ const createEditorWithDelimiter = async (page: Page): Promise<void> => {
       }
     }
 
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
       tools: {
         delimiter: ContentlessToolMock,
@@ -125,8 +125,8 @@ const createEditorWithDelimiter = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID });
 };
 
@@ -171,7 +171,7 @@ const waitForCaretInBlock = async (page: Page, locator: Locator, expectedBlockIn
     }
 
     const currentIndex = await page.evaluate(() => {
-      return window.editorInstance?.blocks.getCurrentBlockIndex?.() ?? -1;
+      return window.blokInstance?.blocks.getCurrentBlockIndex?.() ?? -1;
     });
 
     return currentIndex;
@@ -200,17 +200,17 @@ const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
 
 test.describe('arrowLeft keydown', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test.describe('starting whitespaces handling', () => {
     test('should move caret over visible non-breaking space before navigating to previous block', async ({ page }) => {
-      await createParagraphEditor(page, ['1', '&nbsp;2']);
+      await createParagraphBlok(page, ['1', '&nbsp;2']);
 
       const lastParagraph = getParagraphByIndex(page, 1);
 
@@ -238,7 +238,7 @@ test.describe('arrowLeft keydown', () => {
     });
 
     test('should ignore invisible spaces before caret when moving to previous block', async ({ page }) => {
-      await createParagraphEditor(page, ['1', ' 2']);
+      await createParagraphBlok(page, ['1', ' 2']);
 
       const lastParagraph = getParagraphByIndex(page, 1);
 
@@ -257,7 +257,7 @@ test.describe('arrowLeft keydown', () => {
     });
 
     test('should ignore empty tags before caret when moving to previous block', async ({ page }) => {
-      await createParagraphEditor(page, ['1', '<b></b>2']);
+      await createParagraphBlok(page, ['1', '<b></b>2']);
 
       const lastParagraph = getParagraphByIndex(page, 1);
 
@@ -276,7 +276,7 @@ test.describe('arrowLeft keydown', () => {
     });
 
     test('should move caret over non-breaking space that follows empty tag before navigating to previous block', async ({ page }) => {
-      await createParagraphEditor(page, ['1', '<b></b>&nbsp;2']);
+      await createParagraphBlok(page, ['1', '<b></b>&nbsp;2']);
 
       const lastParagraph = getParagraphByIndex(page, 1);
 
@@ -296,7 +296,7 @@ test.describe('arrowLeft keydown', () => {
     });
 
     test('should handle non-breaking space placed before empty tag when moving to previous block', async ({ page }) => {
-      await createParagraphEditor(page, ['1', '<b></b>&nbsp;2']);
+      await createParagraphBlok(page, ['1', '<b></b>&nbsp;2']);
 
       const lastParagraph = getParagraphByIndex(page, 1);
 
@@ -316,7 +316,7 @@ test.describe('arrowLeft keydown', () => {
     });
 
     test('should move caret over non-breaking and regular spaces before navigating to previous block', async ({ page }) => {
-      await createParagraphEditor(page, ['1', ' &nbsp;2']);
+      await createParagraphBlok(page, ['1', ' &nbsp;2']);
 
       const lastParagraph = getParagraphByIndex(page, 1);
 
@@ -337,16 +337,16 @@ test.describe('arrowLeft keydown', () => {
   });
 
   test('should move caret to previous block when focused block is contentless', async ({ page }) => {
-    await createEditorWithDelimiter(page);
+    await createBlokWithDelimiter(page);
 
     // Focus on third block's input and position caret at start
-    const thirdBlockInput = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-id="block3"] [contenteditable="true"]`);
+    const thirdBlockInput = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-id="block3"] [contenteditable="true"]`);
 
     await thirdBlockInput.focus();
 
     // Use Caret API to ensure we're at the start
     await page.evaluate(() => {
-      const block = window.editorInstance?.blocks.getBlockByIndex(2);
+      const block = window.blokInstance?.blocks.getBlockByIndex(2);
 
       if (block?.holder) {
         const input = block.holder.querySelector('[contenteditable="true"]');
@@ -366,7 +366,7 @@ test.describe('arrowLeft keydown', () => {
 
     // Wait for caret to be in the third block
     await expect.poll(async () => {
-      return await page.evaluate(() => window.editorInstance?.blocks.getCurrentBlockIndex?.() ?? -1);
+      return await page.evaluate(() => window.blokInstance?.blocks.getCurrentBlockIndex?.() ?? -1);
     }).toBe(2);
 
     // Move left to cross block boundary to contentless block
@@ -374,7 +374,7 @@ test.describe('arrowLeft keydown', () => {
 
     // Wait for the contentless block to become current (index 1)
     await expect.poll(async () => {
-      return await page.evaluate(() => window.editorInstance?.blocks.getCurrentBlockIndex?.() ?? -1);
+      return await page.evaluate(() => window.blokInstance?.blocks.getCurrentBlockIndex?.() ?? -1);
     }, {
       message: 'Expected to navigate to contentless block (index 1)',
     }).toBe(1);
@@ -394,8 +394,8 @@ test.describe('arrowLeft keydown', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }
 

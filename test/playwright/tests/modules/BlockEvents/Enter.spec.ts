@@ -2,23 +2,23 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '../../../../../types';
+import type Blok from '../../../../../types';
 import type { OutputData } from '../../../../../types';
-import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -33,21 +33,21 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createParagraphEditor = async (page: Page, paragraphs: string[]): Promise<void> => {
+const createParagraphBlok = async (page: Page, paragraphs: string[]): Promise<void> => {
   const blocks: OutputData['blocks'] = paragraphs.map((text) => ({
     type: 'paragraph',
     data: { text },
   }));
 
-  await resetEditor(page);
-  await page.evaluate(async ({ holder, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
       holder: holder,
-      data: { blocks: editorBlocks },
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID,
     blocks });
 };
@@ -79,13 +79,13 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
   }, text);
 };
 
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return page.evaluate(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance is not initialized');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance is not initialized');
     }
 
-    return window.editorInstance.save();
+    return window.blokInstance.save();
   });
 };
 
@@ -101,16 +101,16 @@ const getLastItem = <T>(items: T[]): T => {
 
 test.describe('enter keydown', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should split block and remove selected fragment when part of text is selected', async ({ page }) => {
-    await createParagraphEditor(page, [ 'The block with some text' ]);
+    await createParagraphBlok(page, [ 'The block with some text' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
@@ -118,7 +118,7 @@ test.describe('enter keydown', () => {
     await selectText(paragraph, 'with so');
     await page.keyboard.press('Enter');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(2);
     expect((blocks[0].data as { text: string }).text).toBe('The block ');
@@ -126,7 +126,7 @@ test.describe('enter keydown', () => {
   });
 
   test('should place caret into new block when Enter pressed at block end', async ({ page }) => {
-    await createParagraphEditor(page, [ 'The block with some text' ]);
+    await createParagraphBlok(page, [ 'The block with some text' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
@@ -190,12 +190,12 @@ test.describe('enter keydown', () => {
       }
     }`;
 
-    await resetEditor(page);
+    await resetBlok(page);
 
     await page.evaluate(async ({ holder, toolSource }) => {
       const PreventDefaultTool = new Function(`return (${toolSource});`)();
 
-      const editor = new window.EditorJS({
+      const blok = new window.Blok({
         holder: holder,
         tools: {
           preventDefaultTool: {
@@ -214,8 +214,8 @@ test.describe('enter keydown', () => {
         },
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     }, { holder: HOLDER_ID,
       toolSource: PREVENT_DEFAULT_TOOL_SOURCE });
 
@@ -231,7 +231,7 @@ test.describe('enter keydown', () => {
     // Wait for potential reaction
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
   });
@@ -239,8 +239,8 @@ test.describe('enter keydown', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }
 

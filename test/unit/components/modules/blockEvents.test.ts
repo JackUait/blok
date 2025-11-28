@@ -7,9 +7,9 @@ vi.mock('@editorjs/caret', () => ({
 import { focus } from '@editorjs/caret';
 import BlockEvents from '../../../../src/components/modules/blockEvents';
 import EventsDispatcher from '../../../../src/components/utils/events';
-import type { EditorModules } from '../../../../src/types-internal/editor-modules';
-import type { EditorConfig } from '../../../../types';
-import type { EditorEventMap } from '../../../../src/components/events';
+import type { BlokModules } from '../../../../src/types-internal/blok-modules';
+import type { BlokConfig } from '../../../../types';
+import type { BlokEventMap } from '../../../../src/components/events';
 import type Block from '../../../../src/components/block';
 import SelectionUtils from '../../../../src/components/selection';
 import * as caretUtils from '../../../../src/components/utils/caret';
@@ -28,15 +28,15 @@ const KEY_CODE_TO_KEY_MAP: Record<number, string> = {
   [keyCodes.UP]: 'ArrowUp',
 };
 
-const createBlockEvents = (overrides: Partial<EditorModules> = {}): BlockEvents => {
+const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents => {
   const blockEvents = new BlockEvents({
-    config: {} as EditorConfig,
-    eventsDispatcher: new EventsDispatcher<EditorEventMap>(),
+    config: {} as BlokConfig,
+    eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 
   const wrapper = document.createElement('div');
 
-  const defaults: Partial<EditorModules> = {
+  const defaults: Partial<BlokModules> = {
     Toolbar: {
       opened: false,
       close: vi.fn(),
@@ -44,17 +44,17 @@ const createBlockEvents = (overrides: Partial<EditorModules> = {}): BlockEvents 
       toolbox: {
         open: vi.fn(),
       },
-    } as unknown as EditorModules['Toolbar'],
+    } as unknown as BlokModules['Toolbar'],
     BlockSelection: {
       anyBlockSelected: false,
       clearSelection: vi.fn(),
       copySelectedBlocks: vi.fn(() => Promise.resolve()),
       selectedBlocks: [],
-    } as unknown as EditorModules['BlockSelection'],
+    } as unknown as BlokModules['BlockSelection'],
     InlineToolbar: {
       opened: false,
       tryToShow: vi.fn(async () => undefined),
-    } as unknown as EditorModules['InlineToolbar'],
+    } as unknown as BlokModules['InlineToolbar'],
     BlockManager: {
       currentBlock: undefined,
       currentBlockIndex: 0,
@@ -65,7 +65,7 @@ const createBlockEvents = (overrides: Partial<EditorModules> = {}): BlockEvents 
       removeBlock: vi.fn(),
       removeSelectedBlocks: vi.fn(),
       split: vi.fn(),
-    } as unknown as EditorModules['BlockManager'],
+    } as unknown as BlokModules['BlockManager'],
     Caret: {
       navigateNext: vi.fn(() => false),
       navigatePrevious: vi.fn(() => false),
@@ -75,7 +75,7 @@ const createBlockEvents = (overrides: Partial<EditorModules> = {}): BlockEvents 
         START: 'start-position',
         END: 'end-position',
       },
-    } as unknown as EditorModules['Caret'],
+    } as unknown as BlokModules['Caret'],
     UI: {
       nodes: {
         wrapper,
@@ -84,19 +84,19 @@ const createBlockEvents = (overrides: Partial<EditorModules> = {}): BlockEvents 
       someFlipperButtonFocused: false,
       checkEmptiness: vi.fn(),
       closeAllToolbars: vi.fn(),
-    } as unknown as EditorModules['UI'],
+    } as unknown as BlokModules['UI'],
     BlockSettings: {
       opened: false,
       open: vi.fn(),
-    } as unknown as EditorModules['BlockSettings'],
+    } as unknown as BlokModules['BlockSettings'],
     CrossBlockSelection: {
       toggleBlockSelectedState: vi.fn(),
-    } as unknown as EditorModules['CrossBlockSelection'],
+    } as unknown as BlokModules['CrossBlockSelection'],
   };
 
-  const mergedState: Partial<EditorModules> = { ...defaults };
+  const mergedState: Partial<BlokModules> = { ...defaults };
 
-  for (const [moduleName, moduleOverrides] of Object.entries(overrides) as Array<[keyof EditorModules, unknown]>) {
+  for (const [moduleName, moduleOverrides] of Object.entries(overrides) as Array<[keyof BlokModules, unknown]>) {
     const defaultModule = defaults[moduleName];
 
     if (
@@ -106,16 +106,16 @@ const createBlockEvents = (overrides: Partial<EditorModules> = {}): BlockEvents 
       moduleOverrides !== null &&
       typeof moduleOverrides === 'object'
     ) {
-      (mergedState as Record<keyof EditorModules, EditorModules[keyof EditorModules]>)[moduleName] = {
+      (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = {
         ...(defaultModule as object),
         ...(moduleOverrides as object),
-      } as EditorModules[typeof moduleName];
+      } as BlokModules[typeof moduleName];
     } else if (moduleOverrides !== undefined) {
-      (mergedState as Record<keyof EditorModules, EditorModules[keyof EditorModules]>)[moduleName] = moduleOverrides as EditorModules[typeof moduleName];
+      (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = moduleOverrides as BlokModules[typeof moduleName];
     }
   }
 
-  blockEvents.state = mergedState as EditorModules;
+  blockEvents.state = mergedState as BlokModules;
 
   return blockEvents;
 };
@@ -163,7 +163,7 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         UI: {
           checkEmptiness,
-        } as unknown as EditorModules['UI'],
+        } as unknown as BlokModules['UI'],
       });
 
       blockEvents.keyup(createKeyboardEvent({ shiftKey: false }));
@@ -176,7 +176,7 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         UI: {
           checkEmptiness,
-        } as unknown as EditorModules['UI'],
+        } as unknown as BlokModules['UI'],
       });
 
       blockEvents.keyup(createKeyboardEvent({ shiftKey: true }));
@@ -193,7 +193,7 @@ describe('BlockEvents', () => {
         BlockSelection: {
           anyBlockSelected: true,
           copySelectedBlocks,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
       const event = new Event('copy') as ClipboardEvent;
 
@@ -208,7 +208,7 @@ describe('BlockEvents', () => {
         BlockSelection: {
           anyBlockSelected: false,
           copySelectedBlocks,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
 
       blockEvents.handleCommandC(new Event('copy') as ClipboardEvent);
@@ -230,17 +230,17 @@ describe('BlockEvents', () => {
           anyBlockSelected: true,
           copySelectedBlocks,
           clearSelection,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
         BlockManager: {
           removeSelectedBlocks,
           insertDefaultBlockAtIndex,
-        } as unknown as EditorModules['BlockManager'],
+        } as unknown as BlokModules['BlockManager'],
         Caret: {
           setToBlock,
           positions: {
             START: 'start-position',
           },
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
       });
       const event = new Event('cut') as ClipboardEvent;
 
@@ -261,7 +261,7 @@ describe('BlockEvents', () => {
         BlockSelection: {
           anyBlockSelected: false,
           copySelectedBlocks,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
 
       blockEvents.handleCommandX(new Event('cut') as ClipboardEvent);
@@ -350,10 +350,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         InlineToolbar: {
           opened: true,
-        } as unknown as EditorModules['InlineToolbar'],
+        } as unknown as BlokModules['InlineToolbar'],
         Caret: {
           navigateNext,
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.TAB });
 
@@ -368,7 +368,7 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Caret: {
           navigateNext,
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.TAB });
 
@@ -383,7 +383,7 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Caret: {
           navigatePrevious,
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.TAB,
         shiftKey: true });
@@ -396,12 +396,12 @@ describe('BlockEvents', () => {
   });
 
   describe('slashPressed', () => {
-    it('ignores events fired outside the editor wrapper', () => {
+    it('ignores events fired outside the blok wrapper', () => {
       const insertContentAtCaretPosition = vi.fn();
       const blockEvents = createBlockEvents({
         Caret: {
           insertContentAtCaretPosition,
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
       });
       const event = createKeyboardEvent({
         keyCode: keyCodes.SLASH,
@@ -415,7 +415,7 @@ describe('BlockEvents', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('opens toolbox for empty block inside editor', () => {
+    it('opens toolbox for empty block inside blok', () => {
       const insertContentAtCaretPosition = vi.fn();
       const currentBlock = {
         isEmpty: true,
@@ -428,15 +428,15 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Caret: {
           insertContentAtCaretPosition,
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
         BlockManager: {
           currentBlock,
-        } as unknown as EditorModules['BlockManager'],
+        } as unknown as BlokModules['BlockManager'],
         UI: {
           nodes: {
             wrapper,
           },
-        } as unknown as EditorModules['UI'],
+        } as unknown as BlokModules['UI'],
       });
       const activateSpy = vi
         .spyOn(blockEvents as unknown as { activateToolbox: () => void }, 'activateToolbox')
@@ -469,15 +469,15 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Caret: {
           insertContentAtCaretPosition,
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
         BlockManager: {
           currentBlock,
-        } as unknown as EditorModules['BlockManager'],
+        } as unknown as BlokModules['BlockManager'],
         UI: {
           nodes: {
             wrapper,
           },
-        } as unknown as EditorModules['UI'],
+        } as unknown as BlokModules['UI'],
       });
       const activateSpy = vi
         .spyOn(blockEvents as unknown as { activateToolbox: () => void }, 'activateToolbox')
@@ -509,10 +509,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Toolbar: {
           moveAndOpen,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockManager: {
           currentBlock,
-        } as unknown as EditorModules['BlockManager'],
+        } as unknown as BlokModules['BlockManager'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.ENTER });
 
@@ -540,19 +540,19 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Toolbar: {
           moveAndOpen,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockManager: {
           currentBlock,
           currentBlockIndex: 2,
           insertDefaultBlockAtIndex,
-        } as unknown as EditorModules['BlockManager'],
+        } as unknown as BlokModules['BlockManager'],
         Caret: {
           setToBlock,
           positions: {
             START: 'start-position',
             END: 'end-position',
           },
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.ENTER });
 
@@ -595,11 +595,11 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Toolbar: {
           close: toolbarClose,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockManager: {
           currentBlock,
           previousBlock,
-        } as unknown as EditorModules['BlockManager'],
+        } as unknown as BlokModules['BlockManager'],
       });
       const mergeSpy = vi
         .spyOn(blockEvents as unknown as { mergeBlocks: (target: Block, source: Block) => void }, 'mergeBlocks')
@@ -633,11 +633,11 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Toolbar: {
           close: toolbarClose,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockManager: {
           currentBlock,
           nextBlock,
-        } as unknown as EditorModules['BlockManager'],
+        } as unknown as BlokModules['BlockManager'],
       });
       const mergeSpy = vi
         .spyOn(blockEvents as unknown as { mergeBlocks: (target: Block, source: Block) => void }, 'mergeBlocks')
@@ -658,10 +658,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         UI: {
           someToolbarOpened: true,
-        } as unknown as EditorModules['UI'],
+        } as unknown as BlokModules['UI'],
         Toolbar: {
           close: toolbarClose,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.DOWN });
 
@@ -676,10 +676,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         BlockSelection: {
           anyBlockSelected: true,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
         CrossBlockSelection: {
           toggleBlockSelectedState,
-        } as unknown as EditorModules['CrossBlockSelection'],
+        } as unknown as BlokModules['CrossBlockSelection'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.DOWN,
         shiftKey: true });
@@ -697,13 +697,13 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Toolbar: {
           close: toolbarClose,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         Caret: {
           navigateNext,
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
         BlockSelection: {
           clearSelection,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.DOWN });
 
@@ -723,7 +723,7 @@ describe('BlockEvents', () => {
         UI: {
           someToolbarOpened: true,
           closeAllToolbars,
-        } as unknown as EditorModules['UI'],
+        } as unknown as BlokModules['UI'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.LEFT });
 
@@ -738,10 +738,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         BlockSelection: {
           anyBlockSelected: true,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
         CrossBlockSelection: {
           toggleBlockSelectedState,
-        } as unknown as EditorModules['CrossBlockSelection'],
+        } as unknown as BlokModules['CrossBlockSelection'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.UP,
         shiftKey: true });
@@ -759,13 +759,13 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Toolbar: {
           close: toolbarClose,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         Caret: {
           navigatePrevious,
-        } as unknown as EditorModules['Caret'],
+        } as unknown as BlokModules['Caret'],
         BlockSelection: {
           clearSelection,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
       const event = createKeyboardEvent({ keyCode: keyCodes.UP });
 
@@ -783,7 +783,7 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         BlockSelection: {
           selectedBlocks: [ {} ],
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
       const activateSpy = vi
         .spyOn(blockEvents as unknown as { activateBlockSettings: () => void }, 'activateBlockSettings')
@@ -798,7 +798,7 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         BlockSelection: {
           selectedBlocks: [ {}, {} ],
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
       const activateSpy = vi
         .spyOn(blockEvents as unknown as { activateBlockSettings: () => void }, 'activateBlockSettings')
@@ -811,22 +811,22 @@ describe('BlockEvents', () => {
   });
 
   describe('needToolbarClosing', () => {
-    const createToolbarMocks = (): Partial<EditorModules> => ({
+    const createToolbarMocks = (): Partial<BlokModules> => ({
       Toolbar: {
         toolbox: {
           opened: false,
         },
-      } as unknown as EditorModules['Toolbar'],
+      } as unknown as BlokModules['Toolbar'],
       BlockSettings: {
         opened: false,
-      } as unknown as EditorModules['BlockSettings'],
+      } as unknown as BlokModules['BlockSettings'],
       InlineToolbar: {
         opened: false,
-      } as unknown as EditorModules['InlineToolbar'],
+      } as unknown as BlokModules['InlineToolbar'],
     });
 
     it('returns false when Shift is pressed', () => {
-      const blockEvents = createBlockEvents(createToolbarMocks() as Partial<EditorModules>);
+      const blockEvents = createBlockEvents(createToolbarMocks() as Partial<BlokModules>);
       const event = createKeyboardEvent({ shiftKey: true });
 
       const result = (blockEvents as unknown as { needToolbarClosing: (event: KeyboardEvent) => boolean })
@@ -836,7 +836,7 @@ describe('BlockEvents', () => {
     });
 
     it('returns false when Tab is pressed', () => {
-      const blockEvents = createBlockEvents(createToolbarMocks() as Partial<EditorModules>);
+      const blockEvents = createBlockEvents(createToolbarMocks() as Partial<BlokModules>);
       const event = createKeyboardEvent({ keyCode: 9 });
 
       const result = (blockEvents as unknown as { needToolbarClosing: (event: KeyboardEvent) => boolean })
@@ -858,7 +858,7 @@ describe('BlockEvents', () => {
         InlineToolbar: {
           opened: false,
         },
-      } as Partial<EditorModules>);
+      } as Partial<BlokModules>);
       const event = createKeyboardEvent({ keyCode: 13 });
 
       const result = (blockEvents as unknown as { needToolbarClosing: (event: KeyboardEvent) => boolean })
@@ -868,7 +868,7 @@ describe('BlockEvents', () => {
     });
 
     it('returns true when none of the skip conditions met', () => {
-      const blockEvents = createBlockEvents(createToolbarMocks() as Partial<EditorModules>);
+      const blockEvents = createBlockEvents(createToolbarMocks() as Partial<BlokModules>);
       const event = createKeyboardEvent({ keyCode: 65 });
 
       const result = (blockEvents as unknown as { needToolbarClosing: (event: KeyboardEvent) => boolean })
@@ -885,10 +885,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Toolbar: {
           close,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockSelection: {
           clearSelection,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
       const event = createKeyboardEvent({ keyCode: 65 });
 
@@ -907,10 +907,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Toolbar: {
           close,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockSelection: {
           clearSelection,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
       const event = createKeyboardEvent({ keyCode: 65,
         ctrlKey: true });
@@ -930,10 +930,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         Toolbar: {
           close,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockSelection: {
           clearSelection,
-        } as unknown as EditorModules['BlockSelection'],
+        } as unknown as BlokModules['BlockSelection'],
       });
 
       vi.spyOn(blockEvents as unknown as { needToolbarClosing: (event: KeyboardEvent) => boolean }, 'needToolbarClosing')
@@ -958,7 +958,7 @@ describe('BlockEvents', () => {
         },
       };
       const blockEvents = createBlockEvents({
-        Toolbar: toolbar as unknown as EditorModules['Toolbar'],
+        Toolbar: toolbar as unknown as BlokModules['Toolbar'],
       });
 
       (blockEvents as unknown as { activateToolbox: () => void }).activateToolbox();
@@ -978,7 +978,7 @@ describe('BlockEvents', () => {
         },
       };
       const blockEvents = createBlockEvents({
-        Toolbar: toolbar as unknown as EditorModules['Toolbar'],
+        Toolbar: toolbar as unknown as BlokModules['Toolbar'],
       });
 
       (blockEvents as unknown as { activateToolbox: () => void }).activateToolbox();
@@ -996,11 +996,11 @@ describe('BlockEvents', () => {
         Toolbar: {
           opened: false,
           moveAndOpen,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockSettings: {
           opened: false,
           open,
-        } as unknown as EditorModules['BlockSettings'],
+        } as unknown as BlokModules['BlockSettings'],
       });
 
       (blockEvents as unknown as { activateBlockSettings: () => void }).activateBlockSettings();
@@ -1016,11 +1016,11 @@ describe('BlockEvents', () => {
         Toolbar: {
           opened: true,
           moveAndOpen,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockSettings: {
           opened: false,
           open,
-        } as unknown as EditorModules['BlockSettings'],
+        } as unknown as BlokModules['BlockSettings'],
       });
 
       (blockEvents as unknown as { activateBlockSettings: () => void }).activateBlockSettings();
@@ -1036,11 +1036,11 @@ describe('BlockEvents', () => {
         Toolbar: {
           opened: true,
           moveAndOpen,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
         BlockSettings: {
           opened: true,
           open,
-        } as unknown as EditorModules['BlockSettings'],
+        } as unknown as BlokModules['BlockSettings'],
       });
 
       (blockEvents as unknown as { activateBlockSettings: () => void }).activateBlockSettings();
@@ -1060,10 +1060,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         BlockManager: {
           mergeBlocks: mergeBlocksFn,
-        } as unknown as EditorModules['BlockManager'],
+        } as unknown as BlokModules['BlockManager'],
         Toolbar: {
           close: closeToolbar,
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
       });
 
       (blockEvents as unknown as { mergeBlocks: (target: Block, source: Block) => void }).mergeBlocks(
@@ -1083,10 +1083,10 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         BlockManager: {
           mergeBlocks: mergeBlocksFn,
-        } as unknown as EditorModules['BlockManager'],
+        } as unknown as BlokModules['BlockManager'],
         Toolbar: {
           close: vi.fn(),
-        } as unknown as EditorModules['Toolbar'],
+        } as unknown as BlokModules['Toolbar'],
       });
 
       (blockEvents as unknown as { mergeBlocks: (target: Block, source: Block) => void }).mergeBlocks(

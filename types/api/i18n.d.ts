@@ -1,5 +1,5 @@
 /**
- * Describes Editor`s I18n API
+ * Describes Blok`s I18n API
  */
 export interface I18n {
   /**

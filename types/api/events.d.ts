@@ -1,5 +1,5 @@
 /**
- * Describes Editor`s events API
+ * Describes Blok`s events API
  */
 export interface Events {
   /**

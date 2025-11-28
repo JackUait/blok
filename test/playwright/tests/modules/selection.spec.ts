@@ -3,24 +3,24 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 const FAKE_BACKGROUND_SELECTOR = '[data-blok-testid="fake-background"]';
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
@@ -53,11 +53,11 @@ const getParagraphByIndex = (page: Page, index: number): Locator => {
   return page.locator(getParagraphSelectorByIndex(index));
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -74,7 +74,7 @@ const resetEditor = async (page: Page): Promise<void> => {
   });
 };
 
-const createEditorWithBlocks = async (
+const createBlokWithBlocks = async (
   page: Page,
   blocks: OutputData['blocks'],
   tools: ToolDefinition[] = []
@@ -94,10 +94,10 @@ const createEditorWithBlocks = async (
       ...tools,
     ];
 
-  await resetEditor(page);
+  await resetBlok(page);
   await page.evaluate(async ({
     holder,
-    blocks: editorBlocks,
+    blocks: blokBlocks,
     serializedTools: toolConfigs,
   }: {
     holder: string;
@@ -133,14 +133,14 @@ const createEditorWithBlocks = async (
       return accumulator;
     }, {});
 
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
-      data: { blocks: editorBlocks },
+      data: { blocks: blokBlocks },
       ...(toolConfigs.length > 0 ? { tools: revivedTools } : {}),
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, {
     holder: HOLDER_ID,
     blocks,
@@ -322,7 +322,7 @@ const getElementCenter = async (locator: Locator): Promise<{ x: number; y: numbe
 
 test.describe('modules/selection', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -330,7 +330,7 @@ test.describe('modules/selection', () => {
   });
 
   test('selects all blocks via CMD/CTRL + A', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -367,7 +367,7 @@ test.describe('modules/selection', () => {
   });
 
   test('cross-block selection selects contiguous blocks when dragging across content', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -414,7 +414,7 @@ test.describe('modules/selection', () => {
   test('selection API exposes save/restore, expandToTag, fake background helpers', async ({ page }) => {
     const text = 'Important <strong>bold</strong> text inside paragraph';
 
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -430,17 +430,17 @@ test.describe('modules/selection', () => {
     const paragraphText = (await paragraph.innerText()).trim();
 
     const apiResults = await page.evaluate(({ fakeBackgroundSelector }) => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor instance is not ready');
+      if (!blok) {
+        throw new Error('Blok instance is not ready');
       }
 
       const selection = window.getSelection();
 
       const savedText = selection?.toString() ?? '';
 
-      editor.selection.save();
+      blok.selection.save();
 
       selection?.removeAllRanges();
 
@@ -455,21 +455,21 @@ test.describe('modules/selection', () => {
         selection?.addRange(range);
       }
 
-      editor.selection.restore();
+      blok.selection.restore();
 
       const restored = window.getSelection()?.toString() ?? '';
-      const strongTag = editor.selection.findParentTag('STRONG');
+      const strongTag = blok.selection.findParentTag('STRONG');
 
       if (paragraphEl instanceof HTMLElement) {
-        editor.selection.expandToTag(paragraphEl);
+        blok.selection.expandToTag(paragraphEl);
       }
 
       const expanded = window.getSelection()?.toString() ?? '';
 
-      editor.selection.setFakeBackground();
+      blok.selection.setFakeBackground();
       const fakeWrappersCount = document.querySelectorAll(fakeBackgroundSelector).length;
 
-      editor.selection.removeFakeBackground();
+      blok.selection.removeFakeBackground();
       const fakeWrappersAfterRemoval = document.querySelectorAll(fakeBackgroundSelector).length;
 
       return {
@@ -491,7 +491,7 @@ test.describe('modules/selection', () => {
   });
 
   test('cross-block selection deletes multiple blocks with Backspace', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -538,13 +538,13 @@ test.describe('modules/selection', () => {
     await expect(blocks).toHaveCount(2);
 
     const savedData = await page.evaluate<OutputData>(async () => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor instance is not ready');
+      if (!blok) {
+        throw new Error('Blok instance is not ready');
       }
 
-      return editor.save();
+      return blok.save();
     });
 
     expect(savedData.blocks).toHaveLength(2);
@@ -558,7 +558,7 @@ test.describe('modules/selection', () => {
   });
 
   test('cross-block selection spans different block types with shift navigation', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {

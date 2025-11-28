@@ -13,12 +13,12 @@ export interface BaseToolAdapter<Type extends ToolType, ToolClass extends Tool> 
   type: Type;
 
   /**
-   * Tool name specified in EditorJS config
+   * Tool name specified in Blok config
    */
   name: string;
 
   /**
-   * Flag show is current Tool internal (bundled with EditorJS core) or not
+   * Flag show is current Tool internal (bundled with Blok core) or not
    */
   readonly isInternal: boolean;
 

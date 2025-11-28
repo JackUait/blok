@@ -3,22 +3,22 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import type Blok from '@/types';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BlockChanged } from '../../../../src/components/events/BlockChanged';
 import { BlockHovered } from '../../../../src/components/events/BlockHovered';
 import { RedactorDomChanged } from '../../../../src/components/events/RedactorDomChanged';
 import { FakeCursorAboutToBeToggled } from '../../../../src/components/events/FakeCursorAboutToBeToggled';
 import { FakeCursorHaveBeenSet } from '../../../../src/components/events/FakeCursorHaveBeenSet';
-import { EditorMobileLayoutToggled } from '../../../../src/components/events/EditorMobileLayoutToggled';
+import { BlokMobileLayoutToggled } from '../../../../src/components/events/BlokMobileLayoutToggled';
 import { BlockSettingsOpened } from '../../../../src/components/events/BlockSettingsOpened';
 import { BlockSettingsClosed } from '../../../../src/components/events/BlockSettingsClosed';
-import type { EditorEventMap } from '../../../../src/components/events';
+import type { BlokEventMap } from '../../../../src/components/events';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
@@ -26,10 +26,10 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
+const HOLDER_ID = 'blok';
 
 type EventTestCase = {
-  name: keyof EditorEventMap;
+  name: keyof BlokEventMap;
   createPayload: () => unknown;
 };
 
@@ -47,7 +47,7 @@ const EVENT_TEST_CASES: EventTestCase[] = [
           index: 0,
         },
       },
-    }) as unknown as EditorEventMap[typeof BlockChanged],
+    }) as unknown as BlokEventMap[typeof BlockChanged],
   },
   {
     name: BlockHovered,
@@ -55,31 +55,31 @@ const EVENT_TEST_CASES: EventTestCase[] = [
       block: {
         id: 'hovered-block',
       },
-    }) as unknown as EditorEventMap[typeof BlockHovered],
+    }) as unknown as BlokEventMap[typeof BlockHovered],
   },
   {
     name: RedactorDomChanged,
     createPayload: () => ({
       mutations: [],
-    }) as EditorEventMap[typeof RedactorDomChanged],
+    }) as BlokEventMap[typeof RedactorDomChanged],
   },
   {
     name: FakeCursorAboutToBeToggled,
     createPayload: () => ({
       state: true,
-    }) as EditorEventMap[typeof FakeCursorAboutToBeToggled],
+    }) as BlokEventMap[typeof FakeCursorAboutToBeToggled],
   },
   {
     name: FakeCursorHaveBeenSet,
     createPayload: () => ({
       state: false,
-    }) as EditorEventMap[typeof FakeCursorHaveBeenSet],
+    }) as BlokEventMap[typeof FakeCursorHaveBeenSet],
   },
   {
-    name: EditorMobileLayoutToggled,
+    name: BlokMobileLayoutToggled,
     createPayload: () => ({
       isEnabled: true,
-    }) as EditorEventMap[typeof EditorMobileLayoutToggled],
+    }) as BlokEventMap[typeof BlokMobileLayoutToggled],
   },
   {
     name: BlockSettingsOpened,
@@ -91,11 +91,11 @@ const EVENT_TEST_CASES: EventTestCase[] = [
   },
 ];
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -110,29 +110,28 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page): Promise<void> => {
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+const createBlok = async (page: Page): Promise<void> => {
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(async ({ holder }) => {
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
     });
 
-    window.editorInstance = editor;
-
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID });
 };
 
 const subscribeEmitAndUnsubscribe = async (
   page: Page,
-  eventName: keyof EditorEventMap,
+  eventName: keyof BlokEventMap,
   payload: unknown
 ): Promise<unknown[]> => {
   return await page.evaluate(({ name, data }) => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
     const received: unknown[] = [];
@@ -140,10 +139,10 @@ const subscribeEmitAndUnsubscribe = async (
       received.push(eventPayload);
     };
 
-    window.editorInstance.on(name, handler);
-    window.editorInstance.emit(name, data);
-    window.editorInstance.off(name, handler);
-    window.editorInstance.emit(name, data);
+    window.blokInstance.on(name, handler);
+    window.blokInstance.emit(name, data);
+    window.blokInstance.off(name, handler);
+    window.blokInstance.emit(name, data);
 
     return received;
   }, {
@@ -158,13 +157,13 @@ const TEST_PAGE_VISIT = async (page: Page): Promise<void> => {
 
 const eventsDispatcherExists = async (page: Page): Promise<boolean> => {
   return await page.evaluate(() => {
-    return Boolean(window.editorInstance && 'eventsDispatcher' in window.editorInstance);
+    return Boolean(window.blokInstance && 'eventsDispatcher' in window.blokInstance);
   });
 };
 
 test.describe('api.events', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -172,7 +171,7 @@ test.describe('api.events', () => {
   });
 
   test('should expose events dispatcher via core API', async ({ page }) => {
-    await createEditor(page);
+    await createBlok(page);
 
     const dispatcherExists = await eventsDispatcherExists(page);
 
@@ -182,7 +181,7 @@ test.describe('api.events', () => {
   test.describe('subscription lifecycle', () => {
     for (const { name, createPayload } of EVENT_TEST_CASES) {
       test(`should subscribe, emit and unsubscribe for event "${name}"`, async ({ page }) => {
-        await createEditor(page);
+        await createBlok(page);
         const payload = createPayload();
 
         const receivedPayloads = await subscribeEmitAndUnsubscribe(page, name, payload);

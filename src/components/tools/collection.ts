@@ -7,7 +7,7 @@ import type { ToolsCollection as ToolsCollectionInterface } from '@/types/tools/
 export type ToolClass = BlockToolAdapter | InlineToolAdapter | BlockTuneAdapter;
 
 /**
- * Class to store Editor Tools
+ * Class to store Blok Tools
  */
 export default class ToolsCollection<V extends ToolClass = ToolClass> extends Map<string, V> implements ToolsCollectionInterface<V> {
   /**

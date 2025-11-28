@@ -3,10 +3,10 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import type { EditorConfig, OutputData } from '@/types';
-import { modificationsObserverBatchTimeout, EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
-import { ensureEditorBundleBuilt } from './helpers/ensure-build';
+import type Blok from '@/types';
+import type { BlokConfig, OutputData } from '@/types';
+import { modificationsObserverBatchTimeout, BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { BlockAddedMutationType } from '../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../types/events/block/BlockMoved';
@@ -16,11 +16,11 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const TOOLBAR_PLUS_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const TOOLBAR_PLUS_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const WAIT_FOR_BATCH = modificationsObserverBatchTimeout + 100;
 
 const HEADER_TOOL_UMD_PATH = path.resolve(
@@ -87,7 +87,7 @@ const ensureSerializedBlockMutationEvents = (
   return value;
 };
 
-type CreateEditorOptions = {
+type CreateBlokOptions = {
   blocks?: OutputData['blocks'];
   readOnly?: boolean;
   tools?: SerializableToolConfig[];
@@ -101,15 +101,15 @@ type WindowTestState = Partial<Record<'__onChangeCalls', SerializedOnChangeCall[
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -124,7 +124,7 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   const {
     blocks,
     readOnly,
@@ -133,8 +133,8 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
     config = {},
   } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
     async ({
@@ -143,7 +143,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
       readOnly: readOnlyOption,
       tools: serializedTools,
       callSaveInsideOnChange: shouldCallSave,
-      config: editorConfigOptions,
+      config: blokConfigOptions,
     }) => {
       const windowObj = window as unknown as Window & WindowTestState;
 
@@ -174,23 +174,23 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
         };
       }, {});
 
-      const editorConfig: Record<string, unknown> = {
+      const blokConfig: Record<string, unknown> = {
         holder: holder,
-        ...editorConfigOptions,
+        ...blokConfigOptions,
       };
 
       if (typeof readOnlyOption === 'boolean') {
-        editorConfig.readOnly = readOnlyOption;
+        blokConfig.readOnly = readOnlyOption;
       }
 
       if (initialBlocks) {
-        editorConfig.data = {
+        blokConfig.data = {
           blocks: initialBlocks,
         };
       }
 
       if (Object.keys(reviveTools).length > 0) {
-        editorConfig.tools = reviveTools;
+        blokConfig.tools = reviveTools;
       }
 
       const cloneDetail = <T>(value: T): T => {
@@ -224,7 +224,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
           : serializeSingle(event);
       };
 
-      editorConfig.onChange = (api: unknown, event: CustomEvent | CustomEvent[]) => {
+      blokConfig.onChange = (api: unknown, event: CustomEvent | CustomEvent[]) => {
         windowObj.__onChangeCalls = windowObj.__onChangeCalls ?? [];
 
         windowObj.__onChangeCalls.push(serializeEvent(event));
@@ -240,11 +240,11 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
         }
       };
 
-      const editor = new window.EditorJS(editorConfig as EditorConfig);
+      const blok = new window.Blok(blokConfig as BlokConfig);
 
-      windowObj.editorInstance = editor;
+      windowObj.blokInstance = blok;
 
-      await editor.isReady;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
@@ -307,16 +307,16 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
 
 test.describe('onChange callback', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should batch events when several changes happened at once', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -355,7 +355,7 @@ test.describe('onChange callback', () => {
   });
 
   test('should filter out similar events on batching', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -390,7 +390,7 @@ test.describe('onChange callback', () => {
   });
 
   test('should be fired with correct index on block insertion above the current block', async ({ page }) => {
-    await createEditor(page);
+    await createBlok(page);
 
     const firstBlock = page.locator(`${BLOCK_SELECTOR}:first-of-type`);
 
@@ -414,7 +414,7 @@ test.describe('onChange callback', () => {
   });
 
   test('should be fired with only single "block-added" event by pressing Enter at the end of a block', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -446,7 +446,7 @@ test.describe('onChange callback', () => {
   });
 
   test('should be fired with correct index on block insertion after the current block', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -477,7 +477,7 @@ test.describe('onChange callback', () => {
   });
 
   test('should be fired on typing into block', async ({ page }) => {
-    await createEditor(page);
+    await createBlok(page);
 
     const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
 
@@ -502,7 +502,7 @@ test.describe('onChange callback', () => {
     await page.addScriptTag({ path: CODE_TOOL_UMD_PATH });
     await page.addScriptTag({ path: DELIMITER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       callSaveInsideOnChange: true,
       tools: [
         {
@@ -571,7 +571,7 @@ test.describe('onChange callback', () => {
   test('should be fired on block replacement for both blocks', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'header',
@@ -622,7 +622,7 @@ test.describe('onChange callback', () => {
   test('should be fired on tune modifying', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'header',
@@ -662,7 +662,7 @@ test.describe('onChange callback', () => {
   });
 
   test('should be fired when block is removed', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -706,7 +706,7 @@ test.describe('onChange callback', () => {
     // eslint-disable-next-line playwright/no-skipped-test
     test.skip(browserName === 'webkit', 'WebKit does not support programmatic drag-and-drop');
 
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -764,7 +764,7 @@ test.describe('onChange callback', () => {
   test('should be fired if something changed inside native input', async ({ page }) => {
     await page.addScriptTag({ path: CODE_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'code',
@@ -781,7 +781,7 @@ test.describe('onChange callback', () => {
       ],
     });
 
-    const textarea = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="code"]`).getByRole('textbox');
+    const textarea = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="code"]`).getByRole('textbox');
 
     await textarea.click();
     await textarea.type('Some input to the textarea');
@@ -800,7 +800,7 @@ test.describe('onChange callback', () => {
   });
 
   test('should not be fired on fake cursor adding and removing', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -827,7 +827,7 @@ test.describe('onChange callback', () => {
   });
 
   test('should be fired when the whole text inside block is removed', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -880,7 +880,7 @@ test.describe('onChange callback', () => {
       })()
     `;
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'testTool',
@@ -937,7 +937,7 @@ test.describe('onChange callback', () => {
       })()
     `;
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'testTool',
@@ -998,7 +998,7 @@ test.describe('onChange callback', () => {
       })()
     `;
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'testTool',
@@ -1026,7 +1026,7 @@ test.describe('onChange callback', () => {
   });
 
   test('should be called on blocks.clear() with removed and added blocks', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -1044,11 +1044,11 @@ test.describe('onChange callback', () => {
     });
 
     await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      await window.editorInstance.blocks.clear();
+      await window.blokInstance.blocks.clear();
     });
 
     await waitForOnChangeCallCount(page, 1);
@@ -1069,8 +1069,8 @@ test.describe('onChange callback', () => {
     ]);
   });
 
-  test('should not be called on blocks.render() on non-empty editor', async ({ page }) => {
-    await createEditor(page, {
+  test('should not be called on blocks.render() on non-empty blok', async ({ page }) => {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -1088,11 +1088,11 @@ test.describe('onChange callback', () => {
     });
 
     await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      await window.editorInstance.blocks.render({
+      await window.blokInstance.blocks.render({
         blocks: [
           {
             type: 'paragraph',
@@ -1120,18 +1120,18 @@ test.describe('onChange callback', () => {
       },
     };
 
-    await createEditor(page, {
+    await createBlok(page, {
       blocks: [
         block,
       ],
     });
 
     await page.evaluate(async ({ blockId }) => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      await window.editorInstance.blocks.update(blockId, {
+      await window.blokInstance.blocks.update(blockId, {
         text: 'Updated text',
       });
     }, { blockId: block.id });
@@ -1176,7 +1176,7 @@ test.describe('onChange callback', () => {
       })()
     `;
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'testTool',
@@ -1209,8 +1209,8 @@ test.describe('onChange callback', () => {
     }));
   });
 
-  test('should not be called when editor is initialized with readOnly mode', async ({ page }) => {
-    await createEditor(page, {
+  test('should not be called when blok is initialized with readOnly mode', async ({ page }) => {
+    await createBlok(page, {
       readOnly: true,
       blocks: [
         {
@@ -1229,8 +1229,8 @@ test.describe('onChange callback', () => {
     expect(calls).toHaveLength(0);
   });
 
-  test('should not be called when editor is switched to and from readOnly mode', async ({ page }) => {
-    await createEditor(page, {
+  test('should not be called when blok is switched to and from readOnly mode', async ({ page }) => {
+    await createBlok(page, {
       blocks: [
         {
           type: 'paragraph',
@@ -1242,11 +1242,11 @@ test.describe('onChange callback', () => {
     });
 
     await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      await window.editorInstance.readOnly.toggle(true);
+      await window.blokInstance.readOnly.toggle(true);
     });
 
     await waitForBatchProcessing(page);
@@ -1256,11 +1256,11 @@ test.describe('onChange callback', () => {
     expect(calls).toHaveLength(0);
 
     await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      await window.editorInstance.readOnly.toggle(false);
+      await window.blokInstance.readOnly.toggle(false);
     });
 
     await waitForBatchProcessing(page);

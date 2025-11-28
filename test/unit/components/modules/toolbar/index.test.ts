@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import Toolbar from '../../../../../src/components/modules/toolbar/index';
 import type * as UtilsModule from '../../../../../src/components/utils';
 import { BlockHovered } from '../../../../../src/components/events/BlockHovered';
-import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
 vi.mock('@codexteam/icons', () => ({
   IconMenu: '<svg></svg>',
@@ -56,8 +56,8 @@ describe('Toolbar module interactions', () => {
     ) => void;
     clearAll: () => void;
   };
-  const getEditor = (): EditorModules =>
-    (toolbar as unknown as { Editor: EditorModules }).Editor;
+  const getBlok = (): BlokModules =>
+    (toolbar as unknown as { Blok: BlokModules }).Blok;
 
   beforeEach(() => {
     const eventsDispatcher = {
@@ -99,7 +99,7 @@ describe('Toolbar module interactions', () => {
       ReadOnly: {
         isEnabled: false,
       },
-    } as unknown as Toolbar['Editor'];
+    } as unknown as Toolbar['Blok'];
 
     (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes = {
       wrapper: document.createElement('div'),
@@ -134,7 +134,7 @@ describe('Toolbar module interactions', () => {
   it('does not move when Block Settings are opened during block hover', () => {
     enableBindings();
 
-    getEditor().BlockSettings.opened = true;
+    getBlok().BlockSettings.opened = true;
     const moveSpy = vi.spyOn(toolbar as unknown as { moveAndOpen: (block: unknown) => void }, 'moveAndOpen');
 
     blockHoveredHandler?.({ block: {} });
@@ -145,7 +145,7 @@ describe('Toolbar module interactions', () => {
   it('does not move when Toolbox is opened during block hover', () => {
     enableBindings();
 
-    getEditor().BlockSettings.opened = false;
+    getBlok().BlockSettings.opened = false;
     (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void; open: () => void; toggle: () => void; hasFocus: () => boolean } }).toolboxInstance = {
       opened: true,
       close: vi.fn(),

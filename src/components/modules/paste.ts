@@ -115,7 +115,7 @@ interface PasteData {
 
 /**
  * @class Paste
- * @classdesc Contains methods to handle paste on editor
+ * @classdesc Contains methods to handle paste on blok
  * @module Paste
  * @version 2.0.0
  */
@@ -123,7 +123,7 @@ export default class Paste extends Module {
   /** If string`s length is greater than this number we don't check paste patterns */
   public static readonly PATTERN_PROCESSING_MAX_LENGTH = 450;
 
-  /** Custom Blok mime-type to handle in-editor copy/paste actions */
+  /** Custom Blok mime-type to handle in-blok copy/paste actions */
   public readonly MIME_TYPE = 'application/x-blok';
 
   /**
@@ -161,7 +161,7 @@ export default class Paste extends Module {
    * @param toolName - tool that is going to handle the file
    */
   private shouldReplaceCurrentBlockForFile(toolName?: string): boolean {
-    const { BlockManager } = this.Editor;
+    const { BlockManager } = this.Blok;
     const currentBlock = BlockManager.currentBlock;
 
     if (!currentBlock) {
@@ -255,7 +255,7 @@ export default class Paste extends Module {
    * @param {DataTransfer} dataTransfer - pasted data transfer object
    */
   public async processDataTransfer(dataTransfer: DataTransfer): Promise<void> {
-    const { Tools } = this.Editor;
+    const { Tools } = this.Blok;
     const includesFiles = this.containsFiles(dataTransfer);
 
     if (includesFiles && !_.isEmpty(this.toolsFiles)) {
@@ -313,7 +313,7 @@ export default class Paste extends Module {
    * @param {boolean} isHTML - if passed string is HTML, this parameter should be true
    */
   public async processText(data: string, isHTML = false): Promise<void> {
-    const { Caret, BlockManager } = this.Editor;
+    const { Caret, BlockManager } = this.Blok;
     const dataToInsert = isHTML ? this.processHTML(data) : this.processPlain(data);
 
     if (!dataToInsert.length) {
@@ -357,21 +357,21 @@ export default class Paste extends Module {
    * Set onPaste callback handler
    */
   private setCallback(): void {
-    this.listeners.on(this.Editor.UI.nodes.holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.on(this.Blok.UI.nodes.holder, 'paste', this.handlePasteEventWrapper);
   }
 
   /**
    * Unset onPaste callback handler
    */
   private unsetCallback(): void {
-    this.listeners.off(this.Editor.UI.nodes.holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.off(this.Blok.UI.nodes.holder, 'paste', this.handlePasteEventWrapper);
   }
 
   /**
    * Get and process tool`s paste configs
    */
   private processTools(): void {
-    const tools = this.Editor.Tools.blockTools;
+    const tools = this.Blok.Tools.blockTools;
 
     Array
       .from(tools.values())
@@ -571,11 +571,11 @@ export default class Paste extends Module {
   }
 
   /**
-   * Check if Editor should process pasted data and pass data transfer object to handler
+   * Check if Blok should process pasted data and pass data transfer object to handler
    * @param {ClipboardEvent} event - clipboard event
    */
   private handlePasteEvent = async (event: ClipboardEvent): Promise<void> => {
-    const { BlockManager, Toolbar } = this.Editor;
+    const { BlockManager, Toolbar } = this.Blok;
 
     /**
      * When someone pasting into a block, its more stable to set current block by event target, instead of relying on current block set before
@@ -609,7 +609,7 @@ export default class Paste extends Module {
    * @param {FileList} items - pasted items
    */
   private async processFiles(items: FileList): Promise<void> {
-    const { BlockManager } = this.Editor;
+    const { BlockManager } = this.Blok;
 
     const processedFiles = await Promise.all(
       Array
@@ -673,7 +673,7 @@ export default class Paste extends Module {
    * @returns {PasteData[]}
    */
   private processHTML(innerHTML: string): PasteData[] {
-    const { Tools } = this.Editor;
+    const { Tools } = this.Blok;
 
     /**
      * @todo Research, do we really need to always wrap innerHTML to a div:
@@ -837,7 +837,7 @@ export default class Paste extends Module {
    * @param {PasteData} dataToInsert - data of Block to insert
    */
   private async processSingleBlock(dataToInsert: PasteData): Promise<void> {
-    const { Caret, BlockManager } = this.Editor;
+    const { Caret, BlockManager } = this.Blok;
     const { currentBlock } = BlockManager;
 
     /**
@@ -864,7 +864,7 @@ export default class Paste extends Module {
    * @param {PasteData} dataToInsert - data of Block to insert
    */
   private async processInlinePaste(dataToInsert: PasteData): Promise<void> {
-    const { BlockManager, Caret } = this.Editor;
+    const { BlockManager, Caret } = this.Blok;
     const { content } = dataToInsert;
 
     const currentBlockIsDefault = BlockManager.currentBlock?.tool.isDefault ?? false;
@@ -934,13 +934,13 @@ export default class Paste extends Module {
   }
 
   /**
-   * Insert pasted Block content to Editor
+   * Insert pasted Block content to Blok
    * @param {PasteData} data - data to insert
    * @param {boolean} canReplaceCurrentBlock - if true and is current Block is empty, will replace current Block
    * @returns {void}
    */
   private async insertBlock(data: PasteData, canReplaceCurrentBlock = false): Promise<void> {
-    const { BlockManager, Caret } = this.Editor;
+    const { BlockManager, Caret } = this.Blok;
     const { currentBlock } = BlockManager;
 
     if (canReplaceCurrentBlock && currentBlock && currentBlock.isEmpty) {
@@ -962,7 +962,7 @@ export default class Paste extends Module {
    * @returns {void}
    */
   private insertBlokData(blocks: Pick<SavedData, 'id' | 'data' | 'tool'>[]): void {
-    const { BlockManager, Caret, Tools } = this.Editor;
+    const { BlockManager, Caret, Tools } = this.Blok;
     const sanitizedBlocks = sanitizeBlocks(
       blocks,
       (name) => Tools.blockTools.get(name)?.sanitizeConfig ?? {},

@@ -19,7 +19,7 @@ export default class ConvertInlineTool implements InlineTool {
   public static isInline = true;
 
   /**
-   * API for working with editor blocks
+   * API for working with blok blocks
    */
   private readonly blocksAPI: Blocks;
 

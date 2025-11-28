@@ -3,30 +3,30 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from './helpers/ensure-build';
-import { TOOLTIP_INTERFACE_SELECTOR, EDITOR_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../src/components/constants';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { TOOLTIP_INTERFACE_SELECTOR, BLOK_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
-const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
-const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const INLINE_TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} ${INLINE_TOOLBAR_INTERFACE_SELECTOR}`;
 const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
 const BLOCK_TUNES_POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -42,11 +42,11 @@ const resetEditor = async (page: Page): Promise<void> => {
 };
 
 /**
- * Create editor with i18n configuration
+ * Create blok with i18n configuration
  * @param page - The Playwright page object
- * @param config - Editor configuration including i18n settings
+ * @param config - Blok configuration including i18n settings
  */
-const createEditorWithI18n = async (
+const createBlokWithI18n = async (
   page: Page,
   config: {
     tools?: Record<string, unknown>;
@@ -54,9 +54,9 @@ const createEditorWithI18n = async (
     data?: { blocks?: OutputData['blocks'] };
   }
 ): Promise<void> => {
-  await resetEditor(page);
+  await resetBlok(page);
   await page.evaluate(
-    async ({ holder, editorConfig }) => {
+    async ({ holder, blokConfig }) => {
       const resolveFromWindow = (value: unknown): unknown => {
         if (typeof value === 'string') {
           return value.split('.').reduce<unknown>((acc, key) => {
@@ -132,17 +132,17 @@ const createEditorWithI18n = async (
         }, {});
       };
 
-      const { tools, ...restConfig } = editorConfig ?? {};
+      const { tools, ...restConfig } = blokConfig ?? {};
       const normalizedTools = normalizeTools(tools as Record<string, unknown> | undefined);
 
-      const editor = new window.EditorJS({
+      const blok = new window.Blok({
         holder: holder,
         ...restConfig,
         ...(normalizedTools ? { tools: normalizedTools } : {}),
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
 
       await new Promise<void>((resolve) => {
         if ('requestIdleCallback' in window) {
@@ -155,7 +155,7 @@ const createEditorWithI18n = async (
       });
     },
     { holder: HOLDER_ID,
-      editorConfig: config }
+      blokConfig: config }
   );
 };
 
@@ -227,7 +227,7 @@ const openInlineToolbarPopover = async (page: Page): Promise<Locator> => {
   await expect(inlineToolbar).toHaveCount(1);
 
   await page.evaluate(() => {
-    window.editorInstance?.inlineToolbar?.open();
+    window.blokInstance?.inlineToolbar?.open();
   });
 
   const inlinePopover = inlineToolbar.locator('[data-blok-testid="popover"]');
@@ -244,7 +244,7 @@ const openInlineToolbarPopover = async (page: Page): Promise<Locator> => {
 
 const getParagraphLocatorByBlockIndex = async (page: Page, blockIndex = 0): Promise<Locator> => {
   const blockId = await page.evaluate(
-    ({ index }) => window.editorInstance?.blocks?.getBlockByIndex(index)?.id ?? null,
+    ({ index }) => window.blokInstance?.blocks?.getBlockByIndex(index)?.id ?? null,
     { index: blockIndex }
   );
 
@@ -259,14 +259,14 @@ const getParagraphLocatorByBlockIndex = async (page: Page, blockIndex = 0): Prom
   return block;
 };
 
-test.describe('editor i18n', () => {
+test.describe('blok i18n', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test.describe('toolbox', () => {
@@ -277,7 +277,7 @@ test.describe('editor i18n', () => {
 
       // Create a simple header tool in the browser context
       await page.evaluate(() => {
-        // @ts-expect-error - Define SimpleHeader in window for editor creation
+        // @ts-expect-error - Define SimpleHeader in window for blok creation
         window.SimpleHeader = class {
           private data: { text: string };
 
@@ -324,7 +324,7 @@ test.describe('editor i18n', () => {
         };
       });
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         tools: {
           header: 'SimpleHeader',
         },
@@ -355,7 +355,7 @@ test.describe('editor i18n', () => {
 
       // Create a test tool with multiple toolbox entries
       await page.evaluate(() => {
-        // @ts-expect-error - Define TestTool in window for editor creation
+        // @ts-expect-error - Define TestTool in window for blok creation
         window.TestTool = class {
           /**
            *
@@ -394,7 +394,7 @@ test.describe('editor i18n', () => {
         };
       });
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         tools: {
           testTool: 'TestTool',
         },
@@ -427,7 +427,7 @@ test.describe('editor i18n', () => {
 
       // Create a test tool without title
       await page.evaluate(() => {
-        // @ts-expect-error - Define TestTool in window for editor creation
+        // @ts-expect-error - Define TestTool in window for blok creation
         window.TestTool = class {
           /**
            *
@@ -460,7 +460,7 @@ test.describe('editor i18n', () => {
         };
       });
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         tools: {
           testTool: 'TestTool',
         },
@@ -492,7 +492,7 @@ test.describe('editor i18n', () => {
         },
       };
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         i18n: {
           messages: {
             blockTunes: blockTunesDictionary,
@@ -531,7 +531,7 @@ test.describe('editor i18n', () => {
         },
       };
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         i18n: {
           messages: {
             blockTunes: blockTunesDictionary,
@@ -580,7 +580,7 @@ test.describe('editor i18n', () => {
 
       // Create a simple header tool in the browser context
       await page.evaluate(() => {
-        // @ts-expect-error - Define SimpleHeader in window for editor creation
+        // @ts-expect-error - Define SimpleHeader in window for blok creation
         window.SimpleHeader = class {
           private data: { text: string };
 
@@ -637,7 +637,7 @@ test.describe('editor i18n', () => {
         };
       });
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         tools: {
           header: 'SimpleHeader',
         },
@@ -686,7 +686,7 @@ test.describe('editor i18n', () => {
         },
       };
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         i18n: {
           messages: {
             ui: uiDictionary,
@@ -717,7 +717,7 @@ test.describe('editor i18n', () => {
         },
       };
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         i18n: {
           messages: {
             ui: uiDictionary,
@@ -763,7 +763,7 @@ test.describe('editor i18n', () => {
       };
 
       await page.evaluate(() => {
-        // @ts-expect-error - Define SimpleHeader in window for editor creation
+        // @ts-expect-error - Define SimpleHeader in window for blok creation
         window.SimpleHeader = class {
           private data: { text: string };
 
@@ -820,7 +820,7 @@ test.describe('editor i18n', () => {
         };
       });
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         i18n: {
           messages: {
             ui: uiDictionary,
@@ -882,7 +882,7 @@ test.describe('editor i18n', () => {
       };
 
       await page.evaluate(() => {
-        // @ts-expect-error - Define SimpleHeader in window for editor creation
+        // @ts-expect-error - Define SimpleHeader in window for blok creation
         window.SimpleHeader = class {
           private data: { text: string };
 
@@ -939,13 +939,13 @@ test.describe('editor i18n', () => {
         };
       });
 
-      await resetEditor(page);
+      await resetBlok(page);
       await page.evaluate(
         async ({ holder, uiDict }) => {
           // @ts-expect-error - Get SimpleHeader from window
           const SimpleHeader = window.SimpleHeader;
 
-          const editor = new window.EditorJS({
+          const blok = new window.Blok({
             holder: holder,
             tools: {
               header: SimpleHeader,
@@ -967,8 +967,8 @@ test.describe('editor i18n', () => {
             },
           });
 
-          window.editorInstance = editor;
-          await editor.isReady;
+          window.blokInstance = blok;
+          await blok.isReady;
         },
         { holder: HOLDER_ID,
           uiDict: uiDictionary }
@@ -1028,7 +1028,7 @@ test.describe('editor i18n', () => {
         },
       };
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         i18n: {
           messages: {
             ui: uiDictionary,
@@ -1062,7 +1062,7 @@ test.describe('editor i18n', () => {
         },
       };
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         i18n: {
           messages: {
             ui: uiDictionary,
@@ -1108,7 +1108,7 @@ test.describe('editor i18n', () => {
 
       // Create a simple header tool in the browser context
       await page.evaluate(() => {
-        // @ts-expect-error - Define SimpleHeader in window for editor creation
+        // @ts-expect-error - Define SimpleHeader in window for blok creation
         window.SimpleHeader = class {
           private data: { text: string };
 
@@ -1165,14 +1165,14 @@ test.describe('editor i18n', () => {
         };
       });
 
-      // Create editor with header tool
-      await resetEditor(page);
+      // Create blok with header tool
+      await resetBlok(page);
       await page.evaluate(
         async ({ holder, uiDict }) => {
           // @ts-expect-error - Get SimpleHeader from window
           const SimpleHeader = window.SimpleHeader;
 
-          const editor = new window.EditorJS({
+          const blok = new window.Blok({
             holder: holder,
             tools: {
               header: SimpleHeader,
@@ -1194,8 +1194,8 @@ test.describe('editor i18n', () => {
             },
           });
 
-          window.editorInstance = editor;
-          await editor.isReady;
+          window.blokInstance = blok;
+          await blok.isReady;
         },
         { holder: HOLDER_ID,
           uiDict: uiDictionary }
@@ -1232,7 +1232,7 @@ test.describe('editor i18n', () => {
         },
       };
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         i18n: {
           messages: {
             tools: toolsDictionary,
@@ -1284,7 +1284,7 @@ test.describe('editor i18n', () => {
         },
       };
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         i18n: {
           messages: {
             tools: toolsDictionary,
@@ -1315,7 +1315,7 @@ test.describe('editor i18n', () => {
 
       // Create a simple header tool in the browser context
       await page.evaluate(() => {
-        // @ts-expect-error - Define SimpleHeader in window for editor creation
+        // @ts-expect-error - Define SimpleHeader in window for blok creation
         window.SimpleHeader = class {
           private data: { text: string };
 
@@ -1372,7 +1372,7 @@ test.describe('editor i18n', () => {
         };
       });
 
-      await createEditorWithI18n(page, {
+      await createBlokWithI18n(page, {
         tools: {
           header: 'SimpleHeader',
         },

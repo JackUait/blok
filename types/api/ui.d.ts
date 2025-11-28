@@ -1,19 +1,19 @@
 /**
- * Describes API module allowing to access some Editor UI elements and methods
+ * Describes API module allowing to access some Blok UI elements and methods
  */
 export interface Ui {
   /**
-   * Allows accessing some Editor UI elements
+   * Allows accessing some Blok UI elements
    */
   nodes: UiNodes,
 }
 
 /**
- * Allows accessing some Editor UI elements
+ * Allows accessing some Blok UI elements
  */
 export interface UiNodes {
   /**
-   * Top-level editor instance wrapper
+   * Top-level blok instance wrapper
    */
   wrapper: HTMLElement,
 

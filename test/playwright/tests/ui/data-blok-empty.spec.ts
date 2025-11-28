@@ -3,31 +3,31 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const PARAGRAPH_INDEX_ATTRIBUTE = 'data-blok-testid-paragraph-index';
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -42,7 +42,7 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditorWithTextBlocks = async (page: Page, textBlocks: string[]): Promise<void> => {
+const createBlokWithTextBlocks = async (page: Page, textBlocks: string[]): Promise<void> => {
   const blocks: OutputData['blocks'] = textBlocks.map((text, index) => ({
     id: `paragraph-${index + 1}`,
     type: 'paragraph',
@@ -51,20 +51,20 @@ const createEditorWithTextBlocks = async (page: Page, textBlocks: string[]): Pro
     },
   }));
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
     async ({ holder, blocksData }) => {
-      const editor = new window.EditorJS({
+      const blok = new window.Blok({
         holder: holder,
         data: {
           blocks: blocksData,
         },
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
@@ -91,7 +91,7 @@ const assignParagraphIndexes = async (page: Page): Promise<void> => {
 
 test.describe('data-blok-empty attribute', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -99,7 +99,7 @@ test.describe('data-blok-empty attribute', () => {
   });
 
   test('reflects initial block content', async ({ page }) => {
-    await createEditorWithTextBlocks(page, ['First', '']);
+    await createBlokWithTextBlocks(page, ['First', '']);
     await assignParagraphIndexes(page);
 
     const paragraphs = page.locator(PARAGRAPH_SELECTOR);
@@ -130,7 +130,7 @@ test.describe('data-blok-empty attribute', () => {
   });
 
   test('updates to "false" after typing', async ({ page }) => {
-    await createEditorWithTextBlocks(page, ['First', '']);
+    await createBlokWithTextBlocks(page, ['First', '']);
     await assignParagraphIndexes(page);
 
     const lastParagraphWrapper = page.locator(
@@ -149,7 +149,7 @@ test.describe('data-blok-empty attribute', () => {
   });
 
   test('updates to "true" after removing content', async ({ page }) => {
-    await createEditorWithTextBlocks(page, ['', 'Some text']);
+    await createBlokWithTextBlocks(page, ['', 'Some text']);
     await assignParagraphIndexes(page);
 
     const lastParagraphWrapper = page.locator(
@@ -169,7 +169,7 @@ test.describe('data-blok-empty attribute', () => {
   });
 
   test('applies to newly created blocks', async ({ page }) => {
-    await createEditorWithTextBlocks(page, ['First', '']);
+    await createBlokWithTextBlocks(page, ['First', '']);
     await assignParagraphIndexes(page);
 
     const paragraphs = page.locator(PARAGRAPH_SELECTOR);

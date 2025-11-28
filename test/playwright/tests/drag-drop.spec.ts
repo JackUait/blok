@@ -2,17 +2,17 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from './helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const HOLDER_ID = 'blok';
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 
 /**
  * Helper function to perform drag and drop with SortableJS.
@@ -63,25 +63,25 @@ const performDragDrop = async (
   await page.waitForTimeout(200);
 };
 
-type CreateEditorOptions = {
+type CreateBlokOptions = {
   data?: OutputData;
   config?: Record<string, unknown>;
 };
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   const { data = null, config = {} } = options;
 
-  await page.evaluate(async ({ holder, data: initialData, config: editorConfig }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+  await page.evaluate(async ({ holder, data: initialData, config: blokConfig }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -95,17 +95,17 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
 
     const configToUse: Record<string, unknown> = {
       holder: holder,
-      ...editorConfig,
+      ...blokConfig,
     };
 
     if (initialData) {
       configToUse.data = initialData;
     }
 
-    const editor = new window.EditorJS(configToUse);
+    const blok = new window.Blok(configToUse);
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, {
     holder: HOLDER_ID,
     data,
@@ -121,12 +121,12 @@ test.describe('drag and drop', () => {
   test.skip(({ browserName }) => browserName === 'webkit', 'Webkit mouse simulation incompatible with SortableJS');
 
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should move block from first position to the last', async ({ page }) => {
@@ -145,7 +145,7 @@ test.describe('drag and drop', () => {
       },
     ];
 
-    await createEditor(page, {
+    await createBlok(page, {
       data: { blocks },
     });
 
@@ -169,8 +169,8 @@ test.describe('drag and drop', () => {
       'First block',
     ]);
 
-    // 5. Verify the new order in Editor data
-    const savedData = await page.evaluate(() => window.editorInstance?.save());
+    // 5. Verify the new order in Blok data
+    const savedData = await page.evaluate(() => window.blokInstance?.save());
 
     expect(savedData?.blocks[0].data.text).toBe('Second block');
     expect(savedData?.blocks[1].data.text).toBe('Third block');
@@ -193,7 +193,7 @@ test.describe('drag and drop', () => {
       },
     ];
 
-    await createEditor(page, {
+    await createBlok(page, {
       data: { blocks },
     });
 
@@ -218,7 +218,7 @@ test.describe('drag and drop', () => {
     ]);
 
     // 5. Verify data
-    const savedData = await page.evaluate(() => window.editorInstance?.save());
+    const savedData = await page.evaluate(() => window.blokInstance?.save());
 
     expect(savedData?.blocks[0].data.text).toBe('Third block');
     expect(savedData?.blocks[1].data.text).toBe('First block');

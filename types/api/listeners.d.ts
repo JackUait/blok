@@ -1,5 +1,5 @@
 /**
- * Describes Editor`s listeners API
+ * Describes Blok`s listeners API
  */
 export interface Listeners {
   /**

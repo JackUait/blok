@@ -3,14 +3,14 @@ import EventsDispatcher from '../../../../../src/components/utils/events';
 import SanitizerAPI from '../../../../../src/components/modules/api/sanitizer';
 import * as sanitizerUtils from '../../../../../src/components/utils/sanitizer';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorConfig } from '../../../../../types';
-import type { EditorEventMap } from '../../../../../src/components/events';
+import type { BlokConfig } from '../../../../../types';
+import type { BlokEventMap } from '../../../../../src/components/events';
 import type { SanitizerConfig } from '../../../../../types/configs';
 
 const createSanitizerApi = (): SanitizerAPI => {
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as EditorConfig,
+    config: {} as BlokConfig,
     eventsDispatcher,
   };
 

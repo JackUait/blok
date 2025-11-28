@@ -1,7 +1,7 @@
 import { BlockToolAdapter } from '../tools/adapters/block-tool-adapter';
 
 /**
- * Describes methods for accessing installed Editor tools
+ * Describes methods for accessing installed Blok tools
  */
 export interface Tools {
   /**

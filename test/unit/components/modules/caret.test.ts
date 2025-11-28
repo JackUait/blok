@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Caret from '../../../../src/components/modules/caret';
 import EventsDispatcher from '../../../../src/components/utils/events';
-import type { EditorEventMap } from '../../../../src/components/events';
-import type { EditorModules } from '../../../../src/types-internal/editor-modules';
-import type { EditorConfig } from '../../../../types';
+import type { BlokEventMap } from '../../../../src/components/events';
+import type { BlokModules } from '../../../../src/types-internal/blok-modules';
+import type { BlokConfig } from '../../../../types';
 import type Block from '../../../../src/components/block';
 import Selection from '../../../../src/components/selection';
 import * as caretUtils from '../../../../src/components/utils/caret';
@@ -87,7 +87,7 @@ const createBlock = (options: BlockOptions = {}): Block => {
   return blockStub as unknown as Block;
 };
 
-const createCaret = (overrides: Partial<EditorModules> = {}): CaretSetup => {
+const createCaret = (overrides: Partial<BlokModules> = {}): CaretSetup => {
   const blockManager: BlockManagerStub = {
     currentBlock: undefined,
     nextBlock: null,
@@ -102,20 +102,20 @@ const createCaret = (overrides: Partial<EditorModules> = {}): CaretSetup => {
     selectBlock: vi.fn(),
   };
 
-  const defaults: Partial<EditorModules> = {
-    BlockManager: blockManager as unknown as EditorModules['BlockManager'],
-    BlockSelection: blockSelection as unknown as EditorModules['BlockSelection'],
+  const defaults: Partial<BlokModules> = {
+    BlockManager: blockManager as unknown as BlokModules['BlockManager'],
+    BlockSelection: blockSelection as unknown as BlokModules['BlockSelection'],
   };
 
   const caret = new Caret({
-    config: { sanitizer: {} } as EditorConfig,
-    eventsDispatcher: new EventsDispatcher<EditorEventMap>(),
+    config: { sanitizer: {} } as BlokConfig,
+    eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 
   caret.state = {
     ...defaults,
     ...overrides,
-  } as EditorModules;
+  } as BlokModules;
 
   return {
     caret,

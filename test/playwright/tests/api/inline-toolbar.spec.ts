@@ -2,20 +2,20 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
 import {
-  EDITOR_INTERFACE_SELECTOR,
+  BLOK_INTERFACE_SELECTOR,
   INLINE_TOOLBAR_INTERFACE_SELECTOR
 } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const INLINE_TOOLBAR_CONTAINER_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-container"]`;
 
 const INITIAL_DATA: OutputData = {
@@ -29,11 +29,11 @@ const INITIAL_DATA: OutputData = {
   ],
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     document.getElementById(holder)?.remove();
@@ -48,22 +48,22 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, data: OutputData): Promise<void> => {
-  await resetEditor(page);
+const createBlok = async (page: Page, data: OutputData): Promise<void> => {
+  await resetBlok(page);
 
   await page.evaluate(
-    async ({ holder, editorData }) => {
-      const editor = new window.EditorJS({
+    async ({ holder, blokData }) => {
+      const blok = new window.Blok({
         holder: holder,
-        data: editorData,
+        data: blokData,
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
       holder: HOLDER_ID,
-      editorData: data,
+      blokData: data,
     }
   );
 };
@@ -170,7 +170,7 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
 
 test.describe('api.inlineToolbar', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -178,7 +178,7 @@ test.describe('api.inlineToolbar', () => {
   });
 
   test('inlineToolbar.open() shows the inline toolbar when selection exists', async ({ page }) => {
-    await createEditor(page, INITIAL_DATA);
+    await createBlok(page, INITIAL_DATA);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
@@ -187,18 +187,18 @@ test.describe('api.inlineToolbar', () => {
     await selectText(paragraph, 'Inline toolbar');
 
     await page.evaluate(() => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      window.editorInstance.inlineToolbar.open();
+      window.blokInstance.inlineToolbar.open();
     });
 
     await expect(page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR)).toBeVisible();
   });
 
   test('inlineToolbar.close() hides the inline toolbar', async ({ page }) => {
-    await createEditor(page, INITIAL_DATA);
+    await createBlok(page, INITIAL_DATA);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
@@ -208,21 +208,21 @@ test.describe('api.inlineToolbar', () => {
     await selectText(paragraph, 'Inline toolbar');
 
     await page.evaluate(() => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      window.editorInstance.inlineToolbar.open();
+      window.blokInstance.inlineToolbar.open();
     });
 
     await expect(toolbarContainer).toBeVisible();
 
     await page.evaluate(() => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      window.editorInstance.inlineToolbar.close();
+      window.blokInstance.inlineToolbar.close();
     });
 
     await expect(toolbarContainer).toHaveCount(0);
@@ -231,7 +231,7 @@ test.describe('api.inlineToolbar', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }

@@ -15,8 +15,8 @@ export default class NotifierAPI extends Module {
 
   /**
    * @param moduleConfiguration - Module Configuration
-   * @param moduleConfiguration.config - Editor's config
-   * @param moduleConfiguration.eventsDispatcher - Editor's event dispatcher
+   * @param moduleConfiguration.config - Blok's config
+   * @param moduleConfiguration.eventsDispatcher - Blok's event dispatcher
    */
   constructor({ config, eventsDispatcher }: ModuleConfig) {
     super({

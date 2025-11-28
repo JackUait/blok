@@ -322,9 +322,9 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   private restoreSelection(): void {
     // if actions is broken by other selection We need to save new selection
     const currentSelection = new SelectionUtils();
-    const isSelectionInEditor = SelectionUtils.isAtEditor;
+    const isSelectionInBlok = SelectionUtils.isAtBlok;
 
-    if (isSelectionInEditor) {
+    if (isSelectionInBlok) {
       currentSelection.save();
     }
 
@@ -332,7 +332,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
     this.selection.restore();
 
     // and recover new selection after removing fake background
-    if (!isSelectionInEditor && this.selection.savedSelectionRange) {
+    if (!isSelectionInBlok && this.selection.savedSelectionRange) {
       const range = this.selection.savedSelectionRange;
       const container = range.commonAncestorContainer;
       const element = container.nodeType === Node.ELEMENT_NODE ? container as HTMLElement : container.parentElement;
@@ -340,7 +340,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
       element?.focus();
     }
 
-    if (!isSelectionInEditor) {
+    if (!isSelectionInBlok) {
       return;
     }
 

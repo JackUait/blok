@@ -29,7 +29,7 @@ const BlockAPI = function BlockAPI(
     },
 
     /**
-     * Tool config passed on Editor's initialization
+     * Tool config passed on Blok's initialization
      * @returns {ToolConfig}
      */
     get config(): ToolConfig {
@@ -111,8 +111,8 @@ const BlockAPI = function BlockAPI(
     },
 
     /**
-     * Allows to say Editor that Block was changed. Used to manually trigger Editor's 'onChange' callback
-     * Can be useful for block changes invisible for editor core.
+     * Allows to say Blok that Block was changed. Used to manually trigger Blok's 'onChange' callback
+     * Can be useful for block changes invisible for blok core.
      */
     dispatchChange(): void {
       block.dispatchChange();

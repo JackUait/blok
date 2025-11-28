@@ -42,7 +42,7 @@ export const isSameBlockData = (data1: BlockToolData, data2: BlockToolData): boo
 /**
  * Returns list of tools you can convert specified block to
  * @param block - block to get conversion items for
- * @param allBlockTools - all block tools available in the editor
+ * @param allBlockTools - all block tools available in the blok
  */
 export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools: BlockToolAdapter[]): Promise<BlockToolAdapter[]> => {
   const savedData = await block.save() as SavedData;

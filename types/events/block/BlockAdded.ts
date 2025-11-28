@@ -16,6 +16,6 @@ interface BlockAddedEventDetail extends BlockMutationEventDetail {
 }
 
 /**
- * Event will be fired when the new block is added to the editor
+ * Event will be fired when the new block is added to the blok
  */
 export type BlockAddedEvent = CustomEvent<BlockAddedEventDetail>;

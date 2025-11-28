@@ -4,9 +4,9 @@ import ToolsAPI from '../../../../../src/components/modules/api/tools';
 import EventsDispatcher from '../../../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
-import type { EditorConfig } from '../../../../../types';
-import type { EditorEventMap } from '../../../../../src/components/events';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type { BlokConfig } from '../../../../../types';
+import type { BlokEventMap } from '../../../../../src/components/events';
 import type BlockToolAdapter from '../../../../../src/components/tools/block';
 
 type CreateToolsApiResult = {
@@ -17,9 +17,9 @@ type CreateToolsApiResult = {
 const createToolsApi = (
   blockToolsEntries: Array<[string, BlockToolAdapter]> = []
 ): CreateToolsApiResult => {
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as EditorConfig,
+    config: {} as BlokConfig,
     eventsDispatcher,
   };
 
@@ -30,7 +30,7 @@ const createToolsApi = (
     Tools: {
       blockTools,
     },
-  } as unknown as EditorModules;
+  } as unknown as BlokModules;
 
   return {
     toolsApi,

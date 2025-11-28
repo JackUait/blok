@@ -125,27 +125,27 @@ export default class RectangleSelection extends Module {
      * Don't clear selected block by clicks on the Block settings
      * because we need to keep highlighting working block
      */
-    const startsInsideToolbar = elemWhereSelectionStart.closest(`.${this.Editor.Toolbar.CSS.toolbar}`);
+    const startsInsideToolbar = elemWhereSelectionStart.closest(`.${this.Blok.Toolbar.CSS.toolbar}`);
 
     if (!startsInsideToolbar) {
-      this.Editor.BlockSelection.allBlocksSelected = false;
+      this.Blok.BlockSelection.allBlocksSelected = false;
       this.clearSelection();
       this.stackOfSelected = [];
     }
 
     const selectorsToAvoid = [
       `.${Block.CSS.content}`,
-      `.${this.Editor.Toolbar.CSS.toolbar}`,
-      `.${this.Editor.InlineToolbar.CSS.inlineToolbar}`,
+      `.${this.Blok.Toolbar.CSS.toolbar}`,
+      `.${this.Blok.InlineToolbar.CSS.inlineToolbar}`,
     ];
 
-    const startsInsideEditor = elemWhereSelectionStart.closest('.' + this.Editor.UI.CSS.editorWrapper);
+    const startsInsideBlok = elemWhereSelectionStart.closest('.' + this.Blok.UI.CSS.blokWrapper);
     const startsInSelectorToAvoid = selectorsToAvoid.some((selector) => !!elemWhereSelectionStart.closest(selector));
 
     /**
-     * If selection starts outside of the editor or inside the blocks or on Editor UI elements, do not handle it
+     * If selection starts outside of the blok or inside the blocks or on Blok UI elements, do not handle it
      */
-    if (!startsInsideEditor || startsInSelectorToAvoid) {
+    if (!startsInsideBlok || startsInSelectorToAvoid) {
       return;
     }
 
@@ -301,9 +301,9 @@ export default class RectangleSelection extends Module {
    * @returns {Record<string, Element>}
    */
   private genHTML(): {container: Element; overlay: Element} {
-    const { UI } = this.Editor;
+    const { UI } = this.Blok;
 
-    const container = UI.nodes.holder.querySelector('.' + UI.CSS.editorWrapper);
+    const container = UI.nodes.holder.querySelector('.' + UI.CSS.blokWrapper);
     const overlay = $.make('div', RectangleSelection.CSS.overlay, {});
     const overlayContainer = $.make('div', RectangleSelection.CSS.overlayContainer, {});
     const overlayRectangle = $.make('div', RectangleSelection.CSS.rect, {});
@@ -312,7 +312,7 @@ export default class RectangleSelection extends Module {
     overlayRectangle.setAttribute('data-blok-testid', 'overlay-rectangle');
 
     if (!container) {
-      throw new Error('RectangleSelection: editor wrapper not found');
+      throw new Error('RectangleSelection: blok wrapper not found');
     }
 
     overlayContainer.appendChild(overlayRectangle);
@@ -384,7 +384,7 @@ export default class RectangleSelection extends Module {
     /**
      * Hide Block Settings Toggler (along with the Toolbar) (if showed) when the Rectangle Selection is activated
      */
-    this.Editor.Toolbar.close();
+    this.Blok.Toolbar.close();
 
     if (index === undefined) {
       return;
@@ -426,7 +426,7 @@ export default class RectangleSelection extends Module {
       return;
     }
 
-    const firstBlockInStack = this.Editor.BlockManager.getBlockByIndex(this.stackOfSelected[0]);
+    const firstBlockInStack = this.Blok.BlockManager.getBlockByIndex(this.stackOfSelected[0]);
 
     if (!firstBlockInStack) {
       return;
@@ -436,13 +436,13 @@ export default class RectangleSelection extends Module {
 
     if (this.rectCrossesBlocks && !isSelectedMode) {
       for (const it of this.stackOfSelected) {
-        this.Editor.BlockSelection.selectBlockByIndex(it);
+        this.Blok.BlockSelection.selectBlockByIndex(it);
       }
     }
 
     if (!this.rectCrossesBlocks && isSelectedMode) {
       for (const it of this.stackOfSelected) {
-        this.Editor.BlockSelection.unSelectBlockByIndex(it);
+        this.Blok.BlockSelection.unSelectBlockByIndex(it);
       }
     }
   }
@@ -487,7 +487,7 @@ export default class RectangleSelection extends Module {
     const scrollTop = this.getScrollTop();
     const y = this.mouseY - scrollTop;
     const elementUnderMouse = document.elementFromPoint(centerOfRedactor, y);
-    const lastBlockHolder = this.Editor.BlockManager.lastBlock?.holder;
+    const lastBlockHolder = this.Blok.BlockManager.lastBlock?.holder;
     const contentElement = lastBlockHolder?.querySelector('.' + Block.CSS.content);
     const contentWidth = contentElement ? Number.parseInt(window.getComputedStyle(contentElement).width, 10) : 0;
     const centerOfBlock = contentWidth / 2;
@@ -501,10 +501,10 @@ export default class RectangleSelection extends Module {
         rightPos,
       };
     }
-    const blockInCurrentPos = this.Editor.BlockManager.getBlockByChildNode(elementUnderMouse);
+    const blockInCurrentPos = this.Blok.BlockManager.getBlockByChildNode(elementUnderMouse);
 
     const index = blockInCurrentPos !== undefined
-      ? this.Editor.BlockManager.blocks.findIndex((block) => block.holder === blockInCurrentPos.holder)
+      ? this.Blok.BlockManager.blocks.findIndex((block) => block.holder === blockInCurrentPos.holder)
       : undefined;
 
     return {
@@ -542,7 +542,7 @@ export default class RectangleSelection extends Module {
    */
   private addBlockInSelection(index: number): void {
     if (this.rectCrossesBlocks) {
-      this.Editor.BlockSelection.selectBlockByIndex(index);
+      this.Blok.BlockSelection.selectBlockByIndex(index);
     }
     this.stackOfSelected.push(index);
   }
@@ -618,7 +618,7 @@ export default class RectangleSelection extends Module {
       }
 
       if (this.rectCrossesBlocks) {
-        this.Editor.BlockSelection.unSelectBlockByIndex(stackIndex);
+        this.Blok.BlockSelection.unSelectBlockByIndex(stackIndex);
       }
       indicesToRemove.push(stackIndex);
     }

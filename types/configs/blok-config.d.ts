@@ -4,14 +4,14 @@ import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
 
-export interface EditorConfig {
+export interface BlokConfig {
   /**
-   * Element where Editor will be appended
+   * Element where Blok will be appended
    */
   holder?: string | HTMLElement;
 
   /**
-   * If true, set caret at the first Block after Editor is ready
+   * If true, set caret at the first Block after Blok is ready
    */
   autofocus?: boolean;
 
@@ -48,17 +48,17 @@ export interface EditorConfig {
   }
 
   /**
-   * Data to render on Editor start
+   * Data to render on Blok start
    */
   data?: OutputData;
 
   /**
-   * Height of Editor's bottom area that allows to set focus on the last Block
+   * Height of Blok's bottom area that allows to set focus on the last Block
    */
   minHeight?: number;
 
   /**
-   * Editors log level (how many logs you want to see)
+   * Blok's log level (how many logs you want to see)
    */
   logLevel?: LogLevels;
 
@@ -73,13 +73,13 @@ export interface EditorConfig {
   i18n?: I18nConfig;
 
   /**
-   * Fires when Editor is ready to work
+   * Fires when Blok is ready to work
    */
   onReady?(): void;
 
   /**
    * Fires when something changed in DOM
-   * @param api - editor.js api
+   * @param api - blok.js api
    * @param event - custom event describing mutation. If several mutations happened at once, they will be batched and you'll get an array of events here.
    */
   onChange?(api: API, event: BlockMutationEvent | BlockMutationEvent[]): void;

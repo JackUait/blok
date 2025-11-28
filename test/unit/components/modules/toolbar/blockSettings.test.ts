@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import BlockSettings from '../../../../../src/components/modules/toolbar/blockSettings';
 import type Block from '../../../../../src/components/block';
-import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
-import type { EditorConfig } from '../../../../../types';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type { BlokConfig } from '../../../../../types';
 import type { MenuConfigItem } from '../../../../../types/tools';
 import { PopoverItemType } from '../../../../../src/components/utils/popover';
 import type { PopoverItemParams } from '../../../../../types/utils/popover/popover-item';
@@ -159,7 +159,7 @@ const createBlock = (): Block => ({
   pluginsContent: document.createElement('div'),
 } as unknown as Block);
 
-type EditorMock = {
+type BlokMock = {
   BlockSelection: {
     selectBlock: Mock<(block: Block) => void>;
     clearCache: Mock<() => void>;
@@ -202,7 +202,7 @@ type EditorMock = {
   };
 };
 
-const createEditorMock = (): EditorMock => {
+const createBlokMock = (): BlokMock => {
   const redactor = document.createElement('div');
   const blockSelection = {
     selectBlock: vi.fn(),
@@ -252,12 +252,12 @@ const createEditorMock = (): EditorMock => {
     Tools: tools,
     Caret: caret,
     Toolbar: toolbar,
-  } satisfies EditorMock;
+  } satisfies BlokMock;
 };
 
 describe('BlockSettings', () => {
   let blockSettings: BlockSettings;
-  let editorMock: EditorMock;
+  let blokMock: BlokMock;
   let eventsDispatcher: EventsDispatcherMock;
 
   beforeEach(() => {
@@ -273,12 +273,12 @@ describe('BlockSettings', () => {
     };
 
     blockSettings = new BlockSettings({
-      config: {} as EditorConfig,
+      config: {} as BlokConfig,
       eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
     });
 
-    editorMock = createEditorMock();
-    blockSettings.state = editorMock as unknown as EditorModules;
+    blokMock = createBlokMock();
+    blockSettings.state = blokMock as unknown as BlokModules;
   });
 
   afterEach(() => {
@@ -308,7 +308,7 @@ describe('BlockSettings', () => {
 
     const block = createBlock();
 
-    editorMock.BlockManager.currentBlock = block;
+    blokMock.BlockManager.currentBlock = block;
 
     const selectionStub = {
       save: vi.fn(),
@@ -332,7 +332,7 @@ describe('BlockSettings', () => {
 
     expect(blockSettings.opened).toBe(true);
     expect(selectionStub.save).toHaveBeenCalledTimes(1);
-    expect(editorMock.BlockSelection.selectBlock).toHaveBeenCalledWith(block);
+    expect(blokMock.BlockSelection.selectBlock).toHaveBeenCalledWith(block);
     expect(eventsDispatcher.emit).toHaveBeenCalledWith(blockSettings.events.opened);
 
     const popover = getLastPopover();
@@ -351,7 +351,7 @@ describe('BlockSettings', () => {
 
     const block = createBlock();
 
-    editorMock.BlockManager.currentBlock = block;
+    blokMock.BlockManager.currentBlock = block;
 
     const selectionStub = {
       save: vi.fn(),
@@ -385,7 +385,7 @@ describe('BlockSettings', () => {
 
     const block = createBlock();
 
-    editorMock.BlockManager.currentBlock = block;
+    blokMock.BlockManager.currentBlock = block;
 
     const selectionStub = {
       save: vi.fn(),
@@ -408,7 +408,7 @@ describe('BlockSettings', () => {
     });
 
     const detachSpy = vi.spyOn(blockSettings as unknown as { detachFlipperKeydownListener: () => void }, 'detachFlipperKeydownListener');
-    const selectionAtEditorSpy = vi.spyOn(SelectionUtils, 'isAtEditor', 'get').mockReturnValue(false);
+    const selectionAtBlokSpy = vi.spyOn(SelectionUtils, 'isAtBlok', 'get').mockReturnValue(false);
     const removeSpy = vi.spyOn(popoverElement, 'remove');
 
     blockSettings.close();
@@ -416,7 +416,7 @@ describe('BlockSettings', () => {
     expect(blockSettings.opened).toBe(false);
     expect(selectionStub.restore).toHaveBeenCalledTimes(1);
     expect(selectionStub.clearSaved).toHaveBeenCalledTimes(1);
-    expect(editorMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
+    expect(blokMock.BlockSelection.unselectBlock).toHaveBeenCalledWith(block);
     expect(eventsDispatcher.emit).toHaveBeenCalledWith(blockSettings.events.closed);
     expect(popover.destroy).toHaveBeenCalledTimes(1);
     expect(popover.off).toHaveBeenCalledWith('closed', expect.any(Function));
@@ -424,15 +424,15 @@ describe('BlockSettings', () => {
     expect(detachSpy).toHaveBeenCalledTimes(1);
     expect((blockSettings as unknown as { popover: unknown }).popover).toBeNull();
 
-    selectionAtEditorSpy.mockRestore();
+    selectionAtBlokSpy.mockRestore();
   });
 
-  it('does not try to restore selection when caret is already inside editor UI', () => {
+  it('does not try to restore selection when caret is already inside blok UI', () => {
     blockSettings.make();
 
     const block = createBlock();
 
-    editorMock.BlockManager.currentBlock = block;
+    blokMock.BlockManager.currentBlock = block;
 
     const selectionStub = {
       save: vi.fn(),
@@ -447,21 +447,21 @@ describe('BlockSettings', () => {
       popover: null,
     });
 
-    const selectionAtEditorSpy = vi.spyOn(SelectionUtils, 'isAtEditor', 'get').mockReturnValue(true);
+    const selectionAtBlokSpy = vi.spyOn(SelectionUtils, 'isAtBlok', 'get').mockReturnValue(true);
 
     blockSettings.close();
 
     expect(selectionStub.restore).not.toHaveBeenCalled();
     expect(selectionStub.clearSaved).toHaveBeenCalledTimes(1);
 
-    selectionAtEditorSpy.mockRestore();
+    selectionAtBlokSpy.mockRestore();
   });
 
 
   it('merges tool tunes, convert-to menu and common tunes', async () => {
     const block = createBlock();
 
-    editorMock.Tools.blockTools = new Map([
+    blokMock.Tools.blockTools = new Map([
       ['paragraph', { name: 'paragraph' } ],
     ]);
 
@@ -513,7 +513,7 @@ describe('BlockSettings', () => {
     if (lastItem && 'name' in lastItem) {
       expect(lastItem.name).toBe('delete');
     }
-    expect(getConvertibleToolsForBlockMock).toHaveBeenCalledWith(block, Array.from(editorMock.Tools.blockTools.values()));
+    expect(getConvertibleToolsForBlockMock).toHaveBeenCalledWith(block, Array.from(blokMock.Tools.blockTools.values()));
   });
 
   it('returns only common tunes when there are no tool-specific or convertible tunes', async () => {

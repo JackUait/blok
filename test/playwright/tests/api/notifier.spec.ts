@@ -3,31 +3,31 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { Notifier as NotifierAPI } from '@/types/api/notifier';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-type EditorWithNotifier = EditorJS & { notifier: NotifierAPI };
+type BlokWithNotifier = Blok & { notifier: NotifierAPI };
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
+const HOLDER_ID = 'blok';
 const NOTIFIER_CONTAINER_SELECTOR = '[data-blok-testid="notifier-container"]';
 const NOTIFICATION_SELECTOR = '[data-blok-testid^="notification"]';
 
-const resetEditor = async (page: Page): Promise<void> => {
+const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
     const holderElement = document.getElementById(holder);
@@ -47,23 +47,23 @@ const resetEditor = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page): Promise<void> => {
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+const createBlok = async (page: Page): Promise<void> => {
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(async ({ holder }) => {
-    const editor = new window.EditorJS({
+    const blok = new window.Blok({
       holder: holder,
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, { holder: HOLDER_ID });
 };
 
 test.describe('api.notifier', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -72,9 +72,9 @@ test.describe('api.notifier', () => {
 
   test.afterEach(async ({ page }) => {
     await page.evaluate(async ({ holder }) => {
-      if (window.editorInstance) {
-        await window.editorInstance.destroy?.();
-        window.editorInstance = undefined;
+      if (window.blokInstance) {
+        await window.blokInstance.destroy?.();
+        window.blokInstance = undefined;
       }
 
       document.querySelectorAll('[data-blok-testid="notifier-container"]').forEach((node) => node.remove());
@@ -83,14 +83,14 @@ test.describe('api.notifier', () => {
   });
 
   test('should display notification message through the notifier API', async ({ page }) => {
-    await createEditor(page);
+    await createBlok(page);
 
-    const message = 'Editor notifier alert';
+    const message = 'Blok notifier alert';
 
     await page.evaluate(({ text }) => {
-      const editor = window.editorInstance as EditorWithNotifier | undefined;
+      const blok = window.blokInstance as BlokWithNotifier | undefined;
 
-      editor?.notifier.show({
+      blok?.notifier.show({
         message: text,
         style: 'success',
         time: 1000,
@@ -106,16 +106,16 @@ test.describe('api.notifier', () => {
   });
 
   test('should render confirm notification with type-specific UI and styles', async ({ page }) => {
-    await createEditor(page);
+    await createBlok(page);
 
     const message = 'Delete current block?';
     const okText = 'Yes, delete';
     const cancelText = 'No, keep';
 
     await page.evaluate(({ text, ok, cancel }) => {
-      const editor = window.editorInstance as EditorWithNotifier | undefined;
+      const blok = window.blokInstance as BlokWithNotifier | undefined;
 
-      editor?.notifier.show({
+      blok?.notifier.show({
         message: text,
         type: 'confirm',
         style: 'error',

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { EditorConfig } from '../../../types';
-import type { EditorModules } from '../../../src/types-internal/editor-modules';
+import type { BlokConfig } from '../../../types';
+import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import { CriticalError } from '../../../src/components/errors/critical';
 
 const mockRegistry = vi.hoisted(() => ({
@@ -70,7 +70,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal Tools module stub used in Core tests.
    */
   class MockTools {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.toolsPrepare;
   }
 
@@ -78,7 +78,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal UI module stub used in Core tests.
    */
   class MockUI {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.uiPrepare;
     public checkEmptiness = mockRegistry.modules.uiCheckEmptiness;
   }
@@ -87,7 +87,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal BlockManager module stub used in Core tests.
    */
   class MockBlockManager {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.blockManagerPrepare;
     public blocks = [ { id: 'block-1' } ];
   }
@@ -96,7 +96,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal Paste module stub used in Core tests.
    */
   class MockPaste {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.pastePrepare;
   }
 
@@ -104,7 +104,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal BlockSelection module stub used in Core tests.
    */
   class MockBlockSelection {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.blockSelectionPrepare;
   }
 
@@ -112,7 +112,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal RectangleSelection module stub used in Core tests.
    */
   class MockRectangleSelection {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.rectangleSelectionPrepare;
   }
 
@@ -120,7 +120,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal CrossBlockSelection module stub used in Core tests.
    */
   class MockCrossBlockSelection {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.crossBlockSelectionPrepare;
   }
 
@@ -128,7 +128,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal ReadOnly module stub used in Core tests.
    */
   class MockReadOnly {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.readOnlyPrepare;
   }
 
@@ -136,7 +136,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal Renderer module stub used in Core tests.
    */
   class MockRenderer {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.rendererPrepare;
     public render = mockRegistry.modules.rendererRender;
   }
@@ -145,7 +145,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal ModificationsObserver module stub used in Core tests.
    */
   class MockModificationsObserver {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.modificationsObserverPrepare;
     public enable = mockRegistry.modules.modificationsObserverEnable;
   }
@@ -154,7 +154,7 @@ vi.mock('../../../src/components/modules', () => {
    * Minimal Caret module stub used in Core tests.
    */
   class MockCaret {
-    public state?: EditorModules;
+    public state?: BlokModules;
     public prepare = mockRegistry.modules.caretPrepare;
     public setToBlock = mockRegistry.modules.caretSetToBlock;
 
@@ -213,7 +213,7 @@ const {
 // Import Core after mocks are configured
 import Core from '../../../src/components/core';
 
-const createReadyCore = async (config?: EditorConfig | string): Promise<Core> => {
+const createReadyCore = async (config?: BlokConfig | string): Promise<Core> => {
   const core = new Core(config);
 
   await core.isReady;
@@ -254,7 +254,7 @@ describe('Core', () => {
 
   describe('configuration', () => {
     it('retains provided data and applies i18n dictionary', async () => {
-      const config: EditorConfig = {
+      const config: BlokConfig = {
         holder: 'holder',
         defaultBlock: 'header',
         data: {
@@ -299,7 +299,7 @@ describe('Core', () => {
 
       core.configuration = {
         holder: 'missing',
-      } as EditorConfig;
+      } as BlokConfig;
 
       expect(() => core.validate()).toThrow('element with ID «missing» is missing. Pass correct holder\'s ID.');
     });
@@ -311,7 +311,7 @@ describe('Core', () => {
 
       core.configuration = {
         holder: {} as unknown as HTMLElement,
-      } as EditorConfig;
+      } as BlokConfig;
 
       expect(() => core.validate()).toThrow('«holder» value must be an Element node');
     });
@@ -325,7 +325,7 @@ describe('Core', () => {
       expect(moduleInstances.Tools).toBeDefined();
       expect(moduleInstances.UI).toBeDefined();
 
-      const toolsState = moduleInstances.Tools.state as Partial<EditorModules>;
+      const toolsState = moduleInstances.Tools.state as Partial<BlokModules>;
 
       expect(toolsState.Tools).toBeUndefined();
       expect(toolsState.UI).toBe(moduleInstances.UI);
@@ -384,24 +384,24 @@ describe('Core', () => {
       const core = await createReadyCore();
       const render = (core as unknown as { render: () => Promise<void> }).render.bind(core);
 
-      delete (core.moduleInstances as Partial<EditorModules>).Renderer;
+      delete (core.moduleInstances as Partial<BlokModules>).Renderer;
 
       expect(() => render()).toThrow('Renderer module is not initialized');
     });
 
-    it('throws when editor data is missing', async () => {
+    it('throws when blok data is missing', async () => {
       const core = await createReadyCore();
       const render = (core as unknown as { render: () => Promise<void> }).render.bind(core);
 
-      (core.configuration as EditorConfig).data = undefined;
+      (core.configuration as BlokConfig).data = undefined;
 
-      expect(() => render()).toThrow('Editor data is not initialized');
+      expect(() => render()).toThrow('Blok data is not initialized');
     });
   });
 
   describe('ready workflow', () => {
     it('checks UI, enables observer and moves caret on autofocus', async () => {
-      const config: EditorConfig = {
+      const config: BlokConfig = {
         holder: 'holder',
         autofocus: true,
         data: {

@@ -104,7 +104,7 @@ describe('InlineToolbar', () => {
    
   let inlineToolbar: InlineToolbar;
    
-  let mockEditor: {
+  let mockBlok: {
     BlockManager: {
       getBlock: ReturnType<typeof vi.fn>;
       currentBlock: {
@@ -132,7 +132,7 @@ describe('InlineToolbar', () => {
         right: number;
       };
       CSS: {
-        editorRtlFix: string;
+        blokRtlFix: string;
       };
     };
     Toolbar: {
@@ -250,8 +250,8 @@ describe('InlineToolbar', () => {
     redactor.className = 'blok-editor__redactor';
     wrapper.appendChild(redactor);
 
-    // Create mock Editor
-    mockEditor = {
+    // Create mock Blok
+    mockBlok = {
       BlockManager: {
         getBlock: vi.fn(),
         currentBlock: null,
@@ -274,7 +274,7 @@ describe('InlineToolbar', () => {
           right: CONTENT_RECT_RIGHT,
         },
         CSS: {
-          editorRtlFix: 'blok-editor--rtl',
+          blokRtlFix: 'blok-editor--rtl',
         },
       },
       Toolbar: {
@@ -291,14 +291,14 @@ describe('InlineToolbar', () => {
       } as unknown as typeof InlineToolbar.prototype['eventsDispatcher'],
     });
 
-    // Set Editor modules
-    (inlineToolbar as unknown as { Editor: typeof mockEditor }).Editor = mockEditor;
+    // Set Blok modules
+    (inlineToolbar as unknown as { Blok: typeof mockBlok }).Blok = mockBlok;
   });
 
   afterEach(() => {
     // Clean up DOM
-    if (mockEditor?.UI?.nodes?.wrapper) {
-      const wrapper = mockEditor.UI.nodes.wrapper;
+    if (mockBlok?.UI?.nodes?.wrapper) {
+      const wrapper = mockBlok.UI.nodes.wrapper;
 
       if (wrapper.parentNode) {
         wrapper.parentNode.removeChild(wrapper);
@@ -321,7 +321,7 @@ describe('InlineToolbar', () => {
         } as unknown as typeof InlineToolbar.prototype['eventsDispatcher'],
       });
 
-      (newToolbar as unknown as { Editor: typeof mockEditor }).Editor = mockEditor;
+      (newToolbar as unknown as { Blok: typeof mockBlok }).Blok = mockBlok;
 
       // The listener is registered via this.listeners.on, not directly
       // So we check that the toolbar was created successfully
@@ -364,7 +364,7 @@ describe('InlineToolbar', () => {
       } as DOMRect);
       vi.spyOn(SelectionUtils, 'range', 'get').mockReturnValue(selection.getRangeAt(0));
 
-      mockEditor.BlockManager.currentBlock = createMockBlock() as unknown as typeof mockEditor.BlockManager.currentBlock;
+      mockBlok.BlockManager.currentBlock = createMockBlock() as unknown as typeof mockBlok.BlockManager.currentBlock;
     });
 
     it('should close toolbar when needToClose is true', async () => {
@@ -393,7 +393,7 @@ describe('InlineToolbar', () => {
       await inlineToolbar.tryToShow();
 
       expect(openSpy).toHaveBeenCalled();
-      expect(mockEditor.Toolbar.close).toHaveBeenCalled();
+      expect(mockBlok.Toolbar.close).toHaveBeenCalled();
     });
   });
 
@@ -569,7 +569,7 @@ describe('InlineToolbar', () => {
         configurable: true,
       });
 
-      mockEditor.BlockManager.getBlock = vi.fn(() => createMockBlock() as unknown as typeof mockEditor.BlockManager.currentBlock) as typeof mockEditor.BlockManager.getBlock;
+      mockBlok.BlockManager.getBlock = vi.fn(() => createMockBlock() as unknown as typeof mockBlok.BlockManager.currentBlock) as typeof mockBlok.BlockManager.getBlock;
 
       const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
 
@@ -595,8 +595,8 @@ describe('InlineToolbar', () => {
         configurable: true,
       });
 
-      mockEditor.BlockManager.currentBlock = null;
-      mockEditor.BlockManager.getBlock = vi.fn(() => null) as typeof mockEditor.BlockManager.getBlock;
+      mockBlok.BlockManager.currentBlock = null;
+      mockBlok.BlockManager.getBlock = vi.fn(() => null) as typeof mockBlok.BlockManager.getBlock;
 
       const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
 
@@ -625,8 +625,8 @@ describe('InlineToolbar', () => {
       const block = createMockBlock();
 
       block.tool.inlineTools = new Map();
-      mockEditor.BlockManager.currentBlock = block as unknown as typeof mockEditor.BlockManager.currentBlock;
-      mockEditor.BlockManager.getBlock = vi.fn(() => block as unknown as typeof mockEditor.BlockManager.currentBlock) as typeof mockEditor.BlockManager.getBlock;
+      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
+      mockBlok.BlockManager.getBlock = vi.fn(() => block as unknown as typeof mockBlok.BlockManager.currentBlock) as typeof mockBlok.BlockManager.getBlock;
 
       const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
 
@@ -655,8 +655,8 @@ describe('InlineToolbar', () => {
       const block = createMockBlock();
 
       block.holder.removeAttribute('contenteditable');
-      mockEditor.BlockManager.currentBlock = block as unknown as typeof mockEditor.BlockManager.currentBlock;
-      mockEditor.BlockManager.getBlock = vi.fn(() => block as unknown as typeof mockEditor.BlockManager.currentBlock) as typeof mockEditor.BlockManager.getBlock;
+      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
+      mockBlok.BlockManager.getBlock = vi.fn(() => block as unknown as typeof mockBlok.BlockManager.currentBlock) as typeof mockBlok.BlockManager.getBlock;
 
       const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
 
@@ -684,8 +684,8 @@ describe('InlineToolbar', () => {
 
       const block = createMockBlock();
 
-      mockEditor.BlockManager.currentBlock = block as unknown as typeof mockEditor.BlockManager.currentBlock;
-      mockEditor.BlockManager.getBlock = vi.fn(() => block as unknown as typeof mockEditor.BlockManager.currentBlock) as typeof mockEditor.BlockManager.getBlock;
+      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
+      mockBlok.BlockManager.getBlock = vi.fn(() => block as unknown as typeof mockBlok.BlockManager.currentBlock) as typeof mockBlok.BlockManager.getBlock;
 
       const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
 
@@ -695,7 +695,7 @@ describe('InlineToolbar', () => {
 
   describe('getTools', () => {
     it('should return empty array when current block is null', () => {
-      mockEditor.BlockManager.currentBlock = null;
+      mockBlok.BlockManager.currentBlock = null;
 
       const result = (inlineToolbar as unknown as { getTools: () => InlineToolAdapter[] }).getTools();
 
@@ -716,8 +716,8 @@ describe('InlineToolbar', () => {
         ['normal-tool', normalTool],
       ]);
 
-      mockEditor.BlockManager.currentBlock = block as unknown as typeof mockEditor.BlockManager.currentBlock;
-      mockEditor.ReadOnly.isEnabled = true;
+      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
+      mockBlok.ReadOnly.isEnabled = true;
 
       const result = (inlineToolbar as unknown as { getTools: () => InlineToolAdapter[] }).getTools();
 
@@ -735,8 +735,8 @@ describe('InlineToolbar', () => {
         ['tool2', tool2],
       ]);
 
-      mockEditor.BlockManager.currentBlock = block as unknown as typeof mockEditor.BlockManager.currentBlock;
-      mockEditor.ReadOnly.isEnabled = false;
+      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
+      mockBlok.ReadOnly.isEnabled = false;
 
       const result = (inlineToolbar as unknown as { getTools: () => InlineToolAdapter[] }).getTools();
 
@@ -863,7 +863,7 @@ describe('InlineToolbar', () => {
         shortcut: 'CMD+B',
       });
 
-      mockEditor.Tools.inlineTools.set('bold', toolAdapter);
+      mockBlok.Tools.inlineTools.set('bold', toolAdapter);
 
       (inlineToolbar as unknown as { registerInitialShortcuts: () => void }).registerInitialShortcuts();
 
@@ -875,7 +875,7 @@ describe('InlineToolbar', () => {
         shortcut: 'CMD+B',
       });
 
-      mockEditor.Tools.inlineTools.set('bold', toolAdapter);
+      mockBlok.Tools.inlineTools.set('bold', toolAdapter);
       vi.mocked(Shortcuts.add).mockImplementation(() => {
         throw new Error('Shortcut error');
       });
@@ -929,7 +929,7 @@ describe('InlineToolbar', () => {
         configurable: true,
       });
 
-      mockEditor.UI.contentRect.right = CONTENT_RECT_RIGHT;
+      mockBlok.UI.contentRect.right = CONTENT_RECT_RIGHT;
 
       (inlineToolbar as unknown as { move: (popoverWidth: number) => void }).move(TOOLBAR_WIDTH);
 

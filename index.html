@@ -54,7 +54,7 @@
     </div>
     <div class="blok-example__output">
       <div class="blok-example__output-footer">
-        <a href="https://github.com/JackUait/blok" style="font-weight: bold;">Blok Editor</a>
+        <a href="https://github.com/JackUait/blok" style="font-weight: bold;">Blok</a>
       </div>
     </div>
   </div>
@@ -89,17 +89,17 @@
     window.Blok = Blok;
 
     /**
-     * To initialize the Editor, create a new instance with configuration object
+     * To initialize the Blok, create a new instance with configuration object
      * @see docs/installation.md for mode details
      */
-    const editorConfig = {
+    const blokConfig = {
       /**
        * Enable/Disable the read only mode
        */
       readOnly: false,
 
       /**
-       * Wrapper of Editor
+       * Wrapper of Blok
        */
       holder: 'blok',
 
@@ -211,7 +211,7 @@
             id: "b6ji-DvaKb",
             type: "paragraph",
             data: {
-              text: "Hey. Meet the new Editor. On this page you can see it in action — try to edit this text. Source code of the page contains the example of connection and configuration."
+              text: "Hey. Meet the new Blok. On this page you can see it in action — try to edit this text. Source code of the page contains the example of connection and configuration."
             }
           },
           {
@@ -255,7 +255,7 @@
             type : 'paragraph',
             id: "bwnFX5LoX7",
             data : {
-              text : 'Workspace in classic editors is made of a single contenteditable element, used to create different HTML markups. Blok <mark class=\"blok-marker\">workspace consists of separate Blocks: paragraphs, headings, images, lists, quotes, etc</mark>. Each of them is an independent contenteditable element (or more complex structure) provided by Plugin and united by Editor\'s Core.'
+              text : 'Workspace in classic editors is made of a single contenteditable element, used to create different HTML markups. Blok <mark class=\"blok-marker\">workspace consists of separate Blocks: paragraphs, headings, images, lists, quotes, etc</mark>. Each of them is an independent contenteditable element (or more complex structure) provided by Plugin and united by Blok\'s Core.'
             }
           },
           {
@@ -303,7 +303,7 @@
             type : 'paragraph',
             id: "h298akk2Ad",
             data : {
-              text : 'We have been working on this project more than three years. Several large media projects help us to test and debug the Editor, to make its core more stable. At the same time we significantly improved the API. Now, it can be used to create any plugin for any task. Hope you enjoy. 😏'
+              text : 'We have been working on this project more than three years. Several large media projects help us to test and debug the Blok, to make its core more stable. At the same time we significantly improved the API. Now, it can be used to create any plugin for any task. Hope you enjoy. 😏'
             }
           },
         ]
@@ -316,10 +316,10 @@
       },
     }
     /**
-    * To initialize the Editor, create a new instance with configuration object
+    * To initialize the Blok, create a new instance with configuration object
     * @see docs/installation.md for mode details
     */
-    var editor = new Blok(editorConfig);
+    var blok = new Blok(blokConfig);
 
     /**
     * Saving button
@@ -336,7 +336,7 @@
     * Saving example
     */
     saveButton.addEventListener('click', function () {
-      editor.save()
+      blok.save()
         .then((savedData) => {
           cPreview.show(savedData, document.getElementById("output"));
         })
@@ -349,7 +349,7 @@
     * Toggle read-only example
     */
     toggleReadOnlyButton.addEventListener('click', async () => {
-      const readOnlyState = await editor.readOnly.toggle();
+      const readOnlyState = await blok.readOnly.toggle();
 
       readOnlyIndicator.textContent = readOnlyState ? 'On' : 'Off';
     });
@@ -371,9 +371,9 @@
     enableThinModeButton.addEventListener('click', () => {
       document.body.classList.toggle("thin-mode")
 
-      editor.destroy();
+      blok.destroy();
 
-      editor = new Blok(editorConfig);
+      blok = new Blok(blokConfig);
     })
 
     /**
@@ -387,7 +387,7 @@
       localStorage.setItem('theme', document.body.classList.contains("dark-mode") ? 'dark' : 'default');
     })
 
-    window.editor = editor;
+    window.blok = blok;
   </script>
 </body>
 </html>

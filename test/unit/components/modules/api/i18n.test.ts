@@ -4,8 +4,8 @@ import I18nAPI from '../../../../../src/components/modules/api/i18n';
 import EventsDispatcher from '../../../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorConfig } from '../../../../../types';
-import type { EditorEventMap } from '../../../../../src/components/events';
+import type { BlokConfig } from '../../../../../types';
+import type { BlokEventMap } from '../../../../../src/components/events';
 
 type EsModuleKey = '__esModule';
 type EsModule<T extends object> = T & { [K in EsModuleKey]: true };
@@ -47,9 +47,9 @@ vi.mock('../../../../../src/components/i18n', () =>
 );
 
 const createI18nApi = (): I18nAPI => {
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as EditorConfig,
+    config: {} as BlokConfig,
     eventsDispatcher,
   };
 

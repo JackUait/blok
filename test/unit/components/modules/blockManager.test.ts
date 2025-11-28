@@ -3,10 +3,10 @@ import type { Mock, MockInstance } from 'vitest';
 
 import BlockManager from '../../../../src/components/modules/blockManager';
 import EventsDispatcher from '../../../../src/components/utils/events';
-import type { EditorConfig } from '../../../../types';
-import type { EditorModules } from '../../../../src/types-internal/editor-modules';
+import type { BlokConfig } from '../../../../types';
+import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import { BlockChanged } from '../../../../src/components/events';
-import type { EditorEventMap } from '../../../../src/components/events';
+import type { BlokEventMap } from '../../../../src/components/events';
 import Block from '../../../../src/components/block';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
@@ -31,7 +31,7 @@ type BlocksStub = {
 
 type CreateBlockManagerOptions = {
   initialBlocks?: Block[];
-  editorOverrides?: Partial<EditorModules>;
+  blokOverrides?: Partial<BlokModules>;
 };
 
 const createBlockStub = (options: {
@@ -178,27 +178,27 @@ const createBlocksStub = (initialBlocks: Block[] = []): BlocksStub => {
 const createBlockManager = (
   options: CreateBlockManagerOptions = {}
 ): BlockManagerContext => {
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const config = {
     defaultBlock: 'paragraph',
     sanitizer: {},
-  } as EditorConfig;
+  } as BlokConfig;
 
   const blockManager = new BlockManager({
     config,
     eventsDispatcher,
   });
 
-  const defaultEditorState: Partial<EditorModules> = {
+  const defaultBlokState: Partial<BlokModules> = {
     BlockEvents: {
       handleCommandC: vi.fn(),
       handleCommandX: vi.fn(),
       keydown: vi.fn(),
       keyup: vi.fn(),
-    } as unknown as EditorModules['BlockEvents'],
+    } as unknown as BlokModules['BlockEvents'],
     ReadOnly: {
       isEnabled: false,
-    } as unknown as EditorModules['ReadOnly'],
+    } as unknown as BlokModules['ReadOnly'],
     UI: {
       nodes: {
         holder: document.createElement('div'),
@@ -206,21 +206,21 @@ const createBlockManager = (
         wrapper: document.createElement('div'),
       },
       CSS: {
-        editorWrapper: 'blok-editor',
-        editorWrapperNarrow: 'blok-editor--narrow',
-        editorZone: 'blok-editor__redactor',
-        editorZoneHidden: 'blok-editor__redactor--hidden',
-        editorEmpty: 'blok-editor--empty',
-        editorRtlFix: 'blok-editor--rtl',
+        blokWrapper: 'blok-editor',
+        blokWrapperNarrow: 'blok-editor--narrow',
+        blokZone: 'blok-editor__redactor',
+        blokZoneHidden: 'blok-editor__redactor--hidden',
+        blokEmpty: 'blok-editor--empty',
+        blokRtlFix: 'blok-editor--rtl',
       },
       checkEmptiness: vi.fn(),
-    } as unknown as EditorModules['UI'],
+    } as unknown as BlokModules['UI'],
   };
 
   blockManager.state = {
-    ...defaultEditorState,
-    ...options.editorOverrides,
-  } as EditorModules;
+    ...defaultBlokState,
+    ...options.blokOverrides,
+  } as BlokModules;
 
   const blocksStub = createBlocksStub(options.initialBlocks);
 
@@ -437,7 +437,7 @@ describe('BlockManager', () => {
   it('throws a descriptive error when default block tool is missing', () => {
     const { blockManager } = createBlockManager();
 
-    (blockManager as unknown as { config: EditorConfig }).config.defaultBlock = undefined;
+    (blockManager as unknown as { config: BlokConfig }).config.defaultBlock = undefined;
 
     expect(() => blockManager.insertDefaultBlockAtIndex(0)).toThrow('Could not insert default Block. Default block tool is not defined in the configuration.');
   });
@@ -474,11 +474,11 @@ describe('BlockManager', () => {
 
     const caretStub = {
       extractFragmentFromCaretPosition: vi.fn().mockReturnValue(fragment),
-    } as unknown as EditorModules['Caret'];
+    } as unknown as BlokModules['Caret'];
 
     const { blockManager } = createBlockManager({
       initialBlocks: [ createBlockStub({ id: 'origin' }) ],
-      editorOverrides: {
+      blokOverrides: {
         Caret: caretStub,
       },
     });
@@ -514,10 +514,10 @@ describe('BlockManager', () => {
 
     const { blockManager } = createBlockManager({
       initialBlocks: [ blockToConvert ],
-      editorOverrides: {
+      blokOverrides: {
         Tools: {
           blockTools: new Map([ [replacingTool.name, replacingTool] ]),
-        } as unknown as EditorModules['Tools'],
+        } as unknown as BlokModules['Tools'],
       },
     });
 
@@ -534,7 +534,7 @@ describe('BlockManager', () => {
     expect(result).toBe(replacedBlock);
   });
 
-  it('sets current block by a child node that belongs to the current editor instance', () => {
+  it('sets current block by a child node that belongs to the current blok instance', () => {
     const blocks = [
       createBlockStub({ id: 'first' }),
       createBlockStub({ id: 'second' }),
@@ -543,9 +543,9 @@ describe('BlockManager', () => {
       initialBlocks: blocks,
     });
 
-    const ui = (blockManager as unknown as { Editor: EditorModules }).Editor.UI;
+    const ui = (blockManager as unknown as { Blok: BlokModules }).Blok.UI;
 
-    ui.nodes.wrapper.classList.add(ui.CSS.editorWrapper);
+    ui.nodes.wrapper.classList.add(ui.CSS.blokWrapper);
     ui.nodes.wrapper.appendChild(blocks[0].holder);
     ui.nodes.wrapper.appendChild(blocks[1].holder);
     document.body.appendChild(ui.nodes.wrapper);
@@ -562,7 +562,7 @@ describe('BlockManager', () => {
 
     const alienWrapper = document.createElement('div');
 
-    alienWrapper.classList.add(ui.CSS.editorWrapper);
+    alienWrapper.classList.add(ui.CSS.blokWrapper);
     const alienBlock = createBlockStub({ id: 'alien' });
 
     alienWrapper.appendChild(alienBlock.holder);
@@ -582,7 +582,7 @@ describe('BlockManager', () => {
     });
 
     const emitSpy = vi.spyOn(
-      (blockManager as unknown as { eventsDispatcher: EventsDispatcher<EditorEventMap> }).eventsDispatcher,
+      (blockManager as unknown as { eventsDispatcher: EventsDispatcher<BlokEventMap> }).eventsDispatcher,
       'emit'
     );
 

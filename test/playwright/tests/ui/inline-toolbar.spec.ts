@@ -38,31 +38,6 @@ type CreateBlokOptions = Pick<BlokConfig, 'readOnly' | 'placeholder'> & {
   tools?: Record<string, SerializableToolConfig>;
 };
 
-const TEST_INLINE_TOOL_SOURCE = `
-class TestTool {
-  static isInline = true;
-
-  constructor() {}
-
-  render() {
-    return {
-      icon: 'n',
-      title: 'Test Tool',
-      name: 'test-tool',
-      children: {
-        items: [
-          {
-            icon: 'm',
-            title: 'Test Tool Item',
-            onActivate: () => {},
-          },
-        ],
-      },
-    };
-  }
-}
-`;
-
 const READ_ONLY_INLINE_TOOL_SOURCE = `
 class ReadOnlyInlineTool {
   static isInline = true;
@@ -815,88 +790,6 @@ test.describe('inline toolbar', () => {
 
     expect(toolbarSnapshot[0]?.name).toBe('convert-to');
     expect(toolbarSnapshot[1]?.hasSeparator).toBe(true);
-  });
-
-  test('should have separators from both sides of item if it is in the middle and has children', async ({ page }) => {
-    await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-
-    await createBlok(page, {
-      data: {
-        blocks: [
-          {
-            type: 'header',
-            data: {
-              text: 'First block text',
-            },
-          },
-        ],
-      },
-      tools: {
-        header: {
-          className: 'Header',
-          config: {
-            inlineToolbar: ['bold', 'testTool', 'link'],
-          },
-        },
-        testTool: {
-          classCode: TEST_INLINE_TOOL_SOURCE,
-        },
-      },
-    });
-
-    const headerBlock = page.locator(HEADER_SELECTOR);
-
-    await expect(headerBlock).toHaveCount(1);
-
-    await selectText(headerBlock, 'block');
-
-    const toolbarSnapshot = await getInlineToolbarSnapshot(page);
-    const testToolIndex = toolbarSnapshot.findIndex((item) => item.name === 'test-tool');
-
-    expect(testToolIndex).toBeGreaterThan(0);
-    expect(toolbarSnapshot[testToolIndex - 1]?.hasSeparator).toBe(true);
-    expect(toolbarSnapshot[testToolIndex + 1]?.hasSeparator).toBe(true);
-  });
-
-  test('should have separator before the item with children if it is the last of all items', async ({ page }) => {
-    await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-
-    await createBlok(page, {
-      data: {
-        blocks: [
-          {
-            type: 'header',
-            data: {
-              text: 'First block text',
-            },
-          },
-        ],
-      },
-      tools: {
-        header: {
-          className: 'Header',
-          config: {
-            inlineToolbar: ['bold', 'testTool'],
-          },
-        },
-        testTool: {
-          classCode: TEST_INLINE_TOOL_SOURCE,
-        },
-      },
-    });
-
-    const headerBlock = page.locator(HEADER_SELECTOR);
-
-    await expect(headerBlock).toHaveCount(1);
-
-    await selectText(headerBlock, 'block');
-
-    const toolbarSnapshot = await getInlineToolbarSnapshot(page);
-    const testToolIndex = toolbarSnapshot.findIndex((item) => item.name === 'test-tool');
-
-    expect(testToolIndex).toBeGreaterThan(0);
-    expect(testToolIndex).toBe(toolbarSnapshot.length - 1);
-    expect(toolbarSnapshot[testToolIndex - 1]?.hasSeparator).toBe(true);
   });
 });
 

@@ -134,7 +134,7 @@ const createMock = <Args extends unknown[] = [], Result = void>(
 };
 
 /**
- * Creates a typed stub for the Editor.js API.
+ * Creates a typed stub for the Blok.js API.
  */
 const createApiStub = (): API => ({
   blocks: {} as API['blocks'],

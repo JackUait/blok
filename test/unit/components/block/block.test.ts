@@ -9,7 +9,7 @@ import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { BlockToolData } from '@/types';
 import type { BlockTuneData } from '@/types/block-tunes/block-tune-data';
 import EventsDispatcher from '../../../../src/components/utils/events';
-import type { EditorEventMap } from '../../../../src/components/events';
+import type { BlokEventMap } from '../../../../src/components/events';
 import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet } from '../../../../src/components/events';
 import SelectionUtils from '../../../../src/components/selection';
 
@@ -38,7 +38,7 @@ interface CreateBlockOptions {
   data?: BlockToolData;
   tunes?: TuneFactoryResult[];
   tunesData?: Record<string, BlockTuneData>;
-  eventBus?: EventsDispatcher<EditorEventMap>;
+  eventBus?: EventsDispatcher<BlokEventMap>;
 }
 
 interface CreateBlockResult {
@@ -324,7 +324,7 @@ describe('Block', () => {
     });
 
     it('toggles selection class and emits fake cursor events', () => {
-      const eventBus = new EventsDispatcher<EditorEventMap>();
+      const eventBus = new EventsDispatcher<BlokEventMap>();
       const emitSpy = vi.spyOn(eventBus, 'emit');
       const { block } = createBlock({ eventBus });
 

@@ -3,17 +3,17 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import type Blok from '@/types';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const FIRST_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]:first-of-type`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const HOLDER_ID = 'blok';
+const FIRST_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]:first-of-type`;
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
 const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
 const FIRST_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(1)`;
@@ -32,49 +32,49 @@ type SerializableTuneRenderConfig =
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    __editorBundleInjectionRequested?: boolean;
+    blokInstance?: Blok;
+    __blokBundleInjectionRequested?: boolean;
   }
 }
 
 /**
- * Reset the editor holder and destroy existing editor instance.
+ * Reset the blok holder and destroy existing blok instance.
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }: { holderId: string }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }: { holder: string }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
- * Ensure the Editor bundle is available on the page.
+ * Ensure the Blok bundle is available on the page.
  *
  * Some tests were flaking because the fixture page occasionally loads before the UMD bundle is ready,
- * leaving window.EditorJS undefined. As a fallback we inject the bundle manually once per run.
+ * leaving window.Blok undefined. As a fallback we inject the bundle manually once per run.
  * @param page - The Playwright page object
  */
-const ensureEditorBundleLoaded = async (page: Page): Promise<void> => {
+const ensureBlokBundleLoaded = async (page: Page): Promise<void> => {
   await page.waitForFunction(() => {
-    if (typeof window.EditorJS === 'function') {
+    if (typeof window.Blok === 'function') {
       return true;
     }
 
-    if (!window.__editorBundleInjectionRequested) {
-      window.__editorBundleInjectionRequested = true;
+    if (!window.__blokBundleInjectionRequested) {
+      window.__blokBundleInjectionRequested = true;
 
       const script = document.createElement('script');
 
@@ -88,23 +88,23 @@ const ensureEditorBundleLoaded = async (page: Page): Promise<void> => {
 };
 
 /**
- * Create an Editor instance configured with a tune that returns the provided render config.
+ * Create an Blok instance configured with a tune that returns the provided render config.
  * @param page - The Playwright page object
  * @param renderConfig - Serializable configuration describing tune render output
  */
-const createEditorWithTune = async (
+const createBlokWithTune = async (
   page: Page,
   renderConfig: SerializableTuneRenderConfig
 ): Promise<void> => {
-  await resetEditor(page);
-  await ensureEditorBundleLoaded(page);
+  await resetBlok(page);
+  await ensureBlokBundleLoaded(page);
 
   await page.evaluate(
     async ({
-      holderId,
+      holder,
       config,
     }: {
-      holderId: string;
+      holder: string;
       config: SerializableTuneRenderConfig;
     }) => {
       const tuneConfig = config;
@@ -148,19 +148,19 @@ const createEditorWithTune = async (
         public save(): void {}
       }
 
-      const editor = new window.EditorJS({
-        holder: holderId,
+      const blok = new window.Blok({
+        holder: holder,
         tools: {
           testTune: TestTune,
         },
         tunes: [ 'testTune' ],
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       config: renderConfig,
     }
   );
@@ -192,7 +192,7 @@ const openBlockTunes = async (page: Page): Promise<void> => {
 
 test.describe('api.tunes', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -200,7 +200,7 @@ test.describe('api.tunes', () => {
   });
 
   test('renders a popover entry for block tune if configured', async ({ page }) => {
-    await createEditorWithTune(page, {
+    await createBlokWithTune(page, {
       type: 'single',
       item: {
         icon: 'ICON',
@@ -216,7 +216,7 @@ test.describe('api.tunes', () => {
   });
 
   test('renders several popover entries for block tune if configured', async ({ page }) => {
-    await createEditorWithTune(page, {
+    await createBlokWithTune(page, {
       type: 'multiple',
       items: [
         {
@@ -242,7 +242,7 @@ test.describe('api.tunes', () => {
   test('displays custom HTML returned by tune render method inside tunes menu', async ({ page }) => {
     const sampleText = 'sample text';
 
-    await createEditorWithTune(page, {
+    await createBlokWithTune(page, {
       type: 'html',
       text: sampleText,
     });
@@ -255,7 +255,7 @@ test.describe('api.tunes', () => {
 
 
   test('displays installed tunes above default tunes', async ({ page }) => {
-    await createEditorWithTune(page, {
+    await createBlokWithTune(page, {
       type: 'single',
       item: {
         icon: 'ICON',

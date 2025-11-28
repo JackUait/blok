@@ -40,10 +40,10 @@ interface NormalizedListenerOptions {
 }
 
 /**
- * Editor.js Listeners helper
+ * Blok Listeners helper
  *
  * Decorator for event listeners assignment
- * @author Codex Team
+ * @author Blok Team
  * @version 2.0.0
  */
 

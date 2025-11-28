@@ -3,77 +3,77 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const REDACTOR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
 
-type CreateEditorOptions = {
+type CreateBlokOptions = {
   data?: OutputData;
   readOnly?: boolean;
 };
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   const { data, readOnly } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
-    async ({ holderId, editorData, readOnlyMode }) => {
-      const editorConfig: Record<string, unknown> = {
-        holder: holderId,
+    async ({ holder, blokData, readOnlyMode }) => {
+      const blokConfig: Record<string, unknown> = {
+        holder: holder,
       };
 
-      if (editorData !== null) {
-        editorConfig.data = editorData;
+      if (blokData !== null) {
+        blokConfig.data = blokData;
       }
 
       if (readOnlyMode !== null) {
-        editorConfig.readOnly = readOnlyMode;
+        blokConfig.readOnly = readOnlyMode;
       }
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
-      holderId: HOLDER_ID,
-      editorData: data ?? null,
+      holder: HOLDER_ID,
+      blokData: data ?? null,
       readOnlyMode: typeof readOnly === 'boolean' ? readOnly : null,
     }
   );
@@ -114,7 +114,7 @@ const clickBottomZone = async (page: Page): Promise<void> => {
 
 test.describe('ui module', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -143,7 +143,7 @@ test.describe('ui module', () => {
 
     const selectBlocks = async (page: Page): Promise<void> => {
       await page.evaluate(() => {
-        const editor = window.editorInstance as EditorJS & {
+        const blok = window.blokInstance as Blok & {
           module?: {
             blockSelection?: {
               selectBlockByIndex?: (index: number) => void;
@@ -152,7 +152,7 @@ test.describe('ui module', () => {
           };
         };
 
-        const blockSelection = editor?.module?.blockSelection;
+        const blockSelection = blok?.module?.blockSelection;
 
         if (!blockSelection?.selectBlockByIndex || !blockSelection?.clearSelection) {
           throw new Error('Block selection module is not available');
@@ -166,31 +166,31 @@ test.describe('ui module', () => {
 
     const getSavedBlocksCount = async (page: Page): Promise<number> => {
       return await page.evaluate(async () => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
-          throw new Error('Editor instance not found');
+        if (!blok) {
+          throw new Error('Blok instance not found');
         }
 
-        const savedData = await editor.save();
+        const savedData = await blok.save();
 
         return savedData.blocks.length;
       });
     };
 
     test('removes selected blocks with Backspace', async ({ page }) => {
-      await createEditor(page, { data: initialData });
+      await createBlok(page, { data: initialData });
       await selectBlocks(page);
 
       await page.keyboard.press('Backspace');
       await page.waitForFunction(() => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
+        if (!blok) {
           return false;
         }
 
-        return editor.blocks.getBlocksCount() === 1;
+        return blok.blocks.getBlocksCount() === 1;
       });
 
       const savedBlocksCount = await getSavedBlocksCount(page);
@@ -199,18 +199,18 @@ test.describe('ui module', () => {
     });
 
     test('removes selected blocks with Delete', async ({ page }) => {
-      await createEditor(page, { data: initialData });
+      await createBlok(page, { data: initialData });
       await selectBlocks(page);
 
       await page.keyboard.press('Delete');
       await page.waitForFunction(() => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
+        if (!blok) {
           return false;
         }
 
-        return editor.blocks.getBlocksCount() === 1;
+        return blok.blocks.getBlocksCount() === 1;
       });
 
       const savedBlocksCount = await getSavedBlocksCount(page);
@@ -244,7 +244,7 @@ test.describe('ui module', () => {
     };
 
     test('updates current block on click', async ({ page }) => {
-      await createEditor(page, { data: textBlocks });
+      await createBlok(page, { data: textBlocks });
 
       const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({
         hasText: 'second block',
@@ -252,20 +252,20 @@ test.describe('ui module', () => {
 
       await secondParagraph.click();
       const currentIndex = await page.evaluate(() => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
-          throw new Error('Editor instance not found');
+        if (!blok) {
+          throw new Error('Blok instance not found');
         }
 
-        return editor.blocks.getCurrentBlockIndex();
+        return blok.blocks.getCurrentBlockIndex();
       });
 
       expect(currentIndex).toBe(1);
     });
 
     test('updates current block on click in read-only mode', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         data: textBlocks,
         readOnly: true,
       });
@@ -276,13 +276,13 @@ test.describe('ui module', () => {
 
       await secondParagraph.click();
       const currentIndex = await page.evaluate(() => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
-          throw new Error('Editor instance not found');
+        if (!blok) {
+          throw new Error('Blok instance not found');
         }
 
-        return editor.blocks.getCurrentBlockIndex();
+        return blok.blocks.getCurrentBlockIndex();
       });
 
       expect(currentIndex).toBe(1);
@@ -291,21 +291,21 @@ test.describe('ui module', () => {
 
   test.describe('bottom zone interactions', () => {
     test('keeps single empty default block when clicking bottom zone', async ({ page }) => {
-      await createEditor(page);
+      await createBlok(page);
       await ensureBottomPadding(page);
 
       await clickBottomZone(page);
 
       const result = await page.evaluate(() => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
-          throw new Error('Editor instance not found');
+        if (!blok) {
+          throw new Error('Blok instance not found');
         }
 
         return {
-          blocksCount: editor.blocks.getBlocksCount(),
-          currentIndex: editor.blocks.getCurrentBlockIndex(),
+          blocksCount: blok.blocks.getBlocksCount(),
+          currentIndex: blok.blocks.getCurrentBlockIndex(),
         };
       });
 
@@ -314,7 +314,7 @@ test.describe('ui module', () => {
     });
 
     test('inserts new default block when clicking bottom zone with non-empty block', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [
             {
@@ -330,25 +330,25 @@ test.describe('ui module', () => {
 
       await clickBottomZone(page);
       await page.waitForFunction(() => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
+        if (!blok) {
           return false;
         }
 
-        return editor.blocks.getBlocksCount() === 2;
+        return blok.blocks.getBlocksCount() === 2;
       });
 
       const result = await page.evaluate(() => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
-          throw new Error('Editor instance not found');
+        if (!blok) {
+          throw new Error('Blok instance not found');
         }
 
-        const blocksCount = editor.blocks.getBlocksCount();
-        const currentIndex = editor.blocks.getCurrentBlockIndex();
-        const lastBlock = editor.blocks.getBlockByIndex(blocksCount - 1);
+        const blocksCount = blok.blocks.getBlocksCount();
+        const currentIndex = blok.blocks.getCurrentBlockIndex();
+        const lastBlock = blok.blocks.getBlockByIndex(blocksCount - 1);
 
         return {
           blocksCount,

@@ -96,7 +96,7 @@ describe('Tooltip utility', () => {
       destroy();
     }
 
-    document.getElementById('codex-tooltips-style')?.remove();
+    document.getElementById('blok-tooltips-style')?.remove();
     document.body.innerHTML = '';
     if (document.documentElement) {
       document.documentElement.scrollTop = 0;
@@ -126,7 +126,7 @@ describe('Tooltip utility', () => {
 
     expect(wrapper?.textContent).toBe('New text');
 
-    const styles = document.querySelectorAll('#codex-tooltips-style');
+    const styles = document.querySelectorAll('#blok-tooltips-style');
 
     expect(styles).toHaveLength(1);
     expect(styles[0]?.textContent).toBe(fakeCssContent);
@@ -152,7 +152,7 @@ describe('Tooltip utility', () => {
 
     expect(() => {
       show(target, 123 as unknown as TooltipContent, { delay: 0 });
-    }).toThrow('[CodeX Tooltip] Wrong type of «content» passed. It should be an instance of Node or String. But number given.');
+    }).toThrow('[Blok Tooltip] Wrong type of «content» passed. It should be an instance of Node or String. But number given.');
   });
 
   it('places tooltip below the element taking margins and scroll into account', () => {

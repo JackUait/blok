@@ -4,7 +4,7 @@
  * @todo split into separate files popover styles
  * @todo make css variables work
  */
-.ce-popover {
+.blok-popover {
     --border-radius: 6px;
     --width: 200px;
     --max-height: 270px;
@@ -53,7 +53,7 @@
     }
 
     &--opened {
-        & > .ce-popover__container {
+        & > .blok-popover__container {
             opacity: 1;
             padding: var(--padding);
             max-height: var(--max-height);
@@ -68,13 +68,13 @@
     }
 
     &--open-top {
-        .ce-popover__container {
+        .blok-popover__container {
             --popover-top: calc(-1 * (var(--offset-from-target) + var(--popover-height)));
         }
     }
 
     &--open-left {
-        .ce-popover__container {
+        .blok-popover__container {
             --popover-left: calc(-1 * var(--width) + 100%);
         }
     }
@@ -102,7 +102,7 @@
     }
 
     @media (--mobile) {
-        .ce-popover__container {
+        .blok-popover__container {
             --offset: 5px;
 
             position: fixed;
@@ -135,7 +135,7 @@
     }
 
     &--nested {
-        .ce-popover__container {
+        .blok-popover__container {
             /* Variable --nesting-level is set via js in showNestedPopoverForItem() method */
             --popover-left: calc(var(--nesting-level) * (var(--width) - var(--nested-popover-overlap)));
 
@@ -145,16 +145,16 @@
         }
     }
 
-    &--open-top.ce-popover--nested {
-        .ce-popover__container {
+    &--open-top.blok-popover--nested {
+        .blok-popover__container {
             /** Bottom edge of nested popover should not be lower than bottom edge of parent popover when opened upwards */
             top: calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + var(--offset-from-target) + var(--nested-popover-overlap));
         }
     }
 
     &--open-left {
-        .ce-popover--nested {
-            .ce-popover__container {
+        .blok-popover--nested {
+            .blok-popover__container {
                 --popover-left: calc(-1 * (var(--nesting-level) + 1) * var(--width) + 100%);
             }
         }
@@ -164,7 +164,7 @@
 /**
  * Popover item styles
  */
-.ce-popover-item-separator {
+.blok-popover-item-separator {
     padding: 4px 3px;
 
     &--hidden {
@@ -178,13 +178,13 @@
     }
 }
 
-.ce-popover-item-html {
+.blok-popover-item-html {
     &--hidden {
         display: none;
     }
 }
 
-.ce-popover-item {
+.blok-popover-item {
     --border-radius: 6px;
 
     border-radius: var(--border-radius);
@@ -271,7 +271,7 @@
     }
 
     &--focused {
-        &:not(.ce-popover-item--no-focus) {
+        &:not(.blok-popover-item--no-focus) {
             background: var(--color-background-item-focus) !important;
         }
     }
@@ -284,7 +284,7 @@
         &:hover {
             cursor: pointer;
 
-            &:not(.ce-popover-item--no-hover) {
+            &:not(.blok-popover-item--no-hover) {
                 background-color: var(--color-background-item-hover);
             }
         }
@@ -293,13 +293,13 @@
     &--confirmation {
         background: var(--color-background-item-confirm);
 
-        .ce-popover-item__title,
-        .ce-popover-item__icon {
+        .blok-popover-item__title,
+        .blok-popover-item__icon {
             color: white;
         }
 
         /* confirmation hover */
-        &:not(.ce-popover-item--no-hover) {
+        &:not(.blok-popover-item--no-hover) {
             @media (--can-hover) {
                 &:hover {
                     background: var(--color-background-item-confirm-hover);
@@ -308,8 +308,8 @@
         }
 
         /* confirmation focus */
-        &:not(.ce-popover-item--no-focus) {
-            &.ce-popover-item--focused {
+        &:not(.blok-popover-item--no-focus) {
+            &.blok-popover-item--focused {
                 background: var(--color-background-item-confirm-hover) !important;
             }
         }
@@ -392,7 +392,7 @@
 /**
  * Popover header styles
  */
-.ce-popover-header {
+.blok-popover-header {
     margin-bottom: 8px;
     margin-top: 4px;
     display: flex;

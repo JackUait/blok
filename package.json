@@ -44,14 +44,14 @@
     "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report",
     "prepublishOnly": "yarn build"
   },
-  "author": "CodeX",
+  "author": "JackUait",
   "contributors": [
-    "JackUait"
+    "CodeX (the author of initial solution)"
   ],
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JackUait/editor.js.git"
+    "url": "git+https://github.com/JackUait/blok.git"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.0",

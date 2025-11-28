@@ -5,10 +5,10 @@ import EventsDispatcher from '../../../../../src/components/utils/events';
 import * as utils from '../../../../../src/components/utils';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorConfig, OutputBlockData, OutputData, BlockToolData } from '../../../../../types';
-import type { EditorEventMap } from '../../../../../src/components/events';
+import type { BlokConfig, OutputBlockData, OutputData, BlockToolData } from '../../../../../types';
+import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlockTuneData } from '../../../../../types/block-tunes/block-tune-data';
-import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
 type MockBlockConstructorOptions = {
   tool?: { name: string };
@@ -203,7 +203,7 @@ const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub()
   return blockManager;
 };
 
-type EditorStub = {
+type BlokStub = {
   BlockManager: BlockManagerMock;
   Caret: {
     setToBlock: ReturnType<typeof vi.fn>;
@@ -233,11 +233,11 @@ type EditorStub = {
   API: Record<string, unknown>;
 };
 
-const createEditorStub = (
+const createBlokStub = (
   blockManager: BlockManagerMock,
-  overrides: Partial<EditorStub> = {}
-): EditorStub => {
-  const base: EditorStub = {
+  overrides: Partial<BlokStub> = {}
+): BlokStub => {
+  const base: BlokStub = {
     BlockManager: blockManager,
     Caret: {
       setToBlock: vi.fn(() => true) as ReturnType<typeof vi.fn>,
@@ -276,28 +276,28 @@ const createEditorStub = (
 const createBlocksApi = (options: {
   blocks?: BlockStub[];
   blockManager?: BlockManagerMock;
-  editorOverrides?: Partial<EditorStub>;
-  configOverrides?: Partial<EditorConfig>;
-} = {}): { blocksApi: BlocksAPI; editor: EditorStub; blockManager: BlockManagerMock } => {
+  blokOverrides?: Partial<BlokStub>;
+  configOverrides?: Partial<BlokConfig>;
+} = {}): { blocksApi: BlocksAPI; blok: BlokStub; blockManager: BlockManagerMock } => {
   const blockManager = options.blockManager ?? createBlockManagerMock(options.blocks);
-  const editor = createEditorStub(blockManager, options.editorOverrides);
+  const blok = createBlokStub(blockManager, options.blokOverrides);
 
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
     config: {
       defaultBlock: 'paragraph',
       ...(options.configOverrides ?? {}),
-    } as EditorConfig,
+    } as BlokConfig,
     eventsDispatcher,
   };
 
   const blocksApi = new BlocksAPI(moduleConfig);
 
-  blocksApi.state = editor as unknown as EditorModules;
+  blocksApi.state = blok as unknown as BlokModules;
 
   return {
     blocksApi,
-    editor,
+    blok,
     blockManager,
   };
 };
@@ -453,7 +453,7 @@ describe('BlocksAPI', () => {
   describe('block deletion', () => {
     it('removes block and re-focuses current block', () => {
       const blocks = [createBlockStub({ id: 'a' }), createBlockStub({ id: 'b' })];
-      const { blocksApi, blockManager, editor } = createBlocksApi({ blocks });
+      const { blocksApi, blockManager, blok } = createBlocksApi({ blocks });
 
       blockManager.currentBlockIndex = 0;
 
@@ -461,16 +461,16 @@ describe('BlocksAPI', () => {
 
       expect(blockManager.getBlockByIndex).toHaveBeenCalledWith(0);
       expect(blockManager.removeBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(
         blockManager.currentBlock,
-        editor.Caret.positions.END
+        blok.Caret.positions.END
       );
-      expect(editor.Toolbar.close).toHaveBeenCalled();
+      expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
     it('inserts default block when last block is removed', () => {
       const block = createBlockStub({ id: 'only' });
-      const { blocksApi, blockManager, editor } = createBlocksApi({ blocks: [ block ] });
+      const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 
       blockManager.removeBlock.mockImplementationOnce(() => {
         blockManager.blocks = [];
@@ -480,13 +480,13 @@ describe('BlocksAPI', () => {
       blocksApi.delete(0);
 
       expect(blockManager.insert).toHaveBeenCalledTimes(1);
-      expect(editor.Caret.setToBlock).not.toHaveBeenCalled();
-      expect(editor.Toolbar.close).toHaveBeenCalled();
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
     it('logs warning when block removal throws', () => {
       const block = createBlockStub({ id: 'faulty' });
-      const { blocksApi, blockManager, editor } = createBlocksApi({ blocks: [ block ] });
+      const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
       const error = new Error('remove failed');
       const logSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
 
@@ -498,24 +498,24 @@ describe('BlocksAPI', () => {
 
       expect(logSpy).toHaveBeenCalledWith(error, 'warn');
       expect(blockManager.insert).not.toHaveBeenCalled();
-      expect(editor.Toolbar.close).not.toHaveBeenCalled();
+      expect(blok.Toolbar.close).not.toHaveBeenCalled();
 
       logSpy.mockRestore();
     });
   });
 
   describe('clearing and rendering', () => {
-    it('clears editor via BlockManager and closes inline toolbar', async () => {
-      const { blocksApi, blockManager, editor } = createBlocksApi();
+    it('clears blok via BlockManager and closes inline toolbar', async () => {
+      const { blocksApi, blockManager, blok } = createBlocksApi();
 
       await blocksApi.clear();
 
       expect(blockManager.clear).toHaveBeenCalledWith(true);
-      expect(editor.InlineToolbar.close).toHaveBeenCalled();
+      expect(blok.InlineToolbar.close).toHaveBeenCalled();
     });
 
     it('renders new data via renderer', async () => {
-      const { blocksApi, blockManager, editor } = createBlocksApi();
+      const { blocksApi, blockManager, blok } = createBlocksApi();
       const data: OutputData = {
         blocks: [
           {
@@ -528,15 +528,15 @@ describe('BlocksAPI', () => {
 
       await blocksApi.render(data);
 
-      expect(editor.ModificationsObserver.disable).toHaveBeenCalled();
+      expect(blok.ModificationsObserver.disable).toHaveBeenCalled();
       expect(blockManager.clear).toHaveBeenCalledWith();
-      expect(editor.Renderer.render).toHaveBeenCalledWith(data.blocks);
-      expect(editor.ModificationsObserver.enable).toHaveBeenCalled();
+      expect(blok.Renderer.render).toHaveBeenCalledWith(data.blocks);
+      expect(blok.ModificationsObserver.enable).toHaveBeenCalled();
 
-      const disableOrder = editor.ModificationsObserver.disable.mock.invocationCallOrder[0];
+      const disableOrder = blok.ModificationsObserver.disable.mock.invocationCallOrder[0];
       const clearOrder = blockManager.clear.mock.invocationCallOrder[0];
-      const renderOrder = editor.Renderer.render.mock.invocationCallOrder[0];
-      const enableOrder = editor.ModificationsObserver.enable.mock.invocationCallOrder[0];
+      const renderOrder = blok.Renderer.render.mock.invocationCallOrder[0];
+      const enableOrder = blok.ModificationsObserver.enable.mock.invocationCallOrder[0];
 
       expect(disableOrder).toBeLessThan(clearOrder);
       expect(clearOrder).toBeLessThan(renderOrder);
@@ -550,12 +550,12 @@ describe('BlocksAPI', () => {
     });
 
     it('renders from HTML string', async () => {
-      const { blocksApi, blockManager, editor } = createBlocksApi();
+      const { blocksApi, blockManager, blok } = createBlocksApi();
 
       await blocksApi.renderFromHTML('<p>Hello</p>');
 
       expect(blockManager.clear).toHaveBeenCalledWith();
-      expect(editor.Paste.processText).toHaveBeenCalledWith('<p>Hello</p>', true);
+      expect(blok.Paste.processText).toHaveBeenCalledWith('<p>Hello</p>', true);
     });
   });
 
@@ -594,9 +594,9 @@ describe('BlocksAPI', () => {
     it('composes block data through Block constructor', async () => {
       const toolName = 'custom-tool';
       const tool = { name: toolName };
-      const { blocksApi, editor } = createBlocksApi();
+      const { blocksApi, blok } = createBlocksApi();
 
-      editor.Tools.blockTools.set(toolName, tool as { conversionConfig?: { export?: () => unknown; import?: () => unknown } });
+      blok.Tools.blockTools.set(toolName, tool as { conversionConfig?: { export?: () => unknown; import?: () => unknown } });
       blockConstructorSpy.mockImplementationOnce(function (this: { data: { createdFrom: string } }, options?: MockBlockConstructorOptions) {
         this.data = {
           createdFrom: options?.tool?.name ?? '',
@@ -696,12 +696,12 @@ describe('BlocksAPI', () => {
     it('converts block to another type when conversion config exists', async () => {
       const block = createBlockStub({ id: 'convertible',
         name: 'paragraph' });
-      const { blocksApi, blockManager, editor } = createBlocksApi({ blocks: [ block ] });
+      const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
       const originalTool = { conversionConfig: { export: () => ({}) } };
       const targetTool = { conversionConfig: { import: () => ({}) } };
 
-      editor.Tools.blockTools.set('paragraph', originalTool);
-      editor.Tools.blockTools.set('header', targetTool);
+      blok.Tools.blockTools.set('paragraph', originalTool);
+      blok.Tools.blockTools.set('header', targetTool);
 
       const result = await blocksApi.methods.convert('convertible', 'header');
 
@@ -717,12 +717,12 @@ describe('BlocksAPI', () => {
     it('throws when conversion target tool lacks conversionConfig', async () => {
       const block = createBlockStub({ id: 'convertible',
         name: 'paragraph' });
-      const { blocksApi, editor } = createBlocksApi({ blocks: [ block ] });
+      const { blocksApi, blok } = createBlocksApi({ blocks: [ block ] });
       const originalTool = { conversionConfig: { export: () => ({}) } };
       const targetTool = {};
 
-      editor.Tools.blockTools.set('paragraph', originalTool);
-      editor.Tools.blockTools.set('header', targetTool);
+      blok.Tools.blockTools.set('paragraph', originalTool);
+      blok.Tools.blockTools.set('header', targetTool);
 
       await expect(blocksApi.methods.convert('convertible', 'header')).rejects.toThrow(
         'Conversion from "paragraph" to "header" is not possible. Header tool(s) should provide a "conversionConfig"'

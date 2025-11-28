@@ -3,19 +3,19 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
 import type { BlockToolConstructable, InlineToolConstructable } from '@/types/tools';
-import { EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
-const EDITOR_BUNDLE_PATH = path.resolve(__dirname, '../../../../dist/editorjs.umd.js');
+const BLOK_BUNDLE_PATH = path.resolve(__dirname, '../../../../dist/editorjs.umd.js');
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 
 type ToolDefinition = {
   name: string;
@@ -33,7 +33,7 @@ type SerializedToolConfig = {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
     __inlineShortcutLog?: string[];
     __lastShortcutEvent?: { metaKey: boolean; ctrlKey: boolean } | null;
   }
@@ -135,48 +135,48 @@ const serializeTools = (tools: ToolDefinition[]): SerializedToolConfig[] => {
   });
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-const ensureEditorBundleAvailable = async (page: Page): Promise<void> => {
-  const hasGlobal = await page.evaluate(() => typeof window.EditorJS === 'function');
+const ensureBlokBundleAvailable = async (page: Page): Promise<void> => {
+  const hasGlobal = await page.evaluate(() => typeof window.Blok === 'function');
 
   if (hasGlobal) {
     return;
   }
 
-  await page.addScriptTag({ path: EDITOR_BUNDLE_PATH });
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await page.addScriptTag({ path: BLOK_BUNDLE_PATH });
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 };
 
-const createEditorWithTools = async (
+const createBlokWithTools = async (
   page: Page,
   options: { data?: OutputData; tools?: ToolDefinition[] } = {}
 ): Promise<void> => {
   const { data = null, tools = [] } = options;
   const serializedTools = serializeTools(tools);
 
-  await resetEditor(page);
-  await ensureEditorBundleAvailable(page);
+  await resetBlok(page);
+  await ensureBlokBundleAvailable(page);
 
   await page.evaluate(
-    async ({ holderId, serializedTools: toolConfigs, initialData }) => {
+    async ({ holder, serializedTools: toolConfigs, initialData }) => {
       const reviveToolClass = (classSource: string): unknown => {
          
         return new Function(`return (${classSource});`)();
@@ -218,45 +218,45 @@ const createEditorWithTools = async (
         };
       }
 
-      const editorConfig: Record<string, unknown> = {
-        holder: holderId,
+      const blokConfig: Record<string, unknown> = {
+        holder: holder,
         ...(inlineToolNames.length > 0 ? { inlineToolbar: inlineToolNames } : {}),
       };
 
       if (initialData) {
-        editorConfig.data = initialData;
+        blokConfig.data = initialData;
       }
 
       if (toolConfigs.length > 0) {
-        editorConfig.tools = revivedTools;
+        blokConfig.tools = revivedTools;
       }
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       serializedTools,
       initialData: data,
     }
   );
 };
 
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return await page.evaluate(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    return await window.editorInstance.save();
+    return await window.blokInstance.save();
   });
 };
 
 test.describe('keyboard shortcuts', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -264,7 +264,7 @@ test.describe('keyboard shortcuts', () => {
   });
 
   test('activates custom block tool via configured shortcut', async ({ page }) => {
-    await createEditorWithTools(page, {
+    await createBlokWithTools(page, {
       data: {
         blocks: [
           {
@@ -298,14 +298,14 @@ test.describe('keyboard shortcuts', () => {
     await page.keyboard.press(combo);
 
     await expect.poll(async () => {
-      const data = await saveEditor(page);
+      const data = await saveBlok(page);
 
       return data.blocks.map((block) => block.type);
     }).toContain('shortcutBlock');
   });
 
   test('maps CMD shortcut definitions to platform-specific modifier keys', async ({ page }) => {
-    await createEditorWithTools(page, {
+    await createBlokWithTools(page, {
       data: {
         blocks: [
           {
@@ -368,7 +368,7 @@ test.describe('keyboard shortcuts', () => {
     expect(shortcutEvent?.ctrlKey).toBe(!isMacPlatform);
 
     await expect.poll(async () => {
-      const data = await saveEditor(page);
+      const data = await saveBlok(page);
 
       return data.blocks.map((block) => block.type);
     }).toContain('cmdShortcutBlock');

@@ -1,27 +1,27 @@
 import $ from './dom';
 import * as _ from './utils';
-import type { EditorConfig, SanitizerConfig } from '../../types';
-import type { EditorModules } from '../types-internal/editor-modules';
+import type { BlokConfig, SanitizerConfig } from '../../types';
+import type { BlokModules } from '../types-internal/blok-modules';
 import I18n from './i18n';
 import { CriticalError } from './errors/critical';
 import EventsDispatcher from './utils/events';
 import Modules from './modules';
-import type { EditorEventMap } from './events';
+import type { BlokEventMap } from './events';
 import type Renderer from './modules/renderer';
 
 /**
- * Editor.js core class. Bootstraps modules.
+ * Blok core class. Bootstraps modules.
  */
 export default class Core {
   /**
-   * Editor configuration passed by user to the constructor
+   * Blok configuration passed by user to the constructor
    */
-  public config: EditorConfig;
+  public config: BlokConfig;
 
   /**
    * Object with core modules instances
    */
-  public moduleInstances: EditorModules = {} as EditorModules;
+  public moduleInstances: BlokModules = {} as BlokModules;
 
   /**
    * Promise that resolves when all core modules are prepared and UI is rendered on the page
@@ -29,16 +29,16 @@ export default class Core {
   public isReady: Promise<void>;
 
   /**
-   * Common Editor Event Bus
+   * Common Blok Event Bus
    */
-  private eventsDispatcher: EventsDispatcher<EditorEventMap> = new EventsDispatcher();
+  private eventsDispatcher: EventsDispatcher<BlokEventMap> = new EventsDispatcher();
 
   /**
-   * @param {EditorConfig} config - user configuration
+   * @param {BlokConfig} config - user configuration
    */
-  constructor(config?: EditorConfig|string) {
+  constructor(config?: BlokConfig|string) {
     /**
-     * Ready promise. Resolved if Editor.js is ready to work, rejected otherwise
+     * Ready promise. Resolved if Blok is ready to work, rejected otherwise
      */
     // Initialize config to satisfy TypeScript's definite assignment check
     // The setter will properly assign and process the config
@@ -58,14 +58,14 @@ export default class Core {
           UI.checkEmptiness();
           ModificationsObserver.enable();
 
-          if ((this.configuration as EditorConfig).autofocus === true && this.configuration.readOnly !== true) {
+          if ((this.configuration as BlokConfig).autofocus === true && this.configuration.readOnly !== true) {
             Caret.setToBlock(BlockManager.blocks[0], Caret.positions.START);
           }
 
           resolve();
         })
         .catch((error) => {
-          _.log(`Editor.js is not ready because of ${error}`, 'error');
+          _.log(`Blok is not ready because of ${error}`, 'error');
 
           /**
            * Reject this.isReady promise
@@ -77,12 +77,12 @@ export default class Core {
 
   /**
    * Setting for configuration
-   * @param {EditorConfig|string|undefined} config - Editor's config to set
+   * @param {BlokConfig|string|undefined} config - Blok's config to set
    */
-  public set configuration(config: EditorConfig|string|undefined) {
+  public set configuration(config: BlokConfig|string|undefined) {
     /**
      * Place config into the class property
-     * @type {EditorConfig}
+     * @type {BlokConfig}
      */
     if (_.isObject(config)) {
       this.config = {
@@ -102,7 +102,7 @@ export default class Core {
      * If holder is empty then set a default value
      */
     if (this.config.holder == null) {
-      this.config.holder = 'editorjs';
+      this.config.holder = 'blok';
     }
 
     if (this.config.logLevel == null) {
@@ -144,14 +144,14 @@ export default class Core {
 
       updatedTools.paragraph = this.createParagraphToolConfig(paragraphEntry);
 
-      this.config.tools = updatedTools as EditorConfig['tools'];
+      this.config.tools = updatedTools as BlokConfig['tools'];
     }
 
     /**
-     * Height of Editor's bottom area that allows to set focus on the last Block
+     * Height of Blok's bottom area that allows to set focus on the last Block
      * @type {number}
      */
-     
+
     this.config.minHeight = this.config.minHeight !== undefined ? this.config.minHeight : 300;
 
     /**
@@ -173,9 +173,9 @@ export default class Core {
     this.config.tools = this.config.tools || {};
     this.config.i18n = this.config.i18n || {};
     this.config.data = this.config.data || { blocks: [] };
-     
+
     this.config.onReady = this.config.onReady || ((): void => {});
-     
+
     this.config.onChange = this.config.onChange || ((): void => {});
     this.config.inlineToolbar = this.config.inlineToolbar !== undefined ? this.config.inlineToolbar : true;
 
@@ -203,14 +203,14 @@ export default class Core {
 
   /**
    * Returns private property
-   * @returns {EditorConfig}
+   * @returns {BlokConfig}
    */
-  public get configuration(): EditorConfig {
+  public get configuration(): BlokConfig {
     return this.config;
   }
 
   /**
-   * Checks for required fields in Editor's config
+   * Checks for required fields in Blok's config
    */
   public validate(): void {
     const { holder } = this.config;
@@ -245,7 +245,7 @@ export default class Core {
   }
 
   /**
-   * Start Editor!
+   * Start Blok!
    *
    * Get list of modules that needs to be prepared and return a sequence (Promise)
    * @returns {Promise<void>}
@@ -267,13 +267,13 @@ export default class Core {
         // _.log(`Preparing ${module} module`, 'time');
 
         try {
-          const moduleInstance = this.moduleInstances[module as keyof EditorModules] as { prepare: () => Promise<void> | void };
+          const moduleInstance = this.moduleInstances[module as keyof BlokModules] as { prepare: () => Promise<void> | void };
 
           await moduleInstance.prepare();
         } catch (e) {
           /**
            * CriticalError's will not be caught
-           * It is used when Editor is rendering in read-only mode with unsupported plugin
+           * It is used when Blok is rendering in read-only mode with unsupported plugin
            */
           if (e instanceof CriticalError) {
             throw new Error(e.message);
@@ -290,14 +290,14 @@ export default class Core {
    * Render initial data
    */
   private render(): Promise<void> {
-    const renderer = this.moduleInstances['Renderer' as keyof EditorModules] as Renderer | undefined;
+    const renderer = this.moduleInstances['Renderer' as keyof BlokModules] as Renderer | undefined;
 
     if (!renderer) {
       throw new CriticalError('Renderer module is not initialized');
     }
 
     if (!this.config.data) {
-      throw new CriticalError('Editor data is not initialized');
+      throw new CriticalError('Blok data is not initialized');
     }
 
     return renderer.render(this.config.data.blocks);
@@ -309,10 +309,10 @@ export default class Core {
   private constructModules(): void {
     Object.entries(Modules).forEach(([key, module]) => {
       try {
-        (this.moduleInstances as unknown as Record<string, EditorModules[keyof EditorModules]>)[key] = new module({
+        (this.moduleInstances as unknown as Record<string, BlokModules[keyof BlokModules]>)[key] = new module({
           config: this.configuration,
           eventsDispatcher: this.eventsDispatcher,
-        }) as EditorModules[keyof EditorModules];
+        }) as BlokModules[keyof BlokModules];
       } catch (e) {
         _.log(`[constructModules] Module ${key} skipped because`, 'error', e);
       }
@@ -330,7 +330,7 @@ export default class Core {
         /**
          * Module does not need self-instance
          */
-        this.moduleInstances[name as keyof EditorModules].state = this.getModulesDiff(name);
+        this.moduleInstances[name as keyof BlokModules].state = this.getModulesDiff(name);
       }
     }
   }
@@ -382,8 +382,8 @@ export default class Core {
    * Return modules without passed name
    * @param {string} name - module for witch modules difference should be calculated
    */
-  private getModulesDiff(name: string): EditorModules {
-    const diff = {} as EditorModules;
+  private getModulesDiff(name: string): BlokModules {
+    const diff = {} as BlokModules;
 
     for (const moduleName in this.moduleInstances) {
       /**
@@ -392,7 +392,7 @@ export default class Core {
       if (moduleName === name) {
         continue;
       }
-      (diff as unknown as Record<string, EditorModules[keyof EditorModules]>)[moduleName] = this.moduleInstances[moduleName as keyof EditorModules] as EditorModules[keyof EditorModules];
+      (diff as unknown as Record<string, BlokModules[keyof BlokModules]>)[moduleName] = this.moduleInstances[moduleName as keyof BlokModules] as BlokModules[keyof BlokModules];
     }
 
     return diff;

@@ -5,17 +5,17 @@ import Module from '../../../src/components/__module';
 import EventsDispatcher from '../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../src/types-internal/module-config';
-import type { EditorConfig } from '../../../types';
-import type { EditorEventMap } from '../../../src/components/events';
-import type { EditorModules } from '../../../src/types-internal/editor-modules';
+import type { BlokConfig } from '../../../types';
+import type { BlokEventMap } from '../../../src/components/events';
+import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import type Listeners from '../../../src/components/utils/listeners';
 
-const createModuleConfig = (configOverrides?: Partial<EditorConfig>): ModuleConfig => {
+const createModuleConfig = (configOverrides?: Partial<BlokConfig>): ModuleConfig => {
   const defaultConfig = {
     i18n: {
       direction: 'ltr',
     },
-  } as EditorConfig;
+  } as BlokConfig;
 
   const mergedConfig = {
     ...defaultConfig,
@@ -24,11 +24,11 @@ const createModuleConfig = (configOverrides?: Partial<EditorConfig>): ModuleConf
       ...defaultConfig.i18n,
       ...(configOverrides?.i18n ?? {}),
     },
-  } as EditorConfig;
+  } as BlokConfig;
 
   return {
     config: mergedConfig,
-    eventsDispatcher: new EventsDispatcher<EditorEventMap>(),
+    eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   };
 };
 
@@ -45,8 +45,8 @@ class ConcreteModule extends Module<{
     this.listeners = listeners as Listeners;
   }
 
-  public editorState(): EditorModules {
-    return this.Editor;
+  public blokState(): BlokModules {
+    return this.Blok;
   }
 
   public isRightToLeft(): boolean {
@@ -54,7 +54,7 @@ class ConcreteModule extends Module<{
   }
 }
 
-const createConcreteModule = (configOverrides?: Partial<EditorConfig>): ConcreteModule => {
+const createConcreteModule = (configOverrides?: Partial<BlokConfig>): ConcreteModule => {
   return new ConcreteModule(createModuleConfig(configOverrides));
 };
 
@@ -62,20 +62,20 @@ describe('Module base class', () => {
   it('throws when attempting to instantiate directly', () => {
     const createModuleInstance = (): Module =>
       new Module({
-        config: {} as EditorConfig,
-        eventsDispatcher: new EventsDispatcher<EditorEventMap>(),
+        config: {} as BlokConfig,
+        eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
       });
 
     expect(createModuleInstance).toThrow(TypeError);
   });
 
-  it('accepts state setter to store Editor modules instance', () => {
+  it('accepts state setter to store Blok modules instance', () => {
     const moduleInstance = createConcreteModule();
-    const editorModules = { blocks: {} } as unknown as EditorModules;
+    const blokModules = { blocks: {} } as unknown as BlokModules;
 
-    moduleInstance.state = editorModules;
+    moduleInstance.state = blokModules;
 
-    expect(moduleInstance.editorState()).toBe(editorModules);
+    expect(moduleInstance.blokState()).toBe(blokModules);
   });
 
   it('removes memorized HTMLElements via removeAllNodes()', () => {

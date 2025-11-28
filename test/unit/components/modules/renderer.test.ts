@@ -6,8 +6,8 @@ import type { OutputBlockData } from '../../../../types';
 import type { StubData } from '../../../../src/tools/stub';
 import * as utils from '../../../../src/components/utils';
 
-type RendererEditor = Renderer['Editor'];
-type RendererBlockManager = RendererEditor['BlockManager'];
+type RendererBlok = Renderer['Blok'];
+type RendererBlockManager = RendererBlok['BlockManager'];
 type BlockManagerInsert = RendererBlockManager['insert'];
 type BlockManagerInsertMany = RendererBlockManager['insertMany'];
 type BlockManagerComposeBlock = RendererBlockManager['composeBlock'];
@@ -91,12 +91,12 @@ const createRenderer = (
     } as unknown as Renderer['eventsDispatcher'],
   });
 
-  const editorState = {
+  const blokState = {
     BlockManager: blockManager,
     Tools: tools,
   };
 
-  renderer.state = editorState as unknown as RendererEditor;
+  renderer.state = blokState as unknown as RendererBlok;
 
   return {
     renderer,

@@ -36,7 +36,7 @@ export default class CrossBlockSelection extends Module {
       return;
     }
 
-    const { BlockManager } = this.Editor;
+    const { BlockManager } = this.Blok;
 
     const block = BlockManager.getBlock(event.target as HTMLElement);
 
@@ -65,7 +65,7 @@ export default class CrossBlockSelection extends Module {
    * @param {boolean} next - if true, toggle next block. Previous otherwise
    */
   public toggleBlockSelectedState(next = true): void {
-    const { BlockManager, BlockSelection } = this.Editor;
+    const { BlockManager, BlockSelection } = this.Blok;
 
     const currentBlock = BlockManager.currentBlock;
 
@@ -86,7 +86,7 @@ export default class CrossBlockSelection extends Module {
       /**
        * Hide the Toolbar when cross-block selection starts.
        */
-      this.Editor.Toolbar.close();
+      this.Blok.Toolbar.close();
     }
 
     if (!this.lastSelectedBlock) {
@@ -104,18 +104,18 @@ export default class CrossBlockSelection extends Module {
       nextBlock.selected = true;
 
       BlockSelection.clearCache();
-      this.Editor.Toolbar.close();
+      this.Blok.Toolbar.close();
     } else {
       this.lastSelectedBlock.selected = false;
 
       BlockSelection.clearCache();
-      this.Editor.Toolbar.close();
+      this.Blok.Toolbar.close();
     }
 
     this.lastSelectedBlock = nextBlock;
 
     /** close InlineToolbar when Blocks selected */
-    this.Editor.InlineToolbar.close();
+    this.Blok.InlineToolbar.close();
 
     nextBlock.holder.scrollIntoView({
       block: 'nearest',
@@ -127,7 +127,7 @@ export default class CrossBlockSelection extends Module {
    * @param {Event} reason - event caused clear of selection
    */
   public clear(reason?: Event): void {
-    const { BlockManager, BlockSelection, Caret } = this.Editor;
+    const { BlockManager, BlockSelection, Caret } = this.Blok;
 
     if (!this.firstSelectedBlock || !this.lastSelectedBlock) {
       return;
@@ -169,17 +169,17 @@ export default class CrossBlockSelection extends Module {
    * @param {MouseEvent} event - mouse down event
    */
   private enableCrossBlockSelection(event: MouseEvent): void {
-    const { UI } = this.Editor;
+    const { UI } = this.Blok;
 
     /**
      * Each mouse down on must disable selectAll state
      */
     if (!SelectionUtils.isCollapsed) {
-      this.Editor.BlockSelection.clearSelection(event);
+      this.Blok.BlockSelection.clearSelection(event);
     }
 
     /**
-     * If mouse down is performed inside the editor, we should watch CBS
+     * If mouse down is performed inside the blok, we should watch CBS
      */
     if (UI.nodes.redactor.contains(event.target as Node)) {
       this.watchSelection(event);
@@ -187,7 +187,7 @@ export default class CrossBlockSelection extends Module {
       /**
        * Otherwise, clear selection
        */
-      this.Editor.BlockSelection.clearSelection(event);
+      this.Blok.BlockSelection.clearSelection(event);
     }
   }
 
@@ -207,10 +207,10 @@ export default class CrossBlockSelection extends Module {
    */
   private onMouseOver = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
-    const { BlockManager, BlockSelection } = this.Editor;
+    const { BlockManager, BlockSelection } = this.Blok;
 
     /**
-     * Probably, editor is not initialized yet
+     * Probably, blok is not initialized yet
      */
     if (mouseEvent.relatedTarget === null && mouseEvent.target === null) {
       return;
@@ -247,7 +247,7 @@ export default class CrossBlockSelection extends Module {
       return;
     }
 
-    this.Editor.InlineToolbar.close();
+    this.Blok.InlineToolbar.close();
 
     this.toggleBlocksSelectedState(relatedBlock, targetBlock);
     this.lastSelectedBlock = targetBlock;
@@ -259,7 +259,7 @@ export default class CrossBlockSelection extends Module {
    * @param {Block} lastBlock - last block in range
    */
   private toggleBlocksSelectedState(firstBlock: Block, lastBlock: Block): void {
-    const { BlockManager, BlockSelection } = this.Editor;
+    const { BlockManager, BlockSelection } = this.Blok;
     const fIndex = BlockManager.blocks.indexOf(firstBlock);
     const lIndex = BlockManager.blocks.indexOf(lastBlock);
 
@@ -289,6 +289,6 @@ export default class CrossBlockSelection extends Module {
     /**
      * Do not keep the Toolbar visible while range selection is active.
      */
-    this.Editor.Toolbar.close();
+    this.Blok.Toolbar.close();
   }
 }

@@ -4,11 +4,11 @@ import {BlockAPI} from './block';
 import {BlockTuneData} from '../block-tunes/block-tune-data';
 
 /**
- * Describes methods to manipulate with Editor`s blocks
+ * Describes methods to manipulate with Blok`s blocks
  */
 export interface Blocks {
   /**
-   * Remove all blocks from Editor zone
+   * Remove all blocks from Blok zone
    */
   clear(): Promise<void>;
 

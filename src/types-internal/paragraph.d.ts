@@ -4,7 +4,7 @@ declare module '@editorjs/paragraph' {
   /**
    * @typedef {object} ParagraphConfig
    * @property {string} placeholder - placeholder for the empty paragraph
-   * @property {boolean} preserveBlank - Whether or not to keep blank paragraphs when saving editor data
+   * @property {boolean} preserveBlank - Whether or not to keep blank paragraphs when saving blok data
    */
   export interface ParagraphConfig extends ToolConfig {
     /**
@@ -12,7 +12,7 @@ declare module '@editorjs/paragraph' {
      */
     placeholder?: string;
     /**
-     * Whether or not to keep blank paragraphs when saving editor data
+     * Whether or not to keep blank paragraphs when saving blok data
      */
     preserveBlank?: boolean;
   }
@@ -34,7 +34,7 @@ declare module '@editorjs/paragraph' {
    * @description Constructor params for the Paragraph tool, use to pass initial data and settings
    * @property {ParagraphData} data - Preload data for the paragraph.
    * @property {ParagraphConfig} config - The configuration for the paragraph.
-   * @property {API} api - The Editor.js API.
+   * @property {API} api - The Blok API.
    * @property {boolean} readOnly - Is paragraph is read-only.
    */
   interface ParagraphParams {
@@ -47,7 +47,7 @@ declare module '@editorjs/paragraph' {
      */
     config: ParagraphConfig;
     /**
-     * Editor.js API
+     * Blok API
      */
     api: API;
     /**
@@ -65,7 +65,7 @@ declare module '@editorjs/paragraph' {
      */
     static get DEFAULT_PLACEHOLDER(): string;
     /**
-     * The Editor.js API
+     * The Blok API
      */
     api: API;
     /**
@@ -79,7 +79,7 @@ declare module '@editorjs/paragraph' {
      * @param {object} params - constructor params
      * @param {ParagraphData} params.data - previously saved data
      * @param {ParagraphConfig} params.config - user config for Tool
-     * @param {object} params.api - editor.js api
+     * @param {object} params.api - Blok api
      * @param {boolean} readOnly - read only mode flag
      */
     constructor({ data, config, api, readOnly }: ParagraphParams);
@@ -101,7 +101,7 @@ declare module '@editorjs/paragraph' {
 
     /**
      * Method that specified how to merge two Text blocks.
-     * Called by Editor.js by backspace at the beginning of the Block
+     * Called by Blok by backspace at the beginning of the Block
      *
      * @param {ParagraphData} data
      * @public
@@ -128,7 +128,7 @@ declare module '@editorjs/paragraph' {
     save(toolsContent: HTMLDivElement): ParagraphData;
 
     /**
-     * On paste callback fired from Editor.
+     * On paste callback fired from Blok.
      *
      * @param {HTMLPasteEvent} event - event with pasted data
      */
@@ -154,7 +154,7 @@ declare module '@editorjs/paragraph' {
     static get isReadOnlySupported(): boolean;
 
     /**
-     * Used by Editor paste handling API.
+     * Used by Blok paste handling API.
      * Provides configuration to handle P tags.
      *
      * @returns {PasteConfig} - Paragraph Paste Setting

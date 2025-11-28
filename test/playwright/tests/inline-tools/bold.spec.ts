@@ -2,18 +2,18 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
-const INLINE_TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
+const INLINE_TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
 
 /**
  * Get the correct modifier key based on the browser's user agent.
@@ -29,44 +29,44 @@ const getModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
 };
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
- * Create editor with provided blocks
+ * Create blok with provided blocks
  * @param page - The Playwright page object
- * @param blocks - The blocks data to initialize the editor with
+ * @param blocks - The blocks data to initialize the blok with
  */
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
-      holder: holderId,
-      data: { blocks: editorBlocks },
+const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
+      holder: holder,
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID,
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
@@ -114,16 +114,16 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
 
 test.describe('inline tool bold', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('detects bold state across multiple bold words', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -173,7 +173,7 @@ test.describe('inline tool bold', () => {
   });
 
   test('detects bold state within a single word', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -190,7 +190,7 @@ test.describe('inline tool bold', () => {
   });
 
   test('does not detect bold state in normal text', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -207,7 +207,7 @@ test.describe('inline tool bold', () => {
   });
 
   test('toggles bold across multiple bold elements', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -272,7 +272,7 @@ test.describe('inline tool bold', () => {
   });
 
   test('makes mixed selection (bold and normal text) bold', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -341,7 +341,7 @@ test.describe('inline tool bold', () => {
   });
 
   test('removes bold from fully bold selection', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -368,7 +368,7 @@ test.describe('inline tool bold', () => {
   });
 
   test('toggles bold with keyboard shortcut', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -435,7 +435,7 @@ test.describe('inline tool bold', () => {
   });
 
   test('persists bold in saved output', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -451,7 +451,7 @@ test.describe('inline tool bold', () => {
     await page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`).click();
 
     const savedData = await page.evaluate<OutputData | undefined>(async () => {
-      return window.editorInstance?.save();
+      return window.blokInstance?.save();
     });
 
     expect(savedData).toBeDefined();
@@ -462,8 +462,8 @@ test.describe('inline tool bold', () => {
   });
 
   test('removes bold from selection within bold text', async ({ page }) => {
-    // Step 1: Create editor with "Some text"
-    await createEditorWithBlocks(page, [
+    // Step 1: Create blok with "Some text"
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -521,7 +521,7 @@ test.describe('inline tool bold', () => {
 
   test('removes bold from separately bolded words', async ({ page }) => {
     // Step 1: Start with normal text "some text"
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -587,7 +587,7 @@ test.describe('inline tool bold', () => {
       doc.dispatchEvent(new Event('selectionchange'));
     });
 
-    // Step 5: Verify the editor indicates the selection is bold (button is active)
+    // Step 5: Verify the blok indicates the selection is bold (button is active)
     await expect(boldButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
     // Step 6: Click bold button - should remove bold on first click (not wrap again)
@@ -606,7 +606,7 @@ test.describe('inline tool bold', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }

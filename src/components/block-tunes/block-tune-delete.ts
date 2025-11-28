@@ -1,6 +1,6 @@
 /**
  * @class DeleteTune
- * @classdesc Editor's default tune that moves up selected block
+ * @classdesc Blok's default tune that moves up selected block
  * @copyright <CodeX Team> 2018
  */
 import type { API, BlockTune } from '../../../types';
@@ -17,14 +17,14 @@ export default class DeleteTune implements BlockTune {
   public static readonly isTune = true;
 
   /**
-   * Property that contains Editor.js API methods
+   * Property that contains Blok API methods
    * @see {@link docs/api.md}
    */
   private readonly api: API;
 
   /**
    * DeleteTune constructor
-   * @param {API} api - Editor's API
+   * @param {API} api - Blok's API
    */
   constructor({ api }: { api: API }) {
     this.api = api;

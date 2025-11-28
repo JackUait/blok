@@ -4,17 +4,17 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
-import { selectionChangeDebounceTimeout, EDITOR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { selectionChangeDebounceTimeout, BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const BLOCK_TUNES_SELECTOR = `[data-blok-testid="block-tunes-popover"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const SEARCH_INPUT_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-search-input"]`;
 const POPOVER_ITEM_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item"]`;
 const NOTHING_FOUND_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-nothing-found"]`;
@@ -96,44 +96,44 @@ const buildTestToolsConfig = (
 });
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
- * Create editor with provided blocks and optional tools/tunes
+ * Create blok with provided blocks and optional tools/tunes
  * @param page - The Playwright page object
- * @param blocks - The blocks data to initialize the editor with
+ * @param blocks - The blocks data to initialize the blok with
  * @param tools - Optional tools configuration
  * @param tunes - Optional tunes configuration
  */
-const createEditorWithBlocks = async (
+const createBlokWithBlocks = async (
   page: Page,
   blocks: OutputData['blocks'],
   tools?: SerializableToolsConfig,
   tunes?: string[]
 ): Promise<void> => {
-  await resetEditor(page);
+  await resetBlok(page);
   await page.evaluate(
-    async ({ holderId, editorBlocks, editorTools, editorTunes, PopoverItemTypeValues }) => {
+    async ({ holder, blokBlocks, blokTools, blokTunes, PopoverItemTypeValues }) => {
       const mapMenuItem = (item: SerializableMenuItem): unknown => {
         if (item.type === PopoverItemTypeValues.Separator) {
           return { type: PopoverItemTypeValues.Separator };
@@ -203,31 +203,31 @@ const createEditorWithBlocks = async (
       };
 
       // Automatically add tool names to tunes list if they're tunes
-      const toolNames = editorTools ? Object.keys(editorTools) : [];
+      const toolNames = blokTools ? Object.keys(blokTools) : [];
       let tunesList: string[] | undefined;
 
-      if (editorTunes && editorTunes.length > 0) {
-        tunesList = [ ...new Set([...editorTunes, ...toolNames]) ];
+      if (blokTunes && blokTunes.length > 0) {
+        tunesList = [ ...new Set([...blokTunes, ...toolNames]) ];
       } else if (toolNames.length > 0) {
         tunesList = toolNames;
       }
-      const toolsOption = buildTools(editorTools);
+      const toolsOption = buildTools(blokTools);
 
-      const editor = new window.EditorJS({
-        holder: holderId,
-        data: { blocks: editorBlocks },
+      const blok = new window.Blok({
+        holder: holder,
+        data: { blocks: blokBlocks },
         ...(toolsOption && { tools: toolsOption }),
         ...(tunesList && { tunes: tunesList }),
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
-      holderId: HOLDER_ID,
-      editorBlocks: blocks,
-      editorTools: tools,
-      editorTunes: tunes,
+      holder: HOLDER_ID,
+      blokBlocks: blocks,
+      blokTools: tools,
+      blokTunes: tunes,
       PopoverItemTypeValues: {
         Default: PopoverItemType.Default,
         Separator: PopoverItemType.Separator,
@@ -269,14 +269,14 @@ const waitForBlockTunesPopover = async (page: Page, timeout = 5000): Promise<voi
 };
 
 /**
- * Focus the first block within the editor interface to expose block tunes actions.
+ * Focus the first block within the blok interface to expose block tunes actions.
  * @param page - The Playwright page object
  */
 const focusFirstBlock = async (page: Page): Promise<void> => {
   const blockHandle = await page.locator(BLOCK_SELECTOR).elementHandle();
 
   if (!blockHandle) {
-    throw new Error('Unable to locate a block within the editor interface.');
+    throw new Error('Unable to locate a block within the blok interface.');
   }
 
   await blockHandle.click();
@@ -305,12 +305,12 @@ const openBlockTunesWithShortcut = async (page: Page): Promise<void> => {
 
 test.describe('popover Search/Filter', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test.describe('filtering behavior', () => {
@@ -318,7 +318,7 @@ test.describe('popover Search/Filter', () => {
      * Test filtering items based on search query
      */
     test('should filter items based on search query', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -371,7 +371,7 @@ test.describe('popover Search/Filter', () => {
      * Test showing all items when search query is cleared
      */
     test('should show all items when search query is cleared', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -418,7 +418,7 @@ test.describe('popover Search/Filter', () => {
      * Test displaying "Nothing found" message when no items match
      */
     test('should display "Nothing found" message when no items match', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -457,7 +457,7 @@ test.describe('popover Search/Filter', () => {
      * Test hiding "Nothing found" message when items match again
      */
     test('should hide "Nothing found" message when items match again', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -500,7 +500,7 @@ test.describe('popover Search/Filter', () => {
      * Test matching items regardless of case
      */
     test('should match items regardless of case', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -550,7 +550,7 @@ test.describe('popover Search/Filter', () => {
      * Test matching items with partial query
      */
     test('should match items with partial query', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -608,7 +608,7 @@ test.describe('popover Search/Filter', () => {
      * Test handling special characters in search query
      */
     test('should handle special characters in search query', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -664,7 +664,7 @@ test.describe('popover Search/Filter', () => {
      * Test handling empty search query
      */
     test('should handle empty search query', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -713,7 +713,7 @@ test.describe('popover Search/Filter', () => {
      * Test updating filter results as user types
      */
     test('should update filter results as user types', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -772,7 +772,7 @@ test.describe('popover Search/Filter', () => {
      * Test updating filter results when backspace is used
      */
     test('should update filter results when backspace is used', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -837,7 +837,7 @@ test.describe('popover Search/Filter', () => {
      * Test maintaining focus on search input during filtering
      */
     test('should maintain focus on search input during filtering', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -876,7 +876,7 @@ test.describe('popover Search/Filter', () => {
      * Test that search input is focused after popover opened
      */
     test('should be focused after popover opened', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -917,7 +917,7 @@ test.describe('popover Search/Filter', () => {
      * Test keyboard navigation between items ignoring separators when search query is applied
      */
     test('should perform keyboard navigation between items ignoring separators when search query is applied', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -980,9 +980,9 @@ test.describe('popover Search/Filter', () => {
      * Test i18n support in nested popover search
      */
     test('should support i18n in nested popover', async ({ page }) => {
-      await resetEditor(page);
+      await resetBlok(page);
       await page.evaluate(
-        async ({ holderId }) => {
+        async ({ holder }) => {
           /**
            * Block Tune with nested children
            * @class TestTune
@@ -1015,8 +1015,8 @@ test.describe('popover Search/Filter', () => {
             }
           }
 
-          const editor = new window.EditorJS({
-            holder: holderId,
+          const blok = new window.Blok({
+            holder: holder,
             data: {
               blocks: [
                 {
@@ -1044,11 +1044,11 @@ test.describe('popover Search/Filter', () => {
             },
           });
 
-          window.editorInstance = editor;
-          await editor.isReady;
+          window.blokInstance = blok;
+          await blok.isReady;
         },
         {
-          holderId: HOLDER_ID,
+          holder: HOLDER_ID,
         }
       );
 
@@ -1081,7 +1081,7 @@ test.describe('popover Search/Filter', () => {
      * Test filtering items in nested popover
      */
     test('should filter items in nested popover', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {

@@ -131,12 +131,12 @@ export default abstract class BaseToolAdapter<Type extends ToolType = ToolType, 
   public abstract type: Type;
 
   /**
-   * Tool name specified in EditorJS config
+   * Tool name specified in Blok config
    */
   public name: string;
 
   /**
-   * Flag show is current Tool internal (bundled with EditorJS core) or not
+   * Flag show is current Tool internal (bundled with Blok core) or not
    */
   public readonly isInternal: boolean;
 
@@ -146,7 +146,7 @@ export default abstract class BaseToolAdapter<Type extends ToolType = ToolType, 
   public readonly isDefault: boolean;
 
   /**
-   * EditorJS API for current Tool
+   * Blok API for current Tool
    */
   protected api: ApiMethods;
 
@@ -161,7 +161,7 @@ export default abstract class BaseToolAdapter<Type extends ToolType = ToolType, 
   protected constructable: ToolConstructable;
 
   /**
-   * Default placeholder specified in EditorJS user configuration
+   * Default placeholder specified in Blok user configuration
    */
   protected defaultPlaceholder?: string | false;
 
@@ -269,6 +269,6 @@ export default abstract class BaseToolAdapter<Type extends ToolType = ToolType, 
    * Constructs new Tool instance from constructable blueprint
    * @param args
    */
-   
+
   public abstract create(...args: any[]): ToolClass;
 }

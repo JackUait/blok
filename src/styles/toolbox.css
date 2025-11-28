@@ -1,10 +1,6 @@
-.ce-toolbox {
-
-}
-
-.codex-editor--narrow .ce-toolbox {
+.blok-editor--narrow .blok-toolbox {
   @media (--not-mobile){
-    .ce-popover {
+    .blok-popover {
       right: 0;
       left: unset;
     }

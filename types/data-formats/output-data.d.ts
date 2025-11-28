@@ -30,7 +30,7 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
 
 export interface OutputData {
   /**
-   * Editor's version
+   * Blok's version
    */
   version?: string;
 

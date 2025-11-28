@@ -71,8 +71,6 @@ type CSSTooltipClasses = {
  * Tiny any beautiful tooltips module.
  *
  * Can be showed near passed Element with any specified HTML content
- * @author CodeX <codex.so>
- * @license MIT
  */
 class Tooltip {
   /**
@@ -265,7 +263,7 @@ class Tooltip {
       return content;
     }
 
-    throw Error('[CodeX Tooltip] Wrong type of «content» passed. It should be an instance of Node or String. ' +
+    throw Error('[Blok Tooltip] Wrong type of «content» passed. It should be an instance of Node or String. ' +
       'But ' + typeof content + ' given.');
   }
 
@@ -412,7 +410,7 @@ class Tooltip {
    * Append CSS file
    */
   private loadStyles(): void {
-    const id = 'codex-tooltips-style';
+    const id = 'blok-tooltips-style';
 
     if (document.getElementById(id)) {
       return;

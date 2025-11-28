@@ -28,7 +28,7 @@ export interface ToolboxConfigEntry {
 }
 
 /**
- * Object passed to the Tool's constructor by {@link EditorConfig#tools}
+ * Object passed to the Tool's constructor by {@link BlokConfig#tools}
  *
  * @template Config - the structure describing a config object supported by the tool
  */

@@ -2,17 +2,17 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_CONTENT_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
 const LINK_INPUT_SELECTOR = '[data-blok-link-tool-input-opened]';
@@ -76,45 +76,45 @@ const selectAll = async (locator: Locator): Promise<void> => {
 };
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
- * Create editor with provided blocks
+ * Create blok with provided blocks
  * @param page - The Playwright page object
- * @param blocks - The blocks data to initialize the editor with
+ * @param blocks - The blocks data to initialize the blok with
  */
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
-      holder: holderId,
-      data: { blocks: editorBlocks },
+const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
+      holder: holder,
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
+    window.blokInstance = blok;
+    await blok.isReady;
   }, {
-    holderId: HOLDER_ID,
+    holder: HOLDER_ID,
     blocks,
   });
 };
@@ -210,16 +210,16 @@ const submitLink = async (page: Page, url: string): Promise<void> => {
 
 test.describe('inline tool link', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should create a link via Enter key', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -232,13 +232,13 @@ test.describe('inline tool link', () => {
 
     await selectText(paragraph, 'First block text');
     await ensureLinkInputOpen(page);
-    await submitLink(page, 'https://codex.so');
+    await submitLink(page, 'https://google.com');
 
-    await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'https://codex.so');
+    await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'https://google.com');
   });
 
   test('should create a link via toolbar button', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -261,7 +261,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should show validation error for invalid URL', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -290,11 +290,11 @@ test.describe('inline tool link', () => {
   });
 
   test('should fill in and update existing link', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
-          text: '<a href="https://codex.so">First block text</a>',
+          text: '<a href="https://google.com">First block text</a>',
         },
       },
     ]);
@@ -304,7 +304,7 @@ test.describe('inline tool link', () => {
     await selectAll(paragraph);
     const linkInput = await ensureLinkInputOpen(page);
 
-    await expect(linkInput).toHaveValue('https://codex.so');
+    await expect(linkInput).toHaveValue('https://google.com');
 
     // Verify button state - find button by data attributes directly
     const linkButton = page.locator('[data-blok-link-tool-unlink="true"][data-blok-link-tool-active="true"]');
@@ -317,11 +317,11 @@ test.describe('inline tool link', () => {
   });
 
   test('should remove link when toggled', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
-          text: '<a href="https://codex.so">Link to remove</a>',
+          text: '<a href="https://google.com">Link to remove</a>',
         },
       },
     ]);
@@ -341,7 +341,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should persist link in saved output', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -354,21 +354,21 @@ test.describe('inline tool link', () => {
 
     await selectText(paragraph, 'Persist me');
     await ensureLinkInputOpen(page);
-    await submitLink(page, 'https://codex.so');
+    await submitLink(page, 'https://google.com');
 
     const savedData = await page.evaluate<OutputData | undefined>(async () => {
-      return window.editorInstance?.save();
+      return window.blokInstance?.save();
     });
 
     expect(savedData).toBeDefined();
 
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
-    expect(paragraphBlock?.data.text).toContain('<a href="https://codex.so" target="_blank" rel="nofollow">Persist me</a>');
+    expect(paragraphBlock?.data.text).toContain('<a href="https://google.com" target="_blank" rel="nofollow">Persist me</a>');
   });
 
   test('should work in read-only mode', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -392,14 +392,14 @@ test.describe('inline tool link', () => {
 
     // Enable read-only mode
     await page.evaluate(async () => {
-      if (window.editorInstance) {
-        await window.editorInstance.readOnly.toggle(true);
+      if (window.blokInstance) {
+        await window.blokInstance.readOnly.toggle(true);
       }
     });
 
     // Verify read-only mode is enabled
     const isReadOnly = await page.evaluate(() => {
-      return window.editorInstance?.readOnly.isEnabled ?? false;
+      return window.blokInstance?.readOnly.isEnabled ?? false;
     });
 
     expect(isReadOnly).toBe(true);
@@ -423,7 +423,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should open link input via Shortcut (CMD+K)', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -450,11 +450,11 @@ test.describe('inline tool link', () => {
   });
 
   test('should unlink if input is cleared and Enter is pressed', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
-          text: '<a href="https://codex.so">Link to remove</a>',
+          text: '<a href="https://google.com">Link to remove</a>',
         },
       },
     ]);
@@ -465,7 +465,7 @@ test.describe('inline tool link', () => {
     // Opening link tool on existing link opens the input pre-filled
     const linkInput = await ensureLinkInputOpen(page);
 
-    await expect(linkInput).toHaveValue('https://codex.so');
+    await expect(linkInput).toHaveValue('https://google.com');
 
     await linkInput.fill('');
     await linkInput.press('Enter');
@@ -474,7 +474,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should auto-prepend http:// to domain-only links', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -493,7 +493,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should NOT prepend protocol to internal links', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -512,7 +512,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should NOT prepend protocol to anchors', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -531,7 +531,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should NOT prepend protocol to protocol-relative URLs', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -550,7 +550,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should close input when Escape is pressed', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -580,7 +580,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should not create link if input is empty and Enter is pressed (new link)', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -603,7 +603,7 @@ test.describe('inline tool link', () => {
 
   test('should restore selection after Escape', async ({ page }) => {
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -631,7 +631,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should unlink when button is clicked while input is open', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -658,7 +658,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should support IDN URLs', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -680,7 +680,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should allow pasting URL into input', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -711,7 +711,7 @@ test.describe('inline tool link', () => {
   });
 
   test('should not open tool via Shortcut (CMD+K) when selection is collapsed', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -738,7 +738,7 @@ test.describe('inline tool link', () => {
   test('should allow javascript: links (security check)', async ({ page }) => {
     // This test documents current behavior.
     // If the policy changes to disallow javascript: links, this test should be updated to expect failure/sanitization.
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
@@ -763,7 +763,7 @@ test.describe('inline tool link', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }

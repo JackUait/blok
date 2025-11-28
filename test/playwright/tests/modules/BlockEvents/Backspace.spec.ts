@@ -2,18 +2,18 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '../../../../../types';
+import type Blok from '../../../../../types';
 import type { OutputData } from '../../../../../types';
-import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
-const TOOLBAR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
-const HOLDER_ID = 'editorjs';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
+const HOLDER_ID = 'blok';
 
 const getPositionalLocator = async (page: Page, selector: string, position: 'first' | 'last'): Promise<Locator> => {
   const locators = await page.locator(selector).all();
@@ -34,56 +34,56 @@ const getBlockLocator = async (page: Page, position: 'first' | 'last'): Promise<
 };
 
 const getQuoteInputLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
-  const quoteInputSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=quote-tool] div[contenteditable]`;
+  const quoteInputSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid=quote-tool] div[contenteditable]`;
 
   return getPositionalLocator(page, quoteInputSelector, position);
 };
 
 const getBlockWrapperLocator = async (page: Page, position: 'first' | 'last'): Promise<Locator> => {
-  const blockWrapperSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=block-wrapper]`;
+  const blockWrapperSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid=block-wrapper]`;
 
   return getPositionalLocator(page, blockWrapperSelector, position);
 };
 
 /**
- * Resets the editor instance by destroying any existing instance and clearing the holder.
+ * Resets the blok instance by destroying any existing instance and clearing the holder.
  * @param page - The Playwright Page object to interact with the browser.
  */
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
  *
  * @param page - Playwright Page instance
- * @param blocks - Array of block data to initialize the editor with
+ * @param blocks - Array of block data to initialize the blok with
  */
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
-      holder: holderId,
-      data: { blocks: editorBlocks },
+const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
+      holder: holder,
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID,
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
@@ -92,24 +92,24 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
  * @param page - The Playwright page object
  * @param textBlocks - Array of text strings to create paragraph blocks from
  */
-const createParagraphEditor = async (page: Page, textBlocks: string[]): Promise<void> => {
+const createParagraphBlok = async (page: Page, textBlocks: string[]): Promise<void> => {
   const blocks: OutputData['blocks'] = textBlocks.map((text) => ({
     type: 'paragraph',
     data: { text },
   }));
 
-  await createEditorWithBlocks(page, blocks);
+  await createBlokWithBlocks(page, blocks);
 };
 
 
 /**
  *
  * @param page - Playwright Page instance
- * @param blocks - Array of block data to initialize the editor with
+ * @param blocks - Array of block data to initialize the blok with
  */
-const createEditorWithSimpleHeader = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
+const createBlokWithSimpleHeader = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
     /**
      *
      */
@@ -167,17 +167,17 @@ const createEditorWithSimpleHeader = async (page: Page, blocks: OutputData['bloc
       }
     }
 
-    const editor = new window.EditorJS({
-      holder: holderId,
+    const blok = new window.Blok({
+      holder: holder,
       tools: {
         header: SimpleHeader,
       },
-      data: { blocks: editorBlocks },
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID,
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
@@ -185,9 +185,9 @@ const createEditorWithSimpleHeader = async (page: Page, blocks: OutputData['bloc
  *
  * @param page - Playwright Page instance
  */
-const createMultiInputToolEditor = async (page: Page): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId }) => {
+const createMultiInputToolBlok = async (page: Page): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder }) => {
     /**
      *
      */
@@ -218,8 +218,8 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
       }
     }
 
-    const editor = new window.EditorJS({
-      holder: holderId,
+    const blok = new window.Blok({
+      holder: holder,
       tools: {
         quote: ExampleOfToolWithSeveralInputs,
       },
@@ -233,9 +233,9 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID });
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID });
 };
 
 /**
@@ -244,9 +244,9 @@ const createMultiInputToolEditor = async (page: Page): Promise<void> => {
  * @param options - Configuration options
  * @param options.hasConversionConfig - Whether the tool has a conversion config
  */
-const createUnmergeableToolEditor = async (page: Page, options: { hasConversionConfig: boolean }): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, hasConversionConfig }) => {
+const createUnmergeableToolBlok = async (page: Page, options: { hasConversionConfig: boolean }): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, hasConversionConfig }) => {
     /**
      *
      */
@@ -286,8 +286,8 @@ const createUnmergeableToolEditor = async (page: Page, options: { hasConversionC
       }
     }
 
-    const editor = new window.EditorJS({
-      holder: holderId,
+    const blok = new window.Blok({
+      holder: holder,
       tools: {
         code: UnmergeableTool,
       },
@@ -307,9 +307,9 @@ const createUnmergeableToolEditor = async (page: Page, options: { hasConversionC
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID,
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID,
     hasConversionConfig: options.hasConversionConfig });
 };
 
@@ -317,13 +317,13 @@ const createUnmergeableToolEditor = async (page: Page, options: { hasConversionC
  *
  * @param page - Playwright Page instance
  */
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return page.evaluate(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance is not initialized');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance is not initialized');
     }
 
-    return window.editorInstance.save();
+    return window.blokInstance.save();
   });
 };
 
@@ -450,18 +450,18 @@ const expectToolbarClosed = async (page: Page): Promise<void> => {
 
 test.describe('backspace keydown', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     page.on('console', msg => console.log(msg.text()));
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test.describe('starting whitespaces handling', () => {
     test('should delete non-breaking space at block start', async ({ page }) => {
-      await createParagraphEditor(page, ['1', '&nbsp;2']);
+      await createParagraphBlok(page, ['1', '&nbsp;2']);
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -475,7 +475,7 @@ test.describe('backspace keydown', () => {
     });
 
     test('should merge blocks when invisible space precedes caret at block start', async ({ page }) => {
-      await createParagraphEditor(page, ['1', ' 2']);
+      await createParagraphBlok(page, ['1', ' 2']);
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -489,7 +489,7 @@ test.describe('backspace keydown', () => {
     });
 
     test('should merge blocks when empty tags precede caret at block start', async ({ page }) => {
-      await createParagraphEditor(page, ['1', '<b></b>2']);
+      await createParagraphBlok(page, ['1', '<b></b>2']);
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -503,7 +503,7 @@ test.describe('backspace keydown', () => {
     });
 
     test('should remove non-breaking space and ignore empty tags at block start', async ({ page }) => {
-      await createParagraphEditor(page, ['1', '<b></b>&nbsp;2']);
+      await createParagraphBlok(page, ['1', '<b></b>&nbsp;2']);
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -530,13 +530,13 @@ test.describe('backspace keydown', () => {
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
          
-        const editor = window.editorInstance as any;
+        const blok = window.blokInstance as any;
 
-        if (blockId && editor && editor.module && editor.module.blockManager) {
-          const block = editor.module.blockManager.getBlockById(blockId);
+        if (blockId && blok && blok.module && blok.module.blockManager) {
+          const block = blok.module.blockManager.getBlockById(blockId);
 
           if (block) {
-            editor.module.blockManager.currentBlock = block;
+            blok.module.blockManager.currentBlock = block;
           }
         }
 
@@ -598,7 +598,7 @@ test.describe('backspace keydown', () => {
     });
 
     test('should remove non-breaking space before empty tags at block start', async ({ page }) => {
-      await createParagraphEditor(page, ['1', '<b></b>&nbsp;2']);
+      await createParagraphBlok(page, ['1', '<b></b>&nbsp;2']);
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -624,13 +624,13 @@ test.describe('backspace keydown', () => {
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
          
-        const editor = window.editorInstance as any;
+        const blok = window.blokInstance as any;
 
-        if (blockId && editor && editor.module && editor.module.blockManager) {
-          const block = editor.module.blockManager.getBlockById(blockId);
+        if (blockId && blok && blok.module && blok.module.blockManager) {
+          const block = blok.module.blockManager.getBlockById(blockId);
 
           if (block) {
-            editor.module.blockManager.currentBlock = block;
+            blok.module.blockManager.currentBlock = block;
           }
         }
 
@@ -691,7 +691,7 @@ test.describe('backspace keydown', () => {
     });
 
     test('should remove non-breaking space and regular space at block start', async ({ page }) => {
-      await createParagraphEditor(page, ['1', ' &nbsp;2']);
+      await createParagraphBlok(page, ['1', ' &nbsp;2']);
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -715,13 +715,13 @@ test.describe('backspace keydown', () => {
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
          
-        const editor = window.editorInstance as any;
+        const blok = window.blokInstance as any;
 
-        if (blockId && editor && editor.module && editor.module.blockManager) {
-          const block = editor.module.blockManager.getBlockById(blockId);
+        if (blockId && blok && blok.module && blok.module.blockManager) {
+          const block = blok.module.blockManager.getBlockById(blockId);
 
           if (block) {
-            editor.module.blockManager.currentBlock = block;
+            blok.module.blockManager.currentBlock = block;
           }
         }
 
@@ -782,7 +782,7 @@ test.describe('backspace keydown', () => {
     });
 
     test('should delete all whitespaces when block contains only whitespace characters', async ({ page }) => {
-      await createParagraphEditor(page, ['1', '&nbsp; &nbsp;']);
+      await createParagraphBlok(page, ['1', '&nbsp; &nbsp;']);
 
       const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -806,13 +806,13 @@ test.describe('backspace keydown', () => {
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
          
-        const editor = window.editorInstance as any;
+        const blok = window.blokInstance as any;
 
-        if (blockId && editor && editor.module && editor.module.blockManager) {
-          const block = editor.module.blockManager.getBlockById(blockId);
+        if (blockId && blok && blok.module && blok.module.blockManager) {
+          const block = blok.module.blockManager.getBlockById(blockId);
 
           if (block) {
-            editor.module.blockManager.currentBlock = block;
+            blok.module.blockManager.currentBlock = block;
           }
         }
 
@@ -864,7 +864,7 @@ test.describe('backspace keydown', () => {
   });
 
   test('should delete selected text using native behavior', async ({ page }) => {
-    await createParagraphEditor(page, ['The first block', 'The second block']);
+    await createParagraphBlok(page, ['The first block', 'The second block']);
 
     const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -878,7 +878,7 @@ test.describe('backspace keydown', () => {
   });
 
   test('should delete character using native behavior when caret is not at block start', async ({ page }) => {
-    await createParagraphEditor(page, ['The first block', 'The second block']);
+    await createParagraphBlok(page, ['The first block', 'The second block']);
 
     const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -891,7 +891,7 @@ test.describe('backspace keydown', () => {
   });
 
   test('should navigate to previous input when caret is not at first input', async ({ page }) => {
-    await createMultiInputToolEditor(page);
+    await createMultiInputToolBlok(page);
 
     const lastInput = await getQuoteInputLocator(page, 'last');
     const firstInput = await getQuoteInputLocator(page, 'first');
@@ -905,7 +905,7 @@ test.describe('backspace keydown', () => {
   });
 
   test('should remove previous empty block and close toolbar when caret is at block start', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         id: 'block1',
         type: 'paragraph',
@@ -924,14 +924,14 @@ test.describe('backspace keydown', () => {
     await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block2');
   });
 
   test('should remove current empty block and place caret at end of previous block', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         id: 'block1',
         type: 'paragraph',
@@ -949,7 +949,7 @@ test.describe('backspace keydown', () => {
     await lastParagraph.click();
     await lastParagraph.press('Backspace');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block1');
@@ -961,7 +961,7 @@ test.describe('backspace keydown', () => {
   });
 
   test('should merge mergeable blocks and place caret at merge point when caret is at block start', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         id: 'block1',
         type: 'paragraph',
@@ -980,7 +980,7 @@ test.describe('backspace keydown', () => {
     await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block1');
@@ -993,7 +993,7 @@ test.describe('backspace keydown', () => {
   });
 
   test('should merge paragraph into header when conversion config is valid', async ({ page }) => {
-    await createEditorWithSimpleHeader(page, [
+    await createBlokWithSimpleHeader(page, [
       {
         id: 'block1',
         type: 'header',
@@ -1012,7 +1012,7 @@ test.describe('backspace keydown', () => {
     await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block1');
@@ -1025,7 +1025,7 @@ test.describe('backspace keydown', () => {
   });
 
   test('should merge header into paragraph when conversion config is valid', async ({ page }) => {
-    await createEditorWithSimpleHeader(page, [
+    await createBlokWithSimpleHeader(page, [
       {
         id: 'block1',
         type: 'paragraph',
@@ -1038,7 +1038,7 @@ test.describe('backspace keydown', () => {
       },
     ]);
 
-    const targetBlock = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-id="block2"]`);
+    const targetBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-id="block2"]`);
 
     const targetBlockContentEditable = targetBlock.locator('[contenteditable]');
 
@@ -1046,7 +1046,7 @@ test.describe('backspace keydown', () => {
     await setCaret(targetBlockContentEditable, 0, 0);
     await targetBlock.press('Backspace');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].id).toBe('block1');
@@ -1059,7 +1059,7 @@ test.describe('backspace keydown', () => {
   });
 
   test('should move caret to end of previous block when blocks are not mergeable without merge method', async ({ page }) => {
-    await createUnmergeableToolEditor(page, { hasConversionConfig: false });
+    await createUnmergeableToolBlok(page, { hasConversionConfig: false });
 
     const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -1067,15 +1067,15 @@ test.describe('backspace keydown', () => {
     await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
+    await expectCaretAtEnd(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
     await expectToolbarClosed(page);
   });
 
   test('should move caret to end of previous block when blocks are not mergeable despite conversion config', async ({ page }) => {
-    await createUnmergeableToolEditor(page, { hasConversionConfig: true });
+    await createUnmergeableToolBlok(page, { hasConversionConfig: true });
 
     const lastParagraph = await getParagraphLocator(page, 'last');
 
@@ -1083,16 +1083,16 @@ test.describe('backspace keydown', () => {
     await setCaret(lastParagraph, 0, 0);
     await lastParagraph.press('Backspace');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
+    await expectCaretAtEnd(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
     await expectToolbarClosed(page);
   });
 
   test.describe('at the start of the first block', () => {
     test('should do nothing when block is not empty', async ({ page }) => {
-      await createParagraphEditor(page, [ 'The only block. Not empty' ]);
+      await createParagraphBlok(page, [ 'The only block. Not empty' ]);
 
       const onlyParagraph = await getParagraphLocator(page, 'first');
 
@@ -1108,7 +1108,7 @@ test.describe('backspace keydown', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }

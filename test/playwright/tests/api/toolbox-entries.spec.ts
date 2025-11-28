@@ -4,16 +4,16 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ToolboxConfig, ToolboxConfigEntry, BlockToolData, OutputData } from '@/types';
 import type { BlockToolConstructable } from '@/types/tools';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [contenteditable]`;
-const PLUS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"] [contenteditable]`;
+const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 const POPOVER_ITEM_SELECTOR = `[data-blok-testid="toolbox-popover"] [data-blok-testid="popover-item"]`;
 const POPOVER_ITEM_ICON_SELECTOR = '[data-blok-testid="popover-item-icon"]';
 
@@ -34,7 +34,7 @@ const getFirstBlock = async (page: Page): Promise<Locator> => {
   const firstBlock = blocks[0];
 
   if (!firstBlock) {
-    throw new Error('No editor blocks were rendered');
+    throw new Error('No blok blocks were rendered');
   }
 
   return firstBlock;
@@ -45,37 +45,37 @@ const getLastBlock = async (page: Page): Promise<Locator> => {
   const lastBlock = blocks[blocks.length - 1];
 
   if (!lastBlock) {
-    throw new Error('No editor blocks were rendered');
+    throw new Error('No blok blocks were rendered');
   }
 
   return lastBlock;
 };
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
- * Create editor with custom tools
+ * Create blok with custom tools
  * @param page - The Playwright page object
  * @param tools - Tools configuration
  */
@@ -110,16 +110,16 @@ const serializeTools = (
   });
 };
 
-const createEditorWithTools = async (
+const createBlokWithTools = async (
   page: Page,
   tools: Record<string, BlockToolConstructable | { class: BlockToolConstructable }>,
   options: ToolRegistrationOptions = {}
 ): Promise<void> => {
-  await resetEditor(page);
+  await resetBlok(page);
   const serializedTools = serializeTools(tools);
 
   const registeredToolNames = await page.evaluate(
-    async ({ holderId, editorTools, globals }) => {
+    async ({ holder, blokTools, globals }) => {
       const reviveToolClass = (classSource: string, classGlobals: Record<string, unknown>): BlockToolConstructable => {
         const globalKeys = Object.keys(classGlobals);
         const factoryBody = `${globalKeys
@@ -131,7 +131,7 @@ return (${classSource});
         return new Function('globals', factoryBody)(classGlobals) as BlockToolConstructable;
       };
 
-      const toolsMap = editorTools.reduce<Record<string, BlockToolConstructable | { class: BlockToolConstructable }>>(
+      const toolsMap = blokTools.reduce<Record<string, BlockToolConstructable | { class: BlockToolConstructable }>>(
         (accumulated, toolConfig) => {
           const toolClass = reviveToolClass(toolConfig.classSource, globals);
 
@@ -153,19 +153,19 @@ return (${classSource});
         {}
       );
 
-      const editor = new window.EditorJS({
-        holder: holderId,
+      const blok = new window.Blok({
+        holder: holder,
         tools: toolsMap,
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
 
       return Object.keys(toolsMap);
     },
     {
-      holderId: HOLDER_ID,
-      editorTools: serializedTools,
+      holder: HOLDER_ID,
+      blokTools: serializedTools,
       globals: options.globals ?? {},
     }
   );
@@ -178,23 +178,23 @@ return (${classSource});
 };
 
 /**
- * Save editor data
+ * Save blok data
  * @param page - The Playwright page object
  * @returns The saved output data
  */
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return await page.evaluate(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    return await window.editorInstance.save();
+    return await window.blokInstance.save();
   });
 };
 
-test.describe('editor Tools Api', () => {
+test.describe('blok Tools Api', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -235,7 +235,7 @@ test.describe('editor Tools Api', () => {
           const contenteditable = document.createElement('div');
 
           contenteditable.contentEditable = 'true';
-          contenteditable.classList.add('cdx-block');
+          contenteditable.classList.add('blok-base-element');
           // Always initialize textContent to ensure it's never null
           contenteditable.textContent = this.data.text;
 
@@ -256,7 +256,7 @@ test.describe('editor Tools Api', () => {
         }
       };
 
-      await createEditorWithTools(
+      await createBlokWithTools(
         page,
         {
           testTool: TestTool as unknown as BlockToolConstructable,
@@ -323,7 +323,7 @@ test.describe('editor Tools Api', () => {
           const contenteditable = document.createElement('div');
 
           contenteditable.contentEditable = 'true';
-          contenteditable.classList.add('cdx-block');
+          contenteditable.classList.add('blok-base-element');
           // Always initialize textContent to ensure it's never null
           contenteditable.textContent = this.data.text;
 
@@ -344,7 +344,7 @@ test.describe('editor Tools Api', () => {
         }
       };
 
-      await createEditorWithTools(
+      await createBlokWithTools(
         page,
         {
           testTool: TestTool as unknown as BlockToolConstructable,
@@ -415,7 +415,7 @@ test.describe('editor Tools Api', () => {
           const wrapper = document.createElement('div');
 
           wrapper.setAttribute('contenteditable', 'true');
-          wrapper.classList.add('cdx-block');
+          wrapper.classList.add('blok-base-element');
 
           return wrapper;
         }
@@ -432,7 +432,7 @@ test.describe('editor Tools Api', () => {
         }
       };
 
-      await createEditorWithTools(
+      await createBlokWithTools(
         page,
         {
           testTool: TestTool as unknown as BlockToolConstructable,
@@ -471,9 +471,9 @@ test.describe('editor Tools Api', () => {
       await insertedBlock.click();
       await insertedBlock.type(text);
 
-      const editorData = await saveEditor(page);
+      const blokData = await saveBlok(page);
 
-      expect(editorData.blocks[0].data).toStrictEqual({
+      expect(blokData.blocks[0].data).toStrictEqual({
         ...dataOverrides,
         text,
       });

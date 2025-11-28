@@ -16,7 +16,7 @@ export interface NotifierOptions {
   type?: string;
 
   /**
-   * Add class `cdx-notify--${style}` to popup
+   * Add class `blok-notify--${style}` to popup
    * We have some default styles: 'success' and 'error'
    */
   style?: string;

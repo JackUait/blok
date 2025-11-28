@@ -3,7 +3,7 @@ import type { Mock } from 'vitest';
 
 import Saver from '../../../../src/components/modules/saver';
 import type Block from '../../../../src/components/block';
-import type { EditorConfig, SanitizerConfig } from '../../../../types';
+import type { BlokConfig, SanitizerConfig } from '../../../../types';
 import type { SavedData } from '../../../../types/data-formats';
 import * as sanitizer from '../../../../src/components/utils/sanitizer';
 import * as utils from '../../../../src/components/utils';
@@ -58,7 +58,7 @@ const createBlockMock = (options: BlockMockOptions): BlockMock => {
 };
 
 const createSaver = (options: CreateSaverOptions = {}): { saver: Saver } => {
-  const config: EditorConfig = {
+  const config: BlokConfig = {
     sanitizer: options.sanitizer ?? ({} as SanitizerConfig),
   };
 
@@ -86,7 +86,7 @@ const createSaver = (options: CreateSaverOptions = {}): { saver: Saver } => {
     Object.entries(toolConfigs).map(([name, sanitizeConfig]) => [name, { sanitizeConfig } ])
   );
 
-  const editorState = {
+  const blokState = {
     BlockManager: {
       blocks: options.blocks ?? [],
     },
@@ -96,7 +96,7 @@ const createSaver = (options: CreateSaverOptions = {}): { saver: Saver } => {
     },
   };
 
-  (saver as unknown as { state: Saver['Editor'] }).state = editorState as unknown as Saver['Editor'];
+  (saver as unknown as { state: Saver['Blok'] }).state = blokState as unknown as Saver['Blok'];
 
   return { saver };
 };
@@ -115,7 +115,7 @@ describe('Saver module', () => {
 
     const version = 'test-version';
 
-    vi.spyOn(utils, 'getEditorVersion').mockReturnValue(version);
+    vi.spyOn(utils, 'getBlokVersion').mockReturnValue(version);
 
     const paragraphBlock = createBlockMock({
       id: 'block-1',

@@ -1,7 +1,7 @@
 /**
  * Block Tool wrapper
  */
-.cdx-block {
+.blok-base-element {
     padding: var(--block-padding-vertical) 0;
 
     &::-webkit-input-placeholder {
@@ -12,7 +12,7 @@
 /**
  * Input
  */
-.cdx-input {
+.blok-base-input {
     border: 1px solid var(--color-line-gray);
     box-shadow: inset 0 1px 2px 0 rgba(35, 44, 72, 0.06);
     border-radius: 3px;
@@ -38,7 +38,7 @@
  * Settings
  * @deprecated - use tunes config instead of creating html element with controls
  */
-.cdx-settings-button {
+.blok-base-settings-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -92,7 +92,7 @@
 /**
  * Loader
  */
-.cdx-loader {
+.blok-base-loader {
     position: relative;
     border: 1px solid var(--color-line-gray);
 
@@ -107,11 +107,11 @@
         border: 2px solid var(--color-line-gray);
         border-left-color: var(--color-active-icon);
         border-radius: 50%;
-        animation: cdxRotation 1.2s infinite linear;
+        animation: rotation 1.2s infinite linear;
     }
 }
 
-@keyframes cdxRotation {
+@keyframes rotation {
     0% {
         transform: rotate(0deg);
     }
@@ -124,7 +124,7 @@
 /**
  * Button
  */
-.cdx-button {
+.blok-base-button {
     padding: 13px;
     border-radius: 3px;
     border: 1px solid var(--color-line-gray);

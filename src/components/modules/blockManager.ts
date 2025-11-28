@@ -1,6 +1,6 @@
 /**
  * @class BlockManager
- * @classdesc Manage editor`s blocks storage and appearance
+ * @classdesc Manage blok`s blocks storage and appearance
  * @module BlockManager
  * @version 2.0.0
  */
@@ -152,7 +152,7 @@ export default class BlockManager extends Module {
    * Check if each Block is empty
    * @returns {boolean}
    */
-  public get isEditorEmpty(): boolean {
+  public get isBlokEmpty(): boolean {
     return this.blocks.every((block) => block.isEmpty);
   }
 
@@ -175,12 +175,11 @@ export default class BlockManager extends Module {
   private sortable: Sortable | null = null;
 
   /**
-   * Should be called after Editor.UI preparation
+   * Should be called after Blok.UI preparation
    * Define this._blocks property
    */
   public prepare(): void {
-    const blocks = new Blocks(this.Editor.UI.nodes.redactor);
-
+    const blocks = new Blocks(this.Blok.UI.nodes.redactor);
     /**
      * We need to use Proxy to overload set/get [] operator.
      * So we can use array-like syntax to access blocks
@@ -202,21 +201,20 @@ export default class BlockManager extends Module {
       document,
       'copy',
       (event: Event) => {
-        this.Editor.BlockEvents.handleCommandC(event as ClipboardEvent);
+        this.Blok.BlockEvents.handleCommandC(event as ClipboardEvent);
       }
     );
 
-    this.sortable = new Sortable(this.Editor.UI.nodes.redactor, {
+    this.sortable = new Sortable(this.Blok.UI.nodes.redactor, {
       animation: 150,
       forceFallback: true,
-      handle: `.${this.Editor.Toolbar.CSS.settingsToggler}`,
+      handle: `.${this.Blok.Toolbar.CSS.settingsToggler}`,
       onStart: () => {
-        this.Editor.UI.nodes.wrapper.classList.add(this.Editor.UI.CSS.editorDragging);
+        this.Blok.UI.nodes.wrapper.classList.add(this.Blok.UI.CSS.blokDragging);
         tooltip.hide(true);
       },
       onEnd: (evt) => {
-        this.Editor.UI.nodes.wrapper.classList.remove(this.Editor.UI.CSS.editorDragging);
-
+        this.Blok.UI.nodes.wrapper.classList.remove(this.Blok.UI.CSS.blokDragging);
         if (evt.newIndex === undefined || evt.oldIndex === undefined) {
           return;
         }
@@ -247,7 +245,7 @@ export default class BlockManager extends Module {
   /**
    * Creates Block instance by tool name
    * @param {object} options - block creation options
-   * @param {string} options.tool - tools passed in editor config {@link EditorConfig#tools}
+   * @param {string} options.tool - tools passed in blok config {@link BlokConfig#tools}
    * @param {string} [options.id] - unique id for this block
    * @param {BlockToolData} [options.data] - constructor params
    * @returns {Block}
@@ -258,8 +256,8 @@ export default class BlockManager extends Module {
     id = undefined,
     tunes: tunesData = {},
   }: {tool: string; id?: string; data?: BlockToolData; tunes?: {[name: string]: BlockTuneData}}): Block {
-    const readOnly = this.Editor.ReadOnly.isEnabled;
-    const tool = this.Editor.Tools.blockTools.get(name);
+    const readOnly = this.Blok.ReadOnly.isEnabled;
+    const tool = this.Blok.Tools.blockTools.get(name);
 
     if (tool === undefined) {
       throw new Error(`Could not compose Block. Tool «${name}» not found.`);
@@ -269,7 +267,7 @@ export default class BlockManager extends Module {
       id,
       data,
       tool,
-      api: this.Editor.API,
+      api: this.Blok.API,
       readOnly,
       tunesData,
     }, this.eventsDispatcher);
@@ -687,7 +685,7 @@ export default class BlockManager extends Module {
    * @returns {Block}
    */
   public split(): Block {
-    const extractedFragment = this.Editor.Caret.extractFragmentFromCaretPosition();
+    const extractedFragment = this.Blok.Caret.extractFragmentFromCaretPosition();
     const wrapper = $.make('div');
 
     wrapper.appendChild(extractedFragment as DocumentFragment);
@@ -782,7 +780,7 @@ export default class BlockManager extends Module {
    * 1) Find first-level Block from passed child Node
    * 2) Mark it as current
    * @param {Node} childNode - look ahead from this node.
-   * @returns {Block | undefined} can return undefined in case when the passed child note is not a part of the current editor instance
+   * @returns {Block | undefined} can return undefined in case when the passed child note is not a part of the current blok instance
    */
   public setCurrentBlockByChildNode(childNode: Node): Block | undefined {
     /**
@@ -801,12 +799,12 @@ export default class BlockManager extends Module {
     }
 
     /**
-     * Support multiple Editor.js instances,
+     * Support multiple Blok instances,
      * by checking whether the found block belongs to the current instance
      * @see {@link Ui#documentTouched}
      */
-    const editorWrapper = parentFirstLevelBlock.closest(`.${this.Editor.UI.CSS.editorWrapper}`);
-    const isBlockBelongsToCurrentInstance = editorWrapper?.isEqualNode(this.Editor.UI.nodes.wrapper);
+    const blokWrapper = parentFirstLevelBlock.closest(`.${this.Blok.UI.CSS.blokWrapper}`);
+    const isBlockBelongsToCurrentInstance = blokWrapper?.isEqualNode(this.Blok.UI.nodes.wrapper);
 
     if (!isBlockBelongsToCurrentInstance) {
       return undefined;
@@ -920,7 +918,7 @@ export default class BlockManager extends Module {
     /**
      * Getting a class of the replacing Tool
      */
-    const replacingTool = this.Editor.Tools.blockTools.get(targetToolName);
+    const replacingTool = this.Blok.Tools.blockTools.get(targetToolName);
 
     if (!replacingTool) {
       throw new Error(`Could not convert Block. Tool «${targetToolName}» not found.`);
@@ -960,7 +958,7 @@ export default class BlockManager extends Module {
   }
 
   /**
-   * Clears Editor
+   * Clears Blok
    * @param {boolean} needToAddDefaultBlock - 1) in internal calls (for example, in api.blocks.render)
    *                                             we don't need to add an empty default block
    *                                        2) in api.blocks.clear we should add empty block
@@ -988,12 +986,12 @@ export default class BlockManager extends Module {
     /**
      * Add empty modifier
      */
-    this.Editor.UI.checkEmptiness();
+    this.Blok.UI.checkEmptiness();
   }
 
   /**
    * Cleans up all the block tools' resources
-   * This is called when editor is destroyed
+   * This is called when blok is destroyed
    */
   public async destroy(): Promise<void> {
     if (this.sortable) {
@@ -1011,7 +1009,7 @@ export default class BlockManager extends Module {
    * @param {Block} block - Block to which event should be bound
    */
   private bindBlockEvents(block: Block): void {
-    const { BlockEvents } = this.Editor;
+    const { BlockEvents } = this.Blok;
 
     this.readOnlyMutableListeners.on(block.holder, 'keydown', (event: Event) => {
       if (event instanceof KeyboardEvent) {
@@ -1049,7 +1047,7 @@ export default class BlockManager extends Module {
       document,
       'cut',
       (event: Event) => {
-        this.Editor.BlockEvents.handleCommandX(event as ClipboardEvent);
+        this.Blok.BlockEvents.handleCommandX(event as ClipboardEvent);
       }
     );
 

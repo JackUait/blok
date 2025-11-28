@@ -50,12 +50,12 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
    * Styles
    */
   private readonly CSS = {
-    button: 'ce-inline-tool',
-    buttonActive: 'ce-inline-tool--active',
-    buttonModifier: 'ce-inline-tool--link',
-    buttonUnlink: 'ce-inline-tool--unlink',
-    input: 'ce-inline-tool-input',
-    inputShowed: 'ce-inline-tool-input--showed',
+    button: 'blok-inline-tool',
+    buttonActive: 'blok-inline-tool--active',
+    buttonModifier: 'blok-inline-tool--link',
+    buttonUnlink: 'blok-inline-tool--unlink',
+    input: 'blok-inline-tool-input',
+    inputShowed: 'blok-inline-tool-input--showed',
   };
   /**
    * Data attributes for e2e selectors
@@ -113,7 +113,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   private i18n: I18n;
 
   /**
-   * @param api - Editor.js API
+   * @param api - Blok API
    */
   constructor({ api }: InlineToolConstructorOptions) {
     this.toolbar = api.toolbar;
@@ -322,9 +322,9 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   private restoreSelection(): void {
     // if actions is broken by other selection We need to save new selection
     const currentSelection = new SelectionUtils();
-    const isSelectionInEditor = SelectionUtils.isAtEditor;
+    const isSelectionInBlok = SelectionUtils.isAtBlok;
 
-    if (isSelectionInEditor) {
+    if (isSelectionInBlok) {
       currentSelection.save();
     }
 
@@ -332,7 +332,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
     this.selection.restore();
 
     // and recover new selection after removing fake background
-    if (!isSelectionInEditor && this.selection.savedSelectionRange) {
+    if (!isSelectionInBlok && this.selection.savedSelectionRange) {
       const range = this.selection.savedSelectionRange;
       const container = range.commonAncestorContainer;
       const element = container.nodeType === Node.ELEMENT_NODE ? container as HTMLElement : container.parentElement;
@@ -340,7 +340,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
       element?.focus();
     }
 
-    if (!isSelectionInEditor) {
+    if (!isSelectionInBlok) {
       return;
     }
 

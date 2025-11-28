@@ -85,7 +85,7 @@ const createContentEditable = (text = 'Hello world'): { element: HTMLDivElement;
     textNode };
 };
 
-const createEditorZone = (text = 'Hello world'): {
+const createBlokZone = (text = 'Hello world'): {
   wrapper: HTMLDivElement;
   zone: HTMLDivElement;
   paragraph: HTMLParagraphElement;
@@ -95,8 +95,8 @@ const createEditorZone = (text = 'Hello world'): {
   const zone = document.createElement('div');
   const paragraph = document.createElement('p');
 
-  wrapper.className = 'codex-editor';
-  zone.className = 'codex-editor__redactor';
+  wrapper.className = 'blok-editor';
+  zone.className = 'blok-editor__redactor';
   paragraph.textContent = text;
 
   zone.appendChild(paragraph);
@@ -106,7 +106,7 @@ const createEditorZone = (text = 'Hello world'): {
   const textNode = paragraph.firstChild;
 
   if (!(textNode instanceof Text)) {
-    throw new Error('Failed to create text node inside editor zone');
+    throw new Error('Failed to create text node inside blok zone');
   }
 
   return { wrapper,
@@ -196,11 +196,11 @@ describe('SelectionUtils', () => {
     expect(SelectionUtils.isCollapsed).toBe(false);
   });
 
-  it('checks whether selection is inside the editor zone', () => {
-    const { textNode } = createEditorZone();
+  it('checks whether selection is inside the blok zone', () => {
+    const { textNode } = createBlokZone();
 
     setSelectionRange(textNode, 0, textNode.textContent?.length ?? 0);
-    expect(SelectionUtils.isAtEditor).toBe(true);
+    expect(SelectionUtils.isAtBlok).toBe(true);
 
     const outside = document.createElement('p');
 
@@ -214,17 +214,17 @@ describe('SelectionUtils', () => {
     }
 
     setSelectionRange(outsideText, 0, 3);
-    expect(SelectionUtils.isAtEditor).toBe(false);
+    expect(SelectionUtils.isAtBlok).toBe(false);
   });
 
-  it('validates whether a specific range belongs to the editor zone', () => {
-    const { textNode } = createEditorZone();
+  it('validates whether a specific range belongs to the blok zone', () => {
+    const { textNode } = createBlokZone();
     const insideRange = document.createRange();
 
     insideRange.setStart(textNode, 0);
     insideRange.setEnd(textNode, 2);
 
-    expect(SelectionUtils.isRangeAtEditor(insideRange)).toBe(true);
+    expect(SelectionUtils.isRangeAtBlok(insideRange)).toBe(true);
 
     const outsideParagraph = document.createElement('p');
 
@@ -242,7 +242,7 @@ describe('SelectionUtils', () => {
     outsideRange.setStart(outsideText, 0);
     outsideRange.setEnd(outsideText, 5);
 
-    expect(SelectionUtils.isRangeAtEditor(outsideRange)).toBe(false);
+    expect(SelectionUtils.isRangeAtBlok(outsideRange)).toBe(false);
   });
 
   it('reports whether any selection exists', () => {
@@ -334,7 +334,7 @@ describe('SelectionUtils', () => {
     SelectionUtils.addFakeCursor();
 
     expect(SelectionUtils.isFakeCursorInsideContainer(element)).toBe(true);
-    expect(element.querySelector('.codex-editor__fake-cursor')).not.toBeNull();
+    expect(element.querySelector('.blok-editor__fake-cursor')).not.toBeNull();
 
     SelectionUtils.removeFakeCursor(element);
 
@@ -343,7 +343,7 @@ describe('SelectionUtils', () => {
 
   it('manages fake background wrappers around selection', () => {
     const utilsInstance = new SelectionUtils();
-    const { zone, paragraph } = createEditorZone('Highlighted text');
+    const { zone, paragraph } = createBlokZone('Highlighted text');
     const selection = ensureSelection();
     const range = document.createRange();
 
@@ -362,7 +362,7 @@ describe('SelectionUtils', () => {
 
     utilsInstance.setFakeBackground();
 
-    const wrappers = zone.querySelectorAll('.codex-editor__fake-background');
+    const wrappers = zone.querySelectorAll('.blok-editor__fake-background');
 
     expect(wrappers.length).toBeGreaterThan(0);
     wrappers.forEach((wrapper) => {
@@ -373,13 +373,13 @@ describe('SelectionUtils', () => {
     utilsInstance.removeFakeBackground();
 
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(false);
-    expect(paragraph.querySelector('.codex-editor__fake-background')).toBeNull();
+    expect(paragraph.querySelector('.blok-editor__fake-background')).toBeNull();
     expect(paragraph.textContent).toBe('Highlighted text');
   });
 
   it('restores selection correctly after using fake background', () => {
     const utilsInstance = new SelectionUtils();
-    const { zone, paragraph } = createEditorZone('Text to select');
+    const { zone, paragraph } = createBlokZone('Text to select');
 
     // Create a text node and select a part of it
     const textNode = paragraph.firstChild as Text;
@@ -394,12 +394,12 @@ describe('SelectionUtils', () => {
 
     // Check that fake background is enabled
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(true);
-    expect(zone.querySelectorAll('.codex-editor__fake-background').length).toBeGreaterThan(0);
+    expect(zone.querySelectorAll('.blok-editor__fake-background').length).toBeGreaterThan(0);
 
     // Remove fake background
     utilsInstance.removeFakeBackground();
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(false);
-    expect(paragraph.querySelector('.codex-editor__fake-background')).toBeNull();
+    expect(paragraph.querySelector('.blok-editor__fake-background')).toBeNull();
 
     // Clear current selection to simulate focus change or similar
     window.getSelection()?.removeAllRanges();
@@ -415,7 +415,7 @@ describe('SelectionUtils', () => {
 
   it('does not enable fake background when selection is collapsed', () => {
     const utilsInstance = new SelectionUtils();
-    const { paragraph } = createEditorZone('Single word');
+    const { paragraph } = createBlokZone('Single word');
     const selection = ensureSelection();
     const range = document.createRange();
 
@@ -435,7 +435,7 @@ describe('SelectionUtils', () => {
     utilsInstance.setFakeBackground();
 
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(false);
-    expect(document.querySelector('.codex-editor__fake-background')).toBeNull();
+    expect(document.querySelector('.blok-editor__fake-background')).toBeNull();
   });
 
   it('saves, restores, and clears selection ranges', () => {

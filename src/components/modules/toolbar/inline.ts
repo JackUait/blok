@@ -8,7 +8,7 @@ import I18n from '../../i18n';
 import { I18nInternalNS } from '../../i18n/namespace-internal';
 import Shortcuts from '../../utils/shortcuts';
 import type { ModuleConfig } from '../../../types-internal/module-config';
-import type { EditorModules } from '../../../types-internal/editor-modules';
+import type { BlokModules } from '../../../types-internal/blok-modules';
 import { CommonInternalSettings } from '../../tools/base';
 import type { Popover, PopoverItemParams } from '../../utils/popover';
 import { PopoverItemType } from '../../utils/popover';
@@ -35,7 +35,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * CSS styles
    */
   public CSS = {
-    inlineToolbar: 'ce-inline-toolbar',
+    inlineToolbar: 'blok-inline-toolbar',
   };
 
   /**
@@ -86,8 +86,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * @param moduleConfiguration - Module Configuration
-   * @param moduleConfiguration.config - Editor's config
-   * @param moduleConfiguration.eventsDispatcher - Editor's event dispatcher
+   * @param moduleConfiguration.config - Blok's config
+   * @param moduleConfiguration.eventsDispatcher - Blok's event dispatcher
    */
   constructor({ config, eventsDispatcher }: ModuleConfig) {
     super({
@@ -112,10 +112,10 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
-   * Setter for Editor modules that ensures shortcuts registration is retried once dependencies are available
+   * Setter for Blok modules that ensures shortcuts registration is retried once dependencies are available
    */
-  public override set state(Editor: EditorModules) {
-    super.state = Editor;
+  public override set state(Blok: BlokModules) {
+    super.state = Blok;
     this.tryRegisterShortcuts();
   }
 
@@ -127,7 +127,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
-    if (!this.Editor?.UI?.nodes?.wrapper || this.Editor.Tools === undefined) {
+    if (!this.Blok?.UI?.nodes?.wrapper || this.Blok.Tools === undefined) {
       this.scheduleInitialization();
 
       return;
@@ -146,7 +146,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
-    if (this.Editor?.Tools === undefined) {
+    if (this.Blok?.Tools === undefined) {
       this.scheduleShortcutRegistration();
 
       return;
@@ -232,7 +232,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
     await this.open();
 
-    this.Editor.Toolbar.close();
+    this.Blok.Toolbar.close();
   }
 
   /**
@@ -296,16 +296,16 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   private make(): void {
     this.nodes.wrapper = $.make('div', [
       this.CSS.inlineToolbar,
-      ...(this.isRtl ? [ this.Editor.UI.CSS.editorRtlFix ] : []),
+      ...(this.isRtl ? [ this.Blok.UI.CSS.blokRtlFix ] : []),
     ]);
 
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'inline-toolbar');
 
     /**
-     * Append the inline toolbar to the editor.
+     * Append the inline toolbar to the blok.
      */
-    $.append(this.Editor.UI.nodes.wrapper, this.nodes.wrapper);
+    $.append(this.Blok.UI.nodes.wrapper, this.nodes.wrapper);
   }
 
   /**
@@ -334,7 +334,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
     this.popover = new PopoverInline({
       items: popoverItems,
-      scopeElement: this.Editor.API?.methods?.ui?.nodes?.redactor ?? this.Editor.UI.nodes.redactor,
+      scopeElement: this.Blok.API?.methods?.ui?.nodes?.redactor ?? this.Blok.UI.nodes.redactor,
       messages: {
         nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
         search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
@@ -361,7 +361,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    */
   private move(popoverWidth: number): void {
     const selectionRect = SelectionUtils.rect as DOMRect;
-    const wrapperOffset = this.Editor.UI.nodes.wrapper.getBoundingClientRect();
+    const wrapperOffset = this.Blok.UI.nodes.wrapper.getBoundingClientRect();
     const newCoords = {
       x: selectionRect.x - wrapperOffset.x,
       y: selectionRect.y +
@@ -376,8 +376,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     /**
      * Prevent InlineToolbar from overflowing the content zone on the right side
      */
-    if (realRightCoord > this.Editor.UI.contentRect.right) {
-      newCoords.x = this.Editor.UI.contentRect.right -popoverWidth - wrapperOffset.x;
+    if (realRightCoord > this.Blok.UI.contentRect.right) {
+      newCoords.x = this.Blok.UI.contentRect.right -popoverWidth - wrapperOffset.x;
     }
 
     this.nodes.wrapper!.style.left = Math.floor(newCoords.x) + 'px';
@@ -437,9 +437,9 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       ? currentSelection.anchorNode as HTMLElement
       : currentSelection.anchorNode.parentElement;
     const blockFromAnchor = anchorElement
-      ? this.Editor.BlockManager.getBlock(anchorElement)
+      ? this.Blok.BlockManager.getBlock(anchorElement)
       : null;
-    const currentBlock = blockFromAnchor ?? this.Editor.BlockManager.currentBlock;
+    const currentBlock = blockFromAnchor ?? this.Blok.BlockManager.currentBlock;
 
     if (currentBlock === null || currentBlock === undefined) {
       return false;
@@ -478,8 +478,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       return true;
     }
 
-    if (this.Editor.ReadOnly.isEnabled) {
-      return SelectionUtils.isSelectionAtEditor(currentSelection);
+    if (this.Blok.ReadOnly.isEnabled) {
+      return SelectionUtils.isSelectionAtBlok(currentSelection);
     }
 
     return false;
@@ -497,7 +497,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * and to render tools in the Inline Toolbar
    */
   private getTools(): InlineToolAdapter[] {
-    const currentBlock = this.Editor.BlockManager.currentBlock
+    const currentBlock = this.Blok.BlockManager.currentBlock
       ?? (() => {
         const selection = this.resolveSelection();
         const anchorNode = selection?.anchorNode;
@@ -512,7 +512,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
           return null;
         }
 
-        return this.Editor.BlockManager.getBlock(anchorElement);
+        return this.Blok.BlockManager.getBlock(anchorElement);
       })();
 
     if (!currentBlock) {
@@ -526,7 +526,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
        * We support inline tools in read only mode.
        * Such tools should have isReadOnlySupported flag set to true
        */
-      if (this.Editor.ReadOnly.isEnabled && tool.isReadOnlySupported !== true) {
+      if (this.Blok.ReadOnly.isEnabled && tool.isReadOnlySupported !== true) {
         return false;
       }
 
@@ -685,21 +685,12 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       type: PopoverItemType.Default,
     } as PopoverItemParams;
 
-    /**
-     * Prepend the separator if item has children and not the first one
-     */
-    if ('children' in popoverItem && index !== 0) {
-      popoverItems.push({
-        type: PopoverItemType.Separator,
-      });
-    }
-
     popoverItems.push(popoverItem);
 
     /**
      * Append a separator after the item if it has children and not the last one
      */
-    if ('children' in popoverItem && index < this.tools.size - 1) {
+    if ('children' in popoverItem && index === 0) {
       popoverItems.push({
         type: PopoverItemType.Separator,
       });
@@ -711,7 +702,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * @param toolName — Tool name
    */
   private getToolShortcut(toolName: string): string | undefined {
-    const { Tools } = this.Editor;
+    const { Tools } = this.Blok;
 
     /**
      * Enable shortcuts
@@ -734,7 +725,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
-   * Enable Tool shortcut with Editor Shortcuts Module
+   * Enable Tool shortcut with Blok Shortcuts Module
    * @param toolName - tool name
    * @param shortcut - shortcut according to the ShortcutData Module format
    */
@@ -757,10 +748,10 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     Shortcuts.add({
       name: shortcut,
       handler: (event) => {
-        const { currentBlock } = this.Editor.BlockManager;
+        const { currentBlock } = this.Blok.BlockManager;
 
         /**
-         * Editor is not focused
+         * Blok is not focused
          */
         if (!currentBlock) {
           return;
@@ -832,7 +823,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * @param toolName - name of the tool to invoke
    */
   private invokeToolActionDirectly(toolName: string): void {
-    const tool = this.Editor.Tools.inlineTools.get(toolName);
+    const tool = this.Blok.Tools.inlineTools.get(toolName);
 
     if (!tool) {
       return;
@@ -859,7 +850,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     const result = {} as  { [name: string]: IInlineTool } ;
 
     Array
-      .from(this.Editor.Tools.inlineTools.entries())
+      .from(this.Blok.Tools.inlineTools.entries())
       .forEach(([name, tool]) => {
         result[name] = tool.create();
       });
@@ -871,7 +862,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * Register shortcuts for inline tools ahead of time so they are available before the toolbar opens
    */
   private registerInitialShortcuts(): boolean {
-    const inlineTools = this.Editor.Tools?.inlineTools;
+    const inlineTools = this.Blok.Tools?.inlineTools;
 
     if (!inlineTools) {
       this.scheduleShortcutRegistration();
@@ -895,7 +886,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    */
   private createFallbackPopover(): Popover | null {
     try {
-      const scopeElement = this.Editor.API?.methods?.ui?.nodes?.redactor ?? this.Editor.UI.nodes.redactor;
+      const scopeElement = this.Blok.API?.methods?.ui?.nodes?.redactor ?? this.Blok.UI.nodes.redactor;
 
       return new PopoverInline({
         items: [],

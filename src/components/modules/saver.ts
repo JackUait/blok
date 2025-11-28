@@ -1,7 +1,7 @@
 /**
- * Editor.js Saver
+ * Blok Saver
  * @module Saver
- * @author Codex Team
+ * @author Blok Team
  * @version 2.0.0
  */
 import Module from '../__module';
@@ -21,8 +21,8 @@ type SanitizableBlockData = SaverValidatedData & Pick<SavedData, 'data' | 'tool'
 /**
  * @classdesc This method reduces all Blocks asyncronically and calls Block's save method to extract data
  * @typedef {Saver} Saver
- * @property {Element} html - Editor HTML content
- * @property {string} json - Editor JSON output
+ * @property {Element} html - Blok HTML content
+ * @property {string} json - Blok JSON output
  */
 export default class Saver extends Module {
   /**
@@ -35,7 +35,7 @@ export default class Saver extends Module {
    * @returns {OutputData | undefined}
    */
   public async save(): Promise<OutputData | undefined> {
-    const { BlockManager, Tools } = this.Editor;
+    const { BlockManager, Tools } = this.Blok;
     const blocks = BlockManager.blocks;
 
     /**
@@ -45,7 +45,7 @@ export default class Saver extends Module {
       return {
         time: +new Date(),
         blocks: [],
-        version: _.getEditorVersion(),
+        version: _.getBlokVersion(),
       };
     }
 
@@ -77,7 +77,7 @@ export default class Saver extends Module {
 
   /**
    * Saves and validates
-   * @param {Block} block - Editor's Tool
+   * @param {Block} block - Blok's Tool
    * @returns {ValidatedData} - Tool's validated data
    */
   private async getSavedData(block: Block): Promise<SaverValidatedData> {
@@ -103,7 +103,7 @@ export default class Saver extends Module {
   }
 
   /**
-   * Creates output object with saved data, time and version of editor
+   * Creates output object with saved data, time and version of blok
    * @param {ValidatedData} allExtractedData - data extracted from Blocks
    * @returns {OutputData}
    */
@@ -124,13 +124,13 @@ export default class Saver extends Module {
       }
 
       /** If it was stub Block, get original data */
-      if (tool === this.Editor.Tools.stubTool && this.isStubSavedData(data)) {
+      if (tool === this.Blok.Tools.stubTool && this.isStubSavedData(data)) {
         blocks.push(data);
 
         return;
       }
 
-      if (tool === this.Editor.Tools.stubTool) {
+      if (tool === this.Blok.Tools.stubTool) {
         _.log('Stub block data is malformed and was skipped');
 
         return;
@@ -152,7 +152,7 @@ export default class Saver extends Module {
     return {
       time: +new Date(),
       blocks,
-      version: _.getEditorVersion(),
+      version: _.getBlokVersion(),
     };
   }
 
@@ -160,7 +160,7 @@ export default class Saver extends Module {
    * Sanitizes extracted block data in-place
    * @param extractedData - collection of saved block data
    * @param getToolSanitizeConfig - resolver for tool-specific sanitize config
-   * @param globalSanitizer - global sanitizer config specified in editor settings
+   * @param globalSanitizer - global sanitizer config specified in blok settings
    */
   private sanitizeExtractedData(
     extractedData: SaverValidatedData[],

@@ -4,19 +4,19 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputBlockData, OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from './helpers/ensure-build';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
+const HOLDER_ID = 'blok';
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
@@ -24,42 +24,42 @@ type SerializableOutputData = {
   blocks?: Array<OutputBlockData>;
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-test.describe('editor error handling', () => {
+test.describe('blok error handling', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('reports a descriptive error when tool configuration is invalid', async ({ page }) => {
-    await resetEditor(page);
+    await resetBlok(page);
 
-    const errorMessage = await page.evaluate(async ({ holderId }) => {
+    const errorMessage = await page.evaluate(async ({ holder }) => {
       try {
-        const editor = new window.EditorJS({
-          holder: holderId,
+        const blok = new window.Blok({
+          holder: holder,
           tools: {
             brokenTool: {
               inlineToolbar: true,
@@ -67,32 +67,32 @@ test.describe('editor error handling', () => {
           },
         });
 
-        window.editorInstance = editor;
-        await editor.isReady;
+        window.blokInstance = blok;
+        await blok.isReady;
 
         return null;
       } catch (error) {
         return (error as Error).message;
       }
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     expect(errorMessage).toBe('Tool «brokenTool» must be a constructor function or an object with function in the «class» property');
   });
 
   test('logs a warning when required inline tool methods are missing', async ({ page }) => {
-    await resetEditor(page);
+    await resetBlok(page);
 
     const warningPromise = page.waitForEvent('console', {
       predicate: (message) => message.type() === 'warning' && message.text().includes('Incorrect Inline Tool'),
     });
 
-    await page.evaluate(async ({ holderId }) => {
+    await page.evaluate(async ({ holder }) => {
       class InlineWithoutRender {
         public static isInline = true;
       }
 
-      const editor = new window.EditorJS({
-        holder: holderId,
+      const blok = new window.Blok({
+        holder: holder,
         tools: {
           inlineWithoutRender: {
             class: InlineWithoutRender,
@@ -100,9 +100,9 @@ test.describe('editor error handling', () => {
         },
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
-    }, { holderId: HOLDER_ID });
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
 
     const warningMessage = await warningPromise;
 
@@ -110,7 +110,7 @@ test.describe('editor error handling', () => {
   });
 
   test('throws a descriptive error when render() receives invalid data format', async ({ page }) => {
-    await resetEditor(page);
+    await resetBlok(page);
 
     const initialData: SerializableOutputData = {
       blocks: [
@@ -122,24 +122,24 @@ test.describe('editor error handling', () => {
       ],
     };
 
-    await page.evaluate(async ({ holderId, data }) => {
-      const editor = new window.EditorJS({
-        holder: holderId,
+    await page.evaluate(async ({ holder, data }) => {
+      const blok = new window.Blok({
+        holder: holder,
         data,
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
-    }, { holderId: HOLDER_ID,
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID,
       data: initialData });
 
     const errorMessage = await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
       try {
-        await window.editorInstance.render({} as OutputData);
+        await window.blokInstance.render({} as OutputData);
 
         return null;
       } catch (error) {
@@ -151,9 +151,9 @@ test.describe('editor error handling', () => {
   });
 
   test('blocks read-only initialization when tools do not support read-only mode', async ({ page }) => {
-    await resetEditor(page);
+    await resetBlok(page);
 
-    const errorMessage = await page.evaluate(async ({ holderId }) => {
+    const errorMessage = await page.evaluate(async ({ holder }) => {
       try {
         class NonReadOnlyTool {
           public static get toolbox() {
@@ -178,8 +178,8 @@ test.describe('editor error handling', () => {
           }
         }
 
-        const editor = new window.EditorJS({
-          holder: holderId,
+        const blok = new window.Blok({
+          holder: holder,
           readOnly: true,
           tools: {
             nonReadOnly: {
@@ -196,30 +196,30 @@ test.describe('editor error handling', () => {
           },
         });
 
-        window.editorInstance = editor;
-        await editor.isReady;
+        window.blokInstance = blok;
+        await blok.isReady;
 
         return null;
       } catch (error) {
         return (error as Error).message;
       }
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     expect(errorMessage).toContain('To enable read-only mode all connected tools should support it.');
     expect(errorMessage).toContain('nonReadOnly');
   });
 
   test('throws a descriptive error when default holder element is missing', async ({ page }) => {
-    await page.evaluate(({ holderId }) => {
-      document.getElementById(holderId)?.remove();
-    }, { holderId: HOLDER_ID });
+    await page.evaluate(({ holder }) => {
+      document.getElementById(holder)?.remove();
+    }, { holder: HOLDER_ID });
 
     const errorMessage = await page.evaluate(async () => {
       try {
-        const editor = new window.EditorJS();
+        const blok = new window.Blok();
 
-        window.editorInstance = editor;
-        await editor.isReady;
+        window.blokInstance = blok;
+        await blok.isReady;
 
         return null;
       } catch (error) {
@@ -227,27 +227,27 @@ test.describe('editor error handling', () => {
       }
     });
 
-    expect(errorMessage).toBe('element with ID «editorjs» is missing. Pass correct holder\'s ID.');
+    expect(errorMessage).toBe('element with ID «blok» is missing. Pass correct holder\'s ID.');
   });
 
   test('throws a descriptive error when holder config is not an Element node', async ({ page }) => {
-    await resetEditor(page);
+    await resetBlok(page);
 
-    const errorMessage = await page.evaluate(async ({ holderId }) => {
+    const errorMessage = await page.evaluate(async ({ holder }) => {
       try {
-        const fakeHolder = { id: holderId };
-        const editor = new window.EditorJS({
+        const fakeHolder = { id: holder };
+        const blok = new window.Blok({
           holder: fakeHolder as unknown as HTMLElement,
         });
 
-        window.editorInstance = editor;
-        await editor.isReady;
+        window.blokInstance = blok;
+        await blok.isReady;
 
         return null;
       } catch (error) {
         return (error as Error).message;
       }
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     expect(errorMessage).toBe('«holder» value must be an Element node');
   });

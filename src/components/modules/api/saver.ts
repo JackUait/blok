@@ -19,25 +19,25 @@ export default class SaverAPI extends Module {
   }
 
   /**
-   * Return Editor's data
+   * Return Blok's data
    * @returns {OutputData}
    */
   public async save(): Promise<OutputData> {
-    const errorText = 'Editor\'s content can not be saved in read-only mode';
+    const errorText = 'Blok\'s content can not be saved in read-only mode';
 
-    if (this.Editor.ReadOnly.isEnabled) {
+    if (this.Blok.ReadOnly.isEnabled) {
       _.logLabeled(errorText, 'warn');
 
       throw new Error(errorText);
     }
 
-    const savedData = await this.Editor.Saver.save();
+    const savedData = await this.Blok.Saver.save();
 
     if (savedData !== undefined) {
       return savedData;
     }
 
-    const lastError = this.Editor.Saver.getLastSaveError?.();
+    const lastError = this.Blok.Saver.getLastSaveError?.();
 
     if (lastError instanceof Error) {
       throw lastError;
@@ -45,7 +45,7 @@ export default class SaverAPI extends Module {
 
     const errorMessage = lastError !== undefined
       ? String(lastError)
-      : 'Editor\'s content can not be saved because collecting data failed';
+      : 'Blok\'s content can not be saved because collecting data failed';
 
     throw new Error(errorMessage);
   }

@@ -3,17 +3,17 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import type Blok from '@/types';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_WRAPPER_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const DEFAULT_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const DEFAULT_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const ICON = '<svg width="17" height="15" viewBox="0 0 336 276" xmlns="http://www.w3.org/2000/svg"><path d="M291 150V79c0-19-15-34-34-34H79c-19 0-34 15-34 34v42l67-44 81 72 56-29 42 30zm0 52l-43-30-56 30-81-67-66 39v23c0 19 15 34 34 34h178c17 0 31-13 34-29zM79 0h178c44 0 79 35 79 79v118c0 44-35 79-79 79H79c-44 0-79-35-79-79V79C0 35 35 0 79 0z"></path></svg>';
 
 type ToolDefinition = {
@@ -22,7 +22,7 @@ type ToolDefinition = {
   config?: Record<string, unknown>;
 };
 
-type EditorSetupOptions = {
+type BlokSetupOptions = {
   data?: Record<string, unknown>;
   tools?: ToolDefinition[];
   config?: Record<string, unknown>;
@@ -43,33 +43,33 @@ const getBlockByIndex = (page: Page, index: number): Locator => {
   return page.locator(`${DEFAULT_BLOCK_SELECTOR}:nth-of-type(${index + 1})`);
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: BlokSetupOptions = {}): Promise<void> => {
   const { data, tools = [], config = {} } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
-    async ({ holderId, rawData, serializedTools, rawConfig }) => {
+    async ({ holder, rawData, serializedTools, rawConfig }) => {
       const reviveToolClass = (classSource: string): unknown => {
          
         return new Function(`return (${classSource});`)();
@@ -95,26 +95,26 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
         {}
       );
 
-      const editorConfig: Record<string, unknown> = {
-        holder: holderId,
+      const blokConfig: Record<string, unknown> = {
+        holder: holder,
         ...rawConfig,
       };
 
       if (rawData) {
-        editorConfig.data = rawData;
+        blokConfig.data = rawData;
       }
 
       if (serializedTools.length > 0) {
-        editorConfig.tools = revivedTools;
+        blokConfig.tools = revivedTools;
       }
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       rawData: data ?? null,
       serializedTools: tools,
       rawConfig: config,
@@ -124,11 +124,11 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
 
 const focusBlockByIndex = async (page: Page, index: number = 0): Promise<void> => {
   await page.evaluate(({ blockIndex }) => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    const didSetCaret = window.editorInstance.caret.setToBlock(blockIndex);
+    const didSetCaret = window.blokInstance.caret.setToBlock(blockIndex);
 
     if (!didSetCaret) {
       throw new Error(`Failed to set caret to block at index ${blockIndex}`);
@@ -145,7 +145,7 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
   await block.click();
   await block.hover();
 
-  const settingsButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
+  const settingsButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
   await settingsButton.waitFor({ state: 'visible' });
   await settingsButton.click();
@@ -270,12 +270,12 @@ class TestTool {
 
 test.describe('api.tools', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
     await page.evaluate(() => {
       window.__onPasteCalls = 0;
       window.__lastPasteSnapshot = null;
@@ -293,7 +293,7 @@ test.describe('api.tools', () => {
         };
       `);
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -335,7 +335,7 @@ test.describe('api.tools', () => {
         ];
       `);
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -370,7 +370,7 @@ test.describe('api.tools', () => {
         return element;
       `);
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -408,7 +408,7 @@ test.describe('api.tools', () => {
         `,
       });
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -442,7 +442,7 @@ test.describe('api.tools', () => {
         `,
       });
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -478,7 +478,7 @@ test.describe('api.tools', () => {
         `,
       });
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -525,7 +525,7 @@ test.describe('api.tools', () => {
         `,
       });
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -572,7 +572,7 @@ test.describe('api.tools', () => {
         `,
       });
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -626,7 +626,7 @@ test.describe('api.tools', () => {
         `,
       });
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -686,7 +686,7 @@ test.describe('api.tools', () => {
         `,
       });
 
-      await createEditor(page, {
+      await createBlok(page, {
         tools: [
           {
             name: 'testTool',
@@ -741,7 +741,7 @@ const LAST_PASTE_SNAPSHOT_KEY = '__lastPasteSnapshot';
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
     [ON_PASTE_CALLS_KEY]?: number;
     [LAST_PASTE_SNAPSHOT_KEY]?: unknown;
   }

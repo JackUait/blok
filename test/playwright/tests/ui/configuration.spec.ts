@@ -3,11 +3,11 @@ import type { ConsoleMessage, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import {
-  EDITOR_INTERFACE_SELECTOR,
+  BLOK_INTERFACE_SELECTOR,
   INLINE_TOOLBAR_INTERFACE_SELECTOR,
   MODIFIER_KEY
 } from '../../../../src/components/constants';
@@ -16,9 +16,9 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const REDACTOR_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const REDACTOR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
 const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]';
 const FAILING_TOOL_SOURCE = `
   class FailingTool {
@@ -45,7 +45,7 @@ type ToolDefinition = {
   shortcut?: string;
 };
 
-type CreateEditorOptions = {
+type CreateBlokOptions = {
   data?: OutputData;
   config?: Record<string, unknown>;
   tools?: ToolDefinition[];
@@ -53,8 +53,8 @@ type CreateEditorOptions = {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
     __toolConfigReceived?: unknown;
     __onReadyCalls?: number;
   }
@@ -64,44 +64,44 @@ const getParagraphByIndex = (page: Page, index = 0): ReturnType<Page['locator']>
   return page.locator(`:nth-match(${PARAGRAPH_SELECTOR}, ${index + 1})`);
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   const { data = null, config = {}, tools = [] } = options;
 
-  await resetEditor(page);
+  await resetBlok(page);
 
   await page.evaluate(
-    async ({ holderId, editorData, editorConfig, toolDefinitions }) => {
+    async ({ holder, blokData, blokConfig, toolDefinitions }) => {
       const reviveToolClass = (source: string): unknown => {
 
         return new Function(`return (${source});`)();
       };
 
       const finalConfig: Record<string, unknown> = {
-        holder: holderId,
-        ...editorConfig,
+        holder: holder,
+        ...blokConfig,
       };
 
-      if (editorData) {
-        finalConfig.data = editorData;
+      if (blokData) {
+        finalConfig.data = blokData;
       }
 
       if (toolDefinitions.length > 0) {
@@ -144,15 +144,15 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
         finalConfig.tools = revivedTools;
       }
 
-      const editor = new window.EditorJS(finalConfig);
+      const blok = new window.Blok(finalConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
-      holderId: HOLDER_ID,
-      editorData: data,
-      editorConfig: config,
+      holder: HOLDER_ID,
+      blokData: data,
+      blokConfig: config,
       toolDefinitions: tools,
     }
   );
@@ -182,7 +182,7 @@ const openToolbox = async (page: Page): Promise<void> => {
 
   await paragraph.click();
 
-  const plusButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
+  const plusButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
 
   await plusButton.waitFor({ state: 'visible' });
   await plusButton.click();
@@ -192,16 +192,16 @@ const openToolbox = async (page: Page): Promise<void> => {
 
 const insertFailingToolAndTriggerSave = async (page: Page): Promise<void> => {
   await page.evaluate(async () => {
-    const editor = window.editorInstance;
+    const blok = window.blokInstance;
 
-    if (!editor) {
-      throw new Error('Editor instance not found');
+    if (!blok) {
+      throw new Error('Blok instance not found');
     }
 
-    editor.blocks.insert('failingTool');
+    blok.blocks.insert('failingTool');
 
     try {
-      await editor.save();
+      await blok.save();
     } catch (_error) {
       // Intentionally swallow to observe console logging side effects
     }
@@ -214,19 +214,19 @@ const insertFailingToolAndTriggerSave = async (page: Page): Promise<void> => {
   }, 50);
 };
 
-test.describe('editor configuration options', () => {
+test.describe('blok configuration options', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test.describe('autofocus', () => {
-    test('focuses the default block when editor starts empty', async ({ page }) => {
-      await createEditor(page, {
+    test('focuses the default block when blok starts empty', async ({ page }) => {
+      await createBlok(page, {
         config: {
           autofocus: true,
         },
@@ -240,7 +240,7 @@ test.describe('editor configuration options', () => {
     });
 
     test('focuses the first block when initial data is provided', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         config: {
           autofocus: true,
         },
@@ -263,8 +263,8 @@ test.describe('editor configuration options', () => {
       }).toBe(true);
     });
 
-    test('does not focus any block when autofocus is false on empty editor', async ({ page }) => {
-      await createEditor(page, {
+    test('does not focus any block when autofocus is false on empty blok', async ({ page }) => {
+      await createBlok(page, {
         config: {
           autofocus: false,
         },
@@ -276,8 +276,8 @@ test.describe('editor configuration options', () => {
       expect(selectionState.offset).toBe(-1);
     });
 
-    test('does not focus when autofocus is omitted on empty editor', async ({ page }) => {
-      await createEditor(page);
+    test('does not focus when autofocus is omitted on empty blok', async ({ page }) => {
+      await createBlok(page);
 
       const selectionState = await getSelectionState(page);
 
@@ -286,7 +286,7 @@ test.describe('editor configuration options', () => {
     });
 
     test('does not focus last block when autofocus is false for prefilled data', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         config: {
           autofocus: false,
         },
@@ -308,7 +308,7 @@ test.describe('editor configuration options', () => {
     });
 
     test('does not focus when autofocus is omitted for prefilled data', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         data: {
           blocks: [
             {
@@ -350,7 +350,7 @@ test.describe('editor configuration options', () => {
     test('uses provided placeholder string', async ({ page }) => {
       const placeholder = 'Start typing...';
 
-      await createEditor(page, {
+      await createBlok(page, {
         config: {
           placeholder,
         },
@@ -362,7 +362,7 @@ test.describe('editor configuration options', () => {
     });
 
     test('hides placeholder when set to false', async ({ page }) => {
-      await createEditor(page, {
+      await createBlok(page, {
         config: {
           placeholder: false,
         },
@@ -374,7 +374,7 @@ test.describe('editor configuration options', () => {
     });
 
     test('does not set placeholder when option is omitted', async ({ page }) => {
-      await createEditor(page);
+      await createBlok(page);
 
       await expect.poll(async () => {
         return await getPlaceholderValue(page);
@@ -383,7 +383,7 @@ test.describe('editor configuration options', () => {
   });
 
   test('applies custom minHeight padding', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       config: {
         minHeight: 180,
       },
@@ -399,7 +399,7 @@ test.describe('editor configuration options', () => {
   });
 
   test('uses default minHeight when option is omitted', async ({ page }) => {
-    await createEditor(page);
+    await createBlok(page);
 
     const paddingBottom = await page.evaluate(({ selector }) => {
       const redactor = document.querySelector(selector) as HTMLElement | null;
@@ -424,13 +424,13 @@ test.describe('editor configuration options', () => {
 
     const triggerInvalidMove = async (): Promise<void> => {
       await page.evaluate(() => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
-          throw new Error('Editor instance not found');
+        if (!blok) {
+          throw new Error('Blok instance not found');
         }
 
-        editor.blocks.move(-1, -1);
+        blok.blocks.move(-1, -1);
       });
 
       await page.evaluate(() => {
@@ -440,14 +440,14 @@ test.describe('editor configuration options', () => {
       });
     };
 
-    await createEditor(page);
+    await createBlok(page);
     await triggerInvalidMove();
 
     const warningsWithDefaultLevel = consoleMessages.filter((message) => {
       return message.type === 'warning' && message.text.includes("Warning during 'move' call");
     }).length;
 
-    await createEditor(page, {
+    await createBlok(page, {
       config: {
         logLevel: 'ERROR',
       },
@@ -480,7 +480,7 @@ test.describe('editor configuration options', () => {
 
     page.on('console', listener);
 
-    await createEditor(page, {
+    await createBlok(page, {
       config: {
         logLevel: 'VERBOSE',
       },
@@ -528,7 +528,7 @@ test.describe('editor configuration options', () => {
 
     page.on('console', listener);
 
-    await createEditor(page, {
+    await createBlok(page, {
       config: {
         logLevel: 'INFO',
       },
@@ -571,7 +571,7 @@ test.describe('editor configuration options', () => {
 
     page.on('console', listener);
 
-    await createEditor(page, {
+    await createBlok(page, {
       config: {
         logLevel: 'WARN',
       },
@@ -633,7 +633,7 @@ test.describe('editor configuration options', () => {
       }
     `;
 
-    await createEditor(page, {
+    await createBlok(page, {
       config: {
         defaultBlock: 'simple',
       },
@@ -646,13 +646,13 @@ test.describe('editor configuration options', () => {
     });
 
     const firstBlockType = await page.evaluate(async () => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor instance not found');
+      if (!blok) {
+        throw new Error('Blok instance not found');
       }
 
-      const block = editor.blocks.getBlockByIndex(0);
+      const block = blok.blocks.getBlockByIndex(0);
 
       return block?.name ?? null;
     });
@@ -661,20 +661,20 @@ test.describe('editor configuration options', () => {
   });
 
   test('falls back to paragraph when configured defaultBlock is missing', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       config: {
         defaultBlock: 'nonexistentTool',
       },
     });
 
     const firstBlockType = await page.evaluate(async () => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor instance not found');
+      if (!blok) {
+        throw new Error('Blok instance not found');
       }
 
-      const block = editor.blocks.getBlockByIndex(0);
+      const block = blok.blocks.getBlockByIndex(0);
 
       return block?.name ?? null;
     });
@@ -683,7 +683,7 @@ test.describe('editor configuration options', () => {
   });
 
   test('applies custom sanitizer configuration', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       config: {
         sanitizer: {
           span: true,
@@ -702,13 +702,13 @@ test.describe('editor configuration options', () => {
     });
 
     const savedHtml = await page.evaluate(async () => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor instance not found');
+      if (!blok) {
+        throw new Error('Blok instance not found');
       }
 
-      const data = await editor.save();
+      const data = await blok.save();
 
       return data.blocks[0]?.data?.text ?? '';
     });
@@ -718,7 +718,7 @@ test.describe('editor configuration options', () => {
   });
 
   test('uses default sanitizer rules when option is omitted', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -732,13 +732,13 @@ test.describe('editor configuration options', () => {
     });
 
     const savedHtml = await page.evaluate(async () => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor instance not found');
+      if (!blok) {
+        throw new Error('Blok instance not found');
       }
 
-      const data = await editor.save();
+      const data = await blok.save();
 
       return data.blocks[0]?.data?.text ?? '';
     });
@@ -748,23 +748,23 @@ test.describe('editor configuration options', () => {
   });
 
   test('invokes onReady callback after initialization', async ({ page }) => {
-    await resetEditor(page);
+    await resetBlok(page);
 
-    const onReadyCalls = await page.evaluate(async ({ holderId }) => {
+    const onReadyCalls = await page.evaluate(async ({ holder }) => {
       window.__onReadyCalls = 0;
 
-      const editor = new window.EditorJS({
-        holder: holderId,
+      const blok = new window.Blok({
+        holder: holder,
         onReady() {
           window.__onReadyCalls = (window.__onReadyCalls ?? 0) + 1;
         },
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
 
       return window.__onReadyCalls ?? 0;
-    }, { holderId: HOLDER_ID });
+    }, { holder: HOLDER_ID });
 
     expect(onReadyCalls).toBe(1);
   });
@@ -800,7 +800,7 @@ test.describe('editor configuration options', () => {
       }
     `;
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'shortcutTool',
@@ -821,13 +821,13 @@ test.describe('editor configuration options', () => {
 
     await expect.poll(async () => {
       const data = await page.evaluate(async () => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
-          throw new Error('Editor instance not found');
+        if (!blok) {
+          throw new Error('Blok instance not found');
         }
 
-        return await editor.save();
+        return await blok.save();
       });
 
       return data.blocks.some((block: { type: string }) => block.type === 'shortcutTool');
@@ -875,7 +875,7 @@ test.describe('editor configuration options', () => {
       window.__toolConfigReceived = undefined;
     });
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'configurableTool',
@@ -893,16 +893,16 @@ test.describe('editor configuration options', () => {
     });
 
     await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor instance not found');
+      if (!blok) {
+        throw new Error('Blok instance not found');
       }
 
-      editor.blocks.insert('configurableTool');
+      blok.blocks.insert('configurableTool');
     });
 
-    const configurableSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="configurableTool"]`;
+    const configurableSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="configurableTool"]`;
     const blockCount = await page.locator(configurableSelector).count();
 
     expect(blockCount).toBeGreaterThan(0);
@@ -957,7 +957,7 @@ test.describe('editor configuration options', () => {
       }
     `;
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: [
         {
           name: 'inlineToggleTool',
@@ -968,16 +968,16 @@ test.describe('editor configuration options', () => {
     });
 
     await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor instance not found');
+      if (!blok) {
+        throw new Error('Blok instance not found');
       }
 
-      editor.blocks.insert('inlineToggleTool');
+      blok.blocks.insert('inlineToggleTool');
     });
 
-    const inlineToggleSelector = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="inlineToggleTool"]`;
+    const inlineToggleSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="inlineToggleTool"]`;
     const inlineToggleBlocks = page.locator(inlineToggleSelector);
 
     await expect(inlineToggleBlocks).toHaveCount(1);

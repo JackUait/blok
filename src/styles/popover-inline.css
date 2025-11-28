@@ -1,14 +1,14 @@
 /**
  * Styles overrides for inline popover
  */
-.ce-popover--inline {
+.blok-popover--inline {
     --height: 38px;
     --height-mobile: 46px;
     --container-padding: 4px;
 
     position: relative;
 
-    &.ce-popover--opened {
+    &.blok-popover--opened {
         display: inline-block;
         width: var(--inline-popover-width, max-content);
         height: var(--height);
@@ -18,15 +18,15 @@
         }
     }
 
-    .ce-popover__custom-content {
+    .blok-popover__custom-content {
         margin-bottom: 0;
     }
 
-    .ce-popover__items {
+    .blok-popover__items {
         display: flex;
     }
 
-    .ce-popover__container {
+    .blok-popover__container {
         flex-direction: row;
         padding: var(--container-padding);
         height: var(--height);
@@ -44,7 +44,7 @@
     /**
    * Popover item styles
    */
-    .ce-popover-item-separator {
+    .blok-popover-item-separator {
         padding: 0 4px;
 
         &__line {
@@ -53,7 +53,7 @@
         }
     }
 
-    .ce-popover-item {
+    .blok-popover-item {
         border-radius: 4px;
         padding: 4px;
 
@@ -83,12 +83,12 @@
         }
     }
 
-    .ce-popover-item-html {
+    .blok-popover-item-html {
         display: flex;
         align-items: center;
     }
 
-    .ce-popover-item__icon--chevron-right {
+    .blok-popover-item__icon--chevron-right {
         transform: rotate(90deg);
     }
 
@@ -96,12 +96,12 @@
    * Hide chevron for the link tool — it renders a custom input instead of a dropdown list,
    * so the arrow is misleading here but should stay for other tools like the text style switcher.
    */
-    [data-blok-item-name="link"] .ce-popover-item__icon--chevron-right {
+    [data-blok-item-name="link"] .blok-popover-item__icon--chevron-right {
         display: none;
     }
 
-    .ce-popover--nested-level-1 {
-        .ce-popover__container {
+    .blok-popover--nested-level-1 {
+        .blok-popover__container {
             --offset: 3px;
 
             left: 0;
@@ -116,8 +116,8 @@
     /**
    * Nested popovers should look like regular desktop popovers, hence these overrides
    */
-    .ce-popover--nested {
-        .ce-popover__container {
+    .blok-popover--nested {
+        .blok-popover__container {
             min-width: var(--width);
             width: var(--width);
             height: fit-content;
@@ -125,12 +125,12 @@
             flex-direction: column;
         }
 
-        .ce-popover__items {
+        .blok-popover__items {
             display: block;
             width: 100%;
         }
 
-        .ce-popover-item {
+        .blok-popover-item {
             border-radius: 6px;
             padding: 3px;
 
@@ -148,7 +148,7 @@
             }
         }
 
-        .ce-popover-item-separator {
+        .blok-popover-item-separator {
             padding: 4px 3px;
 
             &__line {

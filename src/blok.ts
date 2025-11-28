@@ -1,7 +1,7 @@
 'use strict';
 
-import type { EditorConfig, API } from '../types';
-import type { EditorModules } from './types-internal/editor-modules';
+import type { BlokConfig, API } from '../types';
+import type { BlokModules } from './types-internal/blok-modules';
 
 /**
  * Apply polyfills
@@ -14,16 +14,14 @@ import * as _ from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 
 /**
- * Editor.js
+ * Blok
  * @license Apache-2.0
- * @see Editor.js <https://editorjs.io>
- * @author CodeX Team <https://codex.so>
  */
-export default class EditorJS {
+export default class Blok {
   /**
    * Store user-provided configuration for later export
    */
-  private readonly initialConfiguration: EditorConfig|string|undefined;
+  private readonly initialConfiguration: BlokConfig|string|undefined;
 
   /**
    * Promise that resolves when core modules are ready and UI is rendered on the page
@@ -32,19 +30,19 @@ export default class EditorJS {
 
   /**
    * Stores destroy method implementation.
-   * Clear heap occupied by Editor and remove UI components from the DOM.
+   * Clear heap occupied by Blok and remove UI components from the DOM.
    */
   public destroy: () => void;
 
-  /** Editor version */
+  /** Blok version */
   public static get version(): string {
-    return _.getEditorVersion();
+    return _.getBlokVersion();
   }
 
   /**
-   * @param {EditorConfig|string|undefined} [configuration] - user configuration
+   * @param {BlokConfig|string|undefined} [configuration] - user configuration
    */
-  constructor(configuration?: EditorConfig|string) {
+  constructor(configuration?: BlokConfig|string) {
     this.initialConfiguration = _.isObject(configuration)
       ? { ...configuration }
       : configuration;
@@ -52,20 +50,20 @@ export default class EditorJS {
     /**
      * Set default onReady function or use the one from configuration if provided
      */
-     
+
     const onReady = (_.isObject(configuration) && _.isFunction(configuration.onReady))
       ? configuration.onReady
       : () => {};
 
     /**
-     * Create a Editor.js instance
+     * Create a Blok instance
      */
-    const editor = new Core(configuration);
+    const blok = new Core(configuration);
 
     /**
      * Initialize destroy with a no-op function that will be replaced in exportAPI
      */
-     
+
     this.destroy = (): void => {};
 
     /**
@@ -73,10 +71,10 @@ export default class EditorJS {
      * as it can be used before other API methods are exported
      * @type {Promise<void>}
      */
-    this.isReady = editor.isReady.then(() => {
-      this.exportAPI(editor);
+    this.isReady = blok.isReady.then(() => {
+      this.exportAPI(blok);
       /**
-       * @todo pass API as an argument. It will allow to use Editor's API when editor is ready
+       * @todo pass API as an argument. It will allow to use Blok's API when blok is ready
        */
       onReady();
     });
@@ -84,12 +82,12 @@ export default class EditorJS {
 
   /**
    * Export external API methods
-   * @param {Core} editor — Editor's instance
+   * @param {Core} blok — Blok's instance
    */
-  public exportAPI(editor: Core): void {
+  public exportAPI(blok: Core): void {
     const fieldsToExport = [ 'configuration' ];
     const destroy = (): void => {
-      Object.values(editor.moduleInstances)
+      Object.values(blok.moduleInstances)
         .forEach((moduleInstance) => {
           if (moduleInstance === undefined || moduleInstance === null) {
             return;
@@ -119,12 +117,12 @@ export default class EditorJS {
 
     fieldsToExport.forEach((field) => {
       if (field !== 'configuration') {
-        (this as Record<string, unknown>)[field] = (editor as unknown as Record<string, unknown>)[field];
+        (this as Record<string, unknown>)[field] = (blok as unknown as Record<string, unknown>)[field];
 
         return;
       }
 
-      const coreConfiguration = (editor as unknown as { configuration?: EditorConfig|string|undefined }).configuration;
+      const coreConfiguration = (blok as unknown as { configuration?: BlokConfig|string|undefined }).configuration;
       const configurationToExport = _.isObject(this.initialConfiguration)
         ? this.initialConfiguration
         : coreConfiguration ?? this.initialConfiguration;
@@ -133,13 +131,13 @@ export default class EditorJS {
         return;
       }
 
-      (this as Record<string, unknown>)[field] = configurationToExport as EditorConfig|string;
+      (this as Record<string, unknown>)[field] = configurationToExport as BlokConfig|string;
     });
 
     this.destroy = destroy;
 
-    const apiMethods = editor.moduleInstances.API.methods;
-    const eventsDispatcherApi = editor.moduleInstances.EventsAPI?.methods ?? apiMethods.events;
+    const apiMethods = blok.moduleInstances.API.methods;
+    const eventsDispatcherApi = blok.moduleInstances.EventsAPI?.methods ?? apiMethods.events;
 
     if (eventsDispatcherApi !== undefined) {
       const defineDispatcher = (target: object): void => {
@@ -157,14 +155,14 @@ export default class EditorJS {
       defineDispatcher(this as Record<string, unknown>);
     }
 
-    if (Object.getPrototypeOf(apiMethods) !== EditorJS.prototype) {
-      Object.setPrototypeOf(apiMethods, EditorJS.prototype);
+    if (Object.getPrototypeOf(apiMethods) !== Blok.prototype) {
+      Object.setPrototypeOf(apiMethods, Blok.prototype);
     }
 
     Object.setPrototypeOf(this, apiMethods);
 
     const moduleAliases = Object.create(null) as Record<string, unknown>;
-    const moduleInstances = editor.moduleInstances as Partial<EditorModules>;
+    const moduleInstances = blok.moduleInstances as Partial<BlokModules>;
     const moduleInstancesRecord = moduleInstances as unknown as Record<string, unknown>;
 
     const getAliasName = (name: string): string => (
@@ -209,7 +207,7 @@ export default class EditorJS {
       writable: false,
     });
 
-    delete (this as Partial<EditorJS>).exportAPI;
+    delete (this as Partial<Blok>).exportAPI;
 
     const shorthands = {
       blocks: {
@@ -234,7 +232,7 @@ export default class EditorJS {
         Object.entries(methods)
           .forEach(([name, alias]) => {
             const apiKey = key as keyof API;
-            const apiMethodGroup = editor.moduleInstances.API.methods[apiKey] as unknown as Record<string, unknown>;
+            const apiMethodGroup = blok.moduleInstances.API.methods[apiKey] as unknown as Record<string, unknown>;
 
             (this as Record<string, unknown>)[alias] = apiMethodGroup[name];
           });

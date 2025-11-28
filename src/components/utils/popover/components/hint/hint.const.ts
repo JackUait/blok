@@ -3,7 +3,7 @@ import { bem } from '../../../bem';
 /**
  * Hint block CSS class constructor
  */
-const className = bem('ce-hint');
+const className = bem('blok-hint');
 
 /**
  * CSS class names to be used in hint class

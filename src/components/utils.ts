@@ -31,12 +31,12 @@ export enum LogLevels {
  */
 declare const VERSION: string;
 
-const fallbackEditorVersion = 'dev';
+const fallbackBlokVersion = 'dev';
 
 /**
- * Returns Editor.js version injected by bundler or a globally provided fallback.
+ * Returns Blok version injected by bundler or a globally provided fallback.
  */
-export const getEditorVersion = (): string => {
+export const getBlokVersion = (): string => {
   if (typeof VERSION !== 'undefined') {
     return VERSION;
   }
@@ -49,12 +49,12 @@ export const getEditorVersion = (): string => {
     return globalVersion;
   }
 
-  return fallbackEditorVersion;
+  return fallbackBlokVersion;
 };
 
 
 /**
- * Editor.js utils
+ * Blok utils
  */
 
 /**
@@ -164,7 +164,7 @@ type ConsoleMethod = {
 
 /**
  * Custom logger
- * @param {boolean} labeled — if true, Editor.js label is shown
+ * @param {boolean} labeled — if true, Blok label is shown
  * @param {string} msg  - message
  * @param {string} type - logging type 'log'|'warn'|'error'|'info'
  * @param {*} [args]      - argument to log with a message
@@ -210,8 +210,8 @@ const _log = (
     argsToPass.push(args);
   }
 
-  const editorLabelText = `Editor.js ${getEditorVersion()}`;
-  const editorLabelStyle = `line-height: 1em;
+  const blokLabelText = `Blok ${getBlokVersion()}`;
+  const blokLabelStyle = `line-height: 1em;
             color: #006FEA;
             display: inline-block;
             font-size: 11px;
@@ -228,12 +228,12 @@ const _log = (
     }
 
     if (isSimpleType) {
-      argsToPass.unshift(editorLabelStyle, style);
+      argsToPass.unshift(blokLabelStyle, style);
 
-      return `%c${editorLabelText}%c ${msg}`;
+      return `%c${blokLabelText}%c ${msg}`;
     }
 
-    return `( ${editorLabelText} )${msg}`;
+    return `( ${blokLabelText} )${msg}`;
   })();
 
   const callArguments = (() => {
@@ -267,7 +267,7 @@ export const setLogLevel = (logLevel: LogLevels): void => {
 };
 
 /**
- * _log method proxy without Editor.js label
+ * _log method proxy without Blok label
  * @param msg - message to log
  * @param type - console method name
  * @param args - optional payload to pass to console
@@ -283,7 +283,7 @@ export const log = (
 };
 
 /**
- * _log method proxy with Editor.js label
+ * _log method proxy with Blok label
  * @param msg - message to log
  * @param type - console method name
  * @param args - optional payload to pass to console

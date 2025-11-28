@@ -1,7 +1,7 @@
 import { BlockAPI } from "./block";
 
 /**
- * Describes Editor`s caret API
+ * Describes Blok`s caret API
  */
 export interface Caret {
 
@@ -57,9 +57,9 @@ export interface Caret {
   setToBlock(blockOrIdOrIndex: BlockAPI | BlockAPI['id'] | number, position?: 'end'|'start'|'default', offset?: number): boolean;
 
   /**
-   * Sets caret to the Editor
+   * Sets caret to the Blok
    *
-   * @param {boolean} atEnd - if true, set Caret to the end of the Editor
+   * @param {boolean} atEnd - if true, set Caret to the end of the Blok
    *
    * @return {boolean}
    */

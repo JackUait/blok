@@ -1,6 +1,6 @@
 import type { Notifier as INotifier } from '../../../../types/api';
 import Notifier from '../../utils/notifier';
-import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } from '../../utils/codex-notifier/types';
+import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } from '../../utils/notifier/types';
 import Module from '../../__module';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 
@@ -15,8 +15,8 @@ export default class NotifierAPI extends Module {
 
   /**
    * @param moduleConfiguration - Module Configuration
-   * @param moduleConfiguration.config - Editor's config
-   * @param moduleConfiguration.eventsDispatcher - Editor's event dispatcher
+   * @param moduleConfiguration.config - Blok's config
+   * @param moduleConfiguration.eventsDispatcher - Blok's event dispatcher
    */
   constructor({ config, eventsDispatcher }: ModuleConfig) {
     super({

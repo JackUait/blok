@@ -11,7 +11,6 @@ export interface BaseTool<RenderReturnType = HTMLElement> {
    * Tool`s render method
    *
    * For Inline Tools returns {@link MenuConfig}
-   * @see https://editorjs.io/menu-config
    *
    * For Block Tools returns tool`s wrapper html element
    */
@@ -20,7 +19,7 @@ export interface BaseTool<RenderReturnType = HTMLElement> {
 
 export interface BaseToolConstructorOptions<C extends object = any> {
   /**
-   * Editor.js API
+   * Blok API
    */
   api: API;
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EditorConfig } from '@/types';
+import type { BlokConfig } from '@/types';
 import type { ToolConstructable, ToolSettings } from '@/types/tools';
 import ToolsFactory from '../../../../src/components/tools/factory';
 import {
@@ -143,7 +143,7 @@ type ApiStub = {
   methods: object;
 };
 
-const baseEditorConfig: EditorConfig = {
+const baseBlokConfig: BlokConfig = {
   tools: {},
   defaultBlock: 'paragraph',
   placeholder: 'Type a text',
@@ -185,16 +185,16 @@ const createToolConfig = (overrides: Partial<ToolConfigEntry> = {}): ToolConfigE
 
 const createFactory = (
   tools: Record<string, ToolConfigEntry>,
-  editorConfigOverrides: Partial<EditorConfig> = {},
+  blokConfigOverrides: Partial<BlokConfig> = {},
   apiStub: ApiStub = createApiStub()
 ): { factory: ToolsFactory; apiStub: ApiStub } => {
-  const editorConfig: EditorConfig = {
-    ...baseEditorConfig,
-    ...editorConfigOverrides,
+  const blokConfig: BlokConfig = {
+    ...baseBlokConfig,
+    ...blokConfigOverrides,
   };
 
   return {
-    factory: new ToolsFactory(tools, editorConfig, apiStub.api),
+    factory: new ToolsFactory(tools, blokConfig, apiStub.api),
     apiStub,
   };
 };

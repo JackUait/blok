@@ -3,15 +3,15 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_CONTENT_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 // The link tool renders the item itself as a button, not a nested button
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
@@ -119,46 +119,46 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
   }, text);
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
     const container = document.createElement('div');
 
-    container.id = holderId;
+    container.id = holder;
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
-      holder: holderId,
-      data: { blocks: editorBlocks },
+const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
+      holder: holder,
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID,
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
 test.describe('inline tool link - edge cases', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should expand selection to whole link when editing partially selected link', async ({ page }) => {
-    await createEditorWithBlocks(page, [ {
+    await createBlokWithBlocks(page, [ {
       type: 'paragraph',
       data: { text: 'Click <a href="https://google.com">here</a> to go.' },
     } ]);
@@ -189,7 +189,7 @@ test.describe('inline tool link - edge cases', () => {
   });
 
   test('should handle spaces in URL correctly (reject unencoded)', async ({ page }) => {
-    await createEditorWithBlocks(page, [ {
+    await createBlokWithBlocks(page, [ {
       type: 'paragraph',
       data: { text: 'Space test' },
     } ]);
@@ -211,7 +211,7 @@ test.describe('inline tool link - edge cases', () => {
   });
 
   test('should accept encoded spaces in URL', async ({ page }) => {
-    await createEditorWithBlocks(page, [ {
+    await createBlokWithBlocks(page, [ {
       type: 'paragraph',
       data: { text: 'Encoded space test' },
     } ]);
@@ -230,7 +230,7 @@ test.describe('inline tool link - edge cases', () => {
   });
 
   test('should preserve target="_blank" on existing links after edit', async ({ page }) => {
-    await createEditorWithBlocks(page, [ {
+    await createBlokWithBlocks(page, [ {
       type: 'paragraph',
       data: { text: '<a href="https://google.com" target="_blank">Target link</a>' },
     } ]);
@@ -251,7 +251,7 @@ test.describe('inline tool link - edge cases', () => {
   });
 
   test('should sanitize javascript: URLs on save', async ({ page }) => {
-    await createEditorWithBlocks(page, [ {
+    await createBlokWithBlocks(page, [ {
       type: 'paragraph',
       data: { text: 'XSS test' },
     } ]);
@@ -272,17 +272,17 @@ test.describe('inline tool link - edge cases', () => {
     await expect(anchor).toHaveAttribute('href', 'javascript:alert(1)');
 
     const savedData = await page.evaluate(async () => {
-      return window.editorInstance?.save();
+      return window.blokInstance?.save();
     });
 
     const blockData = savedData?.blocks[0].data.text;
 
-    // Editor.js sanitizer should strip javascript: hrefs
+    // Blok sanitizer should strip javascript: hrefs
     expect(blockData).not.toContain('href="javascript:alert(1)"');
   });
 
   test('should handle multiple links in one block', async ({ page }) => {
-    await createEditorWithBlocks(page, [ {
+    await createBlokWithBlocks(page, [ {
       type: 'paragraph',
       data: { text: 'Link1 and Link2' },
     } ]);
@@ -310,7 +310,7 @@ test.describe('inline tool link - edge cases', () => {
   });
 
   test('cMD+K on collapsed selection in plain text should NOT open tool', async ({ page }) => {
-    await createEditorWithBlocks(page, [ {
+    await createBlokWithBlocks(page, [ {
       type: 'paragraph',
       data: { text: 'Empty selection' },
     } ]);
@@ -333,7 +333,7 @@ test.describe('inline tool link - edge cases', () => {
   });
 
   test('cMD+K on collapsed selection INSIDE a link should unlink', async ({ page }) => {
-    await createEditorWithBlocks(page, [ {
+    await createBlokWithBlocks(page, [ {
       type: 'paragraph',
       data: { text: 'Click <a href="https://inside.com">inside</a> me' },
     } ]);

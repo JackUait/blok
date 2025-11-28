@@ -2,24 +2,24 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import Tools from '../../../../src/components/modules/tools';
 import BlockToolAdapter from '../../../../src/components/tools/block';
 import EventsDispatcher from '../../../../src/components/utils/events';
-import type { EditorModules } from '../../../../src/types-internal/editor-modules';
+import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { ModuleConfig } from '../../../../src/types-internal/module-config';
-import type { EditorConfig } from '../../../../types';
+import type { BlokConfig } from '../../../../types';
 import type { ToolConstructable } from '../../../../types/tools';
-import type { EditorEventMap } from '../../../../src/components/events';
+import type { BlokEventMap } from '../../../../src/components/events';
 
 /**
- * Creates a Tools module instance with provided editor config.
- * @param config - optional editor configuration
+ * Creates a Tools module instance with provided blok config.
+ * @param config - optional blok configuration
  */
-const createModule = (config?: EditorConfig): Tools => {
-  const editorConfig: EditorConfig = config ?? {
+const createModule = (config?: BlokConfig): Tools => {
+  const blokConfig: BlokConfig = config ?? {
     tools: {},
   };
 
   const moduleConfig: ModuleConfig = {
-    config: editorConfig,
-    eventsDispatcher: new EventsDispatcher<EditorEventMap>(),
+    config: blokConfig,
+    eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   };
 
   const module = new Tools(moduleConfig);
@@ -28,15 +28,15 @@ const createModule = (config?: EditorConfig): Tools => {
     method(): void {},
   };
 
-  const editorModules = {
+  const blokModules = {
     API: {
       getMethodsForTool(): typeof APIMethods {
         return APIMethods;
       },
     },
-  } as unknown as EditorModules;
+  } as unknown as BlokModules;
 
-  module.state = editorModules;
+  module.state = blokModules;
 
   return module;
 };

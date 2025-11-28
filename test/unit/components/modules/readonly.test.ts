@@ -3,10 +3,10 @@ import type { MockInstance } from 'vitest';
 
 import ReadOnly from '../../../../src/components/modules/readonly';
 import { CriticalError } from '../../../../src/components/errors/critical';
-import type { EditorConfig } from '../../../../types';
+import type { BlokConfig } from '../../../../types';
 
 interface CreateReadOnlyOptions {
-  config?: EditorConfig;
+  config?: BlokConfig;
   blockTools?: Array<[string, { isReadOnlySupported?: boolean }]>;
   saverBlocks?: unknown[];
 }
@@ -91,7 +91,7 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
     },
   };
 
-  readOnly.state = modules as unknown as ReadOnly['Editor'];
+  readOnly.state = modules as unknown as ReadOnly['Blok'];
 
   return {
     readOnly,

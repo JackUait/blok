@@ -4,11 +4,11 @@ import UiAPI from '../../../../../src/components/modules/api/ui';
 import EventsDispatcher from '../../../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorModules } from '../../../../../src/types-internal/editor-modules';
-import type { EditorEventMap } from '../../../../../src/components/events';
-import type { EditorConfig } from '../../../../../types';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type { BlokEventMap } from '../../../../../src/components/events';
+import type { BlokConfig } from '../../../../../types';
 
-type EditorStub = {
+type BlokStub = {
   UI: {
     nodes: {
       wrapper: HTMLElement;
@@ -19,13 +19,13 @@ type EditorStub = {
 
 const createUiApi = (): {
   uiApi: UiAPI;
-  editor: EditorStub;
+  blok: BlokStub;
   wrapper: HTMLDivElement;
   redactor: HTMLDivElement;
 } => {
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as EditorConfig,
+    config: {} as BlokConfig,
     eventsDispatcher,
   };
 
@@ -33,7 +33,7 @@ const createUiApi = (): {
   const wrapper = document.createElement('div');
   const redactor = document.createElement('div');
 
-  const editor: EditorStub = {
+  const blok: BlokStub = {
     UI: {
       nodes: {
         wrapper,
@@ -42,11 +42,11 @@ const createUiApi = (): {
     },
   };
 
-  uiApi.state = editor as unknown as EditorModules;
+  uiApi.state = blok as unknown as BlokModules;
 
   return {
     uiApi,
-    editor,
+    blok,
     wrapper,
     redactor,
   };
@@ -61,7 +61,7 @@ describe('UiAPI', () => {
     document.body.innerHTML = '';
   });
 
-  it('exposes editor wrapper and redactor nodes via methods getter', () => {
+  it('exposes blok wrapper and redactor nodes via methods getter', () => {
     const { uiApi, wrapper, redactor } = createUiApi();
 
     const nodes = uiApi.methods.nodes;
@@ -70,8 +70,8 @@ describe('UiAPI', () => {
     expect(nodes.redactor).toBe(redactor);
   });
 
-  it('reflects the latest Editor UI nodes each time methods are accessed', () => {
-    const { uiApi, editor, wrapper } = createUiApi();
+  it('reflects the latest Blok UI nodes each time methods are accessed', () => {
+    const { uiApi, blok, wrapper } = createUiApi();
 
     const initialNodes = uiApi.methods.nodes;
 
@@ -80,8 +80,8 @@ describe('UiAPI', () => {
     const freshWrapper = document.createElement('section');
     const freshRedactor = document.createElement('article');
 
-    editor.UI.nodes.wrapper = freshWrapper;
-    editor.UI.nodes.redactor = freshRedactor;
+    blok.UI.nodes.wrapper = freshWrapper;
+    blok.UI.nodes.redactor = freshRedactor;
 
     const updatedNodes = uiApi.methods.nodes;
 

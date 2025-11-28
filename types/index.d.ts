@@ -7,7 +7,7 @@
 import {
   Dictionary,
   DictValue,
-  EditorConfig,
+  BlokConfig,
   I18nConfig,
   I18nDictionary,
 } from './configs';
@@ -68,7 +68,7 @@ export {
 } from './tools';
 export {BlockTune, BlockTuneConstructable} from './block-tunes';
 export {
-  EditorConfig,
+  BlokConfig,
   SanitizerConfig,
   SanitizerRule,
   PasteConfig,
@@ -123,9 +123,9 @@ export interface API {
 }
 
 /**
- * Main Editor class
+ * Main Blok class
  */
-declare class EditorJS {
+declare class Blok {
   public static version: string;
 
   public isReady: Promise<void>;
@@ -140,7 +140,7 @@ declare class EditorJS {
   public inlineToolbar: InlineToolbar;
   public tooltip: Tooltip;
   public readOnly: ReadOnly;
-  constructor(configuration?: EditorConfig|string);
+  constructor(configuration?: BlokConfig|string);
 
   /**
    * API shorthands
@@ -182,10 +182,10 @@ declare class EditorJS {
   public emit(eventName: string, data: any): void;
 
   /**
-   * Destroy Editor instance and related DOM elements
+   * Destroy Blok instance and related DOM elements
    */
   public destroy(): void;
 }
 
-export as namespace EditorJS;
-export default EditorJS;
+export as namespace Blok;
+export default Blok;

@@ -1,20 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { NotifierOptions } from '../../../../src/components/utils/codex-notifier/types';
+import type { NotifierOptions } from '../../../../src/components/utils/notifier/types';
 
 import Notifier from '../../../../src/components/utils/notifier';
 
 type ShowMock = ReturnType<typeof vi.fn>;
 
-type CodexNotifierModule = {
+type NotifierModule = {
   show: ShowMock;
 };
 
 type NotifierInternals = {
-  loadNotifierModule: () => Promise<CodexNotifierModule>;
-  getNotifierModule: () => CodexNotifierModule | null;
-  setNotifierModule: (module: CodexNotifierModule | null) => void;
-  getLoadingPromise: () => Promise<CodexNotifierModule> | null;
-  setLoadingPromise: (promise: Promise<CodexNotifierModule> | null) => void;
+  loadNotifierModule: () => Promise<NotifierModule>;
+  getNotifierModule: () => NotifierModule | null;
+  setNotifierModule: (module: NotifierModule | null) => void;
+  getLoadingPromise: () => Promise<NotifierModule> | null;
+  setLoadingPromise: (promise: Promise<NotifierModule> | null) => void;
 };
 
 const hoisted = vi.hoisted(() => {
@@ -55,18 +55,18 @@ const hoisted = vi.hoisted(() => {
 
 const { showSpy, getModuleExports, setModuleExports, resetModuleExports } = hoisted;
 
-vi.mock('../../../../src/components/utils/codex-notifier/index', () => getModuleExports());
+vi.mock('../../../../src/components/utils/notifier/index', () => getModuleExports());
 
 const exposeInternals = (notifier: Notifier): NotifierInternals => {
-  const loadModule = (Reflect.get(notifier as object, 'loadNotifierModule') as () => Promise<CodexNotifierModule>).bind(notifier);
+  const loadModule = (Reflect.get(notifier as object, 'loadNotifierModule') as () => Promise<NotifierModule>).bind(notifier);
 
   return {
     loadNotifierModule: loadModule,
-    getNotifierModule: () => Reflect.get(notifier as object, 'notifierModule') as CodexNotifierModule | null,
+    getNotifierModule: () => Reflect.get(notifier as object, 'notifierModule') as NotifierModule | null,
     setNotifierModule: (module) => {
       Reflect.set(notifier as object, 'notifierModule', module);
     },
-    getLoadingPromise: () => Reflect.get(notifier as object, 'loadingPromise') as Promise<CodexNotifierModule> | null,
+    getLoadingPromise: () => Reflect.get(notifier as object, 'loadingPromise') as Promise<NotifierModule> | null,
     setLoadingPromise: (promise) => {
       Reflect.set(notifier as object, 'loadingPromise', promise);
     },
@@ -93,9 +93,9 @@ describe('Notifier utility', () => {
   });
 
   describe('loadNotifierModule', () => {
-    it('loads codex-notifier lazily and caches the resolved module', async () => {
+    it('loads notifier lazily and caches the resolved module', async () => {
       const { internals } = createNotifierWithInternals();
-      const moduleInstance: CodexNotifierModule = { show: showSpy };
+      const moduleInstance: NotifierModule = { show: showSpy };
 
       setModuleExports({ default: moduleInstance });
 
@@ -107,7 +107,7 @@ describe('Notifier utility', () => {
 
     it('returns cached module when it is already available', async () => {
       const { internals } = createNotifierWithInternals();
-      const cachedModule: CodexNotifierModule = { show: vi.fn() };
+      const cachedModule: NotifierModule = { show: vi.fn() };
 
       internals.setNotifierModule(cachedModule);
 
@@ -121,7 +121,7 @@ describe('Notifier utility', () => {
 
     it('reuses the same promise while loading is in progress', async () => {
       const { internals } = createNotifierWithInternals();
-      const moduleInstance: CodexNotifierModule = { show: showSpy };
+      const moduleInstance: NotifierModule = { show: showSpy };
 
       setModuleExports({ default: moduleInstance });
 
@@ -137,17 +137,17 @@ describe('Notifier utility', () => {
 
       setModuleExports({ default: {} });
 
-      await expect(internals.loadNotifierModule()).rejects.toThrow('codex-notifier module does not expose a "show" method.');
+      await expect(internals.loadNotifierModule()).rejects.toThrow('notifier module does not expose a "show" method.');
       expect(internals.getLoadingPromise()).toBeNull();
       expect(internals.getNotifierModule()).toBeNull();
     });
   });
 
   describe('show', () => {
-    it('delegates the call to codex-notifier show once loaded', async () => {
+    it('delegates the call to notifier show once loaded', async () => {
       const { notifier, internals } = createNotifierWithInternals();
       const options = { message: 'Hello' } as NotifierOptions;
-      const moduleInstance: CodexNotifierModule = { show: showSpy };
+      const moduleInstance: NotifierModule = { show: showSpy };
 
       setModuleExports({ default: moduleInstance });
 
@@ -162,7 +162,7 @@ describe('Notifier utility', () => {
       expect(showSpy).toHaveBeenCalledWith(options);
     });
 
-    it('logs an error when loading codex-notifier fails', async () => {
+    it('logs an error when loading notifier fails', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const { notifier, internals } = createNotifierWithInternals();
 
@@ -173,14 +173,14 @@ describe('Notifier utility', () => {
       const loadingPromise = internals.getLoadingPromise();
 
       expect(loadingPromise).not.toBeNull();
-      await expect(loadingPromise).rejects.toThrow('codex-notifier module does not expose a "show" method.');
+      await expect(loadingPromise).rejects.toThrow('notifier module does not expose a "show" method.');
 
       expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
       const [message, errorInstance] = consoleErrorSpy.mock.calls[0];
 
-      expect(message).toBe('[Editor.js] Failed to display notification. Reason:');
+      expect(message).toBe('[Blok] Failed to display notification. Reason:');
       expect(errorInstance).toBeInstanceOf(Error);
-      expect((errorInstance as Error).message).toBe('codex-notifier module does not expose a "show" method.');
+      expect((errorInstance as Error).message).toBe('notifier module does not expose a "show" method.');
     });
   });
 });

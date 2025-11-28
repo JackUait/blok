@@ -2,25 +2,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import UI from '../../../../src/components/modules/ui';
 import SelectionUtils from '../../../../src/components/selection';
 import Flipper from '../../../../src/components/flipper';
-import { DATA_INTERFACE_ATTRIBUTE, EDITOR_INTERFACE_VALUE } from '../../../../src/components/constants';
+import { DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE } from '../../../../src/components/constants';
 import { BlockHovered } from '../../../../src/components/events/BlockHovered';
-import { EditorMobileLayoutToggled } from '../../../../src/components/events';
+import { BlokMobileLayoutToggled } from '../../../../src/components/events';
 import * as Dom from '../../../../src/components/dom';
 import { mobileScreenBreakpoint } from '../../../../src/components/utils';
-import type { EditorConfig } from '../../../../types';
+import type { BlokConfig } from '../../../../types';
 
 const fakeCssContent = '.mock-style{}';
 
 vi.mock('../../../../src/components/styles/main.css?inline', () => fakeCssContent);
 
-const createEditorStub = (): UI['Editor'] => {
+const createBlokStub = (): UI['Blok'] => {
   const blockSettingsWrapper = document.createElement('div');
   const toolbarWrapper = document.createElement('div');
   const toolbarSettingsToggler = document.createElement('button');
 
   return {
     BlockManager: {
-      isEditorEmpty: false,
+      isBlokEmpty: false,
       currentBlock: null,
       currentBlockIndex: -1,
       lastBlock: null,
@@ -90,13 +90,13 @@ const createEditorStub = (): UI['Editor'] => {
     BlockSettingsAPI: {},
     BlockSelectionAPI: {},
     BlockEventsAPI: {},
-  } as unknown as UI['Editor'];
+  } as unknown as UI['Blok'];
 };
 
 interface CreateUIOptions {
   attachNodes?: boolean;
-  configOverrides?: Partial<EditorConfig>;
-  editorOverrides?: Partial<ReturnType<typeof createEditorStub>>;
+  configOverrides?: Partial<BlokConfig>;
+  blokOverrides?: Partial<ReturnType<typeof createBlokStub>>;
   holderWidth?: number;
 }
 
@@ -108,7 +108,7 @@ type EventsDispatcherMock = {
 
 interface CreateUIResult {
   ui: UI;
-  editor: UI['Editor'];
+  blok: UI['Blok'];
   holder: HTMLDivElement;
   wrapper: HTMLDivElement;
   redactor: HTMLDivElement;
@@ -140,17 +140,17 @@ const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
       holder,
       minHeight: 50,
       ...options.configOverrides,
-    } as EditorConfig,
+    } as BlokConfig,
     eventsDispatcher: eventsDispatcher as unknown as UI['eventsDispatcher'],
   });
 
-  const editor = createEditorStub();
+  const blok = createBlokStub();
 
-  if (options.editorOverrides) {
-    Object.assign(editor, options.editorOverrides);
+  if (options.blokOverrides) {
+    Object.assign(blok, options.blokOverrides);
   }
 
-  ui.state = editor;
+  ui.state = blok;
 
   if (options.attachNodes !== false) {
     (ui as { nodes: UI['nodes'] }).nodes = {
@@ -162,7 +162,7 @@ const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
 
   return {
     ui,
-    editor,
+    blok,
     holder,
     wrapper,
     redactor,
@@ -214,7 +214,7 @@ describe('UI module', () => {
 
     it('throws when holder is missing', () => {
       const holderLessUI = new UI({
-        config: {} as EditorConfig,
+        config: {} as BlokConfig,
         eventsDispatcher: {
           on: vi.fn(),
           off: vi.fn(),
@@ -223,7 +223,7 @@ describe('UI module', () => {
       });
 
       expect(() => (holderLessUI as unknown as { make: () => void }).make()).toThrowError(
-        'Editor holder is not specified in the configuration.'
+        'Blok holder is not specified in the configuration.'
       );
     });
 
@@ -237,12 +237,12 @@ describe('UI module', () => {
       const nodes = (ui as { nodes: UI['nodes'] }).nodes;
 
       expect(nodes.wrapper).toBeInstanceOf(HTMLElement);
-      expect(nodes.wrapper?.classList.contains(ui.CSS.editorWrapper)).toBe(true);
-      expect(nodes.wrapper?.classList.contains(ui.CSS.editorWrapperNarrow)).toBe(true);
-      expect(nodes.wrapper?.getAttribute(DATA_INTERFACE_ATTRIBUTE)).toBe(EDITOR_INTERFACE_VALUE);
+      expect(nodes.wrapper?.classList.contains(ui.CSS.blokWrapper)).toBe(true);
+      expect(nodes.wrapper?.classList.contains(ui.CSS.blokWrapperNarrow)).toBe(true);
+      expect(nodes.wrapper?.getAttribute(DATA_INTERFACE_ATTRIBUTE)).toBe(BLOK_INTERFACE_VALUE);
 
       expect(nodes.redactor).toBeInstanceOf(HTMLElement);
-      expect(nodes.redactor?.classList.contains(ui.CSS.editorZone)).toBe(true);
+      expect(nodes.redactor?.classList.contains(ui.CSS.blokZone)).toBe(true);
       expect(nodes.redactor?.style.paddingBottom).toBe(`${ui['config'].minHeight}px`);
 
       expect(holder.contains(nodes.wrapper as HTMLElement)).toBe(true);
@@ -252,13 +252,13 @@ describe('UI module', () => {
     it('appends styles with nonce only once', () => {
       const { ui } = createUI();
 
-      (ui as unknown as { config: EditorConfig }).config.style = {
+      (ui as unknown as { config: BlokConfig }).config.style = {
         nonce: 'nonce-value',
       };
 
       (ui as unknown as { loadStyles: () => void }).loadStyles();
 
-      const styleTag = document.getElementById('editor-js-styles');
+      const styleTag = document.getElementById('blok-styles');
 
       expect(styleTag).toBeTruthy();
       expect(styleTag?.getAttribute('nonce')).toBe('nonce-value');
@@ -266,7 +266,7 @@ describe('UI module', () => {
 
       (ui as unknown as { loadStyles: () => void }).loadStyles();
 
-      expect(document.querySelectorAll('#editor-js-styles')).toHaveLength(1);
+      expect(document.querySelectorAll('#blok-styles')).toHaveLength(1);
     });
   });
 
@@ -304,15 +304,15 @@ describe('UI module', () => {
 
   describe('state updates and getters', () => {
     it('toggles empty class based on BlockManager state', () => {
-      const { ui, editor, wrapper } = createUI();
+      const { ui, blok, wrapper } = createUI();
 
-      Object.assign(editor.BlockManager, { isEditorEmpty: true });
+      Object.assign(blok.BlockManager, { isBlokEmpty: true });
       ui.checkEmptiness();
-      expect(wrapper.classList.contains(ui.CSS.editorEmpty)).toBe(true);
+      expect(wrapper.classList.contains(ui.CSS.blokEmpty)).toBe(true);
 
-      Object.assign(editor.BlockManager, { isEditorEmpty: false });
+      Object.assign(blok.BlockManager, { isBlokEmpty: false });
       ui.checkEmptiness();
-      expect(wrapper.classList.contains(ui.CSS.editorEmpty)).toBe(false);
+      expect(wrapper.classList.contains(ui.CSS.blokEmpty)).toBe(false);
     });
 
     it('invalidates cached content rect on resize and recalculates mobile state', () => {
@@ -357,7 +357,7 @@ describe('UI module', () => {
       const { ui, wrapper } = createUI();
       const blockContent = document.createElement('div');
 
-      blockContent.classList.add('ce-block__content');
+      blockContent.classList.add('blok-element__content');
       const measuredRect = { width: 777 } as DOMRect;
 
       vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue(measuredRect);
@@ -372,30 +372,30 @@ describe('UI module', () => {
     });
 
     it('detects open toolbars and flipper focus', () => {
-      const { ui, editor } = createUI();
+      const { ui, blok } = createUI();
 
-      editor.BlockSettings.opened = true;
+      blok.BlockSettings.opened = true;
       expect(ui.someToolbarOpened).toBe(true);
 
-      editor.BlockSettings.opened = false;
-      editor.InlineToolbar.opened = true;
+      blok.BlockSettings.opened = false;
+      blok.InlineToolbar.opened = true;
       expect(ui.someToolbarOpened).toBe(true);
 
-      editor.InlineToolbar.opened = false;
-      editor.Toolbar.toolbox.opened = true;
+      blok.InlineToolbar.opened = false;
+      blok.Toolbar.toolbox.opened = true;
       expect(ui.someToolbarOpened).toBe(true);
 
-      editor.Toolbar.toolbox.opened = false;
+      blok.Toolbar.toolbox.opened = false;
 
-      vi.mocked(editor.Toolbar.toolbox.hasFocus).mockReturnValue(true);
+      vi.mocked(blok.Toolbar.toolbox.hasFocus).mockReturnValue(true);
       expect(ui.someFlipperButtonFocused).toBe(true);
 
-      vi.mocked(editor.Toolbar.toolbox.hasFocus).mockReturnValue(false);
+      vi.mocked(blok.Toolbar.toolbox.hasFocus).mockReturnValue(false);
       const flipper = new Flipper({ items: [] });
 
       flipper.hasFocus = vi.fn(() => true);
 
-      (editor as unknown as Record<string, unknown>).MockModule = {
+      (blok as unknown as Record<string, unknown>).MockModule = {
         flipper,
       };
 
@@ -409,7 +409,7 @@ describe('UI module', () => {
       (ui as unknown as { setIsMobile: () => void }).setIsMobile();
 
       expect(ui.isMobile).toBe(true);
-      expect(eventsDispatcher.emit).toHaveBeenCalledWith(EditorMobileLayoutToggled, {
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlokMobileLayoutToggled, {
         isEnabled: false,
       });
 
@@ -418,37 +418,37 @@ describe('UI module', () => {
       (ui as unknown as { setIsMobile: () => void }).setIsMobile();
 
       expect(ui.isMobile).toBe(false);
-      expect(eventsDispatcher.emit).toHaveBeenCalledWith(EditorMobileLayoutToggled, {
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlokMobileLayoutToggled, {
         isEnabled: true,
       });
     });
 
     it('closes all toolbars at once', () => {
-      const { ui, editor } = createUI();
+      const { ui, blok } = createUI();
 
       ui.closeAllToolbars();
 
-      expect(editor.BlockSettings.close).toHaveBeenCalledTimes(1);
-      expect(editor.InlineToolbar.close).toHaveBeenCalledTimes(1);
-      expect(editor.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
+      expect(blok.BlockSettings.close).toHaveBeenCalledTimes(1);
+      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('keyboard handling', () => {
     it('skips enter handling when any toolbar opened', () => {
-      const { ui, editor } = createUI();
+      const { ui, blok } = createUI();
 
-      editor.InlineToolbar.opened = true;
+      blok.InlineToolbar.opened = true;
 
       (ui as unknown as { enterPressed: (event: KeyboardEvent) => void }).enterPressed(new KeyboardEvent('keydown'));
 
-      expect(editor.BlockManager.insert).not.toHaveBeenCalled();
+      expect(blok.BlockManager.insert).not.toHaveBeenCalled();
     });
 
     it('clears selected blocks on enter when selection absent', () => {
-      const { ui, editor } = createUI();
+      const { ui, blok } = createUI();
 
-      Object.assign(editor.BlockSelection, { anyBlockSelected: true });
+      Object.assign(blok.BlockSelection, { anyBlockSelected: true });
       mockSelectionExists(false);
       mockSelectionCollapsed(true);
 
@@ -461,17 +461,17 @@ describe('UI module', () => {
 
       (ui as unknown as { enterPressed: (event: KeyboardEvent) => void }).enterPressed(event);
 
-      expect(editor.BlockSelection.clearSelection).toHaveBeenCalledWith(event);
+      expect(blok.BlockSelection.clearSelection).toHaveBeenCalledWith(event);
       expect(event.preventDefault).toHaveBeenCalled();
     });
 
     it('inserts new block when enter pressed on body without selection', () => {
-      const { ui, editor } = createUI();
-      const newBlock = { id: 'new' } as unknown as ReturnType<typeof editor.BlockManager.insert>;
+      const { ui, blok } = createUI();
+      const newBlock = { id: 'new' } as unknown as ReturnType<typeof blok.BlockManager.insert>;
 
-      Object.assign(editor.BlockSelection, { anyBlockSelected: false });
-      editor.BlockManager.currentBlockIndex = 1;
-      vi.mocked(editor.BlockManager.insert).mockReturnValue(newBlock);
+      Object.assign(blok.BlockSelection, { anyBlockSelected: false });
+      blok.BlockManager.currentBlockIndex = 1;
+      vi.mocked(blok.BlockManager.insert).mockReturnValue(newBlock);
       mockSelectionExists(true);
       mockSelectionCollapsed(false);
 
@@ -484,54 +484,54 @@ describe('UI module', () => {
 
       (ui as unknown as { enterPressed: (event: KeyboardEvent) => void }).enterPressed(event);
 
-      expect(editor.BlockManager.insert).toHaveBeenCalledTimes(1);
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(newBlock);
-      expect(editor.Toolbar.moveAndOpen).toHaveBeenCalledWith(newBlock);
-      expect(editor.BlockSelection.clearSelection).toHaveBeenCalledWith(event);
+      expect(blok.BlockManager.insert).toHaveBeenCalledTimes(1);
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(newBlock);
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(newBlock);
+      expect(blok.BlockSelection.clearSelection).toHaveBeenCalledWith(event);
     });
 
     it('handles escape priority order', () => {
-      const { ui, editor } = createUI();
+      const { ui, blok } = createUI();
       const event = new KeyboardEvent('keydown');
 
-      editor.Toolbar.toolbox.opened = true;
-      editor.BlockManager.currentBlock = {
+      blok.Toolbar.toolbox.opened = true;
+      blok.BlockManager.currentBlock = {
         id: 'test',
         name: 'paragraph',
         holder: document.createElement('div'),
-      } as unknown as typeof editor.BlockManager.currentBlock;
+      } as unknown as typeof blok.BlockManager.currentBlock;
 
       (ui as unknown as { escapePressed: (event: KeyboardEvent) => void }).escapePressed(event);
 
-      expect(editor.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
-      expect(editor.Caret.setToBlock).toHaveBeenCalledWith(editor.BlockManager.currentBlock, editor.Caret.positions.END);
+      expect(blok.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(blok.BlockManager.currentBlock, blok.Caret.positions.END);
 
-      editor.Toolbar.toolbox.opened = false;
-      editor.BlockSettings.opened = true;
+      blok.Toolbar.toolbox.opened = false;
+      blok.BlockSettings.opened = true;
       (ui as unknown as { escapePressed: (event: KeyboardEvent) => void }).escapePressed(event);
-      expect(editor.BlockSettings.close).toHaveBeenCalledTimes(1);
+      expect(blok.BlockSettings.close).toHaveBeenCalledTimes(1);
 
-      editor.BlockSettings.opened = false;
-      editor.InlineToolbar.opened = true;
+      blok.BlockSettings.opened = false;
+      blok.InlineToolbar.opened = true;
       (ui as unknown as { escapePressed: (event: KeyboardEvent) => void }).escapePressed(event);
-      expect(editor.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
 
-      editor.InlineToolbar.opened = false;
+      blok.InlineToolbar.opened = false;
       (ui as unknown as { escapePressed: (event: KeyboardEvent) => void }).escapePressed(event);
-      expect(editor.Toolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.close).toHaveBeenCalledTimes(1);
     });
 
     it('sends keydown to block events or clears caret on default handler', () => {
-      const { ui, editor, holder } = createUI();
+      const { ui, blok, holder } = createUI();
 
       const outsideTarget = document.createElement('div');
 
       document.body.appendChild(outsideTarget);
-      editor.BlockManager.currentBlock = {
+      blok.BlockManager.currentBlock = {
         id: 'test',
         name: 'paragraph',
         holder: document.createElement('div'),
-      } as unknown as typeof editor.BlockManager.currentBlock;
+      } as unknown as typeof blok.BlockManager.currentBlock;
 
       (ui as unknown as { defaultBehaviour: (event: KeyboardEvent) => void }).defaultBehaviour({
         target: outsideTarget,
@@ -541,9 +541,9 @@ describe('UI module', () => {
         shiftKey: false,
       } as unknown as KeyboardEvent);
 
-      expect(editor.BlockEvents.keydown).toHaveBeenCalledTimes(1);
+      expect(blok.BlockEvents.keydown).toHaveBeenCalledTimes(1);
 
-      Object.assign(editor.BlockManager, { currentBlock: undefined });
+      Object.assign(blok.BlockManager, { currentBlock: undefined });
       (ui as unknown as { defaultBehaviour: (event: KeyboardEvent) => void }).defaultBehaviour({
         target: outsideTarget,
         altKey: false,
@@ -552,10 +552,10 @@ describe('UI module', () => {
         shiftKey: false,
       } as unknown as KeyboardEvent);
 
-      expect(editor.BlockManager.unsetCurrentBlock).toHaveBeenCalledTimes(1);
-      expect(editor.Toolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.BlockManager.unsetCurrentBlock).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.close).toHaveBeenCalledTimes(1);
 
-      holder.classList.add(ui.CSS.editorWrapper);
+      holder.classList.add(ui.CSS.blokWrapper);
       (ui as unknown as { defaultBehaviour: (event: KeyboardEvent) => void }).defaultBehaviour({
         target: holder,
         altKey: false,
@@ -564,16 +564,16 @@ describe('UI module', () => {
         shiftKey: false,
       } as unknown as KeyboardEvent);
 
-      expect(editor.BlockManager.unsetCurrentBlock).toHaveBeenCalledTimes(1);
+      expect(blok.BlockManager.unsetCurrentBlock).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('selection handling', () => {
     it('responds to selection changes and clears cross block ranges', () => {
-      const { ui, editor } = createUI();
+      const { ui, blok } = createUI();
 
-      Object.assign(editor.CrossBlockSelection, { isCrossBlockSelectionStarted: true });
-      Object.assign(editor.BlockSelection, { anyBlockSelected: true });
+      Object.assign(blok.CrossBlockSelection, { isCrossBlockSelectionStarted: true });
+      Object.assign(blok.BlockSelection, { anyBlockSelected: true });
 
       const removeRanges = vi.fn();
 
@@ -584,11 +584,11 @@ describe('UI module', () => {
       (ui as unknown as { selectionChanged: () => void }).selectionChanged();
 
       expect(removeRanges).toHaveBeenCalledTimes(1);
-      expect(editor.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
     });
 
     it('closes inline toolbar when selection outside block content', () => {
-      const { ui, editor, holder } = createUI();
+      const { ui, blok, holder } = createUI();
       const externalElement = document.createElement('div');
 
       holder.appendChild(externalElement);
@@ -597,15 +597,15 @@ describe('UI module', () => {
 
       (ui as unknown as { selectionChanged: () => void }).selectionChanged();
 
-      expect(editor.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
     });
 
     it('skips closing when inline toolbar enabled for external element and opens toolbar for block content', async () => {
-      const { ui, editor, wrapper } = createUI();
+      const { ui, blok, wrapper } = createUI();
       const blockContent = document.createElement('div');
 
-      blockContent.classList.add('ce-block__content');
-      wrapper.classList.add(SelectionUtils.CSS.editorWrapper);
+      blockContent.classList.add('blok-element__content');
+      wrapper.classList.add(SelectionUtils.CSS.blokWrapper);
       const external = document.createElement('div');
 
       wrapper.appendChild(blockContent);
@@ -617,21 +617,21 @@ describe('UI module', () => {
       anchorSpy.mockReturnValue(external);
 
       (ui as unknown as { selectionChanged: () => void }).selectionChanged();
-      expect(editor.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
 
-      editor.BlockManager.currentBlock = undefined;
+      blok.BlockManager.currentBlock = undefined;
       anchorSpy.mockReturnValue(blockContent);
 
       await (ui as unknown as { selectionChanged: () => Promise<void> }).selectionChanged();
 
-      expect(editor.BlockManager.setCurrentBlockByChildNode).toHaveBeenLastCalledWith(blockContent);
-      expect(editor.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
+      expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenLastCalledWith(blockContent);
+      expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
     });
   });
 
   describe('DOM interactions', () => {
     it('moves toolbar on document touch when block selected', () => {
-      const { ui, editor, redactor } = createUI();
+      const { ui, blok, redactor } = createUI();
       const block = document.createElement('div');
 
       redactor.appendChild(block);
@@ -640,32 +640,32 @@ describe('UI module', () => {
         target: block,
       } as unknown as Event);
 
-      expect(editor.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(block);
-      expect(editor.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(block);
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
     });
 
-    it('clears current block when clicking outside of editor', () => {
-      const { ui, editor } = createUI();
+    it('clears current block when clicking outside of blok', () => {
+      const { ui, blok } = createUI();
       const outside = document.createElement('div');
 
       document.body.appendChild(outside);
 
-      vi.spyOn(SelectionUtils, 'isAtEditor', 'get').mockReturnValue(false);
+      vi.spyOn(SelectionUtils, 'isAtBlok', 'get').mockReturnValue(false);
 
       (ui as unknown as { documentClicked: (event: MouseEvent) => void }).documentClicked({
         target: outside,
         isTrusted: true,
       } as unknown as MouseEvent);
 
-      expect(editor.BlockManager.unsetCurrentBlock).toHaveBeenCalledTimes(1);
-      expect(editor.Toolbar.close).toHaveBeenCalledTimes(1);
-      expect(editor.BlockSelection.clearSelection).toHaveBeenCalledTimes(1);
+      expect(blok.BlockManager.unsetCurrentBlock).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.BlockSelection.clearSelection).toHaveBeenCalledTimes(1);
     });
 
     it('closes block settings when clicking inside redactor', () => {
-      const { ui, editor, redactor } = createUI();
+      const { ui, blok, redactor } = createUI();
 
-      editor.BlockSettings.opened = true;
+      blok.BlockSettings.opened = true;
       const blockElement = document.createElement('div');
 
       redactor.appendChild(blockElement);
@@ -673,36 +673,36 @@ describe('UI module', () => {
         id: 'test',
         name: 'paragraph',
         holder: document.createElement('div'),
-      } as unknown as ReturnType<typeof editor.BlockManager.getBlockByChildNode>;
+      } as unknown as ReturnType<typeof blok.BlockManager.getBlockByChildNode>;
 
-      vi.mocked(editor.BlockManager.getBlockByChildNode).mockReturnValue(blockStub);
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(blockStub);
 
       (ui as unknown as { documentClicked: (event: MouseEvent) => void }).documentClicked({
         target: blockElement,
         isTrusted: true,
       } as unknown as MouseEvent);
 
-      expect(editor.BlockSettings.close).toHaveBeenCalledTimes(1);
-      expect(editor.Toolbar.moveAndOpen).toHaveBeenCalledWith(blockStub);
+      expect(blok.BlockSettings.close).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(blockStub);
     });
   });
 
   describe('hover and placeholder helpers', () => {
     it('emits block-hovered events for unique hovered blocks', () => {
-      const { ui, editor, redactor, eventsDispatcher } = createUI();
+      const { ui, blok, redactor, eventsDispatcher } = createUI();
       const blockElement = document.createElement('div');
 
-      blockElement.classList.add('ce-block');
+      blockElement.classList.add('blok-element');
       redactor.appendChild(blockElement);
 
       const blockStub = {
         id: 'hovered',
         name: 'paragraph',
         holder: document.createElement('div'),
-      } as unknown as ReturnType<typeof editor.BlockManager.getBlockByChildNode>;
+      } as unknown as ReturnType<typeof blok.BlockManager.getBlockByChildNode>;
 
-      vi.mocked(editor.BlockManager.getBlockByChildNode).mockReturnValue(blockStub);
-      Object.assign(editor.BlockSelection, { anyBlockSelected: false });
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(blockStub);
+      Object.assign(blok.BlockSelection, { anyBlockSelected: false });
 
       (ui as unknown as { watchBlockHoveredEvents: () => void }).watchBlockHoveredEvents();
 

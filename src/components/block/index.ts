@@ -23,7 +23,7 @@ import type ToolsCollection from '../tools/collection';
 import EventsDispatcher from '../utils/events';
 import type { MenuConfigItem } from '../../../types/tools';
 import { isMutationBelongsToElement } from '../utils/mutations';
-import type { EditorEventMap } from '../events';
+import type { BlokEventMap } from '../events';
 import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../events';
 import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
@@ -51,7 +51,7 @@ interface BlockConstructorOptions {
   tool: BlockToolAdapter;
 
   /**
-   * Editor's API methods
+   * Blok's API methods
    */
   api: ApiModules;
 
@@ -68,7 +68,7 @@ interface BlockConstructorOptions {
 
 /**
  * @class Block
- * @classdesc This class describes editor`s block, including block`s HTMLElement, data and tool
+ * @classdesc This class describes blok`s block, including block`s HTMLElement, data and tool
  * @property {BlockToolAdapter} tool — current block tool (Paragraph, for example)
  * @property {object} CSS — block`s css classes
  */
@@ -95,7 +95,7 @@ interface BlockEvents {
 /**
  * @classdesc Abstract Block class that contains Block information, Tool name and Tool class instance
  * @property {BlockToolAdapter} tool - Tool instance
- * @property {HTMLElement} holder - Div element that wraps block content with Tool's content. Has `ce-block` CSS class
+ * @property {HTMLElement} holder - Div element that wraps block content with Tool's content. Has `blok-element` CSS class
  * @property {HTMLElement} pluginsContent - HTML content that returns by Tool's render function
  */
 export default class Block extends EventsDispatcher<BlockEvents> {
@@ -105,10 +105,10 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   public static get CSS(): { [name: string]: string } {
     return {
-      wrapper: 'ce-block',
-      wrapperStretched: 'ce-block--stretched',
-      content: 'ce-block__content',
-      selected: 'ce-block--selected',
+      wrapper: 'blok-element',
+      wrapperStretched: 'blok-element--stretched',
+      content: 'blok-element__content',
+      selected: 'blok-element--selected',
     };
   }
 
@@ -178,7 +178,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private readonly tunesInstances: Map<string, IBlockTune> = new Map();
 
   /**
-   * Editor provided Block Tunes instances
+   * Blok provided Block Tunes instances
    */
   private readonly defaultTunesInstances: Map<string, IBlockTune> = new Map();
 
@@ -205,9 +205,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private inputIndex = 0;
 
   /**
-   * Common editor event bus
+   * Common blok event bus
    */
-  private readonly editorEventBus: EventsDispatcher<EditorEventMap> | null = null;
+  private readonly blokEventBus: EventsDispatcher<BlokEventMap> | null = null;
 
   /**
    * Current block API interface
@@ -219,9 +219,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @param [options.id] - block's id. Will be generated if omitted.
    * @param options.data - Tool's initial data
    * @param options.tool — block's tool
-   * @param options.api - Editor API module for pass it to the Block Tunes
+   * @param options.api - Blok API module for pass it to the Block Tunes
    * @param options.readOnly - Read-Only flag
-   * @param [eventBus] - Editor common event bus. Allows to subscribe on some Editor events. Could be omitted when "virtual" Block is created. See BlocksAPI@composeBlockData.
+   * @param [eventBus] - Blok common event bus. Allows to subscribe on some Blok events. Could be omitted when "virtual" Block is created. See BlocksAPI@composeBlockData.
    */
   constructor({
     id = _.generateBlockId(),
@@ -229,7 +229,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     tool,
     readOnly,
     tunesData,
-  }: BlockConstructorOptions, eventBus?: EventsDispatcher<EditorEventMap>) {
+  }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
     this.ready = new Promise((resolve) => {
       this.readyResolver = resolve;
@@ -238,7 +238,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     this.id = id;
     this.settings = tool.settings;
     this.config = this.settings;
-    this.editorEventBus = eventBus || null;
+    this.blokEventBus = eventBus || null;
     this.blockAPI = new BlockAPI(this);
     this.lastSavedData = data ?? {};
     this.lastSavedTunes = tunesData ?? {};
@@ -554,8 +554,8 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
-   * Allows to say Editor that Block was changed. Used to manually trigger Editor's 'onChange' callback
-   * Can be useful for block changes invisible for editor core.
+   * Allows to say Blok that Block was changed. Used to manually trigger Blok's 'onChange' callback
+   * Can be useful for block changes invisible for blok core.
    */
   public dispatchChange(): void {
     this.didMutated();
@@ -627,7 +627,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
-   * Link to editor dom change callback. Used to remove listener on remove
+   * Link to blok dom change callback. Used to remove listener on remove
    */
   private redactorDomChangedCallback: (payload: RedactorDomChangedPayload) => void = () => {};
 
@@ -824,7 +824,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       return;
     }
 
-    this.editorEventBus?.emit(FakeCursorAboutToBeToggled, { state }); // mutex
+    this.blokEventBus?.emit(FakeCursorAboutToBeToggled, { state }); // mutex
 
     if (fakeCursorWillBeAdded) {
       SelectionUtils.addFakeCursor();
@@ -834,7 +834,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       SelectionUtils.removeFakeCursor(this.holder);
     }
 
-    this.editorEventBus?.emit(FakeCursorHaveBeenSet, { state });
+    this.blokEventBus?.emit(FakeCursorHaveBeenSet, { state });
   }
 
   /**
@@ -1146,7 +1146,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   };
 
   /**
-   * Listen common editor Dom Changed event and detect mutations related to the  Block
+   * Listen common blok Dom Changed event and detect mutations related to the  Block
    */
   private watchBlockMutations(): void {
     /**
@@ -1165,7 +1165,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       /**
        * Filter mutations to only include those that belong to this block.
        * Previously, all mutations were passed when any belonged to the block,
-       * which could include mutations from other parts of the editor.
+       * which could include mutations from other parts of the blok.
        */
       const blockMutations = mutations.filter(record => isMutationBelongsToElement(record, toolElement));
 
@@ -1174,14 +1174,14 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       }
     };
 
-    this.editorEventBus?.on(RedactorDomChanged, this.redactorDomChangedCallback);
+    this.blokEventBus?.on(RedactorDomChanged, this.redactorDomChangedCallback);
   }
 
   /**
    * Remove redactor dom change event listener
    */
   private unwatchBlockMutations(): void {
-    this.editorEventBus?.off(RedactorDomChanged, this.redactorDomChangedCallback);
+    this.blokEventBus?.off(RedactorDomChanged, this.redactorDomChangedCallback);
   }
 
   /**

@@ -1,7 +1,7 @@
 import {SanitizerConfig} from '../index';
 
 /**
- * Describes Editor`s sanitizer API
+ * Describes Blok`s sanitizer API
  */
 export interface Sanitizer {
   /**

@@ -5,18 +5,18 @@ import EventsDispatcher from '../../../../../src/components/utils/events';
 import { BlockChanged } from '../../../../../src/components/events/BlockChanged';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { EditorConfig } from '../../../../../types';
-import type { EditorEventMap } from '../../../../../src/components/events';
+import type { BlokConfig } from '../../../../../types';
+import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlockChangedPayload } from '../../../../../src/components/events/BlockChanged';
 import type { BlockMutationEvent } from '../../../../../types/events/block';
 
 const createEventsApi = (): {
   eventsApi: EventsAPI;
-  eventsDispatcher: EventsDispatcher<EditorEventMap>;
+  eventsDispatcher: EventsDispatcher<BlokEventMap>;
 } => {
-  const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+  const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as EditorConfig,
+    config: {} as BlokConfig,
     eventsDispatcher,
   };
 

@@ -114,11 +114,11 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     } as unknown as Paste['eventsDispatcher'],
   });
 
-  const pasteWithInternals = paste as unknown as { listeners: Listeners; state: Paste['Editor'] };
+  const pasteWithInternals = paste as unknown as { listeners: Listeners; state: Paste['Blok'] };
 
   pasteWithInternals.listeners = listeners.instance;
 
-  const editorState = {
+  const blokState = {
     BlockManager: blockManager,
     Caret: caret,
     Tools: tools,
@@ -130,7 +130,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     },
   };
 
-  pasteWithInternals.state = editorState as unknown as Paste['Editor'];
+  pasteWithInternals.state = blokState as unknown as Paste['Blok'];
 
   return {
     paste,
@@ -532,7 +532,7 @@ describe('Paste module', () => {
     expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
   });
 
-  it('inserts sanitized EditorJS data and updates caret position', () => {
+  it('inserts sanitized Blok data and updates caret position', () => {
     const { paste, mocks } = createPaste();
 
     const sanitizeBlocksSpy = vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
@@ -562,8 +562,8 @@ describe('Paste module', () => {
     });
 
     (paste as unknown as {
-      insertEditorJSData(blocks: Array<{ id: string; tool: string; data: unknown }>): void;
-    }).insertEditorJSData([
+      insertBlokData(blocks: Array<{ id: string; tool: string; data: unknown }>): void;
+    }).insertBlokData([
       {
         id: '1',
         tool: 'image',

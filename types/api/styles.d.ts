@@ -3,7 +3,7 @@
  */
 export interface Styles {
   /**
-   * Main Editor`s block styles
+   * Main Blok`s block styles
    */
   block: string;
 

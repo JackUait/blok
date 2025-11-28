@@ -9,10 +9,10 @@ import {
   RedactorDomChanged
 } from '../../../../src/components/events';
 import EventsDispatcher from '../../../../src/components/utils/events';
-import type { EditorEventMap } from '../../../../src/components/events';
-import type { EditorConfig } from '../../../../types';
+import type { BlokEventMap } from '../../../../src/components/events';
+import type { BlokConfig } from '../../../../types';
 import type { BlockMutationEvent, BlockMutationType } from '../../../../types/events/block';
-import type { EditorModules } from '../../../../src/types-internal/editor-modules';
+import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 
 /**
  * Stub implementation of MutationObserver used to capture and trigger callbacks in tests.
@@ -84,21 +84,21 @@ describe('ModificationsObserver', () => {
   });
 
   const createObserver = (
-    configOverrides?: Partial<EditorConfig>
+    configOverrides?: Partial<BlokConfig>
   ): {
     observer: ModificationsObserver;
-    eventsDispatcher: EventsDispatcher<EditorEventMap>;
-    config: EditorConfig;
+    eventsDispatcher: EventsDispatcher<BlokEventMap>;
+    config: BlokConfig;
     redactor: HTMLDivElement;
     apiMethods: Record<string, never>;
     onChange: ReturnType<typeof vi.fn>;
   } => {
-    const eventsDispatcher = new EventsDispatcher<EditorEventMap>();
+    const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
     const onChange = vi.fn();
     const config = {
       onChange,
       ...configOverrides,
-    } as unknown as EditorConfig;
+    } as unknown as BlokConfig;
 
     const observer = new ModificationsObserver({
       config,
@@ -117,7 +117,7 @@ describe('ModificationsObserver', () => {
       API: {
         methods: apiMethods,
       },
-    } as unknown as EditorModules;
+    } as unknown as BlokModules;
 
     return {
       observer,

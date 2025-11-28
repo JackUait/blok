@@ -4,7 +4,7 @@ import InlineToolAdapter from './inline';
 import BlockTuneAdapter from './tune';
 import BlockToolAdapter from './block';
 import type ApiModule from '../modules/api';
-import type { EditorConfig } from '../../../types/configs';
+import type { BlokConfig } from '../../../types/configs';
 
 type ToolConstructor = typeof InlineToolAdapter | typeof BlockToolAdapter | typeof BlockTuneAdapter;
 
@@ -18,29 +18,29 @@ export default class ToolsFactory {
   private config: {[name: string]: ToolSettings & { isInternal?: boolean }};
 
   /**
-   * EditorJS API Module
+   * Blok API Module
    */
   private api: ApiModule;
 
   /**
-   * EditorJS configuration
+   * Blok configuration
    */
-  private editorConfig: EditorConfig;
+  private blokConfig: BlokConfig;
 
   /**
    * @class
    * @param config - tools config
-   * @param editorConfig - EditorJS config
-   * @param api - EditorJS API module
+   * @param blokConfig - Blok config
+   * @param api - Blok API module
    */
   constructor(
     config: {[name: string]: ToolSettings & { isInternal?: boolean }},
-    editorConfig: EditorConfig,
+    blokConfig: BlokConfig,
     api: ApiModule
   ) {
     this.api = api;
     this.config = config;
-    this.editorConfig = editorConfig;
+    this.blokConfig = blokConfig;
   }
 
   /**
@@ -63,8 +63,8 @@ export default class ToolsFactory {
       constructable,
       config,
       api: this.api.getMethodsForTool(name, isTune),
-      isDefault: name === this.editorConfig.defaultBlock,
-      defaultPlaceholder: this.editorConfig.placeholder,
+      isDefault: name === this.blokConfig.defaultBlock,
+      defaultPlaceholder: this.blokConfig.placeholder,
       isInternal,
     });
   }

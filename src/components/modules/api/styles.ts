@@ -13,26 +13,26 @@ export default class StylesAPI extends Module {
       /**
        * Base Block styles
        */
-      block: 'cdx-block',
+      block: 'blok-base-element',
 
       /**
        * Inline Tools styles
        */
-      inlineToolButton: 'ce-inline-tool',
-      inlineToolButtonActive: 'ce-inline-tool--active',
+      inlineToolButton: 'blok-inline-tool',
+      inlineToolButtonActive: 'blok-inline-tool--active',
 
       /**
        * UI elements
        */
-      input: 'cdx-input',
-      loader: 'cdx-loader',
-      button: 'cdx-button',
+      input: 'blok-base-input',
+      loader: 'blok-base-loader',
+      button: 'blok-base-button',
 
       /**
        * Settings styles
        */
-      settingsButton: 'cdx-settings-button',
-      settingsButtonActive: 'cdx-settings-button--active',
+      settingsButton: 'blok-base-settings-button',
+      settingsButtonActive: 'blok-base-settings-button--active',
     };
   }
 }

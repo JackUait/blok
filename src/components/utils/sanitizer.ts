@@ -1,6 +1,6 @@
- 
+
 /**
- * CodeX Sanitizer
+ * Blok Sanitizer
  *
  * Clears HTML from taint tags
  * @version 2.0.0
@@ -45,7 +45,7 @@ const UNSAFE_URL_ATTR_FALLBACK_PATTERN =
  * Enumerate blocks and clean data
  * @param blocksData - blocks' data to sanitize
  * @param sanitizeConfig — sanitize config to use or function to get config for Tool
- * @param globalSanitizer — global sanitizer config defined on editor level
+ * @param globalSanitizer — global sanitizer config defined on blok level
  */
 export const sanitizeBlocks = (
   blocksData: Array<Pick<SavedData, 'data' | 'tool'>>,

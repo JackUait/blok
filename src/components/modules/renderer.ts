@@ -6,7 +6,7 @@ import type { StubData } from '../../tools/stub';
 import type Block from '../block';
 
 /**
- * Module that responsible for rendering Blocks on editor initialization
+ * Module that responsible for rendering Blocks on blok initialization
  */
 export default class Renderer extends Module {
   /**
@@ -15,7 +15,7 @@ export default class Renderer extends Module {
    */
   public render(blocksData: OutputBlockData[]): Promise<void> {
     return new Promise((resolve) => {
-      const { Tools, BlockManager } = this.Editor;
+      const { Tools, BlockManager } = this.Blok;
 
       if (blocksData.length === 0) {
         BlockManager.insert();
@@ -34,7 +34,7 @@ export default class Renderer extends Module {
               };
             }
 
-            _.logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Editor.js config.`, 'warn');
+            _.logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Blok config.`, 'warn');
 
             return {
               tool: Tools.stubTool,
@@ -95,7 +95,7 @@ export default class Renderer extends Module {
    * @param [id] - id of unavailable block
    */
   private composeStubDataForTool(tool: string, data: BlockToolData, id?: BlockId): StubData {
-    const { Tools } = this.Editor;
+    const { Tools } = this.Blok;
 
     const title = (() => {
       if (!Tools.unavailable.has(tool)) {

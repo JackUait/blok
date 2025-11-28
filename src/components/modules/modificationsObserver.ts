@@ -45,8 +45,8 @@ export default class ModificationsObserver extends Module {
   /**
    * Prepare the module
    * @param options - options used by the modification observer module
-   * @param options.config - Editor configuration object
-   * @param options.eventsDispatcher - common Editor event bus
+   * @param options.config - Blok configuration object
+   * @param options.eventsDispatcher - common Blok event bus
    */
   constructor({ config, eventsDispatcher }: ModuleConfig) {
     super({
@@ -79,7 +79,7 @@ export default class ModificationsObserver extends Module {
    */
   public enable(): void {
     this.mutationObserver.observe(
-      this.Editor.UI.nodes.redactor,
+      this.Blok.UI.nodes.redactor,
       {
         childList: true,
         subtree: true,
@@ -99,7 +99,7 @@ export default class ModificationsObserver extends Module {
   }
 
   /**
-   * Call onChange event passed to Editor.js configuration
+   * Call onChange event passed to Blok configuration
    * @param event - some of our custom change events
    */
   private particularBlockChanged(event: BlockMutationEvent): void {
@@ -128,7 +128,7 @@ export default class ModificationsObserver extends Module {
         : queuedEvents;
 
       if (this.config.onChange) {
-        this.config.onChange(this.Editor.API.methods, eventsToEmit);
+        this.config.onChange(this.Blok.API.methods, eventsToEmit);
       }
 
       this.batchingOnChangeQueue.clear();

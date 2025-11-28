@@ -123,7 +123,7 @@ describe('CrossBlockSelection', () => {
           redactor,
         },
       },
-    } as unknown as CrossBlockSelection['Editor'];
+    } as unknown as CrossBlockSelection['Blok'];
 
     setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
     setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
@@ -177,8 +177,8 @@ describe('CrossBlockSelection', () => {
     it('sets selection bounds and attaches mouse listeners when left button is pressed', () => {
       const listeners = accessPrivate<Listeners>(crossBlockSelection, 'listeners');
       const onSpy = vi.spyOn(listeners, 'on').mockReturnValue('listener-id');
-      const editorState = accessPrivate<CrossBlockSelection['Editor']>(crossBlockSelection, 'Editor');
-      const blockManager = editorState.BlockManager;
+      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+      const blockManager = blokState.BlockManager;
 
       (blockManager.getBlock as ReturnType<typeof vi.fn>).mockReturnValue(blocks[1]);
 
@@ -197,8 +197,8 @@ describe('CrossBlockSelection', () => {
     it('ignores non-left mouse buttons', () => {
       const listeners = accessPrivate<Listeners>(crossBlockSelection, 'listeners');
       const onSpy = vi.spyOn(listeners, 'on');
-      const editorState = accessPrivate<CrossBlockSelection['Editor']>(crossBlockSelection, 'Editor');
-      const blockManager = editorState.BlockManager;
+      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+      const blockManager = blokState.BlockManager;
 
       crossBlockSelection.watchSelection({
         button: _.mouseButtons.RIGHT,
@@ -267,35 +267,35 @@ describe('CrossBlockSelection', () => {
     };
 
     it('restores caret position at the end when clearing with ArrowDown', () => {
-      const editorState = accessPrivate<CrossBlockSelection['Editor']>(crossBlockSelection, 'Editor');
+      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
 
-      (editorState.BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = true;
+      (blokState.BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = true;
       setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
       setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
 
       crossBlockSelection.clear(createKeyboardEventWithKey('ArrowDown'));
 
-      expect(caretSetToBlock).toHaveBeenCalledWith(blocks[2], editorState.Caret.positions.END);
+      expect(caretSetToBlock).toHaveBeenCalledWith(blocks[2], blokState.Caret.positions.END);
       expect(accessPrivate<Block | null>(crossBlockSelection, 'firstSelectedBlock')).toBeNull();
       expect(accessPrivate<Block | null>(crossBlockSelection, 'lastSelectedBlock')).toBeNull();
     });
 
     it('restores caret at the start when clearing with ArrowUp', () => {
-      const editorState = accessPrivate<CrossBlockSelection['Editor']>(crossBlockSelection, 'Editor');
+      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
 
-      (editorState.BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = true;
+      (blokState.BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = true;
       setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
       setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
 
       crossBlockSelection.clear(createKeyboardEventWithKey('ArrowUp'));
 
-      expect(caretSetToBlock).toHaveBeenCalledWith(blocks[0], editorState.Caret.positions.START);
+      expect(caretSetToBlock).toHaveBeenCalledWith(blocks[0], blokState.Caret.positions.START);
     });
 
     it('skips caret restoration when nothing is selected', () => {
-      const editorState = accessPrivate<CrossBlockSelection['Editor']>(crossBlockSelection, 'Editor');
+      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
 
-      (editorState.BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = false;
+      (blokState.BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = false;
       setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
       setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
 

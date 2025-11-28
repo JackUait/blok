@@ -2,16 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import BlockSelection from '../../../../src/components/modules/blockSelection';
 import EventsDispatcher from '../../../../src/components/utils/events';
-import type { EditorEventMap } from '../../../../src/components/events';
-import type { EditorModules } from '../../../../src/types-internal/editor-modules';
-import type { EditorConfig } from '../../../../types';
+import type { BlokEventMap } from '../../../../src/components/events';
+import type { BlokModules } from '../../../../src/types-internal/blok-modules';
+import type { BlokConfig } from '../../../../types';
 import SelectionUtils from '../../../../src/components/selection';
 import Shortcuts from '../../../../src/components/utils/shortcuts';
 import * as utils from '../../../../src/components/utils';
 import type { SanitizerConfig } from '../../../../types/configs';
 import type Block from '../../../../src/components/block';
 
-type ModuleOverrides = Partial<EditorModules>;
+type ModuleOverrides = Partial<BlokModules>;
 
 type SelectionSpy = {
   save: ReturnType<typeof vi.fn>;
@@ -21,7 +21,7 @@ type SelectionSpy = {
 
 type BlockSelectionSetup = {
   blockSelection: BlockSelection;
-  modules: EditorModules;
+  modules: BlokModules;
   blocks: Block[];
   selectionSpy: SelectionSpy;
   redactor: HTMLDivElement;
@@ -30,7 +30,7 @@ type BlockSelectionSetup = {
 const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; initiallySelected?: boolean }): Block => {
   const holder = document.createElement('div');
 
-  holder.className = 'ce-block';
+  holder.className = 'blok-element';
   holder.innerHTML = options?.html ?? '<p>Sample text</p>';
 
   const inputs = options?.inputs ?? [ document.createElement('div') ];
@@ -56,7 +56,7 @@ const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; init
     },
     set(nextState: boolean) {
       isSelected = nextState;
-      holder.classList.toggle('ce-block--selected', nextState);
+      holder.classList.toggle('blok-element--selected', nextState);
     },
   });
 
@@ -81,39 +81,39 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
   };
 
   const defaults: ModuleOverrides = {
-    BlockManager: blockManager as unknown as EditorModules['BlockManager'],
+    BlockManager: blockManager as unknown as BlokModules['BlockManager'],
     Caret: {
       setToBlock: vi.fn(),
       insertContentAtCaretPosition: vi.fn(),
-    } as unknown as EditorModules['Caret'],
+    } as unknown as BlokModules['Caret'],
     RectangleSelection: {
       clearSelection: vi.fn(),
       isRectActivated: vi.fn(() => false),
-    } as unknown as EditorModules['RectangleSelection'],
+    } as unknown as BlokModules['RectangleSelection'],
     CrossBlockSelection: {
       clear: vi.fn(),
-    } as unknown as EditorModules['CrossBlockSelection'],
+    } as unknown as BlokModules['CrossBlockSelection'],
     InlineToolbar: {
       close: vi.fn(),
-    } as unknown as EditorModules['InlineToolbar'],
+    } as unknown as BlokModules['InlineToolbar'],
     ReadOnly: {
       isEnabled: false,
-    } as unknown as EditorModules['ReadOnly'],
+    } as unknown as BlokModules['ReadOnly'],
     UI: {
       nodes: {
         redactor,
       },
-    } as unknown as EditorModules['UI'],
+    } as unknown as BlokModules['UI'],
     Paste: {
-      MIME_TYPE: 'application/editorjs',
-    } as unknown as EditorModules['Paste'],
+      MIME_TYPE: 'application/x-blok',
+    } as unknown as BlokModules['Paste'],
   };
 
   const mergedState = { ...defaults,
-    ...overrides } as EditorModules;
+    ...overrides } as BlokModules;
   const blockSelection = new BlockSelection({
-    config: { sanitizer: {} } as EditorConfig,
-    eventsDispatcher: new EventsDispatcher<EditorEventMap>(),
+    config: { sanitizer: {} } as BlokConfig,
+    eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 
   blockSelection.state = mergedState;
@@ -403,7 +403,7 @@ describe('BlockSelection', () => {
       const override: SanitizerConfig = {
         a: { rel: 'nofollow' },
       };
-      const internals = blockSelection as unknown as { config: EditorConfig };
+      const internals = blockSelection as unknown as { config: BlokConfig };
 
       internals.config = {
         ...internals.config,
@@ -471,7 +471,7 @@ describe('BlockSelection', () => {
     it('selects current block when tool exposes multiple inputs', () => {
       const multiInput = document.createElement('div');
       const { blockSelection, blocks } = createBlockSelection();
-      const blockManager = (blockSelection as unknown as { Editor: EditorModules }).Editor.BlockManager;
+      const blockManager = (blockSelection as unknown as { Blok: BlokModules }).Blok.BlockManager;
       const targetBlock = blocks[0];
 
       (targetBlock as unknown as { inputs: HTMLElement[] }).inputs = [multiInput, document.createElement('div')];

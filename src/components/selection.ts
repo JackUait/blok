@@ -58,13 +58,13 @@ export default class SelectionUtils {
   private fakeBackgroundElements: HTMLElement[] = [];
 
   /**
-   * Editor styles
-   * @returns {{editorWrapper: string, editorZone: string}}
+   * Blok styles
+   * @returns {{blokWrapper: string, blokZone: string}}
    */
-  public static get CSS(): { editorWrapper: string; editorZone: string } {
+  public static get CSS(): { blokWrapper: string; blokZone: string } {
     return {
-      editorWrapper: 'codex-editor',
-      editorZone: 'codex-editor__redactor',
+      blokWrapper: 'blok-editor',
+      blokZone: 'blok-editor__redactor',
     };
   }
 
@@ -125,18 +125,18 @@ export default class SelectionUtils {
   }
 
   /**
-   * Check current selection if it is at Editor's zone
+   * Check current selection if it is at Blok's zone
    * @returns {boolean}
    */
-  public static get isAtEditor(): boolean {
-    return this.isSelectionAtEditor(SelectionUtils.get());
+  public static get isAtBlok(): boolean {
+    return this.isSelectionAtBlok(SelectionUtils.get());
   }
 
   /**
-   * Check if passed selection is at Editor's zone
+   * Check if passed selection is at Blok's zone
    * @param selection - Selection object to check
    */
-  public static isSelectionAtEditor(selection: Selection | null): boolean {
+  public static isSelectionAtBlok(selection: Selection | null): boolean {
     if (!selection) {
       return false;
     }
@@ -149,21 +149,21 @@ export default class SelectionUtils {
       ? initialNode.parentNode
       : initialNode;
 
-    const editorZone = selectedNode && selectedNode instanceof Element
-      ? selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`)
+    const blokZone = selectedNode && selectedNode instanceof Element
+      ? selectedNode.closest(`.${SelectionUtils.CSS.blokZone}`)
       : null;
 
     /**
-     * SelectionUtils is not out of Editor because Editor's wrapper was found
+     * SelectionUtils is not out of Blok because Blok's wrapper was found
      */
-    return editorZone ? editorZone.nodeType === Node.ELEMENT_NODE : false;
+    return blokZone ? blokZone.nodeType === Node.ELEMENT_NODE : false;
   }
 
   /**
-   * Check if passed range at Editor zone
+   * Check if passed range at Blok zone
    * @param range - range to check
    */
-  public static isRangeAtEditor(range: Range): boolean | void {
+  public static isRangeAtBlok(range: Range): boolean | void {
     if (!range) {
       return;
     }
@@ -173,15 +173,15 @@ export default class SelectionUtils {
         ? range.startContainer.parentNode
         : range.startContainer;
 
-    const editorZone =
+    const blokZone =
       selectedNode && selectedNode instanceof Element
-        ? selectedNode.closest(`.${SelectionUtils.CSS.editorZone}`)
+        ? selectedNode.closest(`.${SelectionUtils.CSS.blokZone}`)
         : null;
 
     /**
-     * SelectionUtils is not out of Editor because Editor's wrapper was found
+     * SelectionUtils is not out of Blok because Blok's wrapper was found
      */
-    return editorZone ? editorZone.nodeType === Node.ELEMENT_NODE : false;
+    return blokZone ? blokZone.nodeType === Node.ELEMENT_NODE : false;
   }
 
   /**
@@ -362,7 +362,7 @@ export default class SelectionUtils {
       return;
     }
 
-    const fakeCursor = $.make('span', 'codex-editor__fake-cursor');
+    const fakeCursor = $.make('span', 'blok-editor__fake-cursor');
 
     fakeCursor.setAttribute('data-blok-mutation-free', 'true');
 
@@ -375,7 +375,7 @@ export default class SelectionUtils {
    * @param el - where to check
    */
   public static isFakeCursorInsideContainer(el: HTMLElement): boolean {
-    return $.find(el, `.codex-editor__fake-cursor`) !== null;
+    return $.find(el, `.blok-editor__fake-cursor`) !== null;
   }
 
   /**
@@ -383,7 +383,7 @@ export default class SelectionUtils {
    * @param container - container to look for
    */
   public static removeFakeCursor(container: HTMLElement = document.body): void {
-    const fakeCursor = $.find(container, `.codex-editor__fake-cursor`);
+    const fakeCursor = $.find(container, `.blok-editor__fake-cursor`);
 
     if (!fakeCursor) {
       return;
@@ -538,7 +538,7 @@ export default class SelectionUtils {
       return null;
     }
 
-    const wrapper = $.make('span', 'codex-editor__fake-background');
+    const wrapper = $.make('span', 'blok-editor__fake-background');
 
     wrapper.setAttribute('data-blok-testid', 'fake-background');
     wrapper.setAttribute('data-blok-fake-background', 'true');

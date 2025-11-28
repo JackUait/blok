@@ -3,15 +3,15 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
+const HOLDER_ID = 'blok';
 
 type SerializableToolConfig = {
   className?: string;
@@ -19,7 +19,7 @@ type SerializableToolConfig = {
   config?: Record<string, unknown>;
 };
 
-type CreateEditorOptions = {
+type CreateBlokOptions = {
   data?: OutputData | null;
   tools?: Record<string, SerializableToolConfig>;
   config?: Record<string, unknown>;
@@ -28,34 +28,34 @@ type CreateEditorOptions = {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   const { data = null, tools = {}, config = {} } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   const serializedTools = Object.entries(tools).map(([name, tool]) => {
     return {
@@ -67,7 +67,7 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   });
 
   await page.evaluate(
-    async ({ holderId, data: initialData, serializedTools: toolsConfig, config: editorConfigOverrides }) => {
+    async ({ holder, data: initialData, serializedTools: toolsConfig, config: blokConfigOverrides }) => {
       const resolveToolClass = (
         toolConfig: { name?: string; className: string | null; classCode: string | null }
       ): unknown => {
@@ -114,20 +114,20 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
         };
       }, {});
 
-      const editorConfig: Record<string, unknown> = {
-        holder: holderId,
-        ...editorConfigOverrides,
+      const blokConfig: Record<string, unknown> = {
+        holder: holder,
+        ...blokConfigOverrides,
         ...(initialData ? { data: initialData } : {}),
         ...(toolsConfig.length > 0 ? { tools: resolvedTools } : {}),
       };
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       data,
       serializedTools,
       config,
@@ -135,36 +135,36 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   );
 };
 
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await createEditor(page, {
+const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await createBlok(page, {
     data: {
       blocks,
     },
   });
 };
 
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return await page.evaluate(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    return await window.editorInstance.save();
+    return await window.blokInstance.save();
   });
 };
 
 test.describe('modules/blockManager', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('deletes the last block without adding fillers when other blocks remain', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         id: 'block1',
         type: 'paragraph',
@@ -178,14 +178,14 @@ test.describe('modules/blockManager', () => {
     ]);
 
     await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      await window.editorInstance.blocks.delete(1);
+      await window.blokInstance.blocks.delete(1);
     });
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect((blocks[0]?.data as { text: string }).text).toBe('First block');
@@ -194,7 +194,7 @@ test.describe('modules/blockManager', () => {
   test('replaces a single deleted block with a new default block', async ({ page }) => {
     const initialId = 'single-block';
 
-    await createEditorWithBlocks(page, [
+    await createBlokWithBlocks(page, [
       {
         id: initialId,
         type: 'paragraph',
@@ -203,21 +203,21 @@ test.describe('modules/blockManager', () => {
     ]);
 
     await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      await window.editorInstance.blocks.delete(0);
+      await window.blokInstance.blocks.delete(0);
     });
 
     // Check internal state because Saver.save() returns an empty array
-    // if there is only one empty block in the editor.
+    // if there is only one empty block in the blok.
     const block = await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      const firstBlock = window.editorInstance.blocks.getBlockByIndex(0);
+      const firstBlock = window.blokInstance.blocks.getBlockByIndex(0);
 
       if (!firstBlock) {
         return null;
@@ -235,7 +235,7 @@ test.describe('modules/blockManager', () => {
     expect(block?.id).not.toBe(initialId);
     expect((block?.data as { text?: string }).text ?? '').toBe('');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(0);
   });
@@ -303,7 +303,7 @@ test.describe('modules/blockManager', () => {
       };
     })();`;
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: {
         convertibleSource: {
           classCode: CONVERTABLE_SOURCE_TOOL,
@@ -327,14 +327,14 @@ test.describe('modules/blockManager', () => {
     });
 
     await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      await window.editorInstance.blocks.convert('source-block', 'convertibleTarget');
+      await window.blokInstance.blocks.convert('source-block', 'convertibleTarget');
     });
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0]?.type).toBe('convertibleTarget');
@@ -394,7 +394,7 @@ test.describe('modules/blockManager', () => {
       };
     })();`;
 
-    await createEditor(page, {
+    await createBlok(page, {
       tools: {
         convertibleSource: {
           classCode: CONVERTABLE_SOURCE_TOOL,
@@ -418,12 +418,12 @@ test.describe('modules/blockManager', () => {
     });
 
     const errorMessage = await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
       try {
-        await window.editorInstance.blocks.convert('non-convertable', 'withoutConversion');
+        await window.blokInstance.blocks.convert('non-convertable', 'withoutConversion');
 
         return null;
       } catch (error) {
@@ -433,7 +433,7 @@ test.describe('modules/blockManager', () => {
 
     expect(errorMessage).toContain('Conversion from "convertibleSource" to "withoutConversion" is not possible');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0]?.type).toBe('convertibleSource');
@@ -442,29 +442,29 @@ test.describe('modules/blockManager', () => {
 
 
   test('generates unique ids for newly inserted blocks', async ({ page }) => {
-    await createEditor(page);
+    await createBlok(page);
 
     const blockCount = await page.evaluate(async () => {
-      if (!window.editorInstance) {
-        throw new Error('Editor instance not found');
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
       }
 
-      const firstBlock = window.editorInstance.blocks.getBlockByIndex?.(0);
+      const firstBlock = window.blokInstance.blocks.getBlockByIndex?.(0);
 
       if (!firstBlock) {
         throw new Error('Initial block not found');
       }
 
-      await window.editorInstance.blocks.update(firstBlock.id, { text: 'First block' });
-      window.editorInstance.blocks.insert('paragraph', { text: 'Second block' });
-      window.editorInstance.blocks.insert('paragraph', { text: 'Third block' });
+      await window.blokInstance.blocks.update(firstBlock.id, { text: 'First block' });
+      window.blokInstance.blocks.insert('paragraph', { text: 'Second block' });
+      window.blokInstance.blocks.insert('paragraph', { text: 'Third block' });
 
-      return window.editorInstance.blocks.getBlocksCount?.() ?? 0;
+      return window.blokInstance.blocks.getBlocksCount?.() ?? 0;
     });
 
     expect(blockCount).toBe(3);
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
     const ids = blocks.map((block) => block.id);
 
     expect(blocks).toHaveLength(3);

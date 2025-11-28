@@ -6,7 +6,7 @@ import path from 'node:path';
  * Builds the project once before running any tests.
  */
 const globalSetup = async (): Promise<void> => {
-  console.log('Building Editor.js for tests...');
+  console.log('Building Blok for tests...');
   const projectRoot = path.resolve(__dirname, '../..');
 
   const result = spawnSync('yarn', [ 'build:test' ], {
@@ -20,10 +20,10 @@ const globalSetup = async (): Promise<void> => {
   }
 
   if (result.status !== 0) {
-    throw new Error(`Building Editor.js for Playwright failed with exit code ${result.status ?? 'unknown'}.`);
+    throw new Error(`Building Blok for Playwright failed with exit code ${result.status ?? 'unknown'}.`);
   }
 
-  process.env.EDITOR_JS_BUILT = 'true';
+  process.env.BLOK_BUILT = 'true';
 };
 
 export default globalSetup;

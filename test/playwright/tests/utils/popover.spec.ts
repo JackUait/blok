@@ -5,8 +5,8 @@ import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { BlockToolConstructable } from '@/types/tools';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
@@ -14,10 +14,10 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HEADER_TOOL_UMD_PATH = path.resolve(__dirname, '../../../../node_modules/@editorjs/header/dist/header.umd.js');
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const BLOCK_TUNES_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"]`;
 
 interface SerializableMenuChildren {
@@ -83,44 +83,44 @@ const buildTestToolsConfig = (
 });
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
- * Create editor with provided blocks and optional tools/tunes
+ * Create blok with provided blocks and optional tools/tunes
  * @param page - The Playwright page object
- * @param blocks - The blocks data to initialize the editor with
+ * @param blocks - The blocks data to initialize the blok with
  * @param tools - Optional tools configuration (can be SerializableToolsConfig or tool classes)
  * @param tunes - Optional tunes configuration
  */
-const createEditorWithBlocks = async (
+const createBlokWithBlocks = async (
   page: Page,
   blocks: OutputData['blocks'],
   tools?: SerializableToolsConfig | ToolsConfigInput,
   tunes?: string[]
 ): Promise<void> => {
-  await resetEditor(page);
+  await resetBlok(page);
   await page.evaluate(
-    async ({ holderId, editorBlocks, editorTools, editorTunes, PopoverItemTypeValues }) => {
+    async ({ holder, blokBlocks, blokTools, blokTunes, PopoverItemTypeValues }) => {
        
       const testWindow = window as typeof window & Record<string, any>;
 
@@ -286,7 +286,7 @@ const createEditorWithBlocks = async (
 
       // Automatically add tool names to tunes list if they're tunes
       // For direct tool classes, we can't determine if they're tunes, so skip auto-detection
-      const toolNames = editorTools && !Object.values(editorTools).some(tool => {
+      const toolNames = blokTools && !Object.values(blokTools).some(tool => {
         if (typeof tool === 'function') {
           return true;
         }
@@ -297,32 +297,32 @@ const createEditorWithBlocks = async (
 
         return false;
       })
-        ? Object.keys(editorTools)
+        ? Object.keys(blokTools)
         : [];
       let tunesList: string[] | undefined;
 
-      if (editorTunes && editorTunes.length > 0) {
-        tunesList = [ ...new Set([...editorTunes, ...toolNames]) ];
+      if (blokTunes && blokTunes.length > 0) {
+        tunesList = [ ...new Set([...blokTunes, ...toolNames]) ];
       } else if (toolNames.length > 0) {
         tunesList = toolNames;
       }
-      const toolsOption = buildTools(editorTools);
+      const toolsOption = buildTools(blokTools);
 
-      const editor = new window.EditorJS({
-        holder: holderId,
-        data: { blocks: editorBlocks },
+      const blok = new window.Blok({
+        holder: holder,
+        data: { blocks: blokBlocks },
         ...(toolsOption && { tools: toolsOption }),
         ...(tunesList && { tunes: tunesList }),
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
-      holderId: HOLDER_ID,
-      editorBlocks: blocks,
-      editorTools: tools,
-      editorTunes: tunes,
+      holder: HOLDER_ID,
+      blokBlocks: blocks,
+      blokTools: tools,
+      blokTunes: tunes,
       PopoverItemTypeValues: {
         Default: PopoverItemType.Default,
         Separator: PopoverItemType.Separator,
@@ -419,12 +419,12 @@ const openBlockTunes = async (page: Page): Promise<void> => {
 
 test.describe('popover', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should support confirmation chains', async ({ page }) => {
@@ -438,7 +438,7 @@ test.describe('popover', () => {
       title: confirmActionTitle,
     };
 
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -477,7 +477,7 @@ test.describe('popover', () => {
   });
 
   test('should render the items with true isActive property value as active', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -503,7 +503,7 @@ test.describe('popover', () => {
   });
 
   test('should not execute item\'s onActivate callback if the item is disabled', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -550,7 +550,7 @@ test.describe('popover', () => {
   });
 
   test('should close once item with closeOnActivate property set to true is activated', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -582,7 +582,7 @@ test.describe('popover', () => {
   });
 
   test('should highlight as active the item with toggle property set to true once activated', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -614,7 +614,7 @@ test.describe('popover', () => {
   });
 
   test('should perform radiobutton-like behavior among the items that have toggle property value set to the same string value', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -661,7 +661,7 @@ test.describe('popover', () => {
   });
 
   test('should toggle item if it is the only item in toggle group', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -693,9 +693,9 @@ test.describe('popover', () => {
   });
 
   test('should display item with custom html', async ({ page }) => {
-    await resetEditor(page);
+    await resetBlok(page);
     await page.evaluate(
-      async ({ holderId }) => {
+      async ({ holder }) => {
         /**
          *
          */
@@ -708,7 +708,7 @@ test.describe('popover', () => {
           public render(): HTMLElement {
             const button = document.createElement('button');
 
-            button.classList.add('ce-settings__button');
+            button.classList.add('blok-settings__button');
             button.setAttribute('data-blok-testid', 'settings-button');
             button.innerText = 'Tune';
 
@@ -716,8 +716,8 @@ test.describe('popover', () => {
           }
         }
 
-        const editor = new window.EditorJS({
-          holder: holderId,
+        const blok = new window.Blok({
+          holder: holder,
           tools: {
             testTool: TestTune,
           },
@@ -734,10 +734,10 @@ test.describe('popover', () => {
           },
         });
 
-        window.editorInstance = editor;
-        await editor.isReady;
+        window.blokInstance = blok;
+        await blok.isReady;
       },
-      { holderId: HOLDER_ID }
+      { holder: HOLDER_ID }
     );
 
     // Open block tunes menu
@@ -751,9 +751,9 @@ test.describe('popover', () => {
   });
 
   test('should support flipping between custom content items', async ({ page }) => {
-    await resetEditor(page);
+    await resetBlok(page);
     await page.evaluate(
-      async ({ holderId }) => {
+      async ({ holder }) => {
         /**
          *
          */
@@ -766,7 +766,7 @@ test.describe('popover', () => {
           public render(): HTMLElement {
             const button = document.createElement('button');
 
-            button.classList.add('ce-settings__button');
+            button.classList.add('blok-settings__button');
             button.setAttribute('data-blok-testid', 'settings-button');
             button.innerText = 'Tune1';
 
@@ -786,7 +786,7 @@ test.describe('popover', () => {
           public render(): HTMLElement {
             const button = document.createElement('button');
 
-            button.classList.add('ce-settings__button');
+            button.classList.add('blok-settings__button');
             button.setAttribute('data-blok-testid', 'settings-button');
             button.innerText = 'Tune2';
 
@@ -794,8 +794,8 @@ test.describe('popover', () => {
           }
         }
 
-        const editor = new window.EditorJS({
-          holder: holderId,
+        const blok = new window.Blok({
+          holder: holder,
           tools: {
             testTool1: TestTune1,
             testTool2: TestTune2,
@@ -813,10 +813,10 @@ test.describe('popover', () => {
           },
         });
 
-        window.editorInstance = editor;
-        await editor.isReady;
+        window.blokInstance = blok;
+        await blok.isReady;
       },
-      { holderId: HOLDER_ID }
+      { holder: HOLDER_ID }
     );
 
     // Open block tunes menu
@@ -851,7 +851,7 @@ test.describe('popover', () => {
   });
 
   test('should display nested popover (desktop)', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -898,7 +898,7 @@ test.describe('popover', () => {
     await page.setViewportSize({ width: 414,
       height: 896 }); // iPhone size
 
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -957,7 +957,7 @@ test.describe('popover', () => {
   });
 
   test('should display default (non-separator) items without specifying type: default', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -992,7 +992,7 @@ test.describe('popover', () => {
   });
 
   test('should display separator', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -1035,7 +1035,7 @@ test.describe('popover', () => {
   });
 
   test('should perform keyboard navigation between items ignoring separators', async ({ page }) => {
-    await createEditorWithBlocks(
+    await createBlokWithBlocks(
       page,
       [
         {
@@ -1090,7 +1090,7 @@ test.describe('popover', () => {
     });
 
     test('should open nested popover on click instead of hover', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -1106,7 +1106,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
+      const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "First"
@@ -1115,17 +1115,17 @@ test.describe('popover', () => {
       await page.locator('[data-blok-item-name=convert-to]').hover();
 
       // Check nested popover didn't open
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`)).toBeHidden();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`)).toBeHidden();
 
       // Click Convert To item which has nested popover
       await page.locator('[data-blok-item-name=convert-to]').click();
 
       // Check nested popover opened
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`)).toBeVisible();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`)).toBeVisible();
     });
 
     test('should support keyboard navigation between items', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -1141,35 +1141,35 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
+      const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "block"
 
       // Check Inline Popover opened
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`)).toBeVisible();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`)).toBeVisible();
 
       // Check first item is NOT focused
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="convert-to"][data-blok-focused="true"]`)).toBeHidden();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="convert-to"][data-blok-focused="true"]`)).toBeHidden();
 
       // Press Tab
       await page.keyboard.press('Tab');
 
       // Check first item became focused after tab
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="convert-to"][data-blok-focused="true"]`)).toBeVisible();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="convert-to"][data-blok-focused="true"]`)).toBeVisible();
 
       // Check second item is NOT focused
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="link"][data-blok-focused="true"]`)).toBeHidden();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="link"][data-blok-focused="true"]`)).toBeHidden();
 
       // Press Tab
       await page.keyboard.press('Tab');
 
       // Check second item became focused after tab
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="link"][data-blok-focused="true"]`)).toBeVisible();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="link"][data-blok-focused="true"]`)).toBeVisible();
     });
 
     test('should allow to reach nested popover via keyboard', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -1185,13 +1185,13 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
+      const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "block"
 
       // Check Inline Popover opened
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`)).toBeVisible();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`)).toBeVisible();
 
       // Press Tab
       await page.keyboard.press('Tab');
@@ -1200,20 +1200,20 @@ test.describe('popover', () => {
       await page.locator('[data-blok-item-name="convert-to"]').press('Enter');
 
       // Check nested popover opened
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-nested="true"] [data-blok-testid="popover-container"]`)).toBeVisible();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-nested="true"] [data-blok-testid="popover-container"]`)).toBeVisible();
 
       // Check first item is NOT focused
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="popover-container"] [data-blok-item-name="header"][data-blok-focused="true"]`)).toBeHidden();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="popover-container"] [data-blok-item-name="header"][data-blok-focused="true"]`)).toBeHidden();
 
       // Press Tab
       await page.keyboard.press('Tab');
 
       // Check first item is focused
-      await expect(page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="popover-container"] [data-blok-item-name="header"][data-blok-focused="true"]`)).toBeVisible();
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="popover-container"] [data-blok-item-name="header"][data-blok-focused="true"]`)).toBeVisible();
     });
 
     test('should convert block when clicking on item in nested popover', async ({ page }) => {
-      await createEditorWithBlocks(
+      await createBlokWithBlocks(
         page,
         [
           {
@@ -1229,7 +1229,7 @@ test.describe('popover', () => {
       );
 
       // Open Inline Toolbar
-      const paragraph = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
+      const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`);
 
       await paragraph.click();
       await selectTextByRange(paragraph, 0, 5); // Select "First"
@@ -1238,10 +1238,10 @@ test.describe('popover', () => {
       await page.locator('[data-blok-item-name=convert-to]').click();
 
       // Click Header item in nested popover
-      await page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"] [data-blok-item-name="header"]`).click();
+      await page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"] [data-blok-item-name="header"]`).click();
 
       // Check block converted
-      const header = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-component="header"]`);
+      const header = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`);
 
       await expect(header).toBeVisible();
       await expect(header).toHaveText('First block text');

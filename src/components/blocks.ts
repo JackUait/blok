@@ -7,7 +7,7 @@ import type { MoveEvent } from '../../types/tools';
  * @class Blocks
  * @classdesc Class to work with Block instances array
  * @private
- * @property {HTMLElement} workingArea — editor`s working node
+ * @property {HTMLElement} workingArea — blok`s working node
  */
 export default class Blocks {
   /**
@@ -16,13 +16,13 @@ export default class Blocks {
   public blocks: Block[];
 
   /**
-   * Editor`s area where to add Block`s HTML
+   * Blok`s area where to add Block`s HTML
    */
   public workingArea: HTMLElement;
 
   /**
    * @class
-   * @param {HTMLElement} workingArea — editor`s working node
+   * @param {HTMLElement} workingArea — blok`s working node
    */
   constructor(workingArea: HTMLElement) {
     this.blocks = [];

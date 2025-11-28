@@ -155,7 +155,7 @@ describe('LinkInlineTool', () => {
     const input = renderResult.children.items[0].element as HTMLInputElement;
 
     expect(input.placeholder).toBe('Add a link');
-    expect(input.classList.contains('ce-inline-tool-input')).toBe(true);
+    expect(input.classList.contains('blok-inline-tool-input')).toBe(true);
     expect(input.getAttribute('data-blok-link-tool-input-opened')).toBe('false');
 
     const event = createKeyboardEventWithKeyCode(13);
@@ -169,7 +169,7 @@ describe('LinkInlineTool', () => {
     const { tool, selection } = createTool();
     const anchor = document.createElement('a');
 
-    anchor.setAttribute('href', 'https://codex.so');
+    anchor.setAttribute('href', 'https://google.com');
     selection.findParentTag.mockReturnValue(anchor);
 
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
@@ -193,7 +193,7 @@ describe('LinkInlineTool', () => {
     const { tool, selection } = createTool();
     const anchor = document.createElement('a');
 
-    anchor.setAttribute('href', 'https://codex.so');
+    anchor.setAttribute('href', 'https://google.com');
 
     selection.findParentTag.mockReturnValue(anchor);
 
@@ -203,7 +203,7 @@ describe('LinkInlineTool', () => {
     // Simulate onOpen
     renderResult.children.onOpen();
 
-    expect(input.value).toBe('https://codex.so');
+    expect(input.value).toBe('https://google.com');
     expect(selection.save).toHaveBeenCalled();
   });
 
@@ -233,7 +233,7 @@ describe('LinkInlineTool', () => {
     const input = renderResult.children.items[0].element as HTMLInputElement;
     const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
 
-    input.value = 'https://codex .so';
+    input.value = 'https://google .com';
 
     (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
 
@@ -266,11 +266,11 @@ describe('LinkInlineTool', () => {
     const { tool } = createTool();
     const addProtocol = tool as unknown as { addProtocol(link: string): string };
 
-    expect(addProtocol.addProtocol('https://codex.so')).toBe('https://codex.so');
-    expect(addProtocol.addProtocol('codex.so')).toBe('http://codex.so');
+    expect(addProtocol.addProtocol('https://google.com')).toBe('https://google.com');
+    expect(addProtocol.addProtocol('google.com')).toBe('http://google.com');
     expect(addProtocol.addProtocol('/internal')).toBe('/internal');
     expect(addProtocol.addProtocol('#hash')).toBe('#hash');
-    expect(addProtocol.addProtocol('//cdn.codex.so')).toBe('//cdn.codex.so');
+    expect(addProtocol.addProtocol('//cdn.google.com')).toBe('//cdn.google.com');
   });
 
   it('inserts anchor tag with correct attributes when inserting link', () => {
@@ -291,12 +291,12 @@ describe('LinkInlineTool', () => {
 
     vi.spyOn(window, 'getSelection').mockReturnValue(selectionMock as unknown as Selection);
 
-    (tool as unknown as { insertLink(link: string): void }).insertLink('https://codex.so');
+    (tool as unknown as { insertLink(link: string): void }).insertLink('https://google.com');
 
     const anchor = document.querySelector('a');
 
     expect(anchor).not.toBeNull();
-    expect(anchor?.href).toBe('https://codex.so/');
+    expect(anchor?.href).toBe('https://google.com/');
     expect(anchor?.target).toBe('_blank');
     expect(anchor?.rel).toBe('nofollow');
     expect(anchor?.textContent).toBe('selected text');
@@ -307,7 +307,7 @@ describe('LinkInlineTool', () => {
 
     const anchor = document.createElement('a');
 
-    anchor.href = 'https://codex.so';
+    anchor.href = 'https://google.com';
     anchor.textContent = 'link text';
     document.body.appendChild(anchor);
 

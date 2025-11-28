@@ -2,7 +2,7 @@ import type { Tools as ToolsAPIInterface } from '../../../../types/api';
 import Module from '../../__module';
 
 /**
- * Provides methods for accessing installed Editor tools
+ * Provides methods for accessing installed Blok tools
  */
 export default class ToolsAPI extends Module {
   /**
@@ -10,7 +10,7 @@ export default class ToolsAPI extends Module {
    */
   public get methods(): ToolsAPIInterface {
     return {
-      getBlockTools: () => Array.from(this.Editor.Tools.blockTools.values()),
+      getBlockTools: () => Array.from(this.Blok.Tools.blockTools.values()),
     };
   }
 }

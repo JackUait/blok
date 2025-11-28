@@ -3,10 +3,10 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
@@ -17,10 +17,10 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
   '../../../../node_modules/@editorjs/header/dist/header.umd.js'
 );
 
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const BLOCK_CONTENT_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-content"]`;
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const BLOCK_CONTENT_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-content"]`;
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const SETTINGS_ITEM_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-item"]';
 const BLOCK_TEXT = 'The block with some text';
 
@@ -30,41 +30,41 @@ type SerializableToolConfig = {
   config?: Record<string, unknown>;
 };
 
-type CreateEditorOptions = {
+type CreateBlokOptions = {
   data?: OutputData;
   tools?: Record<string, SerializableToolConfig>;
 };
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
+    blokInstance?: Blok;
   }
 }
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: CreateEditorOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   const { data = null, tools = {} } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   const serializedTools = Object.entries(tools).map(([name, tool]) => {
     return {
@@ -76,13 +76,13 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
   });
 
   await page.evaluate(
-    async ({ holderId, data: initialData, serializedTools: toolsConfig }) => {
-      const editorConfig: Record<string, unknown> = {
-        holder: holderId,
+    async ({ holder, data: initialData, serializedTools: toolsConfig }) => {
+      const blokConfig: Record<string, unknown> = {
+        holder: holder,
       };
 
       if (initialData) {
-        editorConfig.data = initialData;
+        blokConfig.data = initialData;
       }
 
       if (toolsConfig.length > 0) {
@@ -114,35 +114,35 @@ const createEditor = async (page: Page, options: CreateEditorOptions = {}): Prom
           {}
         );
 
-        editorConfig.tools = resolvedTools;
+        blokConfig.tools = resolvedTools;
       }
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       data,
       serializedTools,
     }
   );
 };
 
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return await page.evaluate(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    return await window.editorInstance.save();
+    return await window.blokInstance.save();
   });
 };
 
 test.describe('saver module', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -150,7 +150,7 @@ test.describe('saver module', () => {
   });
 
   test('saves block data when extraneous DOM nodes are present', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -171,7 +171,7 @@ test.describe('saver module', () => {
       element.append(extensionNode);
     });
 
-    const savedData = await saveEditor(page);
+    const savedData = await saveBlok(page);
 
     expect(savedData.blocks).toHaveLength(1);
     expect(savedData.blocks[0]?.type).toBe('paragraph');
@@ -183,7 +183,7 @@ test.describe('saver module', () => {
   test('saves header block data after container element changes', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
@@ -217,15 +217,15 @@ test.describe('saver module', () => {
     await headerLevelOption.click();
 
     await page.waitForFunction(
-      ({ editorSelector }) => {
-        const headerElement = document.querySelector(`${editorSelector} .ce-header`);
+      ({ blokSelector }) => {
+        const headerElement = document.querySelector(`${blokSelector} .ce-header`);
 
         return headerElement?.tagName === 'H3';
       },
-      { editorSelector: EDITOR_INTERFACE_SELECTOR }
+      { blokSelector: BLOK_INTERFACE_SELECTOR }
     );
 
-    const savedData = await saveEditor(page);
+    const savedData = await saveBlok(page);
 
     expect(savedData.blocks[0]?.type).toBe('header');
     expect(savedData.blocks[0]?.data).toMatchObject({

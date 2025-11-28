@@ -1,7 +1,7 @@
 /**
-* Editor wrapper
+* Blok wrapper
 */
-.codex-editor {
+.blok-editor {
     position: relative;
     box-sizing: border-box;
     z-index: 1;
@@ -36,7 +36,7 @@
         }
     }
 
-    &--narrow .ce-toolbar__actions {
+    &--narrow .blok-toolbar__actions {
         @media (--not-mobile) {
             right: -5px;
         }
@@ -92,25 +92,25 @@
     &--dragging {
         cursor: grabbing;
 
-        .ce-toolbar__settings-btn {
+        .blok-toolbar__settings-btn {
             cursor: grabbing;
         }
 
-        .ce-toolbar {
+        .blok-toolbar {
             pointer-events: none;
         }
     }
 }
 
-.codex-editor--toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
+.blok-editor--toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
     opacity: 0 !important;
 }
 
-.ce-scroll-locked {
+.blok-scroll-locked {
     overflow: hidden;
 }
 
-.ce-scroll-locked--hard {
+.blok-scroll-locked--hard {
     overflow: hidden;
     top: calc(-1 * var(--window-scroll-offset));
     position: fixed;

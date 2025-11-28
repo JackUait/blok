@@ -1,14 +1,14 @@
-# Blok Editor - AI Coding Instructions
+# Blok - AI Coding Instructions
 
 ## Project Overview
 
-Blok is a headless, block-based rich text editor (fork of Editor.js). Content is structured as JSON blocks, not raw HTML.
+Blok is a headless, block-based rich text editor. Content is structured as JSON blocks, not raw HTML.
 
 ## Architecture
 
 ### Core Components (`src/components/`)
 - **`core.ts`**: Bootstrap orchestrator - initializes all modules, manages editor lifecycle
-- **`__module.ts`**: Base class all modules inherit from - provides `listeners`, `config`, `Editor` references
+- **`__module.ts`**: Base class all modules inherit from - provides `listeners`, `config`, `Blok` references
 - **`block/index.ts`**: Block class representing individual content blocks with lifecycle hooks (`rendered`, `updated`, `removed`, `moved`)
 - **`blocks.ts`**: Array-like collection manager for Block instances
 
@@ -22,7 +22,7 @@ Modules are singletons instantiated by Core. Key modules:
 
 ### Type Definitions
 - **`types/`**: Public API types exported to consumers
-- **`src/types-internal/`**: Internal types (e.g., `EditorModules` interface listing all module types)
+- **`src/types-internal/`**: Internal types (e.g., `BlokModules` interface listing all module types)
 
 ## Development Commands
 
@@ -44,7 +44,7 @@ yarn e2e:safari     # Playwright Safari only
 
 ### Unit Tests (`test/unit/`)
 - Use Vitest with `vi.mock()` for module mocking
-- Mock Core and modules to test in isolation (see `codex.test.ts` for pattern)
+- Mock Core and modules to test in isolation (see `blok.test.ts` for pattern)
 
 ### E2E Tests (`test/playwright/tests/`)
 - Use resilient locators: `page.getByRole()`, `page.getByText()` over CSS selectors
@@ -56,13 +56,13 @@ yarn e2e:safari     # Playwright Safari only
 
 ### TypeScript
 - **Never use `@ts-ignore`, `any`, or `!` assertions** - fix type errors properly with guards/narrowing
-- Import types with `type` keyword: `import type { EditorConfig } from '../../types'`
+- Import types with `type` keyword: `import type { BlokConfig } from '../../types'`
 - Module classes extend `Module<T>` base class for consistent lifecycle
 
 ### DOM Utilities
 - Use `$` from `./dom` for DOM creation/manipulation (jQuery-like API)
 - Use `*` from `./utils` for general utilities
-- CSS selectors use constants from `constants.ts` (e.g., `EDITOR_INTERFACE_SELECTOR`)
+- CSS selectors use constants from `constants.ts` (e.g., `BLOK_INTERFACE_SELECTOR`)
 
 ### Linting
 - Run `yarn lint:fix` first, manual fixes only if autofix fails
@@ -82,8 +82,8 @@ Tools implement `BlockTool` interface (`types/tools/block-tool.d.ts`):
 - `validate?(data)`: Optional data validation
 - Lifecycle: `rendered()`, `updated()`, `removed()`, `moved()`
 
-### Editor Configuration
-Entry point: `src/codex.ts` exports `EditorJS` class
+### Blok Configuration
+Entry point: `src/blok.ts` exports `Blok` class
 Key config options: `holder`, `tools`, `data`, `autofocus`, `defaultBlock`, `readOnly`
 
 ## File Naming

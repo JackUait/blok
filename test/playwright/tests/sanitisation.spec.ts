@@ -3,18 +3,18 @@ import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
-import { ensureEditorBundleBuilt } from './helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../src/components/constants';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
+const HOLDER_ID = 'blok';
 const INITIAL_BLOCK_ID = 'sanitisation-initial-block';
 
 const getBlockById = (page: Page, blockId: string): Locator => {
-  return page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-id="${blockId}"]`);
+  return page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-id="${blockId}"]`);
 };
 
 const getParagraphByBlockId = (page: Page, blockId: string): Locator => {
@@ -22,39 +22,39 @@ const getParagraphByBlockId = (page: Page, blockId: string): Locator => {
 };
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
- * Create editor with provided blocks
+ * Create blok with provided blocks
  * @param page - The Playwright page object
- * @param blocks - The blocks data to initialize the editor with
+ * @param blocks - The blocks data to initialize the blok with
  */
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
-      holder: holderId,
-      data: { blocks: editorBlocks },
+const createBlokWithElements = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
+      holder: holder,
+      data: { blocks: blokBlocks },
       tools: {
         paragraph: {
           inlineToolbar: true,
@@ -65,21 +65,21 @@ const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']):
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID,
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
 /**
- * Create editor with empty config
+ * Create blok with empty config
  * @param page - The Playwright page object
  */
-const createEditor = async (page: Page): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, initialBlockId }) => {
-    const editor = new window.EditorJS({
-      holder: holderId,
+const createBlok = async (page: Page): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, initialBlockId }) => {
+    const blok = new window.Blok({
+      holder: holder,
       data: {
         blocks: [
           {
@@ -101,24 +101,24 @@ const createEditor = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID,
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID,
     initialBlockId: INITIAL_BLOCK_ID });
 };
 
 /**
- * Save editor data
+ * Save blok data
  * @param page - The Playwright page object
  * @returns The saved output data
  */
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return await page.evaluate<OutputData>(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    return await window.editorInstance.save();
+    return await window.blokInstance.save();
   });
 };
 
@@ -145,7 +145,7 @@ const paste = async (page: Page, locator: Locator, data: Record<string, string>)
 
   // Wait for paste processing to complete
   // Some tools (paragraph) could have async hydration
-  // The editor is already ready, so we just wait a brief moment for processing
+  // The blok is already ready, so we just wait a brief moment for processing
   await page.evaluate(() => new Promise((resolve) => {
     setTimeout(resolve, 200);
   }));
@@ -223,15 +223,15 @@ const selectAllText = async (locator: Locator): Promise<void> => {
 };
 
 /**
- * Create editor with custom sanitizer config
+ * Create blok with custom sanitizer config
  * @param page - The Playwright page object
  * @param sanitizerConfig - Custom sanitizer configuration
  */
-const createEditorWithSanitizer = async (page: Page, sanitizerConfig: Record<string, unknown>): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, sanitizer }) => {
-    const editor = new window.EditorJS({
-      holder: holderId,
+const createBlokWithSanitizer = async (page: Page, sanitizerConfig: Record<string, unknown>): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, sanitizer }) => {
+    const blok = new window.Blok({
+      holder: holder,
       sanitizer,
       tools: {
         paragraph: {
@@ -242,38 +242,38 @@ const createEditorWithSanitizer = async (page: Page, sanitizerConfig: Record<str
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID,
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID,
     sanitizer: sanitizerConfig });
 };
 
 test.describe('sanitizing', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test.describe('output should save inline formatting', () => {
     test('should save initial formatting for paragraph', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<strong>Bold text</strong>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
 
       expect(output.blocks[0].data.text).toBe('<strong>Bold text</strong>');
     });
 
     test('should save formatting for paragraph', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           id: INITIAL_BLOCK_ID,
           type: 'paragraph',
@@ -290,38 +290,38 @@ test.describe('sanitizing', () => {
       await selectAllText(block);
 
       // Click bold button
-      const boldButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-item-name="bold"]`);
+      const boldButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-item-name="bold"]`);
 
       await boldButton.click();
 
       // Click block to deselect
       await block.click();
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toMatch(/<strong>This text should be bold\.(<br>)?<\/strong>/);
     });
 
     test('should save formatting for paragraph on paste', async ({ page }) => {
-      await createEditor(page);
+      await createBlok(page);
 
       const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<p>Text</p><p><strong>Bold text</strong></p>',
       });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
 
       expect(output.blocks[1].data.text).toBe('<strong>Bold text</strong>');
     });
   });
 
   test('should sanitize unwanted html on blocks merging', async ({ page }) => {
-    await createEditorWithBlocks(page, [
+    await createBlokWithElements(page, [
       {
         id: 'block1',
         type: 'paragraph',
@@ -347,7 +347,7 @@ test.describe('sanitizing', () => {
     await setCaretToStart(lastParagraph);
     await page.keyboard.press('Backspace');
 
-    const { blocks } = await saveEditor(page);
+    const { blocks } = await saveBlok(page);
 
     // text has been merged, span has been removed
     expect(blocks[0].data.text).toBe('First blockSecond XSS block');
@@ -355,20 +355,20 @@ test.describe('sanitizing', () => {
 
   test.describe('other inline tools', () => {
     test('should save italic formatting', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<i>Italic text</i>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
 
       expect(output.blocks[0].data.text).toBe('<i>Italic text</i>');
     });
 
     test('should save italic formatting applied via toolbar', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           id: INITIAL_BLOCK_ID,
           type: 'paragraph',
@@ -383,33 +383,33 @@ test.describe('sanitizing', () => {
 
       await selectAllText(block);
 
-      const italicButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-item-name="italic"]`);
+      const italicButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-item-name="italic"]`);
 
       await italicButton.click();
       await block.click();
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toMatch(/<i>This text should be italic\.(<br>)?<\/i>/);
     });
 
     test('should save link formatting with href attribute', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<a href="https://example.com">Link text</a>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
 
       expect(output.blocks[0].data.text).toContain('<a href="https://example.com">');
       expect(output.blocks[0].data.text).toContain('Link text');
     });
 
     test('should save link formatting applied via toolbar', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           id: INITIAL_BLOCK_ID,
           type: 'paragraph',
@@ -424,7 +424,7 @@ test.describe('sanitizing', () => {
 
       await selectAllText(block);
 
-      const linkButton = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-item-name="link"]`);
+      const linkButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-item-name="link"]`);
 
       await linkButton.click();
 
@@ -433,7 +433,7 @@ test.describe('sanitizing', () => {
       await linkInput.fill('https://example.com');
       await linkInput.press('Enter');
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toMatch(/<a href="https:\/\/example\.com"[^>]*>Link text<\/a>/);
@@ -442,14 +442,14 @@ test.describe('sanitizing', () => {
 
   test.describe('attribute sanitization', () => {
     test('should strip unwanted attributes from links', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<a href="https://example.com" onclick="alert(1)" style="color:red" id="malicious">Link</a>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('href="https://example.com"');
@@ -459,14 +459,14 @@ test.describe('sanitizing', () => {
     });
 
     test('should preserve allowed link attributes', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<a href="https://example.com" target="_blank" rel="nofollow">Link</a>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('href="https://example.com"');
@@ -475,14 +475,14 @@ test.describe('sanitizing', () => {
     });
 
     test('should strip attributes while keeping tags when rule is false', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<strong style="color:red" onclick="alert(1)">Bold</strong>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('<strong>');
@@ -494,14 +494,14 @@ test.describe('sanitizing', () => {
 
   test.describe('xSS prevention', () => {
     test('should remove script tags', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: 'Text<script>alert("XSS")</script>More text' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
 
       expect(output.blocks[0].data.text).not.toContain('<script>');
       expect(output.blocks[0].data.text).not.toContain('alert');
@@ -509,14 +509,14 @@ test.describe('sanitizing', () => {
     });
 
     test('should remove event handlers', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<strong onclick="alert(1)" onerror="alert(2)" onload="alert(3)">Bold</strong>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).not.toContain('onclick');
@@ -526,14 +526,14 @@ test.describe('sanitizing', () => {
     });
 
     test('should remove javascript: URLs', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<a href="javascript:alert(1)">Link</a>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       // The link should be removed or href should be sanitized
@@ -541,14 +541,14 @@ test.describe('sanitizing', () => {
     });
 
     test('should remove data: URLs with scripts', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<img src="data:text/html,<script>alert(1)</script>" />' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).not.toContain('data:text/html');
@@ -556,14 +556,14 @@ test.describe('sanitizing', () => {
     });
 
     test('should remove style attributes with expressions', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<span style="expression(alert(1))">Text</span>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).not.toContain('style');
@@ -571,14 +571,14 @@ test.describe('sanitizing', () => {
     });
 
     test('should remove malicious attributes', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<strong onmouseover="alert(1)" onfocus="alert(2)">Bold</strong>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).not.toContain('onmouseover');
@@ -588,14 +588,14 @@ test.describe('sanitizing', () => {
 
   test.describe('nested HTML structures', () => {
     test('should save nested formatting (bold inside italic)', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<i>Italic <strong>and bold</strong> text</i>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
 
       expect(output.blocks[0].data.text).toContain('<i>');
       expect(output.blocks[0].data.text).toContain('<strong>');
@@ -603,14 +603,14 @@ test.describe('sanitizing', () => {
     });
 
     test('should save multiple levels of nesting', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<strong>Bold <i>italic <a href="https://example.com">link</a></i></strong>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('<strong>');
@@ -620,14 +620,14 @@ test.describe('sanitizing', () => {
     });
 
     test('should sanitize nested unwanted tags', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<strong>Bold <span id="bad">bad</span> text</strong>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('<strong>');
@@ -638,14 +638,14 @@ test.describe('sanitizing', () => {
 
   test.describe('edge cases', () => {
     test('should handle empty sanitization config', async ({ page }) => {
-      await createEditorWithSanitizer(page, {});
+      await createBlokWithSanitizer(page, {});
 
       await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.blocks.insert('paragraph', {
+        window.blokInstance.blocks.insert('paragraph', {
           text: '<strong>Bold</strong> <i>italic</i>',
         });
 
@@ -655,7 +655,7 @@ test.describe('sanitizing', () => {
         });
       });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       // With empty config, all HTML should be preserved
@@ -663,40 +663,40 @@ test.describe('sanitizing', () => {
     });
 
     test('should handle empty string', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
 
       expect(output.blocks).toHaveLength(0);
     });
 
     test('should handle whitespace-only content', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '   \n\t  ' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
 
       expect(output.blocks[0].data.text).toBeTruthy();
     });
 
     test('should handle HTML entities', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           type: 'paragraph',
           data: { text: '<strong>&lt;script&gt;</strong>' },
         },
       ]);
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('<strong>');
@@ -707,18 +707,18 @@ test.describe('sanitizing', () => {
 
   test.describe('editor-level sanitizer config', () => {
     test('should apply custom sanitizer config', async ({ page }) => {
-      await createEditorWithSanitizer(page, {
+      await createBlokWithSanitizer(page, {
         strong: true,
         i: true,
         // No 'a' tags allowed
       });
 
       await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.blocks.insert('paragraph', {
+        window.blokInstance.blocks.insert('paragraph', {
           text: '<strong>Bold</strong> <i>italic</i> <a href="#">link</a>',
         });
 
@@ -728,7 +728,7 @@ test.describe('sanitizing', () => {
         });
       });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('<strong>');
@@ -737,17 +737,17 @@ test.describe('sanitizing', () => {
     });
 
     test('should override tool-level sanitization', async ({ page }) => {
-      await createEditorWithSanitizer(page, {
+      await createBlokWithSanitizer(page, {
         span: true,
         div: true,
       });
 
       await page.evaluate(async () => {
-        if (!window.editorInstance) {
-          throw new Error('Editor instance not found');
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
         }
 
-        window.editorInstance.blocks.insert('paragraph', {
+        window.blokInstance.blocks.insert('paragraph', {
           text: '<span>Span</span> <div>Div</div>',
         });
 
@@ -757,10 +757,10 @@ test.describe('sanitizing', () => {
         });
       });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
-      // Custom config should allow span and div, even when editor adds safe attributes
+      // Custom config should allow span and div, even when blok adds safe attributes
       expect(text).toMatch(/<span\b[^>]*>Span<\/span>/);
       expect(text).toMatch(/<div\b[^>]*>Div<\/div>/);
     });
@@ -768,7 +768,7 @@ test.describe('sanitizing', () => {
 
   test.describe('block merging edge cases', () => {
     test('should sanitize when merging blocks with different configs', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           id: 'block1',
           type: 'paragraph',
@@ -791,14 +791,14 @@ test.describe('sanitizing', () => {
       await setCaretToStart(lastParagraph);
       await page.keyboard.press('Backspace');
 
-      const { blocks } = await saveEditor(page);
+      const { blocks } = await saveBlok(page);
 
       expect(blocks[0].data.text).toBe('First blockSecond block');
       expect(blocks[0].data.text).not.toContain('<span>');
     });
 
     test('should sanitize nested structures when merging', async ({ page }) => {
-      await createEditorWithBlocks(page, [
+      await createBlokWithElements(page, [
         {
           id: 'block1',
           type: 'paragraph',
@@ -822,7 +822,7 @@ test.describe('sanitizing', () => {
       await setCaretToStart(lastParagraph);
       await page.keyboard.press('Backspace');
 
-      const { blocks } = await saveEditor(page);
+      const { blocks } = await saveBlok(page);
 
       // Verify that merge happened
       expect(blocks).toHaveLength(1);
@@ -842,17 +842,17 @@ test.describe('sanitizing', () => {
 
   test.describe('paste sanitization', () => {
     test('should sanitize malicious content on paste', async ({ page }) => {
-      await createEditor(page);
+      await createBlok(page);
 
       const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<p>Text<script>alert("XSS")</script></p>',
       });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).not.toContain('<script>');
@@ -860,17 +860,17 @@ test.describe('sanitizing', () => {
     });
 
     test('should sanitize mixed allowed/disallowed tags on paste', async ({ page }) => {
-      await createEditor(page);
+      await createBlok(page);
 
       const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<p><strong>Bold</strong> <span id="bad">bad</span> <i>italic</i></p>',
       });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('<strong>');
@@ -880,17 +880,17 @@ test.describe('sanitizing', () => {
     });
 
     test('should sanitize nested structures on paste', async ({ page }) => {
-      await createEditor(page);
+      await createBlok(page);
 
       const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<p><strong>Bold <span>nested</span></strong></p>',
       });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('<strong>');
@@ -899,17 +899,17 @@ test.describe('sanitizing', () => {
     });
 
     test('should sanitize event handlers on paste', async ({ page }) => {
-      await createEditor(page);
+      await createBlok(page);
 
       const block = getBlockById(page, INITIAL_BLOCK_ID);
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<p><strong onclick="alert(1)">Bold</strong></p>',
       });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('<strong>');
@@ -919,9 +919,9 @@ test.describe('sanitizing', () => {
 
   test.describe('deep sanitization', () => {
     test('should sanitize nested objects with HTML strings', async ({ page }) => {
-      await resetEditor(page);
+      await resetBlok(page);
 
-      await page.evaluate(async ({ holderId }) => {
+      await page.evaluate(async ({ holder }) => {
         /**
          * Custom tool with nested data structure
          */
@@ -968,8 +968,8 @@ test.describe('sanitizing', () => {
           }
         }
 
-        const editor = new window.EditorJS({
-          holder: holderId,
+        const blok = new window.Blok({
+          holder: holder,
           tools: {
             custom: CustomTool,
           },
@@ -988,11 +988,11 @@ test.describe('sanitizing', () => {
           },
         });
 
-        window.editorInstance = editor;
-        await editor.isReady;
-      }, { holderId: HOLDER_ID });
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const blockData = output.blocks[0].data;
 
       expect(blockData.text).toContain('<strong>');
@@ -1002,9 +1002,9 @@ test.describe('sanitizing', () => {
     });
 
     test('should sanitize arrays containing HTML strings', async ({ page }) => {
-      await resetEditor(page);
+      await resetBlok(page);
 
-      await page.evaluate(async ({ holderId }) => {
+      await page.evaluate(async ({ holder }) => {
         /**
          * Custom tool with array data structure
          */
@@ -1048,8 +1048,8 @@ test.describe('sanitizing', () => {
           }
         }
 
-        const editor = new window.EditorJS({
-          holder: holderId,
+        const blok = new window.Blok({
+          holder: holder,
           tools: {
             custom: CustomTool,
           },
@@ -1069,11 +1069,11 @@ test.describe('sanitizing', () => {
           },
         });
 
-        window.editorInstance = editor;
-        await editor.isReady;
-      }, { holderId: HOLDER_ID });
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const blockData = output.blocks[0].data;
 
       expect(blockData.items[0]).toContain('<strong>');
@@ -1084,9 +1084,9 @@ test.describe('sanitizing', () => {
 
   test.describe('function-based sanitization rules', () => {
     test('should apply function-based sanitization rules', async ({ page }) => {
-      await resetEditor(page);
+      await resetBlok(page);
 
-      await page.evaluate(async ({ holderId }) => {
+      await page.evaluate(async ({ holder }) => {
         /**
          * Custom tool with function-based sanitization
          */
@@ -1143,8 +1143,8 @@ test.describe('sanitizing', () => {
           }
         }
 
-        const editor = new window.EditorJS({
-          holder: holderId,
+        const blok = new window.Blok({
+          holder: holder,
           tools: {
             custom: CustomTool,
           },
@@ -1160,11 +1160,11 @@ test.describe('sanitizing', () => {
           },
         });
 
-        window.editorInstance = editor;
-        await editor.isReady;
-      }, { holderId: HOLDER_ID });
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('href="https://example.com"');
@@ -1174,9 +1174,9 @@ test.describe('sanitizing', () => {
     });
 
     test('should apply conditional sanitization based on content', async ({ page }) => {
-      await resetEditor(page);
+      await resetBlok(page);
 
-      await page.evaluate(async ({ holderId }) => {
+      await page.evaluate(async ({ holder }) => {
         /**
          * Custom tool with conditional sanitization
          */
@@ -1223,8 +1223,8 @@ test.describe('sanitizing', () => {
           }
         }
 
-        const editor = new window.EditorJS({
-          holder: holderId,
+        const blok = new window.Blok({
+          holder: holder,
           tools: {
             custom: CustomTool,
           },
@@ -1240,11 +1240,11 @@ test.describe('sanitizing', () => {
           },
         });
 
-        window.editorInstance = editor;
-        await editor.isReady;
-      }, { holderId: HOLDER_ID });
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
 
-      const output = await saveEditor(page);
+      const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
 
       expect(text).toContain('<strong>Valid</strong>');

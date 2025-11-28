@@ -19,7 +19,7 @@ export default class ConvertInlineTool implements InlineTool {
   public static isInline = true;
 
   /**
-   * API for working with editor blocks
+   * API for working with blok blocks
    */
   private readonly blocksAPI: Blocks;
 
@@ -44,7 +44,7 @@ export default class ConvertInlineTool implements InlineTool {
   private readonly caretAPI: Caret;
 
   /**
-   * @param api - Editor.js API
+   * @param api - Blok API
    */
   constructor({ api }: { api: API }) {
     this.i18nAPI = api.i18n;

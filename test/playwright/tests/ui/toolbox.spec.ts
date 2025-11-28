@@ -2,50 +2,50 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '@/types';
+import type Blok from '@/types';
 import type { ConversionConfig, ToolboxConfig, OutputData } from '@/types';
 import type { BlockToolConstructable } from '@/types/tools';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
-const PARAGRAPH_BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const HOLDER_ID = 'blok';
+const PARAGRAPH_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
 const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
 const SECONDARY_TITLE_SELECTOR = '[data-blok-testid="popover-item-secondary-title"]';
 
 /**
- * Reset the editor holder and destroy any existing instance
+ * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
  */
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
 /**
- * Create editor with custom tools
+ * Create blok with custom tools
  * @param page - The Playwright page object
  * @param tools - Tools configuration
- * @param data - Optional initial editor data
+ * @param data - Optional initial blok data
  */
 type SerializedToolConfig = {
   name: string;
@@ -86,22 +86,22 @@ const serializeTools = (
   });
 };
 
-const createEditorWithTools = async (
+const createBlokWithTools = async (
   page: Page,
   tools: Record<string, { class: BlockToolConstructable; shortcut?: string }>,
   data?: OutputData
 ): Promise<void> => {
-  await resetEditor(page);
+  await resetBlok(page);
 
   const serializedTools = serializeTools(tools);
 
   await registerToolClasses(page, serializedTools);
 
   const registeredToolNames = await page.evaluate(
-    async ({ holderId, editorTools, editorData }) => {
+    async ({ holder, blokTools, blokData }) => {
       const registry = window.__playwrightToolRegistry ?? {};
 
-      const toolsMap = editorTools.reduce<
+      const toolsMap = blokTools.reduce<
       Record<string, { class: BlockToolConstructable } & Record<string, unknown>>
       >((accumulator, { name, config }) => {
         const toolClass = registry[name];
@@ -119,24 +119,24 @@ const createEditorWithTools = async (
         };
       }, {});
 
-      const editor = new window.EditorJS({
-        holder: holderId,
+      const blok = new window.Blok({
+        holder: holder,
         tools: toolsMap,
-        ...(editorData ? { data: editorData } : {}),
+        ...(blokData ? { data: blokData } : {}),
       });
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
 
       return Object.keys(toolsMap);
     },
     {
-      holderId: HOLDER_ID,
-      editorTools: serializedTools.map(({ name, config }) => ({
+      holder: HOLDER_ID,
+      blokTools: serializedTools.map(({ name, config }) => ({
         name,
         config,
       })),
-      editorData: data ?? null,
+      blokData: data ?? null,
     }
   );
 
@@ -148,30 +148,30 @@ const createEditorWithTools = async (
 };
 
 /**
- * Save editor data
+ * Save blok data
  * @param page - The Playwright page object
  * @returns The saved output data
  */
-const saveEditor = async (page: Page): Promise<OutputData> => {
+const saveBlok = async (page: Page): Promise<OutputData> => {
   return await page.evaluate(async () => {
-    if (!window.editorInstance) {
-      throw new Error('Editor instance not found');
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    return await window.editorInstance.save();
+    return await window.blokInstance.save();
   });
 };
 
 const runShortcutBehaviour = async (page: Page, toolName: string): Promise<void> => {
   await page.evaluate(
     async ({ toolName: shortcutTool }) => {
-      const editor =
-        window.editorInstance ??
+      const blok =
+        window.blokInstance ??
         (() => {
-          throw new Error('Editor instance not found');
+          throw new Error('Blok instance not found');
         })();
 
-      const { blocks, caret } = editor;
+      const { blocks, caret } = blok;
       const currentBlockIndex = blocks.getCurrentBlockIndex();
       const currentBlock =
         blocks.getBlockByIndex(currentBlockIndex) ??
@@ -210,7 +210,7 @@ const isCaretInBlock = async (page: Page, blockId: string): Promise<boolean> => 
     }
 
     const range = selection.getRangeAt(0);
-    const blockElement = document.querySelector(`.ce-block[data-blok-id="${id}"]`);
+    const blockElement = document.querySelector(`.blok-element[data-blok-id="${id}"]`);
 
     if (!blockElement) {
       return false;
@@ -222,7 +222,7 @@ const isCaretInBlock = async (page: Page, blockId: string): Promise<boolean> => 
 
 test.describe('toolbox', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -290,7 +290,7 @@ test.describe('toolbox', () => {
         }
       };
 
-      await createEditorWithTools(page, {
+      await createBlokWithTools(page, {
         convertableTool: {
           class: ConvertableTool as unknown as BlockToolConstructable,
           shortcut: 'CMD+SHIFT+H',
@@ -301,7 +301,7 @@ test.describe('toolbox', () => {
       await page.evaluate(() => {
         return new Promise<void>((resolve) => {
           const check = (): void => {
-            type EditorJSInternal = EditorJS & {
+            type BlokJSInternal = Blok & {
               module: {
                 toolbar: {
                   toolboxInstance: unknown;
@@ -309,7 +309,7 @@ test.describe('toolbox', () => {
               };
             };
 
-            if ((window.editorInstance as unknown as EditorJSInternal)?.module?.toolbar?.toolboxInstance) {
+            if ((window.blokInstance as unknown as BlokJSInternal)?.module?.toolbar?.toolboxInstance) {
               resolve();
             } else {
               requestAnimationFrame(check);
@@ -333,16 +333,16 @@ test.describe('toolbox', () => {
       /**
        * Check that block was converted
        */
-      const editorData = await saveEditor(page);
+      const blokData = await saveBlok(page);
 
-      expect(editorData.blocks).toHaveLength(1);
-      expect(editorData.blocks[0].type).toBe('convertableTool');
-      expect(editorData.blocks[0].data.text).toBe('Some text');
+      expect(blokData.blocks).toHaveLength(1);
+      expect(blokData.blocks[0].type).toBe('convertableTool');
+      expect(blokData.blocks[0].data.text).toBe('Some text');
 
       /**
        * Check that caret belongs to the new block after conversion
        */
-      const blockId = editorData.blocks[0]?.id;
+      const blockId = blokData.blocks[0]?.id;
 
       expect(blockId).toBeDefined();
 
@@ -402,7 +402,7 @@ test.describe('toolbox', () => {
         }
       };
 
-      await createEditorWithTools(page, {
+      await createBlokWithTools(page, {
         nonConvertableTool: {
           class: ToolWithoutConversionConfig as unknown as BlockToolConstructable,
           shortcut: 'CMD+SHIFT+H',
@@ -421,10 +421,10 @@ test.describe('toolbox', () => {
       /**
        * Check that the new block was appended
        */
-      const editorData = await saveEditor(page);
+      const blokData = await saveBlok(page);
 
-      expect(editorData.blocks).toHaveLength(2);
-      expect(editorData.blocks[1].type).toBe('nonConvertableTool');
+      expect(blokData.blocks).toHaveLength(2);
+      expect(blokData.blocks[1].type).toBe('nonConvertableTool');
     });
 
     test('should display shortcut only for the first toolbox item if tool exports toolbox with several items', async ({ page }) => {
@@ -484,7 +484,7 @@ test.describe('toolbox', () => {
         }
       };
 
-      await createEditorWithTools(page, {
+      await createBlokWithTools(page, {
         severalToolboxItemsTool: {
           class: ToolWithSeveralToolboxItems as unknown as BlockToolConstructable,
           shortcut: 'CMD+SHIFT+L',
@@ -499,10 +499,10 @@ test.describe('toolbox', () => {
       await paragraphBlock.locator('[contenteditable]').fill('Some text');
       await paragraphBlock.locator('[contenteditable]').fill('');
       await paragraphBlock.locator('[contenteditable]').focus();
-      // Trigger backspace to ensure Editor.js internal state is clean
+      // Trigger backspace to ensure Blok.js internal state is clean
       await page.keyboard.press('Backspace');
 
-      // Wait for Editor.js to mark it as empty
+      // Wait for Blok.js to mark it as empty
       await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-blok-empty', 'true');
 
       // Open toolbox with "/" shortcut
@@ -584,7 +584,7 @@ test.describe('toolbox', () => {
         }
       };
 
-      await createEditorWithTools(page, {
+      await createBlokWithTools(page, {
         oneToolboxItemTool: {
           class: ToolWithOneToolboxItems as unknown as BlockToolConstructable,
           shortcut: 'CMD+SHIFT+L',
@@ -599,10 +599,10 @@ test.describe('toolbox', () => {
       await paragraphBlock.locator('[contenteditable]').fill('Some text');
       await paragraphBlock.locator('[contenteditable]').fill('');
       await paragraphBlock.locator('[contenteditable]').focus();
-      // Trigger backspace to ensure Editor.js internal state is clean
+      // Trigger backspace to ensure Blok.js internal state is clean
       await page.keyboard.press('Backspace');
 
-      // Wait for Editor.js to mark it as empty
+      // Wait for Blok.js to mark it as empty
       await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-blok-empty', 'true');
 
       // Open toolbox with "/" shortcut
@@ -630,8 +630,8 @@ declare global {
   interface Window {
 
     __playwrightToolRegistry?: Record<string, BlockToolConstructable>;
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }
 

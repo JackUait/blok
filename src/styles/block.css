@@ -8,7 +8,7 @@
     }
 }
 
-.ce-block {
+.blok-element {
     position: relative;
     /**
      * Avoid animation-related opacity=0 states that can hide blocks in headless environments.
@@ -34,7 +34,7 @@
         }
 
         img,
-        .ce-stub {
+        .blok-stub {
             opacity: 0.55;
         }
     }

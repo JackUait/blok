@@ -1,12 +1,12 @@
-.codex-editor.codex-editor--rtl {
+.blok-editor.blok-editor--rtl {
     direction: rtl;
 
-    .cdx-list {
+    .blok-list {
         padding-left: 0;
         padding-right: 40px;
     }
 
-    .ce-toolbar {
+    .blok-toolbar {
         &__plus {
             right: calc(var(--toolbox-buttons-size) * -1);
             left: auto;
@@ -25,7 +25,7 @@
         }
     }
 
-    .ce-settings {
+    .blok-settings {
         left: 5px;
         right: auto;
 
@@ -42,14 +42,14 @@
         }
     }
 
-    .ce-conversion-tool {
+    .blok-conversion-tool {
         &__icon {
             margin-right: 0;
             margin-left: 10px;
         }
     }
 
-    .ce-inline-toolbar {
+    .blok-inline-toolbar {
         &__dropdown {
             border-right: 0 solid transparent;
             border-left: 1px solid var(--color-line-gray);
@@ -63,15 +63,15 @@
     }
 }
 
-.codex-editor--narrow.codex-editor--rtl {
-    .ce-toolbar__plus {
+.blok-editor--narrow.blok-editor--rtl {
+    .blok-toolbar__plus {
         @media (--not-mobile) {
             left: 0;
             right: 5px;
         }
     }
 
-    .ce-toolbar__actions {
+    .blok-toolbar__actions {
         @media (--not-mobile) {
             left: -5px;
         }

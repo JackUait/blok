@@ -527,7 +527,7 @@ export default class Dom {
 
   /**
    * Return element's offset related to the document
-   * @todo handle case when editor initialized in scrollable popup
+   * @todo handle case when blok initialized in scrollable popup
    * @param el - element to compute offset
    */
   public static offset(el: Element): { top: number; left: number; right: number; bottom: number } {

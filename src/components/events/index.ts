@@ -7,22 +7,22 @@ import type { FakeCursorAboutToBeToggledPayload } from './FakeCursorAboutToBeTog
 import { FakeCursorAboutToBeToggled } from './FakeCursorAboutToBeToggled';
 import type { FakeCursorHaveBeenSetPayload } from './FakeCursorHaveBeenSet';
 import { FakeCursorHaveBeenSet } from './FakeCursorHaveBeenSet';
-import type { EditorMobileLayoutToggledPayload } from './EditorMobileLayoutToggled';
-import { EditorMobileLayoutToggled } from './EditorMobileLayoutToggled';
+import type { BlokMobileLayoutToggledPayload } from './BlokMobileLayoutToggled';
+import { BlokMobileLayoutToggled } from './BlokMobileLayoutToggled';
 import type { BlockSettingsOpenedPayload } from './BlockSettingsOpened';
 import { BlockSettingsOpened } from './BlockSettingsOpened';
 import type { BlockSettingsClosedPayload } from './BlockSettingsClosed';
 import { BlockSettingsClosed } from './BlockSettingsClosed';
 
 /**
- * Events fired by Editor Event Dispatcher
+ * Events fired by Blok Event Dispatcher
  */
 export {
   RedactorDomChanged,
   BlockChanged,
   FakeCursorAboutToBeToggled,
   FakeCursorHaveBeenSet,
-  EditorMobileLayoutToggled,
+  BlokMobileLayoutToggled,
   BlockSettingsOpened,
   BlockSettingsClosed
 };
@@ -30,13 +30,13 @@ export {
 /**
  * Event name -> Event payload
  */
-export interface EditorEventMap {
+export interface BlokEventMap {
   [BlockHovered]: BlockHoveredPayload;
   [RedactorDomChanged]: RedactorDomChangedPayload;
   [BlockChanged]: BlockChangedPayload;
   [FakeCursorAboutToBeToggled]: FakeCursorAboutToBeToggledPayload;
   [FakeCursorHaveBeenSet]: FakeCursorHaveBeenSetPayload;
-  [EditorMobileLayoutToggled]: EditorMobileLayoutToggledPayload;
+  [BlokMobileLayoutToggled]: BlokMobileLayoutToggledPayload;
   [BlockSettingsOpened]: BlockSettingsOpenedPayload;
   [BlockSettingsClosed]: BlockSettingsClosedPayload;
 }

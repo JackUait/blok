@@ -3,19 +3,19 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureEditorBundleBuilt } from '../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HOLDER_ID = 'editorjs';
+const HOLDER_ID = 'blok';
 const BLOCK_TUNES_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
-const SETTINGS_BUTTON_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const POPOVER_CONTAINER_SELECTOR = `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"]`;
 const POPOVER_ITEM_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"]`;
-const PLUGIN_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="some-plugin"]`;
+const PLUGIN_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="some-plugin"]`;
 const INLINE_TOOLBAR_SELECTOR = '[data-blok-testid="inline-toolbar"] [data-blok-testid="popover"][data-blok-popover-opened="true"]';
 
 const KEY_CODES = {
@@ -64,7 +64,7 @@ class SomePlugin {
   public render(): HTMLElement {
     const wrapper = document.createElement('div');
 
-    wrapper.classList.add('cdx-some-plugin');
+    wrapper.classList.add('blok-some-plugin');
     wrapper.setAttribute('data-blok-testid', 'some-plugin');
     wrapper.contentEditable = 'true';
     wrapper.addEventListener('keydown', SomePlugin.pluginInternalKeydownHandler);
@@ -101,39 +101,39 @@ type ToolDefinition = {
   config?: Record<string, unknown>;
 };
 
-type EditorSetupOptions = {
+type BlokSetupOptions = {
   data?: Record<string, unknown>;
   config?: Record<string, unknown>;
   tools?: ToolDefinition[];
 };
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promise<void> => {
+const createBlok = async (page: Page, options: BlokSetupOptions = {}): Promise<void> => {
   const { data, config, tools = [] } = options;
 
-  await resetEditor(page);
-  await page.waitForFunction(() => typeof window.EditorJS === 'function');
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
-    async ({ holderId, rawData, rawConfig, serializedTools }) => {
+    async ({ holder, rawData, rawConfig, serializedTools }) => {
       const reviveToolClass = (classSource: string): unknown => {
         return new Function(`return (${classSource});`)();
       };
@@ -152,23 +152,23 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
         };
       }, {});
 
-      const editorConfig = {
-        holder: holderId,
+      const blokConfig = {
+        holder: holder,
         ...rawConfig,
         ...(serializedTools.length > 0 ? { tools: revivedTools } : {}),
         ...(rawData ? { data: rawData } : {}),
       };
 
-      const editor = new window.EditorJS(editorConfig);
+      const blok = new window.Blok(blokConfig);
 
-      window.editorInstance = editor;
-      await editor.isReady;
+      window.blokInstance = blok;
+      await blok.isReady;
 
        
       (globalThis as typeof globalThis & { __pluginHandlerCallCount?: number }).__pluginHandlerCallCount = 0;
     },
     {
-      holderId: HOLDER_ID,
+      holder: HOLDER_ID,
       rawData: data ?? null,
       rawConfig: config ?? {},
       serializedTools: tools,
@@ -176,8 +176,8 @@ const createEditor = async (page: Page, options: EditorSetupOptions = {}): Promi
   );
 };
 
-const createEditorWithPlugin = async (page: Page, data?: Record<string, unknown>): Promise<void> => {
-  await createEditor(page, {
+const createBlokWithPlugin = async (page: Page, data?: Record<string, unknown>): Promise<void> => {
+  await createBlok(page, {
     data,
     tools: [
       {
@@ -309,14 +309,14 @@ const closeBlockTunes = async (page: Page): Promise<void> => {
 
 test.describe('flipper', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
   });
   test('prevents plugin keydown handler during keyboard navigation', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -348,13 +348,13 @@ test.describe('flipper', () => {
   });
 
   test('does not flip items when Shift is held', async ({ page }) => {
-    await createEditor(page, {
+    await createBlok(page, {
       data: {
         blocks: [
           {
             type: 'paragraph',
             data: {
-              text: 'Workspace in classic editors is made of a single contenteditable element, used to create different HTML markups. Editor.js workspace consists of separate Blocks: paragraphs, headings, images, lists, quotes, etc. Each of them is an independent contenteditable element (or more complex structure) provided by Plugin and united by Editor\'s Core.',
+              text: 'Workspace in classic blok is made of a single contenteditable element, used to create different HTML markups. Blok workspace consists of separate Blocks: paragraphs, headings, images, lists, quotes, etc. Each of them is an independent contenteditable element (or more complex structure) provided by Plugin and united by Blok\'s Core.',
             },
           },
         ],
@@ -364,8 +364,8 @@ test.describe('flipper', () => {
       },
     });
 
-    const paragraphWrapper = page.locator(`${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`, {
-      hasText: /^Workspace in classic editors/,
+    const paragraphWrapper = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`, {
+      hasText: /^Workspace in classic blok/,
     });
     // The contenteditable element is inside the block wrapper
     const paragraph = paragraphWrapper.locator('[contenteditable]');
@@ -383,7 +383,7 @@ test.describe('flipper', () => {
   });
 
   test('cycles focus with Tab and Shift+Tab', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -427,7 +427,7 @@ test.describe('flipper', () => {
   });
 
   test('pressing Enter activates the focused item', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -478,7 +478,7 @@ test.describe('flipper', () => {
   });
 
   test('ignores navigation for keys outside allowed list', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -499,7 +499,7 @@ test.describe('flipper', () => {
   });
 
   test('removes capturing listener on deactivate', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -529,7 +529,7 @@ test.describe('flipper', () => {
   });
 
   test('falls back to toolbar button when shortcut is unavailable', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -552,7 +552,7 @@ test.describe('flipper', () => {
   });
 
   test('isActivated getter returns correct state', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -566,14 +566,14 @@ test.describe('flipper', () => {
     await plugin.click();
 
     const isActivatedBefore = await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
+      if (!blok) {
         return null;
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -587,14 +587,14 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     const isActivatedAfter = await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
+      if (!blok) {
         return null;
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -608,14 +608,14 @@ test.describe('flipper', () => {
     await closeBlockTunes(page);
 
     const isActivatedAfterClose = await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
+      if (!blok) {
         return null;
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -628,7 +628,7 @@ test.describe('flipper', () => {
   });
 
   test('hasFocus returns correct state', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -643,14 +643,14 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     const hasFocusBefore = await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
+      if (!blok) {
         return null;
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -667,14 +667,14 @@ test.describe('flipper', () => {
     });
 
     const hasFocusAfter = await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
+      if (!blok) {
         return null;
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -687,7 +687,7 @@ test.describe('flipper', () => {
   });
 
   test('focusFirst focuses the first item', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -702,14 +702,14 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor not found');
+      if (!blok) {
+        throw new Error('Blok not found');
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -732,7 +732,7 @@ test.describe('flipper', () => {
   });
 
   test('onFlip callback is executed on navigation', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -747,14 +747,14 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     const flipCallbackCount = await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
+      if (!blok) {
         return null;
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -829,7 +829,7 @@ test.describe('flipper', () => {
   });
 
   test('removeOnFlip removes callback correctly', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -844,14 +844,14 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor not found');
+      if (!blok) {
+        throw new Error('Blok not found');
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -896,14 +896,14 @@ test.describe('flipper', () => {
     expect(countBeforeRemoval).toBe(1);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor not found');
+      if (!blok) {
+        throw new Error('Blok not found');
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -936,7 +936,7 @@ test.describe('flipper', () => {
   });
 
   test('activate with cursorPosition parameter', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -955,14 +955,14 @@ test.describe('flipper', () => {
 
     await page.evaluate(
       ({ targetIndex: activeIndex, selector }) => {
-        const editor = window.editorInstance;
+        const blok = window.blokInstance;
 
-        if (!editor) {
-          throw new Error('Editor not found');
+        if (!blok) {
+          throw new Error('Blok not found');
         }
 
          
-        const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+        const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
         if (!blockSettings || !blockSettings.flipper) {
           throw new Error('Flipper not found');
@@ -1005,7 +1005,7 @@ test.describe('flipper', () => {
   });
 
   test('activate with items parameter updates items dynamically', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -1020,14 +1020,14 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor not found');
+      if (!blok) {
+        throw new Error('Blok not found');
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -1040,13 +1040,13 @@ test.describe('flipper', () => {
       // Create new items
       const newItem1 = document.createElement('div');
 
-      newItem1.className = 'ce-popover-item';
+      newItem1.className = 'blok-popover-item';
       newItem1.setAttribute('data-blok-testid', 'popover-item');
       newItem1.textContent = 'New Item 1';
 
       const newItem2 = document.createElement('div');
 
-      newItem2.className = 'ce-popover-item';
+      newItem2.className = 'blok-popover-item';
       newItem2.setAttribute('data-blok-testid', 'popover-item');
       newItem2.textContent = 'New Item 2';
 
@@ -1069,7 +1069,7 @@ test.describe('flipper', () => {
   });
 
   test('activateCallback is invoked on Enter press', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -1131,19 +1131,19 @@ test.describe('flipper', () => {
   });
 
   test('handles empty items array gracefully', async ({ page }) => {
-    await createEditor(page);
+    await createBlok(page);
 
     // Test that Flipper can be activated/deactivated even when there are no items
-    // This is tested indirectly through the editor's behavior
+    // This is tested indirectly through the blok's behavior
     const result = await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        return { error: 'Editor not found' };
+      if (!blok) {
+        return { error: 'Blok not found' };
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return { error: 'Flipper not found' };
@@ -1172,7 +1172,7 @@ test.describe('flipper', () => {
   });
 
   test('handles multiple activation/deactivation cycles', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -1187,14 +1187,14 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor not found');
+      if (!blok) {
+        throw new Error('Blok not found');
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -1214,14 +1214,14 @@ test.describe('flipper', () => {
     });
 
     const isActivated = await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
+      if (!blok) {
         return null;
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -1235,14 +1235,14 @@ test.describe('flipper', () => {
     await closeBlockTunes(page);
 
     const isActivatedAfterClose = await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
+      if (!blok) {
         return null;
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -1255,7 +1255,7 @@ test.describe('flipper', () => {
   });
 
   test('custom allowedKeys configuration works correctly', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -1283,7 +1283,7 @@ test.describe('flipper', () => {
   });
 
   test('focusedItemClass is applied to focused items', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -1297,7 +1297,7 @@ test.describe('flipper', () => {
     await plugin.click();
     await openBlockTunesWithShortcut(page, plugin);
 
-    // Test that the focusedItemClass (ce-popover-item--focused) is applied
+    // Test that the focusedItemClass (blok-popover-item--focused) is applied
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
       code: 'Tab',
@@ -1310,7 +1310,7 @@ test.describe('flipper', () => {
   });
 
   test('handleEnterPress does not activate when not activated', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -1360,7 +1360,7 @@ test.describe('flipper', () => {
   });
 
   test('multiple onFlip callbacks are all executed', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -1375,14 +1375,14 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor not found');
+      if (!blok) {
+        throw new Error('Blok not found');
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -1453,7 +1453,7 @@ test.describe('flipper', () => {
   });
 
   test('removeOnFlip with non-existent callback does not error', async ({ page }) => {
-    await createEditorWithPlugin(page, {
+    await createBlokWithPlugin(page, {
       blocks: [
         {
           type: 'sometool',
@@ -1468,14 +1468,14 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     await page.evaluate(() => {
-      const editor = window.editorInstance;
+      const blok = window.blokInstance;
 
-      if (!editor) {
-        throw new Error('Editor not found');
+      if (!blok) {
+        throw new Error('Blok not found');
       }
 
        
-      const blockSettings = (editor as any).module?.toolbar?.blockSettings;
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');

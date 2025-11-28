@@ -33,10 +33,10 @@ describe('Dom helper utilities', () => {
     });
 
     it('creates text nodes via text()', () => {
-      const node = Dom.text('EditorJS');
+      const node = Dom.text('Blok');
 
       expect(node.nodeType).toBe(Node.TEXT_NODE);
-      expect(node.textContent).toBe('EditorJS');
+      expect(node.textContent).toBe('Blok');
     });
   });
 

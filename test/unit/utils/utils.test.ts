@@ -18,7 +18,7 @@ import {
   delay,
   debounce,
   throttle,
-  getEditorVersion,
+  getBlokVersion,
   getFileExtension,
   isValidMimeType,
   capitalize,
@@ -56,7 +56,7 @@ describe('utils', () => {
     setLogLevel(LogLevels.VERBOSE);
   });
 
-  describe('getEditorVersion', () => {
+  describe('getBlokVersion', () => {
     const versionHolder = globalThis as { VERSION?: string };
     const initialVersion = versionHolder.VERSION;
 
@@ -71,13 +71,13 @@ describe('utils', () => {
     it('should return injected VERSION when defined', () => {
       versionHolder.VERSION = '9.9.9';
 
-      expect(getEditorVersion()).toBe('9.9.9');
+      expect(getBlokVersion()).toBe('9.9.9');
     });
 
     it('should fallback to default version when VERSION is not set', () => {
       delete versionHolder.VERSION;
 
-      expect(getEditorVersion()).toBe('dev');
+      expect(getBlokVersion()).toBe('dev');
     });
   });
 

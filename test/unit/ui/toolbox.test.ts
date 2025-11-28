@@ -5,7 +5,7 @@ import type BlockToolAdapter from '../../../src/components/tools/block';
 import type ToolsCollection from '../../../src/components/tools/collection';
 import type { Popover } from '../../../src/components/utils/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { EditorMobileLayoutToggled } from '../../../src/components/events';
+import { BlokMobileLayoutToggled } from '../../../src/components/events';
 import Shortcuts from '../../../src/components/utils/shortcuts';
 
 // Use vi.hoisted to create mock instance that can be shared between factory and tests
@@ -166,7 +166,7 @@ describe('Toolbox', () => {
       const element = toolbox.getElement();
 
       expect(element).not.toBeNull();
-      expect(element?.classList.contains('ce-toolbox')).toBe(true);
+      expect(element?.classList.contains('blok-toolbox')).toBe(true);
     });
 
     it('should set data-blok-testid attribute in test mode', () => {
@@ -191,7 +191,7 @@ describe('Toolbox', () => {
       expect(toolbox.opened).toBe(false);
     });
 
-    it('should register EditorMobileLayoutToggled event listener', () => {
+    it('should register BlokMobileLayoutToggled event listener', () => {
       new Toolbox({
         api: mocks.api,
         tools: mocks.tools,
@@ -199,7 +199,7 @@ describe('Toolbox', () => {
       });
 
       expect(mocks.api.events.on).toHaveBeenCalledWith(
-        EditorMobileLayoutToggled,
+        BlokMobileLayoutToggled,
         expect.any(Function)
       );
     });
@@ -469,7 +469,7 @@ describe('Toolbox', () => {
       );
     });
 
-    it('should remove EditorMobileLayoutToggled event listener', () => {
+    it('should remove BlokMobileLayoutToggled event listener', () => {
       const toolbox = new Toolbox({
         api: mocks.api,
         tools: mocks.tools,
@@ -479,7 +479,7 @@ describe('Toolbox', () => {
       toolbox.destroy();
 
       expect(mocks.api.events.off).toHaveBeenCalledWith(
-        EditorMobileLayoutToggled,
+        BlokMobileLayoutToggled,
         expect.any(Function)
       );
     });

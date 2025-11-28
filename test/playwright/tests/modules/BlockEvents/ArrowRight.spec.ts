@@ -2,64 +2,64 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type EditorJS from '../../../../../types';
+import type Blok from '../../../../../types';
 import type { OutputData } from '../../../../../types';
-import { ensureEditorBundleBuilt } from '../../helpers/ensure-build';
-import { EDITOR_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../../fixtures/test.html')
 ).href;
-const HOLDER_ID = 'editorjs';
-const BLOCK_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${EDITOR_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const HOLDER_ID = 'blok';
+const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
 const CONTENTLESS_TOOL_SELECTOR = '[data-blok-testid-type="contentless-tool"]';
 
-const resetEditor = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holderId }) => {
-    if (window.editorInstance) {
-      await window.editorInstance.destroy?.();
-      window.editorInstance = undefined;
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
     }
 
-    document.getElementById(holderId)?.remove();
+    document.getElementById(holder)?.remove();
 
     const container = document.createElement('div');
 
-    container.id = holderId;
-    container.setAttribute('data-blok-testid', holderId);
+    container.id = holder;
+    container.setAttribute('data-blok-testid', holder);
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
-  }, { holderId: HOLDER_ID });
+  }, { holder: HOLDER_ID });
 };
 
-const createEditorWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId, blocks: editorBlocks }) => {
-    const editor = new window.EditorJS({
-      holder: holderId,
-      data: { blocks: editorBlocks },
+const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
+      holder: holder,
+      data: { blocks: blokBlocks },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID,
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID,
     blocks });
 };
 
-const createParagraphEditor = async (page: Page, textBlocks: string[]): Promise<void> => {
+const createParagraphBlok = async (page: Page, textBlocks: string[]): Promise<void> => {
   const blocks: OutputData['blocks'] = textBlocks.map((text) => ({
     type: 'paragraph',
     data: { text },
   }));
 
-  await createEditorWithBlocks(page, blocks);
+  await createBlokWithBlocks(page, blocks);
 };
 
-const createEditorWithContentlessBlock = async (page: Page): Promise<void> => {
-  await resetEditor(page);
-  await page.evaluate(async ({ holderId }) => {
+const createBlokWithContentlessBlock = async (page: Page): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder }) => {
     /**
      *
      */
@@ -92,8 +92,8 @@ const createEditorWithContentlessBlock = async (page: Page): Promise<void> => {
       }
     }
 
-    const editor = new window.EditorJS({
-      holder: holderId,
+    const blok = new window.Blok({
+      holder: holder,
       tools: {
         delimiter: ContentlessToolMock,
       },
@@ -122,9 +122,9 @@ const createEditorWithContentlessBlock = async (page: Page): Promise<void> => {
       },
     });
 
-    window.editorInstance = editor;
-    await editor.isReady;
-  }, { holderId: HOLDER_ID });
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID });
 };
 
 const getParagraphByIndex = (page: Page, index: number): Locator => {
@@ -175,7 +175,7 @@ const waitForCaretInBlock = async (page: Page, locator: Locator, expectedBlockIn
     }
 
     const currentIndex = await page.evaluate(() => {
-      return window.editorInstance?.blocks.getCurrentBlockIndex?.() ?? -1;
+      return window.blokInstance?.blocks.getCurrentBlockIndex?.() ?? -1;
     });
 
     return currentIndex;
@@ -186,26 +186,26 @@ const waitForCaretInBlock = async (page: Page, locator: Locator, expectedBlockIn
 
 test.describe('arrow right keydown', () => {
   test.beforeAll(() => {
-    ensureEditorBundleBuilt();
+    ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
     page.on('console', msg => console.log(msg.text()));
     await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.EditorJS === 'function');
-    await page.addStyleTag({ content: '.ce-paragraph { white-space: pre-wrap !important; }' });
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+    await page.addStyleTag({ content: '.blok-paragraph { white-space: pre-wrap !important; }' });
   });
 
   test.describe('starting whitespaces handling', () => {
     test('should move caret over visible non-breaking space then to next block', async ({ page }) => {
-      await createParagraphEditor(page, ['1&nbsp;', '2']);
+      await createParagraphBlok(page, ['1&nbsp;', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
 
       // Explicitly set textContent to ensure NBSP is preserved
       await firstParagraph.evaluate((node) => {
-        const content = node.querySelector('.ce-paragraph');
+        const content = node.querySelector('.blok-paragraph');
 
         if (content) {
           content.textContent = '1\\u00A0';
@@ -226,7 +226,7 @@ test.describe('arrow right keydown', () => {
     });
 
     test('should ignore invisible space after caret and move to next block', async ({ page }) => {
-      await createParagraphEditor(page, ['1 ', '2']);
+      await createParagraphBlok(page, ['1 ', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
@@ -245,14 +245,14 @@ test.describe('arrow right keydown', () => {
     });
 
     test('should ignore empty tags after caret and move to next block', async ({ page }) => {
-      await createParagraphEditor(page, ['1<b></b>', '2']);
+      await createParagraphBlok(page, ['1<b></b>', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
 
       // Explicitly set innerHTML to ensure empty tags are preserved
       await firstParagraph.evaluate((node) => {
-        const content = node.querySelector('.ce-paragraph');
+        const content = node.querySelector('.blok-paragraph');
 
         if (content) {
           content.innerHTML = '1<b></b>';
@@ -272,14 +272,14 @@ test.describe('arrow right keydown', () => {
     });
 
     test('should move caret over visible space and then to next block when empty tag follows', async ({ page }) => {
-      await createParagraphEditor(page, ['1&nbsp;<b></b>', '2']);
+      await createParagraphBlok(page, ['1&nbsp;<b></b>', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
 
       // Explicitly set innerHTML to ensure empty tags and NBSP are preserved
       await firstParagraph.evaluate((node) => {
-        const content = node.querySelector('.ce-paragraph');
+        const content = node.querySelector('.blok-paragraph');
 
         if (content) {
           content.innerHTML = '1&nbsp;<b></b>';
@@ -300,14 +300,14 @@ test.describe('arrow right keydown', () => {
     });
 
     test('should ignore empty tag and move caret over visible space before moving to next block', async ({ page }) => {
-      await createParagraphEditor(page, ['1<b></b>&nbsp;', '2']);
+      await createParagraphBlok(page, ['1<b></b>&nbsp;', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
 
       // Explicitly set innerHTML to ensure empty tags and NBSP are preserved
       await firstParagraph.evaluate((node) => {
-        const content = node.querySelector('.ce-paragraph');
+        const content = node.querySelector('.blok-paragraph');
 
         if (content) {
           content.innerHTML = '1<b></b>&nbsp;';
@@ -329,7 +329,7 @@ test.describe('arrow right keydown', () => {
     });
 
     test('should move caret over visible space and ignore trailing space before moving to next block', async ({ page }) => {
-      await createParagraphEditor(page, ['1&nbsp; ', '2']);
+      await createParagraphBlok(page, ['1&nbsp; ', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
@@ -350,7 +350,7 @@ test.describe('arrow right keydown', () => {
   });
 
   test('should move caret to next block if currently focused block is contentless', async ({ page }) => {
-    await createEditorWithContentlessBlock(page);
+    await createBlokWithContentlessBlock(page);
 
     const firstParagraph = getParagraphByIndex(page, 0);
     const contentlessBlock = page.locator(BLOCK_SELECTOR, {
@@ -378,7 +378,7 @@ test.describe('arrow right keydown', () => {
 
 declare global {
   interface Window {
-    editorInstance?: EditorJS;
-    EditorJS: new (...args: unknown[]) => EditorJS;
+    blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
   }
 }

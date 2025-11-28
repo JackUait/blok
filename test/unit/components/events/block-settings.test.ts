@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { BlockSettingsClosed, type BlockSettingsClosedPayload } from '../../../../src/components/events/BlockSettingsClosed';
-import type { EditorEventMap } from '../../../../src/components/events';
+import type { BlokEventMap } from '../../../../src/components/events';
 import EventsDispatcher from '../../../../src/components/utils/events';
 
 describe('BlockSettingsClosed event', () => {
@@ -16,12 +16,12 @@ describe('BlockSettingsClosed event', () => {
     expect(acceptsPayload(payload)).toEqual({});
   });
 
-  it('is registered in EditorEventMap with matching payload', () => {
-    expectTypeOf<EditorEventMap[typeof BlockSettingsClosed]>().toEqualTypeOf<BlockSettingsClosedPayload>();
+  it('is registered in BlokEventMap with matching payload', () => {
+    expectTypeOf<BlokEventMap[typeof BlockSettingsClosed]>().toEqualTypeOf<BlockSettingsClosedPayload>();
   });
 
   it('can be emitted through EventsDispatcher without payload', () => {
-    const dispatcher = new EventsDispatcher<EditorEventMap>();
+    const dispatcher = new EventsDispatcher<BlokEventMap>();
     const handler = vi.fn();
 
     dispatcher.on(BlockSettingsClosed, handler);

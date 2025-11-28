@@ -1,4 +1,4 @@
-.ce-inline-toolbar {
+.blok-inline-toolbar {
     --y-offset: 8px;
 
     /** These variables duplicate the ones defined in popover. @todo move them to single place */
@@ -66,7 +66,7 @@
     }
 }
 
-.ce-inline-tool {
+.blok-inline-tool {
     color: var(--color-text-primary);
     display: flex;
     justify-content: center;
@@ -132,6 +132,7 @@
         box-sizing: border-box;
         display: none;
         font-weight: 500;
+        appearance: none;
         -webkit-appearance: none;
         font-family: inherit;
 

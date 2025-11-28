@@ -43,7 +43,7 @@ const toToolConstructable = (constructable: unknown): ToolConstructable => {
 };
 
 /**
- * @module Editor.js Tools Submodule
+ * @module Blok Tools Submodule
  *
  * Creates Instances from Plugins and binds external config to the instances
  */
@@ -81,7 +81,7 @@ export default class Tools extends Module {
   }
 
   /**
-   * Return editor block tools
+   * Return blok block tools
    */
   public get blockTools(): ToolsCollection<BlockToolAdapter> {
     return this.available.blockTools;
@@ -163,7 +163,7 @@ export default class Tools extends Module {
 
     const config = this.prepareConfig(toolsConfig);
 
-    this.factory = new ToolsFactory(config, this.config, this.Editor.API);
+    this.factory = new ToolsFactory(config, this.config, this.Blok.API);
 
     /**
      * getting classes that has prepare method

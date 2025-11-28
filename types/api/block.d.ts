@@ -16,7 +16,7 @@ export interface BlockAPI {
   readonly name: string;
 
   /**
-   * Tool config passed on Editor's initialization
+   * Tool config passed on Blok's initialization
    */
   readonly config: ToolConfig;
 
@@ -74,8 +74,8 @@ export interface BlockAPI {
   validate(data: BlockToolData): Promise<boolean>;
 
   /**
-   * Allows to say Editor that Block was changed. Used to manually trigger Editor's 'onChange' callback
-   * Can be useful for block changes invisible for editor core.
+   * Allows to say Blok that an element was changed. Used to manually trigger Blok's 'onChange' callback
+   * Can be useful for block changes invisible for blok core.
    */
   dispatchChange(): void;
 

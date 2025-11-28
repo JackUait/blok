@@ -19,7 +19,7 @@ describe('Blocks', () => {
   const createMockBlock = (id: string, name: string = 'paragraph'): Block => {
     const holder = document.createElement('div');
 
-    holder.className = 'ce-block';
+    holder.className = 'blok-element';
     holder.setAttribute('data-blok-id', id);
 
     const mockBlock = {
@@ -40,7 +40,7 @@ describe('Blocks', () => {
    */
   const createBlocks = (): Blocks => {
     // Reset working area for each test
-    workingArea.className = 'codex-editor';
+    workingArea.className = 'blok-editor';
     workingArea.innerHTML = '';
     if (!document.body.contains(workingArea)) {
       document.body.appendChild(workingArea);

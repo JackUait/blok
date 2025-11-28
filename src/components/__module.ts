@@ -1,9 +1,9 @@
-import type { EditorModules } from '../types-internal/editor-modules';
-import type { EditorConfig } from '../../types';
+import type { BlokModules } from '../types-internal/blok-modules';
+import type { BlokConfig } from '../../types';
 import type { ModuleConfig } from '../types-internal/module-config';
 import Listeners from './utils/listeners';
 import type EventsDispatcher from './utils/events';
-import type { EditorEventMap } from './events';
+import type { BlokEventMap } from './events';
 
 /**
  * The type <T> of the Module generic.
@@ -16,8 +16,8 @@ export type ModuleNodes = object;
  * @class      Module
  * @classdesc  All modules inherits from this class.
  * @typedef {Module} Module
- * @property {object} config - Editor user settings
- * @property {EditorModules} Editor - List of Editor modules
+ * @property {object} config - Blok user settings
+ * @property {BlokModules} Blok - List of Blok modules
  */
 export default class Module<T extends ModuleNodes = Record<string, HTMLElement>> {
   /**
@@ -27,21 +27,21 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
   public nodes: T = {} as any;
 
   /**
-   * Editor modules list
-   * @type {EditorModules}
+   * Blok modules list
+   * @type {BlokModules}
    */
-  protected Editor: EditorModules;
+  protected Blok: BlokModules;
 
   /**
-   * Editor configuration object
-   * @type {EditorConfig}
+   * Blok configuration object
+   * @type {BlokConfig}
    */
-  protected config: EditorConfig;
+  protected config: BlokConfig;
 
   /**
-   * Editor event dispatcher class
+   * Blok event dispatcher class
    */
-  protected eventsDispatcher: EventsDispatcher<EditorEventMap>;
+  protected eventsDispatcher: EventsDispatcher<BlokEventMap>;
 
   /**
    * Util for bind/unbind DOM event listeners
@@ -102,16 +102,16 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
 
     this.config = config;
     this.eventsDispatcher = eventsDispatcher;
-    // Editor is initialized via the state setter after construction
-    this.Editor = {} as EditorModules;
+    // Blok is initialized via the state setter after construction
+    this.Blok = {} as BlokModules;
   }
 
   /**
-   * Editor modules setter
-   * @param {EditorModules} Editor - Editor's Modules
+   * Blok modules setter
+   * @param {BlokModules} Blok - Blok's Modules
    */
-  public set state(Editor: EditorModules) {
-    this.Editor = Editor;
+  public set state(Blok: BlokModules) {
+    this.Blok = Blok;
   }
 
   /**

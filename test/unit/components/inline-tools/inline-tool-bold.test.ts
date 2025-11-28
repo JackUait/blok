@@ -36,10 +36,10 @@ const resetBoldInlineTool = (): void => {
   internals.instances.clear();
 };
 
-const setupEditor = (html: string): { block: HTMLElement } => {
+const setupBlok = (html: string): { block: HTMLElement } => {
   const wrapper = document.createElement('div');
 
-  wrapper.className = SelectionUtils.CSS.editorWrapper;
+  wrapper.className = SelectionUtils.CSS.blokWrapper;
 
   const block = document.createElement('div');
 
@@ -106,7 +106,7 @@ describe('BoldInlineTool', () => {
   });
 
   it('wraps selected text and reports bold state', () => {
-    const { block } = setupEditor('Hello world');
+    const { block } = setupBlok('Hello world');
     const textNode = block.firstChild as Text;
 
     setRange(textNode, 0, 5);
@@ -123,7 +123,7 @@ describe('BoldInlineTool', () => {
   });
 
   it('unwraps existing bold text when toggled again', () => {
-    const { block } = setupEditor('<strong>Hello</strong> world');
+    const { block } = setupBlok('<strong>Hello</strong> world');
     const strong = block.querySelector('strong');
 
     expect(strong).not.toBeNull();
@@ -142,7 +142,7 @@ describe('BoldInlineTool', () => {
   });
 
   it('starts a collapsed bold segment when caret is not inside bold', () => {
-    const { block } = setupEditor('Hello');
+    const { block } = setupBlok('Hello');
     const textNode = block.firstChild as Text;
 
     setRange(textNode, 0);
@@ -161,7 +161,7 @@ describe('BoldInlineTool', () => {
   });
 
   it('exits collapsed bold when caret is inside bold content', () => {
-    const { block } = setupEditor('<strong>BOLD</strong> text');
+    const { block } = setupBlok('<strong>BOLD</strong> text');
     const strong = block.querySelector('strong');
 
     expect(strong).not.toBeNull();

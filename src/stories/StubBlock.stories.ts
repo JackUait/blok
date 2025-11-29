@@ -6,11 +6,11 @@
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { waitFor, expect } from 'storybook/test';
-import Blok from '../blok';
-import type { OutputData, BlokConfig } from '@/types';
-import { waitForIdleCallback } from './helpers';
+import type { OutputData } from '@/types';
+import { createEditorContainer } from './helpers';
+import type { EditorFactoryOptions } from './helpers';
 
-interface StubBlockArgs {
+interface StubBlockArgs extends EditorFactoryOptions {
   minHeight: number;
   data: OutputData;
 }
@@ -42,35 +42,7 @@ const stubBlockData: OutputData = {
   ],
 };
 
-const createEditor = (args: StubBlockArgs): HTMLElement => {
-  const container = document.createElement('div');
-
-  container.style.border = '1px solid #e0e0e0';
-  container.style.borderRadius = '8px';
-  container.style.padding = '16px';
-  container.style.minHeight = `${args.minHeight}px`;
-  container.style.backgroundColor = '#fff';
-
-  const editorHolder = document.createElement('div');
-
-  editorHolder.id = `blok-editor-${Date.now()}`;
-  container.appendChild(editorHolder);
-
-  const config: BlokConfig = {
-    holder: editorHolder,
-    autofocus: false,
-    data: args.data,
-  };
-
-  setTimeout(async () => {
-    const editor = new Blok(config);
-
-    await editor.isReady;
-    await waitForIdleCallback();
-  }, 0);
-
-  return container;
-};
+const createEditor = (args: StubBlockArgs): HTMLElement => createEditorContainer(args);
 
 const meta: Meta<StubBlockArgs> = {
   title: 'Components/Stub Block',
@@ -177,36 +149,7 @@ export const MultipleMissingTools: Story = {
 export const StubInReadOnly: Story = {
   args: {
     data: stubBlockData,
-  },
-  render: (args) => {
-    const container = document.createElement('div');
-
-    container.style.border = '1px solid #e0e0e0';
-    container.style.borderRadius = '8px';
-    container.style.padding = '16px';
-    container.style.minHeight = `${args.minHeight}px`;
-    container.style.backgroundColor = '#fff';
-
-    const editorHolder = document.createElement('div');
-
-    editorHolder.id = `blok-editor-${Date.now()}`;
-    container.appendChild(editorHolder);
-
-    const config: BlokConfig = {
-      holder: editorHolder,
-      autofocus: false,
-      readOnly: true,
-      data: args.data,
-    };
-
-    setTimeout(async () => {
-      const editor = new Blok(config);
-
-      await editor.isReady;
-      await waitForIdleCallback();
-    }, 0);
-
-    return container;
+    readOnly: true,
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for stub block in read-only mode', async () => {

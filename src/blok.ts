@@ -12,6 +12,7 @@ import './components/polyfills';
 import Core from './components/core';
 import * as _ from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
+import Header from './tools/header';
 
 /**
  * Blok
@@ -38,6 +39,11 @@ export default class Blok {
   public static get version(): string {
     return _.getBlokVersion();
   }
+
+  /**
+   * Header tool bundled with Blok
+   */
+  public static Header = Header;
 
   /**
    * @param {BlokConfig|string|undefined} [configuration] - user configuration

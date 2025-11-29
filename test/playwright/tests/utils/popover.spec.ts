@@ -12,7 +12,6 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HEADER_TOOL_UMD_PATH = path.resolve(__dirname, '../../../../node_modules/@editorjs/header/dist/header.umd.js');
 
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -206,8 +205,11 @@ const createBlokWithBlocks = async (
           if (typeof toolConfig === 'object' && toolConfig !== null && 'fromGlobal' in toolConfig) {
             const { fromGlobal, config, ...rest } = toolConfig as GlobalToolConfig;
              
-            const runtimeWindow = window as typeof window & Record<string, any>;
-            const globalTool = runtimeWindow[fromGlobal];
+            // Handle dot notation (e.g., 'Blok.Header')
+            const globalTool = fromGlobal.split('.').reduce(
+              (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
+              window
+            );
 
             if (globalTool === undefined || globalTool === null) {
               throw new Error(`Global tool "${fromGlobal}" is not available on window.`);
@@ -1085,10 +1087,6 @@ test.describe('popover', () => {
   });
 
   test.describe('inline popover', () => {
-    test.beforeEach(async ({ page }) => {
-      await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-    });
-
     test('should open nested popover on click instead of hover', async ({ page }) => {
       await createBlokWithBlocks(
         page,
@@ -1101,7 +1099,7 @@ test.describe('popover', () => {
           },
         ],
         {
-          header: { fromGlobal: 'Header' },
+          header: { fromGlobal: 'Blok.Header' },
         }
       );
 
@@ -1136,7 +1134,7 @@ test.describe('popover', () => {
           },
         ],
         {
-          header: { fromGlobal: 'Header' },
+          header: { fromGlobal: 'Blok.Header' },
         }
       );
 
@@ -1180,7 +1178,7 @@ test.describe('popover', () => {
           },
         ],
         {
-          header: { fromGlobal: 'Header' },
+          header: { fromGlobal: 'Blok.Header' },
         }
       );
 
@@ -1224,7 +1222,7 @@ test.describe('popover', () => {
           },
         ],
         {
-          header: { fromGlobal: 'Header' },
+          header: { fromGlobal: 'Blok.Header' },
         }
       );
 

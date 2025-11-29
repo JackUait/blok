@@ -23,11 +23,6 @@ const TOOLBAR_PLUS_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plu
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const WAIT_FOR_BATCH = modificationsObserverBatchTimeout + 100;
 
-const HEADER_TOOL_UMD_PATH = path.resolve(
-  __dirname,
-  '../../../node_modules/@editorjs/header/dist/header.umd.js'
-);
-
 type BoundingBox = {
   x: number;
   y: number;
@@ -145,7 +140,11 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         let toolClass: unknown = null;
 
         if (tool.className) {
-          toolClass = (window as unknown as Record<string, unknown>)[tool.className] ?? null;
+          // Handle dot notation (e.g., 'Blok.Header')
+          toolClass = tool.className.split('.').reduce(
+            (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
+            window
+          ) ?? null;
         }
 
         if (!toolClass && tool.classCode) {
@@ -490,13 +489,11 @@ test.describe('onChange callback', () => {
   });
 
   test('should be fired on block replacement for both blocks', async ({ page }) => {
-    await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-
     await createBlok(page, {
       tools: [
         {
           name: 'header',
-          className: 'Header',
+          className: 'Blok.Header',
         },
       ],
     });
@@ -541,13 +538,11 @@ test.describe('onChange callback', () => {
   });
 
   test('should be fired on tune modifying', async ({ page }) => {
-    await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-
     await createBlok(page, {
       tools: [
         {
           name: 'header',
-          className: 'Header',
+          className: 'Blok.Header',
         },
       ],
       blocks: [

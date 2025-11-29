@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
-import Blok from '../blok';
-import type { OutputData, BlokConfig } from '@/types';
-import { simulateClick, waitForIdleCallback, waitForToolbar, TOOLBAR_TESTID, dispatchKeyboardEvent, focusSearchInput, waitForPointerEvents } from './helpers';
+import type { OutputData } from '@/types';
+import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID, dispatchKeyboardEvent, focusSearchInput, waitForPointerEvents } from './helpers';
+import type { EditorFactoryOptions } from './helpers';
 
-interface PopoverArgs {
+interface PopoverArgs extends EditorFactoryOptions {
   minHeight: number;
   data: OutputData | undefined;
 }
@@ -43,35 +43,7 @@ const sampleData: OutputData = {
   ],
 };
 
-const createEditor = (args: PopoverArgs): HTMLElement => {
-  const container = document.createElement('div');
-
-  container.style.border = '1px solid #e0e0e0';
-  container.style.borderRadius = '8px';
-  container.style.padding = '16px';
-  container.style.minHeight = `${args.minHeight}px`;
-  container.style.backgroundColor = '#fff';
-
-  const editorHolder = document.createElement('div');
-
-  editorHolder.id = `blok-editor-${Date.now()}`;
-  container.appendChild(editorHolder);
-
-  const config: BlokConfig = {
-    holder: editorHolder,
-    autofocus: false,
-    data: args.data,
-  };
-
-  setTimeout(async () => {
-    const editor = new Blok(config);
-
-    await editor.isReady;
-    await waitForIdleCallback();
-  }, 0);
-
-  return container;
-};
+const createEditor = (args: PopoverArgs): HTMLElement => createEditorContainer(args);
 
 const meta: Meta<PopoverArgs> = {
   title: 'Components/Popover',

@@ -66,24 +66,14 @@
 
     Also you can load each Tool from CDN or use NPM/Yarn packages.
   -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script><!-- Header -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/nested-list@latest"></script><!-- List -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest"></script><!-- Checklist -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script><!-- Quote -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script><!-- Embed -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest"></script><!-- Table -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/link@latest"></script><!-- Link -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/warning@latest"></script><!-- Warning -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@latest"></script><!-- Raw -->
-
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@latest"></script><!-- Marker -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@latest"></script><!-- Inline Code -->
 
   <!-- Initialization -->
   <script type="module">
     import Blok from './src/blok.ts';
+    import Header from './src/tools/header/index.ts';
 
     window.Blok = Blok;
+    window.Header = Header;
 
     /**
      * To initialize the Blok, create a new instance with configuration object
@@ -105,7 +95,7 @@
        * - if true (or not specified), the order from 'tool' property will be used
        * - if an array of tool names, this order will be used
        */
-      // inlineToolbar: ['link', 'marker', 'bold', 'italic'],
+      // inlineToolbar: ['link', 'bold', 'italic'],
       // inlineToolbar: true,
 
       /**
@@ -117,58 +107,12 @@
          */
         header: {
           class: Header,
-          inlineToolbar: ['link', 'marker'],
+          inlineToolbar: ['link'],
           config: {
             placeholder: 'Header'
           },
           shortcut: 'CMD+SHIFT+H'
         },
-
-        list: {
-          class: NestedList,
-          inlineToolbar: true,
-          shortcut: 'CMD+SHIFT+L'
-        },
-
-        checklist: {
-          class: Checklist,
-          inlineToolbar: true,
-        },
-
-        quote: {
-          class: Quote,
-          inlineToolbar: true,
-          config: {
-            quotePlaceholder: 'Enter a quote',
-            captionPlaceholder: 'Quote\'s author',
-          },
-          shortcut: 'CMD+SHIFT+O'
-        },
-
-        warning: Warning,
-
-        marker: {
-          class:  Marker,
-          shortcut: 'CMD+SHIFT+M'
-        },
-
-        inlineCode: {
-          class: InlineCode,
-          shortcut: 'CMD+SHIFT+C'
-        },
-
-        linkTool: LinkTool,
-
-        raw: RawTool,
-
-        embed: Embed,
-
-        table: {
-          class: Table,
-          inlineToolbar: true,
-          shortcut: 'CMD+ALT+T'
-        },
-
       },
 
       /**
@@ -208,27 +152,6 @@
             }
           },
           {
-            type : 'list',
-            id: "SSBSguGvP7",
-            data : {
-              items : [
-                {
-                  content: 'It is a block-styled editor',
-                  items: []
-                },
-                {
-                  content: 'It returns clean data output in JSON',
-                  items: []
-                },
-                {
-                  content: 'Designed to be extendable and pluggable with a simple API',
-                  items: []
-                }
-              ],
-              style: 'unordered'
-            }
-          },
-          {
             type: "header",
             id: "QZFox1m_ul",
             data: {
@@ -240,7 +163,7 @@
             type : 'paragraph',
             id: "bwnFX5LoX7",
             data : {
-              text : 'Workspace in classic editors is made of a single contenteditable element, used to create different HTML markups. Blok <mark class=\"cdx-marker\">workspace consists of separate Blocks: paragraphs, headings, images, lists, quotes, etc</mark>. Each of them is an independent contenteditable element (or more complex structure) provided by Plugin and united by Blok\'s Core.'
+              text : 'Workspace in classic editors is made of a single contenteditable element, used to create different HTML markups. Blok workspace consists of separate Blocks: paragraphs, headings, images, lists, quotes, etc. Each of them is an independent contenteditable element (or more complex structure) provided by Plugin and united by Blok\'s Core.'
             }
           },
           {

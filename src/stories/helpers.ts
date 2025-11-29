@@ -3,10 +3,142 @@
  * These utilities help work around browser environment differences in Chromatic.
  */
 
+import Blok from '../blok';
+import type { OutputData, BlokConfig, ToolConstructable, ToolSettings, I18nConfig } from '@/types';
+
 /**
  * Test ID selectors used in story tests
  */
 export const TOOLBAR_TESTID = '[data-blok-testid="toolbar"]';
+
+/**
+ * Configuration options for the shared editor factory
+ */
+export interface EditorFactoryOptions {
+  /** Minimum height of the editor container in pixels */
+  minHeight?: number;
+  /** Width of the editor container in pixels (optional, defaults to auto) */
+  width?: number;
+  /** Initial data to populate the editor */
+  data?: OutputData;
+  /** Whether the editor is read-only */
+  readOnly?: boolean;
+  /** Placeholder text for empty blocks */
+  placeholder?: string;
+  /** Whether to autofocus the editor */
+  autofocus?: boolean;
+  /** Tools configuration */
+  tools?: { [toolName: string]: ToolConstructable | ToolSettings };
+  /** i18n configuration (e.g., for RTL support) */
+  i18n?: I18nConfig;
+}
+
+/**
+ * Extended HTMLElement interface that stores the Blok editor instance
+ */
+export interface EditorContainer extends HTMLElement {
+  __blokEditor?: Blok;
+}
+
+/** Shared editor state to avoid let declarations */
+const editorState: { editor: Blok | null; holder: HTMLElement | null } = {
+  editor: null,
+  holder: null,
+};
+
+/**
+ * Creates an editor container with a Blok editor instance.
+ * Reuses a single shared editor instance across stories when possible.
+ *
+ * @param options - Configuration options for the editor
+ * @returns HTMLElement container with the editor
+ */
+export const createEditorContainer = (options: EditorFactoryOptions = {}): HTMLElement => {
+  const {
+    minHeight = 300,
+    width,
+    data,
+    readOnly = false,
+    placeholder,
+    autofocus = false,
+    tools,
+    i18n,
+  } = options;
+
+  const container = document.createElement('div') as EditorContainer;
+
+  container.style.border = '1px solid #e0e0e0';
+  container.style.borderRadius = '8px';
+  container.style.padding = '16px';
+  container.style.minHeight = `${minHeight}px`;
+  container.style.backgroundColor = '#fff';
+  container.setAttribute('data-story-container', 'true');
+
+  if (width) {
+    container.style.width = `${width}px`;
+  }
+
+  const editorHolder = document.createElement('div');
+
+  editorHolder.id = `blok-editor-${Date.now()}`;
+  container.appendChild(editorHolder);
+
+  const config: BlokConfig = {
+    holder: editorHolder,
+    autofocus,
+    readOnly,
+    data,
+    placeholder,
+    tools,
+    i18n,
+  };
+
+  // Clean up and initialize editor after DOM is ready
+  setTimeout(async () => {
+    // Destroy previous editor if it exists and holder changed
+    if (editorState.editor && editorState.holder !== editorHolder) {
+      try {
+        await editorState.editor.destroy();
+      } catch {
+        // Editor may already be destroyed
+      }
+      editorState.editor = null;
+    }
+
+    // Create new editor instance
+    const editor = new Blok(config);
+
+    await editor.isReady;
+    await waitForIdleCallback();
+
+    // Store references
+    editorState.editor = editor;
+    editorState.holder = editorHolder;
+    container.__blokEditor = editor;
+  }, 0);
+
+  return container;
+};
+
+/**
+ * Gets the current shared editor instance (if available)
+ */
+export const getSharedEditor = (): Blok | null => editorState.editor;
+
+/**
+ * Cleans up the shared editor instance
+ */
+export const destroySharedEditor = async (): Promise<void> => {
+  if (editorState.editor) {
+    try {
+      await editorState.editor.destroy();
+    } catch {
+      // Editor may already be destroyed
+    }
+    editorState.editor = null;
+    editorState.holder = null;
+  }
+};
 
 /**
  * Simulates a full click sequence (mousedown → mouseup → click) with proper event bubbling.

@@ -663,7 +663,22 @@ export default class SelectionUtils {
      */
     const findTagFromNode = (startNode: HTMLElement): HTMLElement | null => {
       const searchUpTree = (node: HTMLElement, depth: number): HTMLElement | null => {
-        if (depth <= 0 || !node.parentNode) {
+        if (depth <= 0 || !node) {
+          return null;
+        }
+
+        /**
+         * Check if the current node itself matches the tag (for element nodes).
+         * This handles the case when the selection anchor/focus is the target element.
+         */
+        const isCurrentNodeMatch = node.nodeType === Node.ELEMENT_NODE && node.tagName === tagName;
+        const currentNodeHasMatchingClass = !className || (node.classList && node.classList.contains(className));
+
+        if (isCurrentNodeMatch && currentNodeHasMatchingClass) {
+          return node;
+        }
+
+        if (!node.parentNode) {
           return null;
         }
 

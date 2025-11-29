@@ -106,7 +106,15 @@ export default class BlockEvents extends Module {
    * @returns true if event was handled
    */
   private handleSelectedBlocksDeletion(event: KeyboardEvent): boolean {
-    const { BlockSelection, BlockManager, Caret } = this.Blok;
+    const { BlockSelection, BlockManager, Caret, BlockSettings } = this.Blok;
+
+    /**
+     * Ignore delete/backspace from inside the BlockSettings popover (e.g., search input)
+     */
+    if (BlockSettings.contains(event.target as HTMLElement)) {
+      return false;
+    }
+
     const isRemoveKey = event.key === 'Backspace' || event.key === 'Delete';
     const selectionExists = SelectionUtils.isSelectionExists;
     const selectionCollapsed = SelectionUtils.isCollapsed === true;

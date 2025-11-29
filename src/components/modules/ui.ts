@@ -551,6 +551,14 @@ export default class UI extends Module<UINodes> {
     const isMetaKey = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
 
     /**
+     * Ignore keydowns from inside the BlockSettings popover (e.g., search input)
+     * to prevent closing the popover when typing
+     */
+    if (this.Blok.BlockSettings.contains(event.target as HTMLElement)) {
+      return;
+    }
+
+    /**
      * When some block is selected, but the caret is not set inside the blok, treat such keydowns as keydown on selected block.
      */
     if (currentBlock !== undefined && keyDownOnBlok === null) {
@@ -581,6 +589,13 @@ export default class UI extends Module<UINodes> {
    * @param {KeyboardEvent} event - keyboard event
    */
   private backspacePressed(event: KeyboardEvent): void {
+    /**
+     * Ignore backspace/delete from inside the BlockSettings popover (e.g., search input)
+     */
+    if (this.Blok.BlockSettings.contains(event.target as HTMLElement)) {
+      return;
+    }
+
     const { BlockManager, BlockSelection, Caret } = this.Blok;
 
     const selectionExists = Selection.isSelectionExists;
@@ -760,11 +775,12 @@ export default class UI extends Module<UINodes> {
      * If Block Settings opened, close them by click on document.
      *
      * But allow clicking inside Block Settings.
-     * Also, do not process clicks on the Block Settings Toggler, because it has own click listener
+     * Also, do not process clicks on the Block Settings Toggler or Plus Button, because they have their own click listeners
      */
     const isClickedInsideBlockSettings = this.Blok.BlockSettings.contains(target);
     const isClickedInsideBlockSettingsToggler = this.Blok.Toolbar.nodes.settingsToggler?.contains(target);
-    const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler;
+    const isClickedInsidePlusButton = this.Blok.Toolbar.nodes.plusButton?.contains(target);
+    const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler || isClickedInsidePlusButton;
 
     const shouldCloseBlockSettings = this.Blok.BlockSettings.opened && !doNotProcess;
     if (shouldCloseBlockSettings) {

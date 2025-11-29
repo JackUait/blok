@@ -126,6 +126,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popover.classList.add(css.popoverOpened);
     this.nodes.popover.setAttribute('data-blok-popover-opened', 'true');
 
+    /**
+     * Refresh active states for all items.
+     * This ensures items with dynamic isActive() callbacks reflect the current state.
+     */
+    this.itemsDefault.forEach(item => this.refreshItemActiveState(item));
+
     if (this.search !== undefined) {
       this.search.focus();
     }

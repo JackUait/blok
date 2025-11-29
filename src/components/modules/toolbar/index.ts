@@ -325,15 +325,17 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const firstInputOffset = firstInputRect !== null ? firstInputRect.top - targetBlockHolderRect.top : null;
 
     const toolbarY = (() => {
+      const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
+
       /**
        * Case 1.
-       * On mobile — Toolbar at the bottom of Block
+       * On mobile — Toolbar above the block content (negative offset)
        */
       if (isMobile) {
-        return targetBlockHolder.offsetHeight;
-      }
+        const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
 
-      const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
+        return pluginContentOffset - toolbarActionsHeight;
+      }
 
       /**
        * Case 2.1
@@ -558,10 +560,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
+      this.Blok.UI.nodes.wrapper.setAttribute('data-blok-toolbox-opened', 'true');
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
+      this.Blok.UI.nodes.wrapper.removeAttribute('data-blok-toolbox-opened');
     });
 
     this.toolboxInstance.on(ToolboxEvent.BlockAdded, ({ block }) => {
@@ -613,6 +617,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     if (this.hoveredBlock) {
       this.Blok.BlockManager.currentBlock = this.hoveredBlock;
+    }
+
+    /**
+     * Close Block Settings if opened, similar to how settings toggler closes toolbox
+     */
+    if (this.Blok.BlockSettings.opened) {
+      this.Blok.BlockSettings.close();
     }
 
     this.toolboxInstance?.toggle();

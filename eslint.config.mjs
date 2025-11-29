@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'eslint/config';
@@ -52,6 +55,128 @@ const NON_CSS_PREFIXES = [
   'nth=',
   'aria/',
 ];
+
+const internalStorybookPlugin = {
+  rules: {
+    'no-class-selectors': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Disallow class selectors and toHaveClass in Storybook stories. Prefer data-testid or role-based locators.',
+        },
+        schema: [],
+        messages: {
+          noClassSelector:
+            'Avoid using class selectors ({{selector}}) in Storybook stories. Prefer data-blok-testid or role-based locators.',
+          noToHaveClass:
+            'Avoid using toHaveClass() in Storybook stories. Prefer checking data attributes or element states.',
+        },
+      },
+      create(context) {
+        const getSelectorParts = (node) => {
+          if (!node) {
+            return [];
+          }
+
+          if (node.type === 'Literal' && typeof node.value === 'string') {
+            return [{ value: node.value, node }];
+          }
+
+          if (node.type === 'TemplateLiteral') {
+            return node.quasis.map((element) => ({
+              value: element.value.cooked ?? element.value.raw,
+              node: element,
+            }));
+          }
+
+          return [];
+        };
+
+        const containsClassSelector = (rawSelector) => {
+          if (!rawSelector) {
+            return null;
+          }
+
+          const selector = rawSelector.trim();
+
+          if (!selector) {
+            return null;
+          }
+
+          // Match class selectors like .className, .blok-element--selected
+          const classMatch = selector.match(/\.[_a-zA-Z][_a-zA-Z0-9-]*/);
+
+          if (classMatch) {
+            return classMatch[0];
+          }
+
+          return null;
+        };
+
+        return {
+          // Check for class selectors in strings
+          Literal(node) {
+            if (typeof node.value !== 'string') {
+              return;
+            }
+
+            const classSelector = containsClassSelector(node.value);
+
+            if (classSelector) {
+              // Skip if it's a file extension like .ts, .css, etc.
+              if (/^\.[a-z]{2,4}$/.test(classSelector)) {
+                return;
+              }
+
+              context.report({
+                node,
+                messageId: 'noClassSelector',
+                data: { selector: classSelector },
+              });
+            }
+          },
+
+          // Check for class selectors in template literals
+          TemplateLiteral(node) {
+            for (const quasi of node.quasis) {
+              const value = quasi.value.cooked ?? quasi.value.raw;
+              const classSelector = containsClassSelector(value);
+
+              if (classSelector) {
+                // Skip if it's a file extension like .ts, .css, etc.
+                if (/^\.[a-z]{2,4}$/.test(classSelector)) {
+                  continue;
+                }
+
+                context.report({
+                  node: quasi,
+                  messageId: 'noClassSelector',
+                  data: { selector: classSelector },
+                });
+              }
+            }
+          },
+
+          // Check for toHaveClass usage
+          CallExpression(node) {
+            if (node.callee.type !== 'MemberExpression') {
+              return;
+            }
+
+            const { property } = node.callee;
+
+            if (property.type === 'Identifier' && property.name === 'toHaveClass') {
+              context.report({
+                node,
+                messageId: 'noToHaveClass',
+              });
+            }
+          },
+        };
+      },
+    },
+  },
+};
 
 const internalPlaywrightPlugin = {
   rules: {
@@ -240,6 +365,7 @@ export default defineConfig(
       'dist',
       'public/assets/**',
       '**/public/assets/**',
+      'storybook-static/**',
     ],
   },
   // TypeScript ESLint base config
@@ -518,6 +644,35 @@ export default defineConfig(
     ],
     rules: {
       'no-restricted-syntax': 'off',
+    },
+  },
+  // Storybook configuration for story files
+  ...storybook.configs['flat/recommended'],
+  {
+    files: ['**/*.stories.@(ts|tsx|js|jsx|mjs|cjs)'],
+    plugins: {
+      'internal-storybook': internalStorybookPlugin,
+    },
+    rules: {
+      // Enforce best practices
+      'storybook/await-interactions': 'error',
+      'storybook/context-in-play-function': 'error',
+      'storybook/default-exports': 'error',
+      'storybook/hierarchy-separator': 'error',
+      'storybook/no-redundant-story-name': 'warn',
+      'storybook/prefer-pascal-case': 'error',
+      'storybook/story-exports': 'error',
+      'storybook/use-storybook-expect': 'error',
+      'storybook/use-storybook-testing-library': 'error',
+      // Prevent CSS class selectors and toHaveClass in stories
+      'internal-storybook/no-class-selectors': 'error',
+      // Relax some rules for stories
+      'no-restricted-syntax': 'off',
+      '@typescript-eslint/no-magic-numbers': 'off',
+      // Play function steps are handled by Storybook framework
+      '@typescript-eslint/no-floating-promises': 'off',
+      // Stories may have repeated selectors and test data
+      'sonarjs/no-duplicate-string': 'off',
     },
   },
 );

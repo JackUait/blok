@@ -242,6 +242,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     this.nodes.root.innerHTML = confirmationEl.innerHTML;
     this.nodes.root.classList.add(css.confirmationState);
+    this.nodes.root.setAttribute('data-blok-popover-item-confirmation', 'true');
 
     this.confirmationState = newState;
 
@@ -259,6 +260,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     this.nodes.root.innerHTML = itemWithOriginalParams.innerHTML;
     this.nodes.root.classList.remove(css.confirmationState);
+    this.nodes.root.removeAttribute('data-blok-popover-item-confirmation');
 
     this.confirmationState = null;
 

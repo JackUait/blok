@@ -775,11 +775,12 @@ export default class UI extends Module<UINodes> {
      * If Block Settings opened, close them by click on document.
      *
      * But allow clicking inside Block Settings.
-     * Also, do not process clicks on the Block Settings Toggler, because it has own click listener
+     * Also, do not process clicks on the Block Settings Toggler or Plus Button, because they have their own click listeners
      */
     const isClickedInsideBlockSettings = this.Blok.BlockSettings.contains(target);
     const isClickedInsideBlockSettingsToggler = this.Blok.Toolbar.nodes.settingsToggler?.contains(target);
-    const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler;
+    const isClickedInsidePlusButton = this.Blok.Toolbar.nodes.plusButton?.contains(target);
+    const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler || isClickedInsidePlusButton;
 
     const shouldCloseBlockSettings = this.Blok.BlockSettings.opened && !doNotProcess;
     if (shouldCloseBlockSettings) {

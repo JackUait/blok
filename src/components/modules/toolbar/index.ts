@@ -619,6 +619,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
       this.Blok.BlockManager.currentBlock = this.hoveredBlock;
     }
 
+    /**
+     * Close Block Settings if opened, similar to how settings toggler closes toolbox
+     */
+    if (this.Blok.BlockSettings.opened) {
+      this.Blok.BlockSettings.close();
+    }
+
     this.toolboxInstance?.toggle();
   }
 

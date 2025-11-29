@@ -325,15 +325,17 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const firstInputOffset = firstInputRect !== null ? firstInputRect.top - targetBlockHolderRect.top : null;
 
     const toolbarY = (() => {
+      const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
+
       /**
        * Case 1.
-       * On mobile — Toolbar at the bottom of Block
+       * On mobile — Toolbar above the block content (negative offset)
        */
       if (isMobile) {
-        return targetBlockHolder.offsetHeight;
-      }
+        const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
 
-      const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
+        return pluginContentOffset - toolbarActionsHeight;
+      }
 
       /**
        * Case 2.1

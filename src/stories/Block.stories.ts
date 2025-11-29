@@ -415,3 +415,65 @@ export const NewBlockAnimation: Story = {
     });
   },
 };
+
+/**
+ * Stretched block - full-width block layout.
+ * This state is shown when a block is configured to stretch to full width.
+ */
+export const StretchedBlock: Story = {
+  args: {
+    data: {
+      time: Date.now(),
+      version: '1.0.0',
+      blocks: [
+        {
+          id: 'normal-block-1',
+          type: 'paragraph',
+          data: { text: 'This is a normal width paragraph block.' },
+        },
+        {
+          id: 'stretched-block-1',
+          type: 'paragraph',
+          data: { text: 'This block has the stretched class applied to demonstrate full-width layout.' },
+        },
+        {
+          id: 'normal-block-2',
+          type: 'paragraph',
+          data: { text: 'Another normal width paragraph for comparison.' },
+        },
+      ],
+    },
+    readOnly: false,
+  },
+  play: async ({ canvasElement, step }) => {
+    await step('Wait for editor to initialize', async () => {
+      await waitFor(
+        () => {
+          const blocks = canvasElement.querySelectorAll(BLOCK_TESTID);
+
+          expect(blocks.length).toBe(3);
+        },
+        TIMEOUT_INIT
+      );
+    });
+
+    await step('Apply stretched class to middle block', async () => {
+      const blocks = canvasElement.querySelectorAll(BLOCK_TESTID);
+      const middleBlock = blocks[1];
+
+      if (middleBlock) {
+        middleBlock.classList.add('blok-block--stretched');
+        middleBlock.setAttribute('data-blok-stretched', 'true');
+      }
+
+      await waitFor(
+        () => {
+          const stretchedBlock = canvasElement.querySelector('[data-blok-stretched="true"]');
+
+          expect(stretchedBlock).toBeInTheDocument();
+        },
+        TIMEOUT_ACTION
+      );
+    });
+  },
+};

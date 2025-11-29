@@ -31,7 +31,7 @@ jobs:
         run: yarn test
 
       - name: Run Storybook Tests
-        run: yarn test:storybook
+        run: yarn storybook:test
 
       - name: Build
         run: yarn build

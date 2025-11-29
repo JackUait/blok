@@ -88,6 +88,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     BlockSettings: {
       opened: false,
       open: vi.fn(),
+      contains: vi.fn(() => false),
     } as unknown as BlokModules['BlockSettings'],
     CrossBlockSelection: {
       toggleBlockSelectedState: vi.fn(),

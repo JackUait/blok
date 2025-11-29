@@ -174,13 +174,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codexteam/shortcuts@npm:1.2.0":
-  version: 1.2.0
-  resolution: "@codexteam/shortcuts@npm:1.2.0"
-  checksum: 10c0/0afb0ca49e04a89b2ad9e86a20fd8ffbb2f08a2a3f2f3a93b82afbe2875bfadaa591d95bd334d2231d3ac979f430d70c0f21cafd9937d014710d81a308fc8585
-  languageName: node
-  linkType: hard
-
 "@colors/colors@npm:1.5.0":
   version: 1.5.0
   resolution: "@colors/colors@npm:1.5.0"
@@ -1220,7 +1213,6 @@ __metadata:
     "@babel/register": "npm:7.28.3"
     "@chromatic-com/storybook": "npm:^4.1.3"
     "@codexteam/icons": "npm:0.3.3"
-    "@codexteam/shortcuts": "npm:1.2.0"
     "@editorjs/caret": "npm:1.0.3"
     "@editorjs/code": "npm:2.9.3"
     "@editorjs/delimiter": "npm:1.4.2"

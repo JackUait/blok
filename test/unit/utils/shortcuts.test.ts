@@ -15,7 +15,7 @@ const shortcutInstances: ShortcutMockInstance[] = [];
 
 const ShortcutConstructor = vi.fn();
 
-vi.mock('@codexteam/shortcuts', () => ({
+vi.mock('../../../src/components/utils/shortcut', () => ({
   default: ShortcutConstructor,
 }));
 

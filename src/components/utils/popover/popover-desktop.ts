@@ -526,5 +526,10 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private toggleNothingFoundMessage(isDisplayed: boolean): void {
     this.nodes.nothingFoundMessage.classList.toggle(css.nothingFoundMessageDisplayed, isDisplayed);
+    if (isDisplayed) {
+      this.nodes.nothingFoundMessage.setAttribute('data-blok-nothing-found-displayed', 'true');
+    } else {
+      this.nodes.nothingFoundMessage.removeAttribute('data-blok-nothing-found-displayed');
+    }
   }
 }

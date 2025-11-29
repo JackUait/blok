@@ -551,6 +551,14 @@ export default class UI extends Module<UINodes> {
     const isMetaKey = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
 
     /**
+     * Ignore keydowns from inside the BlockSettings popover (e.g., search input)
+     * to prevent closing the popover when typing
+     */
+    if (this.Blok.BlockSettings.contains(event.target as HTMLElement)) {
+      return;
+    }
+
+    /**
      * When some block is selected, but the caret is not set inside the blok, treat such keydowns as keydown on selected block.
      */
     if (currentBlock !== undefined && keyDownOnBlok === null) {
@@ -581,6 +589,13 @@ export default class UI extends Module<UINodes> {
    * @param {KeyboardEvent} event - keyboard event
    */
   private backspacePressed(event: KeyboardEvent): void {
+    /**
+     * Ignore backspace/delete from inside the BlockSettings popover (e.g., search input)
+     */
+    if (this.Blok.BlockSettings.contains(event.target as HTMLElement)) {
+      return;
+    }
+
     const { BlockManager, BlockSelection, Caret } = this.Blok;
 
     const selectionExists = Selection.isSelectionExists;

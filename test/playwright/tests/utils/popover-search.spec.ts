@@ -910,6 +910,158 @@ test.describe('popover Search/Filter', () => {
 
       expect(containsCaret).toBe(true);
     });
+
+    /**
+     * Test that popover stays open when typing in search input via keyboard
+     * Regression test for bug where keydown events would close the popover
+     */
+    test('should keep popover open when typing in search input via keyboard', async ({ page }) => {
+      await createBlokWithBlocks(
+        page,
+        [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Some text',
+            },
+          },
+        ],
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Test Item',
+            name: 'test',
+          },
+        ])
+      );
+
+      await openBlockTunes(page);
+
+      const searchInput = page.locator(SEARCH_INPUT_SELECTOR);
+      const popoverContainer = page.locator(POPOVER_CONTAINER_SELECTOR);
+
+      // Verify popover is visible
+      await expect(popoverContainer).toBeVisible();
+
+      // Type characters one by one using keyboard.type() to simulate real typing
+      await searchInput.focus();
+      await page.keyboard.type('test', { delay: 50 });
+
+      // Verify popover is still visible after typing
+      await expect(popoverContainer).toBeVisible();
+      await expect(searchInput).toBeFocused();
+      await expect(searchInput).toHaveValue('test');
+    });
+
+    /**
+     * Test that backspace/delete in search input doesn't delete the focused block
+     * Regression test for bug where backspace would delete the block instead of text in search input
+     */
+    test('should allow deleting text in search input without affecting blocks', async ({ page }) => {
+      await createBlokWithBlocks(
+        page,
+        [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Some text that should not be deleted',
+            },
+          },
+        ],
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Test Item',
+            name: 'test',
+          },
+        ])
+      );
+
+      await openBlockTunes(page);
+
+      const searchInput = page.locator(SEARCH_INPUT_SELECTOR);
+      const popoverContainer = page.locator(POPOVER_CONTAINER_SELECTOR);
+      const block = page.locator(BLOCK_SELECTOR);
+
+      // Verify popover is visible and block exists
+      await expect(popoverContainer).toBeVisible();
+      await expect(block).toBeVisible();
+
+      // Type some text in search input
+      await searchInput.focus();
+      await page.keyboard.type('test', { delay: 50 });
+      await expect(searchInput).toHaveValue('test');
+
+      // Use backspace to delete the text
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+
+      // Verify search input is now empty
+      await expect(searchInput).toHaveValue('');
+
+      // Verify popover is still visible
+      await expect(popoverContainer).toBeVisible();
+
+      // Verify block still exists and has its original content
+      await expect(block).toBeVisible();
+      await expect(block).toContainText('Some text that should not be deleted');
+    });
+
+    /**
+     * Test that Delete key in search input works correctly
+     */
+    test('should allow using Delete key in search input without affecting blocks', async ({ page }) => {
+      await createBlokWithBlocks(
+        page,
+        [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Some text that should not be deleted',
+            },
+          },
+        ],
+        buildTestToolsConfig([
+          {
+            icon: 'Icon',
+            title: 'Test Item',
+            name: 'test',
+          },
+        ])
+      );
+
+      await openBlockTunes(page);
+
+      const searchInput = page.locator(SEARCH_INPUT_SELECTOR);
+      const popoverContainer = page.locator(POPOVER_CONTAINER_SELECTOR);
+      const block = page.locator(BLOCK_SELECTOR);
+
+      // Verify popover is visible
+      await expect(popoverContainer).toBeVisible();
+
+      // Type some text in search input
+      await searchInput.focus();
+      await page.keyboard.type('test', { delay: 50 });
+      await expect(searchInput).toHaveValue('test');
+
+      // Move cursor to the beginning using cross-browser compatible method
+      // Select all text first, then collapse to start
+      await searchInput.evaluate((el: HTMLInputElement) => {
+        el.setSelectionRange(0, 0);
+      });
+      await page.keyboard.press('Delete');
+      await page.keyboard.press('Delete');
+
+      // Verify text was deleted from the beginning
+      await expect(searchInput).toHaveValue('st');
+
+      // Verify popover is still visible and block is intact
+      await expect(popoverContainer).toBeVisible();
+      await expect(block).toBeVisible();
+      await expect(block).toContainText('Some text that should not be deleted');
+    });
   });
 
   test.describe('keyboard navigation with search', () => {

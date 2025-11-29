@@ -33,10 +33,12 @@
     "**/*.tsx",
     "**/*.js",
     "**/*.json",
-    "vite.config*.mjs"
+    "vite.config*.mjs",
+    ".storybook/**/*.ts"
   ],
   "exclude": [
     "dist",
-    "node_modules"
+    "node_modules",
+    "storybook-static"
   ]
 }

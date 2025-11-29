@@ -290,6 +290,15 @@
         }
     }
 
+    /**
+     * Force hover styles for Storybook/Chromatic testing where @media (hover: hover) doesn't match.
+     * This class is added programmatically in story play functions.
+     */
+    &--force-hover:not(.blok-popover-item--no-hover) {
+        background-color: var(--color-background-item-hover);
+        cursor: pointer;
+    }
+
     &--confirmation {
         background: var(--color-background-item-confirm);
 

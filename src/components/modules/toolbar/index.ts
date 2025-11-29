@@ -558,10 +558,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
+      this.Blok.UI.nodes.wrapper.setAttribute('data-blok-toolbox-opened', 'true');
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
+      this.Blok.UI.nodes.wrapper.removeAttribute('data-blok-toolbox-opened');
     });
 
     this.toolboxInstance.on(ToolboxEvent.BlockAdded, ({ block }) => {

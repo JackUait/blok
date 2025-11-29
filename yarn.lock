@@ -146,7 +146,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codexteam/icons@npm:0.3.3, @codexteam/icons@npm:^0.3.2":
+"@codexteam/icons@npm:0.3.3":
   version: 0.3.3
   resolution: "@codexteam/icons@npm:0.3.3"
   checksum: 10c0/336245f38a2b2a53626a552a5f0f32c822ee1265be6827670ba157c9fa101cb23e6c75e625aa067e4577c2d805e261f4ffcb61097ea94c034c0a3c0cae7d7271
@@ -164,13 +164,6 @@ __metadata:
   version: 0.0.5
   resolution: "@codexteam/icons@npm:0.0.5"
   checksum: 10c0/5f73f137a65a17959d758a80a3b3846801475a9555791a13561b4a2fcb57664bb7a667b6c27ea1da6f9d462b5b0657b2c35164928ad6c0a10b7e4737ddd79104
-  languageName: node
-  linkType: hard
-
-"@codexteam/icons@npm:^0.0.6":
-  version: 0.0.6
-  resolution: "@codexteam/icons@npm:0.0.6"
-  checksum: 10c0/b29d2f4b931f763999354781199ab60ada31bc1b8c419df916d4e5857a68c73e5b8615a1c5b72434367e23f95c75e62c1053090f6b34d52d66add9d686a950cb
   languageName: node
   linkType: hard
 
@@ -599,24 +592,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@editorjs/code@npm:2.9.3":
-  version: 2.9.3
-  resolution: "@editorjs/code@npm:2.9.3"
-  dependencies:
-    "@codexteam/icons": "npm:^0.3.2"
-  checksum: 10c0/e467a857cb48aeccaa6fccf3efb949f59549d0d9d031b64c7f7439b1f693299316188a27f30446cf2ce782fe4e2b4f55796677dfff150b823c89e3aebe0c7b7a
-  languageName: node
-  linkType: hard
-
-"@editorjs/delimiter@npm:1.4.2":
-  version: 1.4.2
-  resolution: "@editorjs/delimiter@npm:1.4.2"
-  dependencies:
-    "@codexteam/icons": "npm:^0.3.2"
-  checksum: 10c0/635e96097529484e3db69b565de6dd153c5b4564906f1e4ad5883c3f97236badbc2b964a512a7456f0f3819eac0809e061f4a5a0e27b49054b28b2e8e13b1d7c
-  languageName: node
-  linkType: hard
-
 "@editorjs/dom@npm:^1.0.1":
   version: 1.0.1
   resolution: "@editorjs/dom@npm:1.0.1"
@@ -660,15 +635,6 @@ __metadata:
   dependencies:
     "@codexteam/icons": "npm:^0.0.4"
   checksum: 10c0/0a81d900196378fb8603a5a8bbc91a65aa3eae78612dddf4fdb1f039eaafca4a9b2e13bf9607faed413cbd7f42bb7d287cdafdd9e08117c825808df907de17f3
-  languageName: node
-  linkType: hard
-
-"@editorjs/simple-image@npm:1.6.0":
-  version: 1.6.0
-  resolution: "@editorjs/simple-image@npm:1.6.0"
-  dependencies:
-    "@codexteam/icons": "npm:^0.0.6"
-  checksum: 10c0/b178e05e785e60dab8fc6985e940e3a952b8f2b4266402f043ecbaa1046590bb61f47192d486682cb1a755883ed2664c62cd8587572a2223c3487d3a5ca701be
   languageName: node
   linkType: hard
 
@@ -1214,11 +1180,8 @@ __metadata:
     "@chromatic-com/storybook": "npm:^4.1.3"
     "@codexteam/icons": "npm:0.3.3"
     "@editorjs/caret": "npm:1.0.3"
-    "@editorjs/code": "npm:2.9.3"
-    "@editorjs/delimiter": "npm:1.4.2"
     "@editorjs/header": "npm:2.8.8"
     "@editorjs/paragraph": "npm:2.11.7"
-    "@editorjs/simple-image": "npm:1.6.0"
     "@playwright/test": "npm:1.57.0"
     "@storybook/addon-a11y": "npm:10.1.1"
     "@storybook/addon-vitest": "npm:10.1.1"

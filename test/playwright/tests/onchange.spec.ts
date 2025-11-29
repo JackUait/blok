@@ -27,14 +27,6 @@ const HEADER_TOOL_UMD_PATH = path.resolve(
   __dirname,
   '../../../node_modules/@editorjs/header/dist/header.umd.js'
 );
-const CODE_TOOL_UMD_PATH = path.resolve(
-  __dirname,
-  '../../../node_modules/@editorjs/code/dist/code.umd.js'
-);
-const DELIMITER_TOOL_UMD_PATH = path.resolve(
-  __dirname,
-  '../../../node_modules/@editorjs/delimiter/dist/delimiter.umd.js'
-);
 
 type BoundingBox = {
   x: number;
@@ -497,77 +489,6 @@ test.describe('onChange callback', () => {
     }));
   });
 
-  test('should be fired on block insertion with save inside onChange', async ({ page }) => {
-    await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-    await page.addScriptTag({ path: CODE_TOOL_UMD_PATH });
-    await page.addScriptTag({ path: DELIMITER_TOOL_UMD_PATH });
-
-    await createBlok(page, {
-      callSaveInsideOnChange: true,
-      tools: [
-        {
-          name: 'header',
-          className: 'Header',
-        },
-        {
-          name: 'code',
-          className: 'CodeTool',
-        },
-        {
-          name: 'delimiter',
-          className: 'Delimiter',
-        },
-      ],
-    });
-
-    const block = page.locator(`${BLOCK_SELECTOR}:first-of-type`);
-
-    await block.click();
-
-    const plusButton = page.locator(TOOLBAR_PLUS_SELECTOR);
-
-    await plusButton.click();
-
-    const delimiterOption = page.getByTestId('toolbox-popover').locator('[data-blok-testid="popover-item"][data-blok-item-name=delimiter]');
-
-    await delimiterOption.click();
-
-    await waitForOnChangeCallCount(page, 1);
-
-    const [ events ] = await getOnChangeCalls(page);
-    const eventsBatch = ensureSerializedBlockMutationEvents(events);
-
-    expect(eventsBatch).toStrictEqual([
-      expect.objectContaining({
-        type: BlockRemovedMutationType,
-        detail: expect.objectContaining({
-          index: 0,
-          target: expect.objectContaining({
-            name: 'paragraph',
-          }),
-        }),
-      }),
-      expect.objectContaining({
-        type: BlockAddedMutationType,
-        detail: expect.objectContaining({
-          index: 0,
-          target: expect.objectContaining({
-            name: 'delimiter',
-          }),
-        }),
-      }),
-      expect.objectContaining({
-        type: BlockAddedMutationType,
-        detail: expect.objectContaining({
-          index: 1,
-          target: expect.objectContaining({
-            name: 'paragraph',
-          }),
-        }),
-      }),
-    ]);
-  });
-
   test('should be fired on block replacement for both blocks', async ({ page }) => {
     await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
 
@@ -757,44 +678,6 @@ test.describe('onChange callback', () => {
       detail: expect.objectContaining({
         fromIndex: 1,
         toIndex: 0,
-      }),
-    }));
-  });
-
-  test('should be fired if something changed inside native input', async ({ page }) => {
-    await page.addScriptTag({ path: CODE_TOOL_UMD_PATH });
-
-    await createBlok(page, {
-      tools: [
-        {
-          name: 'code',
-          className: 'CodeTool',
-        },
-      ],
-      blocks: [
-        {
-          type: 'code',
-          data: {
-            code: '',
-          },
-        },
-      ],
-    });
-
-    const textarea = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="code"]`).getByRole('textbox');
-
-    await textarea.click();
-    await textarea.type('Some input to the textarea');
-
-    await waitForOnChangeCallCount(page, 1);
-
-    const [ event ] = await getOnChangeCalls(page);
-    const singleEvent = ensureSerializedBlockMutationEvent(event);
-
-    expect(singleEvent).toStrictEqual(expect.objectContaining({
-      type: BlockChangedMutationType,
-      detail: expect.objectContaining({
-        index: 0,
       }),
     }));
   });

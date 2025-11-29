@@ -67,12 +67,9 @@
     Also you can load each Tool from CDN or use NPM/Yarn packages.
   -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script><!-- Header -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/simple-image@latest"></script><!-- Image -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest"></script><!-- Delimiter -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/nested-list@latest"></script><!-- List -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest"></script><!-- Checklist -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script><!-- Quote -->
-  <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script><!-- Code -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script><!-- Embed -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest"></script><!-- Table -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/link@latest"></script><!-- Link -->
@@ -127,11 +124,6 @@
           shortcut: 'CMD+SHIFT+H'
         },
 
-        /**
-         * Or pass class directly without any configuration
-         */
-        image: SimpleImage,
-
         list: {
           class: NestedList,
           inlineToolbar: true,
@@ -159,13 +151,6 @@
           class:  Marker,
           shortcut: 'CMD+SHIFT+M'
         },
-
-        code: {
-          class:  CodeTool,
-          shortcut: 'CMD+SHIFT+C'
-        },
-
-        delimiter: Delimiter,
 
         inlineCode: {
           class: InlineCode,
@@ -293,11 +278,6 @@
             data : {
               text : 'Clean data is useful to sanitize, validate and process on the backend.'
             }
-          },
-          {
-            type : 'delimiter',
-            id: "H9LWKQ3NYd",
-            data : {}
           },
           {
             type : 'paragraph',

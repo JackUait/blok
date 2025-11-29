@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import { Buffer } from 'node:buffer';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type Blok from '@/types';
@@ -15,11 +14,6 @@ const TEST_PAGE_URL = pathToFileURL(
 const HEADER_TOOL_UMD_PATH = path.resolve(
   __dirname,
   '../../../node_modules/@editorjs/header/dist/header.umd.js'
-);
-
-const SIMPLE_IMAGE_TOOL_UMD_PATH = path.resolve(
-  __dirname,
-  '../../../node_modules/@editorjs/simple-image/dist/simple-image.umd.js'
 );
 
 const HOLDER_ID = 'blok';
@@ -480,40 +474,6 @@ test.describe('copy and paste', () => {
       expect(output.blocks[1]?.type).toBe('paragraph');
       expect(output.blocks[1]?.data).toMatchObject({
         text: 'Second block',
-      });
-    });
-
-    test('should parse pattern', async ({ page }) => {
-      await page.addScriptTag({ path: SIMPLE_IMAGE_TOOL_UMD_PATH });
-
-      const imageUrl = 'https://example.com/test.png';
-
-      await page.route(imageUrl, route => route.fulfill({
-        status: 200,
-        contentType: 'image/png',
-        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
-      }));
-
-      await createBlok(page, {
-        tools: {
-          image: {
-            className: 'SimpleImage',
-          },
-        },
-      });
-
-      const block = getBlockByIndex(page, 0);
-
-      await block.click();
-      await paste(page, block, {
-
-        'text/plain': imageUrl,
-      });
-
-      const image = page.getByRole('img');
-
-      await expect(image).toHaveAttribute('src', imageUrl, {
-        timeout: 10_000,
       });
     });
 

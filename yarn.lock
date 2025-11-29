@@ -153,13 +153,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codexteam/icons@npm:^0.0.4":
-  version: 0.0.4
-  resolution: "@codexteam/icons@npm:0.0.4"
-  checksum: 10c0/8509a2f8f8d889ce1016bfc7ed0452a931bb75838e267c2118aec594497d472de65c90cdee203fd2d99b1bc8367f760f093ba4d83cb2e5b5c787f00186627acb
-  languageName: node
-  linkType: hard
-
 "@colors/colors@npm:1.5.0":
   version: 1.5.0
   resolution: "@colors/colors@npm:1.5.0"
@@ -573,15 +566,6 @@ __metadata:
   peerDependencies:
     postcss: ^8.4
   checksum: 10c0/2ac10895e0a1f9e1fc9c092197c8595a09f632552791af91219f38c55bb39083fb44b74a6a7de9112492cf24a2fe66d20c955a2b4aff041d5c017d87bbebc0f2
-  languageName: node
-  linkType: hard
-
-"@editorjs/paragraph@npm:2.11.7":
-  version: 2.11.7
-  resolution: "@editorjs/paragraph@npm:2.11.7"
-  dependencies:
-    "@codexteam/icons": "npm:^0.0.4"
-  checksum: 10c0/0a81d900196378fb8603a5a8bbc91a65aa3eae78612dddf4fdb1f039eaafca4a9b2e13bf9607faed413cbd7f42bb7d287cdafdd9e08117c825808df907de17f3
   languageName: node
   linkType: hard
 
@@ -1126,7 +1110,6 @@ __metadata:
     "@babel/register": "npm:7.28.3"
     "@chromatic-com/storybook": "npm:^4.1.3"
     "@codexteam/icons": "npm:0.3.3"
-    "@editorjs/paragraph": "npm:2.11.7"
     "@playwright/test": "npm:1.57.0"
     "@storybook/addon-a11y": "npm:10.1.1"
     "@storybook/addon-vitest": "npm:10.1.1"

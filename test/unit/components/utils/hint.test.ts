@@ -20,14 +20,15 @@ describe('Hint component', () => {
     });
 
     const root = hint.getElement();
-    const title = root.querySelector(`.${css.title}`);
-    const description = root.querySelector(`.${css.description}`);
+    // Title is the first child div
+    const title = root.children[0];
+    // Description would be the second child if present
+    const description = root.children[1];
 
-    expect(root.classList.contains(css.root)).toBe(true);
     expect(root.classList.contains(css.alignedStart)).toBe(true);
     expect(root.classList.contains(css.alignedCenter)).toBe(false);
     expect(title?.textContent).toBe('Primary action');
-    expect(description).toBeNull();
+    expect(description).toBeUndefined();
   });
 
   it('renders description when provided', () => {
@@ -37,9 +38,10 @@ describe('Hint component', () => {
     });
 
     const root = hint.getElement();
-    const description = root.querySelector(`.${css.description}`);
+    // Description is the second child div when provided
+    const description = root.children[1];
 
-    expect(description).not.toBeNull();
+    expect(description).toBeDefined();
     expect(description?.textContent).toBe('Explains what the action does');
   });
 

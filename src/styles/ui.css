@@ -38,7 +38,14 @@
 
     &--narrow .blok-toolbar__actions {
         @media (--not-mobile) {
-            right: -5px;
+            right: calc(-1 * var(--narrow-mode-right-padding) - 5px);
+        }
+    }
+
+    &--narrow&--rtl .blok-toolbar__actions {
+        @media (--not-mobile) {
+            right: auto;
+            left: calc(-1 * var(--narrow-mode-right-padding) - 5px);
         }
     }
 

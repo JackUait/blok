@@ -53,6 +53,7 @@
     a {
         cursor: pointer;
         text-decoration: underline;
+        color: var(--color-link);
     }
 
     b {

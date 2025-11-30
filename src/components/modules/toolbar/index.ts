@@ -11,8 +11,6 @@ import { IconMenu, IconPlus } from '../../icons';
 import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
-import { beautifyShortcut } from '../../utils';
-import { getKeyboardKeyForCode } from '../../utils/keyboard';
 
 /**
  * @todo Tab on non-empty block should open Block Settings of the hoveredBlock (not where caret is set)
@@ -34,6 +32,11 @@ interface ToolbarNodes {
   plusButton: HTMLElement | undefined;
   settingsToggler: HTMLElement | undefined;
 }
+
+/**
+ * Threshold in pixels to distinguish between a click and a drag
+ */
+const DRAG_THRESHOLD = 1000;
 /**
  *
  *«Toolbar» is the node that moves up/down over current block
@@ -96,6 +99,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private toolboxInstance: Toolbox | null = null;
 
   /**
+   * Mouse position when mousedown occurred on settings toggler
+   * Used to distinguish between click and drag
+   */
+  private settingsTogglerMouseDownPosition: { x: number; y: number } | null = null;
+
+  /**
    * @class
    * @param moduleConfiguration - Module Configuration
    * @param moduleConfiguration.config - Blok's config
@@ -124,6 +133,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
       plusButton: 'blok-toolbar__plus',
       plusButtonShortcut: 'blok-toolbar__plus-shortcut',
+      plusButtonShortcutKey: 'blok-toolbar__plus-shortcut-key',
       settingsToggler: 'blok-toolbar__settings-btn',
       settingsTogglerHidden: 'blok-toolbar__settings-btn--hidden',
       settingsTogglerOpened: 'blok-toolbar__settings-btn--opened',
@@ -484,10 +494,34 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     const tooltipContent = $.make('div');
 
-    tooltipContent.appendChild(document.createTextNode(I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Add')));
-    tooltipContent.appendChild($.make('div', this.CSS.plusButtonShortcut, {
-      textContent: '/',
-    }));
+    const createTooltipLine = (text: string): DocumentFragment => {
+      const fragment = document.createDocumentFragment();
+      const spaceIndex = text.indexOf(' ');
+
+      if (spaceIndex > 0) {
+        const firstWord = text.substring(0, spaceIndex);
+        const rest = text.substring(spaceIndex);
+
+        fragment.appendChild($.make('span', this.CSS.plusButtonShortcutKey, {
+          textContent: firstWord,
+        }));
+        fragment.appendChild(document.createTextNode(rest));
+      } else {
+        fragment.appendChild(document.createTextNode(text));
+      }
+
+      return fragment;
+    };
+
+    tooltipContent.appendChild(createTooltipLine(I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Click to add below')));
+    tooltipContent.appendChild($.make('br'));
+
+    const userOS = _.getUserOS();
+    const modifierClickText = userOS.win
+      ? I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Ctrl-click to add above')
+      : I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Option-click to add above');
+
+    tooltipContent.appendChild(createTooltipLine(modifierClickText));
 
     tooltip.onHover(plusButton, tooltipContent, {
       hidingDelay: 400,
@@ -510,13 +544,26 @@ export default class Toolbar extends Module<ToolbarNodes> {
     $.append(actions, settingsToggler);
 
     const blockTunesTooltip = $.make('div');
-    const blockTunesTooltipEl = $.text(I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to tune'));
-    const slashRealKey = await getKeyboardKeyForCode('Slash', '/');
 
-    blockTunesTooltip.appendChild(blockTunesTooltipEl);
-    blockTunesTooltip.appendChild($.make('div', this.CSS.plusButtonShortcut, {
-      textContent: beautifyShortcut(`CMD + ${slashRealKey}`),
-    }));
+    const createStyledLine = (text: string): HTMLElement => {
+      const line = $.make('div');
+      const [firstWord, ...rest] = text.split(' ');
+      const styledWord = $.make('span', null, { textContent: firstWord });
+
+      styledWord.style.color = 'white';
+      line.appendChild(styledWord);
+      if (rest.length > 0) {
+        line.appendChild($.text(' ' + rest.join(' ')));
+      }
+
+      return line;
+    };
+
+    const dragToMoveText = I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Drag to move');
+    const clickToOpenText = I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to open the menu');
+
+    blockTunesTooltip.appendChild(createStyledLine(dragToMoveText));
+    blockTunesTooltip.appendChild(createStyledLine(clickToOpenText));
 
     tooltip.onHover(settingsToggler, blockTunesTooltip, {
       hidingDelay: 400,
@@ -642,15 +689,50 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
     if (settingsToggler) {
       /**
-       * Settings toggler
+       * Settings toggler mousedown handler
+       * Stores the initial mouse position to distinguish between click and drag
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
         e.stopPropagation();
         tooltip.hide(true);
+
+        const mouseEvent = e as MouseEvent;
+
+        /**
+         * Store the mouse position when mousedown occurs
+         * This will be used to determine if the user dragged or clicked
+         */
+        this.settingsTogglerMouseDownPosition = {
+          x: mouseEvent.clientX,
+          y: mouseEvent.clientY,
+        };
       }, true);
 
+      /**
+       * Settings toggler click handler
+       * Only opens the menu if the mouse didn't move significantly (i.e., it was a click, not a drag)
+       */
       this.readOnlyMutableListeners.on(settingsToggler, 'click', (e) => {
         e.stopPropagation();
+
+        const mouseEvent = e as MouseEvent;
+
+        /**
+         * Check if this was a drag or a click by comparing mouse positions
+         * If the mouse moved more than the threshold, it was a drag - don't open menu
+         */
+        const mouseDownPos = this.settingsTogglerMouseDownPosition;
+
+        this.settingsTogglerMouseDownPosition = null;
+
+        const wasDragged = mouseDownPos !== null && (
+          Math.abs(mouseEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
+          Math.abs(mouseEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
+        );
+
+        if (wasDragged) {
+          return;
+        }
 
         this.settingsTogglerClicked();
 

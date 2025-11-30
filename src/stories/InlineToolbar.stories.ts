@@ -71,6 +71,9 @@ const meta: Meta<InlineToolbarArgs> = {
   args: {
     minHeight: 300,
     data: sampleData,
+    tools: {
+      header: Header,
+    },
   },
   render: createEditor,
 };
@@ -366,9 +369,6 @@ export const LinkInputShown: Story = {
 export const ConvertToDropdownOpen: Story = {
   args: {
     data: sampleData,
-    tools: {
-      header: Header,
-    },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {

@@ -33,6 +33,11 @@
     --color-active-icon: #388ae5;
 
     /**
+   * Link color
+   */
+    --color-link: #388ae5;
+
+    /**
    * Block content width
    * Should be set in a constant at the modules/ui.js
    */

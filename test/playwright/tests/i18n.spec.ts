@@ -526,7 +526,7 @@ test.describe('blok i18n', () => {
     test('should translate "Click to delete" confirmation message', async ({ page }) => {
       const blockTunesDictionary = {
         delete: {
-           
+
           'Click to delete': 'Нажмите для удаления',
         },
       };
@@ -712,7 +712,7 @@ test.describe('blok i18n', () => {
     test('should translate "Nothing found" message in toolbox', async ({ page }) => {
       const uiDictionary = {
         popover: {
-           
+
           'Nothing found': 'Ничего не найдено',
         },
       };
@@ -757,7 +757,7 @@ test.describe('blok i18n', () => {
       const uiDictionary = {
         popover: {
           Filter: 'Поиск',
-           
+
           'Nothing found': 'Ничего не найдено',
         },
       };
@@ -876,7 +876,7 @@ test.describe('blok i18n', () => {
       const uiDictionary = {
         popover: {
           Filter: 'Поиск',
-           
+
           'Nothing found': 'Ничего не найдено',
         },
       };
@@ -1019,11 +1019,12 @@ test.describe('blok i18n', () => {
   });
 
   test.describe('ui toolbar toolbox', () => {
-    test('should translate "Add" button tooltip', async ({ page }) => {
+    test('should translate plus button tooltip', async ({ page }) => {
       const uiDictionary = {
         toolbar: {
           toolbox: {
-            Add: 'Добавить',
+            'Click to add below': 'Нажмите, чтобы добавить блок снизу',
+            'Option-click to add above': 'Option + клик чтобы добавить блок сверху',
           },
         },
       };
@@ -1047,17 +1048,18 @@ test.describe('blok i18n', () => {
 
       const tooltipText = await getTooltipText(page, plusButton);
 
-      expect(tooltipText).toContain(uiDictionary.toolbar.toolbox.Add);
+      expect(tooltipText).toContain(uiDictionary.toolbar.toolbox['Click to add below']);
+      expect(tooltipText).toContain(uiDictionary.toolbar.toolbox['Option-click to add above']);
     });
   });
 
   test.describe('ui block tunes toggler', () => {
-    test('should translate "Click to tune" tooltip', async ({ page }) => {
+    test('should translate "Drag to move" tooltip', async ({ page }) => {
       const uiDictionary = {
         blockTunes: {
           toggler: {
-             
-            'Click to tune': 'Нажмите, чтобы настроить',
+            'Drag to move': 'Перетащите для перемещения',
+            'Click to open the menu': 'Нажмите, чтобы открыть меню',
           },
         },
       };
@@ -1091,7 +1093,7 @@ test.describe('blok i18n', () => {
 
       const tooltipText = await getTooltipText(page, settingsButton);
 
-      expect(tooltipText).toContain(uiDictionary.blockTunes.toggler['Click to tune']);
+      expect(tooltipText).toContain('Перетащите');
     });
   });
 
@@ -1100,7 +1102,7 @@ test.describe('blok i18n', () => {
       const uiDictionary = {
         inlineToolbar: {
           converter: {
-             
+
             'Convert to': 'Конвертировать в',
           },
         },
@@ -1227,7 +1229,7 @@ test.describe('blok i18n', () => {
     test('should translate "Add a link" placeholder for link tool', async ({ page }) => {
       const toolsDictionary = {
         link: {
-           
+
           'Add a link': 'Вставьте ссылку',
         },
       };
@@ -1279,7 +1281,7 @@ test.describe('blok i18n', () => {
     test('should translate stub tool message', async ({ page }) => {
       const toolsDictionary = {
         stub: {
-           
+
           'The block can not be displayed correctly.': 'Блок не может быть отображен корректно.',
         },
       };

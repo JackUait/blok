@@ -8,6 +8,36 @@
   outline: none;
 }
 
+h1.blok-header {
+  font-size: 2.5em;
+  font-weight: 700;
+}
+
+h2.blok-header {
+  font-size: 2em;
+  font-weight: 600;
+}
+
+h3.blok-header {
+  font-size: 1.75em;
+  font-weight: 600;
+}
+
+h4.blok-header {
+  font-size: 1.5em;
+  font-weight: 600;
+}
+
+h5.blok-header {
+  font-size: 1.25em;
+  font-weight: 600;
+}
+
+h6.blok-header {
+  font-size: 1em;
+  font-weight: 600;
+}
+
 .blok-header p,
 .blok-header div {
   padding: 0 !important;

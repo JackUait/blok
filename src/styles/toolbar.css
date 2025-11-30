@@ -26,6 +26,10 @@
             opacity: 0.6;
             word-spacing: -2px;
             margin-top: 5px;
+
+            &-key {
+                color: #fff;
+            }
         }
 
         @media (--mobile) {
@@ -58,7 +62,6 @@
     &__settings-btn {
         @apply --toolbox-button;
 
-        margin-left: 3px;
         cursor: pointer;
         user-select: none;
 

@@ -31,7 +31,7 @@ const getNamespaces = (dict: object, keyPath?: string): DictNamespaces<typeof de
      *
      * ui.toolbar.toolbox – "ui.toolbar.toolbox"
      * instead of
-     * ui.toolbar.toolbox – {"Add": ""}
+     * ui.toolbar.toolbox – {"Click to add below": "", "Option-click to add above": ""}
      */
     if (!isLastSection) {
       result[key] = getNamespaces(section, newPath);
@@ -47,6 +47,6 @@ const getNamespaces = (dict: object, keyPath?: string): DictNamespaces<typeof de
 
 /**
  * Type safe access to the internal messages dictionary sections
- * @example I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to tune');
+ * @example I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Drag to move');
  */
 export const I18nInternalNS = getNamespaces(defaultDictionary);

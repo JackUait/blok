@@ -56,6 +56,7 @@
     .blok-popover-item {
         border-radius: 4px;
         padding: 4px;
+        gap: 4px;
 
         &__icon--tool {
             box-shadow: none;

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { IconLink } from '@codexteam/icons';
+import { IconLink } from '../../../../src/components/icons';
 
 import LinkInlineTool from '../../../../src/components/inline-tools/inline-tool-link';
 import type SelectionUtils from '../../../../src/components/selection';

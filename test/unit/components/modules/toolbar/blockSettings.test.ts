@@ -109,7 +109,7 @@ vi.mock('@/types/utils/popover/popover-event', () => ({
   },
 }));
 
-vi.mock('@codexteam/icons', () => ({
+vi.mock('../../../../../src/components/icons', () => ({
   IconReplace: '<svg data-blok-icon="replace" />',
 }));
 

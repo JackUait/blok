@@ -7,7 +7,7 @@
  */
 import './index.css';
 
-import { IconText } from '@codexteam/icons';
+import { IconText } from '../../components/icons';
 import type {
   API,
   BlockTool,

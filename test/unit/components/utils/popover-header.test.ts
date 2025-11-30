@@ -7,7 +7,7 @@ const { iconMarkup } = vi.hoisted(() => ({
   iconMarkup: '<svg data-blok-testid="chevron"></svg>',
 }));
 
-vi.mock('@codexteam/icons', () => ({
+vi.mock('../../../../src/components/icons', () => ({
   IconChevronLeft: iconMarkup,
 }));
 

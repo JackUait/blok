@@ -1,5 +1,5 @@
 import type { InlineTool, SanitizerConfig } from '../../../types';
-import { IconBold } from '@codexteam/icons';
+import { IconBold } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
 import { BLOK_INTERFACE_SELECTOR } from '../constants';
 import SelectionUtils from '../selection';

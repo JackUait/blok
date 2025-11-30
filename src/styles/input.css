@@ -3,7 +3,7 @@
 
   background: #F8F8F8;
   border: 1px solid rgba(226,226,229,0.20);
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 2px;
   display: grid;
   grid-template-columns: auto auto 1fr;

@@ -146,13 +146,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@codexteam/icons@npm:0.3.3":
-  version: 0.3.3
-  resolution: "@codexteam/icons@npm:0.3.3"
-  checksum: 10c0/336245f38a2b2a53626a552a5f0f32c822ee1265be6827670ba157c9fa101cb23e6c75e625aa067e4577c2d805e261f4ffcb61097ea94c034c0a3c0cae7d7271
-  languageName: node
-  linkType: hard
-
 "@colors/colors@npm:1.5.0":
   version: 1.5.0
   resolution: "@colors/colors@npm:1.5.0"
@@ -1109,7 +1102,6 @@ __metadata:
     "@axe-core/playwright": "npm:4.11.0"
     "@babel/register": "npm:7.28.3"
     "@chromatic-com/storybook": "npm:^4.1.3"
-    "@codexteam/icons": "npm:0.3.3"
     "@playwright/test": "npm:1.57.0"
     "@storybook/addon-a11y": "npm:10.1.1"
     "@storybook/addon-vitest": "npm:10.1.1"

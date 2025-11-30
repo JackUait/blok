@@ -1,5 +1,5 @@
 import Dom from '../../../../../dom';
-import { IconDotCircle, IconChevronRight } from '@codexteam/icons';
+import { IconChevronRight } from '../../../../../icons';
 import type {
   PopoverItemDefaultParams as PopoverItemDefaultParams,
   PopoverItemRenderParamsMap,
@@ -171,12 +171,14 @@ export class PopoverItemDefault extends PopoverItem {
       el.setAttribute('data-blok-item-name', params.name);
     }
 
-    this.nodes.icon = Dom.make('div', [css.icon, css.iconTool], {
-      innerHTML: params.icon || IconDotCircle,
-      'data-blok-testid': 'popover-item-icon',
-    });
+    if (params.icon) {
+      this.nodes.icon = Dom.make('div', [css.icon, css.iconTool], {
+        innerHTML: params.icon,
+        'data-blok-testid': 'popover-item-icon',
+      });
 
-    el.appendChild(this.nodes.icon);
+      el.appendChild(this.nodes.icon);
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
     const title = params.title || params.label;

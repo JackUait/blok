@@ -7,7 +7,7 @@
  */
 import './index.css';
 
-import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '@codexteam/icons';
+import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../../components/icons';
 import type {
   API,
   BlockTool,

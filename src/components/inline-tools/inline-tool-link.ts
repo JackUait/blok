@@ -9,7 +9,7 @@ import type {
 import { PopoverItemType } from '../utils/popover';
 import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
-import { IconLink } from '@codexteam/icons';
+import { IconLink } from '../icons';
 import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../constants';
 
 /**

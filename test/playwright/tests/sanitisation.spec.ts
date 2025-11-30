@@ -281,21 +281,21 @@ test.describe('sanitizing', () => {
         },
       ]);
 
-      const block = getBlockById(page, INITIAL_BLOCK_ID);
+      const paragraph = getParagraphByBlockId(page, INITIAL_BLOCK_ID);
 
-      await block.click();
-      // await block.type('This text should be bold.');
+      await paragraph.click();
 
       // Select all text
-      await selectAllText(block);
+      await selectAllText(paragraph);
 
       // Click bold button
       const boldButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-item-name="bold"]`);
 
       await boldButton.click();
 
-      // Click block to deselect
-      await block.click();
+      // Click paragraph to deselect and wait for inline toolbar to close
+      await paragraph.click();
+      await boldButton.waitFor({ state: 'hidden' });
 
       const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
@@ -376,17 +376,19 @@ test.describe('sanitizing', () => {
         },
       ]);
 
-      const block = getBlockById(page, INITIAL_BLOCK_ID);
+      const paragraph = getParagraphByBlockId(page, INITIAL_BLOCK_ID);
 
-      await block.click();
-      // await block.type('This text should be italic.');
+      await paragraph.click();
 
-      await selectAllText(block);
+      await selectAllText(paragraph);
 
       const italicButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-item-name="italic"]`);
 
       await italicButton.click();
-      await block.click();
+
+      // Click paragraph to deselect and wait for inline toolbar to close
+      await paragraph.click();
+      await italicButton.waitFor({ state: 'hidden' });
 
       const output = await saveBlok(page);
       const text = output.blocks[0].data.text;
@@ -417,12 +419,11 @@ test.describe('sanitizing', () => {
         },
       ]);
 
-      const block = getBlockById(page, INITIAL_BLOCK_ID);
+      const paragraph = getParagraphByBlockId(page, INITIAL_BLOCK_ID);
 
-      await block.click();
-      // await block.type('Link text');
+      await paragraph.click();
 
-      await selectAllText(block);
+      await selectAllText(paragraph);
 
       const linkButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-item-name="link"]`);
 
@@ -432,6 +433,9 @@ test.describe('sanitizing', () => {
 
       await linkInput.fill('https://example.com');
       await linkInput.press('Enter');
+
+      // Wait for link input to close after pressing Enter
+      await linkInput.waitFor({ state: 'hidden' });
 
       const output = await saveBlok(page);
       const text = output.blocks[0].data.text;

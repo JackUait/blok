@@ -181,7 +181,7 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     if (params.icon) {
-      this.nodes.icon = Dom.make('div', [css.icon, css.iconTool], {
+      this.nodes.icon = Dom.make('div', [css.icon, css.iconTool, css.iconToolMargin], {
         innerHTML: params.icon,
         'data-blok-testid': 'popover-item-icon',
       });
@@ -221,7 +221,7 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     if (params.isDisabled) {
-      el.classList.add(css.disabled);
+      el.classList.add(css.disabled, css.disabledCursor, css.disabledPointerEvents);
       el.setAttribute('data-blok-disabled', 'true');
     }
 

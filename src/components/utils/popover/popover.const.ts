@@ -1,24 +1,55 @@
 /**
- * CSS class names to be used in popover
- * Uses Tailwind-compatible class names defined in popover.css
+ * Tailwind CSS class names for popover component
+ *
+ * Classes are organized into:
+ * - Structural classes (blok-popover*): Keep BEM naming for CSS variable support and complex state selectors
+ * - Utility classes: Pure Tailwind utilities for simple, static styles
  */
 export const css = {
+  // Structural classes - require CSS file for CSS variables and state-based selectors
   popover: 'blok-popover',
   popoverContainer: 'blok-popover__container',
   popoverOpenTop: 'blok-popover--open-top',
   popoverOpenLeft: 'blok-popover--open-left',
   popoverOpened: 'blok-popover--opened',
-  search: 'blok-popover__search',
-  nothingFoundMessage: 'blok-popover__nothing-found-message',
-  nothingFoundMessageDisplayed: 'blok-popover__nothing-found-message--displayed',
-  items: 'blok-popover__items',
-  overlay: 'blok-popover__overlay',
-  overlayHidden: 'blok-popover__overlay--hidden',
   popoverNested: 'blok-popover--nested',
-  getPopoverNestedClass: (level: number) => `blok-popover--nested-level-${level.toString()}`,
   popoverInline: 'blok-popover--inline',
-  popoverHeader: 'blok-popover-header',
+  overlay: 'blok-popover__overlay',
+  getPopoverNestedClass: (level: number) => `blok-popover--nested-level-${level.toString()}`,
+
+  // Utility classes - pure Tailwind
+  search: 'mb-1.5',
+  items: 'blok-popover__items overflow-y-auto overscroll-contain',
+  overlayHidden: 'hidden',
+  nothingFoundMessage: 'hidden cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text p-[3px]',
+  nothingFoundMessageDisplayed: '!block',
+  popoverHeader: 'flex items-center mb-2 mt-1',
 };
+
+/**
+ * Data attribute name for opened state
+ */
+export const DATA_ATTRIBUTE_OPENED = 'data-blok-popover-opened';
+
+/**
+ * Data attribute name for nested state
+ */
+export const DATA_ATTRIBUTE_NESTED = 'data-blok-nested';
+
+/**
+ * Data attribute name for open-top state
+ */
+export const DATA_ATTRIBUTE_OPEN_TOP = 'data-blok-popover-open-top';
+
+/**
+ * Data attribute name for open-left state
+ */
+export const DATA_ATTRIBUTE_OPEN_LEFT = 'data-blok-popover-open-left';
+
+/**
+ * Data attribute name for nothing found message displayed state
+ */
+export const DATA_ATTRIBUTE_NOTHING_FOUND_DISPLAYED = 'data-blok-nothing-found-displayed';
 
 /**
  * CSS variables names to be used in popover

@@ -1,161 +1,142 @@
 /**
- * Styles overrides for inline popover
+ * Styles overrides for inline popover - Tailwind version
+ *
+ * Uses @apply where possible, CSS variables for dynamic values
  */
 .blok-popover--inline {
-    --height: 38px;
-    --height-mobile: 46px;
-    --container-padding: 4px;
+  --height: 38px;
+  --height-mobile: 46px;
+  --container-padding: 4px;
 
-    position: relative;
+  @apply relative;
 
-    &.blok-popover--opened {
-        display: inline-block;
-        width: var(--inline-popover-width, max-content);
-        height: var(--height);
+  &.blok-popover--opened {
+    @apply inline-block;
+    width: var(--inline-popover-width, max-content);
+    height: var(--height);
 
-        @media (--mobile) {
-            height: var(--height-mobile);
-        }
+    @screen mobile {
+      height: var(--height-mobile);
     }
+  }
 
-    .blok-popover__custom-content {
-        margin-bottom: 0;
+  .blok-popover__custom-content {
+    @apply mb-0;
+  }
+
+  .blok-popover__items {
+    @apply flex;
+  }
+
+  .blok-popover__container {
+    @apply flex-row top-0 min-w-max w-max mobile:absolute;
+    padding: var(--container-padding);
+    height: var(--height);
+    animation: none;
+
+    @screen mobile {
+      height: var(--height-mobile);
     }
+  }
 
-    .blok-popover__items {
-        display: flex;
-    }
-
-    .blok-popover__container {
-        flex-direction: row;
-        padding: var(--container-padding);
-        height: var(--height);
-        top: 0;
-        min-width: max-content;
-        width: max-content;
-        animation: none;
-
-        @media (--mobile) {
-            height: var(--height-mobile);
-            position: absolute;
-        }
-    }
-
-    /**
+  /**
    * Popover item styles
    */
-    .blok-popover-item-separator {
-        padding: 0 4px;
+  .blok-popover-item-separator {
+    @apply px-1 py-0;
 
-        &__line {
-            height: 100%;
-            width: 1px;
-        }
+    &__line {
+      @apply h-full w-px;
+    }
+  }
+
+  .blok-popover-item {
+    @apply rounded p-1 gap-1;
+
+    &__icon--tool {
+      @apply shadow-none bg-transparent mr-0;
     }
 
-    .blok-popover-item {
-        border-radius: 4px;
-        padding: 4px;
-        gap: 4px;
+    &__icon {
+      @apply w-auto h-auto;
 
-        &__icon--tool {
-            box-shadow: none;
-            background: transparent;
-            margin-right: 0;
+      svg {
+        width: var(--icon-size);
+        height: var(--icon-size);
+
+        @screen mobile {
+          width: var(--icon-size--mobile);
+          height: var(--icon-size--mobile);
         }
-
-        &__icon {
-            width: unset;
-            height: unset;
-
-            svg {
-                width: var(--icon-size);
-                height: var(--icon-size);
-
-                @media (--mobile) {
-                    width: var(--icon-size--mobile);
-                    height: var(--icon-size--mobile);
-                }
-            }
-        }
-
-        &:not(:last-of-type) {
-            margin-bottom: unset;
-        }
+      }
     }
 
-    .blok-popover-item-html {
-        display: flex;
-        align-items: center;
+    &:not(:last-of-type) {
+      @apply mb-0;
     }
+  }
 
-    .blok-popover-item__icon--chevron-right {
-        transform: rotate(90deg);
-    }
+  .blok-popover-item-html {
+    @apply flex items-center;
+  }
 
-    /**
+  .blok-popover-item__icon--chevron-right {
+    @apply rotate-90;
+  }
+
+  /**
    * Hide chevron for the link tool — it renders a custom input instead of a dropdown list,
    * so the arrow is misleading here but should stay for other tools like the text style switcher.
    */
-    [data-blok-item-name="link"] .blok-popover-item__icon--chevron-right {
-        display: none;
+  [data-blok-item-name="link"] .blok-popover-item__icon--chevron-right {
+    @apply hidden;
+  }
+
+  .blok-popover--nested-level-1 {
+    .blok-popover__container {
+      --offset: 3px;
+
+      @apply left-0;
+      top: calc(var(--height) + var(--offset));
+
+      @screen mobile {
+        top: calc(var(--height-mobile) + var(--offset));
+      }
     }
+  }
 
-    .blok-popover--nested-level-1 {
-        .blok-popover__container {
-            --offset: 3px;
-
-            left: 0;
-            top: calc(var(--height) + var(--offset));
-
-            @media (--mobile) {
-                top: calc(var(--height-mobile) + var(--offset));
-            }
-        }
-    }
-
-    /**
+  /**
    * Nested popovers should look like regular desktop popovers, hence these overrides
    */
-    .blok-popover--nested {
-        .blok-popover__container {
-            min-width: var(--width);
-            width: var(--width);
-            height: fit-content;
-            padding: 6px;
-            flex-direction: column;
-        }
-
-        .blok-popover__items {
-            display: block;
-            width: 100%;
-        }
-
-        .blok-popover-item {
-            border-radius: 6px;
-            padding: 3px;
-
-            @media (--mobile) {
-                padding: 4px;
-            }
-
-            &__icon--tool {
-                margin-right: 4px;
-            }
-
-            &__icon {
-                width: 26px;
-                height: 26px;
-            }
-        }
-
-        .blok-popover-item-separator {
-            padding: 4px 3px;
-
-            &__line {
-                width: 100%;
-                height: 1px;
-            }
-        }
+  .blok-popover--nested {
+    .blok-popover__container {
+      @apply h-fit p-1.5 flex-col;
+      min-width: var(--width);
+      width: var(--width);
     }
+
+    .blok-popover__items {
+      @apply block w-full;
+    }
+
+    .blok-popover-item {
+      @apply rounded-md p-[3px] mobile:p-1;
+
+      &__icon--tool {
+        @apply mr-1;
+      }
+
+      &__icon {
+        @apply w-[26px] h-[26px];
+      }
+    }
+
+    .blok-popover-item-separator {
+      @apply py-1 px-[3px];
+
+      &__line {
+        @apply w-full h-px;
+      }
+    }
+  }
 }

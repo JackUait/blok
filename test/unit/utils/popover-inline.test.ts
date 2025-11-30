@@ -21,7 +21,7 @@ vi.mock('../../../src/components/utils', async () => {
 vi.mock('../../../src/components/flipper');
 
 describe('PopoverInline', () => {
-   
+
   const OFFSET_LEFT_VALUE = 50;
   const ITEM_OFFSET_LEFT_VALUE = 30;
 
@@ -657,6 +657,8 @@ describe('PopoverInline', () => {
         .showNestedPopoverForItem(item);
 
       expect(result).toBe(nestedPopover);
+      // Verify nested level class was applied - this tests CSS positioning behavior
+      // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing CSS class application for nested popover positioning
       expect(nestedPopoverEl.classList.contains(css.getPopoverNestedClass(1))).toBe(true);
     });
 

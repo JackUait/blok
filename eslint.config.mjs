@@ -75,6 +75,10 @@ const internalUnitTestPlugin = {
             'Avoid using classList.{{method}}() in unit tests. Prefer data-blok-testid or data attributes for state checking.',
           noClassNameProperty:
             'Avoid using .className in unit tests. Prefer data-blok-testid or data attributes for state checking.',
+          noGetAttributeClass:
+            "Avoid using getAttribute('class') in unit tests. Prefer data-blok-testid or data attributes for state checking.",
+          noSetAttributeClass:
+            "Avoid using setAttribute('class', ...) in unit tests. Prefer data-blok-testid or data attributes for state checking.",
         },
       },
       create(context) {
@@ -186,6 +190,94 @@ const internalUnitTestPlugin = {
           return classListProperty.type === 'Identifier' && classListProperty.name === 'classList';
         };
 
+        const isSpyOnClassList = (node) => {
+          // Check for vi.spyOn(element.classList, 'method') or jest.spyOn(element.classList, 'method') pattern
+          if (node.callee.type !== 'MemberExpression') {
+            return null;
+          }
+
+          const { object, property } = node.callee;
+
+          // Check if it's vi.spyOn or jest.spyOn
+          if (object.type !== 'Identifier' || !['vi', 'jest'].includes(object.name)) {
+            return null;
+          }
+
+          if (property.type !== 'Identifier' || property.name !== 'spyOn') {
+            return null;
+          }
+
+          // Check if first argument is element.classList
+          if (node.arguments.length < 2) {
+            return null;
+          }
+
+          const firstArg = node.arguments[0];
+
+          if (firstArg.type !== 'MemberExpression') {
+            return null;
+          }
+
+          if (firstArg.property.type !== 'Identifier' || firstArg.property.name !== 'classList') {
+            return null;
+          }
+
+          // Check if second argument is a classList method name
+          const secondArg = node.arguments[1];
+
+          if (secondArg.type !== 'Literal' || typeof secondArg.value !== 'string') {
+            return null;
+          }
+
+          if (CLASS_LIST_METHODS.has(secondArg.value)) {
+            return secondArg.value;
+          }
+
+          return null;
+        };
+
+        const isGetAttributeClass = (node) => {
+          // Check for element.getAttribute('class') pattern
+          if (node.callee.type !== 'MemberExpression') {
+            return false;
+          }
+
+          const { property } = node.callee;
+
+          if (property.type !== 'Identifier' || property.name !== 'getAttribute') {
+            return false;
+          }
+
+          if (node.arguments.length === 0) {
+            return false;
+          }
+
+          const arg = node.arguments[0];
+
+          return arg.type === 'Literal' && arg.value === 'class';
+        };
+
+        const isSetAttributeClass = (node) => {
+          // Check for element.setAttribute('class', ...) pattern
+          if (node.callee.type !== 'MemberExpression') {
+            return false;
+          }
+
+          const { property } = node.callee;
+
+          if (property.type !== 'Identifier' || property.name !== 'setAttribute') {
+            return false;
+          }
+
+          if (node.arguments.length < 2) {
+            return false;
+          }
+
+          const arg = node.arguments[0];
+
+          return arg.type === 'Literal' && arg.value === 'class';
+        };
+
         return {
           MemberExpression(node) {
             // Check for .className property access
@@ -197,6 +289,39 @@ const internalUnitTestPlugin = {
             }
           },
           CallExpression(node) {
+            // Check for element.getAttribute('class') pattern
+            if (isGetAttributeClass(node)) {
+              context.report({
+                node,
+                messageId: 'noGetAttributeClass',
+              });
+
+              return;
+            }
+
+            // Check for element.setAttribute('class', ...) pattern
+            if (isSetAttributeClass(node)) {
+              context.report({
+                node,
+                messageId: 'noSetAttributeClass',
+              });
+
+              return;
+            }
+
+            // Check for vi.spyOn(element.classList, 'method') pattern
+            const spyOnMethod = isSpyOnClassList(node);
+
+            if (spyOnMethod) {
+              context.report({
+                node,
+                messageId: 'noClassListMethod',
+                data: { method: spyOnMethod },
+              });
+
+              return;
+            }
+
             if (node.callee.type !== 'MemberExpression') {
               return;
             }

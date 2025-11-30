@@ -37,7 +37,7 @@
 }
 
 .blok-popover__container {
-  @apply absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none;
+  @apply absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none z-[4] max-h-0;
   min-width: var(--width);
   width: var(--width);
   border-radius: var(--border-radius);
@@ -45,20 +45,25 @@
   left: var(--popover-left);
   top: var(--popover-top);
   background: var(--color-background);
-  z-index: 4;
-  max-height: 0;
+
+  /* Mobile container styles */
+  @apply mobile:fixed mobile:max-w-none mobile:rounded-[10px];
+
+  @screen mobile {
+    --offset: 5px;
+    min-width: calc(100% - var(--offset) * 2);
+    inset: auto var(--offset) calc(var(--offset) + env(safe-area-inset-bottom)) var(--offset);
+  }
 }
 
 .blok-popover--opened > .blok-popover__container {
   @apply opacity-100 pointer-events-auto;
+  animation: panelShowing 100ms ease;
   padding: var(--padding);
   max-height: var(--max-height);
-  animation: panelShowing 100ms ease;
   border: 1px solid var(--color-border);
-}
 
-@media (width <= 650px) {
-  .blok-popover--opened > .blok-popover__container {
+  @screen mobile {
     animation: panelShowingMobile 250ms ease;
   }
 }
@@ -71,66 +76,23 @@
   --popover-left: calc(-1 * var(--width) + 100%);
 }
 
-.blok-popover__items {
-  @apply overflow-y-auto;
-  overscroll-behavior: contain;
-}
-
 .blok-popover__overlay {
-  @apply hidden;
-}
+  @apply hidden bg-dark mobile:fixed mobile:inset-0 mobile:block mobile:visible mobile:z-[3] mobile:opacity-50 mobile:transition-opacity mobile:duration-[120ms] mobile:ease-in mobile:will-change-[opacity];
 
-@media (width <= 650px) {
-  .blok-popover__overlay {
-    @apply fixed inset-0 block visible;
-    background: var(--color-dark);
-    z-index: 3;
-    opacity: 0.5;
-    transition: opacity 0.12s ease-in;
-    will-change: opacity;
-  }
-
-  .blok-popover__overlay--hidden {
+  &--hidden {
     @apply hidden;
   }
 }
 
-/* Mobile container styles */
-@media (width <= 650px) {
-  .blok-popover .blok-popover__container {
-    --offset: 5px;
-    @apply fixed max-w-none;
-    min-width: calc(100% - var(--offset) * 2);
-    inset: auto var(--offset) calc(var(--offset) + env(safe-area-inset-bottom)) var(--offset);
-    border-radius: 10px;
-  }
-}
-
-.blok-popover__search {
-  @apply mb-1.5;
-}
-
-.blok-popover__nothing-found-message {
-  @apply hidden cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis;
-  color: var(--grayText);
-  padding: 3px;
-}
-
-.blok-popover__nothing-found-message--displayed {
-  @apply block;
-}
-
 /* Nested popover positioning */
 .blok-popover--nested .blok-popover__container {
-  /* Variable --nesting-level is set via js in showNestedPopoverForItem() method */
+  /* Variables --nesting-level and --trigger-item-top are set via JS */
   --popover-left: calc(var(--nesting-level) * (var(--width) - var(--nested-popover-overlap)));
-  /* Variable --trigger-item-top is set via js in showNestedPopoverForItem() method */
   @apply absolute;
   top: calc(var(--trigger-item-top) - var(--nested-popover-overlap));
 }
 
 .blok-popover--open-top.blok-popover--nested .blok-popover__container {
-  /* Bottom edge of nested popover should not be lower than bottom edge of parent popover when opened upwards */
   top: calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + var(--offset-from-target) + var(--nested-popover-overlap));
 }
 
@@ -142,11 +104,11 @@
  * Popover item separator
  */
 .blok-popover-item-separator {
-  padding: 4px 3px;
-}
+  @apply py-1 px-[3px];
 
-.blok-popover-item-separator--hidden {
-  @apply hidden;
+  &--hidden {
+    @apply hidden;
+  }
 }
 
 .blok-popover-item-separator__line {
@@ -166,196 +128,103 @@
  */
 .blok-popover-item {
   --border-radius: theme('borderRadius.md');
-  @apply flex items-center select-none border-none bg-transparent;
-  border-radius: var(--border-radius);
+  @apply flex items-center select-none border-none bg-transparent rounded-md mobile:p-1;
   padding: var(--item-padding);
   color: var(--color-text-primary);
-}
 
-@media (width <= 650px) {
-  .blok-popover-item {
-    @apply p-1;
+  &:not(:last-of-type) {
+    @apply mb-px;
   }
-}
 
-.blok-popover-item:not(:last-of-type) {
-  @apply mb-px;
+  &--active {
+    background: var(--color-background-icon-active);
+    color: var(--color-text-icon-active);
+  }
+
+  &--disabled {
+    @apply cursor-default pointer-events-none;
+    color: var(--color-text-secondary);
+  }
+
+  &--focused:not(.blok-popover-item--no-focus) {
+    background: var(--color-background-item-focus) !important;
+  }
+
+  &--hidden {
+    @apply !hidden;
+  }
+
+  /* Hover styles - only on devices that support hover */
+  @media (hover: hover) {
+    &:hover {
+      @apply cursor-pointer;
+    }
+
+    &:hover:not(.blok-popover-item--no-hover) {
+      background-color: var(--color-background-item-hover);
+    }
+  }
+
+  /* Force hover styles for Storybook/Chromatic testing */
+  &--force-hover:not(.blok-popover-item--no-hover) {
+    @apply cursor-pointer;
+    background-color: var(--color-background-item-hover);
+  }
+
+  /* Confirmation state */
+  &--confirmation {
+    background: var(--color-background-item-confirm);
+
+    .blok-popover-item__title,
+    .blok-popover-item__icon {
+      @apply text-white;
+    }
+
+    @media (hover: hover) {
+      &:not(.blok-popover-item--no-hover):hover {
+        background: var(--color-background-item-confirm-hover);
+      }
+    }
+
+    &:not(.blok-popover-item--no-focus).blok-popover-item--focused {
+      background: var(--color-background-item-confirm-hover) !important;
+    }
+  }
 }
 
 .blok-popover-item__icon {
-  @apply flex items-center justify-center;
-  width: 26px;
-  height: 26px;
-}
+  @apply flex items-center justify-center w-[26px] h-[26px] mobile:w-9 mobile:h-9 mobile:rounded-lg;
 
-.blok-popover-item__icon svg {
-  width: var(--icon-size);
-  height: var(--icon-size);
-}
-
-@media (width <= 650px) {
-  .blok-popover-item__icon {
-    @apply w-9 h-9 rounded-lg;
+  svg {
+    width: var(--icon-size);
+    height: var(--icon-size);
+    @apply mobile:w-7 mobile:h-7;
   }
 
-  .blok-popover-item__icon svg {
-    @apply w-7 h-7;
+  &--tool {
+    @apply mr-1;
   }
-}
-
-.blok-popover-item__icon--tool {
-  @apply mr-1;
 }
 
 .blok-popover-item__title {
-  @apply text-sm leading-5 font-medium overflow-hidden whitespace-nowrap text-ellipsis mr-auto;
-}
-
-@media (width <= 650px) {
-  .blok-popover-item__title {
-    @apply text-base;
-  }
+  @apply text-sm leading-5 font-medium overflow-hidden whitespace-nowrap text-ellipsis mr-auto mobile:text-base;
 }
 
 .blok-popover-item__secondary-title {
-  @apply text-xs whitespace-nowrap pr-1.5 opacity-60;
+  @apply text-xs whitespace-nowrap pr-1.5 opacity-60 tracking-[-0.1em] mobile:hidden;
   color: var(--color-text-secondary);
-  letter-spacing: -0.1em;
-}
-
-@media (width <= 650px) {
-  .blok-popover-item__secondary-title {
-    @apply hidden;
-  }
-}
-
-.blok-popover-item--active {
-  background: var(--color-background-icon-active);
-  color: var(--color-text-icon-active);
-}
-
-.blok-popover-item--disabled {
-  @apply cursor-default pointer-events-none;
-  color: var(--color-text-secondary);
-}
-
-.blok-popover-item--focused:not(.blok-popover-item--no-focus) {
-  background: var(--color-background-item-focus) !important;
-}
-
-.blok-popover-item--hidden {
-  display: none !important;
-}
-
-/* Hover styles - only on devices that support hover */
-@media (hover: hover) {
-  .blok-popover-item:hover {
-    @apply cursor-pointer;
-  }
-
-  .blok-popover-item:hover:not(.blok-popover-item--no-hover) {
-    background-color: var(--color-background-item-hover);
-  }
-}
-
-/* Force hover styles for Storybook/Chromatic testing */
-.blok-popover-item--force-hover:not(.blok-popover-item--no-hover) {
-  @apply cursor-pointer;
-  background-color: var(--color-background-item-hover);
-}
-
-/* Confirmation state */
-.blok-popover-item--confirmation {
-  background: var(--color-background-item-confirm);
-}
-
-.blok-popover-item--confirmation .blok-popover-item__title,
-.blok-popover-item--confirmation .blok-popover-item__icon {
-  @apply text-white;
-}
-
-/* Confirmation hover */
-@media (hover: hover) {
-  .blok-popover-item--confirmation:not(.blok-popover-item--no-hover):hover {
-    background: var(--color-background-item-confirm-hover);
-  }
-}
-
-/* Confirmation focus */
-.blok-popover-item--confirmation:not(.blok-popover-item--no-focus).blok-popover-item--focused {
-  background: var(--color-background-item-confirm-hover) !important;
 }
 
 /**
- * Animations
+ * Wobble animation utility class
  */
-@keyframes panelShowing {
-  from {
-    @apply opacity-0;
-    transform: translateY(-8px) scale(0.9);
-  }
-  70% {
-    @apply opacity-100;
-    transform: translateY(2px);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-@keyframes panelShowingMobile {
-  from {
-    @apply opacity-0;
-    transform: translateY(14px) scale(0.98);
-  }
-  70% {
-    @apply opacity-100;
-    transform: translateY(-4px);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
 .wobble {
-  animation-name: wobble;
-  animation-duration: 400ms;
-}
-
-/**
- * @author Nick Pettit - https://github.com/nickpettit/glide
- */
-@keyframes wobble {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  15% {
-    transform: translate3d(-9%, 0, 0);
-  }
-  30% {
-    transform: translate3d(9%, 0, 0);
-  }
-  45% {
-    transform: translate3d(-4%, 0, 0);
-  }
-  60% {
-    transform: translate3d(4%, 0, 0);
-  }
-  75% {
-    transform: translate3d(-1%, 0, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
+  animation: wobble 400ms;
 }
 
 /**
  * Popover header styles
  */
-.blok-popover-header {
-  @apply flex items-center mb-2 mt-1;
-}
-
 .blok-popover-header__text {
   @apply text-lg font-semibold;
 }
@@ -363,8 +232,8 @@
 .blok-popover-header__back-button {
   @apply border-0 bg-transparent w-9 h-9;
   color: var(--color-text-primary);
-}
 
-.blok-popover-header__back-button svg {
-  @apply block w-7 h-7;
+  svg {
+    @apply block w-7 h-7;
+  }
 }

@@ -6,7 +6,7 @@ import EventsDispatcher from '../events';
 import Listeners from '../listeners';
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { css } from './popover.const';
+import { css, DATA_ATTRIBUTE_OPEN_TOP, DATA_ATTRIBUTE_OPEN_LEFT } from './popover.const';
 import type { PopoverItemParams } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 
@@ -143,7 +143,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   public hide(): void {
     this.nodes.popover.classList.remove(css.popoverOpened);
     this.nodes.popover.classList.remove(css.popoverOpenTop);
+    this.nodes.popover.classList.remove(css.popoverOpenLeft);
     this.nodes.popover.removeAttribute('data-blok-popover-opened');
+    this.nodes.popover.removeAttribute(DATA_ATTRIBUTE_OPEN_TOP);
+    this.nodes.popover.removeAttribute(DATA_ATTRIBUTE_OPEN_LEFT);
 
     this.itemsDefault.forEach(item => item.reset());
 

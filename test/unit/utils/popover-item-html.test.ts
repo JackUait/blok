@@ -6,7 +6,6 @@ vi.mock('../../../src/components/utils/tooltip', () => ({
 }));
 
 import { PopoverItemHtml } from '../../../src/components/utils/popover/components/popover-item/popover-item-html/popover-item-html';
-import { css } from '../../../src/components/utils/popover/components/popover-item/popover-item-html/popover-item-html.const';
 import { PopoverItemType, type PopoverItemHtmlParams, type PopoverItemRenderParamsMap } from '../../../src/components/utils/popover/components/popover-item';
 import * as tooltip from '../../../src/components/utils/tooltip';
 
@@ -62,7 +61,7 @@ describe('PopoverItemHtml', () => {
     const { root, params } = createItem({ element: customElement,
       name: 'html-item' });
 
-    expect(root.classList.contains(css.root)).toBe(true);
+    expect(root.getAttribute('data-blok-testid')).toBe('popover-item-html');
     expect(root.getAttribute('data-blok-item-name')).toBe(params.name);
     expect(root.contains(customElement)).toBe(true);
     expect(customElement.parentElement).toBe(root);
@@ -126,10 +125,10 @@ describe('PopoverItemHtml', () => {
     const { item, root } = createItem();
 
     item.toggleHidden(true);
-    expect(root.classList.contains(css.hidden)).toBe(true);
+    expect(root.getAttribute('data-blok-hidden')).toBe('true');
 
     item.toggleHidden(false);
-    expect(root.classList.contains(css.hidden)).toBe(false);
+    expect(root.hasAttribute('data-blok-hidden')).toBe(false);
   });
 
   it('returns focusable controls located inside custom html content', () => {

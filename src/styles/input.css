@@ -1,44 +1,21 @@
-.blok-search-field {
-  --icon-margin-right: 10px;
+@layer components {
+  .blok-search-field {
+    @apply bg-[#F8F8F8] border border-[rgba(226,226,229,0.20)] rounded p-0.5 grid grid-cols-[auto_auto_1fr] grid-rows-[auto];
 
-  background: #F8F8F8;
-  border: 1px solid rgba(226,226,229,0.20);
-  border-radius: 4px;
-  padding: 2px;
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  grid-template-rows: auto;
+    &__icon {
+      @apply w-toolbox-btn h-toolbox-btn flex items-center justify-center mr-2.5;
 
-  &__icon {
-    width: var(--toolbox-buttons-size);
-    height: var(--toolbox-buttons-size);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: var(--icon-margin-right);
-
-    svg {
-      width: var(--icon-size);
-      height: var(--icon-size);
-      color: var(--grayText);
+      svg {
+        @apply w-icon h-icon text-gray-text;
+      }
     }
-  }
 
-  &__input {
-    font-size: 14px;
-    outline: none;
-    font-weight: 500;
-    font-family: inherit;
-    border: 0;
-    background: transparent;
-    margin: 0;
-    padding: 0;
-    line-height: 22px;
-    min-width: calc(100% - var(--toolbox-buttons-size) - var(--icon-margin-right));
+    &__input {
+      @apply text-sm outline-none font-medium font-inherit border-0 bg-transparent m-0 p-0 leading-[22px] min-w-[calc(100%-var(--toolbox-buttons-size)-10px)];
 
-    &::placeholder {
-       color: var(--grayText);
-       font-weight: 500;
+      &::placeholder {
+        @apply text-gray-text font-medium;
+      }
     }
   }
 }

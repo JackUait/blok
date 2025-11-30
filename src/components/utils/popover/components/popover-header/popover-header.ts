@@ -1,7 +1,7 @@
 import type { PopoverHeaderParams } from './popover-header.types';
 import Dom from '../../../../dom';
 import { css } from './popover-header.const';
-import { IconChevronLeft } from '@codexteam/icons';
+import { IconChevronLeft } from '../../../../icons';
 import Listeners from '../../../listeners';
 
 /**

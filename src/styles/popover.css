@@ -5,10 +5,10 @@
  * @todo make css variables work
  */
 .blok-popover {
-    --border-radius: 6px;
+    --border-radius: 8px;
     --width: 200px;
     --max-height: 270px;
-    --padding: 6px;
+    --padding: 4px;
     --offset-from-target: 8px;
     --color-border: #eff0f1;
     --color-shadow: rgba(13, 20, 33, 0.1);

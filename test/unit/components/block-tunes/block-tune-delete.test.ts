@@ -1,4 +1,4 @@
-import { IconCross } from '@codexteam/icons';
+import { IconCross } from '../../../../src/components/icons';
 import type { Mock } from 'vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { IconReplace } from '@codexteam/icons';
+import { IconReplace } from '../../../../src/components/icons';
 
 import ConvertInlineTool from '../../../../src/components/inline-tools/inline-tool-convert';
 import SelectionUtils from '../../../../src/components/selection';

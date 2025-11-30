@@ -23,3 +23,7 @@ jscpd-report/
 
 *storybook.log
 storybook-static
+
+# Environment variables
+.env
+.env.local

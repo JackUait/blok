@@ -16,11 +16,6 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HEADER_TOOL_UMD_PATH = path.resolve(
-  __dirname,
-  '../../../../node_modules/@editorjs/header/dist/header.umd.js'
-);
-
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
@@ -97,7 +92,11 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
           let toolClass: unknown = null;
 
           if (className) {
-            toolClass = (window as unknown as Record<string, unknown>)[className] ?? null;
+            // Handle dot notation (e.g., 'Blok.Header')
+            toolClass = className.split('.').reduce(
+              (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
+              window
+            ) ?? null;
           }
 
           if (!toolClass && classCode) {
@@ -386,11 +385,10 @@ test.describe('ui.block-tunes', () => {
 
   test.describe('convert to', () => {
     test('shows available tools when conversion is possible', async ({ page }) => {
-      await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
       await createBlok(page, {
         tools: {
           header: {
-            className: 'Header',
+            className: 'Blok.Header',
           },
         },
         data: {
@@ -504,11 +502,10 @@ test.describe('ui.block-tunes', () => {
     });
 
     test('converts block and keeps caret inside the new block', async ({ page }) => {
-      await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
       await createBlok(page, {
         tools: {
           header: {
-            className: 'Header',
+            className: 'Blok.Header',
           },
         },
         data: {

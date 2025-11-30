@@ -4,7 +4,7 @@ import type * as UtilsModule from '../../../../../src/components/utils';
 import { BlockHovered } from '../../../../../src/components/events/BlockHovered';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
-vi.mock('@codexteam/icons', () => ({
+vi.mock('../../../../../src/components/icons', () => ({
   IconMenu: '<svg></svg>',
   IconPlus: '<svg></svg>',
 }));

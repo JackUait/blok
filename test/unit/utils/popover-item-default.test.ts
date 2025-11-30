@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-vi.mock('@codexteam/icons', () => ({
-  IconDotCircle: '<svg data-blok-testid="dot-circle"></svg>',
+vi.mock('../../../src/components/icons', () => ({
   IconChevronRight: '<svg data-blok-testid="chevron-right"></svg>',
 }));
 

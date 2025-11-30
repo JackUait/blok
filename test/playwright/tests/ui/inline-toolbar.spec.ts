@@ -14,11 +14,6 @@ const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
 
-const HEADER_TOOL_UMD_PATH = path.resolve(
-  __dirname,
-  '../../../../node_modules/@editorjs/header/dist/header.umd.js'
-);
-
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const HEADER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`;
@@ -160,7 +155,11 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
             let toolClass: unknown;
 
             if (className) {
-              toolClass = (window as unknown as Record<string, unknown>)[className];
+              // Handle dot notation (e.g., 'Blok.Header')
+              toolClass = className.split('.').reduce(
+                (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
+                window
+              ) ?? null;
             }
 
             if (!toolClass && classCode) {
@@ -504,8 +503,6 @@ test.describe('inline toolbar', () => {
   });
 
   test('should display inline toolbar in read-only mode when tool supports it', async ({ page }) => {
-    await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-
     await createBlok(page, {
       readOnly: true,
       data: {
@@ -520,7 +517,7 @@ test.describe('inline toolbar', () => {
       },
       tools: {
         header: {
-          className: 'Header',
+          className: 'Blok.Header',
           config: {
             inlineToolbar: ['bold', 'testTool'],
           },
@@ -665,12 +662,10 @@ test.describe('inline toolbar', () => {
   });
 
   test('should restore caret after converting a block', async ({ page }) => {
-    await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-
     await createBlok(page, {
       tools: {
         header: {
-          className: 'Header',
+          className: 'Blok.Header',
         },
       },
       data: {

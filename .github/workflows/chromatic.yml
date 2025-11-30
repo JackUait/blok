@@ -28,7 +28,7 @@ jobs:
         run: yarn install
 
       - name: Build Storybook
-        run: yarn build-storybook
+        run: yarn storybook:build
 
       - name: Run Chromatic
         uses: chromaui/action@latest

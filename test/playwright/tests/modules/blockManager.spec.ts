@@ -72,7 +72,11 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         toolConfig: { name?: string; className: string | null; classCode: string | null }
       ): unknown => {
         if (toolConfig.className) {
-          const toolClass = (window as unknown as Record<string, unknown>)[toolConfig.className];
+          // Handle dot notation (e.g., 'Blok.Header')
+          const toolClass = toolConfig.className.split('.').reduce(
+            (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
+            window
+          );
 
           if (toolClass) {
             return toolClass;

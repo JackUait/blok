@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import Paragraph from '@editorjs/paragraph';
+import Paragraph from '../../../../src/tools/paragraph';
 import LinkInlineTool from '../../../../src/components/inline-tools/inline-tool-link';
 import DeleteTune from '../../../../src/components/block-tunes/block-tune-delete';
 import ToolsFactory from '../../../../src/components/tools/factory';

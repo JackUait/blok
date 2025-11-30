@@ -21,10 +21,6 @@ const TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"
 const SETTINGS_BUTTON_SELECTOR = `${TOOLBAR_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-item"]`;
 
-const HEADER_TOOL_UMD_PATH = path.resolve(
-  __dirname,
-  '../../../node_modules/@editorjs/header/dist/header.umd.js'
-);
 
 const READ_ONLY_INLINE_TOOL_SOURCE = `
 class ReadOnlyInlineTool {
@@ -156,7 +152,11 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
             let toolClass: unknown = null;
 
             if (className) {
-              toolClass = (window as unknown as Record<string, unknown>)[className] ?? null;
+              // Handle dot notation (e.g., 'Blok.Header')
+              toolClass = className.split('.').reduce(
+                (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
+                window
+              ) ?? null;
             }
 
             if (!toolClass && classCode) {
@@ -340,8 +340,7 @@ test.describe('read-only mode', () => {
   });
 
   test('only shows read-only inline tools when blok is locked', async ({ page }) => {
-    await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-
+    
     await createBlok(page, {
       readOnly: true,
       data: {
@@ -356,7 +355,7 @@ test.describe('read-only mode', () => {
       },
       tools: {
         header: {
-          className: 'Header',
+          className: 'Blok.Header',
           config: {
             inlineToolbar: ['readOnlyInline', 'legacyInline'],
           },

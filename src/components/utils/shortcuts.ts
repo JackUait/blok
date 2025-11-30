@@ -1,4 +1,4 @@
-import Shortcut from '@codexteam/shortcuts';
+import Shortcut from './shortcut';
 
 /**
  * Contains keyboard and mouse events binded on each Block by Block Manager

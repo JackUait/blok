@@ -1,0 +1,15 @@
+/**
+ * Plugin styles
+ */
+.blok-header {
+  padding: 0.6em 0 3px;
+  margin: 0;
+  line-height: 1.25em;
+  outline: none;
+}
+
+.blok-header p,
+.blok-header div {
+  padding: 0 !important;
+  margin: 0 !important;
+}

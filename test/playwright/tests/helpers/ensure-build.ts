@@ -3,20 +3,25 @@ import path from 'node:path';
 
 let didBuild = false;
 
+const PROJECT_ROOT = path.resolve(__dirname, '../../../..');
+
 /**
  * Ensure the Blok bundle is freshly built before running Playwright tests.
  *
  * Necessary because the Playwright fixtures load the UMD bundle directly from the dist folder.
  * Without rebuilding we might exercise stale code that doesn't match the current TypeScript sources.
+ *
+ * Note: The Header tool is bundled as part of Blok and accessible via Blok.Header
  */
 export const ensureBlokBundleBuilt = (): void => {
   if (didBuild || process.env.BLOK_BUILT === 'true') {
     return;
   }
 
-  const projectRoot = path.resolve(__dirname, '../../../..');
+  console.log('Building Blok for tests...');
+
   const result = spawnSync('yarn', [ 'build:test' ], {
-    cwd: projectRoot,
+    cwd: PROJECT_ROOT,
     stdio: 'inherit',
     shell: process.platform === 'win32',
   });

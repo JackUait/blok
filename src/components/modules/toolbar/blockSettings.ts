@@ -13,7 +13,7 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { isMobileScreen, keyCodes } from '../../utils';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
-import { IconReplace } from '@codexteam/icons';
+import { IconReplace } from '../../icons';
 import { getConvertibleToolsForBlock } from '../../utils/blocks';
 
 /**

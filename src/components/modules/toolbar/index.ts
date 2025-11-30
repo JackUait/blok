@@ -7,7 +7,7 @@ import * as tooltip from '../../utils/tooltip';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import Block from '../../block';
 import Toolbox, { ToolboxEvent } from '../../ui/toolbox';
-import { IconMenu, IconPlus } from '@codexteam/icons';
+import { IconMenu, IconPlus } from '../../icons';
 import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';

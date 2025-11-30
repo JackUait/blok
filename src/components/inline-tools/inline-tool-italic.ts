@@ -1,5 +1,5 @@
 import type { InlineTool, SanitizerConfig } from '../../../types';
-import { IconItalic } from '@codexteam/icons';
+import { IconItalic } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
 
 /**

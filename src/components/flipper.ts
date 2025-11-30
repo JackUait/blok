@@ -286,6 +286,14 @@ export default class Flipper {
     }
 
     /**
+     * For Enter key, only handle it if there's a focused item.
+     * Otherwise, let the event propagate to allow block splitting etc.
+     */
+    if (keyCode === _.keyCodes.ENTER && !this.iterator?.currentItem) {
+      return;
+    }
+
+    /**
      * Stop propagation to prevent plugin-level handlers from being called
      * while Flipper manages keyboard navigation.
      */

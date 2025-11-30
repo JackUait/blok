@@ -1,4 +1,3 @@
-import { IconReplace } from '@codexteam/icons';
 import type { InlineTool, API } from '../../../types';
 import type { MenuConfig, MenuConfigItem } from '../../../types/tools';
 import * as _ from '../utils';
@@ -100,13 +99,13 @@ export default class ConvertInlineTool implements InlineTool {
     }, []);
 
     const currentBlockToolboxItem = await currentBlock.getActiveToolboxEntry();
-    const icon = currentBlockToolboxItem !== undefined ? currentBlockToolboxItem.icon : IconReplace;
+    const currentBlockTitle = currentBlockToolboxItem?.title ?? currentBlock.name;
     const isDesktop =  !_.isMobileScreen();
 
     return {
-      icon,
       name: 'convert-to',
-      hint: {
+      title: I18nInternal.t(I18nInternalNS.toolNames, currentBlockTitle),
+       hint: {
         title: I18nInternal.ui(I18nInternalNS.ui.inlineToolbar.converter, 'Convert to'),
       },
       children: {

@@ -6,7 +6,16 @@ import type {
   PopoverItemType
 } from '@/types/utils/popover/popover-item';
 import { PopoverItem } from '../popover-item';
-import { css, DATA_ATTRIBUTE_ACTIVE } from './popover-item-default.const';
+import {
+  css,
+  DATA_ATTRIBUTE_ACTIVE,
+  DATA_ATTRIBUTE_HIDDEN,
+  DATA_ATTRIBUTE_CONFIRMATION,
+  DATA_ATTRIBUTE_NO_HOVER,
+  DATA_ATTRIBUTE_NO_FOCUS,
+  DATA_ATTRIBUTE_FOCUSED,
+  DATA_ATTRIBUTE_WOBBLE
+} from './popover-item-default.const';
 
 /**
  * Represents single popover item node
@@ -53,7 +62,7 @@ export class PopoverItemDefault extends PopoverItem {
       return false;
     }
 
-    return this.nodes.root.classList.contains(css.focused);
+    return this.nodes.root.hasAttribute(DATA_ATTRIBUTE_FOCUSED);
   }
 
   /**
@@ -132,9 +141,9 @@ export class PopoverItemDefault extends PopoverItem {
     this.nodes.root?.classList.toggle(css.hidden, isHidden);
 
     if (isHidden) {
-      this.nodes.root?.setAttribute('data-blok-hidden', 'true');
+      this.nodes.root?.setAttribute(DATA_ATTRIBUTE_HIDDEN, 'true');
     } else {
-      this.nodes.root?.removeAttribute('data-blok-hidden');
+      this.nodes.root?.removeAttribute(DATA_ATTRIBUTE_HIDDEN);
     }
   }
 
@@ -245,7 +254,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     this.nodes.root.innerHTML = confirmationEl.innerHTML;
     this.nodes.root.classList.add(css.confirmationState);
-    this.nodes.root.setAttribute('data-blok-popover-item-confirmation', 'true');
+    this.nodes.root.setAttribute(DATA_ATTRIBUTE_CONFIRMATION, 'true');
 
     this.confirmationState = newState;
 
@@ -263,7 +272,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     this.nodes.root.innerHTML = itemWithOriginalParams.innerHTML;
     this.nodes.root.classList.remove(css.confirmationState);
-    this.nodes.root.removeAttribute('data-blok-popover-item-confirmation');
+    this.nodes.root.removeAttribute(DATA_ATTRIBUTE_CONFIRMATION);
 
     this.confirmationState = null;
 
@@ -277,6 +286,8 @@ export class PopoverItemDefault extends PopoverItem {
   private enableSpecialHoverAndFocusBehavior(): void {
     this.nodes.root?.classList.add(css.noHover);
     this.nodes.root?.classList.add(css.noFocus);
+    this.nodes.root?.setAttribute(DATA_ATTRIBUTE_NO_HOVER, 'true');
+    this.nodes.root?.setAttribute(DATA_ATTRIBUTE_NO_FOCUS, 'true');
 
     this.nodes.root?.addEventListener('mouseleave', this.removeSpecialHoverBehavior, { once: true });
   }
@@ -296,6 +307,7 @@ export class PopoverItemDefault extends PopoverItem {
    */
   private removeSpecialFocusBehavior = (): void => {
     this.nodes.root?.classList.remove(css.noFocus);
+    this.nodes.root?.removeAttribute(DATA_ATTRIBUTE_NO_FOCUS);
   };
 
   /**
@@ -303,6 +315,7 @@ export class PopoverItemDefault extends PopoverItem {
    */
   private removeSpecialHoverBehavior = (): void => {
     this.nodes.root?.classList.remove(css.noHover);
+    this.nodes.root?.removeAttribute(DATA_ATTRIBUTE_NO_HOVER);
   };
 
   /**
@@ -326,11 +339,12 @@ export class PopoverItemDefault extends PopoverItem {
    * Animates item which symbolizes that error occurred while executing 'onActivate()' callback
    */
   private animateError(): void {
-    if (this.nodes.icon?.classList.contains(css.wobbleAnimation)) {
+    if (this.nodes.icon?.hasAttribute(DATA_ATTRIBUTE_WOBBLE)) {
       return;
     }
 
     this.nodes.icon?.classList.add(css.wobbleAnimation);
+    this.nodes.icon?.setAttribute(DATA_ATTRIBUTE_WOBBLE, 'true');
 
     this.nodes.icon?.addEventListener('animationend', this.onErrorAnimationEnd);
   }
@@ -340,6 +354,7 @@ export class PopoverItemDefault extends PopoverItem {
    */
   private onErrorAnimationEnd = (): void => {
     this.nodes.icon?.classList.remove(css.wobbleAnimation);
+    this.nodes.icon?.removeAttribute(DATA_ATTRIBUTE_WOBBLE);
     this.nodes.icon?.removeEventListener('animationend', this.onErrorAnimationEnd);
   };
 }

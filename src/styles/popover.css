@@ -244,7 +244,7 @@
 }
 
 .blok-popover-item--hidden {
-  @apply hidden;
+  display: none !important;
 }
 
 /* Hover styles - only on devices that support hover */

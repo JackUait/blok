@@ -1,29 +1,23 @@
-import { bem } from '../bem';
-
-/**
- * Popover block CSS class constructor
- */
-const className = bem('blok-popover');
-
 /**
  * CSS class names to be used in popover
+ * Uses Tailwind-compatible class names defined in popover.css
  */
 export const css = {
-  popover: className(),
-  popoverContainer: className('container'),
-  popoverOpenTop: className(null, 'open-top'),
-  popoverOpenLeft: className(null, 'open-left'),
-  popoverOpened: className(null, 'opened'),
-  search: className('search'),
-  nothingFoundMessage: className('nothing-found-message'),
-  nothingFoundMessageDisplayed: className('nothing-found-message', 'displayed'),
-  items: className('items'),
-  overlay: className('overlay'),
-  overlayHidden: className('overlay', 'hidden'),
-  popoverNested: className(null, 'nested'),
-  getPopoverNestedClass: (level: number) => className(null, `nested-level-${level.toString()}` ),
-  popoverInline: className(null, 'inline'),
-  popoverHeader: className('header'),
+  popover: 'blok-popover',
+  popoverContainer: 'blok-popover__container',
+  popoverOpenTop: 'blok-popover--open-top',
+  popoverOpenLeft: 'blok-popover--open-left',
+  popoverOpened: 'blok-popover--opened',
+  search: 'blok-popover__search',
+  nothingFoundMessage: 'blok-popover__nothing-found-message',
+  nothingFoundMessageDisplayed: 'blok-popover__nothing-found-message--displayed',
+  items: 'blok-popover__items',
+  overlay: 'blok-popover__overlay',
+  overlayHidden: 'blok-popover__overlay--hidden',
+  popoverNested: 'blok-popover--nested',
+  getPopoverNestedClass: (level: number) => `blok-popover--nested-level-${level.toString()}`,
+  popoverInline: 'blok-popover--inline',
+  popoverHeader: 'blok-popover-header',
 };
 
 /**

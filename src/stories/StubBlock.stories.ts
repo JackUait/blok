@@ -70,11 +70,8 @@ export const MissingTool: Story = {
     await step('Wait for stub block to render', async () => {
       await waitFor(
         () => {
-          // Look for the stub block by its wrapper class
-          const blocks = canvasElement.querySelectorAll('[data-blok-testid="block-wrapper"]');
-          const stubBlock = Array.from(blocks).find(block =>
-            block.querySelector('[class*="blok-stub"]')
-          );
+          // Look for the stub block by its data attribute
+          const stubBlock = canvasElement.querySelector('[data-blok-stub]');
 
           expect(stubBlock).toBeTruthy();
         },
@@ -83,13 +80,9 @@ export const MissingTool: Story = {
     });
 
     await step('Verify stub block structure', async () => {
-      const blocks = canvasElement.querySelectorAll('[data-blok-testid="block-wrapper"]');
-      const stubWrapper = Array.from(blocks).find(block =>
-        block.querySelector('[class*="blok-stub"]')
-      );
-      const stubBlock = stubWrapper?.querySelector('[class*="blok-stub"]');
-      const title = stubBlock?.querySelector('[class*="blok-stub__title"]');
-      const subtitle = stubBlock?.querySelector('[class*="blok-stub__subtitle"]');
+      const stubBlock = canvasElement.querySelector('[data-blok-stub]');
+      const title = stubBlock?.querySelector('[data-blok-stub-title]');
+      const subtitle = stubBlock?.querySelector('[data-blok-stub-subtitle]');
 
       expect(title).toBeTruthy();
       expect(subtitle).toBeTruthy();
@@ -128,12 +121,8 @@ export const MultipleMissingTools: Story = {
     await step('Wait for all stub blocks to render', async () => {
       await waitFor(
         () => {
-          // Count only the main stub wrapper elements (not nested info/title/subtitle)
-          const allElements = canvasElement.querySelectorAll('[class*="blok-stub"]');
-          const stubWrappers = Array.from(allElements).filter(el =>
-            el.classList.contains('blok-stub') && !el.classList.contains('blok-stub__info') &&
-            !el.classList.contains('blok-stub__title') && !el.classList.contains('blok-stub__subtitle')
-          );
+          // Count stub wrapper elements by data attribute
+          const stubWrappers = canvasElement.querySelectorAll('[data-blok-stub]');
 
           expect(stubWrappers.length).toBe(3);
         },
@@ -155,7 +144,7 @@ export const StubInReadOnly: Story = {
     await step('Wait for stub block in read-only mode', async () => {
       await waitFor(
         () => {
-          const stubBlock = canvasElement.querySelector('[class*="blok-stub"]');
+          const stubBlock = canvasElement.querySelector('[data-blok-stub]');
 
           expect(stubBlock).toBeTruthy();
         },

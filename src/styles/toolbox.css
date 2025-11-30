@@ -1,8 +1,0 @@
-.blok-editor--narrow .blok-toolbox {
-  @media (--not-mobile){
-    .blok-popover {
-      right: 0;
-      left: unset;
-    }
-  }
-}

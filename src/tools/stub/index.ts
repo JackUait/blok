@@ -22,10 +22,19 @@ export default class Stub implements BlockTool {
    * @type {{wrapper: string, info: string, title: string, subtitle: string}}
    */
   private CSS = {
-    wrapper: 'blok-stub',
-    info: 'blok-stub__info',
-    title: 'blok-stub__title',
+    wrapper: 'blok-stub flex items-center py-3 px-[18px] my-2.5 rounded-[10px] bg-bg-light border border-line-gray text-gray-text text-sm [&_svg]:size-icon',
+    info: 'blok-stub__info ml-3.5',
+    title: 'blok-stub__title font-medium capitalize',
     subtitle: 'blok-stub__subtitle',
+  };
+
+  /**
+   * Data attributes for testing
+   */
+  private static readonly DATA_ATTR = {
+    wrapper: 'data-blok-stub',
+    title: 'data-blok-stub-title',
+    subtitle: 'data-blok-stub-subtitle',
   };
 
   /**
@@ -97,6 +106,10 @@ export default class Stub implements BlockTool {
     const subtitle = $.make('div', this.CSS.subtitle, {
       textContent: this.subtitle,
     });
+
+    wrapper.setAttribute(Stub.DATA_ATTR.wrapper, '');
+    title.setAttribute(Stub.DATA_ATTR.title, '');
+    subtitle.setAttribute(Stub.DATA_ATTR.subtitle, '');
 
     wrapper.innerHTML = icon;
 

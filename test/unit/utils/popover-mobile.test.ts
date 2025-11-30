@@ -6,7 +6,6 @@ import { PopoverItemDefault } from '../../../src/components/utils/popover/compon
 import { PopoverMobile } from '../../../src/components/utils/popover/popover-mobile';
 import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
 import { PopoverStatesHistory } from '../../../src/components/utils/popover/utils/popover-states-history';
-import { css } from '../../../src/components/utils/popover/popover.const';
 
 interface MockScrollLockerInstance {
   lock: ReturnType<typeof vi.fn>;
@@ -68,6 +67,10 @@ const getNodes = (popover: PopoverMobile): PopoverMobileNodes => {
   return (popover as unknown as { nodes: PopoverMobileNodes }).nodes;
 };
 
+const getIsHidden = (popover: PopoverMobile): boolean => {
+  return (popover as unknown as { isHidden: boolean }).isHidden;
+};
+
 const getPrivateApi = (popover: PopoverMobile): {
   updateItemsAndHeader: (items: PopoverItemParams[], title?: string) => void;
   showNestedItems: (item: PopoverItemDefault) => void;
@@ -118,8 +121,8 @@ describe('PopoverMobile', () => {
       const nodes = getNodes(popover);
       const hideSpy = vi.spyOn(popover, 'hide');
 
-      expect(nodes.overlay.classList.contains(css.overlay)).toBe(true);
-      expect(nodes.overlay.classList.contains(css.overlayHidden)).toBe(true);
+      expect(nodes.overlay).toBeInstanceOf(HTMLElement);
+      expect(getIsHidden(popover)).toBe(true);
       expect(nodes.popover.firstChild).toBe(nodes.overlay);
 
       nodes.overlay.click();
@@ -133,11 +136,10 @@ describe('PopoverMobile', () => {
     it('removes overlay hidden class, calls super.show, and locks scroll', () => {
       const superShowSpy = vi.spyOn(PopoverAbstract.prototype, 'show');
       const { popover } = createPopover();
-      const nodes = getNodes(popover);
 
       popover.show();
 
-      expect(nodes.overlay.classList.contains(css.overlayHidden)).toBe(false);
+      expect(getIsHidden(popover)).toBe(false);
       expect(superShowSpy).toHaveBeenCalledTimes(1);
       expect(getLatestScrollLocker().lock).toHaveBeenCalledTimes(1);
     });
@@ -160,12 +162,11 @@ describe('PopoverMobile', () => {
       const superHideSpy = vi.spyOn(PopoverAbstract.prototype, 'hide');
       const historyResetSpy = vi.spyOn(PopoverStatesHistory.prototype, 'reset');
       const { popover } = createPopover();
-      const nodes = getNodes(popover);
 
       popover.show();
       popover.hide();
 
-      expect(nodes.overlay.classList.contains(css.overlayHidden)).toBe(true);
+      expect(getIsHidden(popover)).toBe(true);
       expect(superHideSpy).toHaveBeenCalledTimes(1);
       expect(historyResetSpy).toHaveBeenCalledTimes(1);
       expect(getLatestScrollLocker().unlock).toHaveBeenCalledTimes(1);

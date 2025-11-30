@@ -29,3 +29,33 @@ export const css = {
  * Data attribute name for active state
  */
 export const DATA_ATTRIBUTE_ACTIVE = 'data-blok-popover-item-active';
+
+/**
+ * Data attribute name for hidden state
+ */
+export const DATA_ATTRIBUTE_HIDDEN = 'data-blok-hidden';
+
+/**
+ * Data attribute name for confirmation state
+ */
+export const DATA_ATTRIBUTE_CONFIRMATION = 'data-blok-popover-item-confirmation';
+
+/**
+ * Data attribute name for no-hover state
+ */
+export const DATA_ATTRIBUTE_NO_HOVER = 'data-blok-popover-item-no-hover';
+
+/**
+ * Data attribute name for no-focus state
+ */
+export const DATA_ATTRIBUTE_NO_FOCUS = 'data-blok-popover-item-no-focus';
+
+/**
+ * Data attribute name for focused state (managed by DomIterator)
+ */
+export const DATA_ATTRIBUTE_FOCUSED = 'data-blok-focused';
+
+/**
+ * Data attribute name for wobble animation state
+ */
+export const DATA_ATTRIBUTE_WOBBLE = 'data-blok-popover-item-wobble';

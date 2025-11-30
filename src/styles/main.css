@@ -1,3 +1,9 @@
+/* Tailwind CSS - must be first */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Project styles */
 @import './variables.css';
 @import './ui.css';
 @import './toolbar.css';

@@ -1,7 +1,16 @@
 plugins:
   # Apply custom property sets via @apply rule
+  # MUST run before Tailwind to process custom property sets like --toolbox-button
   # https://github.com/pascalduez/postcss-apply
   postcss-apply: {}
+
+  # Tailwind CSS
+  # https://tailwindcss.com/docs/installation/using-postcss
+  tailwindcss: {}
+
+  # Autoprefixer for vendor prefixes
+  # https://github.com/postcss/autoprefixer
+  autoprefixer: {}
 
   # Convert modern CSS into something most browsers can understand
   # https://github.com/csstools/postcss-preset-env
@@ -15,8 +24,8 @@ plugins:
     # Define polyfills based on browsers you are supporting
     # https://github.com/csstools/postcss-preset-env#browsers
     browsers:
-      - 'last 2 versions'
-      - '> 1%'
+      - "last 2 versions"
+      - "> 1%"
 
     # Instruct all plugins to omit pre-polyfilled CSS
     # https://github.com/csstools/postcss-preset-env#preserve

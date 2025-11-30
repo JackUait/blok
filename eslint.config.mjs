@@ -10,6 +10,7 @@ import sonarjs from 'eslint-plugin-sonarjs';
 import jest from 'eslint-plugin-jest';
 import tseslint from 'typescript-eslint';
 import jsdoc from 'eslint-plugin-jsdoc';
+import tailwindcss from 'eslint-plugin-tailwindcss';
 
 const CLASS_SELECTOR_PATTERN = /\.[_a-zA-Z][_a-zA-Z0-9-]*/;
 const ID_SELECTOR_PATTERN = /#[_a-zA-Z][_a-zA-Z0-9-]*/;
@@ -472,6 +473,7 @@ export default defineConfig(
     plugins: {
       sonarjs,
       import: eslintPluginImport,
+      tailwindcss,
     },
     rules: {
       // Duplicate code detection
@@ -481,6 +483,13 @@ export default defineConfig(
       // Prevent UMD module patterns
       'import/no-amd': 'error',
       'import/no-commonjs': 'error',
+      // Tailwind CSS rules
+      'tailwindcss/classnames-order': 'warn',
+      'tailwindcss/enforces-negative-arbitrary-values': 'warn',
+      'tailwindcss/enforces-shorthand': 'warn',
+      'tailwindcss/no-arbitrary-value': 'off',
+      'tailwindcss/no-custom-classname': 'off',
+      'tailwindcss/no-contradicting-classname': 'error',
     },
   },
   {

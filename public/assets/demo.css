@@ -84,12 +84,6 @@ body {
     padding: 0 15px;
 }
 
-.blok-example__output {
-    background: #1b202b;
-    overflow-x: auto;
-    padding: 0 30px 80px;
-}
-
 .blok-example__button {
     display: block;
     margin: 50px auto;
@@ -109,18 +103,6 @@ body {
     background: #3d8de5;
     transform: translateY(2px);
     box-shadow: 0 20px 15px -4px rgba(137, 207, 255, 0.77);
-}
-
-.blok-example__output-footer {
-    padding: 30px 0;
-    font-size: 14.2px;
-    letter-spacing: 0.3px;
-    text-align: center;
-}
-
-.blok-example__output-footer a {
-    color: #fff;
-    text-decoration: none;
 }
 
 .blok-example__statusbar {
@@ -341,10 +323,6 @@ body {
 
 .dark-mode .blok-example__button {
     box-shadow: 0 24px 18px -14px rgba(4, 154, 255, 0.24);
-}
-
-.dark-mode .blok-example__output {
-    background-color: #17191f;
 }
 
 .dark-mode .inline-code {

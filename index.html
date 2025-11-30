@@ -20,9 +20,6 @@
     </div>
     <div class="blok-example__content">
       <div id="blok"></div>
-      <div class="blok-example__button" id="saveButton">
-        Save changes
-      </div>
       <div class="blok-example__statusbar">
         <div class="blok-example__statusbar-item">
           Readonly:
@@ -50,11 +47,6 @@
           <div class="blok-example__statusbar-toggler" id="darkThemeToggler">
           </div>
         </div>
-      </div>
-    </div>
-    <div class="blok-example__output">
-      <div class="blok-example__output-footer">
-        <a href="https://github.com/JackUait/blok" style="font-weight: bold;">Blok</a>
       </div>
     </div>
   </div>
@@ -211,9 +203,6 @@
           },
         ]
       },
-      onReady: function(){
-        saveButton.click();
-      },
       onChange: function(api, event) {
         console.log('something changed', event);
       },
@@ -225,28 +214,10 @@
     var blok = new Blok(blokConfig);
 
     /**
-    * Saving button
-    */
-    const saveButton = document.getElementById('saveButton');
-
-    /**
     * Toggle read-only button
     */
     const toggleReadOnlyButton = document.getElementById('toggleReadOnlyButton');
     const readOnlyIndicator = document.getElementById('readonly-state');
-
-    /**
-    * Saving example
-    */
-    saveButton.addEventListener('click', function () {
-      blok.save()
-        .then((savedData) => {
-          cPreview.show(savedData, document.getElementById("output"));
-        })
-        .catch((error) => {
-          console.error('Saving error', error);
-        });
-    });
 
     /**
     * Toggle read-only example

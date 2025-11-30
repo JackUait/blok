@@ -77,7 +77,7 @@ export abstract class PopoverItem {
    * @param itemElement - popover item root element to add hint to
    * @param hintData - hint data
    */
-  protected addHint(itemElement: HTMLElement, hintData: { title: string, description?: string; position: HintPosition }): void {
+  protected addHint(itemElement: HTMLElement, hintData: { title: string, description?: string; position: HintPosition; alignment?: 'start' | 'center' }): void {
     const content = new Hint(hintData);
 
     tooltip.onHover(itemElement, content.getElement(), {

@@ -8,43 +8,43 @@
   <script src="/assets/json-preview.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
-<body>
+<body class="font-sans text-sm leading-relaxed m-0 bg-demo-bg text-demo-text">
   <script>
     if (localStorage.getItem('theme') === 'dark') {
       document.body.classList.add("dark-mode");
     }
   </script>
-  <div class="blok-example">
-    <div class="blok-example__header">
-      <a class="blok-example__header-logo" href="https://github.com/JackUait/blok">Blok</a>
+  <div class="blok-example text-base">
+    <div class="blok-example__header flex flex-wrap items-center h-[50px] leading-[50px] px-[30px] max-md:px-5 mb-[30px] border-b border-demo-border">
+      <a class="font-bold text-inherit no-underline" href="https://github.com/JackUait/blok">Blok</a>
     </div>
-    <div class="blok-example__content">
+    <div class="blok-example__content max-w-[1100px] mx-auto antialiased max-md:px-5">
       <div id="blok"></div>
-      <div class="blok-example__statusbar">
+      <div class="blok-example__statusbar flex items-center fixed bottom-0 left-0 right-0 bg-demo-bg rounded-t-lg border-t border-demo-border shadow-sm text-[13px] px-4 py-2 z-[1] select-none max-md:hidden">
         <div class="blok-example__statusbar-item">
           Readonly:
           <b id="readonly-state">
             Off
           </b>
           &nbsp;
-          <div class="blok-example__statusbar-button" id="toggleReadOnlyButton">
+          <div class="blok-example__statusbar-button inline-block px-3 py-[3px] rounded-full bg-demo-btn-bg hover:bg-demo-btn-hover transition-all duration-150 cursor-pointer text-center select-none" id="toggleReadOnlyButton">
             toggle
           </div>
         </div>
         <div class="blok-example__statusbar-item">
-          <div class="blok-example__statusbar-button" id="showBlocksBoundariesButton">
+          <div class="blok-example__statusbar-button inline-block px-3 py-[3px] rounded-full bg-demo-btn-bg hover:bg-demo-btn-hover transition-all duration-150 cursor-pointer text-center select-none" id="showBlocksBoundariesButton">
             <span data-toggled-text="Hide">Show</span>
             blocks boundaries
           </div>
         </div>
         <div class="blok-example__statusbar-item">
-          <div class="blok-example__statusbar-button" id="enableThinModeButton">
+          <div class="blok-example__statusbar-button inline-block px-3 py-[3px] rounded-full bg-demo-btn-bg hover:bg-demo-btn-hover transition-all duration-150 cursor-pointer text-center select-none" id="enableThinModeButton">
             <span data-toggled-text="Disable">Enable</span>
             thin mode
           </div>
         </div>
-        <div class="blok-example__statusbar-item blok-example__statusbar-item--right">
-          <div class="blok-example__statusbar-toggler" id="darkThemeToggler">
+        <div class="blok-example__statusbar-item blok-example__statusbar-item--right ml-auto">
+          <div class="blok-example__statusbar-toggler relative bg-demo-toggler rounded-[20px] p-[2px] w-[44px] cursor-pointer select-none" id="darkThemeToggler">
           </div>
         </div>
       </div>

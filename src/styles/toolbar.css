@@ -1,125 +1,99 @@
 .blok-toolbar {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    transition: opacity 100ms ease;
-    will-change: opacity, top;
-    display: none;
+    @apply absolute left-0 right-0 top-0 hidden transition-opacity duration-100 ease-linear will-change-[opacity,top];
 
     &--opened {
-        display: block;
+        @apply block;
     }
 
     &__content {
+        @apply relative mx-auto;
         max-width: var(--content-width);
-        margin: 0 auto;
-        position: relative;
     }
 
     &__plus {
         @apply --toolbox-button;
-
-        flex-shrink: 0;
+        @apply shrink-0;
 
         &-shortcut {
-            opacity: 0.6;
+            @apply mt-[5px] opacity-60;
             word-spacing: -2px;
-            margin-top: 5px;
 
             &-key {
-                color: #fff;
+                @apply text-white;
             }
-        }
-
-        @media (--mobile) {
-            @apply --overlay-pane;
-
-            position: static;
         }
     }
 
     /**
-   * Block actions Zone
-   * -------------------------
-   */
+     * Block actions Zone
+     */
     &__actions {
-        position: absolute;
+        @apply absolute flex opacity-0 pr-[5px];
         right: 100%;
-        opacity: 0;
-        display: flex;
-        padding-right: 5px;
 
         &--opened {
-            opacity: 1;
-        }
-
-        @media (--mobile) {
-            right: auto;
+            @apply opacity-100;
         }
     }
 
     &__settings-btn {
         @apply --toolbox-button;
-
-        cursor: pointer;
-        user-select: none;
-
-        @media (--can-hover) {
-            &:hover {
-                cursor: grab;
-            }
-        }
+        @apply cursor-pointer select-none;
 
         &:active {
-            cursor: grabbing;
-        }
-
-        &--opened {
-            @media (--can-hover) {
-                &:hover {
-                    cursor: pointer;
-                }
-            }
-        }
-
-        @media (--not-mobile) {
-            width: 24px;
+            @apply cursor-grabbing;
         }
 
         &--hidden {
-            display: none;
-        }
-
-        @media (--mobile) {
-            @apply --overlay-pane;
-
-            position: static;
+            @apply hidden;
         }
     }
 
     &__plus,
     &__settings-btn {
         svg {
-            width: 24px;
-            height: 24px;
+            @apply h-6 w-6;
         }
     }
 }
 
-/**
- * Styles for Narrow mode
- */
-.blok-editor--narrow .blok-toolbar__plus {
-    @media (--not-mobile) {
-        left: 5px;
+/* Mobile styles - moved outside nesting to avoid @apply in nested @media */
+@media (--mobile) {
+    .blok-toolbar__plus {
+        @apply --overlay-pane;
+        @apply static;
+    }
+
+    .blok-toolbar__actions {
+        @apply right-auto;
+    }
+
+    .blok-toolbar__settings-btn {
+        @apply --overlay-pane;
+        @apply static;
     }
 }
 
-.blok-editor--toolbox-opened .blok-toolbar__settings-btn {
-    @media (--can-hover) {
-        &:hover {
-            cursor: pointer;
-        }
+@media (--not-mobile) {
+    .blok-toolbar__settings-btn {
+        @apply w-6;
+    }
+
+    .blok-editor--narrow .blok-toolbar__plus {
+        @apply left-[5px];
+    }
+}
+
+@media (--can-hover) {
+    .blok-toolbar__settings-btn:hover {
+        @apply cursor-grab;
+    }
+
+    .blok-toolbar__settings-btn--opened:hover {
+        @apply cursor-pointer;
+    }
+
+    .blok-editor--toolbox-opened .blok-toolbar__settings-btn:hover {
+        @apply cursor-pointer;
     }
 }

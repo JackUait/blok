@@ -2,44 +2,34 @@
  * Plugin styles
  */
 .blok-header {
-  padding: 0.6em 0 3px;
-  margin: 0;
-  line-height: 1.25em;
-  outline: none;
+  @apply py-[0.6em] pb-[3px] px-0 m-0 leading-[1.25em] outline-none;
 }
 
 h1.blok-header {
-  font-size: 2.5em;
-  font-weight: 700;
+  @apply text-[2.5em] font-bold;
 }
 
 h2.blok-header {
-  font-size: 2em;
-  font-weight: 600;
+  @apply text-[2em] font-semibold;
 }
 
 h3.blok-header {
-  font-size: 1.75em;
-  font-weight: 600;
+  @apply text-[1.75em] font-semibold;
 }
 
 h4.blok-header {
-  font-size: 1.5em;
-  font-weight: 600;
+  @apply text-[1.5em] font-semibold;
 }
 
 h5.blok-header {
-  font-size: 1.25em;
-  font-weight: 600;
+  @apply text-[1.25em] font-semibold;
 }
 
 h6.blok-header {
-  font-size: 1em;
-  font-weight: 600;
+  @apply text-base font-semibold;
 }
 
 .blok-header p,
 .blok-header div {
-  padding: 0 !important;
-  margin: 0 !important;
+  @apply !p-0 !m-0;
 }

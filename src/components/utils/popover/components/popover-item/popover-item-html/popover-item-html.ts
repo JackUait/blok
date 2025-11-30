@@ -36,6 +36,7 @@ export class PopoverItemHtml extends PopoverItem {
       this.addHint(this.nodes.root, {
         ...params.hint,
         position: renderParams?.hint?.position || 'right',
+        alignment: renderParams?.hint?.alignment || 'center',
       });
     }
   }

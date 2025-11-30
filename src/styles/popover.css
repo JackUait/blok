@@ -1,428 +1,370 @@
 /**
- * Popover styles
+ * Popover styles - Tailwind version
  *
- * @todo split into separate files popover styles
- * @todo make css variables work
+ * Uses @apply where possible, CSS variables for dynamic values set via JS
  */
+
+/* Popover CSS Variables - kept for JS integration and dynamic calculations */
 .blok-popover {
-    --border-radius: 8px;
-    --width: 200px;
-    --max-height: 270px;
-    --padding: 4px;
-    --offset-from-target: 8px;
-    --color-border: #eff0f1;
-    --color-shadow: rgba(13, 20, 33, 0.1);
-    --color-background: white;
-    --color-text-primary: black;
-    --color-text-secondary: #707684;
-    --color-border-icon: rgb(201 201 204 / 48%);
-    --color-border-icon-disabled: #eff0f1;
-    --color-text-icon-active: #388ae5;
-    --color-background-icon-active: rgba(56, 138, 229, 0.1);
-    --color-background-item-focus: rgba(34, 186, 255, 0.08);
-    --color-shadow-item-focus: rgba(7, 161, 227, 0.08);
-    --color-background-item-hover: #f8f8f8;
-    --color-background-item-confirm: #e24a4a;
-    --color-background-item-confirm-hover: #ce4343;
-    --popover-top: calc(100% + var(--offset-from-target));
-    --popover-left: 0;
-    --nested-popover-overlap: 4px;
-    --icon-size: 20px;
-    --item-padding: 3px;
-    --item-height: calc(var(--icon-size) + 2 * var(--item-padding));
+  /* Design tokens */
+  --border-radius: theme('borderRadius.lg');
+  --width: 200px;
+  --max-height: 270px;
+  --padding: theme('spacing.1');
+  --offset-from-target: theme('spacing.2');
+  --color-border: theme('colors.gray.200', #eff0f1);
+  --color-shadow: rgba(13, 20, 33, 0.1);
+  --color-background: theme('colors.white');
+  --color-text-primary: theme('colors.black');
+  --color-text-secondary: theme('colors.gray.500', #707684);
+  --color-border-icon: rgb(201 201 204 / 48%);
+  --color-border-icon-disabled: theme('colors.gray.200', #eff0f1);
+  --color-text-icon-active: theme('colors.blue.500', #388ae5);
+  --color-background-icon-active: rgba(56, 138, 229, 0.1);
+  --color-background-item-focus: rgba(34, 186, 255, 0.08);
+  --color-shadow-item-focus: rgba(7, 161, 227, 0.08);
+  --color-background-item-hover: theme('colors.gray.100', #f8f8f8);
+  --color-background-item-confirm: theme('colors.red.500', #e24a4a);
+  --color-background-item-confirm-hover: theme('colors.red.600', #ce4343);
 
-    &__container {
-        min-width: var(--width);
-        width: var(--width);
-        border-radius: var(--border-radius);
-        overflow: hidden;
-        box-sizing: border-box;
-        box-shadow: 0 3px 15px -3px var(--color-shadow);
-        position: absolute;
-        left: var(--popover-left);
-        top: var(--popover-top);
-        background: var(--color-background);
-        display: flex;
-        flex-direction: column;
-        z-index: 4;
-        opacity: 0;
-        max-height: 0;
-        pointer-events: none;
-        padding: 0;
-        border: none;
-    }
+  /* Positioning variables (set via JS) */
+  --popover-top: calc(100% + var(--offset-from-target));
+  --popover-left: 0;
+  --nested-popover-overlap: theme('spacing.1');
+  --icon-size: theme('spacing.5');
+  --item-padding: 3px;
+  --item-height: calc(var(--icon-size) + 2 * var(--item-padding));
+}
 
-    &--opened {
-        & > .blok-popover__container {
-            opacity: 1;
-            padding: var(--padding);
-            max-height: var(--max-height);
-            pointer-events: auto;
-            animation: panelShowing 100ms ease;
-            border: 1px solid var(--color-border);
+.blok-popover__container {
+  @apply absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none;
+  min-width: var(--width);
+  width: var(--width);
+  border-radius: var(--border-radius);
+  box-shadow: 0 3px 15px -3px var(--color-shadow);
+  left: var(--popover-left);
+  top: var(--popover-top);
+  background: var(--color-background);
+  z-index: 4;
+  max-height: 0;
+}
 
-            @media (--mobile) {
-                animation: panelShowingMobile 250ms ease;
-            }
-        }
-    }
+.blok-popover--opened > .blok-popover__container {
+  @apply opacity-100 pointer-events-auto;
+  padding: var(--padding);
+  max-height: var(--max-height);
+  animation: panelShowing 100ms ease;
+  border: 1px solid var(--color-border);
+}
 
-    &--open-top {
-        .blok-popover__container {
-            --popover-top: calc(-1 * (var(--offset-from-target) + var(--popover-height)));
-        }
-    }
+@media (width <= 650px) {
+  .blok-popover--opened > .blok-popover__container {
+    animation: panelShowingMobile 250ms ease;
+  }
+}
 
-    &--open-left {
-        .blok-popover__container {
-            --popover-left: calc(-1 * var(--width) + 100%);
-        }
-    }
+.blok-popover--open-top .blok-popover__container {
+  --popover-top: calc(-1 * (var(--offset-from-target) + var(--popover-height)));
+}
 
-    &__items {
-        overflow-y: auto;
-        overscroll-behavior: contain;
-    }
+.blok-popover--open-left .blok-popover__container {
+  --popover-left: calc(-1 * var(--width) + 100%);
+}
 
-    &__overlay {
-        @media (--mobile) {
-            position: fixed;
-            inset: 0;
-            background: var(--color-dark);
-            z-index: 3;
-            opacity: 0.5;
-            transition: opacity 0.12s ease-in;
-            will-change: opacity;
-            visibility: visible;
-        }
+.blok-popover__items {
+  @apply overflow-y-auto;
+  overscroll-behavior: contain;
+}
 
-        &--hidden {
-            display: none;
-        }
-    }
+.blok-popover__overlay {
+  @apply hidden;
+}
 
-    @media (--mobile) {
-        .blok-popover__container {
-            --offset: 5px;
+@media (width <= 650px) {
+  .blok-popover__overlay {
+    @apply fixed inset-0 block visible;
+    background: var(--color-dark);
+    z-index: 3;
+    opacity: 0.5;
+    transition: opacity 0.12s ease-in;
+    will-change: opacity;
+  }
 
-            position: fixed;
-            max-width: none;
-            min-width: calc(100% - var(--offset) * 2);
-            inset: auto var(--offset) calc(var(--offset) + env(safe-area-inset-bottom)) var(--offset);
-            border-radius: 10px;
-        }
-    }
+  .blok-popover__overlay--hidden {
+    @apply hidden;
+  }
+}
 
-    &__search {
-        margin-bottom: 5px;
-    }
+/* Mobile container styles */
+@media (width <= 650px) {
+  .blok-popover .blok-popover__container {
+    --offset: 5px;
+    @apply fixed max-w-none;
+    min-width: calc(100% - var(--offset) * 2);
+    inset: auto var(--offset) calc(var(--offset) + env(safe-area-inset-bottom)) var(--offset);
+    border-radius: 10px;
+  }
+}
 
-    &__nothing-found-message {
-        color: var(--grayText);
-        display: none;
-        cursor: default;
-        padding: 3px;
-        font-size: 14px;
-        line-height: 20px;
-        font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+.blok-popover__search {
+  @apply mb-1.5;
+}
 
-        &--displayed {
-            display: block;
-        }
-    }
+.blok-popover__nothing-found-message {
+  @apply hidden cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis;
+  color: var(--grayText);
+  padding: 3px;
+}
 
-    &--nested {
-        .blok-popover__container {
-            /* Variable --nesting-level is set via js in showNestedPopoverForItem() method */
-            --popover-left: calc(var(--nesting-level) * (var(--width) - var(--nested-popover-overlap)));
+.blok-popover__nothing-found-message--displayed {
+  @apply block;
+}
 
-            /* Variable --trigger-item-top is set via js in showNestedPopoverForItem() method */
-            top: calc(var(--trigger-item-top) - var(--nested-popover-overlap));
-            position: absolute;
-        }
-    }
+/* Nested popover positioning */
+.blok-popover--nested .blok-popover__container {
+  /* Variable --nesting-level is set via js in showNestedPopoverForItem() method */
+  --popover-left: calc(var(--nesting-level) * (var(--width) - var(--nested-popover-overlap)));
+  /* Variable --trigger-item-top is set via js in showNestedPopoverForItem() method */
+  @apply absolute;
+  top: calc(var(--trigger-item-top) - var(--nested-popover-overlap));
+}
 
-    &--open-top.blok-popover--nested {
-        .blok-popover__container {
-            /** Bottom edge of nested popover should not be lower than bottom edge of parent popover when opened upwards */
-            top: calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + var(--offset-from-target) + var(--nested-popover-overlap));
-        }
-    }
+.blok-popover--open-top.blok-popover--nested .blok-popover__container {
+  /* Bottom edge of nested popover should not be lower than bottom edge of parent popover when opened upwards */
+  top: calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + var(--offset-from-target) + var(--nested-popover-overlap));
+}
 
-    &--open-left {
-        .blok-popover--nested {
-            .blok-popover__container {
-                --popover-left: calc(-1 * (var(--nesting-level) + 1) * var(--width) + 100%);
-            }
-        }
-    }
+.blok-popover--open-left .blok-popover--nested .blok-popover__container {
+  --popover-left: calc(-1 * (var(--nesting-level) + 1) * var(--width) + 100%);
 }
 
 /**
- * Popover item styles
+ * Popover item separator
  */
 .blok-popover-item-separator {
-    padding: 4px 3px;
-
-    &--hidden {
-        display: none;
-    }
-
-    &__line {
-        height: 1px;
-        background: var(--color-border);
-        width: 100%;
-    }
+  padding: 4px 3px;
 }
 
-.blok-popover-item-html {
-    &--hidden {
-        display: none;
-    }
+.blok-popover-item-separator--hidden {
+  @apply hidden;
 }
 
+.blok-popover-item-separator__line {
+  @apply h-px w-full;
+  background: var(--color-border);
+}
+
+/**
+ * Popover item HTML
+ */
+.blok-popover-item-html--hidden {
+  @apply hidden;
+}
+
+/**
+ * Popover item
+ */
 .blok-popover-item {
-    --border-radius: 6px;
+  --border-radius: theme('borderRadius.md');
+  @apply flex items-center select-none border-none bg-transparent;
+  border-radius: var(--border-radius);
+  padding: var(--item-padding);
+  color: var(--color-text-primary);
+}
 
-    border-radius: var(--border-radius);
-    display: flex;
-    align-items: center;
-    padding: var(--item-padding);
-    color: var(--color-text-primary);
-    user-select: none;
-    border: none;
-    background: transparent;
+@media (width <= 650px) {
+  .blok-popover-item {
+    @apply p-1;
+  }
+}
 
-    @media (--mobile) {
-        padding: 4px;
-    }
+.blok-popover-item:not(:last-of-type) {
+  @apply mb-px;
+}
 
-    &:not(:last-of-type) {
-        margin-bottom: 1px;
-    }
+.blok-popover-item__icon {
+  @apply flex items-center justify-center;
+  width: 26px;
+  height: 26px;
+}
 
-    &__icon {
-        width: 26px;
-        height: 26px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+.blok-popover-item__icon svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
 
-        svg {
-            width: var(--icon-size);
-            height: var(--icon-size);
-        }
+@media (width <= 650px) {
+  .blok-popover-item__icon {
+    @apply w-9 h-9 rounded-lg;
+  }
 
-        @media (--mobile) {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
+  .blok-popover-item__icon svg {
+    @apply w-7 h-7;
+  }
+}
 
-            svg {
-                width: 28px;
-                height: 28px;
-            }
-        }
-    }
+.blok-popover-item__icon--tool {
+  @apply mr-1;
+}
 
-    &__icon--tool {
-        margin-right: 4px;
-    }
+.blok-popover-item__title {
+  @apply text-sm leading-5 font-medium overflow-hidden whitespace-nowrap text-ellipsis mr-auto;
+}
 
-    &__title {
-        font-size: 14px;
-        line-height: 20px;
-        font-weight: 500;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        margin-right: auto;
+@media (width <= 650px) {
+  .blok-popover-item__title {
+    @apply text-base;
+  }
+}
 
-        @media (--mobile) {
-            font-size: 16px;
-        }
-    }
+.blok-popover-item__secondary-title {
+  @apply text-xs whitespace-nowrap pr-1.5 opacity-60;
+  color: var(--color-text-secondary);
+  letter-spacing: -0.1em;
+}
 
-    &__secondary-title {
-        color: var(--color-text-secondary);
-        font-size: 12px;
-        white-space: nowrap;
-        letter-spacing: -0.1em;
-        padding-right: 5px;
-        opacity: 0.6;
+@media (width <= 650px) {
+  .blok-popover-item__secondary-title {
+    @apply hidden;
+  }
+}
 
-        @media (--mobile) {
-            display: none;
-        }
-    }
+.blok-popover-item--active {
+  background: var(--color-background-icon-active);
+  color: var(--color-text-icon-active);
+}
 
-    &--active {
-        background: var(--color-background-icon-active);
-        color: var(--color-text-icon-active);
-    }
+.blok-popover-item--disabled {
+  @apply cursor-default pointer-events-none;
+  color: var(--color-text-secondary);
+}
 
-    &--disabled {
-        color: var(--color-text-secondary);
-        cursor: default;
-        pointer-events: none;
-    }
+.blok-popover-item--focused:not(.blok-popover-item--no-focus) {
+  background: var(--color-background-item-focus) !important;
+}
 
-    &--focused {
-        &:not(.blok-popover-item--no-focus) {
-            background: var(--color-background-item-focus) !important;
-        }
-    }
+.blok-popover-item--hidden {
+  @apply hidden;
+}
 
-    &--hidden {
-        display: none;
-    }
+/* Hover styles - only on devices that support hover */
+@media (hover: hover) {
+  .blok-popover-item:hover {
+    @apply cursor-pointer;
+  }
 
-    @media (--can-hover) {
-        &:hover {
-            cursor: pointer;
+  .blok-popover-item:hover:not(.blok-popover-item--no-hover) {
+    background-color: var(--color-background-item-hover);
+  }
+}
 
-            &:not(.blok-popover-item--no-hover) {
-                background-color: var(--color-background-item-hover);
-            }
-        }
-    }
+/* Force hover styles for Storybook/Chromatic testing */
+.blok-popover-item--force-hover:not(.blok-popover-item--no-hover) {
+  @apply cursor-pointer;
+  background-color: var(--color-background-item-hover);
+}
 
-    /**
-     * Force hover styles for Storybook/Chromatic testing where @media (hover: hover) doesn't match.
-     * This class is added programmatically in story play functions.
-     */
-    &--force-hover:not(.blok-popover-item--no-hover) {
-        background-color: var(--color-background-item-hover);
-        cursor: pointer;
-    }
+/* Confirmation state */
+.blok-popover-item--confirmation {
+  background: var(--color-background-item-confirm);
+}
 
-    &--confirmation {
-        background: var(--color-background-item-confirm);
+.blok-popover-item--confirmation .blok-popover-item__title,
+.blok-popover-item--confirmation .blok-popover-item__icon {
+  @apply text-white;
+}
 
-        .blok-popover-item__title,
-        .blok-popover-item__icon {
-            color: white;
-        }
+/* Confirmation hover */
+@media (hover: hover) {
+  .blok-popover-item--confirmation:not(.blok-popover-item--no-hover):hover {
+    background: var(--color-background-item-confirm-hover);
+  }
+}
 
-        /* confirmation hover */
-        &:not(.blok-popover-item--no-hover) {
-            @media (--can-hover) {
-                &:hover {
-                    background: var(--color-background-item-confirm-hover);
-                }
-            }
-        }
-
-        /* confirmation focus */
-        &:not(.blok-popover-item--no-focus) {
-            &.blok-popover-item--focused {
-                background: var(--color-background-item-confirm-hover) !important;
-            }
-        }
-    }
+/* Confirmation focus */
+.blok-popover-item--confirmation:not(.blok-popover-item--no-focus).blok-popover-item--focused {
+  background: var(--color-background-item-confirm-hover) !important;
 }
 
 /**
  * Animations
  */
 @keyframes panelShowing {
-    from {
-        opacity: 0;
-        transform: translateY(-8px) scale(0.9);
-    }
-
-    70% {
-        opacity: 1;
-        transform: translateY(2px);
-    }
-
-    to {
-        transform: translateY(0);
-    }
+  from {
+    @apply opacity-0;
+    transform: translateY(-8px) scale(0.9);
+  }
+  70% {
+    @apply opacity-100;
+    transform: translateY(2px);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 @keyframes panelShowingMobile {
-    from {
-        opacity: 0;
-        transform: translateY(14px) scale(0.98);
-    }
-
-    70% {
-        opacity: 1;
-        transform: translateY(-4px);
-    }
-
-    to {
-        transform: translateY(0);
-    }
+  from {
+    @apply opacity-0;
+    transform: translateY(14px) scale(0.98);
+  }
+  70% {
+    @apply opacity-100;
+    transform: translateY(-4px);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 .wobble {
-    animation-name: wobble;
-    animation-duration: 400ms;
+  animation-name: wobble;
+  animation-duration: 400ms;
 }
 
 /**
  * @author Nick Pettit - https://github.com/nickpettit/glide
  */
 @keyframes wobble {
-    from {
-        transform: translate3d(0, 0, 0);
-    }
-
-    15% {
-        transform: translate3d(-9%, 0, 0);
-    }
-
-    30% {
-        transform: translate3d(9%, 0, 0);
-    }
-
-    45% {
-        transform: translate3d(-4%, 0, 0);
-    }
-
-    60% {
-        transform: translate3d(4%, 0, 0);
-    }
-
-    75% {
-        transform: translate3d(-1%, 0, 0);
-    }
-
-    to {
-        transform: translate3d(0, 0, 0);
-    }
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  15% {
+    transform: translate3d(-9%, 0, 0);
+  }
+  30% {
+    transform: translate3d(9%, 0, 0);
+  }
+  45% {
+    transform: translate3d(-4%, 0, 0);
+  }
+  60% {
+    transform: translate3d(4%, 0, 0);
+  }
+  75% {
+    transform: translate3d(-1%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 /**
  * Popover header styles
  */
 .blok-popover-header {
-    margin-bottom: 8px;
-    margin-top: 4px;
-    display: flex;
-    align-items: center;
+  @apply flex items-center mb-2 mt-1;
+}
 
-    &__text {
-        font-size: 18px;
-        font-weight: 600;
-    }
+.blok-popover-header__text {
+  @apply text-lg font-semibold;
+}
 
-    &__back-button {
-        border: 0;
-        background: transparent;
-        width: 36px;
-        height: 36px;
-        color: var(--color-text-primary);
+.blok-popover-header__back-button {
+  @apply border-0 bg-transparent w-9 h-9;
+  color: var(--color-text-primary);
+}
 
-        svg {
-            display: block;
-            width: 28px;
-            height: 28px;
-        }
-    }
+.blok-popover-header__back-button svg {
+  @apply block w-7 h-7;
 }

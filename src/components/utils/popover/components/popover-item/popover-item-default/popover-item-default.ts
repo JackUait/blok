@@ -220,6 +220,7 @@ export class PopoverItemDefault extends PopoverItem {
       this.addHint(el, {
         ...params.hint,
         position: renderParams?.hint?.position || 'right',
+        alignment: renderParams?.hint?.alignment || 'center',
       });
     }
 

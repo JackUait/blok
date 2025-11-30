@@ -1,125 +1,95 @@
-/**
-* Blok wrapper
-*/
-.blok-editor {
-    position: relative;
-    box-sizing: border-box;
-    z-index: 1;
+@layer components {
+  /* Blok Editor - Main wrapper */
+  .blok-editor {
+    @apply relative box-border z-[1];
 
-    .hide {
-        display: none;
+    & .hide {
+      @apply hidden;
     }
 
-    &__redactor {
-        /**
-     * Workaround firefox bug: empty content editable elements has collapsed height
-     * https://bugzilla.mozilla.org/show_bug.cgi?id=1098151#c18
-     */
-        [contenteditable]:empty::after {
-            content: "\feff ";
-        }
+    /* SVG defaults */
+    & svg {
+      @apply max-h-full;
     }
 
-    /**
-   * Styles for narrow holder
-   */
-    &--narrow &__redactor {
-        @media (--not-mobile) {
-            margin-right: var(--narrow-mode-right-padding);
-        }
+    & path {
+      @apply stroke-current;
     }
 
-    &--narrow&--rtl &__redactor {
-        @media (--not-mobile) {
-            margin-left: var(--narrow-mode-right-padding);
-            margin-right: 0;
-        }
+    /* Native selection color */
+    & ::selection {
+      background-color: var(--inlineSelectionColor);
+    }
+  }
+
+  /* Redactor - Firefox empty contenteditable fix */
+  .blok-editor__redactor [contenteditable]:empty::after {
+    content: "\feff ";
+  }
+
+  /* Narrow mode - Right padding for redactor */
+  @media (--not-mobile) {
+    .blok-editor--narrow .blok-editor__redactor {
+      @apply mr-[var(--narrow-mode-right-padding)];
     }
 
-    &--narrow .blok-toolbar__actions {
-        @media (--not-mobile) {
-            right: calc(-1 * var(--narrow-mode-right-padding) - 5px);
-        }
+    .blok-editor--narrow.blok-editor--rtl .blok-editor__redactor {
+      @apply ml-[var(--narrow-mode-right-padding)] mr-0;
     }
 
-    &--narrow&--rtl .blok-toolbar__actions {
-        @media (--not-mobile) {
-            right: auto;
-            left: calc(-1 * var(--narrow-mode-right-padding) - 5px);
-        }
+    .blok-editor--narrow .blok-toolbar__actions {
+      right: calc(-1 * var(--narrow-mode-right-padding) - 5px);
     }
 
-    &-copyable {
-        position: absolute;
-        height: 1px;
-        width: 1px;
-        top: -400%;
-        opacity: 0.001;
+    .blok-editor--narrow.blok-editor--rtl .blok-toolbar__actions {
+      @apply right-auto -right-[5px];
+      left: calc(-1 * var(--narrow-mode-right-padding) - 5px);
+    }
+  }
+
+  /* Copyable element - Hidden off-screen */
+  .blok-editor-copyable {
+    @apply absolute h-px w-px -top-[400%] opacity-[0.001];
+  }
+
+  /* Overlay */
+  .blok-editor-overlay {
+    @apply fixed inset-0 z-overlay pointer-events-none overflow-hidden;
+  }
+
+  .blok-editor-overlay__container {
+    @apply relative pointer-events-auto z-0;
+  }
+
+  .blok-editor-overlay__rectangle {
+    @apply absolute pointer-events-none bg-selection-highlight border border-transparent;
+  }
+
+  /* Dragging state */
+  .blok-editor--dragging {
+    @apply cursor-grabbing;
+
+    & .blok-toolbar__settings-btn {
+      @apply cursor-grabbing;
     }
 
-    &-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-        pointer-events: none;
-        overflow: hidden;
-
-        &__container {
-            position: relative;
-            pointer-events: auto;
-            z-index: 0;
-        }
-
-        &__rectangle {
-            position: absolute;
-            pointer-events: none;
-            background-color: rgba(46, 170, 220, 0.2);
-            border: 1px solid transparent;
-        }
+    & .blok-toolbar {
+      @apply pointer-events-none;
     }
+  }
 
-    svg {
-        max-height: 100%;
-    }
+  /* Toolbox opened - Hide placeholder */
+  .blok-editor--toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
+    @apply !opacity-0;
+  }
 
-    path {
-        stroke: currentColor;
-    }
+  /* Scroll lock utilities */
+  .blok-scroll-locked {
+    @apply overflow-hidden;
+  }
 
-    /**
-  * Set color for native selection
-  */
-    ::selection {
-        background-color: var(--inlineSelectionColor);
-    }
-
-    /**
-   * Class added when some block is being dragged
-   */
-    &--dragging {
-        cursor: grabbing;
-
-        .blok-toolbar__settings-btn {
-            cursor: grabbing;
-        }
-
-        .blok-toolbar {
-            pointer-events: none;
-        }
-    }
-}
-
-.blok-editor--toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
-    opacity: 0 !important;
-}
-
-.blok-scroll-locked {
-    overflow: hidden;
-}
-
-.blok-scroll-locked--hard {
-    overflow: hidden;
+  .blok-scroll-locked--hard {
+    @apply overflow-hidden fixed w-full;
     top: calc(-1 * var(--window-scroll-offset));
-    position: fixed;
-    width: 100%;
+  }
 }

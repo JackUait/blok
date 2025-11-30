@@ -51,13 +51,18 @@ export default class Dom {
     const el = document.createElement(tagName);
 
     if (Array.isArray(classNames)) {
-      const validClassnames = classNames.filter((className): className is string => className !== undefined);
+      const validClassnames = classNames
+        .filter((className): className is string => className !== undefined && className !== '')
+        .flatMap((className) => className.split(' '))
+        .filter((className) => className !== '');
 
       el.classList.add(...validClassnames);
     }
 
-    if (typeof classNames === 'string') {
-      el.classList.add(classNames);
+    if (typeof classNames === 'string' && classNames !== '') {
+      const splitClassNames = classNames.split(' ').filter((className) => className !== '');
+
+      el.classList.add(...splitClassNames);
     }
 
     for (const attrName in attributes) {
@@ -243,7 +248,7 @@ export default class Dom {
    * @param {*} node - object to check
    * @returns {boolean}
    */
-   
+
   public static isElement(node: any): node is Element {
     if (_.isNumber(node)) {
       return false;
@@ -257,7 +262,7 @@ export default class Dom {
    * @param {object} node - object to check
    * @returns {boolean}
    */
-   
+
   public static isFragment(node: any): node is DocumentFragment {
     if (_.isNumber(node)) {
       return false;
@@ -280,7 +285,7 @@ export default class Dom {
    * @param {*} target - HTML element or string
    * @returns {boolean}
    */
-   
+
   public static isNativeInput(target: any): target is HTMLInputElement | HTMLTextAreaElement {
     const nativeInputs = [
       'INPUT',
@@ -672,7 +677,7 @@ export const isCollapsedWhitespaces = (textContent: string): boolean => {
 export const calculateBaseline = (element: Element): number => {
   const style = window.getComputedStyle(element);
   const fontSize = parseFloat(style.fontSize);
-   
+
   const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.2; // default line-height if not set
   const paddingTop = parseFloat(style.paddingTop);
   const borderTopWidth = parseFloat(style.borderTopWidth);
@@ -681,7 +686,7 @@ export const calculateBaseline = (element: Element): number => {
   /**
    * Typically, the baseline is about 80% of the `fontSize` from the top of the text, as this is a common average for many fonts.
    */
-   
+
   const baselineOffset = fontSize * 0.8;
 
   /**

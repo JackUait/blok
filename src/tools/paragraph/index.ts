@@ -169,7 +169,7 @@ export default class Paragraph implements BlockTool {
 
     div.classList.add(this._CSS.wrapper, this._CSS.block);
     div.contentEditable = 'false';
-    div.dataset.placeholderActive = this.api.i18n.t(this._placeholder);
+    div.setAttribute('data-placeholder-active', this.api.i18n.t(this._placeholder));
 
     if (this._data.text) {
       div.innerHTML = this._data.text;

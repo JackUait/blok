@@ -331,11 +331,11 @@ export const RTLMode: Story = {
     },
   },
   play: async ({ canvasElement, step }) => {
-    await step('Verify RTL class is applied', async () => {
+    await step('Verify RTL direction is applied', async () => {
       await waitFor(
         () => {
-          const editors = canvasElement.querySelectorAll('[data-blok-testid="editor-wrapper"], [class*="blok-editor"]');
-          const rtlEditor = Array.from(editors).find(el => el.classList.contains('blok-editor--rtl'));
+          // eslint-disable-next-line internal-storybook/no-class-selectors -- Checking RTL class is applied to editor
+          const rtlEditor = canvasElement.querySelector('[data-blok-testid="blok-editor"].blok-editor--rtl');
 
           expect(rtlEditor).toBeTruthy();
         },
@@ -408,18 +408,18 @@ export const DraggingState: Story = {
       );
     });
 
-    await step('Add dragging class to show visual dragging state', async () => {
-      const editors = canvasElement.querySelectorAll('[class*="blok-editor"]');
-      const editorWrapper = editors[0];
+    await step('Add dragging state to show visual dragging state', async () => {
+      const editorWrapper = canvasElement.querySelector('[data-blok-testid="blok-editor"]');
 
       if (editorWrapper) {
+        // eslint-disable-next-line internal-storybook/no-class-selectors
         editorWrapper.classList.add('blok-editor--dragging');
       }
 
       await waitFor(
         () => {
-          const draggingEditor = Array.from(canvasElement.querySelectorAll('[class*="blok-editor"]'))
-            .find(el => el.classList.contains('blok-editor--dragging'));
+          // eslint-disable-next-line internal-storybook/no-class-selectors -- Checking dragging class is applied to editor
+          const draggingEditor = canvasElement.querySelector('[data-blok-testid="blok-editor"].blok-editor--dragging');
 
           expect(draggingEditor).toBeTruthy();
         },
@@ -452,14 +452,14 @@ export const DraggingState: Story = {
       );
     });
 
-    await step('Remove dragging class after move completes', async () => {
-      // Keep dragging class visible for a moment to show the state
+    await step('Remove dragging state after move completes', async () => {
+      // Keep dragging state visible for a moment to show the state
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const editors = canvasElement.querySelectorAll('[class*="blok-editor"]');
-      const editorWrapper = editors[0];
+      const editorWrapper = canvasElement.querySelector('[data-blok-testid="blok-editor"]');
 
       if (editorWrapper) {
+        // eslint-disable-next-line internal-storybook/no-class-selectors
         editorWrapper.classList.remove('blok-editor--dragging');
       }
     });
@@ -488,8 +488,7 @@ export const RectangleSelection: Story = {
 
     await step('Create and show rectangle selection overlay', async () => {
       // Create the overlay structure manually for visual demonstration
-      const editors = canvasElement.querySelectorAll('[class*="blok-editor"]');
-      const editorWrapper = editors[0];
+      const editorWrapper = canvasElement.querySelector('[data-blok-testid="blok-editor"]');
 
       if (editorWrapper) {
         const overlay = document.createElement('div');

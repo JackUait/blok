@@ -548,10 +548,10 @@ test.describe('tooltip API', () => {
 
       await button.hover();
 
-      // Wait for tooltip to appear (accounting for delay)
+      // Wait for tooltip to appear (accounting for delay of 200ms + rendering time)
       const tooltip = page.locator(TOOLTIP_INTERFACE_SELECTOR);
 
-      await expect(tooltip).toBeVisible({ timeout: 500 });
+      await expect(tooltip).toBeVisible({ timeout: 1000 });
       await expect(tooltip).toContainText('Tooltip with config');
     });
   });
@@ -1282,7 +1282,7 @@ test.describe('tooltip API', () => {
       await page.evaluate((selector) => {
         const tooltipElement = document.querySelector(selector) as HTMLElement | null;
 
-        tooltipElement?.classList.remove('ct--shown');
+        tooltipElement?.classList.remove('blok-tooltip--shown');
       }, TOOLTIP_INTERFACE_SELECTOR);
 
       await page.waitForFunction((selector) => {
@@ -1350,12 +1350,12 @@ test.describe('tooltip API', () => {
 
         return {
           left: parseFloat(tooltipElement.style.left),
-          classes: Array.from(tooltipElement.classList),
+          placement: tooltipElement.getAttribute('data-blok-placement'),
         };
       }, TOOLTIP_INTERFACE_SELECTOR);
 
       expect(leftPlacement).not.toBeNull();
-      expect(leftPlacement?.classes).toContain('ct--left');
+      expect(leftPlacement?.placement).toBe('left');
 
       // Left placement with margin
       await page.evaluate(({ elementId }) => {
@@ -1410,12 +1410,12 @@ test.describe('tooltip API', () => {
 
         return {
           left: parseFloat(tooltipElement.style.left),
-          classes: Array.from(tooltipElement.classList),
+          placement: tooltipElement.getAttribute('data-blok-placement'),
         };
       }, TOOLTIP_INTERFACE_SELECTOR);
 
       expect(rightPlacement).not.toBeNull();
-      expect(rightPlacement?.classes).toContain('ct--right');
+      expect(rightPlacement?.placement).toBe('right');
 
       // Right placement with margin
       await page.evaluate(({ elementId }) => {

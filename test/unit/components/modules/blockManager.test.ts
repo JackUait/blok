@@ -7,7 +7,7 @@ import type { BlokConfig } from '../../../../types';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import { BlockChanged } from '../../../../src/components/events';
 import type { BlokEventMap } from '../../../../src/components/events';
-import Block from '../../../../src/components/block';
+import type Block from '../../../../src/components/block';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
@@ -42,7 +42,8 @@ const createBlockStub = (options: {
 } = {}): Block => {
   const holder = document.createElement('div');
 
-  holder.classList.add(Block.CSS.wrapper);
+  // eslint-disable-next-line internal-unit-test/no-class-selectors
+  holder.classList.add('blok-element');
   const inputs = [ document.createElement('div') ];
   const data = options.data ?? {};
 
@@ -545,7 +546,8 @@ describe('BlockManager', () => {
 
     const ui = (blockManager as unknown as { Blok: BlokModules }).Blok.UI;
 
-    ui.nodes.wrapper.classList.add(ui.CSS.blokWrapper);
+    // eslint-disable-next-line internal-unit-test/no-class-selectors
+    ui.nodes.wrapper.classList.add('blok-editor');
     ui.nodes.wrapper.appendChild(blocks[0].holder);
     ui.nodes.wrapper.appendChild(blocks[1].holder);
     document.body.appendChild(ui.nodes.wrapper);
@@ -562,7 +564,8 @@ describe('BlockManager', () => {
 
     const alienWrapper = document.createElement('div');
 
-    alienWrapper.classList.add(ui.CSS.blokWrapper);
+    // eslint-disable-next-line internal-unit-test/no-class-selectors
+    alienWrapper.classList.add('blok-editor');
     const alienBlock = createBlockStub({ id: 'alien' });
 
     alienWrapper.appendChild(alienBlock.holder);

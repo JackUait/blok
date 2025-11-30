@@ -116,7 +116,7 @@ describe('Tooltip utility', () => {
 
     expect(wrapper).not.toBeNull();
     expect(wrapper?.textContent).toBe('Tooltip text');
-    expect(wrapper?.classList.contains('ct--shown')).toBe(true);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
     expect(wrapper?.getAttribute(DATA_INTERFACE_ATTRIBUTE)).toBe(TOOLTIP_INTERFACE_VALUE);
     expect(wrapper?.getAttribute('role')).toBe('tooltip');
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
@@ -142,7 +142,7 @@ describe('Tooltip utility', () => {
     show(target, customContent, { delay: 0 });
 
     const wrapper = getTooltipWrapper();
-    const contentHolder = wrapper?.querySelector('.ct__content');
+    const contentHolder = wrapper?.querySelector('[data-blok-testid="tooltip-content"]');
 
     expect(contentHolder?.contains(customContent)).toBe(true);
   });
@@ -177,7 +177,7 @@ describe('Tooltip utility', () => {
 
     expect(wrapper?.style.left).toBe('35px');
     expect(wrapper?.style.top).toBe('98px');
-    expect(wrapper?.classList.contains('ct--bottom')).toBe(true);
+    expect(wrapper?.getAttribute('data-blok-placement')).toBe('bottom');
   });
 
   it('places tooltip to the left of the element and respects marginLeft', () => {
@@ -203,8 +203,7 @@ describe('Tooltip utility', () => {
 
     expect(wrapper?.style.left).toBe('145px');
     expect(wrapper?.style.top).toBe('110px');
-    expect(wrapper?.classList.contains('ct--left')).toBe(true);
-    expect(wrapper?.classList.contains('ct--right')).toBe(false);
+    expect(wrapper?.getAttribute('data-blok-placement')).toBe('left');
   });
 
   it('places tooltip to the right of the element with marginRight taken into account', () => {
@@ -230,8 +229,7 @@ describe('Tooltip utility', () => {
 
     expect(wrapper?.style.left).toBe('276px');
     expect(wrapper?.style.top).toBe('45px');
-    expect(wrapper?.classList.contains('ct--right')).toBe(true);
-    expect(wrapper?.classList.contains('ct--left')).toBe(false);
+    expect(wrapper?.getAttribute('data-blok-placement')).toBe('right');
   });
 
   it('places tooltip above the element using document scroll fallback', () => {
@@ -257,7 +255,7 @@ describe('Tooltip utility', () => {
 
     expect(wrapper?.style.left).toBe('50px');
     expect(wrapper?.style.top).toBe('116px');
-    expect(wrapper?.classList.contains('ct--top')).toBe(true);
+    expect(wrapper?.getAttribute('data-blok-placement')).toBe('top');
   });
 
   it('delays hiding when hidingDelay is set but respects skip flag', () => {
@@ -271,22 +269,22 @@ describe('Tooltip utility', () => {
 
     const wrapper = getTooltipWrapper();
 
-    expect(wrapper?.classList.contains('ct--shown')).toBe(true);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
     hide();
 
-    expect(wrapper?.classList.contains('ct--shown')).toBe(true);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
     vi.advanceTimersByTime(49);
-    expect(wrapper?.classList.contains('ct--shown')).toBe(true);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
     vi.advanceTimersByTime(1);
-    expect(wrapper?.classList.contains('ct--shown')).toBe(false);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
 
     show(target, wrapperText, { delay: 0,
       hidingDelay: 50 });
     hide(true);
-    expect(wrapper?.classList.contains('ct--shown')).toBe(false);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('responds to hover events by showing and hiding the tooltip', () => {
@@ -298,11 +296,11 @@ describe('Tooltip utility', () => {
 
     const wrapper = getTooltipWrapper();
 
-    expect(wrapper?.classList.contains('ct--shown')).toBe(true);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
     target.dispatchEvent(new Event('mouseleave'));
 
-    expect(wrapper?.classList.contains('ct--shown')).toBe(false);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('keeps aria-hidden synchronized with CSS class changes', async () => {
@@ -314,7 +312,7 @@ describe('Tooltip utility', () => {
 
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
-    wrapper?.classList.remove('ct--shown');
+    hide();
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -329,11 +327,11 @@ describe('Tooltip utility', () => {
 
     const wrapper = getTooltipWrapper();
 
-    expect(wrapper?.classList.contains('ct--shown')).toBe(true);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
     window.dispatchEvent(new Event('scroll'));
 
-    expect(wrapper?.classList.contains('ct--shown')).toBe(false);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('destroy removes DOM nodes and allows reinitialization', () => {

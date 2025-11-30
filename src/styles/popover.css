@@ -216,13 +216,6 @@
 }
 
 /**
- * Wobble animation utility class
- */
-.wobble {
-  animation: wobble 400ms;
-}
-
-/**
  * Popover header styles
  */
 .blok-popover-header__text {

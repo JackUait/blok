@@ -196,7 +196,7 @@ export default class Caret extends Module {
     this.set(nodeToSet as HTMLElement, offsetToSet);
 
     BlockManager.setCurrentBlockByChildNode(block.holder);
-     
+
     BlockManager.currentBlock!.currentInput = element;
   }
 
@@ -486,6 +486,7 @@ export default class Caret extends Module {
     const shadowCaret = document.createElement('span');
 
     shadowCaret.classList.add(Caret.CSS.shadowCaret);
+    shadowCaret.setAttribute('data-blok-testid', 'shadow-caret');
     element.insertAdjacentElement('beforeend', shadowCaret);
   }
 
@@ -494,7 +495,7 @@ export default class Caret extends Module {
    * @param {HTMLElement} element - element where caret should be restored
    */
   public restoreCaret(element: HTMLElement): void {
-    const shadowCaret = element.querySelector(`.${Caret.CSS.shadowCaret}`);
+    const shadowCaret = element.querySelector('[data-blok-testid="shadow-caret"]');
 
     if (!shadowCaret) {
       return;

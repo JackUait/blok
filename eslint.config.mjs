@@ -570,6 +570,8 @@ const internalPlaywrightPlugin = {
         messages: {
           noCssSelector:
             'Avoid using CSS selectors in Playwright tests. Prefer getByRole(), getByTestId(), or data-blok-* attribute locators.',
+          noToContainClass:
+            'Avoid using toContain() with class names ({{className}}) in Playwright tests. Prefer checking data attributes or element states.',
         },
       },
       create(context) {
@@ -673,8 +675,66 @@ const internalPlaywrightPlugin = {
           });
         };
 
+        // Check if a string looks like a CSS class name (e.g., 'blok-tooltip--left', 'my-class')
+        const looksLikeClassName = (value) => {
+          if (!value || typeof value !== 'string') {
+            return false;
+          }
+
+          const trimmed = value.trim();
+
+          // Match BEM-style class names or hyphenated class names
+          // e.g., 'blok-tooltip--left', 'my-component__element--modifier', 'some-class'
+          // Uses [-_]+ to match BEM double dashes/underscores like '--' or '__'
+          if (/^[a-zA-Z][a-zA-Z0-9]*(?:[-_]+[a-zA-Z0-9]+)+$/.test(trimmed)) {
+            return true;
+          }
+
+          return false;
+        };
+
+        // Check if this is a toContain() call in an expect chain
+        const isToContainWithClassName = (node) => {
+          if (node.callee.type !== 'MemberExpression') {
+            return null;
+          }
+
+          const { property } = node.callee;
+
+          if (property.type !== 'Identifier' || property.name !== 'toContain') {
+            return null;
+          }
+
+          if (node.arguments.length === 0) {
+            return null;
+          }
+
+          const arg = node.arguments[0];
+
+          if (arg.type === 'Literal' && typeof arg.value === 'string') {
+            if (looksLikeClassName(arg.value)) {
+              return arg.value;
+            }
+          }
+
+          return null;
+        };
+
         return {
           CallExpression(node) {
+            // Check for toContain() with class names
+            const classNameInToContain = isToContainWithClassName(node);
+
+            if (classNameInToContain) {
+              context.report({
+                node,
+                messageId: 'noToContainClass',
+                data: { className: classNameInToContain },
+              });
+
+              return;
+            }
+
             const methodName = getMethodName(node.callee);
 
             if (!methodName || !SELECTOR_METHODS.has(methodName)) {
@@ -724,6 +784,95 @@ const internalPlaywrightPlugin = {
                 messageId: 'noCssSelector',
               });
             }
+          },
+        };
+      },
+    },
+  },
+};
+
+const internalDomPlugin = {
+  rules: {
+    'no-dataset-assignment': {
+      meta: {
+        type: 'suggestion',
+        docs: {
+          description: 'Disallow using .dataset for setting data attributes. Use .setAttribute() instead.',
+        },
+        fixable: 'code',
+        schema: [],
+        messages: {
+          noDatasetAssignment:
+            'Avoid using .dataset.{{property}} for setting data attributes. Use .setAttribute(\'data-{{kebabProperty}}\', value) instead.',
+        },
+      },
+      create(context) {
+        const sourceCode = context.sourceCode ?? context.getSourceCode();
+
+        // Convert camelCase to kebab-case
+        const toKebabCase = (str) => {
+          return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+        };
+
+        // Get the object being accessed (the element before .dataset)
+        const getElementExpression = (datasetNode) => {
+          if (datasetNode.type !== 'MemberExpression') {
+            return null;
+          }
+
+          return sourceCode.getText(datasetNode.object);
+        };
+
+        return {
+          AssignmentExpression(node) {
+            // Check if left side is element.dataset.property pattern
+            if (node.left.type !== 'MemberExpression') {
+              return;
+            }
+
+            const { object, property, computed } = node.left;
+
+            // Check if it's accessing .dataset
+            if (object.type !== 'MemberExpression') {
+              return;
+            }
+
+            if (object.property.type !== 'Identifier' || object.property.name !== 'dataset') {
+              return;
+            }
+
+            // Get the property name being set
+            const propertyName = computed
+              ? (property.type === 'Literal' ? String(property.value) : null)
+              : (property.type === 'Identifier' ? property.name : null);
+
+            if (!propertyName) {
+              return;
+            }
+
+            const kebabProperty = toKebabCase(propertyName);
+            const elementExpr = getElementExpression(object);
+
+            if (!elementExpr) {
+              return;
+            }
+
+            const valueText = sourceCode.getText(node.right);
+
+            context.report({
+              node,
+              messageId: 'noDatasetAssignment',
+              data: {
+                property: propertyName,
+                kebabProperty,
+              },
+              fix(fixer) {
+                return fixer.replaceText(
+                  node,
+                  `${elementExpr}.setAttribute('data-${kebabProperty}', ${valueText})`
+                );
+              },
+            });
           },
         };
       },
@@ -853,8 +1002,11 @@ export default defineConfig(
       sonarjs,
       import: eslintPluginImport,
       tailwindcss,
+      'internal-dom': internalDomPlugin,
     },
     rules: {
+      // Prevent .dataset assignment, prefer .setAttribute()
+      'internal-dom/no-dataset-assignment': 'error',
       // Duplicate code detection
       'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-blok-testid,data-blok-focused,data-blok-opened,data-blok-component' }],
       'sonarjs/no-identical-functions': 'error',
@@ -876,6 +1028,7 @@ export default defineConfig(
     plugins: {
       jest,
       'internal-unit-test': internalUnitTestPlugin,
+      'internal-dom': internalDomPlugin,
     },
     languageOptions: {
       globals: {
@@ -894,6 +1047,8 @@ export default defineConfig(
     },
     rules: {
       ...jest.configs.recommended.rules,
+      // Prevent .dataset assignment, prefer .setAttribute()
+      'internal-dom/no-dataset-assignment': 'error',
       // Prevent class selectors in unit tests
       'internal-unit-test/no-class-selectors': 'error',
       '@typescript-eslint/no-magic-numbers': 'off',

@@ -79,14 +79,14 @@ class Tooltip {
    */
   private get CSS(): CSSTooltipClasses {
     return {
-      tooltip: 'ct',
+      tooltip: 'blok-tooltip',
       tooltipContent: 'ct__content',
-      tooltipShown: 'ct--shown',
+      tooltipShown: 'blok-tooltip--shown',
       placement: {
-        left: 'ct--left',
-        bottom: 'ct--bottom',
-        right: 'ct--right',
-        top: 'ct--top',
+        left: 'blok-tooltip--left',
+        bottom: 'blok-tooltip--bottom',
+        right: 'blok-tooltip--right',
+        top: 'blok-tooltip--top',
       },
     };
   }
@@ -346,6 +346,7 @@ class Tooltip {
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, TOOLTIP_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'tooltip');
     this.nodes.content = this.make('div', this.CSS.tooltipContent);
+    this.nodes.content.setAttribute('data-blok-testid', 'tooltip-content');
 
     if (this.nodes.wrapper && this.nodes.content) {
       this.append(this.nodes.wrapper, this.nodes.content);
@@ -366,6 +367,7 @@ class Tooltip {
 
     this.nodes.wrapper.style.setProperty(VISIBILITY_PROPERTY, isShown ? VISIBILITY_VISIBLE : VISIBILITY_HIDDEN);
     this.nodes.wrapper.setAttribute(ARIA_HIDDEN_ATTRIBUTE, isShown ? ARIA_HIDDEN_FALSE : ARIA_HIDDEN_TRUE);
+    this.nodes.wrapper.setAttribute('data-blok-shown', isShown ? 'true' : 'false');
   }
 
   /**
@@ -507,6 +509,7 @@ class Tooltip {
     }
 
     this.nodes.wrapper.classList.add(this.CSS.placement[place]);
+    this.nodes.wrapper.setAttribute('data-blok-placement', place);
 
     this.nodes.wrapper.style.left = `${left}px`;
     this.nodes.wrapper.style.top = `${top}px`;

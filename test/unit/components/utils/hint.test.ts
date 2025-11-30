@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../../../src/components/utils/popover/components/hint/hint.css', () => ({}));
 
 import { Hint } from '../../../../src/components/utils/popover/components/hint';
-import { css } from '../../../../src/components/utils/popover/components/hint/hint.const';
 
 describe('Hint component', () => {
   beforeEach(() => {
@@ -25,8 +24,7 @@ describe('Hint component', () => {
     // Description would be the second child if present
     const description = root.children[1];
 
-    expect(root.classList.contains(css.alignedStart)).toBe(true);
-    expect(root.classList.contains(css.alignedCenter)).toBe(false);
+    expect(root.dataset.alignment).toBe('start');
     expect(title?.textContent).toBe('Primary action');
     expect(description).toBeUndefined();
   });
@@ -53,8 +51,7 @@ describe('Hint component', () => {
 
     const root = hint.getElement();
 
-    expect(root.classList.contains(css.alignedCenter)).toBe(true);
-    expect(root.classList.contains(css.alignedStart)).toBe(false);
+    expect(root.dataset.alignment).toBe('center');
   });
 
   it('returns the same root element instance from getElement', () => {

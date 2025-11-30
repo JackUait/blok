@@ -59,6 +59,7 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   if (wrapper && notify) {
     wrapper.appendChild(notify);
     notify.classList.add(bounceInClass);
+    notify.setAttribute('data-blok-bounce-in', 'true');
   }
 };
 

@@ -105,6 +105,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     ]);
     this.nodes.popover.setAttribute('data-blok-testid', 'popover');
 
+    if (this.params.class) {
+      this.nodes.popover.setAttribute('data-blok-popover-custom-class', this.params.class);
+    }
+
     this.nodes.popover.appendChild(this.nodes.popoverContainer);
   }
 

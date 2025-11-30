@@ -488,8 +488,8 @@ export const ToolHoverState: Story = {
       const boldTool = document.querySelector('[data-blok-item-name="bold"]');
 
       if (boldTool) {
-        // Add force-hover class to show hover styles in headless browsers
-        boldTool.classList.add('blok-popover-item--force-hover');
+        // Add force-hover state to show hover styles in headless browsers
+        boldTool.setAttribute('data-blok-force-hover', 'true');
         await userEvent.hover(boldTool);
       }
     });

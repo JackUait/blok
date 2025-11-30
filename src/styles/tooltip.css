@@ -1,14 +1,14 @@
 :root {
-    --ct-color-bg: #1d202b;
-    --ct-color-font: #cdd1e0;
+    --blok-tooltip-color-bg: #1d202b;
+    --blok-tooltip-color-font: #cdd1e0;
 }
 
-.ct {
+.blok-tooltip {
     position: absolute;
     z-index: 999;
     top: 0;
     left: 0;
-    background-color: var(--ct-color-bg);
+    background-color: var(--blok-tooltip-color-bg);
     opacity: 0;
     user-select: none;
     pointer-events: none;
@@ -18,89 +18,89 @@
     border-radius: 9px;
 }
 
-.ct::before {
+.blok-tooltip::before {
     content: '';
     inset: 0;
     position: absolute;
-    background-color: var(--ct-color-bg);
+    background-color: var(--blok-tooltip-color-bg);
     z-index: -1;
     border-radius: 4px;
 }
 
 @supports (-webkit-mask-box-image: url('')) {
-    .ct::before {
+    .blok-tooltip::before {
         border-radius: 0;
         -webkit-mask-box-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M10.71 0h2.58c3.02 0 4.64.42 6.1 1.2a8.18 8.18 0 013.4 3.4C23.6 6.07 24 7.7 24 10.71v2.58c0 3.02-.42 4.64-1.2 6.1a8.18 8.18 0 01-3.4 3.4c-1.47.8-3.1 1.21-6.11 1.21H10.7c-3.02 0-4.64-.42-6.1-1.2a8.18 8.18 0 01-3.4-3.4C.4 17.93 0 16.3 0 13.29V10.7c0-3.02.42-4.64 1.2-6.1a8.18 8.18 0 013.4-3.4C6.07.4 7.7 0 10.71 0z" fill="#000" fill-rule="nonzero"/></svg>') 48% 41% 37.9% 53.3%;
     }
 }
 
 @media (max-width: 768px) {
-    .ct {
+    .blok-tooltip {
         display: none;
     }
 }
 
 .ct__content {
     padding: 6px 10px;
-    color: var(--ct-color-font);
+    color: var(--blok-tooltip-color-font);
     font-size: 12px;
     text-align: center;
     letter-spacing: 0.02em;
     line-height: 1em;
 }
 
-.ct::after {
+.blok-tooltip::after {
     content: '';
     width: 8px;
     height: 8px;
     position: absolute;
-    background-color: var(--ct-color-bg);
+    background-color: var(--blok-tooltip-color-bg);
     z-index: -1;
 }
 
-.ct--bottom {
+.blok-tooltip--bottom {
     transform: translateY(5px);
 }
 
-.ct--bottom::after {
+.blok-tooltip--bottom::after {
     top: -3px;
     left: 50%;
     transform: translateX(-50%) rotate(-45deg);
 }
 
-.ct--top {
+.blok-tooltip--top {
     transform: translateY(-5px);
 }
 
-.ct--top::after {
+.blok-tooltip--top::after {
     top: auto;
     bottom: -3px;
     left: 50%;
     transform: translateX(-50%) rotate(-45deg);
 }
 
-.ct--left {
+.blok-tooltip--left {
     transform: translateX(-5px);
 }
 
-.ct--left::after {
+.blok-tooltip--left::after {
     top: 50%;
     left: auto;
     right: 0;
     transform: translate(41.6%, -50%) rotate(-45deg);
 }
 
-.ct--right {
+.blok-tooltip--right {
     transform: translateX(5px);
 }
 
-.ct--right::after {
+.blok-tooltip--right::after {
     top: 50%;
     left: 0;
     transform: translate(-41.6%, -50%) rotate(-45deg);
 }
 
-.ct--shown {
+.blok-tooltip--shown {
     opacity: 1;
     transform: none;
 }

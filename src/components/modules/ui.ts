@@ -8,7 +8,6 @@ import $, { toggleEmptyMark } from '../dom';
 import * as _ from '../utils';
 
 import Selection from '../selection';
-import Block from '../block';
 import Flipper from '../flipper';
 import { mobileScreenBreakpoint } from '../utils';
 
@@ -70,7 +69,7 @@ export default class UI extends Module<UINodes> {
       return this.contentRectCache;
     }
 
-    const someBlock = this.nodes.wrapper.querySelector(`.${Block.CSS.content}`);
+    const someBlock = this.nodes.wrapper.querySelector('[data-blok-testid="block-content"]');
 
     /**
      * When Blok is not ready, there is no Blocks, so return the default value
@@ -195,6 +194,7 @@ export default class UI extends Module<UINodes> {
     const { BlockManager } = this.Blok;
 
     this.nodes.wrapper.classList.toggle(this.CSS.blokEmpty, BlockManager.isBlokEmpty);
+    this.nodes.wrapper.setAttribute('data-blok-empty', BlockManager.isBlokEmpty ? 'true' : 'false');
   }
 
   /**
@@ -311,6 +311,7 @@ export default class UI extends Module<UINodes> {
      */
     if (this.nodes.holder.offsetWidth < this.contentRect.width) {
       this.nodes.wrapper.classList.add(this.CSS.blokWrapperNarrow);
+      this.nodes.wrapper.setAttribute('data-blok-narrow', 'true');
     }
 
     /**
@@ -449,7 +450,7 @@ export default class UI extends Module<UINodes> {
         return;
       }
 
-      const hoveredBlock = (event.target as Element | null)?.closest('.blok-element');
+      const hoveredBlock = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
       /**
        * Do not trigger 'block-hovered' for cross-block selection
@@ -547,7 +548,7 @@ export default class UI extends Module<UINodes> {
    */
   private defaultBehaviour(event: KeyboardEvent): void {
     const { currentBlock } = this.Blok.BlockManager;
-    const keyDownOnBlok = (event.target as HTMLElement).closest(`.${this.CSS.blokWrapper}`);
+    const keyDownOnBlok = (event.target as HTMLElement).closest('[data-blok-testid="blok-editor"]');
     const isMetaKey = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
 
     /**
@@ -982,8 +983,8 @@ export default class UI extends Module<UINodes> {
      * for example, at the Inline Toolbar or some Block Tune element.
      * We also make sure that the closest block belongs to the current blok and not a parent
      */
-    const closestBlock = focusedElement.closest(`.${Block.CSS.content}`);
-    const clickedOutsideBlockContent = closestBlock === null || (closestBlock.closest(`.${Selection.CSS.blokWrapper}`) !== this.nodes.wrapper);
+    const closestBlock = focusedElement.closest('[data-blok-testid="block-content"]');
+    const clickedOutsideBlockContent = closestBlock === null || (closestBlock.closest('[data-blok-testid="blok-editor"]') !== this.nodes.wrapper);
 
     const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).getAttribute('data-blok-inline-toolbar') === 'true';
     const shouldCloseInlineToolbar = clickedOutsideBlockContent && !this.Blok.InlineToolbar.containsNode(focusedElement);

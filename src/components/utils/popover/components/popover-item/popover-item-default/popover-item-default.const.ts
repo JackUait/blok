@@ -1,44 +1,99 @@
 /**
  * CSS class names to be used in popover item class
  *
- * Uses Tailwind utility classes combined with BEM classes where needed
- * for complex CSS selectors (e.g., confirmation state styling in popover.css)
+ * Architecture:
+ * - BEM classes (blok-popover-item*): Required for CSS variable scoping, complex state selectors,
+ *   and nested element styling in popover.css (e.g., confirmation state color overrides)
+ * - Tailwind utilities: Used for simple, static styles that don't require CSS file definitions
+ *
+ * Note: Some styles must remain in popover.css due to:
+ * - CSS variable usage (--color-*, --icon-size, etc.)
+ * - Complex selectors (&--confirmation .blok-popover-item__title)
+ * - Media query hover states (@media (hover: hover))
+ * - Pseudo-selectors with state combinations
  */
 export const css = {
-  /** Container - BEM class needed for CSS variable scoping and complex selectors in popover.css */
+  /**
+   * Container - BEM class required for:
+   * - CSS variable scoping (--border-radius, --item-padding)
+   * - Complex state selectors in popover.css
+   * - External references (tests, other components)
+   */
   container: 'blok-popover-item',
-  /** Active state - BEM class needed for external selectors (inline-tool-bold.ts, tests) */
+
+  /**
+   * Active state - BEM class required for:
+   * - CSS variable color (--color-background-icon-active, --color-text-icon-active)
+   * - External selectors (inline-tool-bold.ts, tests)
+   */
   active: 'blok-popover-item--active',
-  /** Disabled state - BEM class for CSS variable color */
+
+  /**
+   * Disabled state - BEM class for CSS variable color (--color-text-secondary)
+   * Combined with Tailwind utilities for cursor and pointer-events
+   */
   disabled: 'blok-popover-item--disabled',
-  /** Disabled state cursor utility */
   disabledCursor: 'cursor-default',
-  /** Disabled state pointer events utility */
   disabledPointerEvents: 'pointer-events-none',
-  /** Focused state - BEM class needed for complex CSS selectors with no-focus modifier */
+
+  /**
+   * Focused state - BEM class required for:
+   * - Complex CSS selectors with no-focus modifier
+   * - CSS variable background (--color-background-item-focus)
+   */
   focused: 'blok-popover-item--focused',
-  /** Hidden state */
+
+  /** Hidden state - Tailwind utility with important modifier */
   hidden: '!hidden',
-  /** Confirmation state - BEM class needed for nested element styling in popover.css */
+
+  /**
+   * Confirmation state - BEM class required for:
+   * - CSS variable backgrounds (--color-background-item-confirm*)
+   * - Nested element color overrides (.blok-popover-item__title, .blok-popover-item__icon)
+   */
   confirmationState: 'blok-popover-item--confirmation',
-  /** No hover behavior - BEM class needed for CSS hover media query selectors */
+
+  /**
+   * No hover/focus behavior - BEM classes required for:
+   * - CSS hover media query selectors (@media (hover: hover))
+   * - Complex :not() selectors in popover.css
+   */
   noHover: 'blok-popover-item--no-hover',
-  /** No focus behavior - BEM class needed for CSS focus selectors */
   noFocus: 'blok-popover-item--no-focus',
-  /** Title - BEM class needed for confirmation state color override in popover.css */
+
+  /**
+   * Title - BEM class required for:
+   * - Confirmation state color override in popover.css
+   * - CSS variable usage for responsive sizing
+   */
   title: 'blok-popover-item__title',
-  /** Secondary title - BEM class kept for consistency, styles defined in popover.css */
+
+  /**
+   * Secondary title - BEM class required for:
+   * - CSS variable color (--color-text-secondary)
+   * - Responsive hiding (mobile:hidden)
+   */
   secondaryTitle: 'blok-popover-item__secondary-title',
-  /** Icon - BEM class needed for confirmation state color override in popover.css */
+
+  /**
+   * Icon - BEM class required for:
+   * - Confirmation state color override in popover.css
+   * - CSS variable sizing (--icon-size)
+   * - Responsive sizing (mobile:w-9 mobile:h-9)
+   */
   icon: 'blok-popover-item__icon',
-  /** Icon tool modifier */
+
+  /** Icon tool modifier - kept for semantic clarity */
   iconTool: 'blok-popover-item__icon--tool',
-  /** Icon tool margin */
+
+  /** Icon tool margin - Tailwind utility for spacing between icon and title */
   iconToolMargin: 'mr-1',
-  /** Icon chevron right modifier */
+
+  /** Icon chevron right - BEM class for potential future styling */
   iconChevronRight: 'blok-popover-item__icon--chevron-right',
-  /** Wobble animation for error feedback */
-  wobbleAnimation: 'wobble',
+
+  /** Wobble animation - defined in tailwind.config.js keyframes */
+  wobbleAnimation: 'animate-wobble',
 };
 
 /**

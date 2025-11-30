@@ -13,6 +13,14 @@ export default class ScrollLocker {
   };
 
   /**
+   * Data attributes for state checking
+   */
+  private static DATA_ATTR = {
+    scrollLocked: 'data-blok-scroll-locked',
+    scrollLockedHard: 'data-blok-scroll-locked-hard',
+  };
+
+  /**
    * Stores scroll position, used for hard scroll lock
    */
   private scrollPosition: null | number = null;
@@ -25,6 +33,7 @@ export default class ScrollLocker {
       this.lockHard();
     } else {
       document.body.classList.add(ScrollLocker.CSS.scrollLocked);
+      document.body.setAttribute(ScrollLocker.DATA_ATTR.scrollLocked, 'true');
     }
   }
 
@@ -36,6 +45,7 @@ export default class ScrollLocker {
       this.unlockHard();
     } else {
       document.body.classList.remove(ScrollLocker.CSS.scrollLocked);
+      document.body.removeAttribute(ScrollLocker.DATA_ATTR.scrollLocked);
     }
   }
 
@@ -49,6 +59,7 @@ export default class ScrollLocker {
       `${this.scrollPosition}px`
     );
     document.body.classList.add(ScrollLocker.CSS.scrollLockedHard);
+    document.body.setAttribute(ScrollLocker.DATA_ATTR.scrollLockedHard, 'true');
   }
 
   /**
@@ -56,6 +67,7 @@ export default class ScrollLocker {
    */
   private unlockHard(): void {
     document.body.classList.remove(ScrollLocker.CSS.scrollLockedHard);
+    document.body.removeAttribute(ScrollLocker.DATA_ATTR.scrollLockedHard);
     if (this.scrollPosition !== null) {
       window.scrollTo(0, this.scrollPosition);
     }

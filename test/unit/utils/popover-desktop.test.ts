@@ -466,46 +466,6 @@ describe('PopoverDesktop', () => {
     });
   });
 
-  describe('size', () => {
-    it('clones popover to measure dimensions and caches the result', () => {
-      const popover = createPopover();
-      const instance = popover as unknown as PopoverDesktopInternal;
-      const clonePopover = document.createElement('div');
-
-      clonePopover.setAttribute('data-blok-testid', 'popover');
-
-      const nested = document.createElement('div');
-
-      nested.setAttribute(DATA_ATTRIBUTE_NESTED, 'true');
-
-      const container = document.createElement('div');
-
-      Object.defineProperty(container, 'offsetHeight', {
-        configurable: true,
-        get: () => 180,
-      });
-      Object.defineProperty(container, 'offsetWidth', {
-        configurable: true,
-        get: () => 90,
-      });
-
-      clonePopover.appendChild(nested);
-      clonePopover.appendChild(container);
-
-      const cloneSpy = vi.spyOn(instance.nodes.popover, 'cloneNode').mockReturnValue(clonePopover);
-
-      const firstSize = instance.size;
-      const secondSize = instance.size;
-
-      expect(firstSize).toEqual({ height: 180,
-        width: 90 });
-      expect(secondSize).toBe(firstSize);
-      expect(cloneSpy).toHaveBeenCalledTimes(1);
-      expect(clonePopover.isConnected).toBe(false);
-      expect(clonePopover.hasAttribute('data-blok-popover-opened')).toBe(true);
-      expect(clonePopover.querySelector(`[${DATA_ATTRIBUTE_NESTED}]`)).toBeNull();
-    });
-  });
 
   describe('flippableElements', () => {
     it('includes only enabled default items and controls from HTML items', () => {

@@ -334,7 +334,7 @@ export default class Header implements BlockTool {
     /**
      * Add Placeholder
      */
-    tag.dataset.placeholder = this.api.i18n.t(this._settings.placeholder || '');
+    tag.setAttribute('data-placeholder', this.api.i18n.t(this._settings.placeholder || ''));
 
     return tag;
   }

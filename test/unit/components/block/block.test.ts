@@ -335,7 +335,7 @@ describe('Block', () => {
 
       block.selected = true;
 
-      expect(block.holder.classList.contains(Block.CSS.selected)).toBe(true);
+      expect(block.holder.getAttribute('data-blok-selected')).toBe('true');
       expect(emitSpy).toHaveBeenCalledWith(FakeCursorAboutToBeToggled, { state: true });
       expect(emitSpy).toHaveBeenCalledWith(FakeCursorHaveBeenSet, { state: true });
 

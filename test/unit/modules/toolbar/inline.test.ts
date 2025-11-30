@@ -73,13 +73,13 @@ vi.mock('../../../../src/components/i18n', () => ({
 
 vi.mock('../../../../src/components/dom', () => ({
   default: {
-    make: vi.fn((tag: string, className: string | string[]) => {
+    make: vi.fn((tag: string, classNameArg: string | string[]) => {
       const el = document.createElement(tag);
 
-      if (Array.isArray(className)) {
-        el.className = className.join(' ');
-      } else {
-        el.className = className;
+      if (Array.isArray(classNameArg)) {
+        el.setAttribute('data-blok-testid', classNameArg.join('-'));
+      } else if (classNameArg) {
+        el.setAttribute('data-blok-testid', classNameArg);
       }
 
       return el;
@@ -101,9 +101,9 @@ describe('InlineToolbar', () => {
   const CONTENT_RECT_RIGHT = 1000;
   const OVERFLOW_ADJUSTMENT = 800;
 
-   
+
   let inlineToolbar: InlineToolbar;
-   
+
   let mockBlok: {
     BlockManager: {
       getBlock: ReturnType<typeof vi.fn>;
@@ -181,7 +181,7 @@ describe('InlineToolbar', () => {
   } => {
     const blockElement = document.createElement('div');
 
-    blockElement.className = 'blok-element';
+    blockElement.setAttribute('data-blok-testid', 'blok-element');
     blockElement.setAttribute('contenteditable', 'true');
 
     const toolAdapter = createMockInlineToolAdapter('bold', {
@@ -223,7 +223,7 @@ describe('InlineToolbar', () => {
     // Mock requestIdleCallback and setTimeout to execute immediately but asynchronously to avoid recursion in constructor
     vi.useFakeTimers();
 
-     
+
     (global as any).requestIdleCallback = vi.fn((callback: () => void) => {
       setTimeout(callback, 0);
 
@@ -242,12 +242,12 @@ describe('InlineToolbar', () => {
     // Create mock UI nodes
     const wrapper = document.createElement('div');
 
-    wrapper.className = 'blok-editor';
+    wrapper.setAttribute('data-blok-testid', 'blok-editor');
     document.body.appendChild(wrapper);
 
     const redactor = document.createElement('div');
 
-    redactor.className = 'blok-editor__redactor';
+    redactor.setAttribute('data-blok-testid', 'blok-editor-redactor');
     wrapper.appendChild(redactor);
 
     // Create mock Blok

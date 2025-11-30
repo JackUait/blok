@@ -428,12 +428,11 @@ export const StretchedBlock: Story = {
       );
     });
 
-    await step('Apply stretched class to middle block', async () => {
+    await step('Apply stretched state to middle block', async () => {
       const blocks = canvasElement.querySelectorAll(BLOCK_TESTID);
       const middleBlock = blocks[1];
 
       if (middleBlock) {
-        middleBlock.classList.add('blok-block--stretched');
         middleBlock.setAttribute('data-blok-stretched', 'true');
       }
 

@@ -303,7 +303,7 @@ export default class UI extends Module<UINodes> {
       'box-border',
       'z-[1]',
       '[&.is-dragging]:cursor-grabbing',
-      ...(this.isRtl ? [ this.CSS.blokRtlFix ] : []),
+      ...(this.isRtl ? [ this.CSS.blokRtlFix, '[direction:rtl]' ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');

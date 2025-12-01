@@ -303,6 +303,13 @@ export default class UI extends Module<UINodes> {
       'box-border',
       'z-[1]',
       '[&.is-dragging]:cursor-grabbing',
+      // SVG defaults
+      '[&_svg]:max-h-full',
+      '[&_path]:stroke-current',
+      // Native selection color
+      '[&_::selection]:bg-selection-inline',
+      // Hide placeholder when toolbox is opened
+      '[&.is-toolbox-opened_[contentEditable=true][data-blok-placeholder]:focus]:before:!opacity-0',
       ...(this.isRtl ? [ this.CSS.blokRtlFix, '[direction:rtl]' ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE);
@@ -314,6 +321,8 @@ export default class UI extends Module<UINodes> {
       // RTL narrow mode: add left margin instead
       'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:ml-[theme(spacing.narrow-mode-right-padding)]',
       'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:mr-0',
+      // Firefox empty contenteditable fix
+      '[&_[contenteditable]:empty]:after:content-["\\feff_"]',
     ]);
     this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
 

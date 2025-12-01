@@ -5,8 +5,6 @@
 
 /* Project styles */
 @import './variables.css';
-@import './ui.css';
-@import './input.css';
 @import './popover.css';
 @import './popover-inline.css';
 @import './placeholders.css';

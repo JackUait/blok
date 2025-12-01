@@ -2,24 +2,24 @@
   /* Blok Editor - Main wrapper */
   .blok-editor {
     @apply relative box-border z-[1];
+  }
 
-    & .hide {
-      @apply hidden;
-    }
+  .blok-editor .hide {
+    @apply hidden;
+  }
 
-    /* SVG defaults */
-    & svg {
-      @apply max-h-full;
-    }
+  /* SVG defaults */
+  .blok-editor svg {
+    @apply max-h-full;
+  }
 
-    & path {
-      @apply stroke-current;
-    }
+  .blok-editor path {
+    @apply stroke-current;
+  }
 
-    /* Native selection color */
-    & ::selection {
-      background-color: theme('colors.selection-inline');
-    }
+  /* Native selection color */
+  .blok-editor ::selection {
+    background-color: theme('colors.selection-inline');
   }
 
   /* Redactor - Firefox empty contenteditable fix */
@@ -68,14 +68,14 @@
   /* Dragging state */
   .blok-editor.is-dragging {
     @apply cursor-grabbing;
+  }
 
-    & .blok-toolbar__settings-btn {
-      @apply cursor-grabbing;
-    }
+  .blok-editor.is-dragging .blok-toolbar__settings-btn {
+    @apply cursor-grabbing;
+  }
 
-    & .blok-toolbar {
-      @apply pointer-events-none;
-    }
+  .blok-editor.is-dragging .blok-toolbar {
+    @apply pointer-events-none;
   }
 
   /* Toolbox opened - Hide placeholder */

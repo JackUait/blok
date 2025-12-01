@@ -68,16 +68,18 @@
  */
 .blok-toolbox-button {
   @apply text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none;
+}
 
-  @screen mobile {
+@screen mobile {
+  .blok-toolbox-button {
     width: theme('width.toolbox-btn-mobile');
     height: theme('height.toolbox-btn-mobile');
   }
+}
 
-  @screen can-hover {
-    &:hover {
-      background-color: theme('colors.bg-light');
-    }
+@screen can-hover {
+  .blok-toolbox-button:hover {
+    background-color: theme('colors.bg-light');
   }
 }
 
@@ -92,20 +94,22 @@
  */
 .blok-tool-icon {
   @apply inline-flex w-toolbox-btn h-toolbox-btn shadow-tool-icon rounded-[5px] items-center justify-center bg-white box-content shrink-0 mr-[10px];
+}
 
-  svg {
-    @apply w-icon h-icon;
-  }
+.blok-tool-icon svg {
+  @apply w-icon h-icon;
+}
 
-  @screen mobile {
+@screen mobile {
+  .blok-tool-icon {
     width: theme('width.toolbox-btn-mobile');
     height: theme('height.toolbox-btn-mobile');
     border-radius: 8px;
+  }
 
-    svg {
-      width: theme('width.icon-mobile');
-      height: theme('height.icon-mobile');
-    }
+  .blok-tool-icon svg {
+    width: theme('width.icon-mobile');
+    height: theme('height.icon-mobile');
   }
 }
 

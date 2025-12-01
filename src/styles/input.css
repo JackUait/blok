@@ -1,21 +1,21 @@
 @layer components {
   .blok-search-field {
     @apply bg-[#F8F8F8] border border-[rgba(226,226,229,0.20)] rounded p-0.5 grid grid-cols-[auto_auto_1fr] grid-rows-[auto];
+  }
 
-    &__icon {
-      @apply w-toolbox-btn h-toolbox-btn flex items-center justify-center mr-2;
+  .blok-search-field__icon {
+    @apply w-toolbox-btn h-toolbox-btn flex items-center justify-center mr-2;
 
-      svg {
-        @apply w-icon h-icon text-gray-text;
-      }
+    svg {
+      @apply w-icon h-icon text-gray-text;
     }
+  }
 
-    &__input {
-      @apply text-sm outline-none font-medium font-inherit border-0 bg-transparent m-0 p-0 leading-[22px] min-w-[calc(100%-theme('spacing.6')-10px)];
+  .blok-search-field__input {
+    @apply text-sm outline-none font-medium font-inherit border-0 bg-transparent m-0 p-0 leading-[22px] min-w-[calc(100%-theme('spacing.6')-10px)];
+  }
 
-      &::placeholder {
-        @apply text-gray-text font-medium;
-      }
-    }
+  .blok-search-field__input::placeholder {
+    @apply text-gray-text font-medium;
   }
 }

@@ -3,10 +3,10 @@
  */
 .blok-base-element {
     @apply py-[theme('spacing.block-padding-vertical')] px-0;
+}
 
-    &::-webkit-input-placeholder {
-        @apply !leading-normal;
-    }
+.blok-base-element::-webkit-input-placeholder {
+    @apply !leading-normal;
 }
 
 /**
@@ -15,14 +15,14 @@
 .blok-base-input {
     @apply w-full rounded-[3px] border border-line-gray px-3 py-2.5 outline-none;
     box-shadow: inset 0 1px 2px 0 rgba(35, 44, 72, 0.06);
+}
 
-    /**
-     * Workaround Firefox bug with cursor position on empty content editable elements with ::before pseudo
-     * https://bugzilla.mozilla.org/show_bug.cgi?id=904846
-     */
-    &[data-blok-placeholder]::before {
-        @apply !static inline-block w-0 whitespace-nowrap pointer-events-none;
-    }
+/**
+ * Workaround Firefox bug with cursor position on empty content editable elements with ::before pseudo
+ * https://bugzilla.mozilla.org/show_bug.cgi?id=904846
+ */
+.blok-base-input[data-blok-placeholder]::before {
+    @apply !static inline-block w-0 whitespace-nowrap pointer-events-none;
 }
 
 /**
@@ -74,14 +74,14 @@
  */
 .blok-base-loader {
     @apply relative border border-line-gray;
+}
 
-    &::before {
-        @apply absolute left-1/2 top-1/2 w-[18px] h-[18px] rounded-full content-[''];
-        margin: -11px 0 0 -11px;
-        border: 2px solid theme('colors.line-gray');
-        border-left-color: theme('colors.active-icon');
-        animation: rotation 1.2s infinite linear;
-    }
+.blok-base-loader::before {
+    @apply absolute left-1/2 top-1/2 w-[18px] h-[18px] rounded-full content-[''];
+    margin: -11px 0 0 -11px;
+    border: 2px solid theme('colors.line-gray');
+    border-left-color: theme('colors.active-icon');
+    animation: rotation 1.2s infinite linear;
 }
 
 @keyframes rotation {

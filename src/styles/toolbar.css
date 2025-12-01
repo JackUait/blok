@@ -1,50 +1,48 @@
 .blok-toolbar {
     @apply absolute left-0 right-0 top-0 hidden transition-opacity duration-100 ease-linear will-change-[opacity,top];
+}
 
-    &__content {
-        @apply relative mx-auto;
-        max-width: theme('maxWidth.content');
-    }
+.blok-toolbar__content {
+    @apply relative mx-auto;
+    max-width: theme('maxWidth.content');
+}
 
-    &__plus {
-        /* Expanded --toolbox-button mixin */
-        @apply text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none;
-        @apply shrink-0;
+.blok-toolbar__plus {
+    /* Expanded --toolbox-button mixin */
+    @apply text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none;
+    @apply shrink-0;
+}
 
-        &-shortcut {
-            @apply mt-[5px] opacity-60;
-            word-spacing: -2px;
+.blok-toolbar__plus-shortcut {
+    @apply mt-[5px] opacity-60;
+    word-spacing: -2px;
+}
 
-            &-key {
-                @apply text-white;
-            }
-        }
-    }
+.blok-toolbar__plus-shortcut-key {
+    @apply text-white;
+}
 
-    /**
-     * Block actions Zone
-     */
-    &__actions {
-        @apply absolute flex opacity-0 pr-[5px];
-        right: 100%;
-    }
+/**
+ * Block actions Zone
+ */
+.blok-toolbar__actions {
+    @apply absolute flex opacity-0 pr-[5px];
+    right: 100%;
+}
 
-    &__settings-btn {
-        /* Expanded --toolbox-button mixin */
-        @apply text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none;
-        @apply cursor-pointer select-none;
+.blok-toolbar__settings-btn {
+    /* Expanded --toolbox-button mixin */
+    @apply text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none;
+    @apply cursor-pointer select-none;
+}
 
-        &:active {
-            @apply cursor-grabbing;
-        }
-    }
+.blok-toolbar__settings-btn:active {
+    @apply cursor-grabbing;
+}
 
-    &__plus,
-    &__settings-btn {
-        svg {
-            @apply h-6 w-6;
-        }
-    }
+.blok-toolbar__plus svg,
+.blok-toolbar__settings-btn svg {
+    @apply h-6 w-6;
 }
 
 .blok-toolbar.is-opened {

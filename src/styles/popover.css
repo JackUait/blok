@@ -113,20 +113,20 @@
   @apply flex items-center select-none border-none bg-transparent rounded-md mobile:p-1;
   padding: var(--item-padding);
   color: theme('colors.text-primary');
+}
 
-  &:not(:last-of-type) {
-    @apply mb-px;
+.blok-popover-item:not(:last-of-type) {
+  @apply mb-px;
+}
+
+/* Hover styles - only on devices that support hover */
+@screen can-hover {
+  .blok-popover-item:hover {
+    @apply cursor-pointer;
   }
 
-  /* Hover styles - only on devices that support hover */
-  @screen can-hover {
-    &:hover {
-      @apply cursor-pointer;
-    }
-
-    &:hover:not(.blok-popover-item--no-hover) {
-      background-color: theme('colors.item-hover-bg');
-    }
+  .blok-popover-item:hover:not(.blok-popover-item--no-hover) {
+    background-color: theme('colors.item-hover-bg');
   }
 }
 
@@ -157,21 +157,21 @@
 /* Confirmation state */
 .blok-popover-item.is-confirmation {
   background: theme('colors.item-confirm-bg');
+}
 
-  .blok-popover-item__title,
-  .blok-popover-item__icon {
-    @apply text-white;
-  }
+.blok-popover-item.is-confirmation .blok-popover-item__title,
+.blok-popover-item.is-confirmation .blok-popover-item__icon {
+  @apply text-white;
+}
 
-  @screen can-hover {
-    &:not(.blok-popover-item--no-hover):hover {
-      background: theme('colors.item-confirm-hover-bg');
-    }
+@screen can-hover {
+  .blok-popover-item.is-confirmation:not(.blok-popover-item--no-hover):hover {
+    background: theme('colors.item-confirm-hover-bg');
   }
+}
 
-  &:not(.blok-popover-item--no-focus).is-focused {
-    background: theme('colors.item-confirm-hover-bg') !important;
-  }
+.blok-popover-item.is-confirmation:not(.blok-popover-item--no-focus).is-focused {
+  background: theme('colors.item-confirm-hover-bg') !important;
 }
 
 .blok-popover-item__icon {

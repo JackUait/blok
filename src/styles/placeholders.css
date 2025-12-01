@@ -9,32 +9,26 @@
  */
 
 @layer components {
-  .blok-editor {
-    /**
-     * Use [data-blok-placeholder="..."] to always show a placeholder on empty contenteditable.
-     */
-    [data-blok-placeholder]:empty,
-    [data-blok-placeholder][data-blok-empty="true"] {
-      &::before {
-        @apply pointer-events-none text-gray-text cursor-text;
+  /**
+   * Use [data-blok-placeholder="..."] to always show a placeholder on empty contenteditable.
+   */
+  .blok-editor [data-blok-placeholder]:empty::before,
+  .blok-editor [data-blok-placeholder][data-blok-empty="true"]::before {
+    @apply pointer-events-none text-gray-text cursor-text;
+    content: attr(data-blok-placeholder);
+  }
 
-        content: attr(data-blok-placeholder);
-      }
-    }
+  /**
+   * Use [data-blok-placeholder-active="..."] to show a placeholder on empty contenteditable in current block.
+   */
+  /* Paragraph tool shows the placeholder for the first block, event it is not focused, so we need to prepare styles for it */
+  .blok-editor [data-blok-placeholder-active]:empty::before,
+  .blok-editor [data-blok-placeholder-active][data-blok-empty="true"]::before {
+    @apply pointer-events-none text-gray-text cursor-text;
+  }
 
-    /**
-     * Use [data-blok-placeholder-active="..."] to show a placeholder on empty contenteditable in current block.
-     */
-    [data-blok-placeholder-active]:empty,
-    [data-blok-placeholder-active][data-blok-empty="true"] {
-      /* Paragraph tool shows the placeholder for the first block, event it is not focused, so we need to prepare styles for it */
-      &::before {
-        @apply pointer-events-none text-gray-text cursor-text;
-      }
-
-      &:focus::before {
-        content: attr(data-blok-placeholder-active);
-      }
-    }
+  .blok-editor [data-blok-placeholder-active]:empty:focus::before,
+  .blok-editor [data-blok-placeholder-active][data-blok-empty="true"]:focus::before {
+    content: attr(data-blok-placeholder-active);
   }
 }

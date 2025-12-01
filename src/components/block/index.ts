@@ -106,9 +106,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   public static get CSS(): { [name: string]: string } {
     return {
       wrapper: 'blok-element',
-      wrapperStretched: 'blok-element--stretched',
+      wrapperStretched: 'is-stretched',
       content: 'blok-element__content',
-      selected: 'blok-element--selected',
+      selected: 'is-selected',
     };
   }
 

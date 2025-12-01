@@ -51,11 +51,11 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
    */
   private readonly CSS = {
     button: 'blok-inline-tool',
-    buttonActive: 'blok-inline-tool--active',
-    buttonModifier: 'blok-inline-tool--link',
-    buttonUnlink: 'blok-inline-tool--unlink',
+    buttonActive: 'is-active',
+    buttonModifier: 'is-link',
+    buttonUnlink: 'is-unlink',
     input: 'blok-inline-tool-input',
-    inputShowed: 'blok-inline-tool-input--showed',
+    inputShowed: 'is-showed',
   };
   /**
    * Data attributes for e2e selectors
@@ -132,6 +132,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
       icon: IconLink,
       isActive: () => !!this.selection.findParentTag('A'),
       children: {
+        hideChevron: true,
         items: [
           {
             type: PopoverItemType.Html,

@@ -3,7 +3,7 @@
     @apply bg-[#F8F8F8] border border-[rgba(226,226,229,0.20)] rounded p-0.5 grid grid-cols-[auto_auto_1fr] grid-rows-[auto];
 
     &__icon {
-      @apply w-toolbox-btn h-toolbox-btn flex items-center justify-center mr-2.5;
+      @apply w-toolbox-btn h-toolbox-btn flex items-center justify-center mr-2;
 
       svg {
         @apply w-icon h-icon text-gray-text;

@@ -35,6 +35,10 @@ export class PopoverInline extends PopoverDesktop {
             alignment: 'center',
             enabled: isHintEnabled,
           },
+          /**
+           * Inline tools display icons without titles, so no gap is needed
+           */
+          iconWithGap: true,
         },
         [PopoverItemType.Html]: {
           hint: {

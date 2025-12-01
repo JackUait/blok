@@ -87,56 +87,50 @@
         &:last-child {
             margin-left: 10px;
         }
+    }
+}
 
-        &--cancel {
-            background: #f2f5f7;
-            box-shadow: 0 2px 1px 0 rgba(16,19,29,0);
-            color: #656b7c;
+.blok-notify__button.is-cancel {
+    background: #f2f5f7;
+    box-shadow: 0 2px 1px 0 rgba(16,19,29,0);
+    color: #656b7c;
 
-            &:hover {
-                 background: color(#f5f5f5 blackness(+3%));
-            }
+    &:hover {
+         background: color(#f5f5f5 blackness(+3%));
+    }
+}
 
-        }
+.blok-notify__button.is-confirm {
+    background: #34c992;
+    box-shadow: 0 1px 1px 0 rgba(18,49,35,.05);
+    color: #fff;
 
-        &--confirm {
-            background: #34c992;
-            box-shadow: 0 1px 1px 0 rgba(18,49,35,.05);
-            color: #fff;
+    &:hover {
+        background: color(#34c992 blackness(+10%));
+    }
+}
 
-            &:hover {
-                background: color(#34c992 blackness(+10%));
-            }
-        }
+.blok-notify__input {
+    max-width: 130px;
+    padding: 5px 10px;
+    background: #f7f7f7;
+    border: 0;
+    border-radius: 3px;
+    font-size: 13px;
+    color: #656b7c;
+    outline: none;
 
+    &::placeholder {
+        color: #656b7c;
     }
 
-
-    /* Prompt input */
-    &__input {
-        max-width: 130px;
-        padding: 5px 10px;
-        background: #f7f7f7;
-        border: 0;
-        border-radius: 3px;
-        font-size: 13px;
-        color: #656b7c;
-        outline: none;
+    &:focus {
 
         &::placeholder {
-            color: #656b7c;
-        }
-
-        &:focus {
-
-            &::placeholder {
-               color: rgba(101, 107, 124, 0.3);
-            }
-
+           color: rgba(101, 107, 124, 0.3);
         }
 
     }
-
 }
 
 @keyframes bounceIn {
@@ -159,30 +153,24 @@
     }
 }
 
-.blok-notify--bounce-in {
+.blok-notify.is-bounce-in {
     animation-name: bounceIn;
     animation-duration: 600ms;
     animation-iteration-count: 1;
 }
 
-.blok-notify {
+.blok-notify.is-success {
+    background: #fafffe !important;
 
-    &--success {
-        background: #fafffe !important;
-
-        &::before {
-            background: #41ffb1 !important;
-        }
-
+    &::before {
+        background: #41ffb1 !important;
     }
+}
 
-    &--error {
-        background: #fffbfb !important;
+.blok-notify.is-error {
+    background: #fffbfb !important;
 
-        &::before {
-            background: #fb5d5d !important;
-        }
-
+    &::before {
+        background: #fb5d5d !important;
     }
-
 }

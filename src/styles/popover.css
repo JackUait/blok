@@ -61,10 +61,10 @@
 
 .blok-popover__overlay {
   @apply hidden bg-dark mobile:fixed mobile:inset-0 mobile:block mobile:visible mobile:z-[3] mobile:opacity-50 mobile:transition-opacity mobile:duration-[120ms] mobile:ease-in mobile:will-change-[opacity];
+}
 
-  &--hidden {
-    @apply hidden;
-  }
+.blok-popover__overlay.is-hidden {
+  @apply hidden;
 }
 
 /* Nested popover positioning */
@@ -88,10 +88,10 @@
  */
 .blok-popover-item-separator {
   @apply py-1 px-[3px];
+}
 
-  &--hidden {
-    @apply hidden;
-  }
+.blok-popover-item-separator.is-hidden {
+  @apply hidden;
 }
 
 .blok-popover-item-separator__line {
@@ -118,24 +118,6 @@
     @apply mb-px;
   }
 
-  &--active {
-    background: theme('colors.icon-active-bg');
-    color: theme('colors.icon-active-text');
-  }
-
-  &--disabled {
-    @apply cursor-default pointer-events-none;
-    color: theme('colors.text-secondary');
-  }
-
-  &--focused:not(.blok-popover-item--no-focus) {
-    background: theme('colors.item-focus-bg') !important;
-  }
-
-  &--hidden {
-    @apply !hidden;
-  }
-
   /* Hover styles - only on devices that support hover */
   @screen can-hover {
     &:hover {
@@ -146,31 +128,49 @@
       background-color: theme('colors.item-hover-bg');
     }
   }
+}
 
-  /* Force hover styles for Storybook/Chromatic testing */
-  &--force-hover:not(.blok-popover-item--no-hover) {
-    @apply cursor-pointer;
-    background-color: theme('colors.item-hover-bg');
+.blok-popover-item.is-active {
+  background: theme('colors.icon-active-bg');
+  color: theme('colors.icon-active-text');
+}
+
+.blok-popover-item.is-disabled {
+  @apply cursor-default pointer-events-none;
+  color: theme('colors.text-secondary');
+}
+
+.blok-popover-item.is-focused:not(.blok-popover-item--no-focus) {
+  background: theme('colors.item-focus-bg') !important;
+}
+
+.blok-popover-item.is-hidden {
+  @apply !hidden;
+}
+
+/* Force hover styles for Storybook/Chromatic testing */
+.blok-popover-item.is-force-hover:not(.blok-popover-item--no-hover) {
+  @apply cursor-pointer;
+  background-color: theme('colors.item-hover-bg');
+}
+
+/* Confirmation state */
+.blok-popover-item.is-confirmation {
+  background: theme('colors.item-confirm-bg');
+
+  .blok-popover-item__title,
+  .blok-popover-item__icon {
+    @apply text-white;
   }
 
-  /* Confirmation state */
-  &--confirmation {
-    background: theme('colors.item-confirm-bg');
-
-    .blok-popover-item__title,
-    .blok-popover-item__icon {
-      @apply text-white;
+  @screen can-hover {
+    &:not(.blok-popover-item--no-hover):hover {
+      background: theme('colors.item-confirm-hover-bg');
     }
+  }
 
-    @screen can-hover {
-      &:not(.blok-popover-item--no-hover):hover {
-        background: theme('colors.item-confirm-hover-bg');
-      }
-    }
-
-    &:not(.blok-popover-item--no-focus).blok-popover-item--focused {
-      background: theme('colors.item-confirm-hover-bg') !important;
-    }
+  &:not(.blok-popover-item--no-focus).is-focused {
+    background: theme('colors.item-confirm-hover-bg') !important;
   }
 }
 
@@ -180,10 +180,10 @@
   svg {
     @apply w-icon h-icon mobile:w-7 mobile:h-7;
   }
+}
 
-  &--tool {
-    @apply mr-1;
-  }
+.blok-popover-item__icon.is-tool {
+  @apply mr-1;
 }
 
 .blok-popover-item__title {

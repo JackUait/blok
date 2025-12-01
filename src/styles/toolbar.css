@@ -1,10 +1,6 @@
 .blok-toolbar {
     @apply absolute left-0 right-0 top-0 hidden transition-opacity duration-100 ease-linear will-change-[opacity,top];
 
-    &--opened {
-        @apply block;
-    }
-
     &__content {
         @apply relative mx-auto;
         max-width: theme('maxWidth.content');
@@ -31,10 +27,6 @@
     &__actions {
         @apply absolute flex opacity-0 pr-[5px];
         right: 100%;
-
-        &--opened {
-            @apply opacity-100;
-        }
     }
 
     &__settings-btn {
@@ -45,10 +37,6 @@
         &:active {
             @apply cursor-grabbing;
         }
-
-        &--hidden {
-            @apply hidden;
-        }
     }
 
     &__plus,
@@ -57,6 +45,18 @@
             @apply h-6 w-6;
         }
     }
+}
+
+.blok-toolbar.is-opened {
+    @apply block;
+}
+
+.blok-toolbar__actions.is-opened {
+    @apply opacity-100;
+}
+
+.blok-toolbar__settings-btn.is-hidden {
+    @apply hidden;
 }
 
 /* Mobile styles - moved outside nesting to avoid @apply in nested @screen */
@@ -101,11 +101,11 @@
         @apply bg-bg-light cursor-grab;
     }
 
-    .blok-toolbar__settings-btn--opened:hover {
+    .blok-toolbar__settings-btn.is-opened:hover {
         @apply cursor-pointer;
     }
 
-    .blok-editor--toolbox-opened .blok-toolbar__settings-btn:hover {
+    .blok-editor.is-toolbox-opened .blok-toolbar__settings-btn:hover {
         @apply cursor-pointer;
     }
 }

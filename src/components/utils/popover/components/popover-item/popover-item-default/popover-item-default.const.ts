@@ -22,36 +22,36 @@ export const css = {
   container: 'blok-popover-item',
 
   /**
-   * Active state - BEM class required for:
+   * Active state - is-* class required for:
    * - CSS variable color (--color-background-icon-active, --color-text-icon-active)
    * - External selectors (inline-tool-bold.ts, tests)
    */
-  active: 'blok-popover-item--active',
+  active: 'is-active',
 
   /**
-   * Disabled state - BEM class for CSS variable color (--color-text-secondary)
+   * Disabled state - is-* class for CSS variable color (--color-text-secondary)
    * Combined with Tailwind utilities for cursor and pointer-events
    */
-  disabled: 'blok-popover-item--disabled',
+  disabled: 'is-disabled',
   disabledCursor: 'cursor-default',
   disabledPointerEvents: 'pointer-events-none',
 
   /**
-   * Focused state - BEM class required for:
+   * Focused state - is-* class required for:
    * - Complex CSS selectors with no-focus modifier
    * - CSS variable background (--color-background-item-focus)
    */
-  focused: 'blok-popover-item--focused',
+  focused: 'is-focused',
 
   /** Hidden state - Tailwind utility with important modifier */
   hidden: '!hidden',
 
   /**
-   * Confirmation state - BEM class required for:
+   * Confirmation state - is-* class required for:
    * - CSS variable backgrounds (--color-background-item-confirm*)
    * - Nested element color overrides (.blok-popover-item__title, .blok-popover-item__icon)
    */
-  confirmationState: 'blok-popover-item--confirmation',
+  confirmationState: 'is-confirmation',
 
   /**
    * No hover/focus behavior - BEM classes required for:
@@ -83,11 +83,8 @@ export const css = {
    */
   icon: 'blok-popover-item__icon',
 
-  /** Icon tool modifier - kept for semantic clarity */
-  iconTool: 'blok-popover-item__icon--tool',
-
   /** Icon tool margin - Tailwind utility for spacing between icon and title */
-  iconToolMargin: 'mr-1',
+  iconToolMargin: 'mr-2',
 
   /** Icon chevron right - BEM class for potential future styling */
   iconChevronRight: 'blok-popover-item__icon--chevron-right',

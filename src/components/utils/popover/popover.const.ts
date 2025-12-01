@@ -20,7 +20,7 @@ export const css = {
   // Utility classes - pure Tailwind
   search: 'mb-1.5',
   items: 'blok-popover__items overflow-y-auto overscroll-contain',
-  overlayHidden: 'hidden',
+  overlayHidden: 'is-hidden',
   nothingFoundMessage: 'hidden cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text p-[3px]',
   nothingFoundMessageDisplayed: '!block',
   popoverHeader: 'flex items-center mb-2 mt-1',

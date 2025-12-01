@@ -126,17 +126,17 @@ export default class Toolbar extends Module<ToolbarNodes> {
       toolbar: 'blok-toolbar',
       content: 'blok-toolbar__content',
       actions: 'blok-toolbar__actions',
-      actionsOpened: 'blok-toolbar__actions--opened',
+      actionsOpened: 'is-opened',
 
-      toolbarOpened: 'blok-toolbar--opened',
-      openedToolboxHolderModifier: 'blok-editor--toolbox-opened',
+      toolbarOpened: 'is-opened',
+      openedToolboxHolderModifier: 'is-toolbox-opened',
 
       plusButton: 'blok-toolbar__plus',
       plusButtonShortcut: 'blok-toolbar__plus-shortcut',
       plusButtonShortcutKey: 'blok-toolbar__plus-shortcut-key',
       settingsToggler: 'blok-toolbar__settings-btn',
-      settingsTogglerHidden: 'blok-toolbar__settings-btn--hidden',
-      settingsTogglerOpened: 'blok-toolbar__settings-btn--opened',
+      settingsTogglerHidden: 'is-hidden',
+      settingsTogglerOpened: 'is-opened',
     };
   }
 

@@ -47,21 +47,17 @@
  */
 .blok-overlay-pane {
   @apply absolute bg-white border border-popover-border shadow-overlay-pane rounded-[6px] z-[2];
+}
 
-  &--left-oriented {
-    &::before {
-      left: 15px;
-      margin-left: 0;
-    }
-  }
+.blok-overlay-pane.is-left-oriented::before {
+  left: 15px;
+  margin-left: 0;
+}
 
-  &--right-oriented {
-    &::before {
-      left: auto;
-      right: 15px;
-      margin-left: 0;
-    }
-  }
+.blok-overlay-pane.is-right-oriented::before {
+  left: auto;
+  right: 15px;
+  margin-left: 0;
 }
 
 
@@ -83,10 +79,10 @@
       background-color: theme('colors.bg-light');
     }
   }
+}
 
-  &--active {
-    @apply bg-bg-light animate-bounce-in;
-  }
+.blok-toolbox-button.is-active {
+  @apply bg-bg-light animate-bounce-in;
 }
 
 /**

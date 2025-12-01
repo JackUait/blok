@@ -81,7 +81,7 @@ class Tooltip {
     return {
       tooltip: 'blok-tooltip',
       tooltipContent: 'ct__content',
-      tooltipShown: 'blok-tooltip--shown',
+      tooltipShown: 'is-shown',
       placement: {
         left: 'blok-tooltip--left',
         bottom: 'blok-tooltip--bottom',

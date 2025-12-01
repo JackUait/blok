@@ -95,7 +95,7 @@
     transform: translate(-41.6%, -50%) rotate(-45deg);
 }
 
-.blok-tooltip--shown {
+.blok-tooltip.is-shown {
     opacity: 1;
     transform: none;
 }

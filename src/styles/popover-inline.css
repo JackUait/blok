@@ -56,7 +56,7 @@
   }
 
   .blok-popover-item {
-    @apply rounded p-1 gap-1;
+    @apply rounded p-1;
 
     &__icon--tool {
       @apply shadow-none bg-transparent mr-0;
@@ -87,14 +87,6 @@
 
   .blok-popover-item__icon--chevron-right {
     @apply rotate-90;
-  }
-
-  /**
-   * Hide chevron for the link tool — it renders a custom input instead of a dropdown list,
-   * so the arrow is misleading here but should stay for other tools like the text style switcher.
-   */
-  [data-blok-item-name="link"] .blok-popover-item__icon--chevron-right {
-    @apply hidden;
   }
 
   .blok-popover--nested-level-1 {

@@ -181,7 +181,11 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     if (params.icon) {
-      this.nodes.icon = Dom.make('div', [css.icon, css.iconTool, css.iconToolMargin], {
+      const iconClasses = !!renderParams?.iconWithGap === true
+        ? [css.icon]
+        : [css.icon, css.iconToolMargin];
+
+      this.nodes.icon = Dom.make('div', iconClasses, {
         innerHTML: params.icon,
         'data-blok-testid': 'popover-item-icon',
       });
@@ -208,7 +212,7 @@ export class PopoverItemDefault extends PopoverItem {
       el.appendChild(secondaryTitle);
     }
 
-    if (this.hasChildren) {
+    if (this.hasChildren && !this.isChevronHidden) {
       el.appendChild(Dom.make('div', [css.icon, css.iconChevronRight], {
         innerHTML: IconChevronRight,
         'data-blok-testid': 'popover-item-chevron-right',

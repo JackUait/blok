@@ -66,7 +66,7 @@
   }
 
   /* Dragging state */
-  .blok-editor--dragging {
+  .blok-editor.is-dragging {
     @apply cursor-grabbing;
 
     & .blok-toolbar__settings-btn {
@@ -79,7 +79,7 @@
   }
 
   /* Toolbox opened - Hide placeholder */
-  .blok-editor--toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
+  .blok-editor.is-toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
     @apply !opacity-0;
   }
 
@@ -88,7 +88,7 @@
     @apply overflow-hidden;
   }
 
-  .blok-scroll-locked--hard {
+  .blok-scroll-locked.is-hard {
     @apply overflow-hidden fixed w-full;
     top: calc(-1 * var(--window-scroll-offset));
   }

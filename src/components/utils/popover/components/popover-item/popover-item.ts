@@ -119,8 +119,13 @@ export abstract class PopoverItem {
     return this.params !== undefined && 'children' in this.params && this.params.children?.isOpen === true;
   }
 
-  /**
-   * True if item children items should be navigatable via keyboard
+  /**   * Returns true if the chevron icon should be hidden
+   */
+  public get isChevronHidden(): boolean {
+    return this.params !== undefined && 'children' in this.params && this.params.children?.hideChevron === true;
+  }
+
+  /**   * True if item children items should be navigatable via keyboard
    */
   public get isChildrenFlippable(): boolean {
     if (this.params === undefined) {

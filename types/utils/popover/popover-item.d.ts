@@ -39,6 +39,12 @@ export interface PopoverItemChildren {
    * Called once children popover is closed
    */
   onClose?: () => void;
+
+  /**
+   * True if the chevron icon should be hidden for this item.
+   * Useful for items like link tool that render custom content instead of a dropdown list.
+   */
+  hideChevron?: boolean;
 }
 
 /**
@@ -241,7 +247,13 @@ export type PopoverItemRenderParamsMap = {
     /**
      * Hint render params
      */
-    hint?: PopoverItemHintRenderParams
+    hint?: PopoverItemHintRenderParams;
+
+    /**
+     * If true, adds a gap/margin after the icon.
+     * True by default. Set to false for inline tools where icons are displayed without titles.
+     */
+    iconWithGap?: boolean;
   };
 
   [PopoverItemType.Html]?: {

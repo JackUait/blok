@@ -34,22 +34,22 @@
     min-width: theme('width.toolbox-btn');
     min-height: theme('height.toolbox-btn');
 
-    &--focused {
-        /* Expanded --button-focused mixin */
-        @apply shadow-button-focused bg-item-focus-bg;
-
-        &-animated {
-            animation: buttonClicked 250ms;
-        }
-    }
-
-    &--active {
-        @apply text-active-icon;
-    }
-
     svg {
         @apply w-auto h-auto;
     }
+}
+
+.blok-base-settings-button.is-focused {
+    /* Expanded --button-focused mixin */
+    @apply shadow-button-focused bg-item-focus-bg;
+}
+
+.blok-base-settings-button.is-focused.is-animated {
+    animation: buttonClicked 250ms;
+}
+
+.blok-base-settings-button.is-active {
+    @apply text-active-icon;
 }
 
 /* Mobile styles for settings button - moved outside nesting to avoid @apply in nested @screen */

@@ -9,7 +9,7 @@ export default class ScrollLocker {
    */
   private static CSS = {
     scrollLocked: 'blok-scroll-locked',
-    scrollLockedHard: 'blok-scroll-locked--hard',
+    scrollLockedHard: 'is-hard',
   };
 
   /**

@@ -2,7 +2,7 @@ import * as draw from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './types';
 import './index.css';
 
-const bounceInClass = 'blok-notify--bounce-in';
+const bounceInClass = 'is-bounce-in';
 const DEFAULT_TIME = 8000;
 
 /**

@@ -53,10 +53,10 @@ export default class UI extends Module<UINodes> {
       blokWrapper: 'blok-editor',
       blokWrapperNarrow: 'blok-editor--narrow',
       blokZone: 'blok-editor__redactor',
-      blokZoneHidden: 'blok-editor__redactor--hidden',
-      blokEmpty: 'blok-editor--empty',
+      blokZoneHidden: 'is-hidden',
+      blokEmpty: 'is-empty',
       blokRtlFix: 'blok-editor--rtl',
-      blokDragging: 'blok-editor--dragging',
+      blokDragging: 'is-dragging',
     };
   }
 

@@ -19,7 +19,7 @@ export default class StylesAPI extends Module {
        * Inline Tools styles
        */
       inlineToolButton: 'blok-inline-tool',
-      inlineToolButtonActive: 'blok-inline-tool--active',
+      inlineToolButtonActive: 'is-active',
 
       /**
        * UI elements
@@ -32,7 +32,7 @@ export default class StylesAPI extends Module {
        * Settings styles
        */
       settingsButton: 'blok-base-settings-button',
-      settingsButtonActive: 'blok-base-settings-button--active',
+      settingsButtonActive: 'is-active',
     };
   }
 }

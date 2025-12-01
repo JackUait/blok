@@ -240,6 +240,7 @@ describe('PopoverInline', () => {
               alignment: 'center',
               enabled: true,
             },
+            iconWithGap: false,
           },
           [PopoverItemType.Html]: {
             hint: {

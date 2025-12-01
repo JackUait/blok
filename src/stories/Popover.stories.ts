@@ -130,7 +130,7 @@ export const ItemHoverState: Story = {
       if (popoverItem) {
         // Add force-hover class to show hover styles in headless browsers
         // eslint-disable-next-line internal-storybook/no-class-selectors
-        popoverItem.classList.add('blok-popover-item--force-hover');
+        popoverItem.classList.add('is-force-hover');
         await userEvent.hover(popoverItem);
       }
     });
@@ -581,7 +581,7 @@ export const DisabledItem: Story = {
       if (popoverItem) {
         // Add the proper disabled classes and attribute that match the real implementation
         // eslint-disable-next-line internal-storybook/no-class-selectors
-        popoverItem.classList.add('blok-popover-item--disabled', 'cursor-default', 'pointer-events-none');
+        popoverItem.classList.add('is-disabled', 'cursor-default', 'pointer-events-none');
         popoverItem.setAttribute('data-blok-disabled', 'true');
       }
 

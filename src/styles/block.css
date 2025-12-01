@@ -5,39 +5,39 @@
         @apply mt-0;
     }
 
-    &--selected &__content {
-        background: theme('colors.selection');
-
-        /* Workaround Safari case when user can select inline-fragment with cross-block-selection */
-        & [contenteditable] {
-            @apply select-none;
-        }
-
-        img,
-        .blok-stub {
-            @apply opacity-55;
-        }
-    }
-
-    &--stretched &__content {
-        @apply max-w-none;
-    }
-
     &__content {
         @apply relative mx-auto transition-colors duration-150 ease-out;
         max-width: theme('maxWidth.content');
     }
+}
 
-    a {
-        @apply cursor-pointer underline;
-        color: theme('colors.link');
+.blok-element.is-selected .blok-element__content {
+    background: theme('colors.selection');
+
+    /* Workaround Safari case when user can select inline-fragment with cross-block-selection */
+    [contenteditable] {
+        @apply select-none;
     }
 
-    b {
-        @apply font-bold;
+    img,
+    .blok-stub {
+        @apply opacity-55;
     }
+}
 
-    i {
-        @apply italic;
-    }
+.blok-element.is-stretched .blok-element__content {
+    @apply max-w-none;
+}
+
+.blok-element a {
+    @apply cursor-pointer underline;
+    color: theme('colors.link');
+}
+
+.blok-element b {
+    @apply font-bold;
+}
+
+.blok-element i {
+    @apply italic;
 }

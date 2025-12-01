@@ -12,7 +12,7 @@ import type BlockType from '../../../../src/components/block';
 type PartialModules = Partial<BlokModules>;
 
 type ToolbarModuleMock = {
-  CSS: { toolbar: string };
+  CSS: { toolbar: string; toolbarSelector: string };
   close: Mock<() => void>;
 };
 
@@ -76,6 +76,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
   const toolbarMock: ToolbarModuleMock = {
     CSS: {
       toolbar: 'blok-editor-toolbar',
+      toolbarSelector: 'blok-editor-toolbar',
     },
     close: vi.fn<() => void>(),
   };
@@ -242,7 +243,7 @@ describe('RectangleSelection', () => {
     const toolbarElement = document.createElement('div');
 
     toolbarElement.setAttribute('data-blok-testid', 'toolbar');
-    Object.assign(toolbarElement, { className: toolbar.CSS.toolbar });
+    Object.assign(toolbarElement, { className: toolbar.CSS.toolbarSelector });
     const toolbarChild = document.createElement('div');
 
     toolbarElement.appendChild(toolbarChild);

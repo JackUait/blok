@@ -11,6 +11,7 @@ import { IconMenu, IconPlus } from '../../icons';
 import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
+import { twJoin } from '../../utils/tw';
 
 /**
  * @todo Tab on non-empty block should open Block Settings of the hoveredBlock (not where caret is set)
@@ -123,20 +124,71 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   public get CSS(): { [name: string]: string } {
     return {
-      toolbar: 'blok-toolbar',
-      content: 'blok-toolbar__content',
-      actions: 'blok-toolbar__actions',
-      actionsOpened: 'is-opened',
+      toolbar: twJoin(
+        'absolute left-0 right-0 top-0 transition-opacity duration-100 ease-linear will-change-[opacity,top]'
+      ),
+      toolbarSelector: 'blok-toolbar',
+      toolbarOpened: 'block',
+      toolbarClosed: 'hidden',
+      content: twJoin(
+        'relative mx-auto max-w-content'
+      ),
+      actions: twJoin(
+        'absolute flex opacity-0 pr-[5px]',
+        'right-full',
+        // Mobile styles
+        'mobile:right-auto',
+        // RTL styles
+        'group-[.blok-editor--rtl]:right-auto group-[.blok-editor--rtl]:left-[calc(-1*theme(width.toolbox-btn))]',
+        'mobile:group-[.blok-editor--rtl]:ml-0 mobile:group-[.blok-editor--rtl]:mr-auto mobile:group-[.blok-editor--rtl]:pr-0 mobile:group-[.blok-editor--rtl]:pl-[10px]'
+      ),
+      actionsOpened: 'opacity-100',
 
-      toolbarOpened: 'is-opened',
       openedToolboxHolderModifier: 'is-toolbox-opened',
 
-      plusButton: 'blok-toolbar__plus',
-      plusButtonShortcut: 'blok-toolbar__plus-shortcut',
-      plusButtonShortcutKey: 'blok-toolbar__plus-shortcut-key',
-      settingsToggler: 'blok-toolbar__settings-btn',
-      settingsTogglerHidden: 'is-hidden',
-      settingsTogglerOpened: 'is-opened',
+      plusButton: twJoin(
+        // Base toolbox-button styles
+        'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
+        'shrink-0',
+        // SVG sizing
+        '[&_svg]:h-6 [&_svg]:w-6',
+        // Hover (can-hover)
+        'can-hover:hover:bg-bg-light',
+        // Mobile styles (static positioning with overlay-pane appearance)
+        'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
+        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
+        // RTL styles
+        'group-[.blok-editor--rtl]:right-[calc(-1*theme(width.toolbox-btn))] group-[.blok-editor--rtl]:left-auto',
+        // Narrow mode (not-mobile)
+        'not-mobile:group-[.blok-editor--narrow]:left-[5px]',
+        // Narrow mode RTL (not-mobile)
+        'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-0 not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:right-[5px]'
+      ),
+      plusButtonShortcut: 'mt-[5px] opacity-60',
+      plusButtonShortcutKey: 'text-white',
+      settingsToggler: twJoin(
+        // Base toolbox-button styles
+        'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
+        'cursor-pointer select-none',
+        // SVG sizing
+        '[&_svg]:h-6 [&_svg]:w-6',
+        // Active state
+        'active:cursor-grabbing',
+        // Hover (can-hover)
+        'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
+        // When toolbox is opened, use pointer cursor on hover
+        'group-[.is-toolbox-opened]:can-hover:hover:cursor-pointer',
+        // Mobile styles (static positioning with overlay-pane appearance)
+        'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
+        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
+        // Not-mobile styles
+        'not-mobile:w-6'
+      ),
+      settingsTogglerHidden: 'hidden',
+      settingsTogglerOpened: twJoin(
+        // When opened, override hover cursor
+        'can-hover:hover:cursor-pointer'
+      ),
     };
   }
 
@@ -405,6 +457,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarOpened);
+    this.nodes.wrapper?.classList.add(this.CSS.toolbarClosed);
     this.nodes.wrapper?.removeAttribute('data-blok-opened');
 
     /** Close components */
@@ -434,6 +487,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    *                                     This flag allows to open Toolbar without Actions.
    */
   private open(withBlockActions = true): void {
+    this.nodes.wrapper?.classList.remove(this.CSS.toolbarClosed);
     this.nodes.wrapper?.classList.add(this.CSS.toolbarOpened);
     this.nodes.wrapper?.setAttribute('data-blok-opened', 'true');
 
@@ -450,6 +504,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private async make(): Promise<void> {
     const wrapper = $.make('div', [
       this.CSS.toolbar,
+      this.CSS.toolbarSelector,
+      this.CSS.toolbarClosed,
       'group-[.is-dragging]:pointer-events-none',
     ]);
 
@@ -467,6 +523,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
       // RTL narrow mode: use left positioning instead
       'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:right-auto',
       'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
+      // RTL narrow mode additional left offset
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-[-5px]',
     ]);
 
     this.nodes.content = content;

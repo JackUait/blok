@@ -7,23 +7,6 @@
     padding-right: 40px;
 }
 
-.blok-editor.blok-editor--rtl .blok-toolbar__plus {
-    right: calc(theme('width.toolbox-btn') * -1);
-    left: auto;
-}
-
-.blok-editor.blok-editor--rtl .blok-toolbar__actions {
-    right: auto;
-    left: calc(theme('width.toolbox-btn') * -1);
-
-    @screen mobile {
-        margin-left: 0;
-        margin-right: auto;
-        padding-right: 0;
-        padding-left: 10px;
-    }
-}
-
 .blok-editor.blok-editor--rtl .blok-settings {
     left: 5px;
     right: auto;
@@ -55,15 +38,7 @@
     margin-right: 4px;
 }
 
-.blok-editor--narrow.blok-editor--rtl .blok-toolbar__plus {
-    @screen not-mobile {
-        left: 0;
-        right: 5px;
-    }
-}
-
-.blok-editor--narrow.blok-editor--rtl .blok-toolbar__actions {
-    @screen not-mobile {
-        left: -5px;
-    }
+.blok-editor--narrow.blok-editor--rtl .blok-inline-toolbar__dropdown {
+    margin-left: 6px;
+    margin-right: -6px;
 }

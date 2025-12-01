@@ -125,7 +125,7 @@ export default class RectangleSelection extends Module {
      * Don't clear selected block by clicks on the Block settings
      * because we need to keep highlighting working block
      */
-    const startsInsideToolbar = elemWhereSelectionStart.closest(`.${this.Blok.Toolbar.CSS.toolbar}`);
+    const startsInsideToolbar = elemWhereSelectionStart.closest(`.${this.Blok.Toolbar.CSS.toolbarSelector}`);
 
     if (!startsInsideToolbar) {
       this.Blok.BlockSelection.allBlocksSelected = false;
@@ -135,7 +135,7 @@ export default class RectangleSelection extends Module {
 
     const selectorsToAvoid = [
       `.${Block.CSS.content}`,
-      `.${this.Blok.Toolbar.CSS.toolbar}`,
+      `.${this.Blok.Toolbar.CSS.toolbarSelector}`,
       `.${this.Blok.InlineToolbar.CSS.inlineToolbar}`,
     ];
 

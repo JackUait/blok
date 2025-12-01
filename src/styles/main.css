@@ -6,7 +6,6 @@
 /* Project styles */
 @import './variables.css';
 @import './ui.css';
-@import './inline-toolbar.css';
 @import './block.css';
 @import './export.css';
 @import './rtl.css';

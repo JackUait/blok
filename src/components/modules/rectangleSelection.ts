@@ -10,6 +10,7 @@ import $ from '../dom';
 import SelectionUtils from '../selection';
 import Block from '../block';
 import * as _ from '../utils';
+import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../constants';
 
 /**
  *
@@ -136,7 +137,7 @@ export default class RectangleSelection extends Module {
     const selectorsToAvoid = [
       `.${Block.CSS.content}`,
       `.${this.Blok.Toolbar.CSS.toolbarSelector}`,
-      `.${this.Blok.InlineToolbar.CSS.inlineToolbar}`,
+      INLINE_TOOLBAR_INTERFACE_SELECTOR,
     ];
 
     const startsInsideBlok = elemWhereSelectionStart.closest('.' + this.Blok.UI.CSS.blokWrapper);

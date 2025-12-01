@@ -26,19 +26,3 @@
     margin-right: 0;
     margin-left: 10px;
 }
-
-.blok-editor.blok-editor--rtl .blok-inline-toolbar__dropdown {
-    border-right: 0 solid transparent;
-    border-left: 1px solid theme('colors.line-gray');
-    margin: 0 -6px 0 6px;
-}
-
-.blok-editor.blok-editor--rtl .blok-inline-toolbar__dropdown .icon--toggler-down {
-    margin-left: 0;
-    margin-right: 4px;
-}
-
-.blok-editor--narrow.blok-editor--rtl .blok-inline-toolbar__dropdown {
-    margin-left: 6px;
-    margin-right: -6px;
-}

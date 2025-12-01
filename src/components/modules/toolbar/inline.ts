@@ -15,6 +15,7 @@ import { PopoverItemType } from '../../utils/popover';
 import { PopoverInline } from '../../utils/popover/popover-inline';
 import type InlineToolAdapter from 'src/components/tools/inline';
 import { DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../constants';
+import { twMerge } from '../../utils/tw';
 
 /**
  * Inline Toolbar elements
@@ -30,13 +31,12 @@ interface InlineToolbarNodes {
  * |   B  i [link] [mark]   |
  * |________________________|
  */
+/**
+ * Tailwind classes for inline toolbar wrapper
+ */
+const INLINE_TOOLBAR_CLASSES = 'absolute top-0 left-0 z-[3] opacity-100 visible transition-opacity duration-[250ms] ease-out will-change-[opacity,left,top] [&_[hidden]]:!hidden';
+
 export default class InlineToolbar extends Module<InlineToolbarNodes> {
-  /**
-   * CSS styles
-   */
-  public CSS = {
-    inlineToolbar: 'blok-inline-toolbar',
-  };
 
   /**
    * State of inline toolbar
@@ -294,10 +294,11 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * Making DOM
    */
   private make(): void {
-    this.nodes.wrapper = $.make('div', [
-      this.CSS.inlineToolbar,
-      ...(this.isRtl ? [ this.Blok.UI.CSS.blokRtlFix ] : []),
-    ]);
+    this.nodes.wrapper = $.make('div');
+    this.nodes.wrapper.className = twMerge(
+      INLINE_TOOLBAR_CLASSES,
+      this.isRtl ? this.Blok.UI.CSS.blokRtlFix : ''
+    );
 
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'inline-toolbar');

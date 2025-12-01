@@ -166,8 +166,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
       ),
       plusButtonShortcut: 'mt-[5px] opacity-60',
       plusButtonShortcutKey: 'text-white',
+      /**
+       * Class used as the SortableJS drag handle selector
+       */
+      settingsTogglerHandle: 'blok-settings-toggler',
       settingsToggler: twJoin(
         // Base toolbox-button styles
+        'blok-settings-toggler',
         'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
         'cursor-pointer select-none',
         // SVG sizing

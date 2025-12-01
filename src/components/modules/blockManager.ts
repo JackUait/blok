@@ -208,7 +208,7 @@ export default class BlockManager extends Module {
     this.sortable = new Sortable(this.Blok.UI.nodes.redactor, {
       animation: 150,
       forceFallback: true,
-      handle: `.${this.Blok.Toolbar.CSS.settingsToggler}`,
+      handle: `.${this.Blok.Toolbar.CSS.settingsTogglerHandle}`,
       onStart: () => {
         this.Blok.UI.nodes.wrapper.classList.add(this.Blok.UI.CSS.blokDragging);
         tooltip.hide(true);

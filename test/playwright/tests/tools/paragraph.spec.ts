@@ -12,19 +12,6 @@ import {
   selectionChangeDebounceTimeout,
 } from '../../../../src/components/constants';
 
-/**
- * Get the appropriate modifier key based on the browser's user agent.
- * WebKit always uses a macOS-style user agent, so it expects Meta regardless of host OS.
- * @param page - The Playwright page object
- */
-const getModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
-  const isMac = await page.evaluate(() => {
-    return navigator.userAgent.toLowerCase().includes('mac');
-  });
-
-  return isMac ? 'Meta' : 'Control';
-};
-
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
@@ -497,13 +484,27 @@ test.describe('paragraph tool', () => {
 
       const paragraphContent = page.locator(PARAGRAPH_BLOCK_SELECTOR).locator('[contenteditable="true"]');
 
-      await paragraphContent.click();
+      // Select text using the Selection API for reliability across browsers
+      await paragraphContent.evaluate((element) => {
+        const range = element.ownerDocument.createRange();
 
-      // Use browser-based modifier key detection for WebKit compatibility on Linux CI
-      const modifierKey = await getModifierKey(page);
+        range.selectNodeContents(element);
 
-      await page.keyboard.press(`${modifierKey}+a`);
-      await page.keyboard.press(`${modifierKey}+b`);
+        const selection = element.ownerDocument.getSelection();
+
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        element.ownerDocument.dispatchEvent(new Event('selectionchange'));
+      });
+
+      // Wait for inline toolbar to appear after selection
+      const boldButton = page.locator('[data-blok-interface="inline-toolbar"] [data-blok-item-name="bold"]');
+
+      await expect(boldButton).toBeVisible({ timeout: 5000 });
+
+      // Click the bold button to apply formatting
+      await boldButton.click();
 
       // Wait for the bold formatting to be applied
       await page.waitForFunction(

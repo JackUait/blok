@@ -1,34 +1,18 @@
 
 /**
- * We support two types of placeholders for contenteditable:
+ * Placeholder content attribute.
  *
- * 1. Regular-like placeholders. Will be visible when element is empty.
-      -- Best choice for rare-used blocks like Headings.
- * 2. Current-block placeholders. Will be visible when element is empty and the block is focused.
-      -- Best choice for common-used blocks like Paragraphs.
+ * The `content: attr()` CSS function can only be defined in CSS.
+ * Styling classes are applied via Tailwind arbitrary variants in the component.
+ * @see block/index.ts for placeholder styling classes
  */
 
 @layer components {
   /**
-   * Use [data-blok-placeholder="..."] to always show a placeholder on empty contenteditable.
+   * data-blok-placeholder: Show placeholder content when empty
    */
   .blok-editor [data-blok-placeholder]:empty::before,
   .blok-editor [data-blok-placeholder][data-blok-empty="true"]::before {
-    @apply pointer-events-none text-gray-text cursor-text;
     content: attr(data-blok-placeholder);
-  }
-
-  /**
-   * Use [data-blok-placeholder-active="..."] to show a placeholder on empty contenteditable in current block.
-   */
-  /* Paragraph tool shows the placeholder for the first block, event it is not focused, so we need to prepare styles for it */
-  .blok-editor [data-blok-placeholder-active]:empty::before,
-  .blok-editor [data-blok-placeholder-active][data-blok-empty="true"]::before {
-    @apply pointer-events-none text-gray-text cursor-text;
-  }
-
-  .blok-editor [data-blok-placeholder-active]:empty:focus::before,
-  .blok-editor [data-blok-placeholder-active][data-blok-empty="true"]:focus::before {
-    content: attr(data-blok-placeholder-active);
   }
 }

@@ -164,10 +164,24 @@ export default class Paragraph implements BlockTool {
    *
    * @returns HTMLDivElement
    */
+  /**
+   * Placeholder styling classes using Tailwind arbitrary variants.
+   * Applied to ::before pseudo-element only when element is empty.
+   * The `content` attribute is handled in paragraph CSS.
+   */
+  private static readonly PLACEHOLDER_CLASSES = [
+    'empty:before:pointer-events-none',
+    'empty:before:text-gray-text',
+    'empty:before:cursor-text',
+    '[&[data-empty=true]]:before:pointer-events-none',
+    '[&[data-empty=true]]:before:text-gray-text',
+    '[&[data-empty=true]]:before:cursor-text',
+  ];
+
   private drawView(): HTMLDivElement {
     const div = document.createElement('DIV') as HTMLDivElement;
 
-    div.classList.add(this._CSS.wrapper, ...this._CSS.block.split(' '));
+    div.classList.add(this._CSS.wrapper, ...this._CSS.block.split(' '), ...Paragraph.PLACEHOLDER_CLASSES);
     div.contentEditable = 'false';
     div.setAttribute('data-placeholder-active', this.api.i18n.t(this._placeholder));
 

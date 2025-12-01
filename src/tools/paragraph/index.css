@@ -7,8 +7,9 @@
 }
 
 /**
- * Placeholder styles for empty paragraphs
- * Only show placeholder when the paragraph is the only block
+ * Placeholder content for empty paragraphs.
+ * Only show placeholder when the paragraph is the only block.
+ * Styling classes are applied via Tailwind in the component.
  */
 .ce-block:only-of-type .blok-paragraph[data-placeholder-active]:empty::before,
 .ce-block:only-of-type .blok-paragraph[data-placeholder-active][data-empty='true']::before {

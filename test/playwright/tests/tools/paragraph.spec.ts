@@ -12,6 +12,19 @@ import {
   selectionChangeDebounceTimeout,
 } from '../../../../src/components/constants';
 
+/**
+ * Get the appropriate modifier key based on the browser's user agent.
+ * WebKit always uses a macOS-style user agent, so it expects Meta regardless of host OS.
+ * @param page - The Playwright page object
+ */
+const getModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
+  const isMac = await page.evaluate(() => {
+    return navigator.userAgent.toLowerCase().includes('mac');
+  });
+
+  return isMac ? 'Meta' : 'Control';
+};
+
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../../fixtures/test.html')
 ).href;
@@ -485,8 +498,23 @@ test.describe('paragraph tool', () => {
       const paragraphContent = page.locator(PARAGRAPH_BLOCK_SELECTOR).locator('[contenteditable="true"]');
 
       await paragraphContent.click();
-      await page.keyboard.press(`${MODIFIER_KEY}+a`);
-      await page.keyboard.press(`${MODIFIER_KEY}+b`);
+
+      // Use browser-based modifier key detection for WebKit compatibility on Linux CI
+      const modifierKey = await getModifierKey(page);
+
+      await page.keyboard.press(`${modifierKey}+a`);
+      await page.keyboard.press(`${modifierKey}+b`);
+
+      // Wait for the bold formatting to be applied
+      await page.waitForFunction(
+        ({ selector }) => {
+          const el = document.querySelector(selector);
+
+          return el && /<b>|<strong>/.test(el.innerHTML);
+        },
+        { selector: `${PARAGRAPH_BLOCK_SELECTOR} [contenteditable="true"]` },
+        { timeout: 5000 }
+      );
 
       const savedData = await page.evaluate(async () => {
         return await window.blokInstance?.save();

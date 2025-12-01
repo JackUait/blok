@@ -448,7 +448,10 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Draws Toolbar elements
    */
   private async make(): Promise<void> {
-    const wrapper = $.make('div', this.CSS.toolbar);
+    const wrapper = $.make('div', [
+      this.CSS.toolbar,
+      'group-[.is-dragging]:pointer-events-none',
+    ]);
 
     this.nodes.wrapper = wrapper;
     wrapper.setAttribute('data-blok-testid', 'toolbar');
@@ -457,7 +460,14 @@ export default class Toolbar extends Module<ToolbarNodes> {
      * Make Content Zone and Actions Zone
      */
     const content = $.make('div', this.CSS.content);
-    const actions = $.make('div', this.CSS.actions);
+    const actions = $.make('div', [
+      this.CSS.actions,
+      // Narrow mode positioning on non-mobile screens
+      'not-mobile:group-[.blok-editor--narrow]:right-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
+      // RTL narrow mode: use left positioning instead
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:right-auto',
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
+    ]);
 
     this.nodes.content = content;
 
@@ -533,7 +543,10 @@ export default class Toolbar extends Module<ToolbarNodes> {
      *  - Remove Block Button
      *  - Settings Panel
      */
-    const settingsToggler = $.make('span', this.CSS.settingsToggler, {
+    const settingsToggler = $.make('span', [
+      this.CSS.settingsToggler,
+      'group-[.is-dragging]:cursor-grabbing',
+    ], {
       innerHTML: IconMenu,
     });
 

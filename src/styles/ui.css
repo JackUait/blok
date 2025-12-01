@@ -1,13 +1,4 @@
 @layer components {
-  /* Blok Editor - Main wrapper */
-  .blok-editor {
-    @apply relative box-border z-[1];
-  }
-
-  .blok-editor .hide {
-    @apply hidden;
-  }
-
   /* SVG defaults */
   .blok-editor svg {
     @apply max-h-full;
@@ -27,69 +18,8 @@
     content: "\feff ";
   }
 
-  /* Narrow mode - Right padding for redactor */
-  @screen not-mobile {
-    .blok-editor--narrow .blok-editor__redactor {
-      @apply mr-[theme('spacing.narrow-mode-right-padding')];
-    }
-
-    .blok-editor--narrow.blok-editor--rtl .blok-editor__redactor {
-      @apply ml-[theme('spacing.narrow-mode-right-padding')] mr-0;
-    }
-
-    .blok-editor--narrow .blok-toolbar__actions {
-      right: calc(-1 * theme('spacing.narrow-mode-right-padding') - 5px);
-    }
-
-    .blok-editor--narrow.blok-editor--rtl .blok-toolbar__actions {
-      @apply right-auto;
-      left: calc(-1 * theme('spacing.narrow-mode-right-padding') - 5px);
-    }
-  }
-
-  /* Copyable element - Hidden off-screen */
-  .blok-editor-copyable {
-    @apply absolute h-px w-px -top-[400%] opacity-[0.001];
-  }
-
-  /* Overlay */
-  .blok-editor-overlay {
-    @apply fixed inset-0 z-overlay pointer-events-none overflow-hidden;
-  }
-
-  .blok-editor-overlay__container {
-    @apply relative pointer-events-auto z-0;
-  }
-
-  .blok-editor-overlay__rectangle {
-    @apply absolute pointer-events-none bg-selection-highlight border border-transparent;
-  }
-
-  /* Dragging state */
-  .blok-editor.is-dragging {
-    @apply cursor-grabbing;
-  }
-
-  .blok-editor.is-dragging .blok-toolbar__settings-btn {
-    @apply cursor-grabbing;
-  }
-
-  .blok-editor.is-dragging .blok-toolbar {
-    @apply pointer-events-none;
-  }
-
   /* Toolbox opened - Hide placeholder */
   .blok-editor.is-toolbox-opened [contentEditable=true][data-blok-placeholder]:focus::before {
     @apply !opacity-0;
-  }
-
-  /* Scroll lock utilities */
-  .blok-scroll-locked {
-    @apply overflow-hidden;
-  }
-
-  .blok-scroll-locked.is-hard {
-    @apply overflow-hidden fixed w-full;
-    top: calc(-1 * var(--window-scroll-offset));
   }
 }

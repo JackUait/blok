@@ -304,9 +304,28 @@ export default class RectangleSelection extends Module {
     const { UI } = this.Blok;
 
     const container = UI.nodes.holder.querySelector('.' + UI.CSS.blokWrapper);
-    const overlay = $.make('div', RectangleSelection.CSS.overlay, {});
-    const overlayContainer = $.make('div', RectangleSelection.CSS.overlayContainer, {});
-    const overlayRectangle = $.make('div', RectangleSelection.CSS.rect, {});
+    const overlay = $.make('div', [
+      RectangleSelection.CSS.overlay,
+      'fixed',
+      'inset-0',
+      'z-overlay',
+      'pointer-events-none',
+      'overflow-hidden',
+    ], {});
+    const overlayContainer = $.make('div', [
+      RectangleSelection.CSS.overlayContainer,
+      'relative',
+      'pointer-events-auto',
+      'z-0',
+    ], {});
+    const overlayRectangle = $.make('div', [
+      RectangleSelection.CSS.rect,
+      'absolute',
+      'pointer-events-none',
+      'bg-selection-highlight',
+      'border',
+      'border-transparent',
+    ], {});
 
     overlay.setAttribute('data-blok-testid', 'overlay');
     overlayRectangle.setAttribute('data-blok-testid', 'overlay-rectangle');

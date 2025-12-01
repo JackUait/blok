@@ -298,11 +298,23 @@ export default class UI extends Module<UINodes> {
      */
     this.nodes.wrapper = $.make('div', [
       this.CSS.blokWrapper,
+      'group',
+      'relative',
+      'box-border',
+      'z-[1]',
+      '[&.is-dragging]:cursor-grabbing',
       ...(this.isRtl ? [ this.CSS.blokRtlFix ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');
-    this.nodes.redactor = $.make('div', this.CSS.blokZone);
+    this.nodes.redactor = $.make('div', [
+      this.CSS.blokZone,
+      // Narrow mode: add right margin on non-mobile screens
+      'not-mobile:group-[.blok-editor--narrow]:mr-[theme(spacing.narrow-mode-right-padding)]',
+      // RTL narrow mode: add left margin instead
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:ml-[theme(spacing.narrow-mode-right-padding)]',
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:mr-0',
+    ]);
     this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
 
     /**

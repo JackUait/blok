@@ -43,7 +43,7 @@
     "jscpd": "jscpd src/ test/",
     "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report",
     "prepublishOnly": "yarn build",
-    "storybook": "storybook dev -p 6006",
+    "storybook": "storybook dev -p 6006 --no-open",
     "storybook:build": "storybook build",
     "storybook:test": "vitest --project=storybook --run",
     "chromatic": "chromatic --exit-zero-on-changes"

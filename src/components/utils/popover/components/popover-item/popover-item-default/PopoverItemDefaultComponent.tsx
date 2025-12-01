@@ -1,6 +1,6 @@
 import React from 'react';
 import { IconChevronRight } from '../../../../../icons';
-import { css, DATA_ATTR } from './popover-item-default.const';
+import { css, cssInline, cssNestedInline, DATA_ATTR } from './popover-item-default.const';
 import { twMerge } from '../../../../tw';
 
 /**
@@ -56,6 +56,16 @@ export interface PopoverItemDefaultComponentProps {
    * Whether to add gap after icon
    */
   iconWithGap?: boolean;
+
+  /**
+   * Whether this item is in an inline popover context
+   */
+  isInline?: boolean;
+
+  /**
+   * Whether this item is in a nested inline popover context
+   */
+  isNestedInline?: boolean;
 }
 
 /**
@@ -73,17 +83,30 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
   wrapperTag = 'div',
   name,
   iconWithGap = true,
+  isInline = false,
+  isNestedInline = false,
 }) => {
-  // Build class names using twMerge
+  // Build class names using twMerge with inline context awareness
   const containerClasses = twMerge(
     css.item,
+    isInline && cssInline.item,
+    isNestedInline && cssNestedInline.item,
     isActive && css.itemActive,
     isDisabled && css.itemDisabled
   );
 
   const iconClasses = twMerge(
     css.icon,
-    iconWithGap && css.iconTool
+    isInline && cssInline.icon,
+    isNestedInline && cssNestedInline.icon,
+    iconWithGap && css.iconTool,
+    iconWithGap && isInline && cssInline.iconTool,
+    iconWithGap && isNestedInline && cssNestedInline.iconTool
+  );
+
+  const chevronClasses = twMerge(
+    css.icon,
+    isInline && cssInline.chevronRight
   );
 
   const showChevron = hasChildren && !hideChevron;
@@ -120,7 +143,7 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
       {showChevron && (
         <div
           {...{ [DATA_ATTR.icon]: '', [DATA_ATTR.iconChevronRight]: '' }}
-          className={css.icon}
+          className={chevronClasses}
           data-blok-testid="popover-item-chevron-right"
           dangerouslySetInnerHTML={{ __html: IconChevronRight }}
         />

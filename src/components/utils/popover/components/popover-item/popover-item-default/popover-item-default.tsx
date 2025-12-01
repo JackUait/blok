@@ -7,7 +7,7 @@ import type {
   PopoverItemType
 } from '@/types/utils/popover/popover-item';
 import { PopoverItem } from '../popover-item';
-import { css, DATA_ATTR } from './popover-item-default.const';
+import { css, cssInline, cssNestedInline, DATA_ATTR } from './popover-item-default.const';
 import { PopoverItemDefaultComponent } from './PopoverItemDefaultComponent';
 import { twMerge } from '../../../../tw';
 
@@ -209,6 +209,8 @@ export class PopoverItemDefault extends PopoverItem {
         wrapperTag={renderParams?.wrapperTag}
         name={params.name}
         iconWithGap={renderParams?.iconWithGap}
+        isInline={renderParams?.isInline}
+        isNestedInline={renderParams?.isNestedInline}
       />
     );
 
@@ -360,9 +362,13 @@ export class PopoverItemDefault extends PopoverItem {
     const isHidden = this.nodes.root.hasAttribute(DATA_ATTR.hidden);
     const isConfirmation = this.nodes.root.hasAttribute(DATA_ATTR.confirmation);
     const isFocused = this.nodes.root.hasAttribute(DATA_ATTR.focused);
+    const isInline = this.renderParams?.isInline ?? false;
+    const isNestedInline = this.renderParams?.isNestedInline ?? false;
 
     this.nodes.root.className = twMerge(
       css.item,
+      isInline && cssInline.item,
+      isNestedInline && cssNestedInline.item,
       isActive && css.itemActive,
       this.isDisabled && css.itemDisabled,
       isFocused && css.itemFocused,

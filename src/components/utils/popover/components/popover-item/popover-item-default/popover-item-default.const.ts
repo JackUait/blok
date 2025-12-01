@@ -83,6 +83,51 @@ export const css = {
 };
 
 /**
+ * Tailwind CSS class names for inline popover item
+ */
+export const cssInline = {
+  /**
+   * Item in inline context - more compact styling
+   */
+  item: 'rounded p-1',
+
+  /**
+   * Icon in inline context - auto sizing
+   */
+  icon: 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
+
+  /**
+   * Icon with tool attribute in inline context - no background/shadow
+   */
+  iconTool: 'shadow-none bg-transparent !mr-0',
+
+  /**
+   * Chevron icon rotation in inline context
+   */
+  chevronRight: 'rotate-90',
+};
+
+/**
+ * Tailwind CSS class names for nested inline popover item
+ */
+export const cssNestedInline = {
+  /**
+   * Nested item - back to desktop popover styling
+   */
+  item: 'rounded-md p-[3px] mobile:p-1',
+
+  /**
+   * Nested icon with tool - restore margin
+   */
+  iconTool: '!mr-2',
+
+  /**
+   * Nested icon size
+   */
+  icon: 'w-toolbox-btn h-toolbox-btn',
+};
+
+/**
  * Data attributes for popover item state management
  */
 export const DATA_ATTR = {

@@ -205,7 +205,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     return items.map(item => {
       switch (item.type) {
         case PopoverItemType.Separator:
-          return new PopoverItemSeparator();
+          return new PopoverItemSeparator(this.itemsRenderParams[PopoverItemType.Separator]);
         case PopoverItemType.Html:
           return new PopoverItemHtml(item, this.itemsRenderParams[PopoverItemType.Html]);
         default:

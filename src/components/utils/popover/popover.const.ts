@@ -34,6 +34,75 @@ export const css = {
 };
 
 /**
+ * Tailwind CSS class names for inline popover
+ * These classes override base popover styles when used in inline context
+ */
+export const cssInline = {
+  // Popover root element for inline
+  popover: 'relative',
+
+  // Popover root when opened (inline)
+  popoverOpened: 'inline-block',
+
+  // Items container in inline context
+  items: 'flex',
+
+  // Custom content in inline context
+  customContent: '!mb-0',
+
+  // Container for inline popover
+  popoverContainer: 'flex-row top-0 min-w-max w-max p-1 mobile:absolute',
+
+  // Container opened state for inline (overrides animation)
+  popoverContainerOpened: 'animate-none',
+
+  // Item in inline context
+  item: 'rounded p-1',
+
+  // Icon in inline context
+  icon: 'w-auto h-auto',
+
+  // Icon with tool attribute in inline context
+  iconTool: 'shadow-none bg-transparent !mr-0',
+
+  // Item separator in inline context
+  separator: 'px-1 py-0',
+
+  // Separator line in inline context
+  separatorLine: 'h-full w-px',
+
+  // Item HTML wrapper in inline context
+  itemHtml: 'flex items-center',
+
+  // Chevron icon rotation in inline context
+  chevronRight: 'rotate-90',
+
+  // Nested popover container positioned below trigger (level-1)
+  nestedLevel1Container: 'left-0',
+
+  // Nested popover container (looks like regular desktop popover)
+  nestedContainer: 'h-fit p-1.5 flex-col',
+
+  // Nested items container
+  nestedItems: 'block w-full',
+
+  // Nested item
+  nestedItem: 'rounded-md p-[3px] mobile:p-1',
+
+  // Nested icon with tool
+  nestedIconTool: '!mr-2',
+
+  // Nested icon size
+  nestedIcon: 'w-toolbox-btn h-toolbox-btn',
+
+  // Nested separator
+  nestedSeparator: 'py-1 px-[3px]',
+
+  // Nested separator line
+  nestedSeparatorLine: 'w-full h-px',
+};
+
+/**
  * Data attributes for popover component
  *
  * Used for:

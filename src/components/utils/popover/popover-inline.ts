@@ -3,14 +3,54 @@ import type { PopoverItem } from './components/popover-item';
 import { PopoverItemDefault, PopoverItemType } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import { PopoverDesktop } from './popover-desktop';
-import { CSSVariables, DATA_ATTR, getNestedLevelAttrValue } from './popover.const';
+import { css, cssInline, CSSVariables, DATA_ATTR, getNestedLevelAttrValue } from './popover.const';
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import { twMerge } from '../tw';
+
+/**
+ * Inline popover height CSS variables
+ */
+const INLINE_HEIGHT = '38px';
+const INLINE_HEIGHT_MOBILE = '46px';
 
 /**
  * Horizontal popover that is displayed inline with the content
  */
 export class PopoverInline extends PopoverDesktop {
+  /**
+   * Closes popover - override as arrow function to match parent
+   */
+  public override hide = (): void => {
+    // Call parent hide logic manually (can't use super for arrow functions)
+    // This replicates PopoverDesktop.hide behavior
+    this.nodes.popover.removeAttribute(DATA_ATTR.opened);
+    this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
+    this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
+
+    this.itemsDefault.forEach(item => item.reset());
+
+    if (this.search !== undefined) {
+      this.search.clear();
+    }
+
+    this.destroyNestedPopoverIfExists();
+    this.flipper?.deactivate();
+
+    // Reset to closed inline styles
+    this.nodes.popover.className = twMerge(css.popover, cssInline.popover);
+    if (this.nodes.popoverContainer) {
+      this.nodes.popoverContainer.className = twMerge(
+        css.popoverContainer,
+        cssInline.popoverContainer
+      );
+      this.nodes.popoverContainer.style.height = '';
+    }
+
+    // Emit closed event (from abstract)
+    this.emit(PopoverEvent.Closed);
+  };
+
   /**
    * Constructs the instance
    * @param params - instance parameters
@@ -38,6 +78,10 @@ export class PopoverInline extends PopoverDesktop {
            * Inline tools display icons without titles, so no gap is needed
            */
           iconWithGap: false,
+          /**
+           * Mark items as inline for styling
+           */
+          isInline: true,
         },
         [PopoverItemType.Html]: {
           hint: {
@@ -45,11 +89,35 @@ export class PopoverInline extends PopoverDesktop {
             alignment: 'center',
             enabled: isHintEnabled,
           },
+          isInline: true,
+        },
+        [PopoverItemType.Separator]: {
+          isInline: true,
         },
       }
     );
 
-    // Mark as inline popover for CSS styling
+    // Apply inline popover root styles
+    this.nodes.popover.className = twMerge(css.popover, cssInline.popover);
+
+    // Apply inline container styles
+    if (this.nodes.popoverContainer) {
+      this.nodes.popoverContainer.className = twMerge(
+        css.popoverContainer,
+        cssInline.popoverContainer
+      );
+    }
+
+    // Apply inline items container styles
+    if (this.nodes.items) {
+      this.nodes.items.className = twMerge(css.items, cssInline.items);
+    }
+
+    // Set inline height CSS variables
+    this.nodes.popover.style.setProperty('--height', INLINE_HEIGHT);
+    this.nodes.popover.style.setProperty('--height-mobile', INLINE_HEIGHT_MOBILE);
+
+    // Mark as inline popover for any remaining CSS (deprecated, but kept for backwards compatibility)
     this.nodes.popover.setAttribute(DATA_ATTR.popoverInline, '');
 
     this.flipper?.setHandleContentEditableTargets(true);
@@ -88,17 +156,34 @@ export class PopoverInline extends PopoverDesktop {
   public override show(): void {
     super.show();
 
+    // Apply inline opened styles to root
+    this.nodes.popover.className = twMerge(css.popover, cssInline.popover, cssInline.popoverOpened);
+
+    // Apply inline container opened styles (no animation for inline)
+    if (this.nodes.popoverContainer) {
+      this.nodes.popoverContainer.className = twMerge(
+        css.popoverContainer,
+        css.popoverContainerOpened,
+        cssInline.popoverContainer,
+        cssInline.popoverContainerOpened
+      );
+
+      // Set height based on screen
+      const height = isMobileScreen() ? 'var(--height-mobile)' : 'var(--height)';
+      this.nodes.popoverContainer.style.height = height;
+    }
+
     const containerRect = this.nestingLevel === 0
       ? this.nodes.popoverContainer?.getBoundingClientRect()
       : undefined;
 
     if (containerRect !== undefined) {
       const width = `${containerRect.width}px`;
-      const height = `${containerRect.height}px`;
+      const heightPx = `${containerRect.height}px`;
 
       this.nodes.popover.style.setProperty(CSSVariables.InlinePopoverWidth, width);
       this.nodes.popover.style.width = width;
-      this.nodes.popover.style.height = height;
+      this.nodes.popover.style.height = heightPx;
     }
 
     requestAnimationFrame(() => {
@@ -163,6 +248,21 @@ export class PopoverInline extends PopoverDesktop {
 
     nestedPopover.flipper?.setHandleContentEditableTargets(true);
 
+    // Apply nested inline styles to the nested popover container
+    const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement | null;
+    if (nestedContainer) {
+      nestedContainer.className = twMerge(
+        nestedContainer.className,
+        cssInline.nestedContainer
+      );
+    }
+
+    // Apply nested inline styles to the items container
+    const nestedItems = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverItems}]`) as HTMLElement | null;
+    if (nestedItems) {
+      nestedItems.className = twMerge(nestedItems.className, cssInline.nestedItems);
+    }
+
     const handleFirstTab = (event: KeyboardEvent): void => {
       if (event.key !== 'Tab' || event.shiftKey) {
         return;
@@ -194,6 +294,14 @@ export class PopoverInline extends PopoverDesktop {
      * Currently only 'level-1' is used
      */
     nestedPopoverEl.setAttribute(DATA_ATTR.nestedLevel, getNestedLevelAttrValue(nestedPopover.nestingLevel));
+
+    // Apply level-1 specific positioning styles
+    if (nestedPopover.nestingLevel === 1 && nestedContainer) {
+      nestedContainer.className = twMerge(nestedContainer.className, cssInline.nestedLevel1Container);
+      // Set top position based on height
+      const topOffset = isMobileScreen() ? 'calc(var(--height-mobile) + 3px)' : 'calc(var(--height) + 3px)';
+      nestedContainer.style.top = topOffset;
+    }
 
     return nestedPopover;
   }

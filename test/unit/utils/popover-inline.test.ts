@@ -240,6 +240,7 @@ describe('PopoverInline', () => {
               enabled: true,
             },
             iconWithGap: false,
+            isInline: true,
           },
           [PopoverItemType.Html]: {
             hint: {
@@ -247,6 +248,10 @@ describe('PopoverInline', () => {
               alignment: 'center',
               enabled: true,
             },
+            isInline: true,
+          },
+          [PopoverItemType.Separator]: {
+            isInline: true,
           },
         }
       );

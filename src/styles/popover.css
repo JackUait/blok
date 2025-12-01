@@ -1,11 +1,12 @@
 /**
  * Popover styles - Tailwind version
  *
- * Uses theme() functions for static values, CSS variables only for dynamic values set via JS
+ * Uses theme() functions for static values, CSS variables only for dynamic values set via JS.
+ * State-based styling uses data attributes for JavaScript integration.
  */
 
 /* Popover CSS Variables - only dynamic values that are set via JS or used in complex calculations */
-.blok-popover {
+[data-blok-popover] {
   /* Layout tokens - specific to popover component */
   --width: 200px;
   --max-height: 270px;
@@ -18,7 +19,7 @@
   --nested-popover-overlap: theme('spacing.1');
 }
 
-.blok-popover__container {
+[data-blok-popover-container] {
   @apply absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none z-[4] max-h-0;
   min-width: var(--width);
   width: var(--width);
@@ -38,7 +39,7 @@
   }
 }
 
-.blok-popover--opened > .blok-popover__container {
+[data-blok-popover-opened] > [data-blok-popover-container] {
   @apply opacity-100 pointer-events-auto;
   animation: panelShowing 100ms ease;
   padding: theme('spacing.1');
@@ -50,51 +51,51 @@
   }
 }
 
-.blok-popover--open-top .blok-popover__container {
+[data-blok-popover-open-top] [data-blok-popover-container] {
   --popover-top: calc(-1 * (theme('spacing.2') + var(--popover-height)));
 }
 
 
-.blok-popover--open-left .blok-popover__container {
+[data-blok-popover-open-left] [data-blok-popover-container] {
   --popover-left: calc(-1 * var(--width) + 100%);
 }
 
-.blok-popover__overlay {
+[data-blok-popover-overlay] {
   @apply hidden bg-dark mobile:fixed mobile:inset-0 mobile:block mobile:visible mobile:z-[3] mobile:opacity-50 mobile:transition-opacity mobile:duration-[120ms] mobile:ease-in mobile:will-change-[opacity];
 }
 
-.blok-popover__overlay.is-hidden {
+[data-blok-popover-overlay][data-blok-overlay-hidden] {
   @apply hidden;
 }
 
 /* Nested popover positioning */
-.blok-popover--nested .blok-popover__container {
+[data-blok-nested] [data-blok-popover-container] {
   /* Variables --nesting-level and --trigger-item-top are set via JS */
   --popover-left: calc(var(--nesting-level) * (var(--width) - var(--nested-popover-overlap)));
   @apply absolute;
   top: calc(var(--trigger-item-top) - var(--nested-popover-overlap));
 }
 
-.blok-popover--open-top.blok-popover--nested .blok-popover__container {
+[data-blok-popover-open-top][data-blok-nested] [data-blok-popover-container] {
   top: calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + theme('spacing.2') + var(--nested-popover-overlap));
 }
 
-.blok-popover--open-left .blok-popover--nested .blok-popover__container {
+[data-blok-popover-open-left] [data-blok-nested] [data-blok-popover-container] {
   --popover-left: calc(-1 * (var(--nesting-level) + 1) * var(--width) + 100%);
 }
 
 /**
  * Popover item separator
  */
-.blok-popover-item-separator {
+[data-blok-popover-item-separator] {
   @apply py-1 px-[3px];
 }
 
-.blok-popover-item-separator.is-hidden {
+[data-blok-popover-item-separator][data-blok-hidden] {
   @apply hidden;
 }
 
-.blok-popover-item-separator__line {
+[data-blok-popover-item-separator-line] {
   @apply h-px w-full;
   background: theme('colors.popover-border');
 }
@@ -102,79 +103,79 @@
 /**
  * Popover item HTML
  */
-.blok-popover-item-html--hidden {
+[data-blok-popover-item-html][data-blok-hidden] {
   @apply hidden;
 }
 
 /**
  * Popover item
  */
-.blok-popover-item {
+[data-blok-popover-item] {
   @apply flex items-center select-none border-none bg-transparent rounded-md mobile:p-1;
   padding: var(--item-padding);
   color: theme('colors.text-primary');
 }
 
-.blok-popover-item:not(:last-of-type) {
+[data-blok-popover-item]:not(:last-of-type) {
   @apply mb-px;
 }
 
 /* Hover styles - only on devices that support hover */
 @screen can-hover {
-  .blok-popover-item:hover {
+  [data-blok-popover-item]:hover {
     @apply cursor-pointer;
   }
 
-  .blok-popover-item:hover:not(.blok-popover-item--no-hover) {
+  [data-blok-popover-item]:hover:not([data-blok-popover-item-no-hover]) {
     background-color: theme('colors.item-hover-bg');
   }
 }
 
-.blok-popover-item.is-active {
+[data-blok-popover-item][data-blok-popover-item-active] {
   background: theme('colors.icon-active-bg');
   color: theme('colors.icon-active-text');
 }
 
-.blok-popover-item.is-disabled {
+[data-blok-popover-item][data-blok-disabled] {
   @apply cursor-default pointer-events-none;
   color: theme('colors.text-secondary');
 }
 
-.blok-popover-item.is-focused:not(.blok-popover-item--no-focus) {
+[data-blok-popover-item][data-blok-focused]:not([data-blok-popover-item-no-focus]) {
   background: theme('colors.item-focus-bg') !important;
 }
 
-.blok-popover-item.is-hidden {
+[data-blok-popover-item][data-blok-hidden] {
   @apply !hidden;
 }
 
 /* Force hover styles for Storybook/Chromatic testing */
-.blok-popover-item.is-force-hover:not(.blok-popover-item--no-hover) {
+[data-blok-popover-item][data-blok-force-hover]:not([data-blok-popover-item-no-hover]) {
   @apply cursor-pointer;
   background-color: theme('colors.item-hover-bg');
 }
 
 /* Confirmation state */
-.blok-popover-item.is-confirmation {
+[data-blok-popover-item][data-blok-popover-item-confirmation] {
   background: theme('colors.item-confirm-bg');
 }
 
-.blok-popover-item.is-confirmation .blok-popover-item__title,
-.blok-popover-item.is-confirmation .blok-popover-item__icon {
+[data-blok-popover-item][data-blok-popover-item-confirmation] [data-blok-popover-item-title],
+[data-blok-popover-item][data-blok-popover-item-confirmation] [data-blok-popover-item-icon] {
   @apply text-white;
 }
 
 @screen can-hover {
-  .blok-popover-item.is-confirmation:not(.blok-popover-item--no-hover):hover {
+  [data-blok-popover-item][data-blok-popover-item-confirmation]:not([data-blok-popover-item-no-hover]):hover {
     background: theme('colors.item-confirm-hover-bg');
   }
 }
 
-.blok-popover-item.is-confirmation:not(.blok-popover-item--no-focus).is-focused {
+[data-blok-popover-item][data-blok-popover-item-confirmation]:not([data-blok-popover-item-no-focus])[data-blok-focused] {
   background: theme('colors.item-confirm-hover-bg') !important;
 }
 
-.blok-popover-item__icon {
+[data-blok-popover-item-icon] {
   @apply flex items-center justify-center w-[26px] h-[26px] mobile:w-9 mobile:h-9 mobile:rounded-lg;
 
   svg {
@@ -182,15 +183,20 @@
   }
 }
 
-.blok-popover-item__icon.is-tool {
-  @apply mr-1;
+[data-blok-popover-item-icon][data-blok-tool] {
+  @apply mr-2;
 }
 
-.blok-popover-item__title {
+/* Wobble animation on error */
+[data-blok-popover-item-icon][data-blok-popover-item-wobble] {
+  @apply animate-wobble;
+}
+
+[data-blok-popover-item-title] {
   @apply text-sm leading-5 font-medium overflow-hidden whitespace-nowrap text-ellipsis mr-auto mobile:text-base;
 }
 
-.blok-popover-item__secondary-title {
+[data-blok-popover-item-secondary-title] {
   @apply text-xs whitespace-nowrap pr-1.5 opacity-60 tracking-[-0.1em] mobile:hidden;
   color: theme('colors.text-secondary');
 }
@@ -198,11 +204,11 @@
 /**
  * Popover header styles
  */
-.blok-popover-header__text {
+[data-blok-popover-header-text] {
   @apply text-lg font-semibold;
 }
 
-.blok-popover-header__back-button {
+[data-blok-popover-header-back-button] {
   @apply border-0 bg-transparent w-9 h-9;
   color: theme('colors.text-primary');
 

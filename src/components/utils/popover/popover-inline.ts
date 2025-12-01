@@ -3,7 +3,7 @@ import type { PopoverItem } from './components/popover-item';
 import { PopoverItemDefault, PopoverItemType } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import { PopoverDesktop } from './popover-desktop';
-import { CSSVariables, css } from './popover.const';
+import { CSSVariables, DATA_ATTR, getNestedLevelAttrValue } from './popover.const';
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
@@ -21,7 +21,6 @@ export class PopoverInline extends PopoverDesktop {
     super(
       {
         ...params,
-        class: css.popoverInline,
       },
       {
         [PopoverItemType.Default]: {
@@ -49,6 +48,9 @@ export class PopoverInline extends PopoverDesktop {
         },
       }
     );
+
+    // Mark as inline popover for CSS styling
+    this.nodes.popover.setAttribute(DATA_ATTR.popoverInline, '');
 
     this.flipper?.setHandleContentEditableTargets(true);
 
@@ -188,10 +190,10 @@ export class PopoverInline extends PopoverDesktop {
     });
 
     /**
-     * We need to add class with nesting level, which will help position nested popover.
-     * Currently only '.blok-popover--nested-level-1' class is used
+     * We need to add data attribute with nesting level, which will help position nested popover.
+     * Currently only 'level-1' is used
      */
-    nestedPopoverEl.classList.add(css.getPopoverNestedClass(nestedPopover.nestingLevel));
+    nestedPopoverEl.setAttribute(DATA_ATTR.nestedLevel, getNestedLevelAttrValue(nestedPopover.nestingLevel));
 
     return nestedPopover;
   }

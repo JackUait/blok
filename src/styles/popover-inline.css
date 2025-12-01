@@ -3,13 +3,14 @@
  *
  * Uses @apply where possible, CSS variables for dynamic values only.
  * Static sizing values use theme() functions per CSS-to-Tailwind migration.
+ * State-based styling uses data attributes for JavaScript integration.
  *
  * Dynamic variables retained for JavaScript integration:
  * - --height, --height-mobile: Popover height (can be overridden)
  * - --inline-popover-width: Dynamic width set by JavaScript
  * - --width: Nested popover width set dynamically
  */
-.blok-popover--inline {
+[data-blok-popover-inline] {
   /* Dynamic sizing variables - retained for runtime manipulation */
   --height: 38px;
   --height-mobile: 46px;
@@ -17,7 +18,7 @@
   @apply relative;
 }
 
-.blok-popover--inline.blok-popover--opened {
+[data-blok-popover-inline][data-blok-popover-opened] {
   @apply inline-block;
   width: var(--inline-popover-width, max-content);
   height: var(--height);
@@ -27,15 +28,15 @@
   }
 }
 
-.blok-popover--inline .blok-popover__custom-content {
+[data-blok-popover-inline] [data-blok-popover-custom-content] {
   @apply mb-0;
 }
 
-.blok-popover--inline .blok-popover__items {
+[data-blok-popover-inline] [data-blok-popover-items] {
   @apply flex;
 }
 
-.blok-popover--inline .blok-popover__container {
+[data-blok-popover-inline] [data-blok-popover-container] {
   @apply flex-row top-0 min-w-max w-max p-1 mobile:absolute;
   height: var(--height);
   animation: none;
@@ -48,23 +49,23 @@
 /**
  * Popover item styles
  */
-.blok-popover--inline .blok-popover-item-separator {
+[data-blok-popover-inline] [data-blok-popover-item-separator] {
   @apply px-1 py-0;
 }
 
-.blok-popover--inline .blok-popover-item-separator__line {
+[data-blok-popover-inline] [data-blok-popover-item-separator-line] {
   @apply h-full w-px;
 }
 
-.blok-popover--inline .blok-popover-item {
+[data-blok-popover-inline] [data-blok-popover-item] {
   @apply rounded p-1;
 }
 
-.blok-popover--inline .blok-popover-item__icon--tool {
+[data-blok-popover-inline] [data-blok-popover-item-icon][data-blok-tool] {
   @apply shadow-none bg-transparent mr-0;
 }
 
-.blok-popover--inline .blok-popover-item__icon {
+[data-blok-popover-inline] [data-blok-popover-item-icon] {
   @apply w-auto h-auto;
 
   svg {
@@ -78,19 +79,19 @@
   }
 }
 
-.blok-popover--inline .blok-popover-item:not(:last-of-type) {
+[data-blok-popover-inline] [data-blok-popover-item]:not(:last-of-type) {
   @apply mb-0;
 }
 
-.blok-popover--inline .blok-popover-item-html {
+[data-blok-popover-inline] [data-blok-popover-item-html] {
   @apply flex items-center;
 }
 
-.blok-popover--inline .blok-popover-item__icon--chevron-right {
+[data-blok-popover-inline] [data-blok-popover-item-icon-chevron-right] {
   @apply rotate-90;
 }
 
-.blok-popover--inline .blok-popover--nested-level-1 .blok-popover__container {
+[data-blok-popover-inline] [data-blok-nested-level="level-1"] [data-blok-popover-container] {
   @apply left-0;
   top: calc(var(--height) + 3px);
 
@@ -102,33 +103,33 @@
 /**
  * Nested popovers should look like regular desktop popovers, hence these overrides
  */
-.blok-popover--inline .blok-popover--nested .blok-popover__container {
+[data-blok-popover-inline] [data-blok-nested] [data-blok-popover-container] {
   @apply h-fit p-1.5 flex-col;
   /* --width is a dynamic variable set by JavaScript for nested popovers */
   min-width: var(--width);
   width: var(--width);
 }
 
-.blok-popover--inline .blok-popover--nested .blok-popover__items {
+[data-blok-popover-inline] [data-blok-nested] [data-blok-popover-items] {
   @apply block w-full;
 }
 
-.blok-popover--inline .blok-popover--nested .blok-popover-item {
+[data-blok-popover-inline] [data-blok-nested] [data-blok-popover-item] {
   @apply rounded-md p-[3px] mobile:p-1;
 }
 
-.blok-popover--inline .blok-popover--nested .blok-popover-item__icon--tool {
-  @apply mr-1;
+[data-blok-popover-inline] [data-blok-nested] [data-blok-popover-item-icon][data-blok-tool] {
+  @apply mr-2;
 }
 
-.blok-popover--inline .blok-popover--nested .blok-popover-item__icon {
+[data-blok-popover-inline] [data-blok-nested] [data-blok-popover-item-icon] {
   @apply w-toolbox-btn h-toolbox-btn;
 }
 
-.blok-popover--inline .blok-popover--nested .blok-popover-item-separator {
+[data-blok-popover-inline] [data-blok-nested] [data-blok-popover-item-separator] {
   @apply py-1 px-[3px];
 }
 
-.blok-popover--inline .blok-popover--nested .blok-popover-item-separator__line {
+[data-blok-popover-inline] [data-blok-nested] [data-blok-popover-item-separator-line] {
   @apply w-full h-px;
 }

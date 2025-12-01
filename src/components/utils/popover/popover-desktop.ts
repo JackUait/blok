@@ -5,7 +5,7 @@ import { PopoverItemSeparator, css as popoverItemCls } from './components/popove
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { keyCodes } from '../../utils';
-import { CSSVariables, css, DATA_ATTRIBUTE_OPEN_TOP, DATA_ATTRIBUTE_OPEN_LEFT, DATA_ATTRIBUTE_NESTED } from './popover.const';
+import { CSSVariables, css, DATA_ATTR } from './popover.const';
 import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent } from './components/search-input';
 import { PopoverItemDefault } from './components/popover-item';
@@ -79,8 +79,7 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (this.nestingLevel > 0) {
-      this.nodes.popover.classList.add(css.popoverNested);
-      this.nodes.popover.setAttribute(DATA_ATTRIBUTE_NESTED, 'true');
+      this.nodes.popover.setAttribute(DATA_ATTR.nested, 'true');
     }
 
     if (params.scopeElement !== undefined) {
@@ -170,13 +169,11 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nodes.popover.style.setProperty(CSSVariables.PopoverHeight, this.size.height + 'px');
 
     if (!this.trigger && !this.shouldOpenBottom) {
-      this.nodes.popover.classList.add(css.popoverOpenTop);
-      this.nodes.popover.setAttribute(DATA_ATTRIBUTE_OPEN_TOP, 'true');
+      this.nodes.popover.setAttribute(DATA_ATTR.openTop, 'true');
     }
 
     if (!this.trigger && !this.shouldOpenRight) {
-      this.nodes.popover.classList.add(css.popoverOpenLeft);
-      this.nodes.popover.setAttribute(DATA_ATTRIBUTE_OPEN_LEFT, 'true');
+      this.nodes.popover.setAttribute(DATA_ATTR.openLeft, 'true');
     }
 
     super.show();
@@ -427,12 +424,11 @@ export class PopoverDesktop extends PopoverAbstract {
     popoverClone.style.position = 'absolute';
     popoverClone.style.top = '-1000px';
 
-    popoverClone.classList.add(css.popoverOpened);
-    popoverClone.setAttribute('data-blok-popover-opened', 'true');
-    popoverClone.querySelector(`[${DATA_ATTRIBUTE_NESTED}]`)?.remove();
+    popoverClone.setAttribute(DATA_ATTR.opened, 'true');
+    popoverClone.querySelector(`[${DATA_ATTR.nested}]`)?.remove();
     document.body.appendChild(popoverClone);
 
-    const container = popoverClone.querySelector('.' + css.popoverContainer) as HTMLElement;
+    const container = popoverClone.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement;
 
     size.height = container.offsetHeight;
     size.width = container.offsetWidth;
@@ -530,9 +526,9 @@ export class PopoverDesktop extends PopoverAbstract {
   private toggleNothingFoundMessage(isDisplayed: boolean): void {
     this.nodes.nothingFoundMessage.classList.toggle(css.nothingFoundMessageDisplayed, isDisplayed);
     if (isDisplayed) {
-      this.nodes.nothingFoundMessage.setAttribute('data-blok-nothing-found-displayed', 'true');
+      this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
     } else {
-      this.nodes.nothingFoundMessage.removeAttribute('data-blok-nothing-found-displayed');
+      this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
     }
   }
 }

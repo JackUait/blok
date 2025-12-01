@@ -1,11 +1,16 @@
 /**
- * CSS class names to be used in popover separator class
- *
- * Note: 'blok-popover-item-separator' BEM class is kept on container for
- * context-specific CSS overrides (e.g., popover-inline.css)
+ * Tailwind CSS classes for popover separator component
  */
 export const css = {
-  container: 'blok-popover-item-separator py-1 px-[3px]',
-  line: 'blok-popover-item-separator__line h-px w-full bg-[var(--color-border)]',
-  hidden: 'hidden',
+  container: 'py-1 px-[3px]',
+  line: 'h-px w-full bg-popover-border',
 };
+
+/**
+ * Data attributes for popover separator
+ */
+export const DATA_ATTR = {
+  root: 'data-blok-popover-item-separator',
+  line: 'data-blok-popover-item-separator-line',
+  hidden: 'data-blok-hidden',
+} as const;

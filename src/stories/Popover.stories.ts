@@ -128,9 +128,9 @@ export const ItemHoverState: Story = {
       const popoverItem = document.querySelector(POPOVER_ITEM_TESTID);
 
       if (popoverItem) {
-        // Add force-hover class to show hover styles in headless browsers
-        // eslint-disable-next-line internal-storybook/no-class-selectors
-        popoverItem.classList.add('is-force-hover');
+        // Add data-blok-force-hover attribute to show hover styles in headless browsers
+        // The CSS uses this attribute instead of :hover for testing compatibility
+        popoverItem.setAttribute('data-blok-force-hover', 'true');
         await userEvent.hover(popoverItem);
       }
     });

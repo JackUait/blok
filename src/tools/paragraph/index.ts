@@ -167,7 +167,7 @@ export default class Paragraph implements BlockTool {
   private drawView(): HTMLDivElement {
     const div = document.createElement('DIV') as HTMLDivElement;
 
-    div.classList.add(this._CSS.wrapper, this._CSS.block);
+    div.classList.add(this._CSS.wrapper, ...this._CSS.block.split(' '));
     div.contentEditable = 'false';
     div.setAttribute('data-placeholder-active', this.api.i18n.t(this._placeholder));
 

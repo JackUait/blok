@@ -1,14 +1,14 @@
-import { bem } from '../../../../bem';
-
 /**
- * Popover item block CSS class constructor
- */
-const className = bem('blok-popover-item-html');
-
-/**
- * CSS class names to be used in popover item class
+ * Tailwind CSS classes for popover item HTML component
  */
 export const css = {
-  root: className(),
-  hidden: className(null, 'hidden'),
+  root: 'flex items-center',
 };
+
+/**
+ * Data attributes for popover item HTML
+ */
+export const DATA_ATTR = {
+  root: 'data-blok-popover-item-html',
+  hidden: 'data-blok-hidden',
+} as const;

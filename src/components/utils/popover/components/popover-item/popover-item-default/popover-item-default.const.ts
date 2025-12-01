@@ -1,129 +1,68 @@
 /**
- * CSS class names to be used in popover item class
+ * CSS class names for popover item
  *
- * Architecture:
- * - BEM classes (blok-popover-item*): Required for CSS variable scoping, complex state selectors,
- *   and nested element styling in popover.css (e.g., confirmation state color overrides)
- * - Tailwind utilities: Used for simple, static styles that don't require CSS file definitions
- *
- * Note: Some styles must remain in popover.css due to:
- * - CSS variable usage (--color-*, --icon-size, etc.)
- * - Complex selectors (&--confirmation .blok-popover-item__title)
- * - Media query hover states (@media (hover: hover))
- * - Pseudo-selectors with state combinations
+ * Note: Most styling is now handled via data attributes in CSS.
+ * Only `focused` is retained for DomIterator/Flipper keyboard navigation compatibility.
  */
 export const css = {
   /**
-   * Container - BEM class required for:
-   * - CSS variable scoping (--border-radius, --item-padding)
-   * - Complex state selectors in popover.css
-   * - External references (tests, other components)
-   */
-  container: 'blok-popover-item',
-
-  /**
-   * Active state - is-* class required for:
-   * - CSS variable color (--color-background-icon-active, --color-text-icon-active)
-   * - External selectors (inline-tool-bold.ts, tests)
-   */
-  active: 'is-active',
-
-  /**
-   * Disabled state - is-* class for CSS variable color (--color-text-secondary)
-   * Combined with Tailwind utilities for cursor and pointer-events
-   */
-  disabled: 'is-disabled',
-  disabledCursor: 'cursor-default',
-  disabledPointerEvents: 'pointer-events-none',
-
-  /**
-   * Focused state - is-* class required for:
-   * - Complex CSS selectors with no-focus modifier
-   * - CSS variable background (--color-background-item-focus)
+   * Focused state class for DomIterator/Flipper keyboard navigation.
+   * Used alongside data-blok-focused attribute.
    */
   focused: 'is-focused',
-
-  /** Hidden state - Tailwind utility with important modifier */
-  hidden: '!hidden',
-
-  /**
-   * Confirmation state - is-* class required for:
-   * - CSS variable backgrounds (--color-background-item-confirm*)
-   * - Nested element color overrides (.blok-popover-item__title, .blok-popover-item__icon)
-   */
-  confirmationState: 'is-confirmation',
-
-  /**
-   * No hover/focus behavior - BEM classes required for:
-   * - CSS hover media query selectors (@media (hover: hover))
-   * - Complex :not() selectors in popover.css
-   */
-  noHover: 'blok-popover-item--no-hover',
-  noFocus: 'blok-popover-item--no-focus',
-
-  /**
-   * Title - BEM class required for:
-   * - Confirmation state color override in popover.css
-   * - CSS variable usage for responsive sizing
-   */
-  title: 'blok-popover-item__title',
-
-  /**
-   * Secondary title - BEM class required for:
-   * - CSS variable color (--color-text-secondary)
-   * - Responsive hiding (mobile:hidden)
-   */
-  secondaryTitle: 'blok-popover-item__secondary-title',
-
-  /**
-   * Icon - BEM class required for:
-   * - Confirmation state color override in popover.css
-   * - CSS variable sizing (--icon-size)
-   * - Responsive sizing (mobile:w-9 mobile:h-9)
-   */
-  icon: 'blok-popover-item__icon',
-
-  /** Icon tool margin - Tailwind utility for spacing between icon and title */
-  iconToolMargin: 'mr-2',
-
-  /** Icon chevron right - BEM class for potential future styling */
-  iconChevronRight: 'blok-popover-item__icon--chevron-right',
-
-  /** Wobble animation - defined in tailwind.config.js keyframes */
-  wobbleAnimation: 'animate-wobble',
 };
 
 /**
- * Data attribute name for active state
+ * Data attributes for popover item state management
  */
-export const DATA_ATTRIBUTE_ACTIVE = 'data-blok-popover-item-active';
+export const DATA_ATTR = {
+  item: 'data-blok-popover-item',
+  icon: 'data-blok-popover-item-icon',
+  iconTool: 'data-blok-tool',
+  iconChevronRight: 'data-blok-popover-item-icon-chevron-right',
+  title: 'data-blok-popover-item-title',
+  secondaryTitle: 'data-blok-popover-item-secondary-title',
+  active: 'data-blok-popover-item-active',
+  hidden: 'data-blok-hidden',
+  confirmation: 'data-blok-popover-item-confirmation',
+  noHover: 'data-blok-popover-item-no-hover',
+  noFocus: 'data-blok-popover-item-no-focus',
+  focused: 'data-blok-focused',
+  wobble: 'data-blok-popover-item-wobble',
+  disabled: 'data-blok-disabled',
+} as const;
 
 /**
- * Data attribute name for hidden state
+ * @deprecated Use DATA_ATTR.active instead
  */
-export const DATA_ATTRIBUTE_HIDDEN = 'data-blok-hidden';
+export const DATA_ATTRIBUTE_ACTIVE = DATA_ATTR.active;
 
 /**
- * Data attribute name for confirmation state
+ * @deprecated Use DATA_ATTR.hidden instead
  */
-export const DATA_ATTRIBUTE_CONFIRMATION = 'data-blok-popover-item-confirmation';
+export const DATA_ATTRIBUTE_HIDDEN = DATA_ATTR.hidden;
 
 /**
- * Data attribute name for no-hover state
+ * @deprecated Use DATA_ATTR.confirmation instead
  */
-export const DATA_ATTRIBUTE_NO_HOVER = 'data-blok-popover-item-no-hover';
+export const DATA_ATTRIBUTE_CONFIRMATION = DATA_ATTR.confirmation;
 
 /**
- * Data attribute name for no-focus state
+ * @deprecated Use DATA_ATTR.noHover instead
  */
-export const DATA_ATTRIBUTE_NO_FOCUS = 'data-blok-popover-item-no-focus';
+export const DATA_ATTRIBUTE_NO_HOVER = DATA_ATTR.noHover;
 
 /**
- * Data attribute name for focused state (managed by DomIterator)
+ * @deprecated Use DATA_ATTR.noFocus instead
  */
-export const DATA_ATTRIBUTE_FOCUSED = 'data-blok-focused';
+export const DATA_ATTRIBUTE_NO_FOCUS = DATA_ATTR.noFocus;
 
 /**
- * Data attribute name for wobble animation state
+ * @deprecated Use DATA_ATTR.focused instead
  */
-export const DATA_ATTRIBUTE_WOBBLE = 'data-blok-popover-item-wobble';
+export const DATA_ATTRIBUTE_FOCUSED = DATA_ATTR.focused;
+
+/**
+ * @deprecated Use DATA_ATTR.wobble instead
+ */
+export const DATA_ATTRIBUTE_WOBBLE = DATA_ATTR.wobble;

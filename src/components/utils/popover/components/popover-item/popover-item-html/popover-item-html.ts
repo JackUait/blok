@@ -1,6 +1,6 @@
 import { PopoverItem } from '../popover-item';
 import type { PopoverItemHtmlParams, PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
-import { css } from './popover-item-html.const';
+import { css, DATA_ATTR } from './popover-item-html.const';
 import Dom from '../../../../../dom';
 
 /**
@@ -22,7 +22,9 @@ export class PopoverItemHtml extends PopoverItem {
     super(params);
 
     this.nodes = {
-      root: Dom.make('div', css.root),
+      root: Dom.make('div', css.root, {
+        [DATA_ATTR.root]: '',
+      }),
     };
 
     this.nodes.root.appendChild(params.element);
@@ -53,12 +55,10 @@ export class PopoverItemHtml extends PopoverItem {
    * @param isHidden - true if item should be hidden
    */
   public toggleHidden(isHidden: boolean): void {
-    this.nodes.root?.classList.toggle(css.hidden, isHidden);
-
     if (isHidden) {
-      this.nodes.root?.setAttribute('data-blok-hidden', 'true');
+      this.nodes.root?.setAttribute(DATA_ATTR.hidden, 'true');
     } else {
-      this.nodes.root?.removeAttribute('data-blok-hidden');
+      this.nodes.root?.removeAttribute(DATA_ATTR.hidden);
     }
   }
 

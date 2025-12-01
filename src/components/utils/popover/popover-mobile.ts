@@ -5,7 +5,7 @@ import { PopoverStatesHistory } from './utils/popover-states-history';
 import type { PopoverMobileNodes, PopoverParams } from '@/types/utils/popover/popover';
 import type { PopoverItemDefault, PopoverItemParams } from './components/popover-item';
 import { PopoverItemType } from './components/popover-item';
-import { css } from './popover.const';
+import { DATA_ATTR } from './popover.const';
 import Dom from '../../dom';
 
 
@@ -55,7 +55,11 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
       },
     });
 
-    this.nodes.overlay = Dom.make('div', [css.overlay, css.overlayHidden]);
+    this.nodes.overlay = Dom.make('div', [], {
+      [DATA_ATTR.popoverOverlay]: '',
+      [DATA_ATTR.overlayHidden]: '',
+      'data-blok-testid': 'popover-overlay',
+    });
     this.nodes.popover.insertBefore(this.nodes.overlay, this.nodes.popover.firstChild);
 
     this.listeners.on(this.nodes.overlay, 'click', () => {
@@ -70,7 +74,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    * Open popover
    */
   public show(): void {
-    this.nodes.overlay.classList.remove(css.overlayHidden);
+    this.nodes.overlay.removeAttribute(DATA_ATTR.overlayHidden);
 
     super.show();
 
@@ -88,7 +92,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     }
 
     super.hide();
-    this.nodes.overlay.classList.add(css.overlayHidden);
+    this.nodes.overlay.setAttribute(DATA_ATTR.overlayHidden, '');
 
     this.scrollLocker.unlock();
 

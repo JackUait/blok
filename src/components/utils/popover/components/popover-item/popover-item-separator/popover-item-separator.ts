@@ -1,6 +1,6 @@
 import Dom from '../../../../../dom';
 import { PopoverItem } from '../popover-item';
-import { css } from './popover-item-separator.const';
+import { css, DATA_ATTR } from './popover-item-separator.const';
 
 /**
  * Represents popover separator node
@@ -18,8 +18,12 @@ export class PopoverItemSeparator extends PopoverItem {
     super();
 
     this.nodes = {
-      root: Dom.make('div', css.container),
-      line: Dom.make('div', css.line),
+      root: Dom.make('div', css.container, {
+        [DATA_ATTR.root]: '',
+      }),
+      line: Dom.make('div', css.line, {
+        [DATA_ATTR.line]: '',
+      }),
     };
 
     this.nodes.root.setAttribute('data-blok-testid', 'popover-item-separator');
@@ -38,12 +42,10 @@ export class PopoverItemSeparator extends PopoverItem {
    * @param isHidden - true if item should be hidden
    */
   public toggleHidden(isHidden: boolean): void {
-    this.nodes.root?.classList.toggle(css.hidden, isHidden);
-
     if (isHidden) {
-      this.nodes.root?.setAttribute('data-blok-hidden', 'true');
+      this.nodes.root?.setAttribute(DATA_ATTR.hidden, 'true');
     } else {
-      this.nodes.root?.removeAttribute('data-blok-hidden');
+      this.nodes.root?.removeAttribute(DATA_ATTR.hidden);
     }
   }
 }

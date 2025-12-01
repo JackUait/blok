@@ -7,16 +7,7 @@ import type {
   PopoverItemType
 } from '@/types/utils/popover/popover-item';
 import { PopoverItem } from '../popover-item';
-import {
-  css,
-  DATA_ATTRIBUTE_ACTIVE,
-  DATA_ATTRIBUTE_HIDDEN,
-  DATA_ATTRIBUTE_CONFIRMATION,
-  DATA_ATTRIBUTE_NO_HOVER,
-  DATA_ATTRIBUTE_NO_FOCUS,
-  DATA_ATTRIBUTE_FOCUSED,
-  DATA_ATTRIBUTE_WOBBLE
-} from './popover-item-default.const';
+import { DATA_ATTR } from './popover-item-default.const';
 import { PopoverItemDefaultComponent } from './PopoverItemDefaultComponent';
 
 /**
@@ -89,7 +80,7 @@ export class PopoverItemDefault extends PopoverItem {
       return false;
     }
 
-    return this.nodes.root.hasAttribute(DATA_ATTRIBUTE_FOCUSED);
+    return this.nodes.root.hasAttribute(DATA_ATTR.focused);
   }
 
   /**
@@ -155,14 +146,12 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    const shouldBeActive = isActive !== undefined ? isActive : !this.nodes.root.classList.contains(css.active);
-
-    this.nodes.root.classList.toggle(css.active, shouldBeActive);
+    const shouldBeActive = isActive !== undefined ? isActive : !this.nodes.root.hasAttribute(DATA_ATTR.active);
 
     if (shouldBeActive) {
-      this.nodes.root.setAttribute(DATA_ATTRIBUTE_ACTIVE, 'true');
+      this.nodes.root.setAttribute(DATA_ATTR.active, 'true');
     } else {
-      this.nodes.root.removeAttribute(DATA_ATTRIBUTE_ACTIVE);
+      this.nodes.root.removeAttribute(DATA_ATTR.active);
     }
   }
 
@@ -171,12 +160,10 @@ export class PopoverItemDefault extends PopoverItem {
    * @param isHidden - true if item should be hidden
    */
   public override toggleHidden(isHidden: boolean): void {
-    this.nodes.root?.classList.toggle(css.hidden, isHidden);
-
     if (isHidden) {
-      this.nodes.root?.setAttribute(DATA_ATTRIBUTE_HIDDEN, 'true');
+      this.nodes.root?.setAttribute(DATA_ATTR.hidden, 'true');
     } else {
-      this.nodes.root?.removeAttribute(DATA_ATTRIBUTE_HIDDEN);
+      this.nodes.root?.removeAttribute(DATA_ATTR.hidden);
     }
   }
 
@@ -251,8 +238,7 @@ export class PopoverItemDefault extends PopoverItem {
     const confirmationEl = this.make(params, this.renderParams);
 
     this.nodes.root.innerHTML = confirmationEl.innerHTML;
-    this.nodes.root.classList.add(css.confirmationState);
-    this.nodes.root.setAttribute(DATA_ATTRIBUTE_CONFIRMATION, 'true');
+    this.nodes.root.setAttribute(DATA_ATTR.confirmation, 'true');
 
     // Update icon reference after innerHTML change
     this.nodes.icon = this.nodes.root.querySelector(ICON_SELECTOR);
@@ -272,8 +258,7 @@ export class PopoverItemDefault extends PopoverItem {
     const itemWithOriginalParams = this.make(this.params, this.renderParams);
 
     this.nodes.root.innerHTML = itemWithOriginalParams.innerHTML;
-    this.nodes.root.classList.remove(css.confirmationState);
-    this.nodes.root.removeAttribute(DATA_ATTRIBUTE_CONFIRMATION);
+    this.nodes.root.removeAttribute(DATA_ATTR.confirmation);
 
     // Update icon reference after innerHTML change
     this.nodes.icon = this.nodes.root.querySelector(ICON_SELECTOR);
@@ -288,10 +273,8 @@ export class PopoverItemDefault extends PopoverItem {
    * This is needed to prevent item from being highlighted as hovered/focused just after click.
    */
   private enableSpecialHoverAndFocusBehavior(): void {
-    this.nodes.root?.classList.add(css.noHover);
-    this.nodes.root?.classList.add(css.noFocus);
-    this.nodes.root?.setAttribute(DATA_ATTRIBUTE_NO_HOVER, 'true');
-    this.nodes.root?.setAttribute(DATA_ATTRIBUTE_NO_FOCUS, 'true');
+    this.nodes.root?.setAttribute(DATA_ATTR.noHover, 'true');
+    this.nodes.root?.setAttribute(DATA_ATTR.noFocus, 'true');
 
     this.nodes.root?.addEventListener('mouseleave', this.removeSpecialHoverBehavior, { once: true });
   }
@@ -310,16 +293,14 @@ export class PopoverItemDefault extends PopoverItem {
    * Removes class responsible for special focus behavior on an item
    */
   private removeSpecialFocusBehavior = (): void => {
-    this.nodes.root?.classList.remove(css.noFocus);
-    this.nodes.root?.removeAttribute(DATA_ATTRIBUTE_NO_FOCUS);
+    this.nodes.root?.removeAttribute(DATA_ATTR.noFocus);
   };
 
   /**
    * Removes class responsible for special hover behavior on an item
    */
   private removeSpecialHoverBehavior = (): void => {
-    this.nodes.root?.classList.remove(css.noHover);
-    this.nodes.root?.removeAttribute(DATA_ATTRIBUTE_NO_HOVER);
+    this.nodes.root?.removeAttribute(DATA_ATTR.noHover);
   };
 
   /**
@@ -343,12 +324,11 @@ export class PopoverItemDefault extends PopoverItem {
    * Animates item which symbolizes that error occurred while executing 'onActivate()' callback
    */
   private animateError(): void {
-    if (this.nodes.icon?.hasAttribute(DATA_ATTRIBUTE_WOBBLE)) {
+    if (this.nodes.icon?.hasAttribute(DATA_ATTR.wobble)) {
       return;
     }
 
-    this.nodes.icon?.classList.add(css.wobbleAnimation);
-    this.nodes.icon?.setAttribute(DATA_ATTRIBUTE_WOBBLE, 'true');
+    this.nodes.icon?.setAttribute(DATA_ATTR.wobble, 'true');
 
     this.nodes.icon?.addEventListener('animationend', this.onErrorAnimationEnd);
   }
@@ -357,8 +337,7 @@ export class PopoverItemDefault extends PopoverItem {
    * Handles finish of error animation
    */
   private onErrorAnimationEnd = (): void => {
-    this.nodes.icon?.classList.remove(css.wobbleAnimation);
-    this.nodes.icon?.removeAttribute(DATA_ATTRIBUTE_WOBBLE);
+    this.nodes.icon?.removeAttribute(DATA_ATTR.wobble);
     this.nodes.icon?.removeEventListener('animationend', this.onErrorAnimationEnd);
   };
 }

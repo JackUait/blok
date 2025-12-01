@@ -1,6 +1,6 @@
 import React from 'react';
 import { IconChevronRight } from '../../../../../icons';
-import { css, DATA_ATTRIBUTE_ACTIVE } from './popover-item-default.const';
+import { DATA_ATTR } from './popover-item-default.const';
 
 /**
  * Props for the PopoverItemDefaultComponent
@@ -73,17 +73,8 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
   name,
   iconWithGap = true,
 }) => {
-  const containerClasses = [
-    css.container,
-    isActive ? css.active : '',
-    isDisabled ? css.disabled : '',
-    isDisabled ? css.disabledCursor : '',
-    isDisabled ? css.disabledPointerEvents : '',
-  ].filter(c => c !== '').join(' ');
-
-  const iconClasses = iconWithGap
-    ? `${css.icon} ${css.iconToolMargin}`
-    : css.icon;
+  // Tailwind classes for disabled state
+  const containerClasses = isDisabled ? 'cursor-default pointer-events-none' : '';
 
   const showChevron = hasChildren && !hideChevron;
 
@@ -91,14 +82,15 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
     <>
       {icon && (
         <div
-          className={iconClasses}
+          {...{ [DATA_ATTR.icon]: '' }}
+          {...(iconWithGap && { [DATA_ATTR.iconTool]: '' })}
           data-blok-testid="popover-item-icon"
           dangerouslySetInnerHTML={{ __html: icon }}
         />
       )}
       {title !== undefined && (
         <div
-          className={css.title}
+          {...{ [DATA_ATTR.title]: '' }}
           data-blok-testid="popover-item-title"
         >
           {title}
@@ -106,7 +98,7 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
       )}
       {secondaryLabel && (
         <div
-          className={css.secondaryTitle}
+          {...{ [DATA_ATTR.secondaryTitle]: '' }}
           data-blok-testid="popover-item-secondary-title"
         >
           {secondaryLabel}
@@ -114,7 +106,7 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
       )}
       {showChevron && (
         <div
-          className={`${css.icon} ${css.iconChevronRight}`}
+          {...{ [DATA_ATTR.icon]: '', [DATA_ATTR.iconChevronRight]: '' }}
           data-blok-testid="popover-item-chevron-right"
           dangerouslySetInnerHTML={{ __html: IconChevronRight }}
         />
@@ -123,11 +115,12 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
   );
 
   const commonProps = {
-    className: containerClasses,
+    className: containerClasses || undefined,
+    [DATA_ATTR.item]: '',
     'data-blok-testid': 'popover-item',
     ...(name && { 'data-blok-item-name': name }),
-    ...(isDisabled && { 'data-blok-disabled': 'true' }),
-    ...(isActive && { [DATA_ATTRIBUTE_ACTIVE]: 'true' }),
+    ...(isDisabled && { [DATA_ATTR.disabled]: 'true' }),
+    ...(isActive && { [DATA_ATTR.active]: 'true' }),
   };
 
   if (wrapperTag === 'button') {

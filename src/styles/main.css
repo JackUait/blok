@@ -6,7 +6,6 @@
 /* Project styles */
 @import './variables.css';
 @import './ui.css';
-@import './export.css';
 @import './rtl.css';
 @import './input.css';
 @import './popover.css';

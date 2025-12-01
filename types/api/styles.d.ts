@@ -18,8 +18,9 @@ export interface Styles {
   /**
    * Base block styles - applied to block tool wrappers.
    * Provides vertical padding for consistent block spacing.
+   * Includes placeholder styling via pseudo-element.
    *
-   * @example 'py-[0.4em] px-0'
+   * @example 'py-[theme(spacing.block-padding-vertical)] px-0 [&::-webkit-input-placeholder]:!leading-normal'
    */
   block: string;
 
@@ -41,23 +42,24 @@ export interface Styles {
 
   /**
    * Styles for input elements.
-   * Provides full width, border, padding, and shadow.
+   * Provides full width, border, padding, shadow, and Firefox placeholder workaround.
    *
-   * @example 'w-full rounded-[3px] border border-line-gray px-3 py-2.5 outline-none'
+   * @example 'w-full rounded-[3px] border border-line-gray px-3 py-2.5 outline-none shadow-input'
    */
   input: string;
 
   /**
    * Loader styles for loading states.
-   * Provides relative positioning and border. Combine with CSS animation.
+   * Provides relative positioning, border, and spinning animation.
    *
-   * @example 'relative border border-line-gray'
+   * @example 'relative border border-line-gray before:animate-rotation'
    */
   loader: string;
 
   /**
    * Styles for Settings box buttons.
-   * Provides flexbox centering, transparent background, and minimum sizing.
+   * Provides flexbox centering, transparent background, minimum sizing,
+   * mobile responsive sizing, and hover states.
    *
    * @example 'inline-flex items-center justify-center rounded-[3px] cursor-pointer'
    */
@@ -72,8 +74,24 @@ export interface Styles {
   settingsButtonActive: string;
 
   /**
+   * Styles for focused Settings box buttons.
+   * Apply alongside settingsButton when the button has focus.
+   *
+   * @example 'shadow-button-focused bg-item-focus-bg'
+   */
+  settingsButtonFocused: string;
+
+  /**
+   * Styles for focused Settings box buttons with animation.
+   * Apply alongside settingsButton and settingsButtonFocused for click animation.
+   *
+   * @example 'animate-button-clicked'
+   */
+  settingsButtonFocusedAnimated: string;
+
+  /**
    * Styles for general buttons.
-   * Provides padding, border, background, and shadow.
+   * Provides padding, border, background, shadow, hover states, and SVG styling.
    *
    * @example 'p-[13px] rounded-[3px] border border-line-gray text-[14.9px] bg-white'
    */

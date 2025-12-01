@@ -1014,13 +1014,17 @@ export default defineConfig(
       // Prevent UMD module patterns
       'import/no-amd': 'error',
       'import/no-commonjs': 'error',
-      // Tailwind CSS rules
-      'tailwindcss/classnames-order': 'warn',
-      'tailwindcss/enforces-negative-arbitrary-values': 'warn',
-      'tailwindcss/enforces-shorthand': 'warn',
-      'tailwindcss/no-arbitrary-value': 'off',
-      'tailwindcss/no-custom-classname': 'off',
-      'tailwindcss/no-contradicting-classname': 'error',
+      // Tailwind CSS rules - best practices
+      'tailwindcss/classnames-order': 'error', // Enforce consistent class ordering for readability
+      'tailwindcss/enforces-negative-arbitrary-values': 'error', // Use -mt-[5px] instead of mt-[-5px]
+      'tailwindcss/enforces-shorthand': 'error', // Use px-2 instead of pl-2 pr-2
+      'tailwindcss/no-arbitrary-value': 'off', // Allow arbitrary values when needed
+      'tailwindcss/no-custom-classname': ['warn', {
+        // Allow custom classes that follow project conventions
+        whitelist: ['blok-.*', 'ce-.*'],
+      }],
+      'tailwindcss/no-contradicting-classname': 'error', // Prevent conflicting classes like flex block
+      'tailwindcss/no-unnecessary-arbitrary-value': 'error', // Use p-4 instead of p-[16px] when equivalent exists
     },
   },
   {

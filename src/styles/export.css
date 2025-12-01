@@ -2,7 +2,7 @@
  * Block Tool wrapper
  */
 .blok-base-element {
-    @apply py-[var(--block-padding-vertical)] px-0;
+    @apply py-[theme('spacing.block-padding-vertical')] px-0;
 
     &::-webkit-input-placeholder {
         @apply !leading-normal;
@@ -13,7 +13,7 @@
  * Input
  */
 .blok-base-input {
-    @apply w-full rounded-[3px] border border-[var(--color-line-gray)] px-3 py-2.5 outline-none;
+    @apply w-full rounded-[3px] border border-line-gray px-3 py-2.5 outline-none;
     box-shadow: inset 0 1px 2px 0 rgba(35, 44, 72, 0.06);
 
     /**
@@ -31,11 +31,12 @@
  */
 .blok-base-settings-button {
     @apply inline-flex items-center justify-center rounded-[3px] cursor-pointer border-0 outline-none bg-transparent align-bottom text-inherit m-0;
-    min-width: var(--toolbox-buttons-size);
-    min-height: var(--toolbox-buttons-size);
+    min-width: theme('width.toolbox-btn');
+    min-height: theme('height.toolbox-btn');
 
     &--focused {
-        @apply --button-focused;
+        /* Expanded --button-focused mixin */
+        @apply shadow-button-focused bg-item-focus-bg;
 
         &-animated {
             animation: buttonClicked 250ms;
@@ -43,28 +44,28 @@
     }
 
     &--active {
-        color: var(--color-active-icon);
+        @apply text-active-icon;
     }
 
     svg {
         @apply w-auto h-auto;
+    }
+}
 
-        @media (--mobile) {
-            width: var(--icon-size--mobile);
-            height: var(--icon-size--mobile);
-        }
+/* Mobile styles for settings button - moved outside nesting to avoid @apply in nested @screen */
+@screen mobile {
+    .blok-base-settings-button {
+        @apply w-toolbox-btn-mobile h-toolbox-btn-mobile rounded-lg;
     }
 
-    @media (--mobile) {
-        width: var(--toolbox-buttons-size--mobile);
-        height: var(--toolbox-buttons-size--mobile);
-        border-radius: 0.5rem;
+    .blok-base-settings-button svg {
+        @apply w-icon-mobile h-icon-mobile;
     }
+}
 
-    @media (--can-hover) {
-        &:hover {
-            background-color: var(--bg-light);
-        }
+@screen can-hover {
+    .blok-base-settings-button:hover {
+        @apply bg-bg-light;
     }
 }
 
@@ -72,13 +73,13 @@
  * Loader
  */
 .blok-base-loader {
-    @apply relative border border-[var(--color-line-gray)];
+    @apply relative border border-line-gray;
 
     &::before {
         @apply absolute left-1/2 top-1/2 w-[18px] h-[18px] rounded-full content-[''];
         margin: -11px 0 0 -11px;
-        border: 2px solid var(--color-line-gray);
-        border-left-color: var(--color-active-icon);
+        border: 2px solid theme('colors.line-gray');
+        border-left-color: theme('colors.active-icon');
         animation: rotation 1.2s infinite linear;
     }
 }
@@ -96,18 +97,17 @@
  * Button
  */
 .blok-base-button {
-    @apply p-[13px] rounded-[3px] border border-[var(--color-line-gray)] text-[14.9px] bg-white text-center cursor-pointer;
+    @apply p-[13px] rounded-[3px] border border-line-gray text-[14.9px] bg-white text-center cursor-pointer text-gray-text;
     box-shadow: 0 2px 2px 0 rgba(18, 30, 57, 0.04);
-    color: var(--grayText);
+}
 
-    @media (--can-hover) {
-        &:hover {
-            background-color: #fbfcfe;
-            box-shadow: 0 1px 3px 0 rgba(18, 30, 57, 0.08);
-        }
+@screen can-hover {
+    .blok-base-button:hover {
+        background-color: #fbfcfe;
+        box-shadow: 0 1px 3px 0 rgba(18, 30, 57, 0.08);
     }
+}
 
-    svg {
-        @apply h-5 mr-[0.2em] -mt-0.5;
-    }
+.blok-base-button svg {
+    @apply h-5 mr-[0.2em] -mt-0.5;
 }

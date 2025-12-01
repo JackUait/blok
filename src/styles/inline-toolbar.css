@@ -2,10 +2,6 @@
   .blok-inline-toolbar {
     --y-offset: 8px;
 
-    /* These variables duplicate the ones defined in popover. @todo move them to single place */
-    --color-background-icon-active: rgba(56, 138, 229, 0.1);
-    --color-text-icon-active: #388ae5;
-    --color-text-primary: black;
 
     @apply absolute top-0 left-0 z-[3] opacity-100 visible transition-opacity duration-[250ms] ease-out will-change-[opacity,left,top];
 
@@ -24,9 +20,9 @@
     &__dropdown {
       @apply flex p-1.5 mx-1.5 -ml-1.5 items-center cursor-pointer border-r border-line-gray box-border;
 
-      @media (--can-hover) {
+      @screen can-hover {
         &:hover {
-          background-color: var(--bg-light);
+          background-color: theme('colors.bg-light');
         }
       }
 
@@ -52,25 +48,25 @@
 
   .blok-inline-tool {
     @apply flex justify-center items-center border-0 rounded h-full p-0 w-7 bg-transparent cursor-pointer leading-normal;
-    color: var(--color-text-primary);
+    color: theme('colors.text-primary');
 
-    @media (--mobile) {
-      width: 2.25rem;
-      height: 2.25rem;
+    @screen mobile {
+      width: theme('width.icon-mobile');
+      height: theme('height.icon-mobile');
     }
 
-    @media (--can-hover) {
+    @screen can-hover {
       &:hover {
-        background-color: #f8f8f8;
+        background-color: theme('colors.item-hover-bg');
       }
     }
 
     svg {
       @apply block w-icon h-icon;
 
-      @media (--mobile) {
-        width: var(--icon-mobile);
-        height: var(--icon-mobile);
+      @screen mobile {
+        width: theme('width.icon-mobile');
+        height: theme('height.icon-mobile');
       }
     }
 
@@ -91,10 +87,10 @@
     }
 
     &-input {
-      @apply hidden w-full m-0 px-2 py-1 text-sm leading-[22px] font-medium bg-[#f8f8f8] border border-[rgba(226,226,229,0.2)] rounded-md outline-none box-border appearance-none;
+      @apply hidden w-full m-0 px-2 py-1 text-sm leading-[22px] font-medium bg-item-hover-bg border border-[rgba(226,226,229,0.2)] rounded-md outline-none box-border appearance-none;
       font-family: inherit;
 
-      @media (--mobile) {
+      @screen mobile {
         font-size: 15px;
         font-weight: 500;
       }
@@ -109,7 +105,7 @@
     }
 
     &--active {
-      @apply bg-[rgba(56,138,229,0.1)] text-[#388ae5];
+      @apply bg-icon-active-bg text-icon-active-text;
     }
   }
 }

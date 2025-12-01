@@ -1,50 +1,32 @@
 /**
  * Popover styles - Tailwind version
  *
- * Uses @apply where possible, CSS variables for dynamic values set via JS
+ * Uses theme() functions for static values, CSS variables only for dynamic values set via JS
  */
 
-/* Popover CSS Variables - kept for JS integration and dynamic calculations */
+/* Popover CSS Variables - only dynamic values that are set via JS or used in complex calculations */
 .blok-popover {
-  /* Design tokens */
-  --border-radius: theme('borderRadius.lg');
+  /* Layout tokens - specific to popover component */
   --width: 200px;
   --max-height: 270px;
-  --padding: theme('spacing.1');
-  --offset-from-target: theme('spacing.2');
-  --color-border: theme('colors.gray.200', #eff0f1);
-  --color-shadow: rgba(13, 20, 33, 0.1);
-  --color-background: theme('colors.white');
-  --color-text-primary: theme('colors.black');
-  --color-text-secondary: theme('colors.gray.500', #707684);
-  --color-border-icon: rgb(201 201 204 / 48%);
-  --color-border-icon-disabled: theme('colors.gray.200', #eff0f1);
-  --color-text-icon-active: theme('colors.blue.500', #388ae5);
-  --color-background-icon-active: rgba(56, 138, 229, 0.1);
-  --color-background-item-focus: rgba(34, 186, 255, 0.08);
-  --color-shadow-item-focus: rgba(7, 161, 227, 0.08);
-  --color-background-item-hover: theme('colors.gray.100', #f8f8f8);
-  --color-background-item-confirm: theme('colors.red.500', #e24a4a);
-  --color-background-item-confirm-hover: theme('colors.red.600', #ce4343);
+  --item-padding: 3px;
+  --item-height: calc(theme('spacing.5') + 2 * var(--item-padding));
 
-  /* Positioning variables (set via JS) */
-  --popover-top: calc(100% + var(--offset-from-target));
+  /* Dynamic positioning variables (set via JS) */
+  --popover-top: calc(100% + theme('spacing.2'));
   --popover-left: 0;
   --nested-popover-overlap: theme('spacing.1');
-  --icon-size: theme('spacing.5');
-  --item-padding: 3px;
-  --item-height: calc(var(--icon-size) + 2 * var(--item-padding));
 }
 
 .blok-popover__container {
   @apply absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none z-[4] max-h-0;
   min-width: var(--width);
   width: var(--width);
-  border-radius: var(--border-radius);
-  box-shadow: 0 3px 15px -3px var(--color-shadow);
+  border-radius: theme('borderRadius.lg');
+  box-shadow: 0 3px 15px -3px theme('colors.popover-shadow');
   left: var(--popover-left);
   top: var(--popover-top);
-  background: var(--color-background);
+  background: theme('colors.popover-bg');
 
   /* Mobile container styles */
   @apply mobile:fixed mobile:max-w-none mobile:rounded-[10px];
@@ -59,9 +41,9 @@
 .blok-popover--opened > .blok-popover__container {
   @apply opacity-100 pointer-events-auto;
   animation: panelShowing 100ms ease;
-  padding: var(--padding);
+  padding: theme('spacing.1');
   max-height: var(--max-height);
-  border: 1px solid var(--color-border);
+  border: 1px solid theme('colors.popover-border');
 
   @screen mobile {
     animation: panelShowingMobile 250ms ease;
@@ -69,8 +51,9 @@
 }
 
 .blok-popover--open-top .blok-popover__container {
-  --popover-top: calc(-1 * (var(--offset-from-target) + var(--popover-height)));
+  --popover-top: calc(-1 * (theme('spacing.2') + var(--popover-height)));
 }
+
 
 .blok-popover--open-left .blok-popover__container {
   --popover-left: calc(-1 * var(--width) + 100%);
@@ -93,7 +76,7 @@
 }
 
 .blok-popover--open-top.blok-popover--nested .blok-popover__container {
-  top: calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + var(--offset-from-target) + var(--nested-popover-overlap));
+  top: calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + theme('spacing.2') + var(--nested-popover-overlap));
 }
 
 .blok-popover--open-left .blok-popover--nested .blok-popover__container {
@@ -113,7 +96,7 @@
 
 .blok-popover-item-separator__line {
   @apply h-px w-full;
-  background: var(--color-border);
+  background: theme('colors.popover-border');
 }
 
 /**
@@ -127,27 +110,26 @@
  * Popover item
  */
 .blok-popover-item {
-  --border-radius: theme('borderRadius.md');
   @apply flex items-center select-none border-none bg-transparent rounded-md mobile:p-1;
   padding: var(--item-padding);
-  color: var(--color-text-primary);
+  color: theme('colors.text-primary');
 
   &:not(:last-of-type) {
     @apply mb-px;
   }
 
   &--active {
-    background: var(--color-background-icon-active);
-    color: var(--color-text-icon-active);
+    background: theme('colors.icon-active-bg');
+    color: theme('colors.icon-active-text');
   }
 
   &--disabled {
     @apply cursor-default pointer-events-none;
-    color: var(--color-text-secondary);
+    color: theme('colors.text-secondary');
   }
 
   &--focused:not(.blok-popover-item--no-focus) {
-    background: var(--color-background-item-focus) !important;
+    background: theme('colors.item-focus-bg') !important;
   }
 
   &--hidden {
@@ -155,39 +137,39 @@
   }
 
   /* Hover styles - only on devices that support hover */
-  @media (hover: hover) {
+  @screen can-hover {
     &:hover {
       @apply cursor-pointer;
     }
 
     &:hover:not(.blok-popover-item--no-hover) {
-      background-color: var(--color-background-item-hover);
+      background-color: theme('colors.item-hover-bg');
     }
   }
 
   /* Force hover styles for Storybook/Chromatic testing */
   &--force-hover:not(.blok-popover-item--no-hover) {
     @apply cursor-pointer;
-    background-color: var(--color-background-item-hover);
+    background-color: theme('colors.item-hover-bg');
   }
 
   /* Confirmation state */
   &--confirmation {
-    background: var(--color-background-item-confirm);
+    background: theme('colors.item-confirm-bg');
 
     .blok-popover-item__title,
     .blok-popover-item__icon {
       @apply text-white;
     }
 
-    @media (hover: hover) {
+    @screen can-hover {
       &:not(.blok-popover-item--no-hover):hover {
-        background: var(--color-background-item-confirm-hover);
+        background: theme('colors.item-confirm-hover-bg');
       }
     }
 
     &:not(.blok-popover-item--no-focus).blok-popover-item--focused {
-      background: var(--color-background-item-confirm-hover) !important;
+      background: theme('colors.item-confirm-hover-bg') !important;
     }
   }
 }
@@ -196,9 +178,7 @@
   @apply flex items-center justify-center w-[26px] h-[26px] mobile:w-9 mobile:h-9 mobile:rounded-lg;
 
   svg {
-    width: var(--icon-size);
-    height: var(--icon-size);
-    @apply mobile:w-7 mobile:h-7;
+    @apply w-icon h-icon mobile:w-7 mobile:h-7;
   }
 
   &--tool {
@@ -212,7 +192,7 @@
 
 .blok-popover-item__secondary-title {
   @apply text-xs whitespace-nowrap pr-1.5 opacity-60 tracking-[-0.1em] mobile:hidden;
-  color: var(--color-text-secondary);
+  color: theme('colors.text-secondary');
 }
 
 /**
@@ -224,7 +204,7 @@
 
 .blok-popover-header__back-button {
   @apply border-0 bg-transparent w-9 h-9;
-  color: var(--color-text-primary);
+  color: theme('colors.text-primary');
 
   svg {
     @apply block w-7 h-7;

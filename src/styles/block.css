@@ -6,7 +6,7 @@
     }
 
     &--selected &__content {
-        background: var(--selectionColor);
+        background: theme('colors.selection');
 
         /* Workaround Safari case when user can select inline-fragment with cross-block-selection */
         & [contenteditable] {
@@ -25,12 +25,12 @@
 
     &__content {
         @apply relative mx-auto transition-colors duration-150 ease-out;
-        max-width: var(--content-width);
+        max-width: theme('maxWidth.content');
     }
 
     a {
         @apply cursor-pointer underline;
-        color: var(--color-link);
+        color: theme('colors.link');
     }
 
     b {

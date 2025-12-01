@@ -18,7 +18,7 @@
 
     /* Native selection color */
     & ::selection {
-      background-color: var(--inlineSelectionColor);
+      background-color: theme('colors.selection-inline');
     }
   }
 
@@ -28,22 +28,22 @@
   }
 
   /* Narrow mode - Right padding for redactor */
-  @media (--not-mobile) {
+  @screen not-mobile {
     .blok-editor--narrow .blok-editor__redactor {
-      @apply mr-[var(--narrow-mode-right-padding)];
+      @apply mr-[theme('spacing.narrow-mode-right-padding')];
     }
 
     .blok-editor--narrow.blok-editor--rtl .blok-editor__redactor {
-      @apply ml-[var(--narrow-mode-right-padding)] mr-0;
+      @apply ml-[theme('spacing.narrow-mode-right-padding')] mr-0;
     }
 
     .blok-editor--narrow .blok-toolbar__actions {
-      right: calc(-1 * var(--narrow-mode-right-padding) - 5px);
+      right: calc(-1 * theme('spacing.narrow-mode-right-padding') - 5px);
     }
 
     .blok-editor--narrow.blok-editor--rtl .blok-toolbar__actions {
-      @apply right-auto -right-[5px];
-      left: calc(-1 * var(--narrow-mode-right-padding) - 5px);
+      @apply right-auto;
+      left: calc(-1 * theme('spacing.narrow-mode-right-padding') - 5px);
     }
   }
 

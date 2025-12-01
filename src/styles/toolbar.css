@@ -7,11 +7,12 @@
 
     &__content {
         @apply relative mx-auto;
-        max-width: var(--content-width);
+        max-width: theme('maxWidth.content');
     }
 
     &__plus {
-        @apply --toolbox-button;
+        /* Expanded --toolbox-button mixin */
+        @apply text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none;
         @apply shrink-0;
 
         &-shortcut {
@@ -37,7 +38,8 @@
     }
 
     &__settings-btn {
-        @apply --toolbox-button;
+        /* Expanded --toolbox-button mixin */
+        @apply text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none;
         @apply cursor-pointer select-none;
 
         &:active {
@@ -57,10 +59,13 @@
     }
 }
 
-/* Mobile styles - moved outside nesting to avoid @apply in nested @media */
-@media (--mobile) {
+/* Mobile styles - moved outside nesting to avoid @apply in nested @screen */
+@screen mobile {
     .blok-toolbar__plus {
-        @apply --overlay-pane;
+        /* Expanded --overlay-pane mixin */
+        @apply absolute bg-white border border-[#e8e8eb] shadow-overlay-pane rounded-[6px] z-[2];
+        /* Expanded --toolbox-button mobile sizing */
+        @apply w-toolbox-btn-mobile h-toolbox-btn-mobile;
         @apply static;
     }
 
@@ -69,12 +74,15 @@
     }
 
     .blok-toolbar__settings-btn {
-        @apply --overlay-pane;
+        /* Expanded --overlay-pane mixin */
+        @apply absolute bg-white border border-[#e8e8eb] shadow-overlay-pane rounded-[6px] z-[2];
+        /* Expanded --toolbox-button mobile sizing */
+        @apply w-toolbox-btn-mobile h-toolbox-btn-mobile;
         @apply static;
     }
 }
 
-@media (--not-mobile) {
+@screen not-mobile {
     .blok-toolbar__settings-btn {
         @apply w-6;
     }
@@ -84,9 +92,13 @@
     }
 }
 
-@media (--can-hover) {
+@screen can-hover {
+    .blok-toolbar__plus:hover {
+        @apply bg-bg-light;
+    }
+
     .blok-toolbar__settings-btn:hover {
-        @apply cursor-grab;
+        @apply bg-bg-light cursor-grab;
     }
 
     .blok-toolbar__settings-btn--opened:hover {

@@ -11,7 +11,7 @@
     }
 
     &__input {
-      @apply text-sm outline-none font-medium font-inherit border-0 bg-transparent m-0 p-0 leading-[22px] min-w-[calc(100%-var(--toolbox-buttons-size)-10px)];
+      @apply text-sm outline-none font-medium font-inherit border-0 bg-transparent m-0 p-0 leading-[22px] min-w-[calc(100%-theme('spacing.6')-10px)];
 
       &::placeholder {
         @apply text-gray-text font-medium;

@@ -8,15 +8,15 @@
 
     .blok-toolbar {
         &__plus {
-            right: calc(var(--toolbox-buttons-size) * -1);
+            right: calc(theme('width.toolbox-btn') * -1);
             left: auto;
         }
 
         &__actions {
             right: auto;
-            left: calc(var(--toolbox-buttons-size) * -1);
+            left: calc(theme('width.toolbox-btn') * -1);
 
-            @media (--mobile) {
+            @screen mobile {
                 margin-left: 0;
                 margin-right: auto;
                 padding-right: 0;
@@ -52,7 +52,7 @@
     .blok-inline-toolbar {
         &__dropdown {
             border-right: 0 solid transparent;
-            border-left: 1px solid var(--color-line-gray);
+            border-left: 1px solid theme('colors.line-gray');
             margin: 0 -6px 0 6px;
 
             .icon--toggler-down {
@@ -65,14 +65,14 @@
 
 .blok-editor--narrow.blok-editor--rtl {
     .blok-toolbar__plus {
-        @media (--not-mobile) {
+        @screen not-mobile {
             left: 0;
             right: 5px;
         }
     }
 
     .blok-toolbar__actions {
-        @media (--not-mobile) {
+        @screen not-mobile {
             left: -5px;
         }
     }

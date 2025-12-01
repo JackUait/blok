@@ -1,159 +1,145 @@
 /**
  * CSS Custom Properties for runtime usage
- * Tailwind equivalents are defined in tailwind.config.js
  *
- * Media queries note: Updating values should also include changes in utils.ts@isMobile
+ * IMPORTANT: Static values have been migrated to tailwind.config.js
+ * This file now only contains:
+ * - Dynamic variables (set via JavaScript at runtime)
+ * - Component classes (converted from CSS mixins)
+ *
+ * For static design tokens, use Tailwind utilities or theme() function:
+ * - Colors: theme('colors.selection'), @apply bg-selection
+ * - Spacing: theme('spacing.content-width'), @apply max-w-content
+ * - Sizing: theme('width.toolbox-btn'), @apply w-toolbox-btn
+ *
+ * For responsive breakpoints, use Tailwind's @screen directive:
+ * - @screen mobile { ... }    -> (max-width: 650px)
+ * - @screen not-mobile { ... } -> (min-width: 651px)
+ * - @screen can-hover { ... }  -> (hover: hover)
+ *
+ * Note: Updating breakpoint values should include changes in:
+ * - tailwind.config.js (screens)
+ * - utils.ts@isMobile
+ *
+ * @see tailwind.config.js for all design tokens and screen definitions
  */
-@custom-media --mobile (width <= 650px);
-@custom-media --not-mobile (width >= 651px);
-@custom-media --can-hover (hover: hover);
 
-:root {
-  /* Selection colors */
-  --selectionColor: #e1f2ff;
-  --inlineSelectionColor: #d4ecff;
+/* ==========================================================================
+   Dynamic Variables (set via JavaScript at runtime)
+   These MUST remain as CSS variables for runtime manipulation
+   ========================================================================== */
 
-  /* UI colors */
-  --bg-light: #eff2f5;
-  --grayText: #707684;
-  --color-dark: #1d202b;
-  --color-active-icon: #388ae5;
-  --color-link: #388ae5;
-  --color-line-gray: #eff0f1;
+/* No dynamic variables defined at :root level.
+   Dynamic variables are defined locally in their respective CSS files:
+   - popover.css: --popover-top, --popover-left, --nesting-level, etc.
+   - popover-inline.css: --height, --height-mobile, --inline-popover-width
+   - ui.css: --window-scroll-offset
+*/
 
-  /* Layout */
-  --content-width: 650px;
-  --narrow-mode-right-padding: 50px;
+/* ==========================================================================
+   Component Classes (converted from CSS mixins)
+   Use these classes directly or via @apply in component styles
+   ========================================================================== */
 
-  /* Toolbox sizing */
-  --toolbox-buttons-size: 26px;
-  --toolbox-buttons-size--mobile: 36px;
+/**
+ * Overlay pane component
+ * Used for floating panels like toolbars and popovers
+ * Replaces: @apply --overlay-pane
+ */
+.blok-overlay-pane {
+  @apply absolute bg-white border border-popover-border shadow-overlay-pane rounded-[6px] z-[2];
 
-  /* Icon sizing */
-  --icon-size: 20px;
-  --icon-size--mobile: 28px;
-
-  /* Block spacing */
-  --block-padding-vertical: 0.4em;
-
-  /**
-   * Mixin: Overlay pane
-   */
-  --overlay-pane {
-    position: absolute;
-    background-color: #fff;
-    border: 1px solid #e8e8eb;
-    box-shadow: 0 3px 15px -3px rgba(13, 20, 33, 0.13);
-    border-radius: 6px;
-    z-index: 2;
-
-    &--left-oriented {
-      &::before {
-        left: 15px;
-        margin-left: 0;
-      }
-    }
-
-    &--right-oriented {
-      &::before {
-        left: auto;
-        right: 15px;
-        margin-left: 0;
-      }
+  &--left-oriented {
+    &::before {
+      left: 15px;
+      margin-left: 0;
     }
   }
 
-  /**
-   * Mixin: Button focused state
-   */
-  --button-focused {
-    box-shadow: inset 0 0 0 1px rgba(7, 161, 227, 0.08);
-    background: rgba(34, 186, 255, 0.08) !important;
-  }
-
-  /**
-   * Mixin: Button active state
-   */
-  --button-active {
-    background: rgba(56, 138, 229, 0.1);
-    color: var(--color-active-icon);
-  }
-
-  /**
-   * Mixin: Button disabled state
-   */
-  --button-disabled {
-    color: var(--grayText);
-    cursor: default;
-    pointer-events: none;
-  }
-
-  /**
-   * Mixin: Toolbox button
-   */
-  --toolbox-button {
-    color: var(--color-dark);
-    cursor: pointer;
-    width: var(--toolbox-buttons-size);
-    height: var(--toolbox-buttons-size);
-    border-radius: 7px;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    user-select: none;
-
-    @media (--mobile) {
-      width: var(--toolbox-buttons-size--mobile);
-      height: var(--toolbox-buttons-size--mobile);
-    }
-
-    @media (--can-hover) {
-      &:hover {
-        background-color: var(--bg-light);
-      }
-    }
-
-    &--active {
-      background-color: var(--bg-light);
-      animation: bounceIn 0.75s 1;
-      animation-fill-mode: forwards;
-    }
-  }
-
-  /**
-   * Mixin: Tool icon with border
-   */
-  --tool-icon {
-    display: inline-flex;
-    width: var(--toolbox-buttons-size);
-    height: var(--toolbox-buttons-size);
-    box-shadow: 0 0 0 1px var(--color-line-gray);
-    border-radius: 5px;
-    align-items: center;
-    justify-content: center;
-    background: #fff;
-    box-sizing: content-box;
-    flex-shrink: 0;
-    margin-right: 10px;
-
-    svg {
-      width: var(--icon-size);
-      height: var(--icon-size);
-    }
-
-    @media (--mobile) {
-      width: var(--toolbox-buttons-size--mobile);
-      height: var(--toolbox-buttons-size--mobile);
-      border-radius: 8px;
-
-      svg {
-        width: var(--icon-size--mobile);
-        height: var(--icon-size--mobile);
-      }
+  &--right-oriented {
+    &::before {
+      left: auto;
+      right: 15px;
+      margin-left: 0;
     }
   }
 }
 
+
+/**
+ * Toolbox button component
+ * Used for toolbar action buttons
+ * Replaces: @apply --toolbox-button
+ */
+.blok-toolbox-button {
+  @apply text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none;
+
+  @screen mobile {
+    width: theme('width.toolbox-btn-mobile');
+    height: theme('height.toolbox-btn-mobile');
+  }
+
+  @screen can-hover {
+    &:hover {
+      background-color: theme('colors.bg-light');
+    }
+  }
+
+  &--active {
+    @apply bg-bg-light animate-bounce-in;
+  }
+}
+
+/**
+ * Tool icon component
+ * Used for tool icons with border in popovers
+ * Replaces: @apply --tool-icon
+ */
+.blok-tool-icon {
+  @apply inline-flex w-toolbox-btn h-toolbox-btn shadow-tool-icon rounded-[5px] items-center justify-center bg-white box-content shrink-0 mr-[10px];
+
+  svg {
+    @apply w-icon h-icon;
+  }
+
+  @screen mobile {
+    width: theme('width.toolbox-btn-mobile');
+    height: theme('height.toolbox-btn-mobile');
+    border-radius: 8px;
+
+    svg {
+      width: theme('width.icon-mobile');
+      height: theme('height.icon-mobile');
+    }
+  }
+}
+
+/* ==========================================================================
+   Button State Utilities
+   These are utility combinations for common button states
+   Use via @apply in component styles
+   ========================================================================== */
+
+/**
+ * Button focused state
+ * Replaces: @apply --button-focused
+ * Usage: @apply shadow-button-focused bg-item-focus-bg
+ */
+
+/**
+ * Button active state
+ * Replaces: @apply --button-active
+ * Usage: @apply bg-icon-active-bg text-active-icon
+ */
+
+/**
+ * Button disabled state
+ * Replaces: @apply --button-disabled
+ * Usage: @apply text-gray-text cursor-default pointer-events-none
+ */
+
+/* ==========================================================================
+   Keyframe Animations
+   ========================================================================== */
 @keyframes bounceIn {
   0% { transform: scale(1); }
   30% { transform: scale(1.15); }

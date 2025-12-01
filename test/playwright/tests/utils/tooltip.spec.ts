@@ -1282,7 +1282,7 @@ test.describe('tooltip API', () => {
       await page.evaluate((selector) => {
         const tooltipElement = document.querySelector(selector) as HTMLElement | null;
 
-        tooltipElement?.classList.remove('blok-tooltip--shown');
+        tooltipElement?.classList.remove('is-shown');
       }, TOOLTIP_INTERFACE_SELECTOR);
 
       await page.waitForFunction((selector) => {

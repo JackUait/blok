@@ -1,5 +1,6 @@
-import Dom from '../../../../../dom';
-import { IconChevronRight } from '../../../../../icons';
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import type {
   PopoverItemDefaultParams as PopoverItemDefaultParams,
   PopoverItemRenderParamsMap,
@@ -16,10 +17,36 @@ import {
   DATA_ATTRIBUTE_FOCUSED,
   DATA_ATTRIBUTE_WOBBLE
 } from './popover-item-default.const';
+import { PopoverItemDefaultComponent } from './PopoverItemDefaultComponent';
+
+/**
+ * Selector for icon element
+ */
+const ICON_SELECTOR = '[data-blok-testid="popover-item-icon"]';
+
+/**
+ * Creates a temporary container and renders React component to extract the element
+ * Uses flushSync to ensure synchronous rendering for immediate DOM access
+ * @param component - React component to render
+ */
+const renderToElement = (component: React.ReactNode): HTMLElement => {
+  const container = document.createElement('div');
+  const root = createRoot(container);
+
+  flushSync(() => {
+    root.render(component);
+  });
+
+  const element = container.firstElementChild as HTMLElement;
+
+  // Unmount React after extracting the element to avoid memory leaks
+  root.unmount();
+
+  return element;
+};
 
 /**
  * Represents single popover item node
- * @todo move nodes initialization to constructor
  * @todo replace multiple make() usages with constructing separate instances
  * @todo split regular popover item and popover item with confirmation to separate classes
  * @todo display icon on the right side of the item for rtl languages
@@ -82,6 +109,11 @@ export class PopoverItemDefault extends PopoverItem {
   private confirmationState: PopoverItemDefaultParams | null = null;
 
   /**
+   * Render params passed during construction, stored for re-rendering
+   */
+  private readonly renderParams: PopoverItemRenderParamsMap[PopoverItemType.Default] | undefined;
+
+  /**
    * Constructs popover item instance
    * @param params - popover item construction params
    * @param renderParams - popover item render params.
@@ -90,6 +122,7 @@ export class PopoverItemDefault extends PopoverItem {
   constructor(protected readonly params: PopoverItemDefaultParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Default]) {
     super(params);
 
+    this.renderParams = renderParams;
     this.nodes.root = this.make(params, renderParams);
   }
 
@@ -169,65 +202,26 @@ export class PopoverItemDefault extends PopoverItem {
    * @param renderParams - popover item render params
    */
   private make(params: PopoverItemDefaultParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Default]): HTMLElement {
-    const tag = renderParams?.wrapperTag || 'div';
-    const el = Dom.make(tag, css.container, {
-      type: tag === 'button' ? 'button' : undefined,
-    });
-
-    el.setAttribute('data-blok-testid', 'popover-item');
-
-    if (params.name) {
-      el.setAttribute('data-blok-item-name', params.name);
-    }
-
-    if (params.icon) {
-      const iconClasses = !!renderParams?.iconWithGap === true
-        ? [css.icon]
-        : [css.icon, css.iconToolMargin];
-
-      this.nodes.icon = Dom.make('div', iconClasses, {
-        innerHTML: params.icon,
-        'data-blok-testid': 'popover-item-icon',
-      });
-
-      el.appendChild(this.nodes.icon);
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
     const title = params.title || params.label;
 
-    if (title !== undefined) {
-      el.appendChild(Dom.make('div', css.title, {
-        innerHTML: title || '',
-        'data-blok-testid': 'popover-item-title',
-      }));
-    }
+    const el = renderToElement(
+      <PopoverItemDefaultComponent
+        icon={params.icon}
+        title={title}
+        secondaryLabel={params.secondaryLabel}
+        isActive={this.isActive}
+        isDisabled={params.isDisabled}
+        hasChildren={this.hasChildren}
+        hideChevron={this.isChevronHidden}
+        wrapperTag={renderParams?.wrapperTag}
+        name={params.name}
+        iconWithGap={renderParams?.iconWithGap}
+      />
+    );
 
-    if (params.secondaryLabel) {
-      const secondaryTitle = Dom.make('div', css.secondaryTitle, {
-        textContent: params.secondaryLabel,
-      });
-
-      secondaryTitle.setAttribute('data-blok-testid', 'popover-item-secondary-title');
-      el.appendChild(secondaryTitle);
-    }
-
-    if (this.hasChildren && !this.isChevronHidden) {
-      el.appendChild(Dom.make('div', [css.icon, css.iconChevronRight], {
-        innerHTML: IconChevronRight,
-        'data-blok-testid': 'popover-item-chevron-right',
-      }));
-    }
-
-    if (this.isActive) {
-      el.classList.add(css.active);
-      el.setAttribute(DATA_ATTRIBUTE_ACTIVE, 'true');
-    }
-
-    if (params.isDisabled) {
-      el.classList.add(css.disabled, css.disabledCursor, css.disabledPointerEvents);
-      el.setAttribute('data-blok-disabled', 'true');
-    }
+    // Store reference to icon element
+    this.nodes.icon = el.querySelector(ICON_SELECTOR);
 
     if (params.hint !== undefined && renderParams?.hint?.enabled !== false) {
       this.addHint(el, {
@@ -254,11 +248,14 @@ export class PopoverItemDefault extends PopoverItem {
       ...newState,
       confirmation: 'confirmation' in newState ? newState.confirmation : undefined,
     } as PopoverItemDefaultParams;
-    const confirmationEl = this.make(params);
+    const confirmationEl = this.make(params, this.renderParams);
 
     this.nodes.root.innerHTML = confirmationEl.innerHTML;
     this.nodes.root.classList.add(css.confirmationState);
     this.nodes.root.setAttribute(DATA_ATTRIBUTE_CONFIRMATION, 'true');
+
+    // Update icon reference after innerHTML change
+    this.nodes.icon = this.nodes.root.querySelector(ICON_SELECTOR);
 
     this.confirmationState = newState;
 
@@ -272,11 +269,14 @@ export class PopoverItemDefault extends PopoverItem {
     if (this.nodes.root === null) {
       return;
     }
-    const itemWithOriginalParams = this.make(this.params);
+    const itemWithOriginalParams = this.make(this.params, this.renderParams);
 
     this.nodes.root.innerHTML = itemWithOriginalParams.innerHTML;
     this.nodes.root.classList.remove(css.confirmationState);
     this.nodes.root.removeAttribute(DATA_ATTRIBUTE_CONFIRMATION);
+
+    // Update icon reference after innerHTML change
+    this.nodes.icon = this.nodes.root.querySelector(ICON_SELECTOR);
 
     this.confirmationState = null;
 

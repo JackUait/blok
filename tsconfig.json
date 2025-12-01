@@ -9,6 +9,9 @@
     "lib": ["dom", "es2017", "es2018", "es2019"],
     "allowJs": true,
 
+    // Enable JSX for React components
+    "jsx": "react-jsx",
+
     // allows to import .json files for i18n
     "resolveJsonModule": true,
 

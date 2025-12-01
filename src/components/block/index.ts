@@ -10,6 +10,7 @@ import type {
 } from '../../../types';
 
 import type { SavedData } from '../../../types/data-formats';
+import { twMerge } from '../utils/tw';
 import $, { toggleEmptyMark } from '../dom';
 import * as _ from '../utils';
 import type ApiModules from '../modules/api';
@@ -100,7 +101,7 @@ interface BlockEvents {
  */
 export default class Block extends EventsDispatcher<BlockEvents> {
   /**
-   * CSS classes for the Block
+   * CSS classes for the Block (BEM selectors)
    * @returns {{wrapper: string, content: string}}
    */
   public static get CSS(): { [name: string]: string } {
@@ -111,6 +112,16 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       selected: 'is-selected',
     };
   }
+
+  /**
+   * Tailwind styles for the Block elements
+   */
+  private static readonly styles = {
+    wrapper: 'relative opacity-100 animate-fade-in first:mt-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
+    content: 'relative mx-auto transition-colors duration-150 ease-out max-w-content',
+    contentSelected: 'bg-selection [&_[contenteditable]]:select-none [&_img]:opacity-55 [&_.blok-stub]:opacity-55',
+    contentStretched: 'max-w-none',
+  };
 
   /**
    * Block unique identifier
@@ -166,6 +177,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * We'll store a reference to the tool's rendered element to access it later
    */
   private toolRenderedElement: HTMLElement | null = null;
+
+  /**
+   * Reference to the content wrapper element for style toggling
+   */
+  private contentElement: HTMLElement | null = null;
 
   /**
    * Tool class instance
@@ -811,6 +827,14 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   public set selected(state: boolean) {
     this.holder.classList.toggle(Block.CSS.selected, state);
 
+    if (this.contentElement) {
+      const stretchedClass = this.stretched ? Block.styles.contentStretched : '';
+
+      this.contentElement.className = state
+        ? twMerge(Block.CSS.content, Block.styles.content, Block.styles.contentSelected)
+        : twMerge(Block.CSS.content, Block.styles.content, stretchedClass);
+    }
+
     if (state) {
       this.holder.setAttribute('data-blok-selected', 'true');
     } else {
@@ -851,6 +875,12 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   public setStretchState(state: boolean): void {
     this.holder.classList.toggle(Block.CSS.wrapperStretched, state);
+
+    if (this.contentElement && !this.selected) {
+      this.contentElement.className = state
+        ? twMerge(Block.CSS.content, Block.styles.content, Block.styles.contentStretched)
+        : twMerge(Block.CSS.content, Block.styles.content);
+    }
   }
 
   /**
@@ -887,8 +917,10 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {HTMLDivElement}
    */
   private compose(): HTMLDivElement {
-    const wrapper = $.make('div', Block.CSS.wrapper) as HTMLDivElement;
-    const contentNode = $.make('div', Block.CSS.content);
+    const wrapper = $.make('div', twMerge(Block.CSS.wrapper, Block.styles.wrapper)) as HTMLDivElement;
+    const contentNode = $.make('div', twMerge(Block.CSS.content, Block.styles.content));
+
+    this.contentElement = contentNode;
 
     contentNode.setAttribute('data-blok-testid', 'block-content');
     const pluginsContent = this.toolInstance.render();

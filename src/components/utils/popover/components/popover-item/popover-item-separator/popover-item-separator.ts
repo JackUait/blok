@@ -1,6 +1,7 @@
 import Dom from '../../../../../dom';
 import { PopoverItem } from '../popover-item';
 import { css, DATA_ATTR } from './popover-item-separator.const';
+import { twMerge } from '../../../../tw';
 
 /**
  * Represents popover separator node
@@ -44,8 +45,10 @@ export class PopoverItemSeparator extends PopoverItem {
   public toggleHidden(isHidden: boolean): void {
     if (isHidden) {
       this.nodes.root?.setAttribute(DATA_ATTR.hidden, 'true');
+      this.nodes.root.className = twMerge(css.container, css.containerHidden);
     } else {
       this.nodes.root?.removeAttribute(DATA_ATTR.hidden);
+      this.nodes.root.className = css.container;
     }
   }
 }

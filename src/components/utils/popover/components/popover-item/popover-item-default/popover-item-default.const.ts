@@ -1,10 +1,80 @@
 /**
- * CSS class names for popover item
- *
- * Note: Most styling is now handled via data attributes in CSS.
- * Only `focused` is retained for DomIterator/Flipper keyboard navigation compatibility.
+ * Tailwind CSS class names for popover item
  */
 export const css = {
+  /**
+   * Base item styles with hover and focus support
+   * Hover is applied via can-hover:hover: for real hover and data-blok-force-hover for tests
+   * Focus is applied via data-blok-focused attribute (set by DomIterator during keyboard navigation)
+   * Note: noHover state is handled via [data-blok-popover-item-no-hover] which disables hover
+   */
+  item: 'flex items-center select-none border-none bg-transparent rounded-md p-[var(--item-padding)] text-text-primary mb-px can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg [&[data-blok-force-hover]]:cursor-pointer [&[data-blok-force-hover]]:bg-item-hover-bg [&[data-blok-focused="true"]]:bg-item-focus-bg [&[data-blok-popover-item-no-hover]]:hover:bg-transparent [&[data-blok-popover-item-no-hover]]:cursor-default',
+
+  /**
+   * Item styles on mobile
+   */
+  itemMobile: 'p-1',
+
+  /**
+   * Item active state
+   */
+  itemActive: 'bg-icon-active-bg text-icon-active-text',
+
+  /**
+   * Item disabled state
+   */
+  itemDisabled: 'cursor-default pointer-events-none text-text-secondary',
+
+  /**
+   * Item focused state (keyboard navigation)
+   */
+  itemFocused: '!bg-item-focus-bg',
+
+  /**
+   * Item confirmation state (uses !important to override focused state)
+   */
+  itemConfirmation: '!bg-item-confirm-bg !text-white',
+
+  /**
+   * Item confirmation hover state
+   */
+  itemConfirmationHover: 'bg-item-confirm-hover-bg',
+
+  /**
+   * Icon container styles
+   */
+  icon: 'flex items-center justify-center w-[26px] h-[26px] [&_svg]:w-icon [&_svg]:h-icon',
+
+  /**
+   * Icon container on mobile
+   */
+  iconMobile: 'w-9 h-9 rounded-lg [&_svg]:w-7 [&_svg]:h-7',
+
+  /**
+   * Icon with tool gap
+   */
+  iconTool: 'mr-2',
+
+  /**
+   * Title styles
+   */
+  title: 'text-sm leading-5 font-medium overflow-hidden whitespace-nowrap text-ellipsis mr-auto',
+
+  /**
+   * Title on mobile
+   */
+  titleMobile: 'text-base',
+
+  /**
+   * Secondary title styles
+   */
+  secondaryTitle: 'text-xs whitespace-nowrap pr-1.5 opacity-60 tracking-[-0.1em] text-text-secondary',
+
+  /**
+   * Secondary title on mobile (hidden)
+   */
+  secondaryTitleMobile: 'hidden',
+
   /**
    * Focused state class for DomIterator/Flipper keyboard navigation.
    * Used alongside data-blok-focused attribute.

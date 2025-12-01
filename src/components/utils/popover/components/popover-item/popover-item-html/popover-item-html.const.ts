@@ -3,6 +3,7 @@
  */
 export const css = {
   root: 'flex items-center',
+  rootHidden: 'hidden',
 };
 
 /**

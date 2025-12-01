@@ -5,8 +5,9 @@ import { PopoverStatesHistory } from './utils/popover-states-history';
 import type { PopoverMobileNodes, PopoverParams } from '@/types/utils/popover/popover';
 import type { PopoverItemDefault, PopoverItemParams } from './components/popover-item';
 import { PopoverItemType } from './components/popover-item';
-import { DATA_ATTR } from './popover.const';
+import { css, DATA_ATTR } from './popover.const';
 import Dom from '../../dom';
+import { twMerge } from '../tw';
 
 
 /**
@@ -55,7 +56,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
       },
     });
 
-    this.nodes.overlay = Dom.make('div', [], {
+    this.nodes.overlay = Dom.make('div', [css.popoverOverlay], {
       [DATA_ATTR.popoverOverlay]: '',
       [DATA_ATTR.overlayHidden]: '',
       'data-blok-testid': 'popover-overlay',
@@ -68,6 +69,12 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
 
     /* Save state to history for proper navigation between nested and parent popovers */
     this.history.push({ items: params.items });
+
+    // Apply mobile-specific classes to container
+    this.nodes.popoverContainer.className = twMerge(
+      css.popoverContainer,
+      css.popoverContainerMobile
+    );
   }
 
   /**
@@ -75,8 +82,17 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    */
   public show(): void {
     this.nodes.overlay.removeAttribute(DATA_ATTR.overlayHidden);
+    this.nodes.overlay.className = twMerge(css.popoverOverlay, css.popoverOverlayMobile);
 
     super.show();
+
+    // Apply mobile opened state classes AFTER super.show() to override base class styles
+    this.nodes.popoverContainer.className = twMerge(
+      css.popoverContainer,
+      css.popoverContainerMobile,
+      css.popoverContainerOpened,
+      css.popoverContainerOpenedMobile
+    );
 
     this.scrollLocker.lock();
 
@@ -93,6 +109,13 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
 
     super.hide();
     this.nodes.overlay.setAttribute(DATA_ATTR.overlayHidden, '');
+    this.nodes.overlay.className = css.popoverOverlay;
+
+    // Reset to mobile base closed state
+    this.nodes.popoverContainer.className = twMerge(
+      css.popoverContainer,
+      css.popoverContainerMobile
+    );
 
     this.scrollLocker.unlock();
 

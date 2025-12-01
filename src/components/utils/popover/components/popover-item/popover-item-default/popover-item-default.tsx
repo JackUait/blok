@@ -7,8 +7,9 @@ import type {
   PopoverItemType
 } from '@/types/utils/popover/popover-item';
 import { PopoverItem } from '../popover-item';
-import { DATA_ATTR } from './popover-item-default.const';
+import { css, DATA_ATTR } from './popover-item-default.const';
 import { PopoverItemDefaultComponent } from './PopoverItemDefaultComponent';
+import { twMerge } from '../../../../tw';
 
 /**
  * Selector for icon element
@@ -153,6 +154,8 @@ export class PopoverItemDefault extends PopoverItem {
     } else {
       this.nodes.root.removeAttribute(DATA_ATTR.active);
     }
+
+    this.updateRootClasses();
   }
 
   /**
@@ -165,6 +168,8 @@ export class PopoverItemDefault extends PopoverItem {
     } else {
       this.nodes.root?.removeAttribute(DATA_ATTR.hidden);
     }
+
+    this.updateRootClasses();
   }
 
   /**
@@ -246,6 +251,7 @@ export class PopoverItemDefault extends PopoverItem {
     this.confirmationState = newState;
 
     this.enableSpecialHoverAndFocusBehavior();
+    this.updateRootClasses();
   }
 
   /**
@@ -266,6 +272,7 @@ export class PopoverItemDefault extends PopoverItem {
     this.confirmationState = null;
 
     this.disableSpecialHoverAndFocusBehavior();
+    this.updateRootClasses();
   }
 
   /**
@@ -340,4 +347,27 @@ export class PopoverItemDefault extends PopoverItem {
     this.nodes.icon?.removeAttribute(DATA_ATTR.wobble);
     this.nodes.icon?.removeEventListener('animationend', this.onErrorAnimationEnd);
   };
+
+  /**
+   * Updates root element classes based on current state
+   */
+  private updateRootClasses(): void {
+    if (this.nodes.root === null) {
+      return;
+    }
+
+    const isActive = this.nodes.root.hasAttribute(DATA_ATTR.active);
+    const isHidden = this.nodes.root.hasAttribute(DATA_ATTR.hidden);
+    const isConfirmation = this.nodes.root.hasAttribute(DATA_ATTR.confirmation);
+    const isFocused = this.nodes.root.hasAttribute(DATA_ATTR.focused);
+
+    this.nodes.root.className = twMerge(
+      css.item,
+      isActive && css.itemActive,
+      this.isDisabled && css.itemDisabled,
+      isFocused && css.itemFocused,
+      isConfirmation && css.itemConfirmation,
+      isHidden && '!hidden'
+    );
+  }
 }

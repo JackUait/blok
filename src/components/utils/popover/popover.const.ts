@@ -1,11 +1,31 @@
 /**
  * Tailwind CSS class names for popover component
  *
- * All styling is now handled via data attributes in CSS.
- * Classes here are pure Tailwind utilities for non-state-based styles.
+ * Classes are applied directly in components using twMerge for conflict resolution.
  */
 export const css = {
-  // Utility classes - pure Tailwind
+  // Popover root element
+  popover: '',
+
+  // Popover container - base styles
+  popoverContainer: 'absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none z-[4] max-h-0 min-w-[var(--width)] w-[var(--width)] rounded-lg shadow-[0_3px_15px_-3px_theme(colors.popover-shadow)] left-[var(--popover-left)] top-[var(--popover-top)] bg-popover-bg',
+
+  // Popover container - mobile styles (applied conditionally)
+  popoverContainerMobile: 'fixed max-w-none rounded-[10px] min-w-[calc(100%-var(--offset)*2)] inset-[auto_var(--offset)_calc(var(--offset)+env(safe-area-inset-bottom))_var(--offset)]',
+
+  // Popover container - opened state
+  popoverContainerOpened: 'opacity-100 pointer-events-auto p-1 max-h-[var(--max-height)] border border-popover-border animate-[panelShowing_100ms_ease]',
+
+  // Popover container - opened state on mobile
+  popoverContainerOpenedMobile: 'animate-[panelShowingMobile_250ms_ease]',
+
+  // Popover overlay
+  popoverOverlay: 'hidden bg-dark',
+
+  // Popover overlay - mobile visible state
+  popoverOverlayMobile: 'fixed inset-0 block visible z-[3] opacity-50 transition-opacity duration-[120ms] ease-in will-change-[opacity]',
+
+  // Utility classes
   search: 'mb-1.5',
   items: 'overflow-y-auto overscroll-contain',
   nothingFoundMessage: 'hidden cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text p-[3px]',

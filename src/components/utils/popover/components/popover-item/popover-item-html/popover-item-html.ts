@@ -2,6 +2,7 @@ import { PopoverItem } from '../popover-item';
 import type { PopoverItemHtmlParams, PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
 import { css, DATA_ATTR } from './popover-item-html.const';
 import Dom from '../../../../../dom';
+import { twMerge } from '../../../../tw';
 
 /**
  * Represents popover item with custom html content
@@ -57,8 +58,10 @@ export class PopoverItemHtml extends PopoverItem {
   public toggleHidden(isHidden: boolean): void {
     if (isHidden) {
       this.nodes.root?.setAttribute(DATA_ATTR.hidden, 'true');
+      this.nodes.root.className = twMerge(css.root, css.rootHidden);
     } else {
       this.nodes.root?.removeAttribute(DATA_ATTR.hidden);
+      this.nodes.root.className = css.root;
     }
   }
 

@@ -354,6 +354,14 @@ export const ConfirmationState: Story = {
         },
         TIMEOUT_ACTION
       );
+
+      // Add hover state to confirmation button for visual testing in headless browsers
+      const confirmButton = document.querySelector(CONFIRMATION_SELECTOR);
+
+      if (confirmButton) {
+        confirmButton.setAttribute('data-blok-force-hover', 'true');
+        await userEvent.hover(confirmButton);
+      }
     });
   },
 };
@@ -580,8 +588,10 @@ export const DisabledItem: Story = {
 
       if (popoverItem) {
         // Add the proper disabled classes and attribute that match the real implementation
+        // The itemDisabled class from popover-item-default.const.ts is:
+        // 'cursor-default pointer-events-none text-text-secondary'
         // eslint-disable-next-line internal-storybook/no-class-selectors
-        popoverItem.classList.add('is-disabled', 'cursor-default', 'pointer-events-none');
+        popoverItem.classList.add('cursor-default', 'pointer-events-none', 'text-text-secondary');
         popoverItem.setAttribute('data-blok-disabled', 'true');
       }
 

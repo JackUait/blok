@@ -3,6 +3,7 @@
  */
 export const css = {
   container: 'py-1 px-[3px]',
+  containerHidden: 'hidden',
   line: 'h-px w-full bg-popover-border',
 };
 

@@ -9,6 +9,7 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { css, DATA_ATTR } from './popover.const';
 import type { PopoverItemParams } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
+import { twMerge } from '../tw';
 
 /**
  * Class responsible for rendering popover and handling its behaviour
@@ -73,7 +74,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     /** Build html elements */
     this.nodes = {} as Nodes;
 
-    this.nodes.popoverContainer = Dom.make('div', [], {
+    this.nodes.popoverContainer = Dom.make('div', [css.popoverContainer], {
       [DATA_ATTR.popoverContainer]: '',
       'data-blok-testid': 'popover-container',
     });
@@ -104,6 +105,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.handleClick(event));
 
     this.nodes.popover = Dom.make('div', [
+      css.popover,
       this.params.class,
     ], {
       [DATA_ATTR.popover]: '',
@@ -134,6 +136,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     this.nodes.popover.setAttribute(DATA_ATTR.opened, 'true');
 
+    // Apply opened state classes to container
+    this.nodes.popoverContainer.className = twMerge(
+      css.popoverContainer,
+      css.popoverContainerOpened
+    );
+
     /**
      * Refresh active states for all items.
      * This ensures items with dynamic isActive() callbacks reflect the current state.
@@ -152,6 +160,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popover.removeAttribute(DATA_ATTR.opened);
     this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
     this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
+
+    // Reset container to base closed state
+    this.nodes.popoverContainer.className = css.popoverContainer;
 
     this.itemsDefault.forEach(item => item.reset());
 

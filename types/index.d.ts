@@ -122,11 +122,18 @@ export interface API {
   ui: Ui;
 }
 
+import { HeaderConstructable } from './tools/header';
+
 /**
  * Main Blok class
  */
 declare class Blok {
   public static version: string;
+
+  /**
+   * Header tool bundled with Blok
+   */
+  public static Header: HeaderConstructable;
 
   public isReady: Promise<void>;
 

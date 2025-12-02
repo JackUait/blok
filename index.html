@@ -178,10 +178,8 @@
   <!-- Initialization -->
   <script type="module">
     import Blok from './src/blok.ts';
-    import Header from './src/tools/header/index.ts';
 
     window.Blok = Blok;
-    window.Header = Header;
 
     /**
      * To initialize the Blok, create a new instance with configuration object
@@ -214,7 +212,7 @@
          * Each Tool is a Plugin. Pass them via 'class' option with necessary settings {@link docs/tools.md}
          */
         header: {
-          class: Header,
+          class: Blok.Header,
           inlineToolbar: ['link'],
           config: {
             placeholder: 'Header'

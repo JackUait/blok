@@ -13,6 +13,7 @@ import Core from './components/core';
 import * as _ from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import Header from './tools/header';
+import Paragraph from './tools/paragraph';
 
 /**
  * Blok
@@ -44,6 +45,11 @@ export default class Blok {
    * Header tool bundled with Blok
    */
   public static Header = Header;
+
+  /**
+   * Paragraph tool bundled with Blok
+   */
+  public static Paragraph = Paragraph;
 
   /**
    * @param {BlokConfig|string|undefined} [configuration] - user configuration

@@ -16,6 +16,7 @@ import {
   BLOK_TOOLBAR_ATTR,
   BLOK_SETTINGS_TOGGLER_ATTR,
   BLOK_TOOLBOX_OPENED_ATTR,
+  BLOK_DRAG_HANDLE_ATTR,
 } from '../../constants';
 
 /**
@@ -79,7 +80,8 @@ const DRAG_THRESHOLD = 1000;
  *|________________________|
  * @class
  * @classdesc Toolbar module
- * @typedef {Toolbar} Toolbar
+ */
+/**
  * @property {object} nodes - Toolbar nodes
  * @property {Element} nodes.wrapper        - Toolbar main element
  * @property {Element} nodes.content        - Zone with Plus button and toolbox.
@@ -133,7 +135,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
       toolbar: twJoin(
         'absolute left-0 right-0 top-0 transition-opacity duration-100 ease-linear will-change-[opacity,top]'
       ),
-      toolbarSelector: 'blok-toolbar',
       toolbarOpened: 'block',
       toolbarClosed: 'hidden',
       content: twJoin(
@@ -149,8 +150,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
         'mobile:group-data-[blok-rtl=true]:ml-0 mobile:group-data-[blok-rtl=true]:mr-auto mobile:group-data-[blok-rtl=true]:pr-0 mobile:group-data-[blok-rtl=true]:pl-[10px]'
       ),
       actionsOpened: 'opacity-100',
-
-      openedToolboxHolderModifier: 'is-toolbox-opened',
 
       plusButton: twJoin(
         // Base toolbox-button styles
@@ -170,12 +169,10 @@ export default class Toolbar extends Module<ToolbarNodes> {
         // Narrow mode RTL (not-mobile)
         'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:left-0 not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:right-[5px]'
       ),
-      plusButtonShortcut: 'mt-[5px] opacity-60',
       plusButtonShortcutKey: 'text-white',
       /**
-       * Class used as the SortableJS drag handle selector
+       * Data attribute selector used by SortableJS for drag handle
        */
-      settingsTogglerHandle: 'blok-settings-toggler',
       settingsToggler: twJoin(
         // Base toolbox-button styles
         'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
@@ -522,11 +519,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private async make(): Promise<void> {
     const wrapper = $.make('div', [
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
       this.CSS.toolbar,
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      this.CSS.toolbarSelector,
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
       this.CSS.toolbarClosed,
       'group-data-[blok-dragging=true]:pointer-events-none',
     ]);
@@ -538,10 +533,10 @@ export default class Toolbar extends Module<ToolbarNodes> {
     /**
      * Make Content Zone and Actions Zone
      */
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
     const content = $.make('div', this.CSS.content);
     const actions = $.make('div', [
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
       this.CSS.actions,
       // Narrow mode positioning on non-mobile screens
       'not-mobile:group-data-[blok-narrow=true]:right-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
@@ -631,14 +626,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const settingsToggler = $.make('span', [
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.CSS.settingsToggler,
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      this.CSS.settingsTogglerHandle,
       'group-data-[blok-dragging=true]:cursor-grabbing',
     ], {
       innerHTML: IconMenu,
     });
 
     settingsToggler.setAttribute(BLOK_SETTINGS_TOGGLER_ATTR, '');
+    settingsToggler.setAttribute(BLOK_DRAG_HANDLE_ATTR, '');
     settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
 
     this.nodes.settingsToggler = settingsToggler;

@@ -116,12 +116,12 @@ export default class Header implements BlockTool {
 
   /**
    * Styles
-   * @deprecated Use data-blok-tool attribute instead
+   * @deprecated Use data-blok-tool attribute instead (BLOK_TOOL_ATTR)
    */
   private get _CSS(): { block: string; wrapper: string } {
     return {
       block: this.api.styles.block,
-      wrapper: 'blok-header',
+      wrapper: '',
     };
   }
 
@@ -332,8 +332,7 @@ export default class Header implements BlockTool {
     /**
      * Add styles class using twMerge to combine base and level-specific styles
      */
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    tag.className = twMerge(this._CSS.wrapper, Header.BASE_STYLES, this.currentLevel.styles);
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles);
 
     /**
      * Set data attribute for tool identification

@@ -85,12 +85,6 @@ export default class Paragraph implements BlockTool {
   private readOnly: boolean;
 
   /**
-   * Paragraph Tool's CSS classes
-   * @deprecated Use data-blok-tool attribute instead
-   */
-  private _CSS: { block: string; wrapper: string };
-
-  /**
    * Placeholder for Paragraph Tool
    */
   private _placeholder: string;
@@ -122,12 +116,6 @@ export default class Paragraph implements BlockTool {
   constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<ParagraphData, ParagraphConfig>) {
     this.api = api;
     this.readOnly = readOnly;
-
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    this._CSS = {
-      block: this.api.styles.block,
-      wrapper: 'blok-paragraph',
-    };
 
     if (!this.readOnly) {
       this.onKeyUp = this.onKeyUp.bind(this);
@@ -196,10 +184,7 @@ export default class Paragraph implements BlockTool {
     const div = document.createElement('DIV') as HTMLDivElement;
 
     div.className = twMerge(
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      this._CSS.wrapper,
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      this._CSS.block,
+      this.api.styles.block,
       Paragraph.WRAPPER_CLASSES,
       Paragraph.PLACEHOLDER_CLASSES
     );

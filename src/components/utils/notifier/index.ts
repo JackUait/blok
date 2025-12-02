@@ -56,7 +56,7 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
 
   if (wrapper && notify) {
     wrapper.appendChild(notify);
-    notify.className = `${notify.className} ${draw.CSS.bounceIn}`;
+    notify.className = `${notify.className} animate-notify-bounce-in`;
     notify.setAttribute('data-blok-bounce-in', 'true');
   }
 };

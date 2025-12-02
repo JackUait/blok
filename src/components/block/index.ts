@@ -103,23 +103,10 @@ interface BlockEvents {
 /**
  * @classdesc Abstract Block class that contains Block information, Tool name and Tool class instance
  * @property {BlockToolAdapter} tool - Tool instance
- * @property {HTMLElement} holder - Div element that wraps block content with Tool's content. Has `blok-element` CSS class
+ * @property {HTMLElement} holder - Div element that wraps block content with Tool's content.
  * @property {HTMLElement} pluginsContent - HTML content that returns by Tool's render function
  */
 export default class Block extends EventsDispatcher<BlockEvents> {
-  /**
-   * CSS classes for the Block - kept for backward compatibility
-   * @returns {{wrapper: string, content: string}}
-   * @deprecated Use data attributes via constants instead
-   */
-  public static get CSS(): { [name: string]: string } {
-    return {
-      wrapper: 'blok-element',
-      wrapperStretched: 'is-stretched',
-      content: 'blok-element__content',
-      selected: 'is-selected',
-    };
-  }
 
   /**
    * Tailwind styles for the Block elements
@@ -843,10 +830,8 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       const stretchedClass = this.stretched ? Block.styles.contentStretched : '';
 
       this.contentElement.className = state
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        ? twMerge(Block.CSS.content, Block.styles.content, Block.styles.contentSelected)
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        : twMerge(Block.CSS.content, Block.styles.content, stretchedClass);
+        ? twMerge(Block.styles.content, Block.styles.contentSelected)
+        : twMerge(Block.styles.content, stretchedClass);
     }
 
     const fakeCursorWillBeAdded = state === true && SelectionUtils.isRangeInsideContainer(this.holder);
@@ -890,10 +875,8 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
     if (this.contentElement && !this.selected) {
       this.contentElement.className = state
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        ? twMerge(Block.CSS.content, Block.styles.content, Block.styles.contentStretched)
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        : twMerge(Block.CSS.content, Block.styles.content);
+        ? twMerge(Block.styles.content, Block.styles.contentStretched)
+        : Block.styles.content;
     }
   }
 
@@ -931,10 +914,8 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {HTMLDivElement}
    */
   private compose(): HTMLDivElement {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const wrapper = $.make('div', twMerge(Block.CSS.wrapper, Block.styles.wrapper)) as HTMLDivElement;
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const contentNode = $.make('div', twMerge(Block.CSS.content, Block.styles.content));
+    const wrapper = $.make('div', Block.styles.wrapper) as HTMLDivElement;
+    const contentNode = $.make('div', Block.styles.content);
 
     this.contentElement = contentNode;
 

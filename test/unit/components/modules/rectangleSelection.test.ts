@@ -1,7 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import RectangleSelection from '../../../../src/components/modules/rectangleSelection';
-import Block from '../../../../src/components/block';
 import SelectionUtils from '../../../../src/components/selection';
 import EventsDispatcher from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
@@ -12,12 +11,10 @@ import type BlockType from '../../../../src/components/block';
 type PartialModules = Partial<BlokModules>;
 
 type ToolbarModuleMock = {
-  CSS: { toolbar: string; toolbarSelector: string };
   close: Mock<() => void>;
 };
 
 type InlineToolbarModuleMock = {
-  CSS: { inlineToolbar: string };
   close: Mock<() => void>;
 };
 
@@ -54,11 +51,10 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
 
   const holder = document.createElement('div');
   const blokWrapper = document.createElement('div');
-  const blokWrapperClass = 'blok-editor__redactor';
 
   blokWrapper.setAttribute('data-blok-testid', 'blok-wrapper');
   blokWrapper.setAttribute('data-blok-editor', '');
-  Object.assign(blokWrapper, { className: blokWrapperClass });
+  blokWrapper.setAttribute('data-blok-redactor', '');
   holder.appendChild(blokWrapper);
   document.body.appendChild(holder);
 
@@ -66,7 +62,6 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
 
   blockContent.setAttribute('data-blok-testid', 'block-content');
   blockContent.setAttribute('data-blok-element-content', '');
-  Object.assign(blockContent, { className: Block.CSS.content });
   blockContent.style.width = '400px';
 
   const lastBlockHolder = document.createElement('div');
@@ -76,17 +71,10 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
   const blocks: BlockType[] = [];
 
   const toolbarMock: ToolbarModuleMock = {
-    CSS: {
-      toolbar: 'blok-editor-toolbar',
-      toolbarSelector: 'blok-editor-toolbar',
-    },
     close: vi.fn<() => void>(),
   };
 
   const inlineToolbarMock: InlineToolbarModuleMock = {
-    CSS: {
-      inlineToolbar: 'blok-editor-inline-toolbar',
-    },
     close: vi.fn<() => void>(),
   };
 
@@ -111,7 +99,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
         holder,
       },
       CSS: {
-        blokWrapper: blokWrapperClass,
+        blokWrapper: '',
       },
     } as unknown as BlokModules['UI'],
     Toolbar: toolbarMock as unknown as BlokModules['Toolbar'],
@@ -237,7 +225,6 @@ describe('RectangleSelection', () => {
     const {
       rectangleSelection,
       blockSelection,
-      toolbar,
     } = createRectangleSelection();
 
     blockSelection.allBlocksSelected = true;
@@ -246,7 +233,7 @@ describe('RectangleSelection', () => {
 
     toolbarElement.setAttribute('data-blok-testid', 'toolbar');
     toolbarElement.setAttribute('data-blok-toolbar', '');
-    Object.assign(toolbarElement, { className: toolbar.CSS.toolbarSelector });
+    Object.assign(toolbarElement);
     const toolbarChild = document.createElement('div');
 
     toolbarElement.appendChild(toolbarChild);
@@ -286,7 +273,6 @@ describe('RectangleSelection', () => {
 
     blockContent.setAttribute('data-blok-testid', 'block-content');
     blockContent.setAttribute('data-blok-element-content', '');
-    Object.assign(blockContent, { className: Block.CSS.content });
     blokWrapper.appendChild(blockContent);
     elementFromPointSpy.mockReturnValue(blockContent);
 

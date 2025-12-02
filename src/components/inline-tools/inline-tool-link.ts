@@ -48,29 +48,10 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   }
 
   /**
-   * Tailwind classes for inline tool button
-   */
-  private readonly BUTTON_CLASSES = 'flex justify-center items-center border-0 rounded h-full p-0 w-7 bg-transparent cursor-pointer leading-normal text-text-primary can-hover:hover:bg-item-hover-bg mobile:w-icon-mobile mobile:h-icon-mobile [&_svg]:block [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile';
-
-  /**
-   * Tailwind classes for active button state
-   */
-  private readonly BUTTON_ACTIVE_CLASSES = 'bg-icon-active-bg text-icon-active-text';
-
-  /**
    * Tailwind classes for input
    */
   private readonly INPUT_BASE_CLASSES = 'hidden w-full m-0 px-2 py-1 text-sm leading-[22px] font-medium bg-item-hover-bg border border-[rgba(226,226,229,0.2)] rounded-md outline-none box-border appearance-none font-[inherit] placeholder:text-gray-text mobile:text-[15px] mobile:font-medium';
 
-  /**
-   * CSS state classes (kept for toggling)
-   */
-  private readonly CSS = {
-    buttonActive: 'is-active',
-    buttonModifier: 'is-link',
-    buttonUnlink: 'is-unlink',
-    inputShowed: 'block',
-  };
   /**
    * Data attributes for e2e selectors
    */
@@ -216,7 +197,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
       this.nodes.input.value = '';
     }
 
-    this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, this.CSS.inputShowed);
+    this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, 'block');
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, true);
 
     this.selection.save();

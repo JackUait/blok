@@ -43,10 +43,11 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * Block Settings CSS
+   * @deprecated Use data attributes for identification instead
    */
   public get CSS(): { [name: string]: string } {
     return {
-      settings: 'blok-settings',
+      settings: '',
     };
   }
 
@@ -103,7 +104,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    *  - Default Settings [Move, Remove, etc]
    */
   public make(): void {
-    this.nodes.wrapper = $.make('div', [ this.CSS.settings ]);
+    this.nodes.wrapper = $.make('div');
     this.nodes.wrapper.setAttribute('data-blok-testid', 'block-tunes-wrapper');
 
     this.eventsDispatcher.on(BlokMobileLayoutToggled, this.close);

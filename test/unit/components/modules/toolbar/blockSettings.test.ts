@@ -291,7 +291,6 @@ describe('BlockSettings', () => {
     const element = blockSettings.getElement();
 
     expect(element).toBeInstanceOf(HTMLElement);
-    expect(element?.dataset.blokClass).toBe('blok-settings');
     expect(element?.getAttribute('data-blok-testid')).toBe('block-tunes-wrapper');
     expect(eventsDispatcher.on).toHaveBeenCalledWith(expect.anything(), blockSettings.close);
   });

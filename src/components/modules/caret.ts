@@ -97,11 +97,11 @@ export default class Caret extends Module {
   }
 
   /**
-   * Elements styles that can be useful for Caret Module
+   * Data attributes used by Caret Module
    */
-  private static get CSS(): { shadowCaret: string } {
+  private static get DATA_ATTR(): { shadowCaret: string } {
     return {
-      shadowCaret: 'blok-shadow-caret',
+      shadowCaret: 'data-blok-shadow-caret',
     };
   }
 
@@ -485,7 +485,7 @@ export default class Caret extends Module {
   public createShadow(element: Element): void {
     const shadowCaret = document.createElement('span');
 
-    shadowCaret.classList.add(Caret.CSS.shadowCaret);
+    shadowCaret.setAttribute(Caret.DATA_ATTR.shadowCaret, '');
     shadowCaret.setAttribute('data-blok-testid', 'shadow-caret');
     element.insertAdjacentElement('beforeend', shadowCaret);
   }

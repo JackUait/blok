@@ -51,26 +51,6 @@ interface UINodes {
  */
 export default class UI extends Module<UINodes> {
   /**
-   * Blok UI CSS class names
-   * @returns {{blokWrapper: string, blokZone: string}}
-   * @deprecated Use data attributes via constants instead
-   */
-  public get CSS(): {
-    blokWrapper: string; blokWrapperNarrow: string; blokZone: string; blokZoneHidden: string;
-    blokEmpty: string; blokRtlFix: string; blokDragging: string;
-    } {
-    return {
-      blokWrapper: 'blok-editor',
-      blokWrapperNarrow: 'blok-editor--narrow',
-      blokZone: 'blok-editor__redactor',
-      blokZoneHidden: 'is-hidden',
-      blokEmpty: 'is-empty',
-      blokRtlFix: 'blok-editor--rtl',
-      blokDragging: 'is-dragging',
-    };
-  }
-
-  /**
    * Return Width of center column of Blok
    * @returns {DOMRect}
    */
@@ -198,13 +178,11 @@ export default class UI extends Module<UINodes> {
   }
 
   /**
-   * Check if Blok is empty and set CSS class to wrapper
+   * Check if Blok is empty and set data attribute on wrapper
    */
   public checkEmptiness(): void {
     const { BlockManager } = this.Blok;
 
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    this.nodes.wrapper.classList.toggle(this.CSS.blokEmpty, BlockManager.isBlokEmpty);
     this.nodes.wrapper.setAttribute(BLOK_EMPTY_ATTR, BlockManager.isBlokEmpty ? 'true' : 'false');
   }
 
@@ -308,8 +286,6 @@ export default class UI extends Module<UINodes> {
      * Create and save main UI elements
      */
     this.nodes.wrapper = $.make('div', [
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      this.CSS.blokWrapper,
       'group',
       'relative',
       'box-border',
@@ -322,8 +298,7 @@ export default class UI extends Module<UINodes> {
       '[&_::selection]:bg-selection-inline',
       // Hide placeholder when toolbox is opened
       '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder]:focus]:before:!opacity-0',
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      ...(this.isRtl ? [ this.CSS.blokRtlFix, '[direction:rtl]' ] : []),
+      ...(this.isRtl ? [ '[direction:rtl]' ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute(BLOK_EDITOR_ATTR, '');
@@ -332,8 +307,6 @@ export default class UI extends Module<UINodes> {
       this.nodes.wrapper.setAttribute(BLOK_RTL_ATTR, 'true');
     }
     this.nodes.redactor = $.make('div', [
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      this.CSS.blokZone,
       // Narrow mode: add right margin on non-mobile screens
       'not-mobile:group-data-[blok-narrow=true]:mr-[theme(spacing.narrow-mode-right-padding)]',
       // RTL narrow mode: add left margin instead
@@ -350,8 +323,6 @@ export default class UI extends Module<UINodes> {
      * @todo Forced layout. Get rid of this feature
      */
     if (this.nodes.holder.offsetWidth < this.contentRect.width) {
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      this.nodes.wrapper.classList.add(this.CSS.blokWrapperNarrow);
       this.nodes.wrapper.setAttribute(BLOK_NARROW_ATTR, 'true');
     }
 

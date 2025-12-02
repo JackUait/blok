@@ -339,8 +339,7 @@ describe('SelectionUtils', () => {
     SelectionUtils.addFakeCursor();
 
     expect(SelectionUtils.isFakeCursorInsideContainer(element)).toBe(true);
-    // eslint-disable-next-line internal-unit-test/no-class-selectors
-    expect(element.querySelector('.blok-editor__fake-cursor')).not.toBeNull();
+    expect(element.querySelector('[data-blok-fake-cursor]')).not.toBeNull();
 
     SelectionUtils.removeFakeCursor(element);
 

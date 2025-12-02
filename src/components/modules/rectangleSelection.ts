@@ -26,15 +26,15 @@ export default class RectangleSelection extends Module {
   /**
    * CSS classes for the Block - kept for backward compatibility
    * @returns {{wrapper: string, content: string}}
-   * @deprecated Use data attributes via constants instead
+   * @deprecated Use data attributes via constants instead (BLOK_OVERLAY_ATTR, BLOK_OVERLAY_CONTAINER_ATTR, etc.)
    */
   public static get CSS(): {[name: string]: string} {
     return {
-      overlay: 'blok-editor-overlay',
-      overlayContainer: 'blok-editor-overlay__container',
-      rect: 'blok-editor-overlay__rectangle',
-      topScrollZone: 'blok-editor-overlay__scroll-zone--top',
-      bottomScrollZone: 'blok-editor-overlay__scroll-zone--bottom',
+      overlay: '',
+      overlayContainer: '',
+      rect: '',
+      topScrollZone: '',
+      bottomScrollZone: '',
     };
   }
 
@@ -314,8 +314,6 @@ export default class RectangleSelection extends Module {
 
     const container = UI.nodes.holder.querySelector(BLOK_EDITOR_SELECTOR);
     const overlay = $.make('div', [
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      RectangleSelection.CSS.overlay,
       'fixed',
       'inset-0',
       'z-overlay',
@@ -323,15 +321,11 @@ export default class RectangleSelection extends Module {
       'overflow-hidden',
     ], {});
     const overlayContainer = $.make('div', [
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      RectangleSelection.CSS.overlayContainer,
       'relative',
       'pointer-events-auto',
       'z-0',
     ], {});
     const overlayRectangle = $.make('div', [
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      RectangleSelection.CSS.rect,
       'absolute',
       'pointer-events-none',
       'bg-selection-highlight',

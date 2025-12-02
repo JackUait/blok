@@ -175,6 +175,13 @@ export const BLOK_SETTINGS_TOGGLER_ATTR = 'data-blok-settings-toggler';
 export const BLOK_SETTINGS_TOGGLER_SELECTOR = '[data-blok-settings-toggler]';
 
 /**
+ * Drag handle attribute for SortableJS block reordering
+ * Used by SortableJS to identify the draggable element
+ */
+export const BLOK_DRAG_HANDLE_ATTR = 'data-blok-drag-handle';
+export const BLOK_DRAG_HANDLE_SELECTOR = '[data-blok-drag-handle]';
+
+/**
  * Tool type attribute for block tools
  * Value specifies the tool name: "paragraph", "header", "stub", etc.
  * Replaces: .blok-paragraph, .blok-header, .blok-stub

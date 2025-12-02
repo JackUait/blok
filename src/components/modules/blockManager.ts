@@ -23,6 +23,7 @@ import { BlockChanged } from '../events';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
 import PromiseQueue from '../utils/promise-queue';
+import { BLOK_DRAGGING_ATTR, BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR, BLOK_DRAG_HANDLE_SELECTOR } from '../constants';
 
 type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
@@ -208,16 +209,14 @@ export default class BlockManager extends Module {
     this.sortable = new Sortable(this.Blok.UI.nodes.redactor, {
       animation: 150,
       forceFallback: true,
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      handle: `.${this.Blok.Toolbar.CSS.settingsTogglerHandle}`,
+       
+      handle: BLOK_DRAG_HANDLE_SELECTOR,
       onStart: () => {
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        this.Blok.UI.nodes.wrapper.classList.add(this.Blok.UI.CSS.blokDragging);
+        this.Blok.UI.nodes.wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
         tooltip.hide(true);
       },
       onEnd: (evt) => {
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        this.Blok.UI.nodes.wrapper.classList.remove(this.Blok.UI.CSS.blokDragging);
+        this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_DRAGGING_ATTR);
         if (evt.newIndex === undefined || evt.oldIndex === undefined) {
           return;
         }
@@ -765,8 +764,8 @@ export default class BlockManager extends Module {
 
     const nodes = this.blocksStore.nodes;
 
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const firstLevelBlock = normalizedElement.closest(`.${Block.CSS.wrapper}`);
+     
+    const firstLevelBlock = normalizedElement.closest(BLOK_ELEMENT_SELECTOR);
 
     if (!firstLevelBlock) {
       return undefined;
@@ -797,8 +796,7 @@ export default class BlockManager extends Module {
       return undefined;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const parentFirstLevelBlock = normalizedChildNode.closest(`.${Block.CSS.wrapper}`);
+    const parentFirstLevelBlock = normalizedChildNode.closest(BLOK_ELEMENT_SELECTOR);
 
     if (!parentFirstLevelBlock) {
       return undefined;
@@ -809,8 +807,7 @@ export default class BlockManager extends Module {
      * by checking whether the found block belongs to the current instance
      * @see {@link Ui#documentTouched}
      */
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const blokWrapper = parentFirstLevelBlock.closest(`.${this.Blok.UI.CSS.blokWrapper}`);
+    const blokWrapper = parentFirstLevelBlock.closest(BLOK_EDITOR_SELECTOR);
     const isBlockBelongsToCurrentInstance = blokWrapper?.isEqualNode(this.Blok.UI.nodes.wrapper);
 
     if (!isBlockBelongsToCurrentInstance) {
@@ -856,8 +853,8 @@ export default class BlockManager extends Module {
       return undefined;
     }
     
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const firstLevelBlock = normalizedChildNode.closest(`.${Block.CSS.wrapper}`);
+     
+    const firstLevelBlock = normalizedChildNode.closest(BLOK_ELEMENT_SELECTOR);
 
     if (!firstLevelBlock) {
       return undefined;

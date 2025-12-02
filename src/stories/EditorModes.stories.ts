@@ -334,8 +334,7 @@ export const RTLMode: Story = {
     await step('Verify RTL direction is applied', async () => {
       await waitFor(
         () => {
-          // eslint-disable-next-line internal-storybook/no-class-selectors -- Checking RTL class is applied to editor
-          const rtlEditor = canvasElement.querySelector('[data-blok-testid="blok-editor"].blok-editor--rtl');
+          const rtlEditor = canvasElement.querySelector('[data-blok-testid="blok-editor"][data-blok-rtl="true"]');
 
           expect(rtlEditor).toBeTruthy();
         },

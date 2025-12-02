@@ -5,18 +5,16 @@ import { isIosDevice } from '../utils';
  */
 export default class ScrollLocker {
   /**
-   * Style classes
+   * Tailwind utility classes for styling
    */
   private static CSS = {
-    scrollLocked: 'blok-scroll-locked',
-    scrollLockedHard: 'is-hard',
     overflowHidden: 'overflow-hidden',
     fixed: 'fixed',
     wFull: 'w-full',
   };
 
   /**
-   * Data attributes for state checking
+   * Data attributes for state management
    */
   private static DATA_ATTR = {
     scrollLocked: 'data-blok-scroll-locked',
@@ -35,7 +33,7 @@ export default class ScrollLocker {
     if (isIosDevice) {
       this.lockHard();
     } else {
-      document.body.classList.add(ScrollLocker.CSS.scrollLocked, ScrollLocker.CSS.overflowHidden);
+      document.body.classList.add(ScrollLocker.CSS.overflowHidden);
       document.body.setAttribute(ScrollLocker.DATA_ATTR.scrollLocked, 'true');
     }
   }
@@ -47,7 +45,7 @@ export default class ScrollLocker {
     if (isIosDevice) {
       this.unlockHard();
     } else {
-      document.body.classList.remove(ScrollLocker.CSS.scrollLocked, ScrollLocker.CSS.overflowHidden);
+      document.body.classList.remove(ScrollLocker.CSS.overflowHidden);
       document.body.removeAttribute(ScrollLocker.DATA_ATTR.scrollLocked);
     }
   }
@@ -62,8 +60,6 @@ export default class ScrollLocker {
       `${this.scrollPosition}px`
     );
     document.body.classList.add(
-      ScrollLocker.CSS.scrollLocked,
-      ScrollLocker.CSS.scrollLockedHard,
       ScrollLocker.CSS.overflowHidden,
       ScrollLocker.CSS.fixed,
       ScrollLocker.CSS.wFull
@@ -77,8 +73,6 @@ export default class ScrollLocker {
    */
   private unlockHard(): void {
     document.body.classList.remove(
-      ScrollLocker.CSS.scrollLocked,
-      ScrollLocker.CSS.scrollLockedHard,
       ScrollLocker.CSS.overflowHidden,
       ScrollLocker.CSS.fixed,
       ScrollLocker.CSS.wFull

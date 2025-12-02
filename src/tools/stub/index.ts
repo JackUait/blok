@@ -25,18 +25,6 @@ export default class Stub implements BlockTool {
   public static isReadOnlySupported = true;
 
   /**
-   * Stub styles
-   * @deprecated Use data attributes via constants instead
-   * @type {{wrapper: string, info: string, title: string, subtitle: string}}
-   */
-  private CSS = {
-    wrapper: 'blok-stub flex items-center py-3 px-[18px] my-2.5 rounded-[10px] bg-bg-light border border-line-gray text-gray-text text-sm [&_svg]:size-icon',
-    info: 'blok-stub__info ml-3.5',
-    title: 'blok-stub__title font-medium capitalize',
-    subtitle: 'blok-stub__subtitle',
-  };
-
-  /**
    * Main stub wrapper
    */
   private readonly wrapper: HTMLElement;
@@ -96,17 +84,14 @@ export default class Stub implements BlockTool {
    * @returns {HTMLElement}
    */
   private make(): HTMLElement {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const wrapper = $.make('div', this.CSS.wrapper);
+    const wrapper = $.make('div', 'flex items-center py-3 px-[18px] my-2.5 rounded-[10px] bg-bg-light border border-line-gray text-gray-text text-sm [&_svg]:size-icon');
     const icon = IconWarning;
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const infoContainer = $.make('div', this.CSS.info);
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const title = $.make('div', this.CSS.title, {
+    const infoContainer = $.make('div', 'ml-3.5');
+    const title = $.make('div', 'font-medium capitalize', {
       textContent: this.title,
     });
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const subtitle = $.make('div', this.CSS.subtitle, {
+     
+    const subtitle = $.make('div', '', {
       textContent: this.subtitle,
     });
 

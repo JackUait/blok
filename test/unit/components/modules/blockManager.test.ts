@@ -42,10 +42,8 @@ const createBlockStub = (options: {
 } = {}): Block => {
   const holder = document.createElement('div');
 
-  // Add both data attribute and class for backward compatibility during migration
+  // Use data attribute for block element identification
   holder.setAttribute('data-blok-element', '');
-  // eslint-disable-next-line internal-unit-test/no-class-selectors
-  holder.classList.add('blok-element');
   const inputs = [ document.createElement('div') ];
   const data = options.data ?? {};
 
@@ -209,12 +207,13 @@ const createBlockManager = (
         wrapper: document.createElement('div'),
       },
       CSS: {
-        blokWrapper: 'blok-editor',
-        blokWrapperNarrow: 'blok-editor--narrow',
-        blokZone: 'blok-editor__redactor',
-        blokZoneHidden: 'is-hidden',
-        blokEmpty: 'is-empty',
-        blokRtlFix: 'blok-editor--rtl',
+        blokWrapper: '',
+        blokWrapperNarrow: '',
+        blokZone: '',
+        blokZoneHidden: '',
+        blokEmpty: '',
+        blokRtlFix: '',
+        blokDragging: '',
       },
       checkEmptiness: vi.fn(),
     } as unknown as BlokModules['UI'],

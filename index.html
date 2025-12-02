@@ -4,7 +4,98 @@
   <meta charset="UTF-8">
   <title>Blok</title>
   <link href="https://fonts.googleapis.com/css?family=PT+Mono" rel="stylesheet">
-  <link href="/assets/demo.css" rel="stylesheet">
+  <style>
+    .dark-mode-toggler::before {
+      @apply block w-5 h-5 bg-white rounded-full transition-transform duration-100 ease-in;
+      content: '';
+    }
+
+    .dark-mode-toggler::after {
+      @apply absolute top-[5px] right-[5px] w-2.5 h-2.5 rounded-full;
+      content: '';
+      box-shadow: -2.5px 1.8px 0 0.5px white;
+    }
+
+    .dark-mode .dark-mode-toggler::before {
+      @apply translate-x-6;
+    }
+
+    .dark-mode .dark-mode-toggler::after {
+      @apply right-auto left-1.5 top-[7px] text-white text-[32px];
+      content: '*';
+      box-shadow: none;
+    }
+
+    .show-block-boundaries .blok-element {
+      @apply shadow-[inset_0_0_0_1px_#eff2f5];
+    }
+
+    .show-block-boundaries .blok-element__content {
+      @apply shadow-[inset_0_0_0_1px_rgba(224,231,241,0.61)];
+    }
+
+    .dark-mode.show-block-boundaries .blok-element,
+    .dark-mode.show-block-boundaries .blok-element__content {
+      @apply shadow-[inset_0_0_0_1px_rgba(128,144,159,0.09)];
+    }
+
+    .toggle-text-swap {
+      @apply text-[0px] align-bottom;
+    }
+
+    .toggle-text-swap::before {
+      @apply inline text-[13px];
+      content: attr(data-default-text);
+    }
+
+    .show-block-boundaries #showBlocksBoundariesButton .toggle-text-swap::before,
+    .thin-mode #enableThinModeButton .toggle-text-swap::before {
+      content: attr(data-toggled-text);
+    }
+
+    .thin-mode .thin-mode-content {
+      @apply max-w-[500px] border-x border-[#eee] px-[15px];
+    }
+
+    .dark-mode.thin-mode .thin-mode-content {
+      @apply border-white/[0.08];
+    }
+
+    .dark-mode img {
+      @apply opacity-50;
+    }
+
+    .dark-mode .blok-input {
+      @apply border-white/[0.08];
+    }
+
+    .dark-mode .inline-code {
+      @apply bg-[rgba(53,56,68,0.62)] text-[#727683];
+    }
+
+    .dark-mode a {
+      @apply text-[#959ba8];
+    }
+
+    .dark-mode .blok-element--selected .blok-element__content,
+    .dark-mode ::selection {
+      @apply bg-[rgba(57,68,84,0.57)];
+    }
+
+    .dark-mode .blok-toolbox__button,
+    .dark-mode .blok-toolbar__settings-btn,
+    .dark-mode .blok-toolbar__plus {
+      @apply text-inherit;
+    }
+
+    .dark-mode .blok-stub {
+      @apply opacity-30;
+    }
+
+    .blok-example .blok-element:first-of-type h1.blok-header {
+      @apply text-[50px];
+    }
+  </style>
   <script src="/assets/json-preview.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>

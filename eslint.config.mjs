@@ -110,7 +110,7 @@ const internalUnitTestPlugin = {
             return null;
           }
 
-          // Match class selectors like .className, .blok-element--selected
+          // Match class selectors like .className
           const classMatch = selector.match(/\.[_a-zA-Z][_a-zA-Z0-9-]*/);
 
           if (classMatch) {
@@ -405,7 +405,7 @@ const internalStorybookPlugin = {
             return null;
           }
 
-          // Match class selectors like .className, .blok-element--selected
+          // Match class selectors like .className
           const classMatch = selector.match(/\.[_a-zA-Z][_a-zA-Z0-9-]*/);
 
           if (classMatch) {

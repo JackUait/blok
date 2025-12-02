@@ -29,7 +29,6 @@ const preview: Preview = {
     (story) => {
       const container = document.createElement("div");
 
-      container.classList.add("blok");
       container.style.fontFamily =
         "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif";
       container.style.padding = "20px";

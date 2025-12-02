@@ -5,56 +5,6 @@
   <title>Blok</title>
   <link href="https://fonts.googleapis.com/css?family=PT+Mono" rel="stylesheet">
   <style>
-    .dark-mode-toggler::before {
-      display: block;
-      width: 1.25rem;
-      height: 1.25rem;
-      background-color: white;
-      border-radius: 9999px;
-      transition-property: transform;
-      transition-duration: 100ms;
-      transition-timing-function: ease-in;
-      content: '';
-    }
-
-    .dark-mode-toggler::after {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      width: 0.625rem;
-      height: 0.625rem;
-      border-radius: 9999px;
-      content: '';
-      box-shadow: -2.5px 1.8px 0 0.5px white;
-    }
-
-    .dark-mode .dark-mode-toggler::before {
-      transform: translateX(1.5rem);
-    }
-
-    .dark-mode .dark-mode-toggler::after {
-      right: auto;
-      left: 0.375rem;
-      top: 7px;
-      color: white;
-      font-size: 32px;
-      content: '*';
-      box-shadow: none;
-    }
-
-    .show-block-boundaries .blok-element {
-      box-shadow: inset 0 0 0 1px #eff2f5;
-    }
-
-    .show-block-boundaries .blok-element__content {
-      box-shadow: inset 0 0 0 1px rgba(224, 231, 241, 0.61);
-    }
-
-    .dark-mode.show-block-boundaries .blok-element,
-    .dark-mode.show-block-boundaries .blok-element__content {
-      box-shadow: inset 0 0 0 1px rgba(128, 144, 159, 0.09);
-    }
-
     .toggle-text-swap {
       font-size: 0px;
       vertical-align: bottom;
@@ -81,86 +31,37 @@
       padding-left: 15px;
       padding-right: 15px;
     }
-
-    .dark-mode.thin-mode .thin-mode-content {
-      border-color: rgba(255, 255, 255, 0.08);
-    }
-
-    .dark-mode img {
-      opacity: 0.5;
-    }
-
-    .dark-mode .blok-input {
-      border-color: rgba(255, 255, 255, 0.08);
-    }
-
-    .dark-mode .inline-code {
-      background-color: rgba(53, 56, 68, 0.62);
-      color: #727683;
-    }
-
-    .dark-mode a {
-      color: #959ba8;
-    }
-
-    .dark-mode .blok-element--selected .blok-element__content,
-    .dark-mode ::selection {
-      background-color: rgba(57, 68, 84, 0.57);
-    }
-
-    .dark-mode .blok-toolbox__button,
-    .dark-mode .blok-toolbar__settings-btn,
-    .dark-mode .blok-toolbar__plus {
-      color: inherit;
-    }
-
-    .dark-mode .blok-stub {
-      opacity: 0.3;
-    }
-
-    .blok-example .blok-element:first-of-type h1.blok-header {
-      font-size: 50px;
-    }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
-<body class="font-sans text-sm leading-relaxed m-0 bg-white dark-mode:bg-[#1c1e24] text-black dark-mode:text-[#737886]">
-  <script>
-    if (localStorage.getItem('theme') === 'dark') {
-      document.body.classList.add("dark-mode");
-    }
-  </script>
-  <div class="blok-example text-base">
-    <div class="flex flex-wrap items-center h-[50px] leading-[50px] px-[30px] max-md:px-5 mb-[30px] border-b border-[#e8e8eb] dark-mode:border-white/[0.08]">
+<body class="font-sans text-sm leading-relaxed m-0 bg-white text-black">
+  <div class="text-base">
+    <div class="flex flex-wrap items-center h-[50px] leading-[50px] px-[30px] max-md:px-5 mb-[30px] border-b border-[#e8e8eb]">
       <a class="font-bold text-inherit no-underline" href="https://github.com/JackUait/blok">Blok</a>
     </div>
     <div class="thin-mode-content max-w-[1100px] mx-auto antialiased max-md:px-5">
       <div id="blok"></div>
-      <div class="flex items-center fixed bottom-0 left-0 right-0 bg-white dark-mode:bg-[#1c1e24] rounded-t-lg border-t border-[#e8e8eb] dark-mode:border-white/[0.08] shadow-sm text-[13px] px-4 py-2 z-[1] select-none max-md:hidden">
-        <div class="after:content-['|'] after:text-[#ddd] dark-mode:after:text-white/[0.08] after:mx-3">
+      <div class="flex items-center fixed bottom-0 left-0 right-0 bg-white rounded-t-lg border-t border-[#e8e8eb] shadow-sm text-[13px] px-4 py-2 z-[1] select-none max-md:hidden">
+        <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
           Readonly:
           <b id="readonly-state">
             Off
           </b>
           &nbsp;
-          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] dark-mode:bg-[#343842] transition-all duration-150 cursor-pointer text-center select-none" id="toggleReadOnlyButton">
+          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] transition-all duration-150 cursor-pointer text-center select-none" id="toggleReadOnlyButton">
             toggle
           </button>
         </div>
-        <div class="after:content-['|'] after:text-[#ddd] dark-mode:after:text-white/[0.08] after:mx-3">
-          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] dark-mode:bg-[#343842] transition-all duration-150 cursor-pointer text-center select-none" id="showBlocksBoundariesButton">
+        <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
+          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] transition-all duration-150 cursor-pointer text-center select-none" id="showBlocksBoundariesButton">
             <span class="toggle-text-swap" data-default-text="Show" data-toggled-text="Hide"></span>
             blocks boundaries
           </button>
         </div>
-        <div class="after:content-['|'] after:text-[#ddd] dark-mode:after:text-white/[0.08] after:mx-3">
-          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] dark-mode:bg-[#343842] transition-all duration-150 cursor-pointer text-center select-none" id="enableThinModeButton">
+        <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
+          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] transition-all duration-150 cursor-pointer text-center select-none" id="enableThinModeButton">
             <span class="toggle-text-swap" data-default-text="Enable" data-toggled-text="Disable"></span>
             thin mode
-          </button>
-        </div>
-        <div class="ml-auto">
-          <button class="dark-mode-toggler relative bg-[#7b8799] dark-mode:bg-[#343842] rounded-[20px] p-[2px] w-[44px] cursor-pointer select-none" id="darkThemeToggler">
           </button>
         </div>
       </div>
@@ -362,17 +263,6 @@
       blok.destroy();
 
       blok = new Blok(blokConfig);
-    })
-
-    /**
-    * Toggler for toggling the dark mode
-    */
-    const darkThemeToggler = document.getElementById("darkThemeToggler");
-
-    darkThemeToggler.addEventListener('click', () => {
-      document.body.classList.toggle("dark-mode");
-
-      localStorage.setItem('theme', document.body.classList.contains("dark-mode") ? 'dark' : 'default');
     })
 
     window.blok = blok;

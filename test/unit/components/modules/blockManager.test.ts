@@ -549,8 +549,6 @@ describe('BlockManager', () => {
 
     // Add both data attribute and class for backward compatibility during migration
     ui.nodes.wrapper.setAttribute('data-blok-editor', '');
-    // eslint-disable-next-line internal-unit-test/no-class-selectors
-    ui.nodes.wrapper.classList.add('blok-editor');
     ui.nodes.wrapper.appendChild(blocks[0].holder);
     ui.nodes.wrapper.appendChild(blocks[1].holder);
     document.body.appendChild(ui.nodes.wrapper);
@@ -569,8 +567,6 @@ describe('BlockManager', () => {
 
     // Add both data attribute and class for backward compatibility during migration
     alienWrapper.setAttribute('data-blok-editor', '');
-    // eslint-disable-next-line internal-unit-test/no-class-selectors
-    alienWrapper.classList.add('blok-editor');
     const alienBlock = createBlockStub({ id: 'alien' });
 
     alienWrapper.appendChild(alienBlock.holder);

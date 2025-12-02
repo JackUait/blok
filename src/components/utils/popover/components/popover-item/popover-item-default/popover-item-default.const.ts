@@ -11,11 +11,6 @@ export const css = {
   item: 'flex items-center select-none border-none bg-transparent rounded-md p-[var(--item-padding)] text-text-primary mb-px can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg [&[data-blok-force-hover]]:cursor-pointer [&[data-blok-force-hover]]:bg-item-hover-bg [&[data-blok-focused="true"]]:bg-item-focus-bg [&[data-blok-popover-item-no-hover]]:hover:bg-transparent [&[data-blok-popover-item-no-hover]]:cursor-default',
 
   /**
-   * Item styles on mobile
-   */
-  itemMobile: 'p-1',
-
-  /**
    * Item active state
    */
   itemActive: 'bg-icon-active-bg text-icon-active-text',
@@ -26,54 +21,9 @@ export const css = {
   itemDisabled: 'cursor-default pointer-events-none text-text-secondary',
 
   /**
-   * Item focused state (keyboard navigation)
-   */
-  itemFocused: '!bg-item-focus-bg',
-
-  /**
-   * Item confirmation state (uses !important to override focused state)
-   */
-  itemConfirmation: '!bg-item-confirm-bg !text-white',
-
-  /**
-   * Item confirmation hover state
-   */
-  itemConfirmationHover: 'bg-item-confirm-hover-bg',
-
-  /**
    * Icon container styles
    */
   icon: 'flex items-center justify-center w-[26px] h-[26px] [&_svg]:w-icon [&_svg]:h-icon',
-
-  /**
-   * Icon container on mobile
-   */
-  iconMobile: 'w-9 h-9 rounded-lg [&_svg]:w-7 [&_svg]:h-7',
-
-  /**
-   * Icon with tool gap
-   */
-  iconTool: 'mr-2',
-
-  /**
-   * Title styles
-   */
-  title: 'text-sm leading-5 font-medium overflow-hidden whitespace-nowrap text-ellipsis mr-auto',
-
-  /**
-   * Title on mobile
-   */
-  titleMobile: 'text-base',
-
-  /**
-   * Secondary title styles
-   */
-  secondaryTitle: 'text-xs whitespace-nowrap pr-1.5 opacity-60 tracking-[-0.1em] text-text-secondary',
-
-  /**
-   * Secondary title on mobile (hidden)
-   */
-  secondaryTitleMobile: 'hidden',
 
   /**
    * Focused state class for DomIterator/Flipper keyboard navigation.
@@ -90,21 +40,6 @@ export const cssInline = {
    * Item in inline context - more compact styling
    */
   item: 'rounded p-1',
-
-  /**
-   * Icon in inline context - auto sizing
-   */
-  icon: 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
-
-  /**
-   * Icon with tool attribute in inline context - no background/shadow
-   */
-  iconTool: 'shadow-none bg-transparent !mr-0',
-
-  /**
-   * Chevron icon rotation in inline context
-   */
-  chevronRight: 'rotate-90',
 };
 
 /**
@@ -115,16 +50,6 @@ export const cssNestedInline = {
    * Nested item - back to desktop popover styling
    */
   item: 'rounded-md p-[3px] mobile:p-1',
-
-  /**
-   * Nested icon with tool - restore margin
-   */
-  iconTool: '!mr-2',
-
-  /**
-   * Nested icon size
-   */
-  icon: 'w-toolbox-btn h-toolbox-btn',
 };
 
 /**

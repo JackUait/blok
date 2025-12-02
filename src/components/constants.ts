@@ -84,77 +84,66 @@ export const MODIFIER_KEY = (() => {
 
 /**
  * Block element wrapper attribute
- * Replaces: .blok-element
  */
 export const BLOK_ELEMENT_ATTR = 'data-blok-element';
 export const BLOK_ELEMENT_SELECTOR = '[data-blok-element]';
 
 /**
  * Block element content wrapper attribute
- * Replaces: .blok-element__content
  */
 export const BLOK_ELEMENT_CONTENT_ATTR = 'data-blok-element-content';
 export const BLOK_ELEMENT_CONTENT_SELECTOR = '[data-blok-element-content]';
 
 /**
  * Editor wrapper attribute
- * Replaces: .blok-editor
  */
 export const BLOK_EDITOR_ATTR = 'data-blok-editor';
 export const BLOK_EDITOR_SELECTOR = '[data-blok-editor]';
 
 /**
  * Redactor zone attribute
- * Replaces: .blok-editor__redactor
  */
 export const BLOK_REDACTOR_ATTR = 'data-blok-redactor';
 export const BLOK_REDACTOR_SELECTOR = '[data-blok-redactor]';
 
 /**
  * Narrow mode state attribute
- * Replaces: .blok-editor--narrow
  */
 export const BLOK_NARROW_ATTR = 'data-blok-narrow';
 export const BLOK_NARROW_SELECTOR = '[data-blok-narrow="true"]';
 
 /**
  * RTL mode state attribute
- * Replaces: .blok-editor--rtl
  */
 export const BLOK_RTL_ATTR = 'data-blok-rtl';
 export const BLOK_RTL_SELECTOR = '[data-blok-rtl="true"]';
 
 /**
  * Fake cursor attribute
- * Replaces: .blok-editor__fake-cursor
  */
 export const BLOK_FAKE_CURSOR_ATTR = 'data-blok-fake-cursor';
 export const BLOK_FAKE_CURSOR_SELECTOR = '[data-blok-fake-cursor]';
 
 /**
  * Selection overlay attribute
- * Replaces: .blok-editor-overlay
  */
 export const BLOK_OVERLAY_ATTR = 'data-blok-overlay';
 export const BLOK_OVERLAY_SELECTOR = '[data-blok-overlay]';
 
 /**
  * Selection overlay container attribute
- * Replaces: .blok-editor-overlay__container
  */
 export const BLOK_OVERLAY_CONTAINER_ATTR = 'data-blok-overlay-container';
 export const BLOK_OVERLAY_CONTAINER_SELECTOR = '[data-blok-overlay-container]';
 
 /**
  * Selection overlay rectangle attribute
- * Replaces: .blok-editor-overlay__rectangle
  */
 export const BLOK_OVERLAY_RECTANGLE_ATTR = 'data-blok-overlay-rectangle';
 export const BLOK_OVERLAY_RECTANGLE_SELECTOR = '[data-blok-overlay-rectangle]';
 
 /**
  * Scroll zone attribute with value for direction
- * Replaces: .blok-scroll-zone--top, .blok-scroll-zone--bottom
  */
 export const BLOK_SCROLL_ZONE_ATTR = 'data-blok-scroll-zone';
 export const BLOK_SCROLL_ZONE_TOP_SELECTOR = '[data-blok-scroll-zone="top"]';
@@ -162,14 +151,12 @@ export const BLOK_SCROLL_ZONE_BOTTOM_SELECTOR = '[data-blok-scroll-zone="bottom"
 
 /**
  * Toolbar attribute
- * Replaces: .blok-toolbar
  */
 export const BLOK_TOOLBAR_ATTR = 'data-blok-toolbar';
 export const BLOK_TOOLBAR_SELECTOR = '[data-blok-toolbar]';
 
 /**
  * Settings toggler attribute (used as drag handle)
- * Replaces: .blok-toolbar__settings-toggler, .blok-settings-toggler
  */
 export const BLOK_SETTINGS_TOGGLER_ATTR = 'data-blok-settings-toggler';
 export const BLOK_SETTINGS_TOGGLER_SELECTOR = '[data-blok-settings-toggler]';
@@ -184,7 +171,6 @@ export const BLOK_DRAG_HANDLE_SELECTOR = '[data-blok-drag-handle]';
 /**
  * Tool type attribute for block tools
  * Value specifies the tool name: "paragraph", "header", "stub", etc.
- * Replaces: .blok-paragraph, .blok-header, .blok-stub
  */
 export const BLOK_TOOL_ATTR = 'data-blok-tool';
 export const BLOK_TOOL_PARAGRAPH_SELECTOR = '[data-blok-tool="paragraph"]';
@@ -193,7 +179,6 @@ export const BLOK_TOOL_STUB_SELECTOR = '[data-blok-tool="stub"]';
 
 /**
  * Stub-specific attributes
- * Replaces: .blok-stub__info, .blok-stub__title, .blok-stub__subtitle
  */
 export const BLOK_STUB_ATTR = 'data-blok-stub';
 export const BLOK_STUB_INFO_ATTR = 'data-blok-stub-info';
@@ -203,54 +188,46 @@ export const BLOK_STUB_SUBTITLE_ATTR = 'data-blok-stub-subtitle';
 /* ============================================
  * State Attribute Constants
  * ============================================
- * These replace BEM modifier classes (is-*) with data attributes
  */
 
 /**
  * Block selected state attribute
- * Replaces: .is-selected
  */
 export const BLOK_SELECTED_ATTR = 'data-blok-selected';
 export const BLOK_SELECTED_SELECTOR = '[data-blok-selected="true"]';
 
 /**
  * Block stretched state attribute
- * Replaces: .is-stretched
  */
 export const BLOK_STRETCHED_ATTR = 'data-blok-stretched';
 export const BLOK_STRETCHED_SELECTOR = '[data-blok-stretched="true"]';
 
 /**
  * Hidden state attribute (for redactor)
- * Replaces: .is-hidden
  */
 export const BLOK_HIDDEN_ATTR = 'data-blok-hidden';
 export const BLOK_HIDDEN_SELECTOR = '[data-blok-hidden="true"]';
 
 /**
  * Empty editor state attribute
- * Replaces: .is-empty
  */
 export const BLOK_EMPTY_ATTR = 'data-blok-empty';
 export const BLOK_EMPTY_SELECTOR = '[data-blok-empty="true"]';
 
 /**
  * Dragging state attribute
- * Replaces: .is-dragging
  */
 export const BLOK_DRAGGING_ATTR = 'data-blok-dragging';
 export const BLOK_DRAGGING_SELECTOR = '[data-blok-dragging="true"]';
 
 /**
  * Toolbox opened state attribute
- * Replaces: .is-toolbox-opened
  */
 export const BLOK_TOOLBOX_OPENED_ATTR = 'data-blok-toolbox-opened';
 export const BLOK_TOOLBOX_OPENED_SELECTOR = '[data-blok-toolbox-opened="true"]';
 
 /**
  * Focused state attribute (for popover items)
- * Replaces: .is-focused
  */
 export const BLOK_FOCUSED_ATTR = 'data-blok-focused';
 export const BLOK_FOCUSED_SELECTOR = '[data-blok-focused="true"]';

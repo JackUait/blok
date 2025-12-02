@@ -8,44 +8,44 @@
   <script src="/assets/json-preview.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
-<body class="font-sans text-sm leading-relaxed m-0 bg-demo-bg text-demo-text">
+<body class="font-sans text-sm leading-relaxed m-0 bg-white dark-mode:bg-[#1c1e24] text-black dark-mode:text-[#737886]">
   <script>
     if (localStorage.getItem('theme') === 'dark') {
       document.body.classList.add("dark-mode");
     }
   </script>
   <div class="blok-example text-base">
-    <div class="blok-example__header flex flex-wrap items-center h-[50px] leading-[50px] px-[30px] max-md:px-5 mb-[30px] border-b border-demo-border">
+    <div class="flex flex-wrap items-center h-[50px] leading-[50px] px-[30px] max-md:px-5 mb-[30px] border-b border-[#e8e8eb] dark-mode:border-white/[0.08]">
       <a class="font-bold text-inherit no-underline" href="https://github.com/JackUait/blok">Blok</a>
     </div>
-    <div class="blok-example__content max-w-[1100px] mx-auto antialiased max-md:px-5">
+    <div class="thin-mode-content max-w-[1100px] mx-auto antialiased max-md:px-5">
       <div id="blok"></div>
-      <div class="blok-example__statusbar flex items-center fixed bottom-0 left-0 right-0 bg-demo-bg rounded-t-lg border-t border-demo-border shadow-sm text-[13px] px-4 py-2 z-[1] select-none max-md:hidden">
-        <div class="blok-example__statusbar-item">
+      <div class="flex items-center fixed bottom-0 left-0 right-0 bg-white dark-mode:bg-[#1c1e24] rounded-t-lg border-t border-[#e8e8eb] dark-mode:border-white/[0.08] shadow-sm text-[13px] px-4 py-2 z-[1] select-none max-md:hidden">
+        <div class="after:content-['|'] after:text-[#ddd] dark-mode:after:text-white/[0.08] after:mx-3">
           Readonly:
           <b id="readonly-state">
             Off
           </b>
           &nbsp;
-          <div class="blok-example__statusbar-button inline-block px-3 py-[3px] rounded-full bg-demo-btn-bg hover:bg-demo-btn-hover transition-all duration-150 cursor-pointer text-center select-none" id="toggleReadOnlyButton">
+          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] dark-mode:bg-[#343842] transition-all duration-150 cursor-pointer text-center select-none" id="toggleReadOnlyButton">
             toggle
-          </div>
+          </button>
         </div>
-        <div class="blok-example__statusbar-item">
-          <div class="blok-example__statusbar-button inline-block px-3 py-[3px] rounded-full bg-demo-btn-bg hover:bg-demo-btn-hover transition-all duration-150 cursor-pointer text-center select-none" id="showBlocksBoundariesButton">
-            <span data-toggled-text="Hide">Show</span>
+        <div class="after:content-['|'] after:text-[#ddd] dark-mode:after:text-white/[0.08] after:mx-3">
+          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] dark-mode:bg-[#343842] transition-all duration-150 cursor-pointer text-center select-none" id="showBlocksBoundariesButton">
+            <span class="toggle-text-swap" data-default-text="Show" data-toggled-text="Hide"></span>
             blocks boundaries
-          </div>
+          </button>
         </div>
-        <div class="blok-example__statusbar-item">
-          <div class="blok-example__statusbar-button inline-block px-3 py-[3px] rounded-full bg-demo-btn-bg hover:bg-demo-btn-hover transition-all duration-150 cursor-pointer text-center select-none" id="enableThinModeButton">
-            <span data-toggled-text="Disable">Enable</span>
+        <div class="after:content-['|'] after:text-[#ddd] dark-mode:after:text-white/[0.08] after:mx-3">
+          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] dark-mode:bg-[#343842] transition-all duration-150 cursor-pointer text-center select-none" id="enableThinModeButton">
+            <span class="toggle-text-swap" data-default-text="Enable" data-toggled-text="Disable"></span>
             thin mode
-          </div>
+          </button>
         </div>
-        <div class="blok-example__statusbar-item blok-example__statusbar-item--right ml-auto">
-          <div class="blok-example__statusbar-toggler relative bg-demo-toggler rounded-[20px] p-[2px] w-[44px] cursor-pointer select-none" id="darkThemeToggler">
-          </div>
+        <div class="ml-auto">
+          <button class="dark-mode-toggler relative bg-[#7b8799] dark-mode:bg-[#343842] rounded-[20px] p-[2px] w-[44px] cursor-pointer select-none" id="darkThemeToggler">
+          </button>
         </div>
       </div>
     </div>

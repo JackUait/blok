@@ -1021,7 +1021,7 @@ export default defineConfig(
       'tailwindcss/no-arbitrary-value': 'off', // Allow arbitrary values when needed
       'tailwindcss/no-custom-classname': ['warn', {
         // Allow custom classes that follow project conventions
-        whitelist: ['blok-.*', 'ce-.*'],
+        whitelist: ['blok-.*'],
       }],
       'tailwindcss/no-contradicting-classname': 'error', // Prevent conflicting classes like flex block
       'tailwindcss/no-unnecessary-arbitrary-value': 'error', // Use p-4 instead of p-[16px] when equivalent exists

@@ -5,9 +5,8 @@
  * Based on @editorjs/paragraph by CodeX
  * @license MIT
  */
-import './index.css';
-
 import { IconText } from '../../components/icons';
+import { twMerge } from '../../components/utils/tw';
 import type {
   API,
   BlockTool,
@@ -165,23 +164,40 @@ export default class Paragraph implements BlockTool {
    * @returns HTMLDivElement
    */
   /**
+   * Paragraph wrapper styling classes using Tailwind.
+   */
+  private static readonly WRAPPER_CLASSES = [
+    'leading-[1.6em]',
+    'outline-none',
+    '[&>p:first-of-type]:mt-0',
+    '[&>p:last-of-type]:mb-0',
+  ];
+
+  /**
    * Placeholder styling classes using Tailwind arbitrary variants.
    * Applied to ::before pseudo-element only when element is empty.
-   * The `content` attribute is handled in paragraph CSS.
+   * Uses content attribute to display the placeholder text.
    */
   private static readonly PLACEHOLDER_CLASSES = [
     'empty:before:pointer-events-none',
     'empty:before:text-gray-text',
     'empty:before:cursor-text',
+    'empty:before:content-[attr(data-placeholder-active)]',
     '[&[data-empty=true]]:before:pointer-events-none',
     '[&[data-empty=true]]:before:text-gray-text',
     '[&[data-empty=true]]:before:cursor-text',
+    '[&[data-empty=true]]:before:content-[attr(data-placeholder-active)]',
   ];
 
   private drawView(): HTMLDivElement {
     const div = document.createElement('DIV') as HTMLDivElement;
 
-    div.classList.add(this._CSS.wrapper, ...this._CSS.block.split(' '), ...Paragraph.PLACEHOLDER_CLASSES);
+    div.className = twMerge(
+      this._CSS.wrapper,
+      this._CSS.block,
+      Paragraph.WRAPPER_CLASSES,
+      Paragraph.PLACEHOLDER_CLASSES
+    );
     div.contentEditable = 'false';
     div.setAttribute('data-placeholder-active', this.api.i18n.t(this._placeholder));
 

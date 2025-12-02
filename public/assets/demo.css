@@ -1,242 +1,108 @@
 /**
- * Minimal styles for demo page - complex states and pseudo-elements
- * Most styles have been moved to Tailwind classes in index.html
+ * Minimal styles for demo page
+ * Only styles requiring pseudo-elements or body-level state toggles that cannot be expressed in Tailwind
  */
 
-:root {
-  --color-bg-main: #fff;
-  --color-border-light: #e8e8eb;
-  --color-text-main: #000;
-  --toggler-size: 20px;
-}
-
-.dark-mode {
-  --color-border-light: rgba(255, 255, 255, 0.08);
-  --color-bg-main: #1c1e24;
-  --color-text-main: #737886;
-}
-
-/* Statusbar item separators */
-.blok-example__statusbar-item:not(:last-of-type)::after {
-  content: '|';
-  color: #ddd;
-  margin: 0 15px 0 12px;
-}
-
-.dark-mode .blok-example__statusbar-item:not(:last-of-type)::after {
-  color: var(--color-border-light);
-}
-
-/* Dark mode toggler pseudo-elements */
-.blok-example__statusbar-toggler::before {
-  display: block;
+/* Dark mode toggler - requires pseudo-elements for sun/moon animation */
+.dark-mode-toggler::before {
+  @apply block w-5 h-5 bg-white rounded-full transition-transform duration-100 ease-in;
   content: '';
-  width: var(--toggler-size);
-  height: var(--toggler-size);
-  background: #fff;
-  border-radius: 50%;
-  transition: transform 100ms ease-in;
 }
 
-.blok-example__statusbar-toggler::after {
-  --moon-size: calc(var(--toggler-size) * 0.5);
+.dark-mode-toggler::after {
+  @apply absolute top-[5px] right-[5px] w-2.5 h-2.5 rounded-full;
   content: '';
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  height: var(--moon-size);
-  width: var(--moon-size);
-  box-shadow: calc(var(--moon-size) * 0.25 * -1) calc(var(--moon-size) * 0.18) 0 calc(var(--moon-size) * 0.05) white;
-  border-radius: 50%;
+  box-shadow: -2.5px 1.8px 0 0.5px white;
 }
 
-.dark-mode .blok-example__statusbar-toggler {
-  background-color: #343842;
+.dark-mode .dark-mode-toggler::before {
+  @apply translate-x-6;
 }
 
-.dark-mode .blok-example__statusbar-toggler::before {
-  transform: translateX(calc(var(--toggler-size) * 2.2 - var(--toggler-size)));
-}
-
-.dark-mode .blok-example__statusbar-toggler::after {
+.dark-mode .dark-mode-toggler::after {
+  @apply right-auto left-1.5 top-[7px] text-white text-[32px];
   content: '*';
-  right: auto;
-  left: 6px;
-  top: 7px;
-  color: #fff;
   box-shadow: none;
-  font-size: 32px;
 }
 
-/* Dark mode button overrides */
-.dark-mode .blok-example__statusbar-button {
-  background-color: #343842;
-}
-
-/* Thin mode */
-.thin-mode .blok-example__content {
-  max-width: 500px;
-  border-left: 1px solid #eee;
-  border-right: 1px solid #eee;
-  padding: 0 15px;
-}
-
-.dark-mode.thin-mode .blok-example__content {
-  border-color: var(--color-border-light);
-}
-
-/* Show block boundaries */
+/* Show block boundaries - requires body-level toggle for editor blocks */
 .show-block-boundaries .blok-element {
-  box-shadow: inset 0 0 0 1px #eff2f5;
+  @apply shadow-[inset_0_0_0_1px_#eff2f5];
 }
 
 .show-block-boundaries .blok-element__content {
-  box-shadow: 0 0 0 1px rgba(224, 231, 241, 0.61) inset;
+  @apply shadow-[inset_0_0_0_1px_rgba(224,231,241,0.61)];
 }
 
 .dark-mode.show-block-boundaries .blok-element,
 .dark-mode.show-block-boundaries .blok-element__content {
-  box-shadow: 0 0 0 1px rgba(128, 144, 159, 0.09) inset;
+  @apply shadow-[inset_0_0_0_1px_rgba(128,144,159,0.09)];
 }
 
-/* Toggle button text swap */
-.show-block-boundaries #showBlocksBoundariesButton span,
-.thin-mode #enableThinModeButton span {
-  font-size: 0;
-  vertical-align: bottom;
+/* Toggle button text swap - requires pseudo-element for content swap */
+.toggle-text-swap {
+  @apply text-[0px] align-bottom;
 }
 
-.show-block-boundaries #showBlocksBoundariesButton span::before,
-.thin-mode #enableThinModeButton span::before {
+.toggle-text-swap::before {
+  @apply inline text-[13px];
+  content: attr(data-default-text);
+}
+
+.show-block-boundaries #showBlocksBoundariesButton .toggle-text-swap::before,
+.thin-mode #enableThinModeButton .toggle-text-swap::before {
   content: attr(data-toggled-text);
-  display: inline;
-  font-size: 13px;
 }
 
-/* Dark mode misc */
+/* Thin mode - requires body-level toggle */
+.thin-mode .thin-mode-content {
+  @apply max-w-[500px] border-x border-[#eee] px-[15px];
+}
+
+.dark-mode.thin-mode .thin-mode-content {
+  @apply border-white/[0.08];
+}
+
+/* Dark mode overrides for editor internals */
 .dark-mode img {
-  opacity: 0.5;
+  @apply opacity-50;
 }
 
 .dark-mode .blok-input {
-  border-color: var(--color-border-light);
+  @apply border-white/[0.08];
 }
 
 .dark-mode .inline-code {
-  background-color: rgba(53, 56, 68, 0.62);
-  color: #727683;
+  @apply bg-[rgba(53,56,68,0.62)] text-[#727683];
 }
 
 .dark-mode a {
-  color: #959ba8;
+  @apply text-[#959ba8];
 }
 
 .dark-mode .blok-element--selected .blok-element__content,
 .dark-mode ::selection {
-  background-color: rgba(57, 68, 84, 0.57);
+  @apply bg-[rgba(57,68,84,0.57)];
 }
 
 .dark-mode .blok-toolbox__button,
 .dark-mode .blok-toolbar__settings-btn,
 .dark-mode .blok-toolbar__plus {
-  color: inherit;
+  @apply text-inherit;
 }
 
 .dark-mode .blok-stub {
-  opacity: 0.3;
+  @apply opacity-30;
 }
 
-/* JSON highlighter */
-.sc_attr { color: rgb(148, 162, 192); }
-.sc_key { color: rgb(190, 213, 255); }
-.sc_toolname { color: rgb(15, 205, 251); }
-.sc_tag { color: rgb(4, 131, 216); }
-.sc_bool { color: rgb(247, 60, 173); }
-
-/* Popup styles */
-.blok-example--popup {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.blok-example--popup .blok-example__content {
-  flex-grow: 2;
-}
-
-.blok-example-popup__overlay {
-  position: fixed;
-  inset: 0;
-  background: #00000085;
-}
-
-.blok-example-popup__popup {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 800px;
-  max-width: 100%;
-  max-height: 90vh;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  overflow: auto;
-  box-sizing: border-box;
-}
-
-@media all and (max-width: 730px) {
-  .blok-example-popup__popup {
-    top: 10px;
-    left: 10px;
-    width: calc(100% - 20px);
-    height: calc(100% - 20px);
-    transform: none;
-    max-height: none;
-  }
-}
-
-/* Multiple editor grid */
-.blok-example-multiple {
-  display: grid;
-  grid-template-columns: calc(50% - 15px) calc(50% - 15px);
-  gap: 30px;
-  padding: 30px;
-}
-
-.blok-example-multiple > div {
-  background: #fff;
-  border-radius: 7px;
-  padding: 30px;
-}
-
-/* Primary button (kept for save button usage) */
-.blok-example__button {
-  display: block;
-  margin: 50px auto;
-  max-width: 180px;
-  background: #4a9df8;
-  padding: 17px 30px;
-  box-shadow: 0 22px 18px -4px rgba(137, 207, 255, 0.77);
-  transition: all 150ms ease;
-  cursor: pointer;
-  border-radius: 31px;
-  color: #fff;
-  font-family: 'PT Mono', Menlo, Monaco, Consolas, Courier New, monospace;
-  text-align: center;
-}
-
-.blok-example__button:hover {
-  background: #3d8de5;
-  transform: translateY(2px);
-  box-shadow: 0 20px 15px -4px rgba(137, 207, 255, 0.77);
-}
-
-.dark-mode .blok-example__button {
-  box-shadow: 0 24px 18px -14px rgba(4, 154, 255, 0.24);
-}
+/* JSON highlighter classes */
+.sc_attr { @apply text-[rgb(148,162,192)]; }
+.sc_key { @apply text-[rgb(190,213,255)]; }
+.sc_toolname { @apply text-[rgb(15,205,251)]; }
+.sc_tag { @apply text-[rgb(4,131,216)]; }
+.sc_bool { @apply text-[rgb(247,60,173)]; }
 
 /* First header special sizing */
 .blok-example .blok-element:first-of-type h1.blok-header {
-  font-size: 50px;
+  @apply text-[50px];
 }

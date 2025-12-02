@@ -6,7 +6,7 @@ export default {
     './src/**/*.{js,ts,jsx,tsx}',
     './.storybook/**/*.{js,ts,jsx,tsx}',
   ],
-  darkMode: 'class',
+  darkMode: ['class', 'dark-mode'],
   theme: {
     extend: {
       screens: {
@@ -60,16 +60,7 @@ export default {
         'notify-btn-cancel-text': '#656b7c',
         'notify-btn-confirm-bg': '#34c992',
 
-        // Demo colors
-        'demo-bg': 'var(--color-bg-main)',
-        'demo-border': 'var(--color-border-light)',
-        'demo-text': 'var(--color-text-main)',
-        'demo-blue': '#4a9df8',
-        'demo-blue-hover': '#3d8de5',
-        'demo-btn-bg': '#eff1f4',
-        'demo-btn-hover': '#e0e4eb',
-        'demo-toggler': '#7b8799',
-        'demo-dark-btn': '#343842',
+
       },
       spacing: {
         // Layout (from variables.css)

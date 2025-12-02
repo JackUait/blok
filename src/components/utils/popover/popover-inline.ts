@@ -38,7 +38,7 @@ export class PopoverInline extends PopoverDesktop {
     this.flipper?.deactivate();
 
     // Reset to closed inline styles
-    this.nodes.popover.className = twMerge(css.popover, cssInline.popover);
+    this.nodes.popover.className = twMerge(cssInline.popover);
     if (this.nodes.popoverContainer) {
       this.nodes.popoverContainer.className = twMerge(
         css.popoverContainer,
@@ -98,7 +98,7 @@ export class PopoverInline extends PopoverDesktop {
     );
 
     // Apply inline popover root styles
-    this.nodes.popover.className = twMerge(css.popover, cssInline.popover);
+    this.nodes.popover.className = twMerge(cssInline.popover);
 
     // Apply inline container styles
     if (this.nodes.popoverContainer) {
@@ -110,7 +110,7 @@ export class PopoverInline extends PopoverDesktop {
 
     // Apply inline items container styles
     if (this.nodes.items) {
-      this.nodes.items.className = twMerge(css.items, cssInline.items);
+      this.nodes.items.className = twMerge(css.items, 'flex');
     }
 
     // Set inline height CSS variables
@@ -157,7 +157,7 @@ export class PopoverInline extends PopoverDesktop {
     super.show();
 
     // Apply inline opened styles to root
-    this.nodes.popover.className = twMerge(css.popover, cssInline.popover, cssInline.popoverOpened);
+    this.nodes.popover.className = twMerge(cssInline.popover, 'inline-block');
 
     // Apply inline container opened styles (no animation for inline)
     if (this.nodes.popoverContainer) {
@@ -165,7 +165,7 @@ export class PopoverInline extends PopoverDesktop {
         css.popoverContainer,
         css.popoverContainerOpened,
         cssInline.popoverContainer,
-        cssInline.popoverContainerOpened
+        'animate-none'
       );
 
       // Set height based on screen
@@ -253,14 +253,14 @@ export class PopoverInline extends PopoverDesktop {
     if (nestedContainer) {
       nestedContainer.className = twMerge(
         nestedContainer.className,
-        cssInline.nestedContainer
+        'h-fit p-1.5 flex-col',
       );
     }
 
     // Apply nested inline styles to the items container
     const nestedItems = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverItems}]`) as HTMLElement | null;
     if (nestedItems) {
-      nestedItems.className = twMerge(nestedItems.className, cssInline.nestedItems);
+      nestedItems.className = twMerge(nestedItems.className, 'block w-full');
     }
 
     const handleFirstTab = (event: KeyboardEvent): void => {
@@ -297,7 +297,7 @@ export class PopoverInline extends PopoverDesktop {
 
     // Apply level-1 specific positioning styles
     if (nestedPopover.nestingLevel === 1 && nestedContainer) {
-      nestedContainer.className = twMerge(nestedContainer.className, cssInline.nestedLevel1Container);
+      nestedContainer.className = twMerge(nestedContainer.className, 'left-0');
       // Set top position based on height
       const topOffset = isMobileScreen() ? 'calc(var(--height-mobile) + 3px)' : 'calc(var(--height) + 3px)';
       nestedContainer.style.top = topOffset;

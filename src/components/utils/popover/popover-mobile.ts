@@ -85,7 +85,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    */
   public show(): void {
     this.nodes.overlay.removeAttribute(DATA_ATTR.overlayHidden);
-    this.nodes.overlay.className = twMerge(css.popoverOverlay, css.popoverOverlayMobile);
+    this.nodes.overlay.className = twMerge(css.popoverOverlay, 'fixed inset-0 block visible z-[3] opacity-50 transition-opacity duration-[120ms] ease-in will-change-[opacity]');
 
     super.show();
 
@@ -94,7 +94,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
       css.popoverContainer,
       css.popoverContainerMobile,
       css.popoverContainerOpened,
-      css.popoverContainerOpenedMobile
+      'animate-[panelShowingMobile_250ms_ease]'
     );
 
     this.scrollLocker.lock();

@@ -979,7 +979,6 @@ test.describe('api.blocks', () => {
           const element = document.createElement('div');
 
           element.contentEditable = 'true';
-          element.classList.add('blok-base-element');
           element.innerHTML = this.data?.text ?? '';
 
           return element;
@@ -1018,7 +1017,6 @@ test.describe('api.blocks', () => {
           const element = document.createElement('div');
 
           element.contentEditable = 'true';
-          element.classList.add('blok-base-element');
           element.innerHTML = this.data?.text ?? '';
 
           return element;
@@ -1126,7 +1124,6 @@ test.describe('api.blocks', () => {
           const element = document.createElement('div');
 
           element.contentEditable = 'true';
-          element.classList.add('blok-base-element');
           element.innerHTML = this.data?.text ?? '';
 
           return element;
@@ -1159,7 +1156,6 @@ test.describe('api.blocks', () => {
           const element = document.createElement('div');
 
           element.contentEditable = 'true';
-          element.classList.add('blok-base-element');
           element.innerHTML = this.data?.text ?? '';
 
           return element;

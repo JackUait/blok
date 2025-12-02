@@ -5,7 +5,7 @@ import { PopoverItemSeparator, css as popoverItemCls } from './components/popove
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { keyCodes } from '../../utils';
-import { CSSVariables, css, DATA_ATTR } from './popover.const';
+import { CSSVariables, DATA_ATTR } from './popover.const';
 import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent } from './components/search-input';
 import { PopoverItemDefault } from './components/popover-item';
@@ -527,7 +527,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     const searchElement = this.search.getElement();
 
-    searchElement.classList.add(css.search);
+    searchElement.classList.add('mb-1.5');
 
     this.nodes.popoverContainer.insertBefore(searchElement, this.nodes.popoverContainer.firstChild);
   }
@@ -569,7 +569,7 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param isDisplayed - true if the message should be displayed
    */
   private toggleNothingFoundMessage(isDisplayed: boolean): void {
-    this.nodes.nothingFoundMessage.classList.toggle(css.nothingFoundMessageDisplayed, isDisplayed);
+    this.nodes.nothingFoundMessage.classList.toggle('!block', isDisplayed);
     if (isDisplayed) {
       this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
     } else {

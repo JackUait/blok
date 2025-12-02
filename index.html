@@ -6,45 +6,63 @@
   <link href="https://fonts.googleapis.com/css?family=PT+Mono" rel="stylesheet">
   <style>
     .dark-mode-toggler::before {
-      @apply block w-5 h-5 bg-white rounded-full transition-transform duration-100 ease-in;
+      display: block;
+      width: 1.25rem;
+      height: 1.25rem;
+      background-color: white;
+      border-radius: 9999px;
+      transition-property: transform;
+      transition-duration: 100ms;
+      transition-timing-function: ease-in;
       content: '';
     }
 
     .dark-mode-toggler::after {
-      @apply absolute top-[5px] right-[5px] w-2.5 h-2.5 rounded-full;
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 0.625rem;
+      height: 0.625rem;
+      border-radius: 9999px;
       content: '';
       box-shadow: -2.5px 1.8px 0 0.5px white;
     }
 
     .dark-mode .dark-mode-toggler::before {
-      @apply translate-x-6;
+      transform: translateX(1.5rem);
     }
 
     .dark-mode .dark-mode-toggler::after {
-      @apply right-auto left-1.5 top-[7px] text-white text-[32px];
+      right: auto;
+      left: 0.375rem;
+      top: 7px;
+      color: white;
+      font-size: 32px;
       content: '*';
       box-shadow: none;
     }
 
     .show-block-boundaries .blok-element {
-      @apply shadow-[inset_0_0_0_1px_#eff2f5];
+      box-shadow: inset 0 0 0 1px #eff2f5;
     }
 
     .show-block-boundaries .blok-element__content {
-      @apply shadow-[inset_0_0_0_1px_rgba(224,231,241,0.61)];
+      box-shadow: inset 0 0 0 1px rgba(224, 231, 241, 0.61);
     }
 
     .dark-mode.show-block-boundaries .blok-element,
     .dark-mode.show-block-boundaries .blok-element__content {
-      @apply shadow-[inset_0_0_0_1px_rgba(128,144,159,0.09)];
+      box-shadow: inset 0 0 0 1px rgba(128, 144, 159, 0.09);
     }
 
     .toggle-text-swap {
-      @apply text-[0px] align-bottom;
+      font-size: 0px;
+      vertical-align: bottom;
     }
 
     .toggle-text-swap::before {
-      @apply inline text-[13px];
+      display: inline;
+      font-size: 13px;
       content: attr(data-default-text);
     }
 
@@ -54,46 +72,54 @@
     }
 
     .thin-mode .thin-mode-content {
-      @apply max-w-[500px] border-x border-[#eee] px-[15px];
+      max-width: 500px;
+      border-left-width: 1px;
+      border-right-width: 1px;
+      border-left-style: solid;
+      border-right-style: solid;
+      border-color: #eee;
+      padding-left: 15px;
+      padding-right: 15px;
     }
 
     .dark-mode.thin-mode .thin-mode-content {
-      @apply border-white/[0.08];
+      border-color: rgba(255, 255, 255, 0.08);
     }
 
     .dark-mode img {
-      @apply opacity-50;
+      opacity: 0.5;
     }
 
     .dark-mode .blok-input {
-      @apply border-white/[0.08];
+      border-color: rgba(255, 255, 255, 0.08);
     }
 
     .dark-mode .inline-code {
-      @apply bg-[rgba(53,56,68,0.62)] text-[#727683];
+      background-color: rgba(53, 56, 68, 0.62);
+      color: #727683;
     }
 
     .dark-mode a {
-      @apply text-[#959ba8];
+      color: #959ba8;
     }
 
     .dark-mode .blok-element--selected .blok-element__content,
     .dark-mode ::selection {
-      @apply bg-[rgba(57,68,84,0.57)];
+      background-color: rgba(57, 68, 84, 0.57);
     }
 
     .dark-mode .blok-toolbox__button,
     .dark-mode .blok-toolbar__settings-btn,
     .dark-mode .blok-toolbar__plus {
-      @apply text-inherit;
+      color: inherit;
     }
 
     .dark-mode .blok-stub {
-      @apply opacity-30;
+      opacity: 0.3;
     }
 
     .blok-example .blok-element:first-of-type h1.blok-header {
-      @apply text-[50px];
+      font-size: 50px;
     }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />

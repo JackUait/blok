@@ -215,7 +215,7 @@ test.describe('saver module', () => {
 
     await page.waitForFunction(
       ({ blokSelector }) => {
-        const headerElement = document.querySelector(`${blokSelector} .blok-header`);
+        const headerElement = document.querySelector(`${blokSelector} [data-blok-tool="header"]`);
 
         return headerElement?.tagName === 'H3';
       },

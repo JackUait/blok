@@ -8,17 +8,25 @@ import Module from '../__module';
 import $ from '../dom';
 
 import SelectionUtils from '../selection';
-import Block from '../block';
 import * as _ from '../utils';
-import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../constants';
+import {
+  INLINE_TOOLBAR_INTERFACE_SELECTOR,
+  BLOK_OVERLAY_ATTR,
+  BLOK_OVERLAY_CONTAINER_ATTR,
+  BLOK_OVERLAY_RECTANGLE_ATTR,
+  BLOK_ELEMENT_CONTENT_SELECTOR,
+  BLOK_EDITOR_SELECTOR,
+  BLOK_TOOLBAR_SELECTOR,
+} from '../constants';
 
 /**
  *
  */
 export default class RectangleSelection extends Module {
   /**
-   * CSS classes for the Block
+   * CSS classes for the Block - kept for backward compatibility
    * @returns {{wrapper: string, content: string}}
+   * @deprecated Use data attributes via constants instead
    */
   public static get CSS(): {[name: string]: string} {
     return {
@@ -126,7 +134,7 @@ export default class RectangleSelection extends Module {
      * Don't clear selected block by clicks on the Block settings
      * because we need to keep highlighting working block
      */
-    const startsInsideToolbar = elemWhereSelectionStart.closest(`.${this.Blok.Toolbar.CSS.toolbarSelector}`);
+    const startsInsideToolbar = elemWhereSelectionStart.closest(BLOK_TOOLBAR_SELECTOR);
 
     if (!startsInsideToolbar) {
       this.Blok.BlockSelection.allBlocksSelected = false;
@@ -135,12 +143,12 @@ export default class RectangleSelection extends Module {
     }
 
     const selectorsToAvoid = [
-      `.${Block.CSS.content}`,
-      `.${this.Blok.Toolbar.CSS.toolbarSelector}`,
+      BLOK_ELEMENT_CONTENT_SELECTOR,
+      BLOK_TOOLBAR_SELECTOR,
       INLINE_TOOLBAR_INTERFACE_SELECTOR,
     ];
 
-    const startsInsideBlok = elemWhereSelectionStart.closest('.' + this.Blok.UI.CSS.blokWrapper);
+    const startsInsideBlok = elemWhereSelectionStart.closest(BLOK_EDITOR_SELECTOR);
     const startsInSelectorToAvoid = selectorsToAvoid.some((selector) => !!elemWhereSelectionStart.closest(selector));
 
     /**
@@ -304,7 +312,7 @@ export default class RectangleSelection extends Module {
   private genHTML(): {container: Element; overlay: Element} {
     const { UI } = this.Blok;
 
-    const container = UI.nodes.holder.querySelector('.' + UI.CSS.blokWrapper);
+    const container = UI.nodes.holder.querySelector(BLOK_EDITOR_SELECTOR);
     const overlay = $.make('div', [
       RectangleSelection.CSS.overlay,
       'fixed',
@@ -328,6 +336,9 @@ export default class RectangleSelection extends Module {
       'border-transparent',
     ], {});
 
+    overlay.setAttribute(BLOK_OVERLAY_ATTR, '');
+    overlayContainer.setAttribute(BLOK_OVERLAY_CONTAINER_ATTR, '');
+    overlayRectangle.setAttribute(BLOK_OVERLAY_RECTANGLE_ATTR, '');
     overlay.setAttribute('data-blok-testid', 'overlay');
     overlayRectangle.setAttribute('data-blok-testid', 'overlay-rectangle');
 
@@ -508,7 +519,7 @@ export default class RectangleSelection extends Module {
     const y = this.mouseY - scrollTop;
     const elementUnderMouse = document.elementFromPoint(centerOfRedactor, y);
     const lastBlockHolder = this.Blok.BlockManager.lastBlock?.holder;
-    const contentElement = lastBlockHolder?.querySelector('.' + Block.CSS.content);
+    const contentElement = lastBlockHolder?.querySelector(BLOK_ELEMENT_CONTENT_SELECTOR);
     const contentWidth = contentElement ? Number.parseInt(window.getComputedStyle(contentElement).width, 10) : 0;
     const centerOfBlock = contentWidth / 2;
     const leftPos = centerOfRedactor - centerOfBlock;

@@ -13,7 +13,16 @@ import { mobileScreenBreakpoint } from '../utils';
 
 import styles from '../../styles/main.css?inline';
 import { BlockHovered } from '../events/BlockHovered';
-import { DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE, selectionChangeDebounceTimeout } from '../constants';
+import {
+  DATA_INTERFACE_ATTRIBUTE,
+  BLOK_INTERFACE_VALUE,
+  selectionChangeDebounceTimeout,
+  BLOK_EDITOR_ATTR,
+  BLOK_REDACTOR_ATTR,
+  BLOK_NARROW_ATTR,
+  BLOK_RTL_ATTR,
+  BLOK_EMPTY_ATTR,
+} from '../constants';
 import { BlokMobileLayoutToggled } from '../events';
 /**
  * HTML Elements used for UI
@@ -44,6 +53,7 @@ export default class UI extends Module<UINodes> {
   /**
    * Blok UI CSS class names
    * @returns {{blokWrapper: string, blokZone: string}}
+   * @deprecated Use data attributes via constants instead
    */
   public get CSS(): {
     blokWrapper: string; blokWrapperNarrow: string; blokZone: string; blokZoneHidden: string;
@@ -194,7 +204,7 @@ export default class UI extends Module<UINodes> {
     const { BlockManager } = this.Blok;
 
     this.nodes.wrapper.classList.toggle(this.CSS.blokEmpty, BlockManager.isBlokEmpty);
-    this.nodes.wrapper.setAttribute('data-blok-empty', BlockManager.isBlokEmpty ? 'true' : 'false');
+    this.nodes.wrapper.setAttribute(BLOK_EMPTY_ATTR, BlockManager.isBlokEmpty ? 'true' : 'false');
   }
 
   /**
@@ -302,28 +312,33 @@ export default class UI extends Module<UINodes> {
       'relative',
       'box-border',
       'z-[1]',
-      '[&.is-dragging]:cursor-grabbing',
+      '[&[data-blok-dragging=true]]:cursor-grabbing',
       // SVG defaults
       '[&_svg]:max-h-full',
       '[&_path]:stroke-current',
       // Native selection color
       '[&_::selection]:bg-selection-inline',
       // Hide placeholder when toolbox is opened
-      '[&.is-toolbox-opened_[contentEditable=true][data-blok-placeholder]:focus]:before:!opacity-0',
+      '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder]:focus]:before:!opacity-0',
       ...(this.isRtl ? [ this.CSS.blokRtlFix, '[direction:rtl]' ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE);
+    this.nodes.wrapper.setAttribute(BLOK_EDITOR_ATTR, '');
     this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');
+    if (this.isRtl) {
+      this.nodes.wrapper.setAttribute(BLOK_RTL_ATTR, 'true');
+    }
     this.nodes.redactor = $.make('div', [
       this.CSS.blokZone,
       // Narrow mode: add right margin on non-mobile screens
-      'not-mobile:group-[.blok-editor--narrow]:mr-[theme(spacing.narrow-mode-right-padding)]',
+      'not-mobile:group-data-[blok-narrow=true]:mr-[theme(spacing.narrow-mode-right-padding)]',
       // RTL narrow mode: add left margin instead
-      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:ml-[theme(spacing.narrow-mode-right-padding)]',
-      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:mr-0',
+      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:ml-[theme(spacing.narrow-mode-right-padding)]',
+      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:mr-0',
       // Firefox empty contenteditable fix
       '[&_[contenteditable]:empty]:after:content-["\\feff_"]',
     ]);
+    this.nodes.redactor.setAttribute(BLOK_REDACTOR_ATTR, '');
     this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
 
     /**
@@ -332,7 +347,7 @@ export default class UI extends Module<UINodes> {
      */
     if (this.nodes.holder.offsetWidth < this.contentRect.width) {
       this.nodes.wrapper.classList.add(this.CSS.blokWrapperNarrow);
-      this.nodes.wrapper.setAttribute('data-blok-narrow', 'true');
+      this.nodes.wrapper.setAttribute(BLOK_NARROW_ATTR, 'true');
     }
 
     /**

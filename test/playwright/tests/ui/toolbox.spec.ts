@@ -210,7 +210,7 @@ const isCaretInBlock = async (page: Page, blockId: string): Promise<boolean> => 
     }
 
     const range = selection.getRangeAt(0);
-    const blockElement = document.querySelector(`.blok-element[data-blok-id="${id}"]`);
+    const blockElement = document.querySelector(`[data-blok-element][data-blok-id="${id}"]`);
 
     if (!blockElement) {
       return false;

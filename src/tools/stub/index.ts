@@ -1,6 +1,13 @@
 import $ from '../../components/dom';
 import type { API, BlockTool, BlockToolConstructorOptions, BlockToolData } from '../../../types';
 import { IconWarning } from '../../components/icons';
+import {
+  BLOK_TOOL_ATTR,
+  BLOK_STUB_ATTR,
+  BLOK_STUB_INFO_ATTR,
+  BLOK_STUB_TITLE_ATTR,
+  BLOK_STUB_SUBTITLE_ATTR,
+} from '../../components/constants';
 
 export interface StubData extends BlockToolData {
   title: string;
@@ -19,6 +26,7 @@ export default class Stub implements BlockTool {
 
   /**
    * Stub styles
+   * @deprecated Use data attributes via constants instead
    * @type {{wrapper: string, info: string, title: string, subtitle: string}}
    */
   private CSS = {
@@ -26,15 +34,6 @@ export default class Stub implements BlockTool {
     info: 'blok-stub__info ml-3.5',
     title: 'blok-stub__title font-medium capitalize',
     subtitle: 'blok-stub__subtitle',
-  };
-
-  /**
-   * Data attributes for testing
-   */
-  private static readonly DATA_ATTR = {
-    wrapper: 'data-blok-stub',
-    title: 'data-blok-stub-title',
-    subtitle: 'data-blok-stub-subtitle',
   };
 
   /**
@@ -107,9 +106,11 @@ export default class Stub implements BlockTool {
       textContent: this.subtitle,
     });
 
-    wrapper.setAttribute(Stub.DATA_ATTR.wrapper, '');
-    title.setAttribute(Stub.DATA_ATTR.title, '');
-    subtitle.setAttribute(Stub.DATA_ATTR.subtitle, '');
+    wrapper.setAttribute(BLOK_TOOL_ATTR, 'stub');
+    wrapper.setAttribute(BLOK_STUB_ATTR, '');
+    infoContainer.setAttribute(BLOK_STUB_INFO_ATTR, '');
+    title.setAttribute(BLOK_STUB_TITLE_ATTR, '');
+    subtitle.setAttribute(BLOK_STUB_SUBTITLE_ATTR, '');
 
     wrapper.innerHTML = icon;
 

@@ -12,6 +12,11 @@ import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
 import { twJoin } from '../../utils/tw';
+import {
+  BLOK_TOOLBAR_ATTR,
+  BLOK_SETTINGS_TOGGLER_ATTR,
+  BLOK_TOOLBOX_OPENED_ATTR,
+} from '../../constants';
 
 /**
  * @todo Tab on non-empty block should open Block Settings of the hoveredBlock (not where caret is set)
@@ -121,6 +126,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
   /**
    * CSS styles
    * @returns {object}
+   * @deprecated Use data attributes via constants instead
    */
   public get CSS(): { [name: string]: string } {
     return {
@@ -139,8 +145,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
         // Mobile styles
         'mobile:right-auto',
         // RTL styles
-        'group-[.blok-editor--rtl]:right-auto group-[.blok-editor--rtl]:left-[calc(-1*theme(width.toolbox-btn))]',
-        'mobile:group-[.blok-editor--rtl]:ml-0 mobile:group-[.blok-editor--rtl]:mr-auto mobile:group-[.blok-editor--rtl]:pr-0 mobile:group-[.blok-editor--rtl]:pl-[10px]'
+        'group-data-[blok-rtl=true]:right-auto group-data-[blok-rtl=true]:left-[calc(-1*theme(width.toolbox-btn))]',
+        'mobile:group-data-[blok-rtl=true]:ml-0 mobile:group-data-[blok-rtl=true]:mr-auto mobile:group-data-[blok-rtl=true]:pr-0 mobile:group-data-[blok-rtl=true]:pl-[10px]'
       ),
       actionsOpened: 'opacity-100',
 
@@ -158,11 +164,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
         'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
         // RTL styles
-        'group-[.blok-editor--rtl]:right-[calc(-1*theme(width.toolbox-btn))] group-[.blok-editor--rtl]:left-auto',
+        'group-data-[blok-rtl=true]:right-[calc(-1*theme(width.toolbox-btn))] group-data-[blok-rtl=true]:left-auto',
         // Narrow mode (not-mobile)
-        'not-mobile:group-[.blok-editor--narrow]:left-[5px]',
+        'not-mobile:group-data-[blok-narrow=true]:left-[5px]',
         // Narrow mode RTL (not-mobile)
-        'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-0 not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:right-[5px]'
+        'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:left-0 not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:right-[5px]'
       ),
       plusButtonShortcut: 'mt-[5px] opacity-60',
       plusButtonShortcutKey: 'text-white',
@@ -172,7 +178,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
       settingsTogglerHandle: 'blok-settings-toggler',
       settingsToggler: twJoin(
         // Base toolbox-button styles
-        'blok-settings-toggler',
         'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
         'cursor-pointer select-none',
         // SVG sizing
@@ -182,7 +187,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
         // Hover (can-hover)
         'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
         // When toolbox is opened, use pointer cursor on hover
-        'group-[.is-toolbox-opened]:can-hover:hover:cursor-pointer',
+        'group-data-[blok-toolbox-opened=true]:can-hover:hover:cursor-pointer',
         // Mobile styles (static positioning with overlay-pane appearance)
         'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
@@ -511,10 +516,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
       this.CSS.toolbar,
       this.CSS.toolbarSelector,
       this.CSS.toolbarClosed,
-      'group-[.is-dragging]:pointer-events-none',
+      'group-data-[blok-dragging=true]:pointer-events-none',
     ]);
 
     this.nodes.wrapper = wrapper;
+    wrapper.setAttribute(BLOK_TOOLBAR_ATTR, '');
     wrapper.setAttribute('data-blok-testid', 'toolbar');
 
     /**
@@ -524,12 +530,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const actions = $.make('div', [
       this.CSS.actions,
       // Narrow mode positioning on non-mobile screens
-      'not-mobile:group-[.blok-editor--narrow]:right-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
+      'not-mobile:group-data-[blok-narrow=true]:right-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
       // RTL narrow mode: use left positioning instead
-      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:right-auto',
-      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
+      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:right-auto',
+      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:left-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
       // RTL narrow mode additional left offset
-      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-[-5px]',
+      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:left-[-5px]',
     ]);
 
     this.nodes.content = content;
@@ -608,11 +614,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     const settingsToggler = $.make('span', [
       this.CSS.settingsToggler,
-      'group-[.is-dragging]:cursor-grabbing',
+      'group-data-[blok-dragging=true]:cursor-grabbing',
     ], {
       innerHTML: IconMenu,
     });
 
+    settingsToggler.setAttribute(BLOK_SETTINGS_TOGGLER_ATTR, '');
     settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
 
     this.nodes.settingsToggler = settingsToggler;
@@ -683,12 +690,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
-      this.Blok.UI.nodes.wrapper.setAttribute('data-blok-toolbox-opened', 'true');
+      this.Blok.UI.nodes.wrapper.setAttribute(BLOK_TOOLBOX_OPENED_ATTR, 'true');
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
-      this.Blok.UI.nodes.wrapper.removeAttribute('data-blok-toolbox-opened');
+      this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_TOOLBOX_OPENED_ATTR);
     });
 
     this.toolboxInstance.on(ToolboxEvent.BlockAdded, ({ block }) => {

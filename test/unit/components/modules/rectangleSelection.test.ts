@@ -57,6 +57,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
   const blokWrapperClass = 'blok-editor__redactor';
 
   blokWrapper.setAttribute('data-blok-testid', 'blok-wrapper');
+  blokWrapper.setAttribute('data-blok-editor', '');
   Object.assign(blokWrapper, { className: blokWrapperClass });
   holder.appendChild(blokWrapper);
   document.body.appendChild(holder);
@@ -64,6 +65,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
   const blockContent = document.createElement('div');
 
   blockContent.setAttribute('data-blok-testid', 'block-content');
+  blockContent.setAttribute('data-blok-element-content', '');
   Object.assign(blockContent, { className: Block.CSS.content });
   blockContent.style.width = '400px';
 
@@ -243,6 +245,7 @@ describe('RectangleSelection', () => {
     const toolbarElement = document.createElement('div');
 
     toolbarElement.setAttribute('data-blok-testid', 'toolbar');
+    toolbarElement.setAttribute('data-blok-toolbar', '');
     Object.assign(toolbarElement, { className: toolbar.CSS.toolbarSelector });
     const toolbarChild = document.createElement('div');
 
@@ -282,6 +285,7 @@ describe('RectangleSelection', () => {
     const blockContent = document.createElement('div');
 
     blockContent.setAttribute('data-blok-testid', 'block-content');
+    blockContent.setAttribute('data-blok-element-content', '');
     Object.assign(blockContent, { className: Block.CSS.content });
     blokWrapper.appendChild(blockContent);
     elementFromPointSpy.mockReturnValue(blockContent);

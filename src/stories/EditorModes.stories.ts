@@ -412,14 +412,12 @@ export const DraggingState: Story = {
       const editorWrapper = canvasElement.querySelector('[data-blok-testid="blok-editor"]');
 
       if (editorWrapper) {
-        // eslint-disable-next-line internal-storybook/no-class-selectors
-        editorWrapper.classList.add('blok-editor--dragging');
+        editorWrapper.setAttribute('data-blok-dragging', 'true');
       }
 
       await waitFor(
         () => {
-          // eslint-disable-next-line internal-storybook/no-class-selectors -- Checking dragging class is applied to editor
-          const draggingEditor = canvasElement.querySelector('[data-blok-testid="blok-editor"].blok-editor--dragging');
+          const draggingEditor = canvasElement.querySelector('[data-blok-testid="blok-editor"][data-blok-dragging="true"]');
 
           expect(draggingEditor).toBeTruthy();
         },
@@ -459,8 +457,7 @@ export const DraggingState: Story = {
       const editorWrapper = canvasElement.querySelector('[data-blok-testid="blok-editor"]');
 
       if (editorWrapper) {
-        // eslint-disable-next-line internal-storybook/no-class-selectors
-        editorWrapper.classList.remove('blok-editor--dragging');
+        editorWrapper.removeAttribute('data-blok-dragging');
       }
     });
   },
@@ -493,7 +490,7 @@ export const RectangleSelection: Story = {
       if (editorWrapper) {
         const overlay = document.createElement('div');
 
-        overlay.className = 'blok-editor-overlay';
+        overlay.setAttribute('data-blok-overlay', '');
         overlay.style.position = 'absolute';
         overlay.style.inset = '0';
         overlay.style.pointerEvents = 'none';
@@ -502,14 +499,14 @@ export const RectangleSelection: Story = {
 
         const overlayContainer = document.createElement('div');
 
-        overlayContainer.className = 'blok-editor-overlay__container';
+        overlayContainer.setAttribute('data-blok-overlay-container', '');
         overlayContainer.style.position = 'relative';
         overlayContainer.style.width = '100%';
         overlayContainer.style.height = '100%';
 
         const rectangle = document.createElement('div');
 
-        rectangle.className = 'blok-editor-overlay__rectangle';
+        rectangle.setAttribute('data-blok-overlay-rectangle', '');
         rectangle.setAttribute('data-blok-testid', 'selection-rectangle');
         rectangle.style.position = 'absolute';
         rectangle.style.top = '50px';

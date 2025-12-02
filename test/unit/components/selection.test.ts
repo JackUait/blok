@@ -95,9 +95,10 @@ const createBlokZone = (text = 'Hello world'): {
   const zone = document.createElement('div');
   const paragraph = document.createElement('p');
 
-  // eslint-disable-next-line internal-unit-test/no-class-selectors
+  // Add both data attribute and class for backward compatibility during migration
+  wrapper.setAttribute('data-blok-editor', '');
   wrapper.classList.add('blok-editor');
-  // eslint-disable-next-line internal-unit-test/no-class-selectors
+  zone.setAttribute('data-blok-redactor', '');
   zone.classList.add('blok-editor__redactor');
   paragraph.textContent = text;
 

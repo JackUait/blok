@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'blok-';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const BLOCK_SELECTED_CLASS = 'is-selected';
+const BLOCK_SELECTED_ATTR = 'data-blok-selected';
 
 type ToolDefinition = {
   name: string;
@@ -526,7 +526,7 @@ test.describe('caret API', () => {
 
       await clearSelection(page);
 
-      const result = await page.evaluate(({ blockSelector, selectedClass }) => {
+      const result = await page.evaluate(({ blockSelector, selectedAttr }) => {
         if (!window.blokInstance) {
           throw new Error('Blok instance not found');
         }
@@ -535,7 +535,7 @@ test.describe('caret API', () => {
 
         const returnedValue = window.blokInstance.caret.setToBlock(99);
         const selection = window.getSelection();
-        const selectedBlocks = document.querySelectorAll(`${blockSelector}.${selectedClass}`).length;
+        const selectedBlocks = document.querySelectorAll(`${blockSelector}[${selectedAttr}="true"]`).length;
 
         return {
           returnedValue,
@@ -543,7 +543,7 @@ test.describe('caret API', () => {
           selectedBlocks,
         };
       }, { blockSelector: BLOCK_SELECTOR,
-        selectedClass: BLOCK_SELECTED_CLASS });
+        selectedAttr: BLOCK_SELECTED_ATTR });
 
       expect(result.returnedValue).toBe(false);
       expect(result.rangeCount).toBe(0);
@@ -562,7 +562,7 @@ test.describe('caret API', () => {
 
       await clearSelection(page);
 
-      const result = await page.evaluate(({ blockSelector, selectedClass }) => {
+      const result = await page.evaluate(({ blockSelector, selectedAttr }) => {
         if (!window.blokInstance) {
           throw new Error('Blok instance not found');
         }
@@ -571,7 +571,7 @@ test.describe('caret API', () => {
 
         const returnedValue = window.blokInstance.caret.setToBlock('missing-block-id');
         const selection = window.getSelection();
-        const selectedBlocks = document.querySelectorAll(`${blockSelector}.${selectedClass}`).length;
+        const selectedBlocks = document.querySelectorAll(`${blockSelector}[${selectedAttr}="true"]`).length;
 
         return {
           returnedValue,
@@ -579,7 +579,7 @@ test.describe('caret API', () => {
           selectedBlocks,
         };
       }, { blockSelector: BLOCK_SELECTOR,
-        selectedClass: BLOCK_SELECTED_CLASS });
+        selectedAttr: BLOCK_SELECTED_ATTR });
 
       expect(result.returnedValue).toBe(false);
       expect(result.rangeCount).toBe(0);
@@ -597,7 +597,7 @@ test.describe('caret API', () => {
 
       await clearSelection(page);
 
-      const result = await page.evaluate(({ blockSelector, selectedClass }) => {
+      const result = await page.evaluate(({ blockSelector, selectedAttr }) => {
         if (!window.blokInstance) {
           throw new Error('Blok instance not found');
         }
@@ -612,7 +612,7 @@ test.describe('caret API', () => {
 
         const returnedValue = window.blokInstance.caret.setToBlock(block);
         const selection = window.getSelection();
-        const selectedBlocks = document.querySelectorAll(`${blockSelector}.${selectedClass}`).length;
+        const selectedBlocks = document.querySelectorAll(`${blockSelector}[${selectedAttr}="true"]`).length;
 
         return {
           returnedValue,
@@ -620,7 +620,7 @@ test.describe('caret API', () => {
           selectedBlocks,
         };
       }, { blockSelector: BLOCK_SELECTOR,
-        selectedClass: BLOCK_SELECTED_CLASS });
+        selectedAttr: BLOCK_SELECTED_ATTR });
 
       expect(result.returnedValue).toBe(false);
       expect(result.rangeCount).toBe(0);
@@ -650,7 +650,7 @@ test.describe('caret API', () => {
 
       await clearSelection(page);
 
-      const result = await page.evaluate(({ blockSelector, selectedClass }) => {
+      const result = await page.evaluate(({ blockSelector, selectedAttr }) => {
         if (!window.blokInstance) {
           throw new Error('Blok instance not found');
         }
@@ -664,11 +664,11 @@ test.describe('caret API', () => {
         return {
           returnedValue,
           rangeCount: selection?.rangeCount ?? 0,
-          secondBlockSelected: !!secondBlock && secondBlock.classList.contains(selectedClass),
-          firstBlockSelected: !!firstBlock && firstBlock.classList.contains(selectedClass),
+          secondBlockSelected: !!secondBlock && secondBlock.getAttribute(selectedAttr) === 'true',
+          firstBlockSelected: !!firstBlock && firstBlock.getAttribute(selectedAttr) === 'true',
         };
       }, { blockSelector: BLOCK_SELECTOR,
-        selectedClass: BLOCK_SELECTED_CLASS });
+        selectedAttr: BLOCK_SELECTED_ATTR });
 
       expect(result.returnedValue).toBe(true);
       expect(result.rangeCount).toBe(0);

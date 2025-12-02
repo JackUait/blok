@@ -7,6 +7,7 @@
  */
 import { IconText } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
+import { BLOK_TOOL_ATTR } from '../../components/constants';
 import type {
   API,
   BlockTool,
@@ -85,6 +86,7 @@ export default class Paragraph implements BlockTool {
 
   /**
    * Paragraph Tool's CSS classes
+   * @deprecated Use data-blok-tool attribute instead
    */
   private _CSS: { block: string; wrapper: string };
 
@@ -198,6 +200,7 @@ export default class Paragraph implements BlockTool {
       Paragraph.WRAPPER_CLASSES,
       Paragraph.PLACEHOLDER_CLASSES
     );
+    div.setAttribute(BLOK_TOOL_ATTR, 'paragraph');
     div.contentEditable = 'false';
     div.setAttribute('data-placeholder-active', this.api.i18n.t(this._placeholder));
 

@@ -3,6 +3,7 @@
  */
 import * as _ from './utils';
 import $ from './dom';
+import { BLOK_FAKE_CURSOR_ATTR, BLOK_FAKE_CURSOR_SELECTOR } from './constants';
 
 interface TextRange {
   boundingTop: number;
@@ -364,6 +365,7 @@ export default class SelectionUtils {
 
     const fakeCursor = $.make('span', 'blok-editor__fake-cursor');
 
+    fakeCursor.setAttribute(BLOK_FAKE_CURSOR_ATTR, '');
     fakeCursor.setAttribute('data-blok-mutation-free', 'true');
 
     range.collapse();
@@ -375,7 +377,7 @@ export default class SelectionUtils {
    * @param el - where to check
    */
   public static isFakeCursorInsideContainer(el: HTMLElement): boolean {
-    return $.find(el, `.blok-editor__fake-cursor`) !== null;
+    return $.find(el, BLOK_FAKE_CURSOR_SELECTOR) !== null;
   }
 
   /**
@@ -383,7 +385,7 @@ export default class SelectionUtils {
    * @param container - container to look for
    */
   public static removeFakeCursor(container: HTMLElement = document.body): void {
-    const fakeCursor = $.find(container, `.blok-editor__fake-cursor`);
+    const fakeCursor = $.find(container, BLOK_FAKE_CURSOR_SELECTOR);
 
     if (!fakeCursor) {
       return;

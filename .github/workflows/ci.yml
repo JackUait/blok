@@ -135,5 +135,8 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
       - name: Run Storybook Tests
         run: yarn storybook:test

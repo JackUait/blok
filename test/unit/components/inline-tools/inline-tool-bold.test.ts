@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import BoldInlineTool from '../../../../src/components/inline-tools/inline-tool-bold';
-import SelectionUtils from '../../../../src/components/selection';
 import type { PopoverItemDefaultBaseParams } from '../../../../types/utils/popover';
 
 type BoldInlineToolInternals = {
@@ -39,7 +38,7 @@ const resetBoldInlineTool = (): void => {
 const setupBlok = (html: string): { block: HTMLElement } => {
   const wrapper = document.createElement('div');
 
-  wrapper.className = SelectionUtils.CSS.blokWrapper;
+  wrapper.setAttribute('data-blok-testid', 'blok-wrapper');
 
   const block = document.createElement('div');
 

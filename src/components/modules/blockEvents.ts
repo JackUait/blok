@@ -8,7 +8,6 @@ import Flipper from '../flipper';
 import type Block from '../block';
 import { areBlocksMergeable } from '../utils/blocks';
 import * as caretUtils from '../utils/caret';
-import { focus } from '@editorjs/caret';
 
 const KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP: Record<string, number> = {
   Backspace: _.keyCodes.BACKSPACE,
@@ -572,7 +571,7 @@ export default class BlockEvents extends Module {
       return;
     }
 
-    focus(targetBlock.lastInput, false);
+    caretUtils.focus(targetBlock.lastInput, false);
 
     BlockManager
       .mergeBlocks(targetBlock, blockToMerge)

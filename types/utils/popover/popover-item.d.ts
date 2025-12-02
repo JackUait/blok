@@ -39,6 +39,12 @@ export interface PopoverItemChildren {
    * Called once children popover is closed
    */
   onClose?: () => void;
+
+  /**
+   * True if the chevron icon should be hidden for this item.
+   * Useful for items like link tool that render custom content instead of a dropdown list.
+   */
+  hideChevron?: boolean;
 }
 
 /**
@@ -227,11 +233,28 @@ type PopoverItemHintRenderParams = {
 
 
 /**
+ * Common popover item render params shared across item types
+ */
+interface PopoverItemCommonRenderParams {
+  /**
+   * If true, item is rendered inside an inline popover.
+   * Applies different styling for inline context.
+   */
+  isInline?: boolean;
+
+  /**
+   * If true, item is rendered inside a nested popover within an inline popover.
+   * Applies nested popover styling.
+   */
+  isNestedInline?: boolean;
+}
+
+/**
  * Popover item render params.
  * The parameters that are not set by user via popover api but rather depend on technical implementation
  */
 export type PopoverItemRenderParamsMap = {
-  [PopoverItemType.Default]?: {
+  [PopoverItemType.Default]?: PopoverItemCommonRenderParams & {
     /**
      * Wrapper tag for the item.
      * Div by default
@@ -241,13 +264,21 @@ export type PopoverItemRenderParamsMap = {
     /**
      * Hint render params
      */
-    hint?: PopoverItemHintRenderParams
+    hint?: PopoverItemHintRenderParams;
+
+    /**
+     * If true, adds a gap/margin after the icon.
+     * True by default. Set to false for inline tools where icons are displayed without titles.
+     */
+    iconWithGap?: boolean;
   };
 
-  [PopoverItemType.Html]?: {
+  [PopoverItemType.Html]?: PopoverItemCommonRenderParams & {
     /**
      * Hint render params
      */
     hint?: PopoverItemHintRenderParams
   };
+
+  [PopoverItemType.Separator]?: PopoverItemCommonRenderParams;
 };

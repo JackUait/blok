@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-vi.mock('@codexteam/icons', () => ({
-  IconDotCircle: '<svg data-blok-testid="dot-circle"></svg>',
+vi.mock('../../../src/components/icons', () => ({
   IconChevronRight: '<svg data-blok-testid="chevron-right"></svg>',
 }));
 
@@ -20,8 +19,8 @@ import type {
 } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { SearchInput } from '../../../src/components/utils/popover/components/search-input';
-import { css } from '../../../src/components/utils/popover/popover.const';
-import { css as popoverItemCss } from '../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
+import { DATA_ATTRIBUTE_OPENED, DATA_ATTRIBUTE_OPEN_TOP, DATA_ATTRIBUTE_OPEN_LEFT } from '../../../src/components/utils/popover/popover.const';
+import { DATA_ATTRIBUTE_ACTIVE } from '../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
 
 /**
  * Test implementation of PopoverAbstract for unit testing
@@ -136,8 +135,8 @@ describe('PopoverAbstract', () => {
       const items = popover.getItemsForTests();
 
       expect(popover.getElement()).toBe(nodes.popover);
-      expect(nodes.popover.classList.contains(css.popover)).toBe(true);
-      expect(nodes.popover.classList.contains('custom-popover')).toBe(true);
+      expect(nodes.popover.dataset.blokTestid).toBe('popover');
+      expect(nodes.popover.dataset.blokPopoverCustomClass).toBe('custom-popover');
       expect(nodes.nothingFoundMessage.textContent).toBe(nothingFoundText);
       expect(nodes.popoverContainer.contains(nodes.items)).toBe(true);
       expect(nodes.items.childElementCount).toBe(items.length);
@@ -244,7 +243,7 @@ describe('PopoverAbstract', () => {
 
       popover.show();
 
-      expect(nodes.popover.classList.contains(css.popoverOpened)).toBe(true);
+      expect(nodes.popover.getAttribute(DATA_ATTRIBUTE_OPENED)).toBe('true');
       expect(nodes.popover.getAttribute('data-blok-popover-opened')).toBe('true');
       expect(focus).toHaveBeenCalledTimes(1);
     });
@@ -269,12 +268,13 @@ describe('PopoverAbstract', () => {
       (popover as unknown as { search?: SearchInput }).search = searchMock;
       popover.on(PopoverEvent.Closed, closedHandler);
 
-      nodes.popover.classList.add(css.popoverOpenTop, css.popoverOpenLeft);
+      nodes.popover.setAttribute(DATA_ATTRIBUTE_OPEN_TOP, 'true');
+      nodes.popover.setAttribute(DATA_ATTRIBUTE_OPEN_LEFT, 'true');
       popover.show();
       popover.hide();
 
-      expect(nodes.popover.classList.contains(css.popoverOpened)).toBe(false);
-      expect(nodes.popover.classList.contains(css.popoverOpenTop)).toBe(false);
+      expect(nodes.popover.getAttribute(DATA_ATTRIBUTE_OPENED)).toBeNull();
+      expect(nodes.popover.getAttribute(DATA_ATTRIBUTE_OPEN_TOP)).toBeNull();
       expect(nodes.popover.getAttribute('data-blok-popover-opened')).toBeNull();
       expect(resetSpy).toHaveBeenCalled();
       expect(searchMock.clear).toHaveBeenCalledTimes(1);
@@ -386,10 +386,10 @@ describe('PopoverAbstract', () => {
       }
 
       popover.invokeHandleItemClick(toggleItem);
-      expect(element?.classList.contains(popoverItemCss.active)).toBe(true);
+      expect(element?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe('true');
 
       popover.invokeHandleItemClick(toggleItem);
-      expect(element?.classList.contains(popoverItemCss.active)).toBe(false);
+      expect(element?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBeNull();
     });
 
     it('applies radio-like behaviour when toggle is a string key', () => {
@@ -418,12 +418,12 @@ describe('PopoverAbstract', () => {
       }
 
       popover.invokeHandleItemClick(first);
-      expect(firstEl?.classList.contains(popoverItemCss.active)).toBe(true);
-      expect(secondEl?.classList.contains(popoverItemCss.active)).toBe(false);
+      expect(firstEl?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe('true');
+      expect(secondEl?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBeNull();
 
       popover.invokeHandleItemClick(second);
-      expect(secondEl?.classList.contains(popoverItemCss.active)).toBe(true);
-      expect(firstEl?.classList.contains(popoverItemCss.active)).toBe(false);
+      expect(secondEl?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe('true');
+      expect(firstEl?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBeNull();
     });
 
     it('hides popover and emits ClosedOnActivate when item requires closing', () => {
@@ -445,7 +445,7 @@ describe('PopoverAbstract', () => {
       popover.show();
       popover.invokeHandleItemClick(item);
 
-      expect(nodes.popover.classList.contains(css.popoverOpened)).toBe(false);
+      expect(nodes.popover.getAttribute(DATA_ATTRIBUTE_OPENED)).toBeNull();
       expect(closedOnActivateHandler).toHaveBeenCalledTimes(1);
     });
   });

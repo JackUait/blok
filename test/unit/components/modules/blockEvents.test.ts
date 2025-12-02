@@ -1,10 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-vi.mock('@editorjs/caret', () => ({
-  focus: vi.fn(),
-}));
-
-import { focus } from '@editorjs/caret';
 import BlockEvents from '../../../../src/components/modules/blockEvents';
 import EventsDispatcher from '../../../../src/components/utils/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
@@ -1052,6 +1046,7 @@ describe('BlockEvents', () => {
 
   describe('mergeBlocks', () => {
     it('focuses the target block, merges blocks and closes toolbar', async () => {
+      const focusSpy = vi.spyOn(caretUtils, 'focus').mockImplementation(() => undefined);
       const mergeBlocksFn = vi.fn().mockResolvedValue(undefined);
       const closeToolbar = vi.fn();
       const targetBlock = {
@@ -1074,12 +1069,13 @@ describe('BlockEvents', () => {
       await mergeBlocksFn.mock.results[0]!.value;
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(focus).toHaveBeenCalledWith(targetBlock.lastInput, false);
+      expect(focusSpy).toHaveBeenCalledWith(targetBlock.lastInput, false);
       expect(mergeBlocksFn).toHaveBeenCalledWith(targetBlock, blockToMerge);
       expect(closeToolbar).toHaveBeenCalledTimes(1);
     });
 
     it('returns early when target block has no lastInput', () => {
+      const focusSpy = vi.spyOn(caretUtils, 'focus').mockImplementation(() => undefined);
       const mergeBlocksFn = vi.fn().mockResolvedValue(undefined);
       const blockEvents = createBlockEvents({
         BlockManager: {
@@ -1096,7 +1092,7 @@ describe('BlockEvents', () => {
       );
 
       expect(mergeBlocksFn).not.toHaveBeenCalled();
-      expect(focus).not.toHaveBeenCalled();
+      expect(focusSpy).not.toHaveBeenCalled();
     });
   });
 });

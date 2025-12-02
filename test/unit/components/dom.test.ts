@@ -18,10 +18,11 @@ describe('Dom helper utilities', () => {
         title: 'Action',
         disabled: true,
         'data-blok-testid': 'make-button',
+        'data-blok-classes': 'btn primary',
       });
 
       expect(button.tagName).toBe('BUTTON');
-      expect(button.className).toBe('btn primary');
+      expect(button.getAttribute('data-blok-classes')).toBe('btn primary');
       expect(button.getAttribute('data-blok-testid')).toBe('make-button');
       expect((button as HTMLButtonElement).disabled).toBe(true);
 
@@ -70,13 +71,13 @@ describe('Dom helper utilities', () => {
       const holder = document.createElement('div');
 
       holder.id = 'holder';
-      holder.innerHTML = '<span class="item">one</span><span class="item">two</span>';
+      holder.innerHTML = '<span data-blok-testid="item">one</span><span data-blok-testid="item">two</span>';
       document.body.appendChild(holder);
 
-      const first = Dom.find(holder, '.item');
+      const first = Dom.find(holder, '[data-blok-testid="item"]');
 
       expect(first?.textContent).toBe('one');
-      expect(Dom.findAll(holder, '.item')).toHaveLength(2);
+      expect(Dom.findAll(holder, '[data-blok-testid="item"]')).toHaveLength(2);
       expect(Dom.get('holder')).toBe(holder);
     });
   });

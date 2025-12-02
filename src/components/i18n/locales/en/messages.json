@@ -2,7 +2,8 @@
   "ui": {
     "blockTunes": {
       "toggler": {
-        "Click to tune": ""
+        "Drag to move": "",
+        "Click to open the menu": ""
       }
     },
     "inlineToolbar": {
@@ -12,7 +13,9 @@
     },
     "toolbar": {
       "toolbox": {
-        "Add": ""
+        "Click to add below": "",
+        "Option-click to add above": "",
+        "Ctrl-click to add above": ""
       }
     },
     "popover": {

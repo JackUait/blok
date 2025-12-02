@@ -6,9 +6,10 @@ import EventsDispatcher from '../events';
 import Listeners from '../listeners';
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { css } from './popover.const';
+import { css, DATA_ATTR } from './popover.const';
 import type { PopoverItemParams } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
+import { twMerge } from '../tw';
 
 /**
  * Class responsible for rendering popover and handling its behaviour
@@ -73,17 +74,21 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     /** Build html elements */
     this.nodes = {} as Nodes;
 
-    this.nodes.popoverContainer = Dom.make('div', [ css.popoverContainer ]);
-    this.nodes.popoverContainer.setAttribute('data-blok-testid', 'popover-container');
+    this.nodes.popoverContainer = Dom.make('div', [css.popoverContainer], {
+      [DATA_ATTR.popoverContainer]: '',
+      'data-blok-testid': 'popover-container',
+    });
 
     this.nodes.nothingFoundMessage = Dom.make('div', [ css.nothingFoundMessage ], {
       textContent: this.messages.nothingFound,
+      'data-blok-testid': 'popover-nothing-found',
     });
-    this.nodes.nothingFoundMessage.setAttribute('data-blok-testid', 'popover-nothing-found');
 
     this.nodes.popoverContainer.appendChild(this.nodes.nothingFoundMessage);
-    this.nodes.items = Dom.make('div', [ css.items ]);
-    this.nodes.items.setAttribute('data-blok-testid', 'popover-items');
+    this.nodes.items = Dom.make('div', [ css.items ], {
+      [DATA_ATTR.popoverItems]: '',
+      'data-blok-testid': 'popover-items',
+    });
 
     this.items.forEach(item => {
       const itemEl = item.getElement();
@@ -102,8 +107,23 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popover = Dom.make('div', [
       css.popover,
       this.params.class,
-    ]);
-    this.nodes.popover.setAttribute('data-blok-testid', 'popover');
+    ], {
+      [DATA_ATTR.popover]: '',
+      'data-blok-testid': 'popover',
+    });
+
+    // Set CSS variables for popover layout (moved from popover.css)
+    this.nodes.popover.style.setProperty('--width', '200px');
+    this.nodes.popover.style.setProperty('--max-height', '270px');
+    this.nodes.popover.style.setProperty('--item-padding', '3px');
+    this.nodes.popover.style.setProperty('--item-height', 'calc(1.25rem + 2 * var(--item-padding))');
+    this.nodes.popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');
+    this.nodes.popover.style.setProperty('--popover-left', '0');
+    this.nodes.popover.style.setProperty('--nested-popover-overlap', '0.25rem');
+
+    if (this.params.class) {
+      this.nodes.popover.setAttribute('data-blok-popover-custom-class', this.params.class);
+    }
 
     this.nodes.popover.appendChild(this.nodes.popoverContainer);
   }
@@ -123,8 +143,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       document.body.appendChild(this.nodes.popover);
     }
 
-    this.nodes.popover.classList.add(css.popoverOpened);
-    this.nodes.popover.setAttribute('data-blok-popover-opened', 'true');
+    this.nodes.popover.setAttribute(DATA_ATTR.opened, 'true');
+
+    // Apply opened state classes to container
+    this.nodes.popoverContainer.className = twMerge(
+      css.popoverContainer,
+      css.popoverContainerOpened
+    );
 
     /**
      * Refresh active states for all items.
@@ -141,9 +166,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Closes popover
    */
   public hide(): void {
-    this.nodes.popover.classList.remove(css.popoverOpened);
-    this.nodes.popover.classList.remove(css.popoverOpenTop);
-    this.nodes.popover.removeAttribute('data-blok-popover-opened');
+    this.nodes.popover.removeAttribute(DATA_ATTR.opened);
+    this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
+    this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
+
+    // Reset container to base closed state
+    this.nodes.popoverContainer.className = css.popoverContainer;
 
     this.itemsDefault.forEach(item => item.reset());
 
@@ -186,7 +214,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     return items.map(item => {
       switch (item.type) {
         case PopoverItemType.Separator:
-          return new PopoverItemSeparator();
+          return new PopoverItemSeparator(this.itemsRenderParams[PopoverItemType.Separator]);
         case PopoverItemType.Html:
           return new PopoverItemHtml(item, this.itemsRenderParams[PopoverItemType.Html]);
         default:

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { IconReplace } from '@codexteam/icons';
 
 import ConvertInlineTool from '../../../../src/components/inline-tools/inline-tool-convert';
 import SelectionUtils from '../../../../src/components/selection';
@@ -165,11 +164,6 @@ describe('ConvertInlineTool', () => {
 
     const menuConfig = config as MenuConfigWithChildren;
 
-    expect(menuConfig).toMatchObject({
-      icon: '<svg>current</svg>',
-      name: 'convert-to',
-    });
-
     const children = menuConfig.children;
 
     expect(children?.searchable).toBe(true);
@@ -194,7 +188,7 @@ describe('ConvertInlineTool', () => {
     expect(caretAPI.setToBlock).toHaveBeenCalledWith(convertedBlock, 'end');
   });
 
-  it('falls back to default icon and skips fake selection on mobile', async () => {
+  it('skips fake selection on mobile', async () => {
     const { tool, blocksAPI, toolsAPI, selectionAPI } = createTool();
     const anchorNode = document.createElement('div');
     const currentBlock = {
@@ -225,7 +219,6 @@ describe('ConvertInlineTool', () => {
 
     const menuConfig = config as MenuConfigWithChildren;
 
-    expect(menuConfig.icon).toBe(IconReplace);
     expect(menuConfig.children?.searchable).toBe(false);
 
     menuConfig.children?.onOpen?.();

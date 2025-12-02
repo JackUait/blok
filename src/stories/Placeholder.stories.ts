@@ -10,11 +10,11 @@
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
-import Blok from '../blok';
-import type { OutputData, BlokConfig } from '@/types';
-import { simulateClick, waitForIdleCallback, waitForToolbar, TOOLBAR_TESTID } from './helpers';
+import type { OutputData } from '@/types';
+import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID } from './helpers';
+import type { EditorFactoryOptions } from './helpers';
 
-interface PlaceholderArgs {
+interface PlaceholderArgs extends EditorFactoryOptions {
   placeholder: string;
   minHeight: number;
   data: OutputData | undefined;
@@ -30,36 +30,7 @@ const DEFAULT_PLACEHOLDER = 'Start typing here...';
 const TIMEOUT_INIT = { timeout: 5000 };
 const TIMEOUT_ACTION = { timeout: 5000 };
 
-const createEditor = (args: PlaceholderArgs): HTMLElement => {
-  const container = document.createElement('div');
-
-  container.style.border = '1px solid #e0e0e0';
-  container.style.borderRadius = '8px';
-  container.style.padding = '16px';
-  container.style.minHeight = `${args.minHeight}px`;
-  container.style.backgroundColor = '#fff';
-
-  const editorHolder = document.createElement('div');
-
-  editorHolder.id = `blok-editor-${Date.now()}`;
-  container.appendChild(editorHolder);
-
-  const config: BlokConfig = {
-    holder: editorHolder,
-    placeholder: args.placeholder,
-    autofocus: false,
-    data: args.data,
-  };
-
-  setTimeout(async () => {
-    const editor = new Blok(config);
-
-    await editor.isReady;
-    await waitForIdleCallback();
-  }, 0);
-
-  return container;
-};
+const createEditor = (args: PlaceholderArgs): HTMLElement => createEditorContainer(args);
 
 const meta: Meta<PlaceholderArgs> = {
   title: 'Components/Placeholder',

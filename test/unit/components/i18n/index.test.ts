@@ -8,7 +8,8 @@ const createDictionary = (): I18nDictionary => ({
   ui: {
     toolbar: {
       toolbox: {
-        Add: 'Ajouter',
+        'Click to add below': 'Cliquez pour ajouter ci-dessous',
+        'Option-click to add above': 'Option-clic pour ajouter ci-dessus',
       },
     },
   },
@@ -41,7 +42,7 @@ describe('I18n', () => {
 
     I18n.setDictionary(dictionary);
 
-    expect(I18n.ui('ui.toolbar.toolbox', 'Add')).toBe('Ajouter');
+    expect(I18n.ui('ui.toolbar.toolbox', 'Click to add below')).toBe('Cliquez pour ajouter ci-dessous');
   });
 
   it('translates external namespaces via t()', () => {

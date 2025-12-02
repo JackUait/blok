@@ -11,7 +11,7 @@ const TEST_PAGE_URL = pathToFileURL(
 
 const HOLDER_ID = 'blok-';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const BLOCK_SELECTED_CLASS = 'blok-element--selected';
+const BLOCK_SELECTED_CLASS = 'is-selected';
 
 type ToolDefinition = {
   name: string;

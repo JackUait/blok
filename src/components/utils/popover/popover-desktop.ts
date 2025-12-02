@@ -5,7 +5,7 @@ import { PopoverItemSeparator, css as popoverItemCls } from './components/popove
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { keyCodes } from '../../utils';
-import { CSSVariables, css } from './popover.const';
+import { CSSVariables, css, DATA_ATTR } from './popover.const';
 import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent } from './components/search-input';
 import { PopoverItemDefault } from './components/popover-item';
@@ -79,8 +79,7 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (this.nestingLevel > 0) {
-      this.nodes.popover.classList.add(css.popoverNested);
-      this.nodes.popover.setAttribute('data-blok-nested', 'true');
+      this.nodes.popover.setAttribute(DATA_ATTR.nested, 'true');
     }
 
     if (params.scopeElement !== undefined) {
@@ -163,18 +162,22 @@ export class PopoverDesktop extends PopoverAbstract {
       this.nodes.popover.style.position = 'absolute';
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
-      this.nodes.popover.style.setProperty('--popover-top', '0px');
-      this.nodes.popover.style.setProperty('--popover-left', '0px');
+      this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, '0px');
+      this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, '0px');
     }
 
     this.nodes.popover.style.setProperty(CSSVariables.PopoverHeight, this.size.height + 'px');
 
     if (!this.trigger && !this.shouldOpenBottom) {
-      this.nodes.popover.classList.add(css.popoverOpenTop);
+      this.nodes.popover.setAttribute(DATA_ATTR.openTop, 'true');
+      // Apply open-top positioning (moved from popover.css)
+      this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, 'calc(-1 * (0.5rem + var(--popover-height)))');
     }
 
     if (!this.trigger && !this.shouldOpenRight) {
-      this.nodes.popover.classList.add(css.popoverOpenLeft);
+      this.nodes.popover.setAttribute(DATA_ATTR.openLeft, 'true');
+      // Apply open-left positioning (moved from popover.css)
+      this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * var(--width) + 100%)');
     }
 
     super.show();
@@ -358,10 +361,51 @@ export class PopoverDesktop extends PopoverAbstract {
     /* We need nesting level value in CSS to calculate offset left for nested popover */
     nestedPopoverEl.style.setProperty(CSSVariables.NestingLevel, this.nestedPopover.nestingLevel.toString());
 
+    // Apply nested popover positioning (moved from popover.css)
+    this.applyNestedPopoverPositioning(nestedPopoverEl);
+
     this.nestedPopover.show();
     this.flipper?.deactivate();
 
     return this.nestedPopover;
+  }
+
+  /**
+   * Applies positioning styles to nested popover container.
+   * This replaces CSS selectors like [data-blok-nested] [data-blok-popover-container]
+   * @param nestedPopoverEl - the nested popover element
+   */
+  private applyNestedPopoverPositioning(nestedPopoverEl: HTMLElement): void {
+    const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement | null;
+
+    if (!nestedContainer) {
+      return;
+    }
+
+    // Check if parent popover has openTop or openLeft state
+    const isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.openTop);
+    const isParentOpenLeft = this.nodes.popover.hasAttribute(DATA_ATTR.openLeft);
+
+    // Apply position: absolute for nested container
+    nestedContainer.style.position = 'absolute';
+
+    // Calculate --popover-left based on nesting level and parent open direction
+    if (isParentOpenLeft) {
+      // Position to the left
+      nestedPopoverEl.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * (var(--nesting-level) + 1) * var(--width) + 100%)');
+    } else {
+      // Position to the right
+      nestedPopoverEl.style.setProperty(CSSVariables.PopoverLeft, 'calc(var(--nesting-level) * (var(--width) - var(--nested-popover-overlap)))');
+    }
+
+    // Calculate top position based on parent open direction
+    if (isParentOpenTop) {
+      // Open upward
+      nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + 0.5rem + var(--nested-popover-overlap))';
+    } else {
+      // Open downward
+      nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--nested-popover-overlap))';
+    }
   }
 
   /**
@@ -425,11 +469,11 @@ export class PopoverDesktop extends PopoverAbstract {
     popoverClone.style.position = 'absolute';
     popoverClone.style.top = '-1000px';
 
-    popoverClone.classList.add(css.popoverOpened);
-    popoverClone.querySelector('.' + css.popoverNested)?.remove();
+    popoverClone.setAttribute(DATA_ATTR.opened, 'true');
+    popoverClone.querySelector(`[${DATA_ATTR.nested}]`)?.remove();
     document.body.appendChild(popoverClone);
 
-    const container = popoverClone.querySelector('.' + css.popoverContainer) as HTMLElement;
+    const container = popoverClone.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement;
 
     size.height = container.offsetHeight;
     size.width = container.offsetWidth;
@@ -527,9 +571,9 @@ export class PopoverDesktop extends PopoverAbstract {
   private toggleNothingFoundMessage(isDisplayed: boolean): void {
     this.nodes.nothingFoundMessage.classList.toggle(css.nothingFoundMessageDisplayed, isDisplayed);
     if (isDisplayed) {
-      this.nodes.nothingFoundMessage.setAttribute('data-blok-nothing-found-displayed', 'true');
+      this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
     } else {
-      this.nodes.nothingFoundMessage.removeAttribute('data-blok-nothing-found-displayed');
+      this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
     }
   }
 }

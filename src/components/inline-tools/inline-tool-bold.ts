@@ -1,5 +1,5 @@
 import type { InlineTool, SanitizerConfig } from '../../../types';
-import { IconBold } from '@codexteam/icons';
+import { IconBold } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
 import { BLOK_INTERFACE_SELECTOR } from '../constants';
 import SelectionUtils from '../selection';
@@ -1019,7 +1019,7 @@ export default class BoldInlineTool implements InlineTool {
 
     const isActive = this.isSelectionVisuallyBold(selection);
 
-    button.classList.toggle('blok-popover-item--active', isActive);
+    button.classList.toggle('is-active', isActive);
 
     if (isActive) {
       button.setAttribute('data-blok-popover-item-active', 'true');

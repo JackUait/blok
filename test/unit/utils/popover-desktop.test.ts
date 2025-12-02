@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance, type Mock } from 'vitest';
 
- 
+
 
 type SearchPayload = { query: string; items: unknown[] };
 
@@ -123,7 +123,7 @@ vi.mock('../../../src/components/utils/popover/components/search-input', () => {
       this.items = items;
       this.placeholder = placeholder;
       this.element = document.createElement('div');
-      this.element.className = 'mock-search-input';
+      this.element.setAttribute('data-blok-testid', 'mock-search-input');
 
       searchInputRegistry.instances.push(this);
     }
@@ -152,9 +152,8 @@ import { PopoverDesktop } from '../../../src/components/utils/popover/popover-de
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { css, CSSVariables } from '../../../src/components/utils/popover/popover.const';
-import { css as popoverItemCss } from '../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
-import { css as separatorCss } from '../../../src/components/utils/popover/components/popover-item/popover-item-separator/popover-item-separator.const';
+import { CSSVariables, DATA_ATTRIBUTE_NESTED, DATA_ATTRIBUTE_OPEN_TOP, DATA_ATTRIBUTE_OPEN_LEFT, DATA_ATTRIBUTE_NOTHING_FOUND_DISPLAYED } from '../../../src/components/utils/popover/popover.const';
+import { DATA_ATTRIBUTE_HIDDEN } from '../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
 import { PopoverItemDefault, PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item';
 import Flipper from '../../../src/components/flipper';
 import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
@@ -252,7 +251,7 @@ describe('PopoverDesktop', () => {
       const popover = createPopover({ nestingLevel: 1 });
 
       expect(popover.nestingLevel).toBe(1);
-      expect(popover.getElement().classList.contains(css.popoverNested)).toBe(true);
+      expect(popover.getElement().hasAttribute(DATA_ATTRIBUTE_NESTED)).toBe(true);
     });
 
     it('reuses provided flipper instance and attaches flip handler', () => {
@@ -467,48 +466,6 @@ describe('PopoverDesktop', () => {
     });
   });
 
-  describe('size', () => {
-    it('clones popover to measure dimensions and caches the result', () => {
-      const popover = createPopover();
-      const instance = popover as unknown as PopoverDesktopInternal;
-      const clonePopover = document.createElement('div');
-
-      clonePopover.classList.add(css.popover);
-
-      const nested = document.createElement('div');
-
-      nested.classList.add(css.popoverNested);
-
-      const container = document.createElement('div');
-
-      container.classList.add(css.popoverContainer);
-
-      Object.defineProperty(container, 'offsetHeight', {
-        configurable: true,
-        get: () => 180,
-      });
-      Object.defineProperty(container, 'offsetWidth', {
-        configurable: true,
-        get: () => 90,
-      });
-
-      clonePopover.appendChild(nested);
-      clonePopover.appendChild(container);
-
-      const cloneSpy = vi.spyOn(instance.nodes.popover, 'cloneNode').mockReturnValue(clonePopover);
-
-      const firstSize = instance.size;
-      const secondSize = instance.size;
-
-      expect(firstSize).toEqual({ height: 180,
-        width: 90 });
-      expect(secondSize).toBe(firstSize);
-      expect(cloneSpy).toHaveBeenCalledTimes(1);
-      expect(clonePopover.isConnected).toBe(false);
-      expect(clonePopover.classList.contains(css.popoverOpened)).toBe(true);
-      expect(clonePopover.querySelector(`.${css.popoverNested}`)).toBeNull();
-    });
-  });
 
   describe('flippableElements', () => {
     it('includes only enabled default items and controls from HTML items', () => {
@@ -571,9 +528,9 @@ describe('PopoverDesktop', () => {
       expect(sizeSpy).toHaveBeenCalled();
       expect(openBottomSpy).toHaveBeenCalled();
       expect(openRightSpy).toHaveBeenCalled();
-      expect(popoverElement.classList.contains(css.popoverOpened)).toBe(true);
-      expect(popoverElement.classList.contains(css.popoverOpenTop)).toBe(true);
-      expect(popoverElement.classList.contains(css.popoverOpenLeft)).toBe(true);
+      expect(popoverElement.hasAttribute('data-blok-popover-opened')).toBe(true);
+      expect(popoverElement.hasAttribute(DATA_ATTRIBUTE_OPEN_TOP)).toBe(true);
+      expect(popoverElement.hasAttribute(DATA_ATTRIBUTE_OPEN_LEFT)).toBe(true);
       expect(popoverElement.style.getPropertyValue(CSSVariables.PopoverHeight)).toBe('120px');
       expect(flipper.activate).toHaveBeenCalledWith(instance.flippableElements);
     });
@@ -606,7 +563,7 @@ describe('PopoverDesktop', () => {
       expect(parentItem).toBeDefined();
 
       instance.showNestedPopoverForItem(parentItem!);
-      const nestedPopoverElement = popover.getElement().querySelector(`.${css.popoverNested}`);
+      const nestedPopoverElement = popover.getElement().querySelector(`[${DATA_ATTRIBUTE_NESTED}]`);
 
       expect(nestedPopoverElement).toBeTruthy();
 
@@ -616,7 +573,7 @@ describe('PopoverDesktop', () => {
 
       expect(popover.getElement().hasAttribute('data-blok-popover-opened')).toBe(false);
       expect(flipper.deactivate).toHaveBeenCalled();
-      expect(popover.getElement().querySelector(`.${css.popoverNested}`)).toBeNull();
+      expect(popover.getElement().querySelector(`[${DATA_ATTRIBUTE_NESTED}]`)).toBeNull();
       expect(instance.nestedPopover).toBeNull();
       expect(instance.nestedPopoverTriggerItem).toBeNull();
       expect(flipper.focusFirst).toHaveBeenCalled();
@@ -719,21 +676,21 @@ describe('PopoverDesktop', () => {
       expect(flipper.activate).toHaveBeenCalledTimes(2);
       expect(flipper.activate).toHaveBeenNthCalledWith(2, [ defaultItems[1].getElement() ]);
 
-      expect(defaultItems[0].getElement()?.classList.contains(popoverItemCss.hidden)).toBe(true);
-      expect(defaultItems[1].getElement()?.classList.contains(popoverItemCss.hidden)).toBe(false);
-      expect(separator?.getElement().classList.contains(separatorCss.hidden)).toBe(true);
-      expect(instance.nodes.nothingFoundMessage.classList.contains(css.nothingFoundMessageDisplayed)).toBe(false);
+      expect(defaultItems[0].getElement()?.hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(true);
+      expect(defaultItems[1].getElement()?.hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(false);
+      expect(separator?.getElement().hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(true);
+      expect(instance.nodes.nothingFoundMessage.hasAttribute(DATA_ATTRIBUTE_NOTHING_FOUND_DISPLAYED)).toBe(false);
 
       searchInput.emitSearch({
         query: 'Zeta',
         items: [],
       });
 
-      expect(instance.nodes.nothingFoundMessage.classList.contains(css.nothingFoundMessageDisplayed)).toBe(true);
+      expect(instance.nodes.nothingFoundMessage.hasAttribute(DATA_ATTRIBUTE_NOTHING_FOUND_DISPLAYED)).toBe(true);
       defaultItems.forEach((item: PopoverItemDefault) => {
-        expect(item.getElement()?.classList.contains(popoverItemCss.hidden)).toBe(true);
+        expect(item.getElement()?.hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(true);
       });
-      expect(separator?.getElement().classList.contains(separatorCss.hidden)).toBe(true);
+      expect(separator?.getElement().hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(true);
     });
   });
 

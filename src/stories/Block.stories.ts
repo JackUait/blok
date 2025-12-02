@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
-import Blok from '../blok';
-import type { OutputData, BlokConfig } from '@/types';
-import { simulateClick, waitForIdleCallback, waitForToolbar, TOOLBAR_TESTID, triggerSelectAll } from './helpers';
+import type { OutputData } from '@/types';
+import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID, triggerSelectAll } from './helpers';
+import type { EditorFactoryOptions } from './helpers';
 
-interface BlockArgs {
+interface BlockArgs extends EditorFactoryOptions {
   minHeight: number;
   data: OutputData | undefined;
   readOnly: boolean;
@@ -40,36 +40,7 @@ const sampleData: OutputData = {
   ],
 };
 
-const createEditor = (args: BlockArgs): HTMLElement => {
-  const container = document.createElement('div');
-
-  container.style.border = '1px solid #e0e0e0';
-  container.style.borderRadius = '8px';
-  container.style.padding = '16px';
-  container.style.minHeight = `${args.minHeight}px`;
-  container.style.backgroundColor = '#fff';
-
-  const editorHolder = document.createElement('div');
-
-  editorHolder.id = `blok-editor-${Date.now()}`;
-  container.appendChild(editorHolder);
-
-  const config: BlokConfig = {
-    holder: editorHolder,
-    autofocus: false,
-    readOnly: args.readOnly,
-    data: args.data,
-  };
-
-  setTimeout(async () => {
-    const editor = new Blok(config);
-
-    await editor.isReady;
-    await waitForIdleCallback();
-  }, 0);
-
-  return container;
-};
+const createEditor = (args: BlockArgs): HTMLElement => createEditorContainer(args);
 
 const meta: Meta<BlockArgs> = {
   title: 'Components/Block',
@@ -457,12 +428,11 @@ export const StretchedBlock: Story = {
       );
     });
 
-    await step('Apply stretched class to middle block', async () => {
+    await step('Apply stretched state to middle block', async () => {
       const blocks = canvasElement.querySelectorAll(BLOCK_TESTID);
       const middleBlock = blocks[1];
 
       if (middleBlock) {
-        middleBlock.classList.add('blok-block--stretched');
         middleBlock.setAttribute('data-blok-stretched', 'true');
       }
 

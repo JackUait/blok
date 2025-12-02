@@ -95,8 +95,10 @@ const createBlokZone = (text = 'Hello world'): {
   const zone = document.createElement('div');
   const paragraph = document.createElement('p');
 
-  wrapper.className = 'blok-editor';
-  zone.className = 'blok-editor__redactor';
+  // eslint-disable-next-line internal-unit-test/no-class-selectors
+  wrapper.classList.add('blok-editor');
+  // eslint-disable-next-line internal-unit-test/no-class-selectors
+  zone.classList.add('blok-editor__redactor');
   paragraph.textContent = text;
 
   zone.appendChild(paragraph);
@@ -334,6 +336,7 @@ describe('SelectionUtils', () => {
     SelectionUtils.addFakeCursor();
 
     expect(SelectionUtils.isFakeCursorInsideContainer(element)).toBe(true);
+    // eslint-disable-next-line internal-unit-test/no-class-selectors
     expect(element.querySelector('.blok-editor__fake-cursor')).not.toBeNull();
 
     SelectionUtils.removeFakeCursor(element);
@@ -362,7 +365,7 @@ describe('SelectionUtils', () => {
 
     utilsInstance.setFakeBackground();
 
-    const wrappers = zone.querySelectorAll('.blok-editor__fake-background');
+    const wrappers = zone.querySelectorAll('[data-blok-fake-background]');
 
     expect(wrappers.length).toBeGreaterThan(0);
     wrappers.forEach((wrapper) => {
@@ -373,7 +376,7 @@ describe('SelectionUtils', () => {
     utilsInstance.removeFakeBackground();
 
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(false);
-    expect(paragraph.querySelector('.blok-editor__fake-background')).toBeNull();
+    expect(paragraph.querySelector('[data-blok-fake-background]')).toBeNull();
     expect(paragraph.textContent).toBe('Highlighted text');
   });
 
@@ -394,12 +397,12 @@ describe('SelectionUtils', () => {
 
     // Check that fake background is enabled
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(true);
-    expect(zone.querySelectorAll('.blok-editor__fake-background').length).toBeGreaterThan(0);
+    expect(zone.querySelectorAll('[data-blok-fake-background]').length).toBeGreaterThan(0);
 
     // Remove fake background
     utilsInstance.removeFakeBackground();
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(false);
-    expect(paragraph.querySelector('.blok-editor__fake-background')).toBeNull();
+    expect(paragraph.querySelector('[data-blok-fake-background]')).toBeNull();
 
     // Clear current selection to simulate focus change or similar
     window.getSelection()?.removeAllRanges();
@@ -435,7 +438,7 @@ describe('SelectionUtils', () => {
     utilsInstance.setFakeBackground();
 
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(false);
-    expect(document.querySelector('.blok-editor__fake-background')).toBeNull();
+    expect(document.querySelector('[data-blok-fake-background]')).toBeNull();
   });
 
   it('saves, restores, and clears selection ranges', () => {

@@ -19,7 +19,7 @@ export default class I18n {
   /**
    * Type-safe translation for internal UI texts:
    * Perform translation of the string by namespace and a key
-   * @example I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to tune')
+   * @example I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Drag to move')
    * @param internalNamespace - path to translated string in dictionary
    * @param dictKey - dictionary key. Better to use default locale original text
    */

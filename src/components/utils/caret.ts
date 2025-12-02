@@ -440,3 +440,104 @@ export const isCaretAtEndOfInput = (input: HTMLElement): boolean => {
    */
   return checkContenteditableSliceForEmptiness(input, caretNode, caretOffset, 'right');
 };
+
+/**
+ * Set focus to contenteditable or native input element
+ * @param element - element where to set focus
+ * @param atStart - where to set focus: at the start or at the end
+ */
+export const focus = (element: HTMLElement, atStart = true): void => {
+  /** If element is native input */
+  if ($.isNativeInput(element)) {
+    element.focus();
+    const position = atStart ? 0 : element.value.length;
+
+    element.setSelectionRange(position, position);
+
+    return;
+  }
+
+  const range = document.createRange();
+  const selection = window.getSelection();
+
+  if (!selection) {
+    return;
+  }
+
+  /**
+   * Helper function to create a new text node and set the caret
+   * @param parent - parent element to append the text node
+   * @param prepend - should the text node be prepended or appended
+   */
+  const createAndFocusTextNode = (parent: Node, prepend = false): void => {
+    const textNode = document.createTextNode('');
+
+    if (prepend) {
+      parent.insertBefore(textNode, parent.firstChild);
+    } else {
+      parent.appendChild(textNode);
+    }
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, 0);
+  };
+
+  /**
+   * Find deepest text node in the given direction
+   * @param node - starting node
+   * @param toStart - search direction
+   */
+  const findTextNode = (node: ChildNode | null, toStart: boolean): ChildNode | null => {
+    if (node === null) {
+      return null;
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node;
+    }
+
+    const nextChild = toStart ? node.firstChild : node.lastChild;
+
+    return findTextNode(nextChild, toStart);
+  };
+
+  /**
+   * We need to set focus at start/end to the text node inside an element
+   */
+  const childNodes = element.childNodes;
+  const initialNode: ChildNode | null = atStart ? childNodes[0] ?? null : childNodes[childNodes.length - 1] ?? null;
+  const nodeToFocus = findTextNode(initialNode, atStart);
+
+  /**
+   * If the element is empty, create a text node and place the caret at the start
+   */
+  if (initialNode === null) {
+    createAndFocusTextNode(element);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    return;
+  }
+
+  /**
+   * If no text node is found, create one and set focus
+   */
+  if (nodeToFocus === null || nodeToFocus.nodeType !== Node.TEXT_NODE) {
+    createAndFocusTextNode(element, atStart);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    return;
+  }
+
+  /**
+   * If a text node is found, place the caret
+   */
+  const length = nodeToFocus.textContent?.length ?? 0;
+  const position = atStart ? 0 : length;
+
+  range.setStart(nodeToFocus, position);
+  range.setEnd(nodeToFocus, position);
+
+  selection.removeAllRanges();
+  selection.addRange(range);
+};

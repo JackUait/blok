@@ -7,12 +7,11 @@ import * as tooltip from '../../utils/tooltip';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import Block from '../../block';
 import Toolbox, { ToolboxEvent } from '../../ui/toolbox';
-import { IconMenu, IconPlus } from '@codexteam/icons';
+import { IconMenu, IconPlus } from '../../icons';
 import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
-import { beautifyShortcut } from '../../utils';
-import { getKeyboardKeyForCode } from '../../utils/keyboard';
+import { twJoin } from '../../utils/tw';
 
 /**
  * @todo Tab on non-empty block should open Block Settings of the hoveredBlock (not where caret is set)
@@ -34,6 +33,11 @@ interface ToolbarNodes {
   plusButton: HTMLElement | undefined;
   settingsToggler: HTMLElement | undefined;
 }
+
+/**
+ * Threshold in pixels to distinguish between a click and a drag
+ */
+const DRAG_THRESHOLD = 1000;
 /**
  *
  *«Toolbar» is the node that moves up/down over current block
@@ -96,6 +100,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private toolboxInstance: Toolbox | null = null;
 
   /**
+   * Mouse position when mousedown occurred on settings toggler
+   * Used to distinguish between click and drag
+   */
+  private settingsTogglerMouseDownPosition: { x: number; y: number } | null = null;
+
+  /**
    * @class
    * @param moduleConfiguration - Module Configuration
    * @param moduleConfiguration.config - Blok's config
@@ -114,19 +124,76 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   public get CSS(): { [name: string]: string } {
     return {
-      toolbar: 'blok-toolbar',
-      content: 'blok-toolbar__content',
-      actions: 'blok-toolbar__actions',
-      actionsOpened: 'blok-toolbar__actions--opened',
+      toolbar: twJoin(
+        'absolute left-0 right-0 top-0 transition-opacity duration-100 ease-linear will-change-[opacity,top]'
+      ),
+      toolbarSelector: 'blok-toolbar',
+      toolbarOpened: 'block',
+      toolbarClosed: 'hidden',
+      content: twJoin(
+        'relative mx-auto max-w-content'
+      ),
+      actions: twJoin(
+        'absolute flex opacity-0 pr-[5px]',
+        'right-full',
+        // Mobile styles
+        'mobile:right-auto',
+        // RTL styles
+        'group-[.blok-editor--rtl]:right-auto group-[.blok-editor--rtl]:left-[calc(-1*theme(width.toolbox-btn))]',
+        'mobile:group-[.blok-editor--rtl]:ml-0 mobile:group-[.blok-editor--rtl]:mr-auto mobile:group-[.blok-editor--rtl]:pr-0 mobile:group-[.blok-editor--rtl]:pl-[10px]'
+      ),
+      actionsOpened: 'opacity-100',
 
-      toolbarOpened: 'blok-toolbar--opened',
-      openedToolboxHolderModifier: 'blok-editor--toolbox-opened',
+      openedToolboxHolderModifier: 'is-toolbox-opened',
 
-      plusButton: 'blok-toolbar__plus',
-      plusButtonShortcut: 'blok-toolbar__plus-shortcut',
-      settingsToggler: 'blok-toolbar__settings-btn',
-      settingsTogglerHidden: 'blok-toolbar__settings-btn--hidden',
-      settingsTogglerOpened: 'blok-toolbar__settings-btn--opened',
+      plusButton: twJoin(
+        // Base toolbox-button styles
+        'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
+        'shrink-0',
+        // SVG sizing
+        '[&_svg]:h-6 [&_svg]:w-6',
+        // Hover (can-hover)
+        'can-hover:hover:bg-bg-light',
+        // Mobile styles (static positioning with overlay-pane appearance)
+        'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
+        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
+        // RTL styles
+        'group-[.blok-editor--rtl]:right-[calc(-1*theme(width.toolbox-btn))] group-[.blok-editor--rtl]:left-auto',
+        // Narrow mode (not-mobile)
+        'not-mobile:group-[.blok-editor--narrow]:left-[5px]',
+        // Narrow mode RTL (not-mobile)
+        'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-0 not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:right-[5px]'
+      ),
+      plusButtonShortcut: 'mt-[5px] opacity-60',
+      plusButtonShortcutKey: 'text-white',
+      /**
+       * Class used as the SortableJS drag handle selector
+       */
+      settingsTogglerHandle: 'blok-settings-toggler',
+      settingsToggler: twJoin(
+        // Base toolbox-button styles
+        'blok-settings-toggler',
+        'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
+        'cursor-pointer select-none',
+        // SVG sizing
+        '[&_svg]:h-6 [&_svg]:w-6',
+        // Active state
+        'active:cursor-grabbing',
+        // Hover (can-hover)
+        'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
+        // When toolbox is opened, use pointer cursor on hover
+        'group-[.is-toolbox-opened]:can-hover:hover:cursor-pointer',
+        // Mobile styles (static positioning with overlay-pane appearance)
+        'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
+        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
+        // Not-mobile styles
+        'not-mobile:w-6'
+      ),
+      settingsTogglerHidden: 'hidden',
+      settingsTogglerOpened: twJoin(
+        // When opened, override hover cursor
+        'can-hover:hover:cursor-pointer'
+      ),
     };
   }
 
@@ -395,6 +462,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarOpened);
+    this.nodes.wrapper?.classList.add(this.CSS.toolbarClosed);
     this.nodes.wrapper?.removeAttribute('data-blok-opened');
 
     /** Close components */
@@ -424,6 +492,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    *                                     This flag allows to open Toolbar without Actions.
    */
   private open(withBlockActions = true): void {
+    this.nodes.wrapper?.classList.remove(this.CSS.toolbarClosed);
     this.nodes.wrapper?.classList.add(this.CSS.toolbarOpened);
     this.nodes.wrapper?.setAttribute('data-blok-opened', 'true');
 
@@ -438,7 +507,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Draws Toolbar elements
    */
   private async make(): Promise<void> {
-    const wrapper = $.make('div', this.CSS.toolbar);
+    const wrapper = $.make('div', [
+      this.CSS.toolbar,
+      this.CSS.toolbarSelector,
+      this.CSS.toolbarClosed,
+      'group-[.is-dragging]:pointer-events-none',
+    ]);
 
     this.nodes.wrapper = wrapper;
     wrapper.setAttribute('data-blok-testid', 'toolbar');
@@ -447,7 +521,16 @@ export default class Toolbar extends Module<ToolbarNodes> {
      * Make Content Zone and Actions Zone
      */
     const content = $.make('div', this.CSS.content);
-    const actions = $.make('div', this.CSS.actions);
+    const actions = $.make('div', [
+      this.CSS.actions,
+      // Narrow mode positioning on non-mobile screens
+      'not-mobile:group-[.blok-editor--narrow]:right-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
+      // RTL narrow mode: use left positioning instead
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:right-auto',
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
+      // RTL narrow mode additional left offset
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:left-[-5px]',
+    ]);
 
     this.nodes.content = content;
 
@@ -484,10 +567,34 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     const tooltipContent = $.make('div');
 
-    tooltipContent.appendChild(document.createTextNode(I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Add')));
-    tooltipContent.appendChild($.make('div', this.CSS.plusButtonShortcut, {
-      textContent: '/',
-    }));
+    const createTooltipLine = (text: string): DocumentFragment => {
+      const fragment = document.createDocumentFragment();
+      const spaceIndex = text.indexOf(' ');
+
+      if (spaceIndex > 0) {
+        const firstWord = text.substring(0, spaceIndex);
+        const rest = text.substring(spaceIndex);
+
+        fragment.appendChild($.make('span', this.CSS.plusButtonShortcutKey, {
+          textContent: firstWord,
+        }));
+        fragment.appendChild(document.createTextNode(rest));
+      } else {
+        fragment.appendChild(document.createTextNode(text));
+      }
+
+      return fragment;
+    };
+
+    tooltipContent.appendChild(createTooltipLine(I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Click to add below')));
+    tooltipContent.appendChild($.make('br'));
+
+    const userOS = _.getUserOS();
+    const modifierClickText = userOS.win
+      ? I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Ctrl-click to add above')
+      : I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Option-click to add above');
+
+    tooltipContent.appendChild(createTooltipLine(modifierClickText));
 
     tooltip.onHover(plusButton, tooltipContent, {
       hidingDelay: 400,
@@ -499,7 +606,10 @@ export default class Toolbar extends Module<ToolbarNodes> {
      *  - Remove Block Button
      *  - Settings Panel
      */
-    const settingsToggler = $.make('span', this.CSS.settingsToggler, {
+    const settingsToggler = $.make('span', [
+      this.CSS.settingsToggler,
+      'group-[.is-dragging]:cursor-grabbing',
+    ], {
       innerHTML: IconMenu,
     });
 
@@ -510,13 +620,26 @@ export default class Toolbar extends Module<ToolbarNodes> {
     $.append(actions, settingsToggler);
 
     const blockTunesTooltip = $.make('div');
-    const blockTunesTooltipEl = $.text(I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to tune'));
-    const slashRealKey = await getKeyboardKeyForCode('Slash', '/');
 
-    blockTunesTooltip.appendChild(blockTunesTooltipEl);
-    blockTunesTooltip.appendChild($.make('div', this.CSS.plusButtonShortcut, {
-      textContent: beautifyShortcut(`CMD + ${slashRealKey}`),
-    }));
+    const createStyledLine = (text: string): HTMLElement => {
+      const line = $.make('div');
+      const [firstWord, ...rest] = text.split(' ');
+      const styledWord = $.make('span', null, { textContent: firstWord });
+
+      styledWord.style.color = 'white';
+      line.appendChild(styledWord);
+      if (rest.length > 0) {
+        line.appendChild($.text(' ' + rest.join(' ')));
+      }
+
+      return line;
+    };
+
+    const dragToMoveText = I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Drag to move');
+    const clickToOpenText = I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to open the menu');
+
+    blockTunesTooltip.appendChild(createStyledLine(dragToMoveText));
+    blockTunesTooltip.appendChild(createStyledLine(clickToOpenText));
 
     tooltip.onHover(settingsToggler, blockTunesTooltip, {
       hidingDelay: 400,
@@ -642,15 +765,50 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
     if (settingsToggler) {
       /**
-       * Settings toggler
+       * Settings toggler mousedown handler
+       * Stores the initial mouse position to distinguish between click and drag
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
         e.stopPropagation();
         tooltip.hide(true);
+
+        const mouseEvent = e as MouseEvent;
+
+        /**
+         * Store the mouse position when mousedown occurs
+         * This will be used to determine if the user dragged or clicked
+         */
+        this.settingsTogglerMouseDownPosition = {
+          x: mouseEvent.clientX,
+          y: mouseEvent.clientY,
+        };
       }, true);
 
+      /**
+       * Settings toggler click handler
+       * Only opens the menu if the mouse didn't move significantly (i.e., it was a click, not a drag)
+       */
       this.readOnlyMutableListeners.on(settingsToggler, 'click', (e) => {
         e.stopPropagation();
+
+        const mouseEvent = e as MouseEvent;
+
+        /**
+         * Check if this was a drag or a click by comparing mouse positions
+         * If the mouse moved more than the threshold, it was a drag - don't open menu
+         */
+        const mouseDownPos = this.settingsTogglerMouseDownPosition;
+
+        this.settingsTogglerMouseDownPosition = null;
+
+        const wasDragged = mouseDownPos !== null && (
+          Math.abs(mouseEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
+          Math.abs(mouseEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
+        );
+
+        if (wasDragged) {
+          return;
+        }
 
         this.settingsTogglerClicked();
 

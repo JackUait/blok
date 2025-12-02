@@ -30,7 +30,7 @@ type BlockSelectionSetup = {
 const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; initiallySelected?: boolean }): Block => {
   const holder = document.createElement('div');
 
-  holder.className = 'blok-element';
+  holder.setAttribute('data-blok-testid', 'blok-element');
   holder.innerHTML = options?.html ?? '<p>Sample text</p>';
 
   const inputs = options?.inputs ?? [ document.createElement('div') ];
@@ -56,7 +56,7 @@ const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; init
     },
     set(nextState: boolean) {
       isSelected = nextState;
-      holder.classList.toggle('blok-element--selected', nextState);
+      holder.setAttribute('data-blok-selected', nextState ? 'true' : 'false');
     },
   });
 

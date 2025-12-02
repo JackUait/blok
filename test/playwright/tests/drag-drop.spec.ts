@@ -224,4 +224,88 @@ test.describe('drag and drop', () => {
     expect(savedData?.blocks[1].data.text).toBe('First block');
     expect(savedData?.blocks[2].data.text).toBe('Second block');
   });
+
+  test('should not open block settings menu after dragging', async ({ page }) => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'First block' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Second block' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // 1. Hover over the first block to show the settings button
+    const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+    await firstBlock.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second block' });
+
+    // 2. Perform drag and drop
+    await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+    // 3. Verify the block settings menu is NOT open after dragging
+    // Check for popover-container inside block-tunes-popover as that's what becomes visible
+    const blockTunesPopoverContainer = page.locator('[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]');
+
+    await expect(blockTunesPopoverContainer).toBeHidden();
+
+    // 4. Verify the blocks were reordered (drag worked)
+    await expect(page.getByTestId('block-wrapper')).toHaveText([
+      'Second block',
+      'First block',
+    ]);
+  });
+
+  test('should open block settings menu on click (without dragging)', async ({ page }) => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'First block' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Second block' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // 1. Hover over the first block to show the settings button
+    const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+    await firstBlock.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // 2. Click the settings button (without dragging)
+    await settingsButton.click();
+
+    // 3. Verify the block settings menu IS open after clicking
+    // Check for popover-container inside block-tunes-popover as that's what becomes visible
+    const blockTunesPopoverContainer = page.locator('[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]');
+
+    await expect(blockTunesPopoverContainer).toBeVisible();
+
+    // 4. Verify the blocks were NOT reordered (no drag occurred)
+    await expect(page.getByTestId('block-wrapper')).toHaveText([
+      'First block',
+      'Second block',
+    ]);
+  });
 });

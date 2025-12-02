@@ -6,11 +6,11 @@
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { waitFor, expect } from 'storybook/test';
-import Blok from '../blok';
-import type { OutputData, BlokConfig } from '@/types';
-import { waitForIdleCallback } from './helpers';
+import type { OutputData } from '@/types';
+import { createEditorContainer } from './helpers';
+import type { EditorFactoryOptions } from './helpers';
 
-interface StubBlockArgs {
+interface StubBlockArgs extends EditorFactoryOptions {
   minHeight: number;
   data: OutputData;
 }
@@ -42,35 +42,7 @@ const stubBlockData: OutputData = {
   ],
 };
 
-const createEditor = (args: StubBlockArgs): HTMLElement => {
-  const container = document.createElement('div');
-
-  container.style.border = '1px solid #e0e0e0';
-  container.style.borderRadius = '8px';
-  container.style.padding = '16px';
-  container.style.minHeight = `${args.minHeight}px`;
-  container.style.backgroundColor = '#fff';
-
-  const editorHolder = document.createElement('div');
-
-  editorHolder.id = `blok-editor-${Date.now()}`;
-  container.appendChild(editorHolder);
-
-  const config: BlokConfig = {
-    holder: editorHolder,
-    autofocus: false,
-    data: args.data,
-  };
-
-  setTimeout(async () => {
-    const editor = new Blok(config);
-
-    await editor.isReady;
-    await waitForIdleCallback();
-  }, 0);
-
-  return container;
-};
+const createEditor = (args: StubBlockArgs): HTMLElement => createEditorContainer(args);
 
 const meta: Meta<StubBlockArgs> = {
   title: 'Components/Stub Block',
@@ -98,11 +70,8 @@ export const MissingTool: Story = {
     await step('Wait for stub block to render', async () => {
       await waitFor(
         () => {
-          // Look for the stub block by its wrapper class
-          const blocks = canvasElement.querySelectorAll('[data-blok-testid="block-wrapper"]');
-          const stubBlock = Array.from(blocks).find(block =>
-            block.querySelector('[class*="blok-stub"]')
-          );
+          // Look for the stub block by its data attribute
+          const stubBlock = canvasElement.querySelector('[data-blok-stub]');
 
           expect(stubBlock).toBeTruthy();
         },
@@ -111,13 +80,9 @@ export const MissingTool: Story = {
     });
 
     await step('Verify stub block structure', async () => {
-      const blocks = canvasElement.querySelectorAll('[data-blok-testid="block-wrapper"]');
-      const stubWrapper = Array.from(blocks).find(block =>
-        block.querySelector('[class*="blok-stub"]')
-      );
-      const stubBlock = stubWrapper?.querySelector('[class*="blok-stub"]');
-      const title = stubBlock?.querySelector('[class*="blok-stub__title"]');
-      const subtitle = stubBlock?.querySelector('[class*="blok-stub__subtitle"]');
+      const stubBlock = canvasElement.querySelector('[data-blok-stub]');
+      const title = stubBlock?.querySelector('[data-blok-stub-title]');
+      const subtitle = stubBlock?.querySelector('[data-blok-stub-subtitle]');
 
       expect(title).toBeTruthy();
       expect(subtitle).toBeTruthy();
@@ -156,12 +121,8 @@ export const MultipleMissingTools: Story = {
     await step('Wait for all stub blocks to render', async () => {
       await waitFor(
         () => {
-          // Count only the main stub wrapper elements (not nested info/title/subtitle)
-          const allElements = canvasElement.querySelectorAll('[class*="blok-stub"]');
-          const stubWrappers = Array.from(allElements).filter(el =>
-            el.classList.contains('blok-stub') && !el.classList.contains('blok-stub__info') &&
-            !el.classList.contains('blok-stub__title') && !el.classList.contains('blok-stub__subtitle')
-          );
+          // Count stub wrapper elements by data attribute
+          const stubWrappers = canvasElement.querySelectorAll('[data-blok-stub]');
 
           expect(stubWrappers.length).toBe(3);
         },
@@ -177,42 +138,13 @@ export const MultipleMissingTools: Story = {
 export const StubInReadOnly: Story = {
   args: {
     data: stubBlockData,
-  },
-  render: (args) => {
-    const container = document.createElement('div');
-
-    container.style.border = '1px solid #e0e0e0';
-    container.style.borderRadius = '8px';
-    container.style.padding = '16px';
-    container.style.minHeight = `${args.minHeight}px`;
-    container.style.backgroundColor = '#fff';
-
-    const editorHolder = document.createElement('div');
-
-    editorHolder.id = `blok-editor-${Date.now()}`;
-    container.appendChild(editorHolder);
-
-    const config: BlokConfig = {
-      holder: editorHolder,
-      autofocus: false,
-      readOnly: true,
-      data: args.data,
-    };
-
-    setTimeout(async () => {
-      const editor = new Blok(config);
-
-      await editor.isReady;
-      await waitForIdleCallback();
-    }, 0);
-
-    return container;
+    readOnly: true,
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for stub block in read-only mode', async () => {
       await waitFor(
         () => {
-          const stubBlock = canvasElement.querySelector('[class*="blok-stub"]');
+          const stubBlock = canvasElement.querySelector('[data-blok-stub]');
 
           expect(stubBlock).toBeTruthy();
         },

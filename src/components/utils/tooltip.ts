@@ -1,5 +1,5 @@
-import tooltipStyles from '../../styles/tooltip.css?inline';
 import { DATA_INTERFACE_ATTRIBUTE, TOOLTIP_INTERFACE_VALUE } from '../constants';
+import { twJoin } from './tw';
 
 /**
  * Tooltip supported content
@@ -56,14 +56,14 @@ const VISIBILITY_VISIBLE = 'visible';
 const VISIBILITY_HIDDEN = 'hidden';
 
 type CSSTooltipClasses = {
-  tooltip: string;
-  tooltipContent: string;
-  tooltipShown: string;
+  tooltip: string | string[];
+  tooltipContent: string | string[];
+  tooltipShown: string | string[];
   placement: {
-    left: string;
-    bottom: string;
-    right: string;
-    top: string;
+    left: string | string[];
+    bottom: string | string[];
+    right: string | string[];
+    top: string | string[];
   };
 };
 
@@ -79,14 +79,27 @@ class Tooltip {
    */
   private get CSS(): CSSTooltipClasses {
     return {
-      tooltip: 'ct',
-      tooltipContent: 'ct__content',
-      tooltipShown: 'ct--shown',
+      tooltip: twJoin(
+        'absolute z-overlay top-0 left-0',
+        'bg-tooltip-bg opacity-0',
+        'select-none pointer-events-none',
+        'transition-[opacity,transform] duration-[50ms,70ms] ease-in',
+        'rounded-lg shadow-tooltip',
+        'will-change-[opacity,top,left]',
+        'before:content-[\'\'] before:absolute before:inset-0 before:bg-tooltip-bg before:-z-10 before:rounded-lg',
+        'mobile:hidden'
+      ).split(' '),
+      tooltipContent: twJoin(
+        'px-2.5 py-1.5',
+        'text-tooltip-font text-xs text-center',
+        'tracking-[0.02em] leading-[1em]'
+      ).split(' '),
+      tooltipShown: ['opacity-100', 'transform-none'],
       placement: {
-        left: 'ct--left',
-        bottom: 'ct--bottom',
-        right: 'ct--right',
-        top: 'ct--top',
+        left: ['-translate-x-[5px]'],
+        bottom: ['translate-y-[5px]'],
+        right: ['translate-x-[5px]'],
+        top: ['-translate-y-[5px]'],
       },
     };
   }
@@ -162,7 +175,6 @@ class Tooltip {
    * Module constructor
    */
   private constructor() {
-    this.loadStyles();
     this.prepare();
 
     window.addEventListener('scroll', this.handleWindowScroll, { passive: true });
@@ -210,7 +222,10 @@ class Tooltip {
       return;
     }
 
-    this.nodes.wrapper.classList.remove(...Object.values(this.CSS.placement));
+    // Flatten the placement classes (each can be a string or array) before removing
+    const placementClasses = Object.values(this.CSS.placement).flatMap(cls => Array.isArray(cls) ? cls : [cls]);
+
+    this.nodes.wrapper.classList.remove(...placementClasses);
 
     switch (showingOptions.placement) {
       case 'top':
@@ -234,7 +249,9 @@ class Tooltip {
     if (showingOptions && showingOptions.delay) {
       this.showingTimeout = setTimeout(() => {
         if (this.nodes.wrapper) {
-          this.nodes.wrapper.classList.add(this.CSS.tooltipShown);
+          const classes = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown : [this.CSS.tooltipShown];
+
+          this.nodes.wrapper.classList.add(...classes);
           this.updateTooltipVisibility();
         }
         this.showed = true;
@@ -244,7 +261,9 @@ class Tooltip {
     }
 
     if (this.nodes.wrapper) {
-      this.nodes.wrapper.classList.add(this.CSS.tooltipShown);
+      const classes = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown : [this.CSS.tooltipShown];
+
+      this.nodes.wrapper.classList.add(...classes);
       this.updateTooltipVisibility();
     }
     this.showed = true;
@@ -287,7 +306,9 @@ class Tooltip {
     }
 
     if (this.nodes.wrapper) {
-      this.nodes.wrapper.classList.remove(this.CSS.tooltipShown);
+      const classes = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown : [this.CSS.tooltipShown];
+
+      this.nodes.wrapper.classList.remove(...classes);
       this.updateTooltipVisibility();
     }
     this.showed = false;
@@ -346,6 +367,7 @@ class Tooltip {
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, TOOLTIP_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'tooltip');
     this.nodes.content = this.make('div', this.CSS.tooltipContent);
+    this.nodes.content.setAttribute('data-blok-testid', 'tooltip-content');
 
     if (this.nodes.wrapper && this.nodes.content) {
       this.append(this.nodes.wrapper, this.nodes.content);
@@ -362,10 +384,12 @@ class Tooltip {
       return;
     }
 
-    const isShown = this.nodes.wrapper.classList.contains(this.CSS.tooltipShown);
+    const shownClass = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown[0] : this.CSS.tooltipShown;
+    const isShown = this.nodes.wrapper.classList.contains(shownClass);
 
     this.nodes.wrapper.style.setProperty(VISIBILITY_PROPERTY, isShown ? VISIBILITY_VISIBLE : VISIBILITY_HIDDEN);
     this.nodes.wrapper.setAttribute(ARIA_HIDDEN_ATTRIBUTE, isShown ? ARIA_HIDDEN_FALSE : ARIA_HIDDEN_TRUE);
+    this.nodes.wrapper.setAttribute('data-blok-shown', isShown ? 'true' : 'false');
   }
 
   /**
@@ -406,26 +430,7 @@ class Tooltip {
     this.watchTooltipVisibility();
   }
 
-  /**
-   * Append CSS file
-   */
-  private loadStyles(): void {
-    const id = 'blok-tooltips-style';
 
-    if (document.getElementById(id)) {
-      return;
-    }
-
-    const tag = this.make('style', null, {
-      textContent: tooltipStyles,
-      id,
-    });
-
-    /**
-     * Append styles at the top of HEAD tag
-     */
-    this.prepend(document.head, tag);
-  }
 
   /**
    * Calculates element coords and moves tooltip bottom of the element
@@ -506,7 +511,10 @@ class Tooltip {
       return;
     }
 
-    this.nodes.wrapper.classList.add(this.CSS.placement[place]);
+    const classes = Array.isArray(this.CSS.placement[place]) ? this.CSS.placement[place] : [this.CSS.placement[place]];
+
+    this.nodes.wrapper.classList.add(...classes);
+    this.nodes.wrapper.setAttribute('data-blok-placement', place);
 
     this.nodes.wrapper.style.left = `${left}px`;
     this.nodes.wrapper.style.top = `${top}px`;

@@ -21,10 +21,10 @@ const mockPopoverInstance = vi.hoisted(() => ({
 
 vi.mock('../../../src/components/dom', () => ({
   default: {
-    make: vi.fn((tag: string, className: string) => {
+    make: vi.fn((tag: string, classNames: string) => {
       const el = document.createElement(tag);
 
-      el.className = className;
+      el.setAttribute('data-blok-testid', classNames);
 
       return el;
     }),
@@ -166,7 +166,7 @@ describe('Toolbox', () => {
       const element = toolbox.getElement();
 
       expect(element).not.toBeNull();
-      expect(element?.classList.contains('blok-toolbox')).toBe(true);
+      expect(element?.getAttribute('data-blok-testid')).toBe('toolbox');
     });
 
     it('should set data-blok-testid attribute in test mode', () => {

@@ -1,7 +1,8 @@
 import { PopoverItem } from '../popover-item';
 import type { PopoverItemHtmlParams, PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
-import { css } from './popover-item-html.const';
+import { css, cssInline, DATA_ATTR } from './popover-item-html.const';
 import Dom from '../../../../../dom';
+import { twMerge } from '../../../../tw';
 
 /**
  * Represents popover item with custom html content
@@ -13,6 +14,11 @@ export class PopoverItemHtml extends PopoverItem {
   private nodes: { root: HTMLElement };
 
   /**
+   * Whether this item is in an inline popover context
+   */
+  private readonly isInline: boolean;
+
+  /**
    * Constructs the instance
    * @param params – instance parameters
    * @param renderParams – popover item render params.
@@ -21,8 +27,14 @@ export class PopoverItemHtml extends PopoverItem {
   constructor(params: PopoverItemHtmlParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Html]) {
     super(params);
 
+    this.isInline = renderParams?.isInline ?? false;
+
+    const rootClass = this.isInline ? twMerge(css.root, cssInline.root) : css.root;
+
     this.nodes = {
-      root: Dom.make('div', css.root),
+      root: Dom.make('div', rootClass, {
+        [DATA_ATTR.root]: '',
+      }),
     };
 
     this.nodes.root.appendChild(params.element);
@@ -36,6 +48,7 @@ export class PopoverItemHtml extends PopoverItem {
       this.addHint(this.nodes.root, {
         ...params.hint,
         position: renderParams?.hint?.position || 'right',
+        alignment: renderParams?.hint?.alignment || 'center',
       });
     }
   }
@@ -52,12 +65,14 @@ export class PopoverItemHtml extends PopoverItem {
    * @param isHidden - true if item should be hidden
    */
   public toggleHidden(isHidden: boolean): void {
-    this.nodes.root?.classList.toggle(css.hidden, isHidden);
+    const baseClass = this.isInline ? twMerge(css.root, cssInline.root) : css.root;
 
     if (isHidden) {
-      this.nodes.root?.setAttribute('data-blok-hidden', 'true');
+      this.nodes.root?.setAttribute(DATA_ATTR.hidden, 'true');
+      this.nodes.root.className = twMerge(baseClass, css.rootHidden);
     } else {
-      this.nodes.root?.removeAttribute('data-blok-hidden');
+      this.nodes.root?.removeAttribute(DATA_ATTR.hidden);
+      this.nodes.root.className = baseClass;
     }
   }
 

@@ -10,6 +10,7 @@ import sonarjs from 'eslint-plugin-sonarjs';
 import jest from 'eslint-plugin-jest';
 import tseslint from 'typescript-eslint';
 import jsdoc from 'eslint-plugin-jsdoc';
+import tailwindcss from 'eslint-plugin-tailwindcss';
 
 const CLASS_SELECTOR_PATTERN = /\.[_a-zA-Z][_a-zA-Z0-9-]*/;
 const ID_SELECTOR_PATTERN = /#[_a-zA-Z][_a-zA-Z0-9-]*/;
@@ -56,41 +57,47 @@ const NON_CSS_PREFIXES = [
   'aria/',
 ];
 
-const internalStorybookPlugin = {
+const internalUnitTestPlugin = {
   rules: {
     'no-class-selectors': {
       meta: {
         type: 'problem',
         docs: {
-          description: 'Disallow class selectors and toHaveClass in Storybook stories. Prefer data-testid or role-based locators.',
+          description: 'Disallow class selectors in unit tests. Prefer data-testid or role-based selectors.',
         },
         schema: [],
         messages: {
           noClassSelector:
-            'Avoid using class selectors ({{selector}}) in Storybook stories. Prefer data-blok-testid or role-based locators.',
-          noToHaveClass:
-            'Avoid using toHaveClass() in Storybook stories. Prefer checking data attributes or element states.',
+            'Avoid using class selectors ({{selector}}) in unit tests. Prefer data-blok-testid or role-based selectors.',
+          noClassSelectorTemplate:
+            'Avoid using class selectors in unit tests. Template contains "." which likely resolves to a class selector. Prefer data-blok-testid or role-based selectors.',
+          noClassListMethod:
+            'Avoid using classList.{{method}}() in unit tests. Prefer data-blok-testid or data attributes for state checking.',
+          noClassNameProperty:
+            'Avoid using .className in unit tests. Prefer data-blok-testid or data attributes for state checking.',
+          noGetAttributeClass:
+            "Avoid using getAttribute('class') in unit tests. Prefer data-blok-testid or data attributes for state checking.",
+          noSetAttributeClass:
+            "Avoid using setAttribute('class', ...) in unit tests. Prefer data-blok-testid or data attributes for state checking.",
         },
       },
       create(context) {
-        const getSelectorParts = (node) => {
-          if (!node) {
-            return [];
-          }
+        const DOM_SELECTOR_METHODS = new Set([
+          'querySelector',
+          'querySelectorAll',
+          'find',
+          'findAll',
+          'closest',
+          'matches',
+          'getElementsByClassName',
+        ]);
 
-          if (node.type === 'Literal' && typeof node.value === 'string') {
-            return [{ value: node.value, node }];
-          }
-
-          if (node.type === 'TemplateLiteral') {
-            return node.quasis.map((element) => ({
-              value: element.value.cooked ?? element.value.raw,
-              node: element,
-            }));
-          }
-
-          return [];
-        };
+        const CLASS_LIST_METHODS = new Set([
+          'contains',
+          'add',
+          'remove',
+          'toggle',
+        ]);
 
         const containsClassSelector = (rawSelector) => {
           if (!rawSelector) {
@@ -113,6 +120,339 @@ const internalStorybookPlugin = {
           return null;
         };
 
+        const containsTemplateDotExpression = (templateLiteral) => {
+          // Check if template has `.${` pattern which indicates class selector with variable
+          for (const quasi of templateLiteral.quasis) {
+            const value = quasi.value.cooked ?? quasi.value.raw;
+
+            if (value.includes('.')) {
+              return true;
+            }
+          }
+
+          return false;
+        };
+
+        const checkSelectorArg = (arg) => {
+          if (arg.type === 'Literal' && typeof arg.value === 'string') {
+            const classSelector = containsClassSelector(arg.value);
+
+            if (classSelector) {
+              context.report({
+                node: arg,
+                messageId: 'noClassSelector',
+                data: { selector: classSelector },
+              });
+            }
+          }
+
+          if (arg.type === 'TemplateLiteral') {
+            // Check for static class selectors in template parts
+            for (const quasi of arg.quasis) {
+              const value = quasi.value.cooked ?? quasi.value.raw;
+              const classSelector = containsClassSelector(value);
+
+              if (classSelector) {
+                context.report({
+                  node: quasi,
+                  messageId: 'noClassSelector',
+                  data: { selector: classSelector },
+                });
+
+                return;
+              }
+            }
+
+            // Check for dynamic class selectors like `.${css.className}`
+            if (containsTemplateDotExpression(arg)) {
+              context.report({
+                node: arg,
+                messageId: 'noClassSelectorTemplate',
+              });
+            }
+          }
+        };
+
+        const isClassListAccess = (node) => {
+          // Check for element.classList.method() pattern
+          if (node.type !== 'MemberExpression') {
+            return false;
+          }
+
+          const { object } = node;
+
+          if (object.type !== 'MemberExpression') {
+            return false;
+          }
+
+          const { property: classListProperty } = object;
+
+          return classListProperty.type === 'Identifier' && classListProperty.name === 'classList';
+        };
+
+        const isSpyOnClassList = (node) => {
+          // Check for vi.spyOn(element.classList, 'method') or jest.spyOn(element.classList, 'method') pattern
+          if (node.callee.type !== 'MemberExpression') {
+            return null;
+          }
+
+          const { object, property } = node.callee;
+
+          // Check if it's vi.spyOn or jest.spyOn
+          if (object.type !== 'Identifier' || !['vi', 'jest'].includes(object.name)) {
+            return null;
+          }
+
+          if (property.type !== 'Identifier' || property.name !== 'spyOn') {
+            return null;
+          }
+
+          // Check if first argument is element.classList
+          if (node.arguments.length < 2) {
+            return null;
+          }
+
+          const firstArg = node.arguments[0];
+
+          if (firstArg.type !== 'MemberExpression') {
+            return null;
+          }
+
+          if (firstArg.property.type !== 'Identifier' || firstArg.property.name !== 'classList') {
+            return null;
+          }
+
+          // Check if second argument is a classList method name
+          const secondArg = node.arguments[1];
+
+          if (secondArg.type !== 'Literal' || typeof secondArg.value !== 'string') {
+            return null;
+          }
+
+          if (CLASS_LIST_METHODS.has(secondArg.value)) {
+            return secondArg.value;
+          }
+
+          return null;
+        };
+
+        const isGetAttributeClass = (node) => {
+          // Check for element.getAttribute('class') pattern
+          if (node.callee.type !== 'MemberExpression') {
+            return false;
+          }
+
+          const { property } = node.callee;
+
+          if (property.type !== 'Identifier' || property.name !== 'getAttribute') {
+            return false;
+          }
+
+          if (node.arguments.length === 0) {
+            return false;
+          }
+
+          const arg = node.arguments[0];
+
+          return arg.type === 'Literal' && arg.value === 'class';
+        };
+
+        const isSetAttributeClass = (node) => {
+          // Check for element.setAttribute('class', ...) pattern
+          if (node.callee.type !== 'MemberExpression') {
+            return false;
+          }
+
+          const { property } = node.callee;
+
+          if (property.type !== 'Identifier' || property.name !== 'setAttribute') {
+            return false;
+          }
+
+          if (node.arguments.length < 2) {
+            return false;
+          }
+
+          const arg = node.arguments[0];
+
+          return arg.type === 'Literal' && arg.value === 'class';
+        };
+
+        return {
+          MemberExpression(node) {
+            // Check for .className property access
+            if (node.property.type === 'Identifier' && node.property.name === 'className') {
+              context.report({
+                node,
+                messageId: 'noClassNameProperty',
+              });
+            }
+          },
+          CallExpression(node) {
+            // Check for element.getAttribute('class') pattern
+            if (isGetAttributeClass(node)) {
+              context.report({
+                node,
+                messageId: 'noGetAttributeClass',
+              });
+
+              return;
+            }
+
+            // Check for element.setAttribute('class', ...) pattern
+            if (isSetAttributeClass(node)) {
+              context.report({
+                node,
+                messageId: 'noSetAttributeClass',
+              });
+
+              return;
+            }
+
+            // Check for vi.spyOn(element.classList, 'method') pattern
+            const spyOnMethod = isSpyOnClassList(node);
+
+            if (spyOnMethod) {
+              context.report({
+                node,
+                messageId: 'noClassListMethod',
+                data: { method: spyOnMethod },
+              });
+
+              return;
+            }
+
+            if (node.callee.type !== 'MemberExpression') {
+              return;
+            }
+
+            const { property } = node.callee;
+
+            // Check for classList methods
+            if (isClassListAccess(node.callee)) {
+              if (property.type === 'Identifier' && CLASS_LIST_METHODS.has(property.name)) {
+                context.report({
+                  node,
+                  messageId: 'noClassListMethod',
+                  data: { method: property.name },
+                });
+              }
+
+              return;
+            }
+
+            // Check for DOM selector methods
+            if (property.type !== 'Identifier' || !DOM_SELECTOR_METHODS.has(property.name)) {
+              return;
+            }
+
+            if (node.arguments.length === 0) {
+              return;
+            }
+
+            // For querySelector/querySelectorAll, check first argument
+            // For Dom.find/Dom.findAll, check second argument (first is the element)
+            const methodName = property.name;
+            const argIndex = (methodName === 'find' || methodName === 'findAll') ? 1 : 0;
+            const arg = node.arguments[argIndex];
+
+            if (arg) {
+              checkSelectorArg(arg);
+            }
+          },
+        };
+      },
+    },
+  },
+};
+
+const internalStorybookPlugin = {
+  rules: {
+    'no-class-selectors': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Disallow class selectors and toHaveClass in Storybook stories. Prefer data-testid or role-based locators.',
+        },
+        schema: [],
+        messages: {
+          noClassSelector:
+            'Avoid using class selectors ({{selector}}) in Storybook stories. Prefer data-blok-testid or role-based locators.',
+          noClassAttributeSelector:
+            'Avoid using class attribute selectors ({{selector}}) in Storybook stories. Prefer data-blok-testid or role-based locators.',
+          noToHaveClass:
+            'Avoid using toHaveClass() in Storybook stories. Prefer checking data attributes or element states.',
+          noClassListMethod:
+            'Avoid using classList.{{method}}() in Storybook stories. Prefer data-blok-testid or data attributes for state checking.',
+        },
+      },
+      create(context) {
+        const CLASS_LIST_METHODS = new Set([
+          'contains',
+          'add',
+          'remove',
+          'toggle',
+        ]);
+
+        const containsClassSelector = (rawSelector) => {
+          if (!rawSelector) {
+            return null;
+          }
+
+          const selector = rawSelector.trim();
+
+          if (!selector) {
+            return null;
+          }
+
+          // Match class selectors like .className, .blok-element--selected
+          const classMatch = selector.match(/\.[_a-zA-Z][_a-zA-Z0-9-]*/);
+
+          if (classMatch) {
+            return classMatch[0];
+          }
+
+          return null;
+        };
+
+        const containsClassAttributeSelector = (rawSelector) => {
+          if (!rawSelector) {
+            return null;
+          }
+
+          const selector = rawSelector.trim();
+
+          if (!selector) {
+            return null;
+          }
+
+          // Match class attribute selectors like [class="foo"], [class*="bar"], [class^="baz"], [class$="qux"], [class~="quux"]
+          const classAttrMatch = selector.match(/\[class(?:[*^$~|]?=)[^\]]+\]/);
+
+          if (classAttrMatch) {
+            return classAttrMatch[0];
+          }
+
+          return null;
+        };
+
+        const isClassListAccess = (node) => {
+          // Check for element.classList.method() pattern
+          if (node.type !== 'MemberExpression') {
+            return false;
+          }
+
+          const { object } = node;
+
+          if (object.type !== 'MemberExpression') {
+            return false;
+          }
+
+          const { property: classListProperty } = object;
+
+          return classListProperty.type === 'Identifier' && classListProperty.name === 'classList';
+        };
+
         return {
           // Check for class selectors in strings
           Literal(node) {
@@ -132,6 +472,18 @@ const internalStorybookPlugin = {
                 node,
                 messageId: 'noClassSelector',
                 data: { selector: classSelector },
+              });
+
+              return;
+            }
+
+            const classAttrSelector = containsClassAttributeSelector(node.value);
+
+            if (classAttrSelector) {
+              context.report({
+                node,
+                messageId: 'noClassAttributeSelector',
+                data: { selector: classAttrSelector },
               });
             }
           },
@@ -153,11 +505,25 @@ const internalStorybookPlugin = {
                   messageId: 'noClassSelector',
                   data: { selector: classSelector },
                 });
+
+                return;
+              }
+
+              const classAttrSelector = containsClassAttributeSelector(value);
+
+              if (classAttrSelector) {
+                context.report({
+                  node: quasi,
+                  messageId: 'noClassAttributeSelector',
+                  data: { selector: classAttrSelector },
+                });
+
+                return;
               }
             }
           },
 
-          // Check for toHaveClass usage
+          // Check for toHaveClass and classList methods
           CallExpression(node) {
             if (node.callee.type !== 'MemberExpression') {
               return;
@@ -165,11 +531,25 @@ const internalStorybookPlugin = {
 
             const { property } = node.callee;
 
+            // Check for toHaveClass usage
             if (property.type === 'Identifier' && property.name === 'toHaveClass') {
               context.report({
                 node,
                 messageId: 'noToHaveClass',
               });
+
+              return;
+            }
+
+            // Check for classList methods
+            if (isClassListAccess(node.callee)) {
+              if (property.type === 'Identifier' && CLASS_LIST_METHODS.has(property.name)) {
+                context.report({
+                  node,
+                  messageId: 'noClassListMethod',
+                  data: { method: property.name },
+                });
+              }
             }
           },
         };
@@ -190,6 +570,8 @@ const internalPlaywrightPlugin = {
         messages: {
           noCssSelector:
             'Avoid using CSS selectors in Playwright tests. Prefer getByRole(), getByTestId(), or data-blok-* attribute locators.',
+          noToContainClass:
+            'Avoid using toContain() with class names ({{className}}) in Playwright tests. Prefer checking data attributes or element states.',
         },
       },
       create(context) {
@@ -293,8 +675,66 @@ const internalPlaywrightPlugin = {
           });
         };
 
+        // Check if a string looks like a CSS class name (e.g., 'blok-tooltip--left', 'my-class')
+        const looksLikeClassName = (value) => {
+          if (!value || typeof value !== 'string') {
+            return false;
+          }
+
+          const trimmed = value.trim();
+
+          // Match BEM-style class names or hyphenated class names
+          // e.g., 'blok-tooltip--left', 'my-component__element--modifier', 'some-class'
+          // Uses [-_]+ to match BEM double dashes/underscores like '--' or '__'
+          if (/^[a-zA-Z][a-zA-Z0-9]*(?:[-_]+[a-zA-Z0-9]+)+$/.test(trimmed)) {
+            return true;
+          }
+
+          return false;
+        };
+
+        // Check if this is a toContain() call in an expect chain
+        const isToContainWithClassName = (node) => {
+          if (node.callee.type !== 'MemberExpression') {
+            return null;
+          }
+
+          const { property } = node.callee;
+
+          if (property.type !== 'Identifier' || property.name !== 'toContain') {
+            return null;
+          }
+
+          if (node.arguments.length === 0) {
+            return null;
+          }
+
+          const arg = node.arguments[0];
+
+          if (arg.type === 'Literal' && typeof arg.value === 'string') {
+            if (looksLikeClassName(arg.value)) {
+              return arg.value;
+            }
+          }
+
+          return null;
+        };
+
         return {
           CallExpression(node) {
+            // Check for toContain() with class names
+            const classNameInToContain = isToContainWithClassName(node);
+
+            if (classNameInToContain) {
+              context.report({
+                node,
+                messageId: 'noToContainClass',
+                data: { className: classNameInToContain },
+              });
+
+              return;
+            }
+
             const methodName = getMethodName(node.callee);
 
             if (!methodName || !SELECTOR_METHODS.has(methodName)) {
@@ -344,6 +784,95 @@ const internalPlaywrightPlugin = {
                 messageId: 'noCssSelector',
               });
             }
+          },
+        };
+      },
+    },
+  },
+};
+
+const internalDomPlugin = {
+  rules: {
+    'no-dataset-assignment': {
+      meta: {
+        type: 'suggestion',
+        docs: {
+          description: 'Disallow using .dataset for setting data attributes. Use .setAttribute() instead.',
+        },
+        fixable: 'code',
+        schema: [],
+        messages: {
+          noDatasetAssignment:
+            'Avoid using .dataset.{{property}} for setting data attributes. Use .setAttribute(\'data-{{kebabProperty}}\', value) instead.',
+        },
+      },
+      create(context) {
+        const sourceCode = context.sourceCode ?? context.getSourceCode();
+
+        // Convert camelCase to kebab-case
+        const toKebabCase = (str) => {
+          return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+        };
+
+        // Get the object being accessed (the element before .dataset)
+        const getElementExpression = (datasetNode) => {
+          if (datasetNode.type !== 'MemberExpression') {
+            return null;
+          }
+
+          return sourceCode.getText(datasetNode.object);
+        };
+
+        return {
+          AssignmentExpression(node) {
+            // Check if left side is element.dataset.property pattern
+            if (node.left.type !== 'MemberExpression') {
+              return;
+            }
+
+            const { object, property, computed } = node.left;
+
+            // Check if it's accessing .dataset
+            if (object.type !== 'MemberExpression') {
+              return;
+            }
+
+            if (object.property.type !== 'Identifier' || object.property.name !== 'dataset') {
+              return;
+            }
+
+            // Get the property name being set
+            const propertyName = computed
+              ? (property.type === 'Literal' ? String(property.value) : null)
+              : (property.type === 'Identifier' ? property.name : null);
+
+            if (!propertyName) {
+              return;
+            }
+
+            const kebabProperty = toKebabCase(propertyName);
+            const elementExpr = getElementExpression(object);
+
+            if (!elementExpr) {
+              return;
+            }
+
+            const valueText = sourceCode.getText(node.right);
+
+            context.report({
+              node,
+              messageId: 'noDatasetAssignment',
+              data: {
+                property: propertyName,
+                kebabProperty,
+              },
+              fix(fixer) {
+                return fixer.replaceText(
+                  node,
+                  `${elementExpr}.setAttribute('data-${kebabProperty}', ${valueText})`
+                );
+              },
+            });
           },
         };
       },
@@ -472,8 +1001,12 @@ export default defineConfig(
     plugins: {
       sonarjs,
       import: eslintPluginImport,
+      tailwindcss,
+      'internal-dom': internalDomPlugin,
     },
     rules: {
+      // Prevent .dataset assignment, prefer .setAttribute()
+      'internal-dom/no-dataset-assignment': 'error',
       // Duplicate code detection
       'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-blok-testid,data-blok-focused,data-blok-opened,data-blok-component' }],
       'sonarjs/no-identical-functions': 'error',
@@ -481,12 +1014,25 @@ export default defineConfig(
       // Prevent UMD module patterns
       'import/no-amd': 'error',
       'import/no-commonjs': 'error',
+      // Tailwind CSS rules - best practices
+      'tailwindcss/classnames-order': 'error', // Enforce consistent class ordering for readability
+      'tailwindcss/enforces-negative-arbitrary-values': 'error', // Use -mt-[5px] instead of mt-[-5px]
+      'tailwindcss/enforces-shorthand': 'error', // Use px-2 instead of pl-2 pr-2
+      'tailwindcss/no-arbitrary-value': 'off', // Allow arbitrary values when needed
+      'tailwindcss/no-custom-classname': ['warn', {
+        // Allow custom classes that follow project conventions
+        whitelist: ['blok-.*'],
+      }],
+      'tailwindcss/no-contradicting-classname': 'error', // Prevent conflicting classes like flex block
+      'tailwindcss/no-unnecessary-arbitrary-value': 'error', // Use p-4 instead of p-[16px] when equivalent exists
     },
   },
   {
     files: ['test/unit/**/*.ts'],
     plugins: {
       jest,
+      'internal-unit-test': internalUnitTestPlugin,
+      'internal-dom': internalDomPlugin,
     },
     languageOptions: {
       globals: {
@@ -505,6 +1051,10 @@ export default defineConfig(
     },
     rules: {
       ...jest.configs.recommended.rules,
+      // Prevent .dataset assignment, prefer .setAttribute()
+      'internal-dom/no-dataset-assignment': 'error',
+      // Prevent class selectors in unit tests
+      'internal-unit-test/no-class-selectors': 'error',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-deprecated': 'off',

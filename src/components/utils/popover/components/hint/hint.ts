@@ -2,8 +2,6 @@ import Dom from '../../../../dom';
 import { css } from './hint.const';
 import type { HintParams } from '@/types/utils/popover/hint';
 
-import './hint.css';
-
 /**
  * Represents the hint content component
  */
@@ -22,11 +20,14 @@ export class Hint {
    * @param params - hint content parameters
    */
   constructor(params: HintParams) {
+    const alignment = params.alignment === 'center' ? 'center' : 'start';
+
     this.nodes = {
-      root: Dom.make('div', [css.root, params.alignment === 'center' ? css.alignedCenter : css.alignedStart]),
+      root: Dom.make('div', [css.root, alignment === 'center' ? css.alignedCenter : css.alignedStart]),
       title: Dom.make('div', css.title, { textContent: params.title }),
     };
 
+    this.nodes.root.setAttribute('data-alignment', alignment);
     this.nodes.root.appendChild(this.nodes.title);
 
     if (params.description !== undefined) {

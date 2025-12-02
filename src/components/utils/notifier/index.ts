@@ -1,8 +1,6 @@
 import * as draw from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './types';
-import './index.css';
 
-const bounceInClass = 'blok-notify--bounce-in';
 const DEFAULT_TIME = 8000;
 
 /**
@@ -10,7 +8,7 @@ const DEFAULT_TIME = 8000;
  * @returns {HTMLElement}
  */
 const prepare_ = (): HTMLElement => {
-  const existingWrapper = document.querySelector(`.${draw.CSS.wrapper}`) as HTMLElement;
+  const existingWrapper = document.querySelector('[data-blok-testid="notifier-container"]') as HTMLElement;
 
   if (existingWrapper) {
     return existingWrapper;
@@ -58,7 +56,8 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
 
   if (wrapper && notify) {
     wrapper.appendChild(notify);
-    notify.classList.add(bounceInClass);
+    notify.className = `${notify.className} ${draw.CSS.bounceIn}`;
+    notify.setAttribute('data-blok-bounce-in', 'true');
   }
 };
 

@@ -3,7 +3,7 @@ import { PopoverInline } from '../../../src/components/utils/popover/popover-inl
 import { PopoverDesktop } from '../../../src/components/utils/popover/popover-desktop';
 import { PopoverItemDefault, PopoverItemType } from '../../../src/components/utils/popover/components/popover-item';
 import type { PopoverItemHtml } from '../../../src/components/utils/popover/components/popover-item/popover-item-html/popover-item-html';
-import { CSSVariables, css } from '../../../src/components/utils/popover/popover.const';
+import { CSSVariables, DATA_ATTR, getNestedLevelAttrValue } from '../../../src/components/utils/popover/popover.const';
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import Flipper from '../../../src/components/flipper';
@@ -21,7 +21,7 @@ vi.mock('../../../src/components/utils', async () => {
 vi.mock('../../../src/components/flipper');
 
 describe('PopoverInline', () => {
-   
+
   const OFFSET_LEFT_VALUE = 50;
   const ITEM_OFFSET_LEFT_VALUE = 30;
 
@@ -230,7 +230,6 @@ describe('PopoverInline', () => {
       expect(PopoverDesktop).toHaveBeenCalledWith(
         {
           ...mocks.mockPopoverParams,
-          class: css.popoverInline,
         },
         {
           [PopoverItemType.Default]: {
@@ -240,6 +239,8 @@ describe('PopoverInline', () => {
               alignment: 'center',
               enabled: true,
             },
+            iconWithGap: false,
+            isInline: true,
           },
           [PopoverItemType.Html]: {
             hint: {
@@ -247,6 +248,10 @@ describe('PopoverInline', () => {
               alignment: 'center',
               enabled: true,
             },
+            isInline: true,
+          },
+          [PopoverItemType.Separator]: {
+            isInline: true,
           },
         }
       );
@@ -657,7 +662,9 @@ describe('PopoverInline', () => {
         .showNestedPopoverForItem(item);
 
       expect(result).toBe(nestedPopover);
-      expect(nestedPopoverEl.classList.contains(css.getPopoverNestedClass(1))).toBe(true);
+      // Verify nested level data attribute was applied - this tests CSS positioning behavior
+      expect(nestedPopoverEl.hasAttribute(DATA_ATTR.nestedLevel)).toBe(true);
+      expect(nestedPopoverEl.getAttribute(DATA_ATTR.nestedLevel)).toBe(getNestedLevelAttrValue(1));
     });
 
     it('should focus nested popover on first Tab press and remove listener', () => {

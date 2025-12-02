@@ -109,9 +109,8 @@ export const ShownBottom: Story = {
           const tooltip = document.querySelector(TOOLTIP_TESTID);
 
           expect(tooltip).toBeInTheDocument();
-          // Tooltip shown state indicated by ct--shown class presence
-          expect(tooltip?.classList.contains('ct--shown')).toBe(true);
-          expect(tooltip?.classList.contains('ct--bottom')).toBe(true);
+          expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
+          expect(tooltip).toHaveAttribute('data-blok-placement', 'bottom');
         },
         TIMEOUT_ACTION
       );
@@ -143,8 +142,8 @@ export const ShownTop: Story = {
           const tooltip = document.querySelector(TOOLTIP_TESTID);
 
           expect(tooltip).toBeInTheDocument();
-          expect(tooltip?.classList.contains('ct--shown')).toBe(true);
-          expect(tooltip?.classList.contains('ct--top')).toBe(true);
+          expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
+          expect(tooltip).toHaveAttribute('data-blok-placement', 'top');
         },
         TIMEOUT_ACTION
       );
@@ -176,8 +175,8 @@ export const ShownLeft: Story = {
           const tooltip = document.querySelector(TOOLTIP_TESTID);
 
           expect(tooltip).toBeInTheDocument();
-          expect(tooltip?.classList.contains('ct--shown')).toBe(true);
-          expect(tooltip?.classList.contains('ct--left')).toBe(true);
+          expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
+          expect(tooltip).toHaveAttribute('data-blok-placement', 'left');
         },
         TIMEOUT_ACTION
       );
@@ -209,8 +208,8 @@ export const ShownRight: Story = {
           const tooltip = document.querySelector(TOOLTIP_TESTID);
 
           expect(tooltip).toBeInTheDocument();
-          expect(tooltip?.classList.contains('ct--shown')).toBe(true);
-          expect(tooltip?.classList.contains('ct--right')).toBe(true);
+          expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
+          expect(tooltip).toHaveAttribute('data-blok-placement', 'right');
         },
         TIMEOUT_ACTION
       );
@@ -245,7 +244,7 @@ export const WithHTMLContent: Story = {
           const tooltip = document.querySelector(TOOLTIP_TESTID);
 
           expect(tooltip).toBeInTheDocument();
-          expect(tooltip?.classList.contains('ct--shown')).toBe(true);
+          expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
         },
         TIMEOUT_ACTION
       );

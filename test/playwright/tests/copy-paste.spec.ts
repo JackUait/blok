@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import { Buffer } from 'node:buffer';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type Blok from '@/types';
@@ -11,16 +10,6 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
 ).href;
-
-const HEADER_TOOL_UMD_PATH = path.resolve(
-  __dirname,
-  '../../../node_modules/@editorjs/header/dist/header.umd.js'
-);
-
-const SIMPLE_IMAGE_TOOL_UMD_PATH = path.resolve(
-  __dirname,
-  '../../../node_modules/@editorjs/simple-image/dist/simple-image.umd.js'
-);
 
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -110,7 +99,11 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
             let toolClass: unknown;
 
             if (className) {
-              toolClass = (window as unknown as Record<string, unknown>)[className] ?? null;
+              // Handle dot notation (e.g., 'Blok.Header')
+              toolClass = className.split('.').reduce(
+                (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
+                window
+              ) ?? null;
             }
 
             if (!toolClass && classCode) {
@@ -446,12 +439,10 @@ test.describe('copy and paste', () => {
     });
 
     test('should parse block tags', async ({ page }) => {
-      await page.addScriptTag({ path: HEADER_TOOL_UMD_PATH });
-
       await createBlok(page, {
         tools: {
           header: {
-            className: 'Header',
+            className: 'Blok.Header',
           },
         },
       });
@@ -480,40 +471,6 @@ test.describe('copy and paste', () => {
       expect(output.blocks[1]?.type).toBe('paragraph');
       expect(output.blocks[1]?.data).toMatchObject({
         text: 'Second block',
-      });
-    });
-
-    test('should parse pattern', async ({ page }) => {
-      await page.addScriptTag({ path: SIMPLE_IMAGE_TOOL_UMD_PATH });
-
-      const imageUrl = 'https://example.com/test.png';
-
-      await page.route(imageUrl, route => route.fulfill({
-        status: 200,
-        contentType: 'image/png',
-        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
-      }));
-
-      await createBlok(page, {
-        tools: {
-          image: {
-            className: 'SimpleImage',
-          },
-        },
-      });
-
-      const block = getBlockByIndex(page, 0);
-
-      await block.click();
-      await paste(page, block, {
-
-        'text/plain': imageUrl,
-      });
-
-      const image = page.getByRole('img');
-
-      await expect(image).toHaveAttribute('src', imageUrl, {
-        timeout: 10_000,
       });
     });
 

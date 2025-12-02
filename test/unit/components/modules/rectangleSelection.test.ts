@@ -12,7 +12,7 @@ import type BlockType from '../../../../src/components/block';
 type PartialModules = Partial<BlokModules>;
 
 type ToolbarModuleMock = {
-  CSS: { toolbar: string };
+  CSS: { toolbar: string; toolbarSelector: string };
   close: Mock<() => void>;
 };
 
@@ -56,13 +56,15 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
   const blokWrapper = document.createElement('div');
   const blokWrapperClass = 'blok-editor__redactor';
 
-  blokWrapper.className = blokWrapperClass;
+  blokWrapper.setAttribute('data-blok-testid', 'blok-wrapper');
+  Object.assign(blokWrapper, { className: blokWrapperClass });
   holder.appendChild(blokWrapper);
   document.body.appendChild(holder);
 
   const blockContent = document.createElement('div');
 
-  blockContent.className = Block.CSS.content;
+  blockContent.setAttribute('data-blok-testid', 'block-content');
+  Object.assign(blockContent, { className: Block.CSS.content });
   blockContent.style.width = '400px';
 
   const lastBlockHolder = document.createElement('div');
@@ -74,6 +76,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
   const toolbarMock: ToolbarModuleMock = {
     CSS: {
       toolbar: 'blok-editor-toolbar',
+      toolbarSelector: 'blok-editor-toolbar',
     },
     close: vi.fn<() => void>(),
   };
@@ -183,8 +186,8 @@ describe('RectangleSelection', () => {
 
     rectangleSelection.prepare();
 
-    const overlay = blokWrapper.querySelector(`.${RectangleSelection.CSS.overlay}`);
-    const rectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`);
+    const overlay = blokWrapper.querySelector('[data-blok-testid="overlay"]');
+    const rectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]');
 
     expect(overlay).not.toBeNull();
     expect(rectangle).not.toBeNull();
@@ -237,10 +240,10 @@ describe('RectangleSelection', () => {
 
     blockSelection.allBlocksSelected = true;
 
-    const toolbarClass = toolbar.CSS.toolbar;
     const toolbarElement = document.createElement('div');
 
-    toolbarElement.className = toolbarClass;
+    toolbarElement.setAttribute('data-blok-testid', 'toolbar');
+    Object.assign(toolbarElement, { className: toolbar.CSS.toolbarSelector });
     const toolbarChild = document.createElement('div');
 
     toolbarElement.appendChild(toolbarChild);
@@ -278,7 +281,8 @@ describe('RectangleSelection', () => {
 
     const blockContent = document.createElement('div');
 
-    blockContent.className = Block.CSS.content;
+    blockContent.setAttribute('data-blok-testid', 'block-content');
+    Object.assign(blockContent, { className: Block.CSS.content });
     blokWrapper.appendChild(blockContent);
     elementFromPointSpy.mockReturnValue(blockContent);
 
@@ -328,7 +332,7 @@ describe('RectangleSelection', () => {
     internal.mousedown = true;
     internal.startX = 50;
     internal.startY = 60;
-    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
     internal.overlayRectangle.style.display = 'block';
 
     rectangleSelection.endSelection();
@@ -517,7 +521,7 @@ describe('RectangleSelection', () => {
       startY: number;
     };
 
-    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
     internal.startX = 150;
     internal.startY = 260;
 
@@ -615,7 +619,7 @@ describe('RectangleSelection', () => {
       updateRectangleSize: () => void;
     };
 
-    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
     internal.startX = 100;
     internal.startY = 150;
     internal.mouseX = 200;
@@ -692,7 +696,7 @@ describe('RectangleSelection', () => {
 
     internal.mousedown = true;
     internal.isRectSelectionActivated = false;
-    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
 
     const genInfoSpy = vi.spyOn(
       rectangleSelection as unknown as { genInfoForMouseSelection: () => { rightPos: number; leftPos: number; index: number } },
@@ -749,7 +753,7 @@ describe('RectangleSelection', () => {
 
     internal.mousedown = true;
     internal.isRectSelectionActivated = true;
-    internal.overlayRectangle = blokWrapper.querySelector(`.${RectangleSelection.CSS.rect}`) as HTMLDivElement;
+    internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
 
     const genInfoSpy = vi.spyOn(
       rectangleSelection as unknown as { genInfoForMouseSelection: () => { rightPos: number; leftPos: number; index: number | undefined } },

@@ -8,7 +8,6 @@ import $, { toggleEmptyMark } from '../dom';
 import * as _ from '../utils';
 
 import Selection from '../selection';
-import Block from '../block';
 import Flipper from '../flipper';
 import { mobileScreenBreakpoint } from '../utils';
 
@@ -54,10 +53,10 @@ export default class UI extends Module<UINodes> {
       blokWrapper: 'blok-editor',
       blokWrapperNarrow: 'blok-editor--narrow',
       blokZone: 'blok-editor__redactor',
-      blokZoneHidden: 'blok-editor__redactor--hidden',
-      blokEmpty: 'blok-editor--empty',
+      blokZoneHidden: 'is-hidden',
+      blokEmpty: 'is-empty',
       blokRtlFix: 'blok-editor--rtl',
-      blokDragging: 'blok-editor--dragging',
+      blokDragging: 'is-dragging',
     };
   }
 
@@ -70,7 +69,7 @@ export default class UI extends Module<UINodes> {
       return this.contentRectCache;
     }
 
-    const someBlock = this.nodes.wrapper.querySelector(`.${Block.CSS.content}`);
+    const someBlock = this.nodes.wrapper.querySelector('[data-blok-testid="block-content"]');
 
     /**
      * When Blok is not ready, there is no Blocks, so return the default value
@@ -195,6 +194,7 @@ export default class UI extends Module<UINodes> {
     const { BlockManager } = this.Blok;
 
     this.nodes.wrapper.classList.toggle(this.CSS.blokEmpty, BlockManager.isBlokEmpty);
+    this.nodes.wrapper.setAttribute('data-blok-empty', BlockManager.isBlokEmpty ? 'true' : 'false');
   }
 
   /**
@@ -298,11 +298,32 @@ export default class UI extends Module<UINodes> {
      */
     this.nodes.wrapper = $.make('div', [
       this.CSS.blokWrapper,
-      ...(this.isRtl ? [ this.CSS.blokRtlFix ] : []),
+      'group',
+      'relative',
+      'box-border',
+      'z-[1]',
+      '[&.is-dragging]:cursor-grabbing',
+      // SVG defaults
+      '[&_svg]:max-h-full',
+      '[&_path]:stroke-current',
+      // Native selection color
+      '[&_::selection]:bg-selection-inline',
+      // Hide placeholder when toolbox is opened
+      '[&.is-toolbox-opened_[contentEditable=true][data-blok-placeholder]:focus]:before:!opacity-0',
+      ...(this.isRtl ? [ this.CSS.blokRtlFix, '[direction:rtl]' ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');
-    this.nodes.redactor = $.make('div', this.CSS.blokZone);
+    this.nodes.redactor = $.make('div', [
+      this.CSS.blokZone,
+      // Narrow mode: add right margin on non-mobile screens
+      'not-mobile:group-[.blok-editor--narrow]:mr-[theme(spacing.narrow-mode-right-padding)]',
+      // RTL narrow mode: add left margin instead
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:ml-[theme(spacing.narrow-mode-right-padding)]',
+      'not-mobile:group-[.blok-editor--narrow.blok-editor--rtl]:mr-0',
+      // Firefox empty contenteditable fix
+      '[&_[contenteditable]:empty]:after:content-["\\feff_"]',
+    ]);
     this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
 
     /**
@@ -311,6 +332,7 @@ export default class UI extends Module<UINodes> {
      */
     if (this.nodes.holder.offsetWidth < this.contentRect.width) {
       this.nodes.wrapper.classList.add(this.CSS.blokWrapperNarrow);
+      this.nodes.wrapper.setAttribute('data-blok-narrow', 'true');
     }
 
     /**
@@ -449,7 +471,7 @@ export default class UI extends Module<UINodes> {
         return;
       }
 
-      const hoveredBlock = (event.target as Element | null)?.closest('.blok-element');
+      const hoveredBlock = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
       /**
        * Do not trigger 'block-hovered' for cross-block selection
@@ -547,7 +569,7 @@ export default class UI extends Module<UINodes> {
    */
   private defaultBehaviour(event: KeyboardEvent): void {
     const { currentBlock } = this.Blok.BlockManager;
-    const keyDownOnBlok = (event.target as HTMLElement).closest(`.${this.CSS.blokWrapper}`);
+    const keyDownOnBlok = (event.target as HTMLElement).closest('[data-blok-testid="blok-editor"]');
     const isMetaKey = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
 
     /**
@@ -982,8 +1004,8 @@ export default class UI extends Module<UINodes> {
      * for example, at the Inline Toolbar or some Block Tune element.
      * We also make sure that the closest block belongs to the current blok and not a parent
      */
-    const closestBlock = focusedElement.closest(`.${Block.CSS.content}`);
-    const clickedOutsideBlockContent = closestBlock === null || (closestBlock.closest(`.${Selection.CSS.blokWrapper}`) !== this.nodes.wrapper);
+    const closestBlock = focusedElement.closest('[data-blok-testid="block-content"]');
+    const clickedOutsideBlockContent = closestBlock === null || (closestBlock.closest('[data-blok-testid="blok-editor"]') !== this.nodes.wrapper);
 
     const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).getAttribute('data-blok-inline-toolbar') === 'true';
     const shouldCloseInlineToolbar = clickedOutsideBlockContent && !this.Blok.InlineToolbar.containsNode(focusedElement);

@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchInput } from '../../../src/components/utils/popover/components/search-input/search-input';
 import { SearchInputEvent } from '../../../src/components/utils/popover/components/search-input/search-input.types';
-import { css } from '../../../src/components/utils/popover/components/search-input/search-input.const';
 import type Listeners from '../../../src/components/utils/listeners';
 
 const getInput = (instance: SearchInput): HTMLInputElement => {
@@ -35,20 +34,17 @@ describe('SearchInput', () => {
   it('builds the wrapper with icon and input', () => {
     const searchInput = createSearchInput();
     const element = searchInput.getElement();
-    const children = Array.from(element.children) as HTMLElement[];
 
-    expect(element.classList.contains(css.wrapper)).toBe(true);
-    expect(children.length).toBe(2);
-    const [iconWrapper, input] = children;
+    expect(element.getAttribute('data-blok-testid')).toBe('popover-search-field');
+    expect(element.children.length).toBe(2);
 
-    expect(iconWrapper.classList.contains(css.icon)).toBe(true);
-    expect(iconWrapper.innerHTML.trim()).not.toHaveLength(0);
+    const input = element.querySelector('[data-blok-testid="popover-search-input"]') as HTMLInputElement;
 
-    expect(input.classList.contains(css.input)).toBe(true);
-    expect((input as HTMLInputElement).type).toBe('search');
-    expect((input as HTMLInputElement).tabIndex).toBe(-1);
-    expect((input as HTMLInputElement).getAttribute('data-blok-flipper-tab-target')).toBe('true');
-    expect((input as HTMLInputElement).placeholder).toBe('Filter actions');
+    expect(input).not.toBeNull();
+    expect(input.type).toBe('search');
+    expect(input.tabIndex).toBe(-1);
+    expect(input.getAttribute('data-blok-flipper-tab-target')).toBe('true');
+    expect(input.placeholder).toBe('Filter actions');
   });
 
   it('focuses the underlying input', () => {

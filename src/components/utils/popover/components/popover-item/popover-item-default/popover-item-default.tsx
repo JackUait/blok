@@ -1,16 +1,44 @@
-import Dom from '../../../../../dom';
-import { IconDotCircle, IconChevronRight } from '@codexteam/icons';
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import type {
   PopoverItemDefaultParams as PopoverItemDefaultParams,
   PopoverItemRenderParamsMap,
   PopoverItemType
 } from '@/types/utils/popover/popover-item';
 import { PopoverItem } from '../popover-item';
-import { css, DATA_ATTRIBUTE_ACTIVE } from './popover-item-default.const';
+import { css, cssInline, cssNestedInline, DATA_ATTR } from './popover-item-default.const';
+import { PopoverItemDefaultComponent } from './PopoverItemDefaultComponent';
+import { twMerge } from '../../../../tw';
+
+/**
+ * Selector for icon element
+ */
+const ICON_SELECTOR = '[data-blok-testid="popover-item-icon"]';
+
+/**
+ * Creates a temporary container and renders React component to extract the element
+ * Uses flushSync to ensure synchronous rendering for immediate DOM access
+ * @param component - React component to render
+ */
+const renderToElement = (component: React.ReactNode): HTMLElement => {
+  const container = document.createElement('div');
+  const root = createRoot(container);
+
+  flushSync(() => {
+    root.render(component);
+  });
+
+  const element = container.firstElementChild as HTMLElement;
+
+  // Unmount React after extracting the element to avoid memory leaks
+  root.unmount();
+
+  return element;
+};
 
 /**
  * Represents single popover item node
- * @todo move nodes initialization to constructor
  * @todo replace multiple make() usages with constructing separate instances
  * @todo split regular popover item and popover item with confirmation to separate classes
  * @todo display icon on the right side of the item for rtl languages
@@ -53,7 +81,7 @@ export class PopoverItemDefault extends PopoverItem {
       return false;
     }
 
-    return this.nodes.root.classList.contains(css.focused);
+    return this.nodes.root.hasAttribute(DATA_ATTR.focused);
   }
 
   /**
@@ -73,6 +101,11 @@ export class PopoverItemDefault extends PopoverItem {
   private confirmationState: PopoverItemDefaultParams | null = null;
 
   /**
+   * Render params passed during construction, stored for re-rendering
+   */
+  private readonly renderParams: PopoverItemRenderParamsMap[PopoverItemType.Default] | undefined;
+
+  /**
    * Constructs popover item instance
    * @param params - popover item construction params
    * @param renderParams - popover item render params.
@@ -81,6 +114,7 @@ export class PopoverItemDefault extends PopoverItem {
   constructor(protected readonly params: PopoverItemDefaultParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Default]) {
     super(params);
 
+    this.renderParams = renderParams;
     this.nodes.root = this.make(params, renderParams);
   }
 
@@ -113,15 +147,15 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    const shouldBeActive = isActive !== undefined ? isActive : !this.nodes.root.classList.contains(css.active);
-
-    this.nodes.root.classList.toggle(css.active, shouldBeActive);
+    const shouldBeActive = isActive !== undefined ? isActive : !this.nodes.root.hasAttribute(DATA_ATTR.active);
 
     if (shouldBeActive) {
-      this.nodes.root.setAttribute(DATA_ATTRIBUTE_ACTIVE, 'true');
+      this.nodes.root.setAttribute(DATA_ATTR.active, 'true');
     } else {
-      this.nodes.root.removeAttribute(DATA_ATTRIBUTE_ACTIVE);
+      this.nodes.root.removeAttribute(DATA_ATTR.active);
     }
+
+    this.updateRootClasses();
   }
 
   /**
@@ -129,13 +163,13 @@ export class PopoverItemDefault extends PopoverItem {
    * @param isHidden - true if item should be hidden
    */
   public override toggleHidden(isHidden: boolean): void {
-    this.nodes.root?.classList.toggle(css.hidden, isHidden);
-
     if (isHidden) {
-      this.nodes.root?.setAttribute('data-blok-hidden', 'true');
+      this.nodes.root?.setAttribute(DATA_ATTR.hidden, 'true');
     } else {
-      this.nodes.root?.removeAttribute('data-blok-hidden');
+      this.nodes.root?.removeAttribute(DATA_ATTR.hidden);
     }
+
+    this.updateRootClasses();
   }
 
   /**
@@ -160,64 +194,34 @@ export class PopoverItemDefault extends PopoverItem {
    * @param renderParams - popover item render params
    */
   private make(params: PopoverItemDefaultParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Default]): HTMLElement {
-    const tag = renderParams?.wrapperTag || 'div';
-    const el = Dom.make(tag, css.container, {
-      type: tag === 'button' ? 'button' : undefined,
-    });
-
-    el.setAttribute('data-blok-testid', 'popover-item');
-
-    if (params.name) {
-      el.setAttribute('data-blok-item-name', params.name);
-    }
-
-    this.nodes.icon = Dom.make('div', [css.icon, css.iconTool], {
-      innerHTML: params.icon || IconDotCircle,
-      'data-blok-testid': 'popover-item-icon',
-    });
-
-    el.appendChild(this.nodes.icon);
-
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
     const title = params.title || params.label;
 
-    if (title !== undefined) {
-      el.appendChild(Dom.make('div', css.title, {
-        innerHTML: title || '',
-        'data-blok-testid': 'popover-item-title',
-      }));
-    }
+    const el = renderToElement(
+      <PopoverItemDefaultComponent
+        icon={params.icon}
+        title={title}
+        secondaryLabel={params.secondaryLabel}
+        isActive={this.isActive}
+        isDisabled={params.isDisabled}
+        hasChildren={this.hasChildren}
+        hideChevron={this.isChevronHidden}
+        wrapperTag={renderParams?.wrapperTag}
+        name={params.name}
+        iconWithGap={renderParams?.iconWithGap}
+        isInline={renderParams?.isInline}
+        isNestedInline={renderParams?.isNestedInline}
+      />
+    );
 
-    if (params.secondaryLabel) {
-      const secondaryTitle = Dom.make('div', css.secondaryTitle, {
-        textContent: params.secondaryLabel,
-      });
-
-      secondaryTitle.setAttribute('data-blok-testid', 'popover-item-secondary-title');
-      el.appendChild(secondaryTitle);
-    }
-
-    if (this.hasChildren) {
-      el.appendChild(Dom.make('div', [css.icon, css.iconChevronRight], {
-        innerHTML: IconChevronRight,
-        'data-blok-testid': 'popover-item-chevron-right',
-      }));
-    }
-
-    if (this.isActive) {
-      el.classList.add(css.active);
-      el.setAttribute(DATA_ATTRIBUTE_ACTIVE, 'true');
-    }
-
-    if (params.isDisabled) {
-      el.classList.add(css.disabled);
-      el.setAttribute('data-blok-disabled', 'true');
-    }
+    // Store reference to icon element
+    this.nodes.icon = el.querySelector(ICON_SELECTOR);
 
     if (params.hint !== undefined && renderParams?.hint?.enabled !== false) {
       this.addHint(el, {
         ...params.hint,
         position: renderParams?.hint?.position || 'right',
+        alignment: renderParams?.hint?.alignment || 'center',
       });
     }
 
@@ -238,15 +242,18 @@ export class PopoverItemDefault extends PopoverItem {
       ...newState,
       confirmation: 'confirmation' in newState ? newState.confirmation : undefined,
     } as PopoverItemDefaultParams;
-    const confirmationEl = this.make(params);
+    const confirmationEl = this.make(params, this.renderParams);
 
     this.nodes.root.innerHTML = confirmationEl.innerHTML;
-    this.nodes.root.classList.add(css.confirmationState);
-    this.nodes.root.setAttribute('data-blok-popover-item-confirmation', 'true');
+    this.nodes.root.setAttribute(DATA_ATTR.confirmation, 'true');
+
+    // Update icon reference after innerHTML change
+    this.nodes.icon = this.nodes.root.querySelector(ICON_SELECTOR);
 
     this.confirmationState = newState;
 
     this.enableSpecialHoverAndFocusBehavior();
+    this.updateRootClasses();
   }
 
   /**
@@ -256,15 +263,18 @@ export class PopoverItemDefault extends PopoverItem {
     if (this.nodes.root === null) {
       return;
     }
-    const itemWithOriginalParams = this.make(this.params);
+    const itemWithOriginalParams = this.make(this.params, this.renderParams);
 
     this.nodes.root.innerHTML = itemWithOriginalParams.innerHTML;
-    this.nodes.root.classList.remove(css.confirmationState);
-    this.nodes.root.removeAttribute('data-blok-popover-item-confirmation');
+    this.nodes.root.removeAttribute(DATA_ATTR.confirmation);
+
+    // Update icon reference after innerHTML change
+    this.nodes.icon = this.nodes.root.querySelector(ICON_SELECTOR);
 
     this.confirmationState = null;
 
     this.disableSpecialHoverAndFocusBehavior();
+    this.updateRootClasses();
   }
 
   /**
@@ -272,8 +282,8 @@ export class PopoverItemDefault extends PopoverItem {
    * This is needed to prevent item from being highlighted as hovered/focused just after click.
    */
   private enableSpecialHoverAndFocusBehavior(): void {
-    this.nodes.root?.classList.add(css.noHover);
-    this.nodes.root?.classList.add(css.noFocus);
+    this.nodes.root?.setAttribute(DATA_ATTR.noHover, 'true');
+    this.nodes.root?.setAttribute(DATA_ATTR.noFocus, 'true');
 
     this.nodes.root?.addEventListener('mouseleave', this.removeSpecialHoverBehavior, { once: true });
   }
@@ -292,14 +302,14 @@ export class PopoverItemDefault extends PopoverItem {
    * Removes class responsible for special focus behavior on an item
    */
   private removeSpecialFocusBehavior = (): void => {
-    this.nodes.root?.classList.remove(css.noFocus);
+    this.nodes.root?.removeAttribute(DATA_ATTR.noFocus);
   };
 
   /**
    * Removes class responsible for special hover behavior on an item
    */
   private removeSpecialHoverBehavior = (): void => {
-    this.nodes.root?.classList.remove(css.noHover);
+    this.nodes.root?.removeAttribute(DATA_ATTR.noHover);
   };
 
   /**
@@ -323,11 +333,13 @@ export class PopoverItemDefault extends PopoverItem {
    * Animates item which symbolizes that error occurred while executing 'onActivate()' callback
    */
   private animateError(): void {
-    if (this.nodes.icon?.classList.contains(css.wobbleAnimation)) {
+    if (this.nodes.icon?.hasAttribute(DATA_ATTR.wobble)) {
       return;
     }
 
-    this.nodes.icon?.classList.add(css.wobbleAnimation);
+    this.nodes.icon?.setAttribute(DATA_ATTR.wobble, 'true');
+    // Apply wobble animation class directly (moved from popover.css)
+    this.nodes.icon?.classList.add('animate-wobble');
 
     this.nodes.icon?.addEventListener('animationend', this.onErrorAnimationEnd);
   }
@@ -336,7 +348,36 @@ export class PopoverItemDefault extends PopoverItem {
    * Handles finish of error animation
    */
   private onErrorAnimationEnd = (): void => {
-    this.nodes.icon?.classList.remove(css.wobbleAnimation);
+    this.nodes.icon?.removeAttribute(DATA_ATTR.wobble);
+    // Remove wobble animation class
+    this.nodes.icon?.classList.remove('animate-wobble');
     this.nodes.icon?.removeEventListener('animationend', this.onErrorAnimationEnd);
   };
+
+  /**
+   * Updates root element classes based on current state
+   */
+  private updateRootClasses(): void {
+    if (this.nodes.root === null) {
+      return;
+    }
+
+    const isActive = this.nodes.root.hasAttribute(DATA_ATTR.active);
+    const isHidden = this.nodes.root.hasAttribute(DATA_ATTR.hidden);
+    const isConfirmation = this.nodes.root.hasAttribute(DATA_ATTR.confirmation);
+    const isFocused = this.nodes.root.hasAttribute(DATA_ATTR.focused);
+    const isInline = this.renderParams?.isInline ?? false;
+    const isNestedInline = this.renderParams?.isNestedInline ?? false;
+
+    this.nodes.root.className = twMerge(
+      css.item,
+      isInline && cssInline.item,
+      isNestedInline && cssNestedInline.item,
+      isActive && css.itemActive,
+      this.isDisabled && css.itemDisabled,
+      isFocused && css.itemFocused,
+      isConfirmation && css.itemConfirmation,
+      isHidden && '!hidden'
+    );
+  }
 }

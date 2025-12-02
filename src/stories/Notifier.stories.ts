@@ -17,32 +17,18 @@ interface NotifierArgs {
 
 const TIMEOUT_ACTION = { timeout: 5000 };
 
-// Helper functions to find notification elements without direct class selectors
-const getNotifyWrapper = (): Element | null => document.querySelector('[class*="blok-notifies"]');
-const getNotify = (): Element | null => {
-  const allNotifies = document.querySelectorAll('[class*="blok-notify"]');
-
-  return Array.from(allNotifies).find(el =>
-    el.classList.contains('blok-notify') && !el.classList.contains('blok-notifies')
-  ) ?? null;
-};
-const getNotifyByStyle = (style: string): Element | null => {
-  const allNotifies = document.querySelectorAll('[class*="blok-notify"]');
-
-  return Array.from(allNotifies).find(el => el.classList.contains(`blok-notify--${style}`)) ?? null;
-};
-const getNotifyButton = (type: 'confirm' | 'cancel'): Element | null => {
-  const buttons = document.querySelectorAll('[class*="blok-notify__button"]');
-
-  return Array.from(buttons).find(el => el.classList.contains(`blok-notify__button--${type}`)) ?? null;
-};
-const getNotifyInput = (): Element | null => document.querySelector('[class*="blok-notify__input"]');
+// Helper functions to find notification elements using data-blok-testid selectors
+const getNotifyWrapper = (): Element | null => document.querySelector('[data-blok-testid="notifier-container"]');
+const getNotify = (): Element | null => document.querySelector('[data-blok-testid="notification"]');
+const getNotifyByStyle = (style: string): Element | null => document.querySelector(`[data-blok-testid="notification-${style}"]`);
+const getNotifyButton = (type: 'confirm' | 'cancel'): Element | null => document.querySelector(`[data-blok-testid="notification-${type}-button"]`);
+const getNotifyInput = (): Element | null => document.querySelector('[data-blok-testid="notification-input"]');
 
 /**
  * Clean up any existing notifications before each test
  */
 const cleanupNotifications = (): void => {
-  const wrapper = document.querySelector('[class*="blok-notifies"]');
+  const wrapper = document.querySelector('[data-blok-testid="notifier-container"]');
 
   if (wrapper) {
     wrapper.innerHTML = '';
@@ -343,8 +329,8 @@ export const BounceInAnimation: Story = {
           const notify = getNotify();
 
           expect(notify).toBeTruthy();
-          // Check animation class via classList
-          expect(notify?.classList.contains('blok-notify--bounce-in')).toBe(true);
+          // Check animation state via data attribute
+          expect(notify?.getAttribute('data-blok-bounce-in')).toBe('true');
         },
         TIMEOUT_ACTION
       );

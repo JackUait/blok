@@ -109,7 +109,7 @@ vi.mock('@/types/utils/popover/popover-event', () => ({
   },
 }));
 
-vi.mock('@codexteam/icons', () => ({
+vi.mock('../../../../../src/components/icons', () => ({
   IconReplace: '<svg data-blok-icon="replace" />',
 }));
 
@@ -125,9 +125,9 @@ const { domModuleMock } = vi.hoisted(() => {
     const node = document.createElement(tag);
 
     if (Array.isArray(className)) {
-      node.className = className.join(' ');
+      node.setAttribute('data-blok-class', className.join(' '));
     } else if (className) {
-      node.className = className;
+      node.setAttribute('data-blok-class', className);
     }
 
     return node;
@@ -291,7 +291,7 @@ describe('BlockSettings', () => {
     const element = blockSettings.getElement();
 
     expect(element).toBeInstanceOf(HTMLElement);
-    expect(element?.classList.contains('blok-settings')).toBe(true);
+    expect(element?.dataset.blokClass).toBe('blok-settings');
     expect(element?.getAttribute('data-blok-testid')).toBe('block-tunes-wrapper');
     expect(eventsDispatcher.on).toHaveBeenCalledWith(expect.anything(), blockSettings.close);
   });

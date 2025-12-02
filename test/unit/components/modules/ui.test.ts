@@ -237,12 +237,12 @@ describe('UI module', () => {
       const nodes = (ui as { nodes: UI['nodes'] }).nodes;
 
       expect(nodes.wrapper).toBeInstanceOf(HTMLElement);
-      expect(nodes.wrapper?.classList.contains(ui.CSS.blokWrapper)).toBe(true);
-      expect(nodes.wrapper?.classList.contains(ui.CSS.blokWrapperNarrow)).toBe(true);
+      expect(nodes.wrapper?.getAttribute('data-blok-testid')).toBe('blok-editor');
+      expect(nodes.wrapper?.dataset.blokNarrow).toBe('true');
       expect(nodes.wrapper?.getAttribute(DATA_INTERFACE_ATTRIBUTE)).toBe(BLOK_INTERFACE_VALUE);
 
       expect(nodes.redactor).toBeInstanceOf(HTMLElement);
-      expect(nodes.redactor?.classList.contains(ui.CSS.blokZone)).toBe(true);
+      expect(nodes.redactor?.getAttribute('data-blok-testid')).toBe('redactor');
       expect(nodes.redactor?.style.paddingBottom).toBe(`${ui['config'].minHeight}px`);
 
       expect(holder.contains(nodes.wrapper as HTMLElement)).toBe(true);
@@ -308,11 +308,11 @@ describe('UI module', () => {
 
       Object.assign(blok.BlockManager, { isBlokEmpty: true });
       ui.checkEmptiness();
-      expect(wrapper.classList.contains(ui.CSS.blokEmpty)).toBe(true);
+      expect(wrapper.dataset.blokEmpty).toBe('true');
 
       Object.assign(blok.BlockManager, { isBlokEmpty: false });
       ui.checkEmptiness();
-      expect(wrapper.classList.contains(ui.CSS.blokEmpty)).toBe(false);
+      expect(wrapper.dataset.blokEmpty).toBe('false');
     });
 
     it('invalidates cached content rect on resize and recalculates mobile state', () => {
@@ -357,7 +357,7 @@ describe('UI module', () => {
       const { ui, wrapper } = createUI();
       const blockContent = document.createElement('div');
 
-      blockContent.classList.add('blok-element__content');
+      blockContent.setAttribute('data-blok-testid', 'block-content');
       const measuredRect = { width: 777 } as DOMRect;
 
       vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue(measuredRect);
@@ -555,7 +555,7 @@ describe('UI module', () => {
       expect(blok.BlockManager.unsetCurrentBlock).toHaveBeenCalledTimes(1);
       expect(blok.Toolbar.close).toHaveBeenCalledTimes(1);
 
-      holder.classList.add(ui.CSS.blokWrapper);
+      holder.setAttribute('data-blok-testid', 'blok-editor');
       (ui as unknown as { defaultBehaviour: (event: KeyboardEvent) => void }).defaultBehaviour({
         target: holder,
         altKey: false,
@@ -604,8 +604,8 @@ describe('UI module', () => {
       const { ui, blok, wrapper } = createUI();
       const blockContent = document.createElement('div');
 
-      blockContent.classList.add('blok-element__content');
-      wrapper.classList.add(SelectionUtils.CSS.blokWrapper);
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.setAttribute('data-blok-testid', 'blok-editor');
       const external = document.createElement('div');
 
       wrapper.appendChild(blockContent);
@@ -692,7 +692,7 @@ describe('UI module', () => {
       const { ui, blok, redactor, eventsDispatcher } = createUI();
       const blockElement = document.createElement('div');
 
-      blockElement.classList.add('blok-element');
+      blockElement.setAttribute('data-blok-testid', 'block-wrapper');
       redactor.appendChild(blockElement);
 
       const blockStub = {

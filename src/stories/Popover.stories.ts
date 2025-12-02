@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
-import Blok from '../blok';
-import type { OutputData, BlokConfig } from '@/types';
-import { simulateClick, waitForIdleCallback, waitForToolbar, TOOLBAR_TESTID, dispatchKeyboardEvent, focusSearchInput, waitForPointerEvents } from './helpers';
+import type { OutputData } from '@/types';
+import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID, dispatchKeyboardEvent, focusSearchInput, waitForPointerEvents } from './helpers';
+import type { EditorFactoryOptions } from './helpers';
 
-interface PopoverArgs {
+interface PopoverArgs extends EditorFactoryOptions {
   minHeight: number;
   data: OutputData | undefined;
 }
@@ -43,35 +43,7 @@ const sampleData: OutputData = {
   ],
 };
 
-const createEditor = (args: PopoverArgs): HTMLElement => {
-  const container = document.createElement('div');
-
-  container.style.border = '1px solid #e0e0e0';
-  container.style.borderRadius = '8px';
-  container.style.padding = '16px';
-  container.style.minHeight = `${args.minHeight}px`;
-  container.style.backgroundColor = '#fff';
-
-  const editorHolder = document.createElement('div');
-
-  editorHolder.id = `blok-editor-${Date.now()}`;
-  container.appendChild(editorHolder);
-
-  const config: BlokConfig = {
-    holder: editorHolder,
-    autofocus: false,
-    data: args.data,
-  };
-
-  setTimeout(async () => {
-    const editor = new Blok(config);
-
-    await editor.isReady;
-    await waitForIdleCallback();
-  }, 0);
-
-  return container;
-};
+const createEditor = (args: PopoverArgs): HTMLElement => createEditorContainer(args);
 
 const meta: Meta<PopoverArgs> = {
   title: 'Components/Popover',
@@ -156,8 +128,9 @@ export const ItemHoverState: Story = {
       const popoverItem = document.querySelector(POPOVER_ITEM_TESTID);
 
       if (popoverItem) {
-        // Add force-hover class to show hover styles in headless browsers
-        popoverItem.classList.add('blok-popover-item--force-hover');
+        // Add data-blok-force-hover attribute to show hover styles in headless browsers
+        // The CSS uses this attribute instead of :hover for testing compatibility
+        popoverItem.setAttribute('data-blok-force-hover', 'true');
         await userEvent.hover(popoverItem);
       }
     });
@@ -381,6 +354,14 @@ export const ConfirmationState: Story = {
         },
         TIMEOUT_ACTION
       );
+
+      // Add hover state to confirmation button for visual testing in headless browsers
+      const confirmButton = document.querySelector(CONFIRMATION_SELECTOR);
+
+      if (confirmButton) {
+        confirmButton.setAttribute('data-blok-force-hover', 'true');
+        await userEvent.hover(confirmButton);
+      }
     });
   },
 };
@@ -600,19 +581,23 @@ export const DisabledItem: Story = {
         TIMEOUT_ACTION
       );
 
-      // Wait for items to render then add disabled class to first item
+      // Wait for items to render then add disabled styling to first item
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       const popoverItem = document.querySelector(POPOVER_ITEM_TESTID);
 
       if (popoverItem) {
-        popoverItem.classList.add('blok-popover-item--disabled');
-        popoverItem.setAttribute('data-blok-popover-item-disabled', 'true');
+        // Add the proper disabled classes and attribute that match the real implementation
+        // The itemDisabled class from popover-item-default.const.ts is:
+        // 'cursor-default pointer-events-none text-text-secondary'
+        // eslint-disable-next-line internal-storybook/no-class-selectors
+        popoverItem.classList.add('cursor-default', 'pointer-events-none', 'text-text-secondary');
+        popoverItem.setAttribute('data-blok-disabled', 'true');
       }
 
       await waitFor(
         () => {
-          const disabledItem = document.querySelector('[data-blok-popover-item-disabled="true"]');
+          const disabledItem = document.querySelector('[data-blok-disabled="true"]');
 
           expect(disabledItem).toBeInTheDocument();
         },
@@ -749,7 +734,7 @@ export const MobileOverlay: Story = {
           // On mobile, the overlay should be visible - check for overlay element
           const popoverElements = document.querySelectorAll('[data-blok-popover-opened="true"]');
           const hasOverlay = Array.from(popoverElements).some(p =>
-            p.querySelector('[class*="blok-popover__overlay"]')
+            p.querySelector('[data-blok-testid="popover-overlay"]')
           );
 
           // Overlay exists (visibility controlled by CSS media queries)

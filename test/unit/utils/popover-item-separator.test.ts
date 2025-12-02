@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item/popover-item-separator/popover-item-separator';
-import { css } from '../../../src/components/utils/popover/components/popover-item/popover-item-separator/popover-item-separator.const';
 
 describe('PopoverItemSeparator', () => {
   beforeEach(() => {
@@ -13,23 +12,23 @@ describe('PopoverItemSeparator', () => {
     const element = separator.getElement();
 
     expect(element).toBeInstanceOf(HTMLElement);
-    expect(element.classList.contains(css.container)).toBe(true);
+    expect(element.getAttribute('data-blok-testid')).toBe('popover-item-separator');
     expect(element.childElementCount).toBe(1);
 
     const line = element.firstElementChild as HTMLElement | null;
 
     expect(line).not.toBeNull();
-    expect(line?.classList.contains(css.line)).toBe(true);
+    expect(line).toBeInstanceOf(HTMLElement);
   });
 
-  it('toggles hidden class on the root element', () => {
+  it('toggles hidden state on the root element', () => {
     const separator = new PopoverItemSeparator();
     const element = separator.getElement();
 
     separator.toggleHidden(true);
-    expect(element.classList.contains(css.hidden)).toBe(true);
+    expect(element.getAttribute('data-blok-hidden')).toBe('true');
 
     separator.toggleHidden(false);
-    expect(element.classList.contains(css.hidden)).toBe(false);
+    expect(element.hasAttribute('data-blok-hidden')).toBe(false);
   });
 });

@@ -1,14 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
-import Blok from '../blok';
-import type { OutputData, BlokConfig, ToolConstructable, ToolSettings } from '@/types';
-import { simulateClick, waitForIdleCallback, waitForToolbar, selectTextInBlock } from './helpers';
-import Header from '@editorjs/header';
+import type { OutputData } from '@/types';
+import { createEditorContainer, simulateClick, waitForToolbar, selectTextInBlock, waitForPointerEvents } from './helpers';
+import type { EditorFactoryOptions } from './helpers';
+import Header from '../tools/header';
 
-interface InlineToolbarArgs {
+interface InlineToolbarArgs extends EditorFactoryOptions {
   minHeight: number;
   data: OutputData | undefined;
-  tools?: { [toolName: string]: ToolConstructable | ToolSettings };
 }
 
 // Constants
@@ -46,36 +45,7 @@ const sampleData: OutputData = {
   ],
 };
 
-const createEditor = (args: InlineToolbarArgs): HTMLElement => {
-  const container = document.createElement('div');
-
-  container.style.border = '1px solid #e0e0e0';
-  container.style.borderRadius = '8px';
-  container.style.padding = '16px';
-  container.style.minHeight = `${args.minHeight}px`;
-  container.style.backgroundColor = '#fff';
-
-  const editorHolder = document.createElement('div');
-
-  editorHolder.id = `blok-editor-${Date.now()}`;
-  container.appendChild(editorHolder);
-
-  const config: BlokConfig = {
-    holder: editorHolder,
-    autofocus: false,
-    data: args.data,
-    tools: args.tools,
-  };
-
-  setTimeout(async () => {
-    const editor = new Blok(config);
-
-    await editor.isReady;
-    await waitForIdleCallback();
-  }, 0);
-
-  return container;
-};
+const createEditor = (args: InlineToolbarArgs): HTMLElement => createEditorContainer(args);
 
 /**
  * Helper to select text within an element
@@ -101,6 +71,9 @@ const meta: Meta<InlineToolbarArgs> = {
   args: {
     minHeight: 300,
     data: sampleData,
+    tools: {
+      header: Header,
+    },
   },
   render: createEditor,
 };
@@ -396,9 +369,6 @@ export const LinkInputShown: Story = {
 export const ConvertToDropdownOpen: Story = {
   args: {
     data: sampleData,
-    tools: {
-      header: Header,
-    },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
@@ -508,12 +478,18 @@ export const ToolHoverState: Story = {
     });
 
     await step('Hover over bold tool', async () => {
+      // Wait for popover to open AND for pointer-events to be enabled
+      await waitForPointerEvents(`${INLINE_TOOLBAR_TESTID} [data-blok-testid="popover-container"]`);
+
+      // Small delay for CSS animation to complete
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       // Find the bold tool specifically by its data attribute
       const boldTool = document.querySelector('[data-blok-item-name="bold"]');
 
       if (boldTool) {
-        // Add force-hover class to show hover styles in headless browsers
-        boldTool.classList.add('blok-popover-item--force-hover');
+        // Add force-hover state to show hover styles in headless browsers
+        boldTool.setAttribute('data-blok-force-hover', 'true');
         await userEvent.hover(boldTool);
       }
     });

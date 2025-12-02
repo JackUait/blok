@@ -1,13 +1,12 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PopoverHeader } from '../../../../src/components/utils/popover/components/popover-header';
 import Listeners from '../../../../src/components/utils/listeners';
-import { css } from '../../../../src/components/utils/popover/components/popover-header/popover-header.const';
 
 const { iconMarkup } = vi.hoisted(() => ({
   iconMarkup: '<svg data-blok-testid="chevron"></svg>',
 }));
 
-vi.mock('@codexteam/icons', () => ({
+vi.mock('../../../../src/components/icons', () => ({
   IconChevronLeft: iconMarkup,
 }));
 
@@ -75,13 +74,13 @@ describe('PopoverHeader', () => {
     const root = header.getElement();
 
     expect(root).not.toBeNull();
-    expect(root?.classList.contains(css.root)).toBe(true);
+    expect(root?.dataset.blokTestid).toBe('popover-header');
 
-    const backButton = root?.querySelector('button');
-    const textElement = root?.querySelector(`.${css.text}`);
+    const backButton = root?.querySelector('[data-blok-testid="popover-header-back-button"]');
+    const textElement = root?.querySelector('[data-blok-testid="popover-header-text"]');
 
     expect(backButton).not.toBeNull();
-    expect(backButton?.classList.contains(css.backButton)).toBe(true);
+    expect(backButton?.getAttribute('data-blok-testid')).toBe('popover-header-back-button');
     expect(backButton?.innerHTML).toBe(iconMarkup);
     expect(root?.firstChild).toBe(backButton);
 

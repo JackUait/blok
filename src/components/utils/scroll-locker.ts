@@ -9,7 +9,18 @@ export default class ScrollLocker {
    */
   private static CSS = {
     scrollLocked: 'blok-scroll-locked',
-    scrollLockedHard: 'blok-scroll-locked--hard',
+    scrollLockedHard: 'is-hard',
+    overflowHidden: 'overflow-hidden',
+    fixed: 'fixed',
+    wFull: 'w-full',
+  };
+
+  /**
+   * Data attributes for state checking
+   */
+  private static DATA_ATTR = {
+    scrollLocked: 'data-blok-scroll-locked',
+    scrollLockedHard: 'data-blok-scroll-locked-hard',
   };
 
   /**
@@ -24,7 +35,8 @@ export default class ScrollLocker {
     if (isIosDevice) {
       this.lockHard();
     } else {
-      document.body.classList.add(ScrollLocker.CSS.scrollLocked);
+      document.body.classList.add(ScrollLocker.CSS.scrollLocked, ScrollLocker.CSS.overflowHidden);
+      document.body.setAttribute(ScrollLocker.DATA_ATTR.scrollLocked, 'true');
     }
   }
 
@@ -35,7 +47,8 @@ export default class ScrollLocker {
     if (isIosDevice) {
       this.unlockHard();
     } else {
-      document.body.classList.remove(ScrollLocker.CSS.scrollLocked);
+      document.body.classList.remove(ScrollLocker.CSS.scrollLocked, ScrollLocker.CSS.overflowHidden);
+      document.body.removeAttribute(ScrollLocker.DATA_ATTR.scrollLocked);
     }
   }
 
@@ -48,14 +61,30 @@ export default class ScrollLocker {
       '--window-scroll-offset',
       `${this.scrollPosition}px`
     );
-    document.body.classList.add(ScrollLocker.CSS.scrollLockedHard);
+    document.body.classList.add(
+      ScrollLocker.CSS.scrollLocked,
+      ScrollLocker.CSS.scrollLockedHard,
+      ScrollLocker.CSS.overflowHidden,
+      ScrollLocker.CSS.fixed,
+      ScrollLocker.CSS.wFull
+    );
+    document.body.style.top = `calc(-1 * var(--window-scroll-offset))`;
+    document.body.setAttribute(ScrollLocker.DATA_ATTR.scrollLockedHard, 'true');
   }
 
   /**
    * Unlocks hard scroll lock
    */
   private unlockHard(): void {
-    document.body.classList.remove(ScrollLocker.CSS.scrollLockedHard);
+    document.body.classList.remove(
+      ScrollLocker.CSS.scrollLocked,
+      ScrollLocker.CSS.scrollLockedHard,
+      ScrollLocker.CSS.overflowHidden,
+      ScrollLocker.CSS.fixed,
+      ScrollLocker.CSS.wFull
+    );
+    document.body.style.top = '';
+    document.body.removeAttribute(ScrollLocker.DATA_ATTR.scrollLockedHard);
     if (this.scrollPosition !== null) {
       window.scrollTo(0, this.scrollPosition);
     }

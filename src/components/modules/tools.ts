@@ -1,4 +1,4 @@
-import Paragraph from '@editorjs/paragraph';
+import Paragraph from '../../tools/paragraph';
 import Module from '../__module';
 import * as _ from '../utils';
 import PromiseQueue from '../utils/promise-queue';

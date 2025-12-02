@@ -5,9 +5,8 @@
  * Based on @editorjs/header by CodeX
  * @license MIT
  */
-import './index.css';
-
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../../components/icons';
+import { twMerge } from '../../components/utils/tw';
 import type {
   API,
   BlockTool,
@@ -53,6 +52,8 @@ interface Level {
   tag: string;
   /** Icon */
   svg: string;
+  /** Tailwind classes for styling */
+  styles: string;
 }
 
 /**
@@ -106,6 +107,11 @@ export default class Header implements BlockTool {
     this._data = this.normalizeData(data);
     this._element = this.getTag();
   }
+
+  /**
+   * Base styles for all header levels
+   */
+  private static readonly BASE_STYLES = 'py-[0.6em] pb-[3px] px-0 m-0 leading-[1.25em] outline-none [&_p]:!p-0 [&_p]:!m-0 [&_div]:!p-0 [&_div]:!m-0';
 
   /**
    * Styles
@@ -322,9 +328,9 @@ export default class Header implements BlockTool {
     tag.innerHTML = this._data.text || '';
 
     /**
-     * Add styles class
+     * Add styles class using twMerge to combine base and level-specific styles
      */
-    tag.classList.add(this._CSS.wrapper);
+    tag.className = twMerge(this._CSS.wrapper, Header.BASE_STYLES, this.currentLevel.styles);
 
     /**
      * Make tag editable
@@ -390,31 +396,37 @@ export default class Header implements BlockTool {
         number: 1,
         tag: 'H1',
         svg: IconH1,
+        styles: 'text-[2.5em] font-bold',
       },
       {
         number: 2,
         tag: 'H2',
         svg: IconH2,
+        styles: 'text-[2em] font-semibold',
       },
       {
         number: 3,
         tag: 'H3',
         svg: IconH3,
+        styles: 'text-[1.75em] font-semibold',
       },
       {
         number: 4,
         tag: 'H4',
         svg: IconH4,
+        styles: 'text-[1.5em] font-semibold',
       },
       {
         number: 5,
         tag: 'H5',
         svg: IconH5,
+        styles: 'text-[1.25em] font-semibold',
       },
       {
         number: 6,
         tag: 'H6',
         svg: IconH6,
+        styles: 'text-base font-semibold',
       },
     ];
 

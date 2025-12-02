@@ -843,7 +843,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       const stretchedClass = this.stretched ? Block.styles.contentStretched : '';
 
       this.contentElement.className = state
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         ? twMerge(Block.CSS.content, Block.styles.content, Block.styles.contentSelected)
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         : twMerge(Block.CSS.content, Block.styles.content, stretchedClass);
     }
 
@@ -888,7 +890,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
     if (this.contentElement && !this.selected) {
       this.contentElement.className = state
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         ? twMerge(Block.CSS.content, Block.styles.content, Block.styles.contentStretched)
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         : twMerge(Block.CSS.content, Block.styles.content);
     }
   }
@@ -927,7 +931,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {HTMLDivElement}
    */
   private compose(): HTMLDivElement {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const wrapper = $.make('div', twMerge(Block.CSS.wrapper, Block.styles.wrapper)) as HTMLDivElement;
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const contentNode = $.make('div', twMerge(Block.CSS.content, Block.styles.content));
 
     this.contentElement = contentNode;

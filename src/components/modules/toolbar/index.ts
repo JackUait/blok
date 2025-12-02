@@ -207,6 +207,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * @returns {boolean}
    */
   public get opened(): boolean {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     return this.nodes.wrapper?.classList.contains(this.CSS.toolbarOpened) ?? false;
   }
 
@@ -286,10 +287,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private get blockActions(): { hide: () => void; show: () => void } {
     return {
       hide: (): void => {
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         this.nodes.actions?.classList.remove(this.CSS.actionsOpened);
         this.nodes.actions?.removeAttribute('data-blok-opened');
       },
       show: (): void => {
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         this.nodes.actions?.classList.add(this.CSS.actionsOpened);
         this.nodes.actions?.setAttribute('data-blok-opened', 'true');
       },
@@ -301,7 +304,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private get blockTunesToggler(): { hide: () => void; show: () => void } {
     return {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       hide: (): void => this.nodes.settingsToggler?.classList.add(this.CSS.settingsTogglerHidden),
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       show: (): void => this.nodes.settingsToggler?.classList.remove(this.CSS.settingsTogglerHidden),
     };
   }
@@ -466,7 +471,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarOpened);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.wrapper?.classList.add(this.CSS.toolbarClosed);
     this.nodes.wrapper?.removeAttribute('data-blok-opened');
 
@@ -497,7 +504,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
    *                                     This flag allows to open Toolbar without Actions.
    */
   private open(withBlockActions = true): void {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarClosed);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.wrapper?.classList.add(this.CSS.toolbarOpened);
     this.nodes.wrapper?.setAttribute('data-blok-opened', 'true');
 
@@ -513,8 +522,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private async make(): Promise<void> {
     const wrapper = $.make('div', [
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.CSS.toolbar,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.CSS.toolbarSelector,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.CSS.toolbarClosed,
       'group-data-[blok-dragging=true]:pointer-events-none',
     ]);
@@ -526,8 +538,10 @@ export default class Toolbar extends Module<ToolbarNodes> {
     /**
      * Make Content Zone and Actions Zone
      */
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const content = $.make('div', this.CSS.content);
     const actions = $.make('div', [
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.CSS.actions,
       // Narrow mode positioning on non-mobile screens
       'not-mobile:group-data-[blok-narrow=true]:right-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
@@ -554,6 +568,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
      *  - Plus Button
      *  - Toolbox
      */
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const plusButton = $.make('div', this.CSS.plusButton, {
       innerHTML: IconPlus,
     });
@@ -581,6 +596,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
         const firstWord = text.substring(0, spaceIndex);
         const rest = text.substring(spaceIndex);
 
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         fragment.appendChild($.make('span', this.CSS.plusButtonShortcutKey, {
           textContent: firstWord,
         }));
@@ -613,6 +629,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
      *  - Settings Panel
      */
     const settingsToggler = $.make('span', [
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.CSS.settingsToggler,
       'group-data-[blok-dragging=true]:cursor-grabbing',
     ], {
@@ -689,11 +706,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
     });
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.setAttribute(BLOK_TOOLBOX_OPENED_ATTR, 'true');
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_TOOLBOX_OPENED_ATTR);
     });
@@ -871,6 +890,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Handler for BlockSettingsOpened event
    */
   private onBlockSettingsOpen = (): void => {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.settingsToggler?.classList.add(this.CSS.settingsTogglerOpened);
   };
 
@@ -878,6 +898,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Handler for BlockSettingsClosed event
    */
   private onBlockSettingsClose = (): void => {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.settingsToggler?.classList.remove(this.CSS.settingsTogglerOpened);
   };
 

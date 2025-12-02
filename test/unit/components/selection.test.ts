@@ -97,8 +97,10 @@ const createBlokZone = (text = 'Hello world'): {
 
   // Add both data attribute and class for backward compatibility during migration
   wrapper.setAttribute('data-blok-editor', '');
+  // eslint-disable-next-line internal-unit-test/no-class-selectors
   wrapper.classList.add('blok-editor');
   zone.setAttribute('data-blok-redactor', '');
+  // eslint-disable-next-line internal-unit-test/no-class-selectors
   zone.classList.add('blok-editor__redactor');
   paragraph.textContent = text;
 

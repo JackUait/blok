@@ -44,6 +44,7 @@ const createBlockStub = (options: {
 
   // Add both data attribute and class for backward compatibility during migration
   holder.setAttribute('data-blok-element', '');
+  // eslint-disable-next-line internal-unit-test/no-class-selectors
   holder.classList.add('blok-element');
   const inputs = [ document.createElement('div') ];
   const data = options.data ?? {};
@@ -549,6 +550,7 @@ describe('BlockManager', () => {
 
     // Add both data attribute and class for backward compatibility during migration
     ui.nodes.wrapper.setAttribute('data-blok-editor', '');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors
     ui.nodes.wrapper.classList.add('blok-editor');
     ui.nodes.wrapper.appendChild(blocks[0].holder);
     ui.nodes.wrapper.appendChild(blocks[1].holder);
@@ -568,6 +570,7 @@ describe('BlockManager', () => {
 
     // Add both data attribute and class for backward compatibility during migration
     alienWrapper.setAttribute('data-blok-editor', '');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors
     alienWrapper.classList.add('blok-editor');
     const alienBlock = createBlockStub({ id: 'alien' });
 

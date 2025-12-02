@@ -96,12 +96,16 @@ export default class Stub implements BlockTool {
    * @returns {HTMLElement}
    */
   private make(): HTMLElement {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const wrapper = $.make('div', this.CSS.wrapper);
     const icon = IconWarning;
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const infoContainer = $.make('div', this.CSS.info);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const title = $.make('div', this.CSS.title, {
       textContent: this.title,
     });
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const subtitle = $.make('div', this.CSS.subtitle, {
       textContent: this.subtitle,
     });

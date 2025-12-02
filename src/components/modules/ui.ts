@@ -203,6 +203,7 @@ export default class UI extends Module<UINodes> {
   public checkEmptiness(): void {
     const { BlockManager } = this.Blok;
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.wrapper.classList.toggle(this.CSS.blokEmpty, BlockManager.isBlokEmpty);
     this.nodes.wrapper.setAttribute(BLOK_EMPTY_ATTR, BlockManager.isBlokEmpty ? 'true' : 'false');
   }
@@ -307,6 +308,7 @@ export default class UI extends Module<UINodes> {
      * Create and save main UI elements
      */
     this.nodes.wrapper = $.make('div', [
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.CSS.blokWrapper,
       'group',
       'relative',
@@ -320,6 +322,7 @@ export default class UI extends Module<UINodes> {
       '[&_::selection]:bg-selection-inline',
       // Hide placeholder when toolbox is opened
       '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder]:focus]:before:!opacity-0',
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       ...(this.isRtl ? [ this.CSS.blokRtlFix, '[direction:rtl]' ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE);
@@ -329,6 +332,7 @@ export default class UI extends Module<UINodes> {
       this.nodes.wrapper.setAttribute(BLOK_RTL_ATTR, 'true');
     }
     this.nodes.redactor = $.make('div', [
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.CSS.blokZone,
       // Narrow mode: add right margin on non-mobile screens
       'not-mobile:group-data-[blok-narrow=true]:mr-[theme(spacing.narrow-mode-right-padding)]',
@@ -346,6 +350,7 @@ export default class UI extends Module<UINodes> {
      * @todo Forced layout. Get rid of this feature
      */
     if (this.nodes.holder.offsetWidth < this.contentRect.width) {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.nodes.wrapper.classList.add(this.CSS.blokWrapperNarrow);
       this.nodes.wrapper.setAttribute(BLOK_NARROW_ATTR, 'true');
     }

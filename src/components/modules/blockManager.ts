@@ -208,12 +208,15 @@ export default class BlockManager extends Module {
     this.sortable = new Sortable(this.Blok.UI.nodes.redactor, {
       animation: 150,
       forceFallback: true,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       handle: `.${this.Blok.Toolbar.CSS.settingsTogglerHandle}`,
       onStart: () => {
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         this.Blok.UI.nodes.wrapper.classList.add(this.Blok.UI.CSS.blokDragging);
         tooltip.hide(true);
       },
       onEnd: (evt) => {
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         this.Blok.UI.nodes.wrapper.classList.remove(this.Blok.UI.CSS.blokDragging);
         if (evt.newIndex === undefined || evt.oldIndex === undefined) {
           return;
@@ -761,6 +764,8 @@ export default class BlockManager extends Module {
     }
 
     const nodes = this.blocksStore.nodes;
+
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const firstLevelBlock = normalizedElement.closest(`.${Block.CSS.wrapper}`);
 
     if (!firstLevelBlock) {
@@ -792,6 +797,7 @@ export default class BlockManager extends Module {
       return undefined;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const parentFirstLevelBlock = normalizedChildNode.closest(`.${Block.CSS.wrapper}`);
 
     if (!parentFirstLevelBlock) {
@@ -803,6 +809,7 @@ export default class BlockManager extends Module {
      * by checking whether the found block belongs to the current instance
      * @see {@link Ui#documentTouched}
      */
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const blokWrapper = parentFirstLevelBlock.closest(`.${this.Blok.UI.CSS.blokWrapper}`);
     const isBlockBelongsToCurrentInstance = blokWrapper?.isEqualNode(this.Blok.UI.nodes.wrapper);
 
@@ -848,7 +855,8 @@ export default class BlockManager extends Module {
     if (!normalizedChildNode) {
       return undefined;
     }
-
+    
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const firstLevelBlock = normalizedChildNode.closest(`.${Block.CSS.wrapper}`);
 
     if (!firstLevelBlock) {

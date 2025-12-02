@@ -123,6 +123,7 @@ export default class Paragraph implements BlockTool {
     this.api = api;
     this.readOnly = readOnly;
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     this._CSS = {
       block: this.api.styles.block,
       wrapper: 'blok-paragraph',
@@ -195,7 +196,9 @@ export default class Paragraph implements BlockTool {
     const div = document.createElement('DIV') as HTMLDivElement;
 
     div.className = twMerge(
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this._CSS.wrapper,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this._CSS.block,
       Paragraph.WRAPPER_CLASSES,
       Paragraph.PLACEHOLDER_CLASSES

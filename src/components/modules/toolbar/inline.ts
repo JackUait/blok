@@ -297,6 +297,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     this.nodes.wrapper = $.make('div');
     this.nodes.wrapper.className = twMerge(
       INLINE_TOOLBAR_CLASSES,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.isRtl ? this.Blok.UI.CSS.blokRtlFix : ''
     );
 

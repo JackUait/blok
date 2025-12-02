@@ -314,6 +314,7 @@ export default class RectangleSelection extends Module {
 
     const container = UI.nodes.holder.querySelector(BLOK_EDITOR_SELECTOR);
     const overlay = $.make('div', [
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       RectangleSelection.CSS.overlay,
       'fixed',
       'inset-0',
@@ -322,12 +323,14 @@ export default class RectangleSelection extends Module {
       'overflow-hidden',
     ], {});
     const overlayContainer = $.make('div', [
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       RectangleSelection.CSS.overlayContainer,
       'relative',
       'pointer-events-auto',
       'z-0',
     ], {});
     const overlayRectangle = $.make('div', [
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       RectangleSelection.CSS.rect,
       'absolute',
       'pointer-events-none',

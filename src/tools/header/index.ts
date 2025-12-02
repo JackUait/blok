@@ -332,6 +332,7 @@ export default class Header implements BlockTool {
     /**
      * Add styles class using twMerge to combine base and level-specific styles
      */
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     tag.className = twMerge(this._CSS.wrapper, Header.BASE_STYLES, this.currentLevel.styles);
 
     /**

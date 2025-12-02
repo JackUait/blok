@@ -765,13 +765,13 @@ test.describe('tooltip API', () => {
       await expect(tooltip).toContainText('After recreate');
     });
 
-    test('should reuse existing tooltip stylesheet across reinitializations', async ({ page }) => {
+    test('should recreate tooltip element across reinitializations', async ({ page }) => {
       const testElement = await page.evaluate(({ holder }) => {
         const container = document.getElementById(holder);
         const element = document.createElement('button');
 
-        element.textContent = 'Stylesheet check';
-        element.id = 'stylesheet-button';
+        element.textContent = 'Reinit check';
+        element.id = 'reinit-button';
         container?.appendChild(element);
 
         return {
@@ -784,19 +784,19 @@ test.describe('tooltip API', () => {
         const element = document.getElementById(elementId);
 
         if (element && blok?.tooltip) {
-          blok.tooltip.show(element, 'Stylesheet tooltip', {
+          blok.tooltip.show(element, 'Initial tooltip', {
             delay: 0,
           });
         }
-      }, { elementId: testElement.id });
+      }, { elementId: testElement.id, tooltipSelector: TOOLTIP_INTERFACE_SELECTOR });
 
       await waitForTooltip(page);
 
-      const initialStyleCount = await page.evaluate(() => {
-        return document.querySelectorAll('#blok-tooltips-style').length;
-      });
+      const initialTooltipCount = await page.evaluate((selector) => {
+        return document.querySelectorAll(selector).length;
+      }, TOOLTIP_INTERFACE_SELECTOR);
 
-      expect(initialStyleCount).toBe(1);
+      expect(initialTooltipCount).toBe(1);
 
       await page.evaluate(async () => {
         if (window.blokInstance) {
@@ -805,11 +805,11 @@ test.describe('tooltip API', () => {
         }
       });
 
-      const afterDestroyStyleCount = await page.evaluate(() => {
-        return document.querySelectorAll('#blok-tooltips-style').length;
-      });
+      const afterDestroyTooltipCount = await page.evaluate((selector) => {
+        return document.querySelectorAll(selector).length;
+      }, TOOLTIP_INTERFACE_SELECTOR);
 
-      expect(afterDestroyStyleCount).toBe(1);
+      expect(afterDestroyTooltipCount).toBe(0);
 
       await createBlok(page);
 
@@ -819,7 +819,7 @@ test.describe('tooltip API', () => {
 
         if (!element && container) {
           element = document.createElement('button');
-          element.textContent = 'Stylesheet check';
+          element.textContent = 'Reinit check';
           element.id = elementId;
           container.appendChild(element);
         }
@@ -831,7 +831,7 @@ test.describe('tooltip API', () => {
         const element = document.getElementById(elementId);
 
         if (element && blok?.tooltip) {
-          blok.tooltip.show(element, 'Stylesheet tooltip reinit', {
+          blok.tooltip.show(element, 'Tooltip after reinit', {
             delay: 0,
           });
         }
@@ -839,11 +839,11 @@ test.describe('tooltip API', () => {
 
       await waitForTooltip(page);
 
-      const afterReinitStyleCount = await page.evaluate(() => {
-        return document.querySelectorAll('#blok-tooltips-style').length;
-      });
+      const afterReinitTooltipCount = await page.evaluate((selector) => {
+        return document.querySelectorAll(selector).length;
+      }, TOOLTIP_INTERFACE_SELECTOR);
 
-      expect(afterReinitStyleCount).toBe(1);
+      expect(afterReinitTooltipCount).toBe(1);
     });
   });
 
@@ -1279,10 +1279,11 @@ test.describe('tooltip API', () => {
 
       await waitForTooltip(page);
 
+      // Remove the opacity-100 class which triggers the MutationObserver to update aria-hidden
       await page.evaluate((selector) => {
         const tooltipElement = document.querySelector(selector) as HTMLElement | null;
 
-        tooltipElement?.classList.remove('is-shown');
+        tooltipElement?.classList.remove('opacity-100');
       }, TOOLTIP_INTERFACE_SELECTOR);
 
       await page.waitForFunction((selector) => {

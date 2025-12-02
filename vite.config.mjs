@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => {
   return {
     build: {
       copyPublicDir: false,
+      target: 'es2017',
       lib: {
         entry: path.resolve(__dirname, 'src', 'blok.ts'),
         name: 'Blok',

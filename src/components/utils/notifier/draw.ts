@@ -36,7 +36,6 @@ export const CSS = {
     '!bg-[#fffbfb]',
     'before:!bg-[#fb5d5d]'
   ),
-  bounceIn: 'animate-notify-bounce-in',
 };
 
 /**

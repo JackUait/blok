@@ -79,7 +79,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       'data-blok-testid': 'popover-container',
     });
 
-    this.nodes.nothingFoundMessage = Dom.make('div', [ css.nothingFoundMessage ], {
+    this.nodes.nothingFoundMessage = Dom.make('div', [ 'hidden cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text p-[3px]' ], {
       textContent: this.messages.nothingFound,
       'data-blok-testid': 'popover-nothing-found',
     });
@@ -105,7 +105,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.handleClick(event));
 
     this.nodes.popover = Dom.make('div', [
-      css.popover,
       this.params.class,
     ], {
       [DATA_ATTR.popover]: '',

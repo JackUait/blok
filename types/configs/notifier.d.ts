@@ -16,7 +16,6 @@ export interface NotifierOptions {
   type?: string;
 
   /**
-   * Add class `blok-notify--${style}` to popup
    * We have some default styles: 'success' and 'error'
    */
   style?: string;

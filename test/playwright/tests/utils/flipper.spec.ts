@@ -64,7 +64,6 @@ class SomePlugin {
   public render(): HTMLElement {
     const wrapper = document.createElement('div');
 
-    wrapper.classList.add('blok-some-plugin');
     wrapper.setAttribute('data-blok-testid', 'some-plugin');
     wrapper.contentEditable = 'true';
     wrapper.addEventListener('keydown', SomePlugin.pluginInternalKeydownHandler);

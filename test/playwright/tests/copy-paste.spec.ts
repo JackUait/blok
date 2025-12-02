@@ -649,7 +649,7 @@ test.describe('copy and paste', () => {
         render() {
           const block = document.createElement('div');
 
-          block.className = 'blok-element-with-disabled-prevent-default';
+          block.className = 'disabled-prevent-default';
           block.setAttribute('data-blok-testid', 'block-with-disabled-prevent-default');
           block.contentEditable = 'true';
 

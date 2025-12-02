@@ -1,8 +1,7 @@
 import type { InlineTool, SanitizerConfig } from '../../../types';
 import { IconBold } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
-import { BLOK_INTERFACE_SELECTOR } from '../constants';
-import SelectionUtils from '../selection';
+import { BLOK_INTERFACE_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
 
 /**
  * Bold Tool
@@ -43,8 +42,7 @@ export default class BoldInlineTool implements InlineTool {
       return;
     }
 
-    const blokWrapperClass = SelectionUtils.CSS.blokWrapper;
-    const selector = `${BLOK_INTERFACE_SELECTOR} b, .${blokWrapperClass} b`;
+    const selector = `${BLOK_INTERFACE_SELECTOR} b, ${BLOK_EDITOR_SELECTOR} b`;
 
     document.querySelectorAll(selector).forEach((boldNode) => {
       BoldInlineTool.ensureStrongElement(boldNode as HTMLElement);
@@ -64,8 +62,7 @@ export default class BoldInlineTool implements InlineTool {
       return;
     }
 
-    const blokWrapperClass = SelectionUtils.CSS.blokWrapper;
-    const blokRoot = element.closest(`${BLOK_INTERFACE_SELECTOR}, .${blokWrapperClass}`);
+    const blokRoot = element.closest(`${BLOK_INTERFACE_SELECTOR}, ${BLOK_EDITOR_SELECTOR}`);
 
     if (!blokRoot) {
       return;
@@ -1000,7 +997,7 @@ export default class BoldInlineTool implements InlineTool {
 
     const anchor = selection.anchorNode;
     const anchorElement = anchor?.nodeType === Node.ELEMENT_NODE ? anchor as Element : anchor?.parentElement;
-    const blokWrapper = anchorElement?.closest(`.${SelectionUtils.CSS.blokWrapper}`);
+    const blokWrapper = anchorElement?.closest(BLOK_EDITOR_SELECTOR);
 
     if (!blokWrapper) {
       return;
@@ -1018,8 +1015,6 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const isActive = this.isSelectionVisuallyBold(selection);
-
-    button.classList.toggle('is-active', isActive);
 
     if (isActive) {
       button.setAttribute('data-blok-popover-item-active', 'true');
@@ -1142,7 +1137,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const root = element?.closest(`.${SelectionUtils.CSS.blokWrapper}`);
+    const root = element?.closest(BLOK_EDITOR_SELECTOR);
 
     if (!root) {
       return;
@@ -1224,7 +1219,7 @@ export default class BoldInlineTool implements InlineTool {
   private static synchronizeCollapsedBold(selection: Selection | null): void {
     const node = selection?.anchorNode ?? selection?.focusNode;
     const element = node && node.nodeType === Node.ELEMENT_NODE ? node as Element : node?.parentElement;
-    const root = element?.closest(`.${SelectionUtils.CSS.blokWrapper}`) ?? element?.ownerDocument;
+    const root = element?.closest(BLOK_EDITOR_SELECTOR) ?? element?.ownerDocument;
 
     if (!root) {
       return;
@@ -1649,7 +1644,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const root = element?.closest(`.${SelectionUtils.CSS.blokWrapper}`);
+    const root = element?.closest(BLOK_EDITOR_SELECTOR);
 
     if (!root) {
       return;
@@ -2067,7 +2062,7 @@ export default class BoldInlineTool implements InlineTool {
 
     const element = anchor.nodeType === Node.ELEMENT_NODE ? anchor as Element : anchor.parentElement;
 
-    return Boolean(element?.closest(`.${SelectionUtils.CSS.blokWrapper}`));
+    return Boolean(element?.closest(BLOK_EDITOR_SELECTOR));
   }
 
   /**
@@ -2080,11 +2075,11 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     if (target instanceof Element) {
-      return Boolean(target.closest(`.${SelectionUtils.CSS.blokWrapper}`));
+      return Boolean(target.closest(BLOK_EDITOR_SELECTOR));
     }
 
     if (target instanceof Text) {
-      return Boolean(target.parentElement?.closest(`.${SelectionUtils.CSS.blokWrapper}`));
+      return Boolean(target.parentElement?.closest(BLOK_EDITOR_SELECTOR));
     }
 
     if (typeof ShadowRoot !== 'undefined' && target instanceof ShadowRoot) {
@@ -2102,7 +2097,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     if (parentNode instanceof Element) {
-      return Boolean(parentNode.closest(`.${SelectionUtils.CSS.blokWrapper}`));
+      return Boolean(parentNode.closest(BLOK_EDITOR_SELECTOR));
     }
 
     return BoldInlineTool.isEventTargetInsideBlok(parentNode);

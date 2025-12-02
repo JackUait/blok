@@ -37,7 +37,7 @@ const BlockAPI = function BlockAPI(
     },
 
     /**
-     * .blok-element element, that wraps plugin contents
+     * Element, that wraps plugin contents
      * @returns {HTMLElement}
      */
     get holder(): HTMLElement {

@@ -1,6 +1,13 @@
 import $ from '../../components/dom';
 import type { API, BlockTool, BlockToolConstructorOptions, BlockToolData } from '../../../types';
 import { IconWarning } from '../../components/icons';
+import {
+  BLOK_TOOL_ATTR,
+  BLOK_STUB_ATTR,
+  BLOK_STUB_INFO_ATTR,
+  BLOK_STUB_TITLE_ATTR,
+  BLOK_STUB_SUBTITLE_ATTR,
+} from '../../components/constants';
 
 export interface StubData extends BlockToolData {
   title: string;
@@ -16,26 +23,6 @@ export default class Stub implements BlockTool {
    * Notify core that tool supports read-only mode
    */
   public static isReadOnlySupported = true;
-
-  /**
-   * Stub styles
-   * @type {{wrapper: string, info: string, title: string, subtitle: string}}
-   */
-  private CSS = {
-    wrapper: 'blok-stub flex items-center py-3 px-[18px] my-2.5 rounded-[10px] bg-bg-light border border-line-gray text-gray-text text-sm [&_svg]:size-icon',
-    info: 'blok-stub__info ml-3.5',
-    title: 'blok-stub__title font-medium capitalize',
-    subtitle: 'blok-stub__subtitle',
-  };
-
-  /**
-   * Data attributes for testing
-   */
-  private static readonly DATA_ATTR = {
-    wrapper: 'data-blok-stub',
-    title: 'data-blok-stub-title',
-    subtitle: 'data-blok-stub-subtitle',
-  };
 
   /**
    * Main stub wrapper
@@ -97,19 +84,22 @@ export default class Stub implements BlockTool {
    * @returns {HTMLElement}
    */
   private make(): HTMLElement {
-    const wrapper = $.make('div', this.CSS.wrapper);
+    const wrapper = $.make('div', 'flex items-center py-3 px-[18px] my-2.5 rounded-[10px] bg-bg-light border border-line-gray text-gray-text text-sm [&_svg]:size-icon');
     const icon = IconWarning;
-    const infoContainer = $.make('div', this.CSS.info);
-    const title = $.make('div', this.CSS.title, {
+    const infoContainer = $.make('div', 'ml-3.5');
+    const title = $.make('div', 'font-medium capitalize', {
       textContent: this.title,
     });
-    const subtitle = $.make('div', this.CSS.subtitle, {
+     
+    const subtitle = $.make('div', '', {
       textContent: this.subtitle,
     });
 
-    wrapper.setAttribute(Stub.DATA_ATTR.wrapper, '');
-    title.setAttribute(Stub.DATA_ATTR.title, '');
-    subtitle.setAttribute(Stub.DATA_ATTR.subtitle, '');
+    wrapper.setAttribute(BLOK_TOOL_ATTR, 'stub');
+    wrapper.setAttribute(BLOK_STUB_ATTR, '');
+    infoContainer.setAttribute(BLOK_STUB_INFO_ATTR, '');
+    title.setAttribute(BLOK_STUB_TITLE_ATTR, '');
+    subtitle.setAttribute(BLOK_STUB_SUBTITLE_ATTR, '');
 
     wrapper.innerHTML = icon;
 

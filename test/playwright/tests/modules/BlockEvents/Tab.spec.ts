@@ -275,7 +275,7 @@ test.describe('tab keydown', () => {
     const contentlessTool = page.locator(CONTENTLESS_TOOL_SELECTOR);
 
     const isSelected = await contentlessTool.evaluate((element) => {
-      return element.closest('.blok-element')?.classList.contains('is-selected') ?? false;
+      return element.closest('[data-blok-element]')?.getAttribute('data-blok-selected') === 'true';
     });
 
     expect(isSelected).toBeTruthy();
@@ -355,7 +355,7 @@ test.describe('shift+Tab keydown', () => {
 
     const contentlessTool = page.locator(CONTENTLESS_TOOL_SELECTOR);
     const isSelected = await contentlessTool.evaluate((element) => {
-      return element.closest('.blok-element')?.classList.contains('is-selected') ?? false;
+      return element.closest('[data-blok-element]')?.getAttribute('data-blok-selected') === 'true';
     });
 
     expect(isSelected).toBeTruthy();

@@ -42,8 +42,8 @@ const createBlockStub = (options: {
 } = {}): Block => {
   const holder = document.createElement('div');
 
-  // eslint-disable-next-line internal-unit-test/no-class-selectors
-  holder.classList.add('blok-element');
+  // Use data attribute for block element identification
+  holder.setAttribute('data-blok-element', '');
   const inputs = [ document.createElement('div') ];
   const data = options.data ?? {};
 
@@ -207,12 +207,13 @@ const createBlockManager = (
         wrapper: document.createElement('div'),
       },
       CSS: {
-        blokWrapper: 'blok-editor',
-        blokWrapperNarrow: 'blok-editor--narrow',
-        blokZone: 'blok-editor__redactor',
-        blokZoneHidden: 'is-hidden',
-        blokEmpty: 'is-empty',
-        blokRtlFix: 'blok-editor--rtl',
+        blokWrapper: '',
+        blokWrapperNarrow: '',
+        blokZone: '',
+        blokZoneHidden: '',
+        blokEmpty: '',
+        blokRtlFix: '',
+        blokDragging: '',
       },
       checkEmptiness: vi.fn(),
     } as unknown as BlokModules['UI'],
@@ -546,8 +547,8 @@ describe('BlockManager', () => {
 
     const ui = (blockManager as unknown as { Blok: BlokModules }).Blok.UI;
 
-    // eslint-disable-next-line internal-unit-test/no-class-selectors
-    ui.nodes.wrapper.classList.add('blok-editor');
+    // Add both data attribute and class for backward compatibility during migration
+    ui.nodes.wrapper.setAttribute('data-blok-editor', '');
     ui.nodes.wrapper.appendChild(blocks[0].holder);
     ui.nodes.wrapper.appendChild(blocks[1].holder);
     document.body.appendChild(ui.nodes.wrapper);
@@ -564,8 +565,8 @@ describe('BlockManager', () => {
 
     const alienWrapper = document.createElement('div');
 
-    // eslint-disable-next-line internal-unit-test/no-class-selectors
-    alienWrapper.classList.add('blok-editor');
+    // Add both data attribute and class for backward compatibility during migration
+    alienWrapper.setAttribute('data-blok-editor', '');
     const alienBlock = createBlockStub({ id: 'alien' });
 
     alienWrapper.appendChild(alienBlock.holder);

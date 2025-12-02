@@ -97,16 +97,16 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
 
   const iconClasses = twMerge(
     css.icon,
-    isInline && cssInline.icon,
-    isNestedInline && cssNestedInline.icon,
-    iconWithGap && css.iconTool,
-    iconWithGap && isInline && cssInline.iconTool,
-    iconWithGap && isNestedInline && cssNestedInline.iconTool
+    isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
+    isNestedInline && 'w-toolbox-btn h-toolbox-btn',
+    iconWithGap && 'mr-2',
+    iconWithGap && isInline && 'shadow-none bg-transparent !mr-0',
+    iconWithGap && isNestedInline && '!mr-2'
   );
 
   const chevronClasses = twMerge(
     css.icon,
-    isInline && cssInline.chevronRight
+    isInline && 'rotate-90'
   );
 
   const showChevron = hasChildren && !hideChevron;
@@ -125,7 +125,7 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
       {title !== undefined && (
         <div
           {...{ [DATA_ATTR.title]: '' }}
-          className={css.title}
+          className={'mr-auto truncate text-sm font-medium leading-5'}
           data-blok-testid="popover-item-title"
         >
           {title}
@@ -134,7 +134,7 @@ export const PopoverItemDefaultComponent: React.FC<PopoverItemDefaultComponentPr
       {secondaryLabel && (
         <div
           {...{ [DATA_ATTR.secondaryTitle]: '' }}
-          className={css.secondaryTitle}
+          className={'whitespace-nowrap pr-1.5 text-xs -tracking-widest text-text-secondary opacity-60'}
           data-blok-testid="popover-item-secondary-title"
         >
           {secondaryLabel}

@@ -7,6 +7,7 @@
  */
 import { IconText } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
+import { BLOK_TOOL_ATTR } from '../../components/constants';
 import type {
   API,
   BlockTool,
@@ -84,11 +85,6 @@ export default class Paragraph implements BlockTool {
   private readOnly: boolean;
 
   /**
-   * Paragraph Tool's CSS classes
-   */
-  private _CSS: { block: string; wrapper: string };
-
-  /**
    * Placeholder for Paragraph Tool
    */
   private _placeholder: string;
@@ -120,11 +116,6 @@ export default class Paragraph implements BlockTool {
   constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<ParagraphData, ParagraphConfig>) {
     this.api = api;
     this.readOnly = readOnly;
-
-    this._CSS = {
-      block: this.api.styles.block,
-      wrapper: 'blok-paragraph',
-    };
 
     if (!this.readOnly) {
       this.onKeyUp = this.onKeyUp.bind(this);
@@ -193,11 +184,11 @@ export default class Paragraph implements BlockTool {
     const div = document.createElement('DIV') as HTMLDivElement;
 
     div.className = twMerge(
-      this._CSS.wrapper,
-      this._CSS.block,
+      this.api.styles.block,
       Paragraph.WRAPPER_CLASSES,
       Paragraph.PLACEHOLDER_CLASSES
     );
+    div.setAttribute(BLOK_TOOL_ATTR, 'paragraph');
     div.contentEditable = 'false';
     div.setAttribute('data-placeholder-active', this.api.i18n.t(this._placeholder));
 

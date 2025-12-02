@@ -65,7 +65,7 @@ describe('Stub tool', () => {
     const titleEl = element.querySelector('[data-blok-stub-title]');
     const subtitleEl = element.querySelector('[data-blok-stub-subtitle]');
 
-    expect(element.hasAttribute('data-blok-stub')).toBe(true);
+    expect(element.getAttribute('data-blok-tool')).toBe('stub');
     expect(titleEl?.textContent).toBe('Broken block');
     expect(subtitleEl?.textContent).toBe('t:The block can not be displayed correctly.');
     expect(translator).toHaveBeenCalledTimes(1);

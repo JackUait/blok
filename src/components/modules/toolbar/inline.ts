@@ -296,8 +296,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   private make(): void {
     this.nodes.wrapper = $.make('div');
     this.nodes.wrapper.className = twMerge(
-      INLINE_TOOLBAR_CLASSES,
-      this.isRtl ? this.Blok.UI.CSS.blokRtlFix : ''
+      INLINE_TOOLBAR_CLASSES
     );
 
     this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE);

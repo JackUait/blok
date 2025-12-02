@@ -121,12 +121,13 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * CSS styles
+   * @deprecated Use data attributes for identification instead
    */
   private static get CSS(): {
     toolbox: string;
     } {
     return {
-      toolbox: 'blok-toolbox',
+      toolbox: '',
     };
   }
 
@@ -158,7 +159,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.enableShortcuts();
 
     this.nodes = {
-      toolbox: Dom.make('div', Toolbox.CSS.toolbox),
+      toolbox: Dom.make('div'),
     };
     this.nodes.toolbox.setAttribute('data-blok-testid', 'toolbox');
 

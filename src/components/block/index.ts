@@ -29,6 +29,13 @@ import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged }
 import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
+import {
+  BLOK_ELEMENT_ATTR,
+  BLOK_ELEMENT_CONTENT_ATTR,
+  BLOK_ELEMENT_CONTENT_SELECTOR,
+  BLOK_SELECTED_ATTR,
+  BLOK_STRETCHED_ATTR,
+} from '../constants';
 
 /**
  * Interface describes Block class constructor argument
@@ -96,22 +103,10 @@ interface BlockEvents {
 /**
  * @classdesc Abstract Block class that contains Block information, Tool name and Tool class instance
  * @property {BlockToolAdapter} tool - Tool instance
- * @property {HTMLElement} holder - Div element that wraps block content with Tool's content. Has `blok-element` CSS class
+ * @property {HTMLElement} holder - Div element that wraps block content with Tool's content.
  * @property {HTMLElement} pluginsContent - HTML content that returns by Tool's render function
  */
 export default class Block extends EventsDispatcher<BlockEvents> {
-  /**
-   * CSS classes for the Block (BEM selectors)
-   * @returns {{wrapper: string, content: string}}
-   */
-  public static get CSS(): { [name: string]: string } {
-    return {
-      wrapper: 'blok-element',
-      wrapperStretched: 'is-stretched',
-      content: 'blok-element__content',
-      selected: 'is-selected',
-    };
-  }
 
   /**
    * Tailwind styles for the Block elements
@@ -119,7 +114,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private static readonly styles = {
     wrapper: 'relative opacity-100 animate-fade-in first:mt-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
     content: 'relative mx-auto transition-colors duration-150 ease-out max-w-content',
-    contentSelected: 'bg-selection [&_[contenteditable]]:select-none [&_img]:opacity-55 [&_.blok-stub]:opacity-55',
+    contentSelected: 'bg-selection [&_[contenteditable]]:select-none [&_img]:opacity-55 [&_[data-blok-tool=stub]]:opacity-55',
     contentStretched: 'max-w-none',
   };
 
@@ -825,20 +820,18 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @param {boolean} state - 'true' to select, 'false' to remove selection
    */
   public set selected(state: boolean) {
-    this.holder.classList.toggle(Block.CSS.selected, state);
+    if (state) {
+      this.holder.setAttribute(BLOK_SELECTED_ATTR, 'true');
+    } else {
+      this.holder.removeAttribute(BLOK_SELECTED_ATTR);
+    }
 
     if (this.contentElement) {
       const stretchedClass = this.stretched ? Block.styles.contentStretched : '';
 
       this.contentElement.className = state
-        ? twMerge(Block.CSS.content, Block.styles.content, Block.styles.contentSelected)
-        : twMerge(Block.CSS.content, Block.styles.content, stretchedClass);
-    }
-
-    if (state) {
-      this.holder.setAttribute('data-blok-selected', 'true');
-    } else {
-      this.holder.removeAttribute('data-blok-selected');
+        ? twMerge(Block.styles.content, Block.styles.contentSelected)
+        : twMerge(Block.styles.content, stretchedClass);
     }
 
     const fakeCursorWillBeAdded = state === true && SelectionUtils.isRangeInsideContainer(this.holder);
@@ -866,7 +859,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get selected(): boolean {
-    return this.holder.classList.contains(Block.CSS.selected);
+    return this.holder.getAttribute(BLOK_SELECTED_ATTR) === 'true';
   }
 
   /**
@@ -874,12 +867,16 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @param {boolean} state - 'true' to enable, 'false' to disable stretched state
    */
   public setStretchState(state: boolean): void {
-    this.holder.classList.toggle(Block.CSS.wrapperStretched, state);
+    if (state) {
+      this.holder.setAttribute(BLOK_STRETCHED_ATTR, 'true');
+    } else {
+      this.holder.removeAttribute(BLOK_STRETCHED_ATTR);
+    }
 
     if (this.contentElement && !this.selected) {
       this.contentElement.className = state
-        ? twMerge(Block.CSS.content, Block.styles.content, Block.styles.contentStretched)
-        : twMerge(Block.CSS.content, Block.styles.content);
+        ? twMerge(Block.styles.content, Block.styles.contentStretched)
+        : Block.styles.content;
     }
   }
 
@@ -896,7 +893,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get stretched(): boolean {
-    return this.holder.classList.contains(Block.CSS.wrapperStretched);
+    return this.holder.getAttribute(BLOK_STRETCHED_ATTR) === 'true';
   }
 
 
@@ -917,11 +914,14 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {HTMLDivElement}
    */
   private compose(): HTMLDivElement {
-    const wrapper = $.make('div', twMerge(Block.CSS.wrapper, Block.styles.wrapper)) as HTMLDivElement;
-    const contentNode = $.make('div', twMerge(Block.CSS.content, Block.styles.content));
+    const wrapper = $.make('div', Block.styles.wrapper) as HTMLDivElement;
+    const contentNode = $.make('div', Block.styles.content);
 
     this.contentElement = contentNode;
 
+    // Set data attributes for block element and content
+    wrapper.setAttribute(BLOK_ELEMENT_ATTR, '');
+    contentNode.setAttribute(BLOK_ELEMENT_CONTENT_ATTR, '');
     contentNode.setAttribute('data-blok-testid', 'block-content');
     const pluginsContent = this.toolInstance.render();
 
@@ -1239,7 +1239,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * especially when mutation observers haven't been set up yet.
    */
   public refreshToolRootElement(): void {
-    const contentNode = this.holder.querySelector(`.${Block.CSS.content}`);
+    const contentNode = this.holder.querySelector(BLOK_ELEMENT_CONTENT_SELECTOR);
 
     if (!contentNode) {
       return;

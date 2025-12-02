@@ -274,7 +274,7 @@ describe('InlineToolbar', () => {
           right: CONTENT_RECT_RIGHT,
         },
         CSS: {
-          blokRtlFix: 'blok-editor--rtl',
+          blokRtlFix: '',
         },
       },
       Toolbar: {

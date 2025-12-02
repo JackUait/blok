@@ -1,19 +1,3 @@
-/**
- * Describes styles API - provides Tailwind CSS utility classes for tool styling.
- *
- * All values are Tailwind utility class strings that can be extended using tailwind-merge.
- *
- * @example
- * // Basic usage
- * element.className = api.styles.block;
- *
- * @example
- * // Extending with custom styles using tailwind-merge
- * import { twMerge } from 'tailwind-merge';
- * const customBlock = twMerge(api.styles.block, 'my-4 bg-gray-100');
- *
- * @since 2.0.0 - Changed from BEM class names to Tailwind utility strings
- */
 export interface Styles {
   /**
    * Base block styles - applied to block tool wrappers.

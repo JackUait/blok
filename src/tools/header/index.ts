@@ -7,6 +7,7 @@
  */
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
+import { BLOK_TOOL_ATTR } from '../../components/constants';
 import type {
   API,
   BlockTool,
@@ -115,11 +116,12 @@ export default class Header implements BlockTool {
 
   /**
    * Styles
+   * @deprecated Use data-blok-tool attribute instead (BLOK_TOOL_ATTR)
    */
   private get _CSS(): { block: string; wrapper: string } {
     return {
       block: this.api.styles.block,
-      wrapper: 'blok-header',
+      wrapper: '',
     };
   }
 
@@ -330,7 +332,12 @@ export default class Header implements BlockTool {
     /**
      * Add styles class using twMerge to combine base and level-specific styles
      */
-    tag.className = twMerge(this._CSS.wrapper, Header.BASE_STYLES, this.currentLevel.styles);
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles);
+
+    /**
+     * Set data attribute for tool identification
+     */
+    tag.setAttribute(BLOK_TOOL_ATTR, 'header');
 
     /**
      * Make tag editable

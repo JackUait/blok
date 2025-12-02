@@ -375,8 +375,8 @@ export class PopoverItemDefault extends PopoverItem {
       isNestedInline && cssNestedInline.item,
       isActive && css.itemActive,
       this.isDisabled && css.itemDisabled,
-      isFocused && css.itemFocused,
-      isConfirmation && css.itemConfirmation,
+      isFocused && '!bg-item-focus-bg',
+      isConfirmation && '!bg-item-confirm-bg !text-white',
       isHidden && '!hidden'
     );
   }

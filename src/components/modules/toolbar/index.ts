@@ -631,6 +631,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const settingsToggler = $.make('span', [
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.CSS.settingsToggler,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      this.CSS.settingsTogglerHandle,
       'group-data-[blok-dragging=true]:cursor-grabbing',
     ], {
       innerHTML: IconMenu,

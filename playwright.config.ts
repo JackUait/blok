@@ -46,5 +46,5 @@ export default defineConfig({
     },
   ],
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : AMOUNT_OF_LOCAL_WORKERS,
+  workers: process.env.CI ? 3 : AMOUNT_OF_LOCAL_WORKERS,
 });

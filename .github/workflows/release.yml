@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: 'Release type'
+        type: choice
+        options:
+          - release
+          - prerelease
+        default: release
+      prerelease-type:
+        description: 'Pre-release type (only for prerelease)'
+        type: choice
+        options:
+          - beta
+          - alpha
+          - rc
+        default: beta
+      dry-run:
+        description: 'Dry run (no publish)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Create Release PR
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+
+    steps:
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: node
+          prerelease: ${{ inputs.release-type == 'prerelease' }}
+          prerelease-type: ${{ inputs.prerelease-type }}
+
+  publish:
+    name: Publish to NPM
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Publish to NPM
+        if: ${{ !inputs.dry-run }}
+        run: npm publish --access public --provenance ${{ inputs.release-type == 'prerelease' && '--tag next' || '' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Dry Run Summary
+        if: ${{ inputs.dry-run }}
+        run: |
+          echo "## 🧪 Dry Run - v${{ needs.release-please.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No package was published (dry run mode)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Summary
+        if: ${{ !inputs.dry-run }}
+        run: |
+          echo "## 🚀 Published v${{ needs.release-please.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Package published to [npm](https://www.npmjs.com/package/@jackuait/blok)" >> $GITHUB_STEP_SUMMARY

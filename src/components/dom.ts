@@ -41,6 +41,67 @@ export default class Dom {
   }
 
   /**
+   * Checks if a class name is valid for use with classList.add()
+   * classList.add() throws if class contains whitespace, is empty, or contains invalid characters
+   * @param className - class name to validate
+   * @returns {boolean} - true if valid for classList.add()
+   */
+  private static isValidClassName(className: string): boolean {
+    if (className === '' || /\s/.test(className)) {
+      return false;
+    }
+
+    /**
+     * Try to validate by creating a temporary element and using classList.add
+     * This is more reliable than regex because it follows the actual browser implementation
+     */
+    try {
+      const testEl = document.createElement('div');
+
+      testEl.classList.add(className);
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Safely adds class names to an element, filtering out invalid ones
+   * @param element - element to add classes to
+   * @param classNames - array of class names to add
+   */
+  private static safelyAddClasses(element: HTMLElement, classNames: string[]): void {
+    const validClasses: string[] = [];
+    const invalidClasses: string[] = [];
+
+    for (const className of classNames) {
+      if (Dom.isValidClassName(className)) {
+        validClasses.push(className);
+      } else {
+        invalidClasses.push(className);
+      }
+    }
+
+    if (validClasses.length > 0) {
+      element.classList.add(...validClasses);
+    }
+
+    /**
+     * For invalid class names (e.g. Tailwind arbitrary values with brackets/parentheses),
+     * we need to set them via className attribute directly
+     */
+    if (invalidClasses.length > 0) {
+      const existingClasses = element.className;
+      const allClasses = existingClasses
+        ? `${existingClasses} ${invalidClasses.join(' ')}`
+        : invalidClasses.join(' ');
+
+      element.setAttribute('class', allClasses);
+    }
+  }
+
+  /**
    * Helper for making Elements with class name and attributes
    * @param  {string} tagName - new Element tag name
    * @param  {string[]|string} [classNames] - list or name of CSS class name(s)
@@ -56,13 +117,13 @@ export default class Dom {
         .flatMap((className) => className.split(' '))
         .filter((className) => className !== '');
 
-      el.classList.add(...validClassnames);
+      Dom.safelyAddClasses(el, validClassnames);
     }
 
     if (typeof classNames === 'string' && classNames !== '') {
       const splitClassNames = classNames.split(' ').filter((className) => className !== '');
 
-      el.classList.add(...splitClassNames);
+      Dom.safelyAddClasses(el, splitClassNames);
     }
 
     for (const attrName in attributes) {

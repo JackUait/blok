@@ -4,10 +4,10 @@
  * EditorJS to Blok Codemod
  *
  * This script automates the migration from EditorJS to Blok.
- * It transforms imports, class names, selectors, and data attributes.
+ * It transforms imports, class names, selectors, data attributes, and text references.
  *
  * Usage:
- *   npx @jackuait/blok-codemod [path] [options]
+ *   npx blok-codemod [path] [options]
  *
  * Options:
  *   --dry-run    Show changes without modifying files
@@ -15,9 +15,9 @@
  *   --help       Show help
  *
  * Examples:
- *   npx @jackuait/blok-codemod ./src
- *   npx @jackuait/blok-codemod ./src --dry-run
- *   npx @jackuait/blok-codemod .
+ *   npx blok-codemod ./src
+ *   npx blok-codemod ./src --dry-run
+ *   npx blok-codemod .
  */
 
 const fs = require('fs');
@@ -119,6 +119,9 @@ const HOLDER_TRANSFORMS = [
   { pattern: /getElementById\s*\(\s*['"]editorjs['"]\s*\)/g, replacement: "getElementById('blok')" },
 ];
 
+// Bundled tools - add new tools here as they are bundled with Blok
+const BUNDLED_TOOLS = ['Header', 'Paragraph'];
+
 // Tool configuration transformations
 const TOOL_CONFIG_TRANSFORMS = [
   // Handle class property syntax
@@ -127,6 +130,14 @@ const TOOL_CONFIG_TRANSFORMS = [
   // Handle standalone tool references in tools config (e.g., `paragraph: Paragraph`)
   { pattern: /(\bheader\s*:\s*)Header(?!Config)(?=\s*[,}\n])/g, replacement: '$1Blok.Header' },
   { pattern: /(\bparagraph\s*:\s*)Paragraph(?!Config)(?=\s*[,}\n])/g, replacement: '$1Blok.Paragraph' },
+];
+
+// Text transformations for "EditorJS" string references
+const TEXT_TRANSFORMS = [
+  // Replace exact "EditorJS" text (preserves case-sensitive matching)
+  { pattern: /EditorJS(?![a-zA-Z])/g, replacement: 'Blok' },
+  // Replace #editorjs with #blok (e.g., in CSS ID selectors or anchor links)
+  { pattern: /#editorjs(?![a-zA-Z0-9_-])/g, replacement: '#blok' },
 ];
 
 // ============================================================================
@@ -186,6 +197,108 @@ function applyTransforms(content, transforms, fileName) {
   });
 
   return { result, changes };
+}
+
+/**
+ * Ensures that Blok is properly imported when bundled tools (Blok.Header, Blok.Paragraph, etc.) are used.
+ * This function checks if the content uses any Blok.* tool references and ensures there's a proper import.
+ *
+ * Handles the following scenarios:
+ * 1. No existing @jackuait/blok import -> adds `import Blok from '@jackuait/blok'`
+ * 2. Named imports only (e.g., `import { BlokConfig } from '@jackuait/blok'`) -> adds Blok default import
+ * 3. Default import with different name -> adds Blok to named imports
+ * 4. Already has Blok default import -> no changes needed
+ */
+function ensureBlokImport(content) {
+  // Check if content uses any Blok.* tool (e.g., Blok.Header, Blok.Paragraph)
+  const blokToolPattern = new RegExp(`Blok\\.(${BUNDLED_TOOLS.join('|')})`, 'g');
+  const usesBlokTools = blokToolPattern.test(content);
+
+  if (!usesBlokTools) {
+    return { result: content, changed: false };
+  }
+
+  // Check if Blok is already available as a default import
+  // Matches: import Blok from '@jackuait/blok' or import Blok, { ... } from '@jackuait/blok'
+  const hasBlokDefaultImport = /import\s+Blok\s*(?:,\s*\{[^}]*\}\s*)?from\s*['"]@jackuait\/blok['"]/.test(content);
+
+  if (hasBlokDefaultImport) {
+    return { result: content, changed: false };
+  }
+
+  // Check for existing @jackuait/blok import patterns
+  const namedOnlyImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"]@jackuait\/blok['"];?/;
+  const defaultWithNamedPattern = /import\s+(\w+)\s*,\s*\{([^}]+)\}\s*from\s*['"]@jackuait\/blok['"];?/;
+  const defaultOnlyPattern = /import\s+(\w+)\s+from\s*['"]@jackuait\/blok['"];?/;
+
+  let result = content;
+
+  // Case 1: Named imports only -> add Blok default import
+  // e.g., `import { BlokConfig } from '@jackuait/blok'` -> `import Blok, { BlokConfig } from '@jackuait/blok'`
+  const namedOnlyMatch = content.match(namedOnlyImportPattern);
+  if (namedOnlyMatch) {
+    const namedImports = namedOnlyMatch[1];
+    result = content.replace(
+      namedOnlyImportPattern,
+      `import Blok, {${namedImports}} from '@jackuait/blok';`
+    );
+    return { result, changed: true };
+  }
+
+  // Case 2: Default import with different name + named imports -> add Blok to named imports
+  // e.g., `import Editor, { BlokConfig } from '@jackuait/blok'` -> `import Editor, { Blok, BlokConfig } from '@jackuait/blok'`
+  const defaultWithNamedMatch = content.match(defaultWithNamedPattern);
+  if (defaultWithNamedMatch) {
+    const defaultName = defaultWithNamedMatch[1];
+    const namedImports = defaultWithNamedMatch[2];
+    // Check if Blok is already in named imports
+    if (!/\bBlok\b/.test(namedImports)) {
+      result = content.replace(
+        defaultWithNamedPattern,
+        `import ${defaultName}, { Blok, ${namedImports.trim()} } from '@jackuait/blok';`
+      );
+      return { result, changed: true };
+    }
+    return { result: content, changed: false };
+  }
+
+  // Case 3: Default import only with different name -> add Blok to named imports
+  // e.g., `import Editor from '@jackuait/blok'` -> `import Editor, { Blok } from '@jackuait/blok'`
+  const defaultOnlyMatch = content.match(defaultOnlyPattern);
+  if (defaultOnlyMatch) {
+    const defaultName = defaultOnlyMatch[1];
+    if (defaultName !== 'Blok') {
+      result = content.replace(
+        defaultOnlyPattern,
+        `import ${defaultName}, { Blok } from '@jackuait/blok';`
+      );
+      return { result, changed: true };
+    }
+    return { result: content, changed: false };
+  }
+
+  // Case 4: No @jackuait/blok import at all -> add new import at the top (after any existing imports)
+  // Find the last import statement to insert after it
+  const importStatements = content.match(/^import\s+.+from\s+['"][^'"]+['"];?\s*$/gm);
+  if (importStatements && importStatements.length > 0) {
+    const lastImport = importStatements[importStatements.length - 1];
+    const lastImportIndex = content.lastIndexOf(lastImport);
+    const insertPosition = lastImportIndex + lastImport.length;
+    result =
+      content.slice(0, insertPosition) +
+      "\nimport Blok from '@jackuait/blok';" +
+      content.slice(insertPosition);
+  } else {
+    // No imports found, add at the very beginning (after shebang if present)
+    const shebangMatch = content.match(/^#!.*\n/);
+    if (shebangMatch) {
+      result = shebangMatch[0] + "import Blok from '@jackuait/blok';\n" + content.slice(shebangMatch[0].length);
+    } else {
+      result = "import Blok from '@jackuait/blok';\n" + content;
+    }
+  }
+
+  return { result, changed: true };
 }
 
 function transformFile(filePath, dryRun = false) {
@@ -252,6 +365,22 @@ function transformFile(filePath, dryRun = false) {
     const { result, changes } = applyTransforms(transformed, TOOL_CONFIG_TRANSFORMS, filePath);
     transformed = result;
     allChanges.push(...changes.map((c) => ({ ...c, category: 'tool-config' })));
+  }
+
+  // Ensure Blok is imported if bundled tools are used (JS/TS only)
+  if (isJsFile) {
+    const { result, changed } = ensureBlokImport(transformed);
+    if (changed) {
+      transformed = result;
+      allChanges.push({ category: 'imports', pattern: 'ensureBlokImport', count: 1, note: 'Added Blok import for bundled tools' });
+    }
+  }
+
+  // Apply text transforms (JS/TS/HTML) - replace "EditorJS" with "Blok"
+  if (isJsFile || isHtmlFile) {
+    const { result, changes } = applyTransforms(transformed, TEXT_TRANSFORMS, filePath);
+    transformed = result;
+    allChanges.push(...changes.map((c) => ({ ...c, category: 'text' })));
   }
 
   const hasChanges = transformed !== content;
@@ -324,7 +453,7 @@ function printHelp() {
 EditorJS to Blok Codemod
 
 Usage:
-  npx @jackuait/blok-codemod [path] [options]
+  npx blok-codemod [path] [options]
 
 Arguments:
   path          Directory or file to transform (default: current directory)
@@ -335,9 +464,9 @@ Options:
   --help        Show this help message
 
 Examples:
-  npx @jackuait/blok-codemod ./src
-  npx @jackuait/blok-codemod ./src --dry-run
-  npx @jackuait/blok-codemod . --verbose
+  npx blok-codemod ./src
+  npx blok-codemod ./src --dry-run
+  npx blok-codemod . --verbose
 
 What this codemod does:
   • Transforms EditorJS imports to Blok imports
@@ -348,6 +477,7 @@ What this codemod does:
   • Changes default holder from 'editorjs' to 'blok'
   • Updates package.json dependencies
   • Converts bundled tool imports (Header, Paragraph)
+  • Ensures Blok is imported when using bundled tools (Blok.Header, etc.)
 
 Note: After running, you may need to manually:
   • Update any custom tool implementations
@@ -469,6 +599,8 @@ module.exports = {
   transformFile,
   updatePackageJson,
   applyTransforms,
+  ensureBlokImport,
+  BUNDLED_TOOLS,
   IMPORT_TRANSFORMS,
   TYPE_TRANSFORMS,
   CLASS_NAME_TRANSFORMS,
@@ -477,4 +609,5 @@ module.exports = {
   SELECTOR_TRANSFORMS,
   HOLDER_TRANSFORMS,
   TOOL_CONFIG_TRANSFORMS,
+  TEXT_TRANSFORMS,
 };

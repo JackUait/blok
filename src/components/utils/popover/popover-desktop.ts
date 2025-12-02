@@ -162,18 +162,22 @@ export class PopoverDesktop extends PopoverAbstract {
       this.nodes.popover.style.position = 'absolute';
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
-      this.nodes.popover.style.setProperty('--popover-top', '0px');
-      this.nodes.popover.style.setProperty('--popover-left', '0px');
+      this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, '0px');
+      this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, '0px');
     }
 
     this.nodes.popover.style.setProperty(CSSVariables.PopoverHeight, this.size.height + 'px');
 
     if (!this.trigger && !this.shouldOpenBottom) {
       this.nodes.popover.setAttribute(DATA_ATTR.openTop, 'true');
+      // Apply open-top positioning (moved from popover.css)
+      this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, 'calc(-1 * (0.5rem + var(--popover-height)))');
     }
 
     if (!this.trigger && !this.shouldOpenRight) {
       this.nodes.popover.setAttribute(DATA_ATTR.openLeft, 'true');
+      // Apply open-left positioning (moved from popover.css)
+      this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * var(--width) + 100%)');
     }
 
     super.show();
@@ -357,10 +361,51 @@ export class PopoverDesktop extends PopoverAbstract {
     /* We need nesting level value in CSS to calculate offset left for nested popover */
     nestedPopoverEl.style.setProperty(CSSVariables.NestingLevel, this.nestedPopover.nestingLevel.toString());
 
+    // Apply nested popover positioning (moved from popover.css)
+    this.applyNestedPopoverPositioning(nestedPopoverEl);
+
     this.nestedPopover.show();
     this.flipper?.deactivate();
 
     return this.nestedPopover;
+  }
+
+  /**
+   * Applies positioning styles to nested popover container.
+   * This replaces CSS selectors like [data-blok-nested] [data-blok-popover-container]
+   * @param nestedPopoverEl - the nested popover element
+   */
+  private applyNestedPopoverPositioning(nestedPopoverEl: HTMLElement): void {
+    const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement | null;
+
+    if (!nestedContainer) {
+      return;
+    }
+
+    // Check if parent popover has openTop or openLeft state
+    const isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.openTop);
+    const isParentOpenLeft = this.nodes.popover.hasAttribute(DATA_ATTR.openLeft);
+
+    // Apply position: absolute for nested container
+    nestedContainer.style.position = 'absolute';
+
+    // Calculate --popover-left based on nesting level and parent open direction
+    if (isParentOpenLeft) {
+      // Position to the left
+      nestedPopoverEl.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * (var(--nesting-level) + 1) * var(--width) + 100%)');
+    } else {
+      // Position to the right
+      nestedPopoverEl.style.setProperty(CSSVariables.PopoverLeft, 'calc(var(--nesting-level) * (var(--width) - var(--nested-popover-overlap)))');
+    }
+
+    // Calculate top position based on parent open direction
+    if (isParentOpenTop) {
+      // Open upward
+      nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + 0.5rem + var(--nested-popover-overlap))';
+    } else {
+      // Open downward
+      nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--nested-popover-overlap))';
+    }
   }
 
   /**

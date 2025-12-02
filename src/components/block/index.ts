@@ -1011,15 +1011,17 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     /**
      * Placeholder styling classes using Tailwind arbitrary variants.
      * Applied to ::before pseudo-element only when element is empty.
-     * The `content` attribute is handled in placeholders.css.
+     * Uses arbitrary properties for `content: attr(data-blok-placeholder)`.
      */
     const placeholderClasses = [
       'empty:before:pointer-events-none',
       'empty:before:text-gray-text',
       'empty:before:cursor-text',
+      'empty:before:content-[attr(data-blok-placeholder)]',
       '[&[data-blok-empty=true]]:before:pointer-events-none',
       '[&[data-blok-empty=true]]:before:text-gray-text',
       '[&[data-blok-empty=true]]:before:cursor-text',
+      '[&[data-blok-empty=true]]:before:content-[attr(data-blok-placeholder)]',
     ];
 
     if (placeholderText.length > 0) {

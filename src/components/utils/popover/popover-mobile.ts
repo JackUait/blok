@@ -70,6 +70,9 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     /* Save state to history for proper navigation between nested and parent popovers */
     this.history.push({ items: params.items });
 
+    // Set mobile offset CSS variable (moved from popover.css @screen mobile rule)
+    this.nodes.popoverContainer.style.setProperty('--offset', '5px');
+
     // Apply mobile-specific classes to container
     this.nodes.popoverContainer.className = twMerge(
       css.popoverContainer,

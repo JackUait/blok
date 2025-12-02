@@ -338,6 +338,8 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     this.nodes.icon?.setAttribute(DATA_ATTR.wobble, 'true');
+    // Apply wobble animation class directly (moved from popover.css)
+    this.nodes.icon?.classList.add('animate-wobble');
 
     this.nodes.icon?.addEventListener('animationend', this.onErrorAnimationEnd);
   }
@@ -347,6 +349,8 @@ export class PopoverItemDefault extends PopoverItem {
    */
   private onErrorAnimationEnd = (): void => {
     this.nodes.icon?.removeAttribute(DATA_ATTR.wobble);
+    // Remove wobble animation class
+    this.nodes.icon?.classList.remove('animate-wobble');
     this.nodes.icon?.removeEventListener('animationend', this.onErrorAnimationEnd);
   };
 

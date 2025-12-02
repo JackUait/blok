@@ -185,6 +185,16 @@ export enum CSSVariables {
   InlinePopoverWidth = '--inline-popover-width',
 
   /**
+   * Top position of the popover container
+   */
+  PopoverTop = '--popover-top',
+
+  /**
+   * Left position of the popover container
+   */
+  PopoverLeft = '--popover-left',
+
+  /**
    * Offset from left of the inline popover item click on which triggers the nested popover opening
    */
   TriggerItemLeft = '--trigger-item-left',

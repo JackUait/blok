@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 Release",
+      "type": "shell",
+      "command": "yarn release",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "🧪 Release (Beta)",
+      "type": "shell",
+      "command": "yarn release:beta",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "🔬 Release (Alpha)",
+      "type": "shell",
+      "command": "yarn release:alpha",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "🎯 Release (RC)",
+      "type": "shell",
+      "command": "yarn release:rc",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "👀 Release (Dry Run)",
+      "type": "shell",
+      "command": "yarn release:dry",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ]
+}

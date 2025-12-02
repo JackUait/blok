@@ -1,0 +1,32 @@
+{
+  "name": "@jackuait/blok-codemod",
+  "version": "1.0.0",
+  "description": "Codemod to migrate from EditorJS to Blok",
+  "main": "migrate-editorjs-to-blok.js",
+  "bin": {
+    "blok-codemod": "./migrate-editorjs-to-blok.js",
+    "migrate-editorjs-to-blok": "./migrate-editorjs-to-blok.js"
+  },
+  "keywords": [
+    "blok",
+    "editorjs",
+    "codemod",
+    "migration",
+    "editor",
+    "rich-text"
+  ],
+  "author": "Jack Uait",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jackuait/blok.git",
+    "directory": "codemod"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "migrate-editorjs-to-blok.js",
+    "README.md"
+  ]
+}

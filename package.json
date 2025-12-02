@@ -6,7 +6,7 @@
   "module": "dist/blok.mjs",
   "types": "./types/index.d.ts",
   "bin": {
-    "blok-codemod": "./codemod/migrate-editorjs-to-blok.js"
+    "migrate-from-editorjs": "./codemod/migrate-editorjs-to-blok.js"
   },
   "files": [
     "dist",

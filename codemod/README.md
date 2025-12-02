@@ -8,16 +8,16 @@ Automatically migrate your codebase from EditorJS to Blok.
 
 ```bash
 # Dry run (preview changes without modifying files)
-npx blok-codemod ./src --dry-run
+npx @jackuait/migrate-from-editorjs ./src --dry-run
 
 # Apply changes
-npx blok-codemod ./src
+npx @jackuait/migrate-from-editorjs ./src
 
 # Process entire project
-npx blok-codemod .
+npx @jackuait/migrate-from-editorjs .
 
 # Verbose output
-npx blok-codemod ./src --verbose
+npx @jackuait/migrate-from-editorjs ./src --verbose
 ```
 
 ## What It Does

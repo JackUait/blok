@@ -7,7 +7,7 @@
  * It transforms imports, class names, selectors, data attributes, and text references.
  *
  * Usage:
- *   npx blok-codemod [path] [options]
+ *   npx migrate-from-editorjs [path] [options]
  *
  * Options:
  *   --dry-run    Show changes without modifying files
@@ -15,9 +15,9 @@
  *   --help       Show help
  *
  * Examples:
- *   npx blok-codemod ./src
- *   npx blok-codemod ./src --dry-run
- *   npx blok-codemod .
+ *   npx migrate-from-editorjs ./src
+ *   npx migrate-from-editorjs ./src --dry-run
+ *   npx migrate-from-editorjs .
  */
 
 const fs = require('fs');
@@ -71,23 +71,99 @@ const CLASS_NAME_TRANSFORMS = [
 ];
 
 // CSS class transformations
+// Handles both with dot (.ce-block) and without dot (ce-block) patterns
 const CSS_CLASS_TRANSFORMS = [
-  // Editor wrapper classes
-  { pattern: /\.codex-editor(?![\w-])/g, replacement: '.blok-editor' },
-  { pattern: /\.codex-editor--narrow/g, replacement: '.blok-editor--narrow' },
-  { pattern: /\.codex-editor--rtl/g, replacement: '.blok-editor--rtl' },
-  // CE prefix classes (commonly used)
-  { pattern: /\.ce-block(?![\w-])/g, replacement: '[data-blok-testid="block-wrapper"]' },
-  { pattern: /\.ce-block--selected/g, replacement: '[data-blok-selected="true"]' },
-  { pattern: /\.ce-block--stretched/g, replacement: '[data-blok-stretched="true"]' },
-  { pattern: /\.ce-block__content/g, replacement: '[data-blok-testid="block-content"]' },
-  { pattern: /\.ce-toolbar(?![\w-])/g, replacement: '[data-blok-testid="toolbar"]' },
-  { pattern: /\.ce-toolbar__plus/g, replacement: '[data-blok-testid="plus-button"]' },
-  { pattern: /\.ce-toolbar__settings-btn/g, replacement: '[data-blok-testid="settings-toggler"]' },
-  { pattern: /\.ce-toolbar__actions/g, replacement: '[data-blok-testid="toolbar-actions"]' },
-  { pattern: /\.ce-inline-toolbar/g, replacement: '[data-blok-testid="inline-toolbar"]' },
-  { pattern: /\.ce-popover(?![\w-])/g, replacement: '[data-blok-testid="popover-container"]' },
-  { pattern: /\.ce-popover-item/g, replacement: '[data-blok-testid="popover-item"]' },
+  // Editor wrapper classes (codex-editor)
+  { pattern: /\.codex-editor__redactor(?![\w-])/g, replacement: '[data-blok-redactor]' },
+  { pattern: /\.codex-editor--narrow(?![\w-])/g, replacement: '[data-blok-narrow="true"]' },
+  { pattern: /\.codex-editor--rtl(?![\w-])/g, replacement: '[data-blok-rtl="true"]' },
+  { pattern: /\.codex-editor(?![\w-])/g, replacement: '[data-blok-editor]' },
+  // Without dot prefix (for string literals, classList operations)
+  { pattern: /(['"`])codex-editor__redactor(['"`])/g, replacement: '$1data-blok-redactor$2' },
+  { pattern: /(['"`])codex-editor--narrow(['"`])/g, replacement: '$1data-blok-narrow$2' },
+  { pattern: /(['"`])codex-editor--rtl(['"`])/g, replacement: '$1data-blok-rtl$2' },
+  { pattern: /(['"`])codex-editor(['"`])/g, replacement: '$1data-blok-editor$2' },
+
+  // Block classes (ce-block)
+  { pattern: /\.ce-block--selected(?![\w-])/g, replacement: '[data-blok-selected="true"]' },
+  { pattern: /\.ce-block--stretched(?![\w-])/g, replacement: '[data-blok-stretched="true"]' },
+  { pattern: /\.ce-block--focused(?![\w-])/g, replacement: '[data-blok-focused="true"]' },
+  { pattern: /\.ce-block__content(?![\w-])/g, replacement: '[data-blok-element-content]' },
+  { pattern: /\.ce-block(?![\w-])/g, replacement: '[data-blok-element]' },
+  // Without dot prefix
+  { pattern: /(['"`])ce-block--selected(['"`])/g, replacement: '$1data-blok-selected$2' },
+  { pattern: /(['"`])ce-block--stretched(['"`])/g, replacement: '$1data-blok-stretched$2' },
+  { pattern: /(['"`])ce-block--focused(['"`])/g, replacement: '$1data-blok-focused$2' },
+  { pattern: /(['"`])ce-block__content(['"`])/g, replacement: '$1data-blok-element-content$2' },
+  { pattern: /(['"`])ce-block(['"`])/g, replacement: '$1data-blok-element$2' },
+
+  // Toolbar classes (ce-toolbar)
+  { pattern: /\.ce-toolbar__plus(?![\w-])/g, replacement: '[data-blok-testid="plus-button"]' },
+  { pattern: /\.ce-toolbar__settings-btn(?![\w-])/g, replacement: '[data-blok-settings-toggler]' },
+  { pattern: /\.ce-toolbar__actions(?![\w-])/g, replacement: '[data-blok-testid="toolbar-actions"]' },
+  { pattern: /\.ce-toolbar(?![\w-])/g, replacement: '[data-blok-toolbar]' },
+  // Without dot prefix
+  { pattern: /(['"`])ce-toolbar__plus(['"`])/g, replacement: '$1data-blok-testid="plus-button"$2' },
+  { pattern: /(['"`])ce-toolbar__settings-btn(['"`])/g, replacement: '$1data-blok-settings-toggler$2' },
+  { pattern: /(['"`])ce-toolbar__actions(['"`])/g, replacement: '$1data-blok-testid="toolbar-actions"$2' },
+  { pattern: /(['"`])ce-toolbar(['"`])/g, replacement: '$1data-blok-toolbar$2' },
+
+  // Inline toolbar classes (ce-inline-toolbar, ce-inline-tool)
+  { pattern: /\.ce-inline-tool--link(?![\w-])/g, replacement: '[data-blok-testid="inline-tool-link"]' },
+  { pattern: /\.ce-inline-tool--bold(?![\w-])/g, replacement: '[data-blok-testid="inline-tool-bold"]' },
+  { pattern: /\.ce-inline-tool--italic(?![\w-])/g, replacement: '[data-blok-testid="inline-tool-italic"]' },
+  { pattern: /\.ce-inline-tool(?![\w-])/g, replacement: '[data-blok-testid="inline-tool"]' },
+  { pattern: /\.ce-inline-toolbar(?![\w-])/g, replacement: '[data-blok-testid="inline-toolbar"]' },
+  // Without dot prefix
+  { pattern: /(['"`])ce-inline-tool--link(['"`])/g, replacement: '$1data-blok-testid="inline-tool-link"$2' },
+  { pattern: /(['"`])ce-inline-tool--bold(['"`])/g, replacement: '$1data-blok-testid="inline-tool-bold"$2' },
+  { pattern: /(['"`])ce-inline-tool--italic(['"`])/g, replacement: '$1data-blok-testid="inline-tool-italic"$2' },
+  { pattern: /(['"`])ce-inline-tool(['"`])/g, replacement: '$1data-blok-testid="inline-tool"$2' },
+  { pattern: /(['"`])ce-inline-toolbar(['"`])/g, replacement: '$1data-blok-testid="inline-toolbar"$2' },
+
+  // Popover classes (ce-popover)
+  { pattern: /\.ce-popover--opened(?![\w-])/g, replacement: '[data-blok-popover][data-blok-opened="true"]' },
+  { pattern: /\.ce-popover__container(?![\w-])/g, replacement: '[data-blok-popover-container]' },
+  { pattern: /\.ce-popover-item--focused(?![\w-])/g, replacement: '[data-blok-focused="true"]' },
+  { pattern: /\.ce-popover-item(?![\w-])/g, replacement: '[data-blok-testid="popover-item"]' },
+  { pattern: /\.ce-popover(?![\w-])/g, replacement: '[data-blok-popover]' },
+  // Without dot prefix
+  { pattern: /(['"`])ce-popover--opened(['"`])/g, replacement: '$1data-blok-popover$2' },
+  { pattern: /(['"`])ce-popover__container(['"`])/g, replacement: '$1data-blok-popover-container$2' },
+  { pattern: /(['"`])ce-popover-item--focused(['"`])/g, replacement: '$1data-blok-focused$2' },
+  { pattern: /(['"`])ce-popover-item(['"`])/g, replacement: '$1data-blok-testid="popover-item"$2' },
+  { pattern: /(['"`])ce-popover(['"`])/g, replacement: '$1data-blok-popover$2' },
+
+  // Tool-specific classes (ce-paragraph, ce-header)
+  { pattern: /\.ce-paragraph(?![\w-])/g, replacement: '[data-blok-tool="paragraph"]' },
+  { pattern: /\.ce-header(?![\w-])/g, replacement: '[data-blok-tool="header"]' },
+  // Without dot prefix
+  { pattern: /(['"`])ce-paragraph(['"`])/g, replacement: '$1data-blok-tool="paragraph"$2' },
+  { pattern: /(['"`])ce-header(['"`])/g, replacement: '$1data-blok-tool="header"$2' },
+
+  // Conversion toolbar
+  { pattern: /\.ce-conversion-toolbar(?![\w-])/g, replacement: '[data-blok-testid="conversion-toolbar"]' },
+  { pattern: /\.ce-conversion-tool(?![\w-])/g, replacement: '[data-blok-testid="conversion-tool"]' },
+  { pattern: /(['"`])ce-conversion-toolbar(['"`])/g, replacement: '$1data-blok-testid="conversion-toolbar"$2' },
+  { pattern: /(['"`])ce-conversion-tool(['"`])/g, replacement: '$1data-blok-testid="conversion-tool"$2' },
+
+  // Settings and tune classes
+  { pattern: /\.ce-settings(?![\w-])/g, replacement: '[data-blok-testid="block-settings"]' },
+  { pattern: /\.ce-tune(?![\w-])/g, replacement: '[data-blok-testid="block-tune"]' },
+  { pattern: /(['"`])ce-settings(['"`])/g, replacement: '$1data-blok-testid="block-settings"$2' },
+  { pattern: /(['"`])ce-tune(['"`])/g, replacement: '$1data-blok-testid="block-tune"$2' },
+
+  // Stub block
+  { pattern: /\.ce-stub(?![\w-])/g, replacement: '[data-blok-stub]' },
+  { pattern: /(['"`])ce-stub(['"`])/g, replacement: '$1data-blok-stub$2' },
+
+  // Drag and drop
+  { pattern: /\.ce-drag-handle(?![\w-])/g, replacement: '[data-blok-drag-handle]' },
+  { pattern: /(['"`])ce-drag-handle(['"`])/g, replacement: '$1data-blok-drag-handle$2' },
+
+  // Additional state classes
+  { pattern: /\.ce-ragged-right(?![\w-])/g, replacement: '[data-blok-ragged-right="true"]' },
+  { pattern: /(['"`])ce-ragged-right(['"`])/g, replacement: '$1data-blok-ragged-right$2' },
 ];
 
 // Data attribute transformations
@@ -453,7 +529,7 @@ function printHelp() {
 EditorJS to Blok Codemod
 
 Usage:
-  npx blok-codemod [path] [options]
+  npx migrate-from-editorjs [path] [options]
 
 Arguments:
   path          Directory or file to transform (default: current directory)
@@ -464,15 +540,21 @@ Options:
   --help        Show this help message
 
 Examples:
-  npx blok-codemod ./src
-  npx blok-codemod ./src --dry-run
-  npx blok-codemod . --verbose
+  npx migrate-from-editorjs ./src
+  npx migrate-from-editorjs ./src --dry-run
+  npx migrate-from-editorjs . --verbose
 
 What this codemod does:
   • Transforms EditorJS imports to Blok imports
   • Updates type names (EditorConfig → BlokConfig)
   • Replaces 'new EditorJS()' with 'new Blok()'
-  • Converts CSS selectors (.ce-* → [data-blok-*])
+  • Converts CSS class selectors to data attributes:
+    - .codex-editor* → [data-blok-editor], [data-blok-redactor], etc.
+    - .ce-block* → [data-blok-element], [data-blok-selected], etc.
+    - .ce-toolbar* → [data-blok-toolbar], [data-blok-settings-toggler], etc.
+    - .ce-inline-toolbar, .ce-inline-tool* → [data-blok-testid="inline-*"]
+    - .ce-popover* → [data-blok-popover], [data-blok-popover-container], etc.
+    - .ce-paragraph, .ce-header → [data-blok-tool="paragraph|header"]
   • Updates data attributes (data-id → data-blok-id)
   • Changes default holder from 'editorjs' to 'blok'
   • Updates package.json dependencies

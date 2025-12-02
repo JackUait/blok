@@ -115,19 +115,25 @@ console.log('\n🎨 CSS Class Transformations\n');
 test('transforms .codex-editor class', () => {
   const input = `.codex-editor { color: red; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `.blok-editor { color: red; }`);
+  assertEqual(result, `[data-blok-editor] { color: red; }`);
 });
 
 test('transforms .codex-editor--narrow modifier', () => {
   const input = `.codex-editor--narrow { width: 100%; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `.blok-editor--narrow { width: 100%; }`);
+  assertEqual(result, `[data-blok-narrow="true"] { width: 100%; }`);
+});
+
+test('transforms .codex-editor__redactor class', () => {
+  const input = `.codex-editor__redactor { padding: 20px; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-redactor] { padding: 20px; }`);
 });
 
 test('transforms .ce-block class', () => {
   const input = `.ce-block { margin: 10px; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `[data-blok-testid="block-wrapper"] { margin: 10px; }`);
+  assertEqual(result, `[data-blok-element] { margin: 10px; }`);
 });
 
 test('transforms .ce-block--selected class', () => {
@@ -139,13 +145,73 @@ test('transforms .ce-block--selected class', () => {
 test('transforms .ce-toolbar class', () => {
   const input = `document.querySelector('.ce-toolbar')`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `document.querySelector('[data-blok-testid="toolbar"]')`);
+  assertEqual(result, `document.querySelector('[data-blok-toolbar]')`);
 });
 
 test('transforms .ce-inline-toolbar class', () => {
   const input = `.ce-inline-toolbar { display: flex; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
   assertEqual(result, `[data-blok-testid="inline-toolbar"] { display: flex; }`);
+});
+
+test('transforms .ce-paragraph class', () => {
+  const input = `.ce-paragraph { line-height: 1.6; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-tool="paragraph"] { line-height: 1.6; }`);
+});
+
+test('transforms .ce-header class', () => {
+  const input = `.ce-header { font-weight: bold; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-tool="header"] { font-weight: bold; }`);
+});
+
+test('transforms .ce-inline-tool--link class', () => {
+  const input = `.ce-inline-tool--link { color: blue; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-testid="inline-tool-link"] { color: blue; }`);
+});
+
+test('transforms .ce-inline-tool--bold class', () => {
+  const input = `.ce-inline-tool--bold { font-weight: bold; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-testid="inline-tool-bold"] { font-weight: bold; }`);
+});
+
+test('transforms .ce-inline-tool--italic class', () => {
+  const input = `.ce-inline-tool--italic { font-style: italic; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-testid="inline-tool-italic"] { font-style: italic; }`);
+});
+
+test('transforms .ce-popover class', () => {
+  const input = `.ce-popover { position: absolute; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-popover] { position: absolute; }`);
+});
+
+test('transforms .ce-popover--opened class', () => {
+  const input = `.ce-popover--opened { display: block; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-popover][data-blok-opened="true"] { display: block; }`);
+});
+
+test('transforms .ce-popover__container class', () => {
+  const input = `.ce-popover__container { overflow: hidden; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-popover-container] { overflow: hidden; }`);
+});
+
+test('transforms class names without dot prefix (string literals)', () => {
+  const input = `element.classList.add('ce-block');`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `element.classList.add('data-blok-element');`);
+});
+
+test('transforms codex-editor in string literals', () => {
+  const input = `const wrapper = document.querySelector("codex-editor");`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `const wrapper = document.querySelector("data-blok-editor");`);
 });
 
 // ============================================================================

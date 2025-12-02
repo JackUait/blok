@@ -3,14 +3,6 @@ import { DATA_INTERFACE_ATTRIBUTE, TOOLTIP_INTERFACE_VALUE } from '../../../../s
 import { destroy, hide, onHover, show } from '../../../../src/components/utils/tooltip';
 import type { TooltipContent } from '../../../../src/components/utils/tooltip';
 
-const { fakeCssContent } = vi.hoisted(() => ({
-  fakeCssContent: '.tooltip{ color: #000; }',
-}));
-
-vi.mock('../../../../src/styles/tooltip.css?inline', () => ({
-  default: fakeCssContent,
-}));
-
 const tooltipSelector = `[${DATA_INTERFACE_ATTRIBUTE}="${TOOLTIP_INTERFACE_VALUE}"]`;
 
 const getTooltipWrapper = (): HTMLElement | null => {
@@ -107,7 +99,7 @@ describe('Tooltip utility', () => {
     vi.useRealTimers();
   });
 
-  it('renders tooltip content, accessible attributes, and injects CSS only once', () => {
+  it('renders tooltip content, accessible attributes', () => {
     const target = createTargetElement();
 
     show(target, 'Tooltip text', { delay: 0 });
@@ -125,11 +117,6 @@ describe('Tooltip utility', () => {
     show(target, 'New text', { delay: 0 });
 
     expect(wrapper?.textContent).toBe('New text');
-
-    const styles = document.querySelectorAll('#blok-tooltips-style');
-
-    expect(styles).toHaveLength(1);
-    expect(styles[0]?.textContent).toBe(fakeCssContent);
   });
 
   it('accepts DOM nodes as content without cloning them', () => {

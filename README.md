@@ -34,6 +34,33 @@ or
 yarn add @jackuait/blok
 ```
 
+## Migrating from EditorJS
+
+If you're migrating from EditorJS, Blok provides a seamless transition path:
+
+### Automated Migration
+
+Run the codemod to automatically update your codebase:
+
+```bash
+# Preview changes (recommended first)
+npx @jackuait/blok-codemod ./src --dry-run
+
+# Apply changes
+npx @jackuait/blok-codemod ./src
+```
+
+The codemod handles:
+- Import updates (`@editorjs/editorjs` → `@jackuait/blok`)
+- Type renames (`EditorConfig` → `BlokConfig`)
+- CSS selector updates (`.ce-*` → `[data-blok-*]`)
+- Data attribute updates (`data-id` → `data-blok-id`)
+- Bundled tool migrations (Header & Paragraph are now included)
+
+### Migration Guide
+
+For a complete list of breaking changes and manual migration steps, see [MIGRATION.md](./MIGRATION.md).
+
 ## Documentation
 
 📚 **Documentation is coming soon!** We're working hard to provide comprehensive guides, API references, and examples. Stay tuned for updates.

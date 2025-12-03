@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
-import { TOOLTIP_INTERFACE_SELECTOR, BLOK_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../src/components/constants';
+import { TOOLTIP_INTERFACE_SELECTOR, BLOK_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
@@ -1258,18 +1258,16 @@ test.describe('blok i18n', () => {
 
       await selectText(paragraph, 'Some text');
 
-      // Wait for inline toolbar to appear
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for UI animation
-      await page.waitForTimeout(200);
+      // Open inline toolbar popover
+      const inlinePopover = await openInlineToolbarPopover(page);
 
-      // Trigger link tool (Ctrl+K or Cmd+K)
-      await page.keyboard.press(`${MODIFIER_KEY}+k`);
+      // Click on link button to open link input
+      const linkButton = inlinePopover.locator('[data-blok-item-name="link"]');
 
-      // Wait for link input to appear
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for UI animation
-      await page.waitForTimeout(200);
+      await expect(linkButton).toBeVisible();
+      await linkButton.click();
 
-      const linkInput = page.locator('[data-blok-link-tool-input-opened]');
+      const linkInput = page.locator('[data-blok-link-tool-input-opened="true"]');
 
       await expect(linkInput).toBeVisible();
 

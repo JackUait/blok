@@ -97,9 +97,7 @@ vi.mock('../../../../src/components/dom', () => ({
  * Tests internal functionality and edge cases not covered by E2E tests
  */
 describe('InlineToolbar', () => {
-  const TOOLBAR_WIDTH = 200;
   const CONTENT_RECT_RIGHT = 1000;
-  const OVERFLOW_ADJUSTMENT = 800;
 
 
   let inlineToolbar: InlineToolbar;
@@ -415,46 +413,50 @@ describe('InlineToolbar', () => {
         [createMockInlineToolAdapter('bold'), toolInstance],
       ]);
 
-      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
+      // Mock componentRef with a popover
+      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
+        current: {
+          getPopover: () => mockPopoverInstance as unknown as Popover,
+          getWrapperElement: () => null,
+          close: vi.fn(),
+        },
+      };
 
       inlineToolbar.close();
 
       expect(inlineToolbar.opened).toBe(false);
-      expect(mockPopoverInstance.hide).toHaveBeenCalled();
-      expect(mockPopoverInstance.destroy).toHaveBeenCalled();
     });
 
-    it('should reset wrapper position', () => {
+    it('should set opened to false when closing', () => {
       inlineToolbar.opened = true;
-      const wrapper = document.createElement('div');
-
-      wrapper.style.left = '100px';
-      wrapper.style.top = '200px';
-      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper = wrapper;
 
       inlineToolbar.close();
 
-      expect(wrapper.style.left).toBe('0px');
-      expect(wrapper.style.top).toBe('0px');
+      expect(inlineToolbar.opened).toBe(false);
     });
   });
 
   describe('containsNode', () => {
-    it('should return false when wrapper is undefined', () => {
-      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement | undefined } }).nodes.wrapper = undefined;
-
+    it('should return false when componentRef is null', () => {
+      // componentRef starts as null by default
       const node = document.createElement('div');
       const result = inlineToolbar.containsNode(node);
 
       expect(result).toBe(false);
     });
 
-    it('should return true when node is contained in wrapper', () => {
+    it('should return true when node is contained in wrapper via componentRef', () => {
       const wrapper = document.createElement('div');
       const child = document.createElement('div');
 
       wrapper.appendChild(child);
-      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper = wrapper;
+
+      // Mock the componentRef to return a wrapper
+      (inlineToolbar as unknown as { componentRef: { current: { getWrapperElement: () => HTMLElement | null } | null } }).componentRef = {
+        current: {
+          getWrapperElement: () => wrapper,
+        },
+      };
 
       const result = inlineToolbar.containsNode(child);
 
@@ -465,7 +467,11 @@ describe('InlineToolbar', () => {
       const wrapper = document.createElement('div');
       const otherNode = document.createElement('div');
 
-      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper = wrapper;
+      (inlineToolbar as unknown as { componentRef: { current: { getWrapperElement: () => HTMLElement | null } | null } }).componentRef = {
+        current: {
+          getWrapperElement: () => wrapper,
+        },
+      };
 
       const result = inlineToolbar.containsNode(otherNode);
 
@@ -474,13 +480,21 @@ describe('InlineToolbar', () => {
   });
 
   describe('destroy', () => {
-    it('should destroy popover and remove nodes', () => {
+    it('should call close on componentRef and cleanup', () => {
       inlineToolbar.opened = true;
-      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
+      const closeSpy = vi.fn();
+
+      (inlineToolbar as unknown as { componentRef: { current: { close: () => void; getWrapperElement: () => null; getPopover: () => null } | null } }).componentRef = {
+        current: {
+          close: closeSpy,
+          getWrapperElement: () => null,
+          getPopover: () => null,
+        },
+      };
 
       inlineToolbar.destroy();
 
-      expect(mockPopoverInstance.destroy).toHaveBeenCalled();
+      expect(closeSpy).toHaveBeenCalled();
     });
   });
 
@@ -745,7 +759,7 @@ describe('InlineToolbar', () => {
   });
 
   describe('Modern Inline Tool', () => {
-    it('should use onActivate callback from MenuConfig', async () => {
+    it('should create tools instances with modern render config', () => {
       const onActivateSpy = vi.fn();
       const tool = createMockInlineTool('modernTool', {
         render: () => ({
@@ -754,22 +768,22 @@ describe('InlineToolbar', () => {
         }),
       });
 
-      const adapter = { name: 'modernTool',
-        title: 'Modern Tool' };
+      const adapter = createMockInlineToolAdapter('modernTool', {
+        title: 'Modern Tool',
+        create: () => tool,
+      });
 
-      (inlineToolbar as unknown as { tools: Map<unknown, unknown> }).tools = new Map([ [adapter, tool] ]);
+      const block = createMockBlock();
 
-      // Mock getToolShortcut to avoid errors
-      vi.spyOn(inlineToolbar as unknown as { getToolShortcut: (name: string) => string | undefined }, 'getToolShortcut').mockReturnValue(undefined);
+      block.tool.inlineTools = new Map([['modernTool', adapter]]);
+      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
 
-      const popoverItems = await (inlineToolbar as unknown as { getPopoverItems: () => Promise<Array<{ onActivate?: () => void }>> }).getPopoverItems();
+      // createToolsInstances is still available and sets up tools
+      (inlineToolbar as unknown as { createToolsInstances: () => void }).createToolsInstances();
 
-      expect(popoverItems).toHaveLength(1);
-      expect(popoverItems[0].onActivate).toBeDefined();
+      const tools = (inlineToolbar as unknown as { tools: Map<unknown, InlineTool> }).tools;
 
-      popoverItems[0].onActivate?.();
-
-      expect(onActivateSpy).toHaveBeenCalled();
+      expect(tools.size).toBe(1);
     });
   });
 
@@ -793,27 +807,31 @@ describe('InlineToolbar', () => {
       inlineToolbar.opened = false;
       const tryToShowSpy = vi.spyOn(inlineToolbar, 'tryToShow').mockResolvedValue();
 
-      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
+      // Mock componentRef to return a popover
+      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
+        current: {
+          getPopover: () => mockPopoverInstance as unknown as Popover,
+          getWrapperElement: () => null,
+          close: vi.fn(),
+        },
+      };
 
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
       expect(tryToShowSpy).toHaveBeenCalled();
     });
 
-    it('should activate item by name when selection is null', async () => {
+    it('should activate item by name when popover is available', async () => {
       inlineToolbar.opened = true;
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: null,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: null,
-        writable: true,
-        configurable: true,
-      });
 
-      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
+      // Mock componentRef to return a popover
+      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
+        current: {
+          getPopover: () => mockPopoverInstance as unknown as Popover,
+          getWrapperElement: () => null,
+          close: vi.fn(),
+        },
+      };
 
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
@@ -831,7 +849,14 @@ describe('InlineToolbar', () => {
         [toolAdapter, toolInstance],
       ]);
 
-      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
+      // Mock componentRef to return a popover
+      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
+        current: {
+          getPopover: () => mockPopoverInstance as unknown as Popover,
+          getWrapperElement: () => null,
+          close: vi.fn(),
+        },
+      };
 
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
@@ -849,7 +874,14 @@ describe('InlineToolbar', () => {
         [toolAdapter, toolInstance],
       ]);
 
-      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
+      // Mock componentRef to return a popover
+      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
+        current: {
+          getPopover: () => mockPopoverInstance as unknown as Popover,
+          getWrapperElement: () => null,
+          close: vi.fn(),
+        },
+      };
 
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
@@ -887,55 +919,30 @@ describe('InlineToolbar', () => {
     });
   });
 
-  describe('move', () => {
-    beforeEach(() => {
-      Object.defineProperty(SelectionUtils, 'rect', {
-        value: {
-          x: 100,
-          y: 100,
-          width: 50,
-          height: 20,
-        } as DOMRect,
-        writable: true,
-        configurable: true,
-      });
+  describe('React integration', () => {
+    it('should have componentRef initialized', () => {
+      const componentRef = (inlineToolbar as unknown as { componentRef: { current: unknown } }).componentRef;
 
-      const wrapper = document.createElement('div');
-
-      wrapper.style.position = 'absolute';
-      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper = wrapper;
+      expect(componentRef).toBeDefined();
+      expect(componentRef.current).toBeNull(); // Initially null before render
     });
 
-    it('should position toolbar below selection', () => {
-      const wrapper = (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+    it('should have popover getter that returns null when componentRef is null', () => {
+      const popover = (inlineToolbar as unknown as { popover: Popover | null }).popover;
 
-      (inlineToolbar as unknown as { move: (popoverWidth: number) => void }).move(TOOLBAR_WIDTH);
-
-      expect(wrapper.style.left).toBeTruthy();
-      expect(wrapper.style.top).toBeTruthy();
+      expect(popover).toBeNull();
     });
 
-    it('should adjust position when toolbar would overflow right edge', () => {
-      const wrapper = (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+    it('should have popover getter that returns popover from componentRef', () => {
+      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null } | null } }).componentRef = {
+        current: {
+          getPopover: () => mockPopoverInstance as unknown as Popover,
+        },
+      };
 
-      Object.defineProperty(SelectionUtils, 'rect', {
-        value: {
-          x: 900,
-          y: 100,
-          width: 50,
-          height: 20,
-        } as DOMRect,
-        writable: true,
-        configurable: true,
-      });
+      const popover = (inlineToolbar as unknown as { popover: Popover | null }).popover;
 
-      mockBlok.UI.contentRect.right = CONTENT_RECT_RIGHT;
-
-      (inlineToolbar as unknown as { move: (popoverWidth: number) => void }).move(TOOLBAR_WIDTH);
-
-      const left = parseInt(wrapper.style.left, 10);
-
-      expect(left).toBeLessThanOrEqual(OVERFLOW_ADJUSTMENT); // Should be adjusted to fit
+      expect(popover).toBe(mockPopoverInstance);
     });
   });
 });

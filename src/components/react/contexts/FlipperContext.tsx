@@ -13,6 +13,7 @@ import React, {
 import * as _ from '../../utils';
 import Dom from '../../dom';
 import SelectionUtils from '../../selection';
+import type Flipper from '../../flipper';
 
 /**
  * Directions for keyboard navigation
@@ -48,6 +49,13 @@ export interface FlipperProviderOptions {
    * Callback when an item is activated (Enter pressed)
    */
   onActivate?: (item: HTMLElement) => void;
+
+  /**
+   * External vanilla Flipper instance to bridge.
+   * When provided, the context delegates all operations to this instance
+   * instead of managing its own state.
+   */
+  externalFlipper?: Flipper;
 }
 
 /**
@@ -209,6 +217,10 @@ const DEFAULT_OPTIONS: FlipperProviderOptions = {};
  * Provides keyboard navigation context for popover items and other
  * navigable elements. Replaces vanilla Flipper + DomIterator classes.
  *
+ * When an externalFlipper is provided, all operations are delegated to it,
+ * allowing vanilla Flipper instances (like BlockSettings.flipperInstance)
+ * to control keyboard navigation inside React-rendered popovers.
+ *
  * @internal
  */
 export const FlipperProvider = ({
@@ -220,9 +232,10 @@ export const FlipperProvider = ({
     handleContentEditableTargets: initialHandleContentEditable = false,
     allowedKeys = USED_KEYS,
     onActivate,
+    externalFlipper,
   } = options;
 
-  // State
+  // State (only used when no external flipper)
   const [isActivated, setIsActivated] = useState(false);
   const [cursor, setCursor] = useState(-1);
 
@@ -234,6 +247,7 @@ export const FlipperProvider = ({
   const allowedKeysRef = useRef(allowedKeys);
   const onActivateRef = useRef(onActivate);
   const focusedItemClassRef = useRef(focusedItemClass);
+  const externalFlipperRef = useRef(externalFlipper);
 
   // Keep refs in sync with props
   useEffect(() => {
@@ -247,6 +261,10 @@ export const FlipperProvider = ({
   useEffect(() => {
     focusedItemClassRef.current = focusedItemClass;
   }, [focusedItemClass]);
+
+  useEffect(() => {
+    externalFlipperRef.current = externalFlipper;
+  }, [externalFlipper]);
 
   /**
    * Get current item based on cursor position
@@ -381,6 +399,11 @@ export const FlipperProvider = ({
    * Focus the first item
    */
   const focusFirst = useCallback(() => {
+    if (externalFlipperRef.current) {
+      externalFlipperRef.current.focusFirst();
+
+      return;
+    }
     dropCursor();
     flipRight();
   }, [dropCursor, flipRight]);
@@ -389,6 +412,12 @@ export const FlipperProvider = ({
    * Focus item at specific position
    */
   const focusItem = useCallback((position: number) => {
+    if (externalFlipperRef.current) {
+      externalFlipperRef.current.focusItem(position);
+
+      return;
+    }
+
     const items = itemsRef.current;
 
     if (items.length === 0) {
@@ -423,6 +452,10 @@ export const FlipperProvider = ({
    * Check if any item has focus
    */
   const hasFocus = useCallback((): boolean => {
+    if (externalFlipperRef.current) {
+      return externalFlipperRef.current.hasFocus();
+    }
+
     return cursor !== -1;
   }, [cursor]);
 
@@ -430,6 +463,11 @@ export const FlipperProvider = ({
    * Register flip callback
    */
   const onFlip = useCallback((callback: () => void) => {
+    if (externalFlipperRef.current) {
+      externalFlipperRef.current.onFlip(callback);
+
+      return;
+    }
     flipCallbacksRef.current.push(callback);
   }, []);
 
@@ -437,6 +475,11 @@ export const FlipperProvider = ({
    * Unregister flip callback
    */
   const removeOnFlip = useCallback((callback: () => void) => {
+    if (externalFlipperRef.current) {
+      externalFlipperRef.current.removeOnFlip(callback);
+
+      return;
+    }
     flipCallbacksRef.current = flipCallbacksRef.current.filter(fn => fn !== callback);
   }, []);
 
@@ -477,6 +520,11 @@ export const FlipperProvider = ({
    * Set handleContentEditableTargets
    */
   const setHandleContentEditableTargets = useCallback((value: boolean) => {
+    if (externalFlipperRef.current) {
+      externalFlipperRef.current.setHandleContentEditableTargets(value);
+
+      return;
+    }
     handleContentEditableRef.current = value;
   }, []);
 
@@ -618,6 +666,11 @@ export const FlipperProvider = ({
    * Handle external keydown (for delegation)
    */
   const handleExternalKeydown = useCallback((event: KeyboardEvent) => {
+    if (externalFlipperRef.current) {
+      externalFlipperRef.current.handleExternalKeydown(event);
+
+      return;
+    }
     handleKeyDown(event);
   }, [handleKeyDown]);
 
@@ -625,6 +678,12 @@ export const FlipperProvider = ({
    * Activate keyboard navigation
    */
   const activate = useCallback((items?: HTMLElement[], cursorPosition?: number) => {
+    if (externalFlipperRef.current) {
+      externalFlipperRef.current.activate(items, cursorPosition);
+
+      return;
+    }
+
     if (items) {
       itemsRef.current = items;
     }
@@ -652,6 +711,11 @@ export const FlipperProvider = ({
    * Deactivate keyboard navigation
    */
   const deactivate = useCallback(() => {
+    if (externalFlipperRef.current) {
+      externalFlipperRef.current.deactivate();
+
+      return;
+    }
     setIsActivated(false);
     dropCursor();
     skipNextTabFocusRef.current = false;
@@ -673,6 +737,18 @@ export const FlipperProvider = ({
   }, [isActivated, handleKeyDown]);
 
   /**
+   * Whether flipper is currently activated (checks external flipper if provided)
+   */
+  const isFlipperActivated = useMemo(() => {
+    if (externalFlipperRef.current) {
+      return externalFlipperRef.current.isActivated;
+    }
+
+    return isActivated;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- externalFlipper triggers re-check when it changes
+  }, [isActivated, externalFlipper]);
+
+  /**
    * Context value
    */
   const contextValue = useMemo<FlipperContextValue>(() => ({
@@ -685,7 +761,7 @@ export const FlipperProvider = ({
     hasFocus,
     onFlip,
     removeOnFlip,
-    isActivated,
+    isActivated: isFlipperActivated,
     currentItem,
     setHandleContentEditableTargets,
     handleExternalKeydown,
@@ -702,7 +778,7 @@ export const FlipperProvider = ({
     hasFocus,
     onFlip,
     removeOnFlip,
-    isActivated,
+    isFlipperActivated,
     currentItem,
     setHandleContentEditableTargets,
     handleExternalKeydown,

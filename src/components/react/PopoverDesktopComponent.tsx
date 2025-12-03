@@ -16,6 +16,8 @@ import { css as popoverItemCss } from '../utils/popover/components/popover-item'
 import * as _ from '../utils';
 import type { PopoverMessages } from '@/types/utils/popover/popover';
 import type { SearchableItem } from '../utils/popover/components/search-input/search-input.types';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
+import type Flipper from '../flipper';
 
 /**
  * Props for PopoverDesktopComponent
@@ -69,6 +71,11 @@ export interface PopoverDesktopComponentProps {
   allowedKeys?: number[];
 
   /**
+   * External vanilla Flipper instance to use instead of FlipperContext
+   */
+  externalFlipper?: Flipper;
+
+  /**
    * Callback when search query changes
    */
   onSearch?: (data: { query: string; items: SearchableItem[] }) => void;
@@ -89,9 +96,66 @@ export interface PopoverDesktopComponentProps {
   onFlip?: () => void;
 
   /**
+   * Callback when an item with children is hovered/clicked to show nested popover
+   */
+  onShowNestedPopover?: (item: NestedPopoverTriggerItem, itemElement: HTMLElement) => void;
+
+  /**
+   * Callback when nested popover should be destroyed
+   */
+  onDestroyNestedPopover?: () => void;
+
+  /**
    * Children (popover items)
    */
   children?: React.ReactNode;
+}
+
+/**
+ * Item data needed to trigger nested popover
+ * @internal
+ */
+export interface NestedPopoverTriggerItem {
+  /**
+   * Children items to display in nested popover
+   */
+  children: PopoverItemParams[];
+
+  /**
+   * Whether children popover should be searchable
+   */
+  isChildrenSearchable: boolean;
+
+  /**
+   * Whether children popover should be flippable
+   */
+  isChildrenFlippable: boolean;
+
+  /**
+   * Called when children popover opens
+   */
+  onChildrenOpen: () => void;
+
+  /**
+   * Called when children popover closes
+   */
+  onChildrenClose: () => void;
+}
+
+/**
+ * State for nested popover
+ * @internal
+ */
+export interface NestedPopoverState {
+  /**
+   * The item that triggered the nested popover
+   */
+  triggerItem: NestedPopoverTriggerItem;
+
+  /**
+   * The element position offset for positioning
+   */
+  triggerItemTop: number;
 }
 
 /**
@@ -129,6 +193,12 @@ export interface PopoverDesktopComponentHandle {
   // Search API
   focusSearch: () => void;
   clearSearch: () => void;
+
+  // Nested popover API
+  showNestedPopover: (item: NestedPopoverTriggerItem, itemElement: HTMLElement) => void;
+  destroyNestedPopover: () => void;
+  hasNestedPopover: () => boolean;
+  getNestedPopoverHandle: () => PopoverDesktopComponentHandle | null;
 }
 
 /**
@@ -154,8 +224,10 @@ const PopoverDesktopInner = forwardRef<PopoverDesktopComponentHandle, PopoverDes
       allowedKeys: _allowedKeys,
       onSearch,
       onClose,
-      onClosedOnActivate: _onClosedOnActivate,
+      onClosedOnActivate,
       onFlip,
+      onShowNestedPopover: _onShowNestedPopover,
+      onDestroyNestedPopover: _onDestroyNestedPopover,
       children,
     },
     ref
@@ -168,6 +240,9 @@ const PopoverDesktopInner = forwardRef<PopoverDesktopComponentHandle, PopoverDes
     const [containerOpened, setContainerOpened] = useState(false);
     const [sizeCache, setSizeCache] = useState<{ width: number; height: number } | null>(null);
 
+    // Nested popover state
+    const [nestedPopoverState, setNestedPopoverState] = useState<NestedPopoverState | null>(null);
+
     // Refs
     const popoverRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -175,6 +250,7 @@ const PopoverDesktopInner = forwardRef<PopoverDesktopComponentHandle, PopoverDes
     const nothingFoundRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<SearchInputComponentHandle>(null);
     const flippableElementsRef = useRef<HTMLElement[]>([]);
+    const nestedPopoverRef = useRef<PopoverDesktopComponentHandle>(null);
 
     // Get flipper context
     const flipper = useFlipperContext();
@@ -302,9 +378,62 @@ const PopoverDesktopInner = forwardRef<PopoverDesktopComponentHandle, PopoverDes
     }, [trigger, position, calculateSize, shouldOpenBottom, shouldOpenRight, flippable, flipper, searchable]);
 
     /**
+     * Destroy nested popover and cleanup
+     */
+    const destroyNestedPopover = useCallback(() => {
+      if (!nestedPopoverState) {
+        return;
+      }
+
+      // Hide and cleanup nested popover
+      nestedPopoverRef.current?.hide();
+
+      // Clear state - useEffect cleanup will handle onChildrenClose
+      setNestedPopoverState(null);
+
+      // Reactivate flipper and focus first item
+      if (flippable) {
+        flipper.activate(flippableElementsRef.current);
+        requestAnimationFrame(() => {
+          flipper.focusFirst();
+        });
+      }
+    }, [nestedPopoverState, flippable, flipper]);
+
+    /**
+     * Show nested popover for an item
+     */
+    const showNestedPopover = useCallback((item: NestedPopoverTriggerItem, itemElement: HTMLElement) => {
+      // Don't reopen if already showing for same item
+      if (nestedPopoverState) {
+        return;
+      }
+
+      // Calculate trigger item position
+      const scrollTop = itemsRef.current?.scrollTop ?? 0;
+      const offsetTop = containerRef.current?.offsetTop ?? 0;
+      const itemOffsetTop = itemElement.offsetTop - scrollTop;
+      const triggerItemTop = offsetTop + itemOffsetTop;
+
+      // Notify item that children are opening
+      item.onChildrenOpen();
+
+      // Deactivate parent flipper
+      flipper.deactivate();
+
+      setNestedPopoverState({
+        triggerItem: item,
+        triggerItemTop,
+      });
+    }, [nestedPopoverState, flipper]);
+
+    /**
      * Hide popover
      */
     const hide = useCallback(() => {
+      // Destroy nested popover first
+      destroyNestedPopover();
+
       flushSync(() => {
         setIsOpened(false);
         setOpenTop(false);
@@ -319,7 +448,47 @@ const PopoverDesktopInner = forwardRef<PopoverDesktopComponentHandle, PopoverDes
       }
 
       onClose?.();
-    }, [flipper, searchable, onClose]);
+    }, [destroyNestedPopover, flipper, searchable, onClose]);
+
+    /**
+     * Handle nested popover close (propagate close up)
+     */
+    const handleNestedPopoverClose = useCallback(() => {
+      // When nested popover closes normally, just cleanup
+      destroyNestedPopover();
+    }, [destroyNestedPopover]);
+
+    /**
+     * Handle nested popover closed on activate (propagate up the chain)
+     */
+    const handleNestedPopoverClosedOnActivate = useCallback(() => {
+      // Close this popover too
+      hide();
+      onClosedOnActivate?.();
+    }, [hide, onClosedOnActivate]);
+
+    // Cleanup effect for nested popover
+    useEffect(() => {
+      // This runs when nestedPopoverState changes from a value to null
+      return () => {
+        // If we had a nested popover and it's being cleared, call onChildrenClose
+        // Note: This captures the previous state via closure
+      };
+    }, [nestedPopoverState]);
+
+    // Separate effect to call onChildrenClose when nested popover is destroyed
+    const previousNestedStateRef = useRef<NestedPopoverState | null>(null);
+
+    useEffect(() => {
+      const previousState = previousNestedStateRef.current;
+
+      // If we had a nested popover and now we don't, call onChildrenClose
+      if (previousState && !nestedPopoverState) {
+        previousState.triggerItem.onChildrenClose();
+      }
+
+      previousNestedStateRef.current = nestedPopoverState;
+    }, [nestedPopoverState]);
 
     /**
      * Handle search
@@ -377,7 +546,13 @@ const PopoverDesktopInner = forwardRef<PopoverDesktopComponentHandle, PopoverDes
       // Search API
       focusSearch: () => searchRef.current?.focus(),
       clearSearch: () => searchRef.current?.clear(),
-    }), [show, hide, calculateSize, flipper]);
+
+      // Nested popover API
+      showNestedPopover,
+      destroyNestedPopover,
+      hasNestedPopover: () => nestedPopoverState !== null,
+      getNestedPopoverHandle: () => nestedPopoverRef.current,
+    }), [show, hide, calculateSize, flipper, showNestedPopover, destroyNestedPopover, nestedPopoverState]);
 
     // Build CSS classes
     const containerClasses = twMerge(
@@ -389,6 +564,31 @@ const PopoverDesktopInner = forwardRef<PopoverDesktopComponentHandle, PopoverDes
       'cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text p-[3px]',
       !nothingFoundVisible && 'hidden'
     );
+
+    // Calculate nested popover styles
+    const nestedPopoverStyles = useCallback((): React.CSSProperties => {
+      if (!nestedPopoverState) {
+        return {};
+      }
+
+      const nestedNestingLevel = nestingLevel + 1;
+
+      // Determine positioning based on parent open direction
+      const popoverLeft = openLeft
+        ? `calc(-1 * (${nestedNestingLevel} + 1) * var(--width) + 100%)`
+        : `calc(${nestedNestingLevel} * (var(--width) - var(--nested-popover-overlap)))`;
+
+      const containerTop = openTop
+        ? `calc(${nestedPopoverState.triggerItemTop}px - var(--popover-height) + var(--item-height) + 0.5rem + var(--nested-popover-overlap))`
+        : `calc(${nestedPopoverState.triggerItemTop}px - var(--nested-popover-overlap))`;
+
+      return {
+        '--nesting-level': nestedNestingLevel.toString(),
+        '--trigger-item-top': `${nestedPopoverState.triggerItemTop}px`,
+        '--popover-left': popoverLeft,
+        '--nested-container-top': containerTop,
+      } as React.CSSProperties;
+    }, [nestedPopoverState, nestingLevel, openTop, openLeft]);
 
     return (
       <div
@@ -441,6 +641,20 @@ const PopoverDesktopInner = forwardRef<PopoverDesktopComponentHandle, PopoverDes
             {children}
           </div>
         </div>
+
+        {/* Nested popover */}
+        {nestedPopoverState && (
+          <NestedPopoverWrapper
+            ref={nestedPopoverRef}
+            messages={messages}
+            nestingLevel={nestingLevel + 1}
+            searchable={nestedPopoverState.triggerItem.isChildrenSearchable}
+            flippable={nestedPopoverState.triggerItem.isChildrenFlippable}
+            onClose={handleNestedPopoverClose}
+            onClosedOnActivate={handleNestedPopoverClosedOnActivate}
+            style={nestedPopoverStyles()}
+          />
+        )}
       </div>
     );
   }
@@ -449,17 +663,80 @@ const PopoverDesktopInner = forwardRef<PopoverDesktopComponentHandle, PopoverDes
 PopoverDesktopInner.displayName = 'PopoverDesktopInner';
 
 /**
+ * Nested popover wrapper component
+ * Renders nested popover with absolute positioning
+ * @internal
+ */
+interface NestedPopoverWrapperProps {
+  messages: PopoverMessages;
+  nestingLevel: number;
+  searchable: boolean;
+  flippable: boolean;
+  onClose: () => void;
+  onClosedOnActivate: () => void;
+  style: React.CSSProperties;
+}
+
+const NestedPopoverWrapper = forwardRef<PopoverDesktopComponentHandle, NestedPopoverWrapperProps>(
+  ({ messages, nestingLevel, searchable, flippable, onClose, onClosedOnActivate, style }, ref) => {
+    const innerRef = useRef<PopoverDesktopComponentHandle>(null);
+
+    // Forward ref
+    useImperativeHandle(ref, () => innerRef.current as PopoverDesktopComponentHandle, []);
+
+    // Auto-show on mount
+    useEffect(() => {
+      innerRef.current?.show();
+    }, []);
+
+    return (
+      <div
+        style={{
+          ...style,
+          position: 'absolute',
+          left: 'var(--popover-left)',
+        }}
+        data-blok-nested="true"
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: 'var(--nested-container-top)',
+          }}
+        >
+          <PopoverDesktopComponent
+            ref={innerRef}
+            messages={messages}
+            nestingLevel={nestingLevel}
+            searchable={searchable}
+            flippable={flippable}
+            onClose={onClose}
+            onClosedOnActivate={onClosedOnActivate}
+          />
+        </div>
+      </div>
+    );
+  }
+);
+
+NestedPopoverWrapper.displayName = 'NestedPopoverWrapper';
+
+/**
  * PopoverDesktopComponent - React component for desktop popover
  *
  * Wraps the inner component with FlipperProvider for keyboard navigation.
  * This component replaces the vanilla PopoverDesktop class internals while
  * maintaining API compatibility.
  *
+ * When an externalFlipper is provided, it delegates keyboard navigation to that
+ * instance, allowing vanilla Flipper instances (like BlockSettings.flipperInstance)
+ * to control navigation inside React-rendered popovers.
+ *
  * @internal
  */
 export const PopoverDesktopComponent = forwardRef<PopoverDesktopComponentHandle, PopoverDesktopComponentProps>(
   (props, ref) => {
-    const { allowedKeys } = props;
+    const { allowedKeys, externalFlipper } = props;
 
     // Default allowed keys for popover navigation
     const defaultAllowedKeys = [
@@ -474,6 +751,7 @@ export const PopoverDesktopComponent = forwardRef<PopoverDesktopComponentHandle,
         options={{
           focusedItemClass: popoverItemCss.focused,
           allowedKeys: allowedKeys ?? defaultAllowedKeys,
+          externalFlipper,
         }}
       >
         <PopoverDesktopInner ref={ref} {...props} />

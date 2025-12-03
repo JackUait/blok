@@ -113,7 +113,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     // Set CSS variables for popover layout (moved from popover.css)
     this.nodes.popover.style.setProperty('--width', '200px');
-    this.nodes.popover.style.setProperty('--max-height', '270px');
     this.nodes.popover.style.setProperty('--item-padding', '3px');
     this.nodes.popover.style.setProperty('--item-height', 'calc(1.25rem + 2 * var(--item-padding))');
     this.nodes.popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');

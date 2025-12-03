@@ -13,7 +13,6 @@ type MenuConfigWithChildren = {
   icon?: string;
   name?: string;
   children?: {
-    searchable?: boolean;
     items?: Array<{
       title?: string;
       onActivate?: () => Promise<void> | void;
@@ -166,7 +165,6 @@ describe('ConvertInlineTool', () => {
 
     const children = menuConfig.children;
 
-    expect(children?.searchable).toBe(true);
     expect(children?.items).toHaveLength(1);
 
     const items = children?.items ?? [];
@@ -218,8 +216,6 @@ describe('ConvertInlineTool', () => {
     expect(Array.isArray(config)).toBe(false);
 
     const menuConfig = config as MenuConfigWithChildren;
-
-    expect(menuConfig.children?.searchable).toBe(false);
 
     menuConfig.children?.onOpen?.();
     menuConfig.children?.onClose?.();

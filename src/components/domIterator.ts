@@ -5,6 +5,7 @@ import SelectionUtils from './selection';
 /**
  * Iterator above passed Elements list.
  * Each next or previous action adds provides CSS-class and sets cursor to this item
+ * @internal
  */
 export default class DomIterator {
   /**

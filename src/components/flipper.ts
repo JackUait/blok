@@ -4,6 +4,7 @@ import * as _ from './utils';
 /**
  * Flipper construction options
  * @interface FlipperOptions
+ * @internal
  */
 export interface FlipperOptions {
   /**
@@ -42,6 +43,7 @@ export interface FlipperOptions {
 
 /**
  * Flipper is a component that iterates passed items array by TAB or Arrows and clicks it by ENTER
+ * @internal
  */
 export default class Flipper {
   /**

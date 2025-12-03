@@ -8,6 +8,7 @@ import EventsDispatcher from '../../../events';
 
 /**
  * Provides search input element and search logic
+ * @internal
  */
 export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
   /**

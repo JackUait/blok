@@ -13,3 +13,39 @@ export type { EditorProviderProps } from './EditorProvider';
 
 export { InlineToolbarComponent } from './InlineToolbarComponent';
 export type { InlineToolbarComponentProps, InlineToolbarComponentHandle } from './InlineToolbarComponent';
+
+// Flipper context (keyboard navigation)
+export {
+  FlipperContext,
+  FlipperProvider,
+  useFlipperContext,
+  useFlippableElement,
+  FlipperUsedKeys,
+} from './contexts';
+export type {
+  FlipperContextValue,
+  FlipperProviderProps,
+  FlipperProviderOptions,
+} from './contexts';
+
+// Hooks
+export { usePopoverSearch, usePopoverPosition } from './hooks';
+export type {
+  UsePopoverSearchReturn,
+  UsePopoverSearchOptions,
+  PopoverPosition,
+  UsePopoverPositionOptions,
+  UsePopoverPositionReturn,
+} from './hooks';
+
+// Search input component
+export { SearchInputComponent } from './SearchInputComponent';
+export type { SearchInputComponentProps, SearchInputComponentHandle } from './SearchInputComponent';
+
+// Popover components
+export { PopoverDesktopComponent } from './PopoverDesktopComponent';
+export type { PopoverDesktopComponentProps, PopoverDesktopComponentHandle } from './PopoverDesktopComponent';
+
+export { PopoverInlineComponent } from './PopoverInlineComponent';
+export type { PopoverInlineComponentProps, PopoverInlineComponentHandle } from './PopoverInlineComponent';
+

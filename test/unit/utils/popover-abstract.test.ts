@@ -19,7 +19,7 @@ import type {
 } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { SearchInput } from '../../../src/components/utils/popover/components/search-input';
-import { DATA_ATTRIBUTE_OPENED, DATA_ATTRIBUTE_OPEN_TOP, DATA_ATTRIBUTE_OPEN_LEFT } from '../../../src/components/utils/popover/popover.const';
+import { DATA_ATTRIBUTE_OPENED, DATA_ATTRIBUTE_OPEN_TOP } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTRIBUTE_ACTIVE } from '../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
 
 /**

@@ -16,6 +16,7 @@ const INLINE_HEIGHT_MOBILE = '46px';
 
 /**
  * Horizontal popover that is displayed inline with the content
+ * @internal
  */
 export class PopoverInline extends PopoverDesktop {
   /**

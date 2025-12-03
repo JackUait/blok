@@ -14,6 +14,7 @@ import { PopoverItemHtml } from './components/popover-item/popover-item-html/pop
 /**
  * Desktop popover.
  * On desktop devices popover behaves like a floating element. Nested popover appears at right or left side.
+ * @internal
  * @todo support rtl for nested popovers and search
  */
 export class PopoverDesktop extends PopoverAbstract {

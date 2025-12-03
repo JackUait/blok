@@ -268,8 +268,9 @@ describe('PopoverAbstract', () => {
       (popover as unknown as { search?: SearchInput }).search = searchMock;
       popover.on(PopoverEvent.Closed, closedHandler);
 
-      nodes.popover.setAttribute(DATA_ATTRIBUTE_OPEN_TOP, 'true');
-      nodes.popover.setAttribute(DATA_ATTRIBUTE_OPEN_LEFT, 'true');
+      // Use the protected methods to set open states (simulating what subclasses do)
+      (popover as unknown as { setOpenTop: (v: boolean) => void }).setOpenTop(true);
+      (popover as unknown as { setOpenLeft: (v: boolean) => void }).setOpenLeft(true);
       popover.show();
       popover.hide();
 

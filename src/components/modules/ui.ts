@@ -976,6 +976,17 @@ export default class UI extends Module<UINodes> {
     }
 
     /**
+     * Ignore transient selection changes triggered by fake background wrappers (used by inline tools
+     * like Convert) while the Inline Toolbar is already open. Otherwise, the toolbar gets torn down
+     * and re-rendered, which closes nested popovers before a user can click their items.
+     */
+    const hasFakeBackground = document.querySelector('[data-blok-fake-background="true"]') !== null;
+
+    if (hasFakeBackground && this.Blok?.InlineToolbar?.opened) {
+      return;
+    }
+
+    /**
      * Usual clicks on some controls, for example, Block Tunes Toggler
      */
     if (!focusedElement && !Selection.range) {

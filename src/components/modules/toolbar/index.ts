@@ -903,21 +903,21 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private settingsTogglerClicked(): void {
     /**
-     * We need to update Current Block because user can click on toggler (thanks to appearing by hover) without any clicks on blok
-     * In this case currentBlock will point last block
+     * Prefer the hovered block (desktop), fall back to the current block (mobile) so tapping the toggler still works
      */
-    const hoveredBlock = this.hoveredBlock;
+    const targetBlock = this.hoveredBlock ?? this.Blok.BlockManager.currentBlock;
 
-    if (!hoveredBlock) {
+    if (!targetBlock) {
       return;
     }
 
-    this.Blok.BlockManager.currentBlock = hoveredBlock;
+    this.hoveredBlock = targetBlock;
+    this.Blok.BlockManager.currentBlock = targetBlock;
 
     if (this.Blok.BlockSettings.opened) {
       this.Blok.BlockSettings.close();
     } else {
-      void this.Blok.BlockSettings.open(hoveredBlock, this.nodes.settingsToggler);
+      void this.Blok.BlockSettings.open(targetBlock, this.nodes.settingsToggler);
     }
   }
 

@@ -23,10 +23,9 @@ export class PopoverInline extends PopoverDesktop {
    */
   public override hide = (): void => {
     // Call parent hide logic manually (can't use super for arrow functions)
-    // This replicates PopoverDesktop.hide behavior
-    this.nodes.popover.removeAttribute(DATA_ATTR.opened);
-    this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
-    this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
+    // This replicates PopoverDesktop.hide behavior using React state management
+    this.setOpenTop(false);
+    this.setOpenLeft(false);
 
     this.itemsDefault.forEach(item => item.reset());
 

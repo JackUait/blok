@@ -169,13 +169,13 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nodes.popover.style.setProperty(CSSVariables.PopoverHeight, this.size.height + 'px');
 
     if (!this.trigger && !this.shouldOpenBottom) {
-      this.nodes.popover.setAttribute(DATA_ATTR.openTop, 'true');
+      this.setOpenTop(true);
       // Apply open-top positioning (moved from popover.css)
       this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, 'calc(-1 * (0.5rem + var(--popover-height)))');
     }
 
     if (!this.trigger && !this.shouldOpenRight) {
-      this.nodes.popover.setAttribute(DATA_ATTR.openLeft, 'true');
+      this.setOpenLeft(true);
       // Apply open-left positioning (moved from popover.css)
       this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * var(--width) + 100%)');
     }
@@ -563,17 +563,4 @@ export class PopoverDesktop extends PopoverAbstract {
       this.flipper.activate(flippableElements as HTMLElement[]);
     }
   };
-
-  /**
-   * Toggles nothing found message visibility
-   * @param isDisplayed - true if the message should be displayed
-   */
-  private toggleNothingFoundMessage(isDisplayed: boolean): void {
-    this.nodes.nothingFoundMessage.classList.toggle('!block', isDisplayed);
-    if (isDisplayed) {
-      this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
-    } else {
-      this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
-    }
-  }
 }

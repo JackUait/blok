@@ -6,25 +6,28 @@ Automatically migrate your codebase from EditorJS to Blok.
 
 ### Using npx (recommended)
 
+The codemod is bundled with the `@jackuait/blok` package.
+
 ```bash
 # Dry run (preview changes without modifying files)
-npx @jackuait/blok-codemod ./src --dry-run
+npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run
 
 # Apply changes
-npx @jackuait/blok-codemod ./src
+npx -p @jackuait/blok migrate-from-editorjs ./src
 
 # Process entire project
-npx @jackuait/blok-codemod .
+npx -p @jackuait/blok migrate-from-editorjs .
 
 # Verbose output
-npx @jackuait/blok-codemod ./src --verbose
+npx -p @jackuait/blok migrate-from-editorjs ./src --verbose
 ```
 
-### Global Installation
+### If you have @jackuait/blok installed locally
+
+If you've already installed `@jackuait/blok` in your project, you can run the codemod directly:
 
 ```bash
-npm install -g @jackuait/blok-codemod
-blok-codemod ./src
+npx migrate-from-editorjs ./src --dry-run
 ```
 
 ## What It Does
@@ -152,11 +155,12 @@ tools: {
 ## Programmatic Usage
 
 ```javascript
+// If you've cloned the blok repository
 const {
   transformFile,
   updatePackageJson,
   applyTransforms,
-} = require('@jackuait/blok-codemod');
+} = require('./codemod/migrate-editorjs-to-blok');
 
 // Transform a single file
 const result = transformFile('/path/to/file.ts', false);

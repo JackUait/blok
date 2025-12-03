@@ -4,6 +4,8 @@
 
 const {
   applyTransforms,
+  ensureBlokImport,
+  BUNDLED_TOOLS,
   IMPORT_TRANSFORMS,
   TYPE_TRANSFORMS,
   CLASS_NAME_TRANSFORMS,
@@ -113,19 +115,25 @@ console.log('\n🎨 CSS Class Transformations\n');
 test('transforms .codex-editor class', () => {
   const input = `.codex-editor { color: red; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `.blok-editor { color: red; }`);
+  assertEqual(result, `[data-blok-editor] { color: red; }`);
 });
 
 test('transforms .codex-editor--narrow modifier', () => {
   const input = `.codex-editor--narrow { width: 100%; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `.blok-editor--narrow { width: 100%; }`);
+  assertEqual(result, `[data-blok-narrow="true"] { width: 100%; }`);
+});
+
+test('transforms .codex-editor__redactor class', () => {
+  const input = `.codex-editor__redactor { padding: 20px; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-redactor] { padding: 20px; }`);
 });
 
 test('transforms .ce-block class', () => {
   const input = `.ce-block { margin: 10px; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `[data-blok-testid="block-wrapper"] { margin: 10px; }`);
+  assertEqual(result, `[data-blok-element] { margin: 10px; }`);
 });
 
 test('transforms .ce-block--selected class', () => {
@@ -137,13 +145,73 @@ test('transforms .ce-block--selected class', () => {
 test('transforms .ce-toolbar class', () => {
   const input = `document.querySelector('.ce-toolbar')`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `document.querySelector('[data-blok-testid="toolbar"]')`);
+  assertEqual(result, `document.querySelector('[data-blok-toolbar]')`);
 });
 
 test('transforms .ce-inline-toolbar class', () => {
   const input = `.ce-inline-toolbar { display: flex; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
   assertEqual(result, `[data-blok-testid="inline-toolbar"] { display: flex; }`);
+});
+
+test('transforms .ce-paragraph class', () => {
+  const input = `.ce-paragraph { line-height: 1.6; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-tool="paragraph"] { line-height: 1.6; }`);
+});
+
+test('transforms .ce-header class', () => {
+  const input = `.ce-header { font-weight: bold; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-tool="header"] { font-weight: bold; }`);
+});
+
+test('transforms .ce-inline-tool--link class', () => {
+  const input = `.ce-inline-tool--link { color: blue; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-testid="inline-tool-link"] { color: blue; }`);
+});
+
+test('transforms .ce-inline-tool--bold class', () => {
+  const input = `.ce-inline-tool--bold { font-weight: bold; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-testid="inline-tool-bold"] { font-weight: bold; }`);
+});
+
+test('transforms .ce-inline-tool--italic class', () => {
+  const input = `.ce-inline-tool--italic { font-style: italic; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-testid="inline-tool-italic"] { font-style: italic; }`);
+});
+
+test('transforms .ce-popover class', () => {
+  const input = `.ce-popover { position: absolute; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-popover] { position: absolute; }`);
+});
+
+test('transforms .ce-popover--opened class', () => {
+  const input = `.ce-popover--opened { display: block; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-popover][data-blok-opened="true"] { display: block; }`);
+});
+
+test('transforms .ce-popover__container class', () => {
+  const input = `.ce-popover__container { overflow: hidden; }`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `[data-blok-popover-container] { overflow: hidden; }`);
+});
+
+test('transforms class names without dot prefix (string literals)', () => {
+  const input = `element.classList.add('ce-block');`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `element.classList.add('data-blok-element');`);
+});
+
+test('transforms codex-editor in string literals', () => {
+  const input = `const wrapper = document.querySelector("codex-editor");`;
+  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
+  assertEqual(result, `const wrapper = document.querySelector("data-blok-editor");`);
 });
 
 // ============================================================================
@@ -289,6 +357,152 @@ test('does not transform unrelated EditorJS-like strings', () => {
   const { result } = applyTransforms(input, CLASS_NAME_TRANSFORMS);
   // Should not transform variable names containing EditorJS
   assertEqual(result, input);
+});
+
+// ============================================================================
+// Ensure Blok Import Tests
+// ============================================================================
+
+console.log('\n📥 Ensure Blok Import\n');
+
+test('adds Blok import when using Blok.Header with no existing import', () => {
+  const input = `const editor = new Blok({
+  tools: { header: Blok.Header }
+});`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes("import Blok from '@jackuait/blok';"), true, 'Should add Blok import');
+});
+
+test('adds Blok import after existing imports', () => {
+  const input = `import React from 'react';
+import { useState } from 'react';
+
+const editor = new Blok({
+  tools: { header: Blok.Header }
+});`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, true, 'Should indicate change');
+  // Check that Blok import is added after existing imports
+  const blokImportIndex = result.indexOf("import Blok from '@jackuait/blok';");
+  const lastReactImportIndex = result.indexOf("import { useState } from 'react';");
+  assertEqual(blokImportIndex > lastReactImportIndex, true, 'Blok import should be after existing imports');
+});
+
+test('adds Blok to named-only import from @jackuait/blok', () => {
+  const input = `import { BlokConfig } from '@jackuait/blok';
+
+const config: BlokConfig = {
+  tools: { header: Blok.Header }
+};`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes("import Blok, { BlokConfig } from '@jackuait/blok';"), true, 'Should add Blok default import');
+});
+
+test('adds Blok to named imports when default import has different name', () => {
+  const input = `import Editor, { BlokConfig } from '@jackuait/blok';
+
+const config: BlokConfig = {
+  tools: { header: Blok.Header }
+};`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes("import Editor, { Blok, BlokConfig } from '@jackuait/blok';"), true, 'Should add Blok to named imports');
+});
+
+test('adds Blok as named import when default import has different name (no existing named imports)', () => {
+  const input = `import Editor from '@jackuait/blok';
+
+const editor = new Editor({
+  tools: { header: Blok.Header }
+});`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes("import Editor, { Blok } from '@jackuait/blok';"), true, 'Should add Blok as named import');
+});
+
+test('does not modify when Blok is already default imported', () => {
+  const input = `import Blok from '@jackuait/blok';
+
+const editor = new Blok({
+  tools: { header: Blok.Header }
+});`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, false, 'Should not indicate change');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('does not modify when Blok is already default imported with named imports', () => {
+  const input = `import Blok, { BlokConfig } from '@jackuait/blok';
+
+const editor = new Blok({
+  tools: { header: Blok.Header }
+});`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, false, 'Should not indicate change');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('does not modify when no Blok tools are used', () => {
+  const input = `import { BlokConfig } from '@jackuait/blok';
+
+const config: BlokConfig = {};`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, false, 'Should not indicate change when no Blok.* tools used');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('detects Blok.Paragraph usage', () => {
+  const input = `const editor = new Blok({
+  tools: { paragraph: Blok.Paragraph }
+});`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, true, 'Should detect Blok.Paragraph');
+  assertEqual(result.includes("import Blok from '@jackuait/blok';"), true, 'Should add Blok import');
+});
+
+test('handles multiple Blok tools usage', () => {
+  const input = `const editor = new Blok({
+  tools: {
+    header: Blok.Header,
+    paragraph: Blok.Paragraph
+  }
+});`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, true, 'Should detect multiple Blok tools');
+  assertEqual(result.includes("import Blok from '@jackuait/blok';"), true, 'Should add Blok import');
+});
+
+test('full migration adds Blok import for bundled tools', () => {
+  // This simulates a complete migration from EditorJS with bundled tools
+  const input = `import EditorJS from '@editorjs/editorjs';
+import Header from '@editorjs/header';
+import Paragraph from '@editorjs/paragraph';
+
+const editor = new EditorJS({
+  holder: 'editorjs',
+  tools: {
+    header: {
+      class: Header,
+    },
+    paragraph: {
+      class: Paragraph,
+    },
+  },
+});`;
+
+  let result = input;
+  result = applyTransforms(result, IMPORT_TRANSFORMS).result;
+  result = applyTransforms(result, CLASS_NAME_TRANSFORMS).result;
+  result = applyTransforms(result, HOLDER_TRANSFORMS).result;
+  result = applyTransforms(result, TOOL_CONFIG_TRANSFORMS).result;
+  result = ensureBlokImport(result).result;
+
+  // After transformation, should have Blok import (since original EditorJS import becomes @jackuait/blok)
+  assertEqual(result.includes("from '@jackuait/blok'"), true, 'Should have @jackuait/blok import');
+  assertEqual(result.includes('class: Blok.Header'), true, 'Should use Blok.Header');
+  assertEqual(result.includes('class: Blok.Paragraph'), true, 'Should use Blok.Paragraph');
 });
 
 // ============================================================================

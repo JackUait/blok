@@ -37,14 +37,19 @@ jobs:
       version: ${{ steps.release.outputs.version }}
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update release-please config for prerelease
+        if: ${{ inputs.release-type == 'prerelease' }}
+        run: |
+          jq '.packages["."].prerelease = true | .packages["."]["prerelease-type"] = "${{ inputs.prerelease-type }}"' release-please-config.json > tmp.json && mv tmp.json release-please-config.json
+
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          release-type: node
-          prerelease: ${{ inputs.release-type == 'prerelease' }}
-          prerelease-type: ${{ inputs.prerelease-type }}
 
   publish:
     name: Publish to NPM
@@ -67,14 +72,14 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install
 
       - name: Build
         run: yarn build
 
       - name: Publish to NPM
         if: ${{ !inputs.dry-run }}
-        run: npm publish --access public --provenance ${{ inputs.release-type == 'prerelease' && '--tag next' || '' }}
+        run: npm publish --access public --provenance ${{ inputs.release-type == 'prerelease' && format('--tag {0}', inputs.prerelease-type) || '' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

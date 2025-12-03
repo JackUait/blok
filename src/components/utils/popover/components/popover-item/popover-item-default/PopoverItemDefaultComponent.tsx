@@ -262,13 +262,14 @@ export const PopoverItemDefaultComponent = forwardRef<
           {...(isWobbling && { [DATA_ATTR.wobble]: 'true' })}
           className={iconClasses}
           data-blok-testid="popover-item-icon"
+          // eslint-disable-next-line react/no-danger -- Icon is trusted HTML string from tool configuration
           dangerouslySetInnerHTML={{ __html: icon }}
         />
       )}
       {title !== undefined && (
         <div
           {...{ [DATA_ATTR.title]: '' }}
-          className={'mr-auto truncate text-sm font-medium leading-5'}
+          className="mr-auto truncate text-sm font-medium leading-5"
           data-blok-testid="popover-item-title"
         >
           {title}
@@ -277,7 +278,7 @@ export const PopoverItemDefaultComponent = forwardRef<
       {secondaryLabel && (
         <div
           {...{ [DATA_ATTR.secondaryTitle]: '' }}
-          className={'whitespace-nowrap pr-1.5 text-xs -tracking-widest text-text-secondary opacity-60'}
+          className="whitespace-nowrap pr-1.5 text-xs -tracking-widest text-text-secondary opacity-60"
           data-blok-testid="popover-item-secondary-title"
         >
           {secondaryLabel}
@@ -288,6 +289,7 @@ export const PopoverItemDefaultComponent = forwardRef<
           {...{ [DATA_ATTR.icon]: '', [DATA_ATTR.iconChevronRight]: '' }}
           className={chevronClasses}
           data-blok-testid="popover-item-chevron-right"
+          // eslint-disable-next-line react/no-danger -- IconChevronRight is trusted internal icon
           dangerouslySetInnerHTML={{ __html: IconChevronRight }}
         />
       )}

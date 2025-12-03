@@ -96,24 +96,102 @@ Blok uses `data-blok-*` attributes instead of EditorJS's mixed naming convention
 
 ## CSS Classes
 
+Blok replaces BEM class names with data attributes for selection.
+
 ### Editor Wrapper
 
 | EditorJS | Blok |
 |----------|------|
-| `.codex-editor` | `.blok-editor` |
-| `.codex-editor--narrow` | `.blok-editor--narrow` |
-| `.codex-editor--rtl` | `.blok-editor--rtl` |
+| `.codex-editor` | `[data-blok-editor]` |
+| `.codex-editor__redactor` | `[data-blok-redactor]` |
+| `.codex-editor--narrow` | `[data-blok-narrow="true"]` |
+| `.codex-editor--rtl` | `[data-blok-rtl="true"]` |
 
 ### Block Elements
 
-Blok replaces BEM class names with data attributes for selection:
+| EditorJS | Blok |
+|----------|------|
+| `.ce-block` | `[data-blok-element]` |
+| `.ce-block--selected` | `[data-blok-selected="true"]` |
+| `.ce-block--stretched` | `[data-blok-stretched="true"]` |
+| `.ce-block--focused` | `[data-blok-focused="true"]` |
+| `.ce-block__content` | `[data-blok-element-content]` |
+
+### Toolbar
 
 | EditorJS | Blok |
 |----------|------|
-| `.ce-block` | `[data-blok-testid="block-wrapper"]` |
-| `.ce-block--selected` | `[data-blok-selected="true"]` |
-| `.ce-block--stretched` | `[data-blok-stretched="true"]` |
-| `.ce-block__content` | `[data-blok-testid="block-content"]` |
+| `.ce-toolbar` | `[data-blok-toolbar]` |
+| `.ce-toolbar__plus` | `[data-blok-testid="plus-button"]` |
+| `.ce-toolbar__settings-btn` | `[data-blok-settings-toggler]` |
+| `.ce-toolbar__actions` | `[data-blok-testid="toolbar-actions"]` |
+| `.ce-toolbox` | `[data-blok-toolbox]` |
+| `.ce-toolbox--opened` | `[data-blok-toolbox][data-blok-opened="true"]` |
+
+### Inline Toolbar
+
+| EditorJS | Blok |
+|----------|------|
+| `.ce-inline-toolbar` | `[data-blok-testid="inline-toolbar"]` |
+| `.ce-inline-tool` | `[data-blok-testid="inline-tool"]` |
+| `.ce-inline-tool--link` | `[data-blok-testid="inline-tool-link"]` |
+| `.ce-inline-tool--bold` | `[data-blok-testid="inline-tool-bold"]` |
+| `.ce-inline-tool--italic` | `[data-blok-testid="inline-tool-italic"]` |
+
+### Popover
+
+| EditorJS | Blok |
+|----------|------|
+| `.ce-popover` | `[data-blok-popover]` |
+| `.ce-popover--opened` | `[data-blok-popover][data-blok-opened="true"]` |
+| `.ce-popover__container` | `[data-blok-popover-container]` |
+| `.ce-popover-item` | `[data-blok-testid="popover-item"]` |
+| `.ce-popover-item--focused` | `[data-blok-focused="true"]` |
+| `.ce-popover-item--confirmation` | `[data-blok-confirmation="true"]` |
+| `.ce-popover-item__icon` | `[data-blok-testid="popover-item-icon"]` |
+| `.ce-popover-item__icon--tool` | `[data-blok-testid="popover-item-icon-tool"]` |
+
+### Tool-Specific Classes
+
+| EditorJS | Blok |
+|----------|------|
+| `.ce-paragraph` | `[data-blok-tool="paragraph"]` |
+| `.ce-header` | `[data-blok-tool="header"]` |
+
+### Conversion Toolbar & Settings
+
+| EditorJS | Blok |
+|----------|------|
+| `.ce-conversion-toolbar` | `[data-blok-testid="conversion-toolbar"]` |
+| `.ce-conversion-tool` | `[data-blok-testid="conversion-tool"]` |
+| `.ce-settings` | `[data-blok-testid="block-settings"]` |
+| `.ce-tune` | `[data-blok-testid="block-tune"]` |
+
+### Other Elements
+
+| EditorJS | Blok |
+|----------|------|
+| `.ce-stub` | `[data-blok-stub]` |
+| `.ce-drag-handle` | `[data-blok-drag-handle]` |
+| `.ce-ragged-right` | `[data-blok-ragged-right="true"]` |
+
+### CDX List Classes
+
+| EditorJS | Blok |
+|----------|------|
+| `.cdx-list` | `[data-blok-list]` |
+| `.cdx-list__item` | `[data-blok-list-item]` |
+| `.cdx-list--ordered` | `[data-blok-list="ordered"]` |
+| `.cdx-list--unordered` | `[data-blok-list="unordered"]` |
+
+### CDX Utility Classes
+
+| EditorJS | Blok |
+|----------|------|
+| `.cdx-button` | `[data-blok-button]` |
+| `.cdx-input` | `[data-blok-input]` |
+| `.cdx-loader` | `[data-blok-loader]` |
+| `.cdx-search-field` | `[data-blok-search-field]` |
 
 ---
 
@@ -252,14 +330,15 @@ Update your test selectors to use Blok's `data-blok-testid` attributes:
 | EditorJS | Blok |
 |----------|------|
 | `[data-cy=editorjs]` | `[data-blok-testid="blok-editor"]` |
-| `.ce-block` | `[data-blok-testid="block-wrapper"]` |
-| `.ce-block__content` | `[data-blok-testid="block-content"]` |
-| `.ce-toolbar` | `[data-blok-testid="toolbar"]` |
+| `.ce-block` | `[data-blok-element]` |
+| `.ce-block__content` | `[data-blok-element-content]` |
+| `.ce-toolbar` | `[data-blok-toolbar]` |
 | `.ce-toolbar__plus` | `[data-blok-testid="plus-button"]` |
-| `.ce-toolbar__settings-btn` | `[data-blok-testid="settings-toggler"]` |
+| `.ce-toolbar__settings-btn` | `[data-blok-settings-toggler]` |
 | `.ce-toolbar__actions` | `[data-blok-testid="toolbar-actions"]` |
+| `.ce-toolbox` | `[data-blok-toolbox]` |
 | `.ce-inline-toolbar` | `[data-blok-testid="inline-toolbar"]` |
-| `.ce-popover` | `[data-blok-testid="popover-container"]` |
+| `.ce-popover` | `[data-blok-popover]` |
 | `.ce-popover-item` | `[data-blok-testid="popover-item"]` |
 | `[data-item-name="..."]` | `[data-blok-item-name="..."]` |
 
@@ -272,8 +351,8 @@ Update your test selectors to use Blok's `data-blok-testid` attributes:
 - await page.locator('[data-item-name="delete"]').click();
 
 // Blok
-+ await page.locator('[data-blok-testid="block-wrapper"]').click();
-+ await page.locator('[data-blok-testid="settings-toggler"]').click();
++ await page.locator('[data-blok-element]').click();
++ await page.locator('[data-blok-settings-toggler]').click();
 + await page.locator('[data-blok-item-name="delete"]').click();
 ```
 
@@ -322,5 +401,6 @@ Update your test selectors to use Blok's `data-blok-testid` attributes:
 - [ ] Update `EditorConfig` type to `BlokConfig`
 - [ ] Replace `data-id` with `data-blok-id` in queries
 - [ ] Replace `data-item-name` with `data-blok-item-name`
-- [ ] Replace `.ce-*` selectors with `[data-blok-testid="..."]`
+- [ ] Replace `.ce-*` selectors with `[data-blok-*]` attributes
+- [ ] Replace `.cdx-*` selectors with `[data-blok-*]` attributes
 - [ ] Update E2E test selectors

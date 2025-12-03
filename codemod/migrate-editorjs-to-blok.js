@@ -7,7 +7,7 @@
  * It transforms imports, class names, selectors, data attributes, and text references.
  *
  * Usage:
- *   npx migrate-from-editorjs [path] [options]
+ *   npx -p @jackuait/blok migrate-from-editorjs [path] [options]
  *
  * Options:
  *   --dry-run    Show changes without modifying files
@@ -15,9 +15,9 @@
  *   --help       Show help
  *
  * Examples:
- *   npx migrate-from-editorjs ./src
- *   npx migrate-from-editorjs ./src --dry-run
- *   npx migrate-from-editorjs .
+ *   npx -p @jackuait/blok migrate-from-editorjs ./src
+ *   npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run
+ *   npx -p @jackuait/blok migrate-from-editorjs .
  */
 
 const fs = require('fs');
@@ -164,6 +164,51 @@ const CSS_CLASS_TRANSFORMS = [
   // Additional state classes
   { pattern: /\.ce-ragged-right(?![\w-])/g, replacement: '[data-blok-ragged-right="true"]' },
   { pattern: /(['"`])ce-ragged-right(['"`])/g, replacement: '$1data-blok-ragged-right$2' },
+
+  // Popover item states and icons
+  { pattern: /\.ce-popover-item--confirmation(?![\w-])/g, replacement: '[data-blok-confirmation="true"]' },
+  { pattern: /\.ce-popover-item__icon(?![\w-])/g, replacement: '[data-blok-testid="popover-item-icon"]' },
+  { pattern: /\.ce-popover-item__icon--tool(?![\w-])/g, replacement: '[data-blok-testid="popover-item-icon-tool"]' },
+  { pattern: /(['"`])ce-popover-item--confirmation(['"`])/g, replacement: '$1data-blok-confirmation$2' },
+  { pattern: /(['"`])ce-popover-item__icon(['"`])/g, replacement: '$1data-blok-testid="popover-item-icon"$2' },
+  { pattern: /(['"`])ce-popover-item__icon--tool(['"`])/g, replacement: '$1data-blok-testid="popover-item-icon-tool"$2' },
+
+  // Toolbox classes (ce-toolbox)
+  { pattern: /\.ce-toolbox--opened(?![\w-])/g, replacement: '[data-blok-toolbox][data-blok-opened="true"]' },
+  { pattern: /\.ce-toolbox(?![\w-])/g, replacement: '[data-blok-toolbox]' },
+  { pattern: /(['"`])ce-toolbox--opened(['"`])/g, replacement: '$1data-blok-toolbox$2' },
+  { pattern: /(['"`])ce-toolbox(['"`])/g, replacement: '$1data-blok-toolbox$2' },
+
+  // CDX list classes (cdx-list)
+  { pattern: /\.cdx-list__item(?![\w-])/g, replacement: '[data-blok-list-item]' },
+  { pattern: /\.cdx-list--ordered(?![\w-])/g, replacement: '[data-blok-list="ordered"]' },
+  { pattern: /\.cdx-list--unordered(?![\w-])/g, replacement: '[data-blok-list="unordered"]' },
+  { pattern: /\.cdx-list(?![\w-])/g, replacement: '[data-blok-list]' },
+  { pattern: /(['"`])cdx-list__item(['"`])/g, replacement: '$1data-blok-list-item$2' },
+  { pattern: /(['"`])cdx-list--ordered(['"`])/g, replacement: '$1data-blok-list="ordered"$2' },
+  { pattern: /(['"`])cdx-list--unordered(['"`])/g, replacement: '$1data-blok-list="unordered"$2' },
+  { pattern: /(['"`])cdx-list(['"`])/g, replacement: '$1data-blok-list$2' },
+
+  // Without dot prefix
+  { pattern: /(['"`])tc-popover__item-icon(['"`])/g, replacement: '$1data-blok-testid="table-popover-item-icon"$2' },
+  { pattern: /(['"`])tc-popover(['"`])/g, replacement: '$1data-blok-testid="table-popover"$2' },
+  { pattern: /(['"`])tc-toolbox__toggler(['"`])/g, replacement: '$1data-blok-testid="table-toolbox-toggler"$2' },
+  { pattern: /(['"`])tc-toolbox(['"`])/g, replacement: '$1data-blok-testid="table-toolbox"$2' },
+  { pattern: /(['"`])tc-add-row(['"`])/g, replacement: '$1data-blok-testid="table-add-row"$2' },
+  { pattern: /(['"`])tc-add-column(['"`])/g, replacement: '$1data-blok-testid="table-add-column"$2' },
+  { pattern: /(['"`])tc-table(['"`])/g, replacement: '$1data-blok-testid="table"$2' },
+  { pattern: /(['"`])tc-row(['"`])/g, replacement: '$1data-blok-testid="table-row"$2' },
+  { pattern: /(['"`])tc-cell(['"`])/g, replacement: '$1data-blok-testid="table-cell"$2' },
+
+  // CDX generic utility classes
+  { pattern: /\.cdx-button(?![\w-])/g, replacement: '[data-blok-button]' },
+  { pattern: /\.cdx-input(?![\w-])/g, replacement: '[data-blok-input]' },
+  { pattern: /\.cdx-loader(?![\w-])/g, replacement: '[data-blok-loader]' },
+  { pattern: /\.cdx-search-field(?![\w-])/g, replacement: '[data-blok-search-field]' },
+  { pattern: /(['"`])cdx-button(['"`])/g, replacement: '$1data-blok-button$2' },
+  { pattern: /(['"`])cdx-input(['"`])/g, replacement: '$1data-blok-input$2' },
+  { pattern: /(['"`])cdx-loader(['"`])/g, replacement: '$1data-blok-loader$2' },
+  { pattern: /(['"`])cdx-search-field(['"`])/g, replacement: '$1data-blok-search-field$2' },
 ];
 
 // Data attribute transformations
@@ -529,7 +574,7 @@ function printHelp() {
 EditorJS to Blok Codemod
 
 Usage:
-  npx migrate-from-editorjs [path] [options]
+  npx -p @jackuait/blok migrate-from-editorjs [path] [options]
 
 Arguments:
   path          Directory or file to transform (default: current directory)
@@ -540,9 +585,9 @@ Options:
   --help        Show this help message
 
 Examples:
-  npx migrate-from-editorjs ./src
-  npx migrate-from-editorjs ./src --dry-run
-  npx migrate-from-editorjs . --verbose
+  npx -p @jackuait/blok migrate-from-editorjs ./src
+  npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run
+  npx -p @jackuait/blok migrate-from-editorjs . --verbose
 
 What this codemod does:
   • Transforms EditorJS imports to Blok imports
@@ -552,9 +597,14 @@ What this codemod does:
     - .codex-editor* → [data-blok-editor], [data-blok-redactor], etc.
     - .ce-block* → [data-blok-element], [data-blok-selected], etc.
     - .ce-toolbar* → [data-blok-toolbar], [data-blok-settings-toggler], etc.
+    - .ce-toolbox* → [data-blok-toolbox], etc.
     - .ce-inline-toolbar, .ce-inline-tool* → [data-blok-testid="inline-*"]
     - .ce-popover* → [data-blok-popover], [data-blok-popover-container], etc.
+    - .ce-popover-item* → [data-blok-testid="popover-item*"], [data-blok-confirmation], etc.
     - .ce-paragraph, .ce-header → [data-blok-tool="paragraph|header"]
+    - .cdx-list* → [data-blok-list], [data-blok-list-item], etc.
+    - .cdx-button, .cdx-input, .cdx-loader → [data-blok-button], etc.
+    - .tc-* (table tool) → [data-blok-testid="table-*"]
   • Updates data attributes (data-id → data-blok-id)
   • Changes default holder from 'editorjs' to 'blok'
   • Updates package.json dependencies

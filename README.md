@@ -44,10 +44,13 @@ Run the codemod to automatically update your codebase:
 
 ```bash
 # Preview changes (recommended first)
-npx @jackuait/blok-codemod ./src --dry-run
+npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run
 
 # Apply changes
-npx @jackuait/blok-codemod ./src
+npx -p @jackuait/blok migrate-from-editorjs ./src
+
+# Process the entire project
+npx -p @jackuait/blok migrate-from-editorjs .
 ```
 
 The codemod handles:

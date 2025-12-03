@@ -1,11 +1,10 @@
 {
-  "name": "@jackuait/blok-codemod",
+  "name": "@jackuait/migrate-from-editorjs",
   "version": "1.0.0",
   "description": "Codemod to migrate from EditorJS to Blok",
   "main": "migrate-editorjs-to-blok.js",
   "bin": {
-    "blok-codemod": "./migrate-editorjs-to-blok.js",
-    "migrate-editorjs-to-blok": "./migrate-editorjs-to-blok.js"
+    "migrate-from-editorjs": "./migrate-editorjs-to-blok.js"
   },
   "keywords": [
     "blok",

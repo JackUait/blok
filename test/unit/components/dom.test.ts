@@ -33,6 +33,70 @@ describe('Dom helper utilities', () => {
       expect((input as HTMLInputElement).value).toBe('Hello');
     });
 
+    it('handles Tailwind arbitrary value class names without throwing', () => {
+      /**
+       * Tailwind CSS arbitrary values like py-[theme(spacing.2)] contain parentheses
+       * which are invalid for classList.add(). The Dom.make() should handle these gracefully.
+       */
+      const tailwindClasses = [
+        'py-[theme(spacing.2)]',
+        'w-[calc(100%-2rem)]',
+        'bg-[#1da1f2]',
+        'text-[length:var(--font-size)]',
+        'valid-class',
+        'another-valid',
+      ];
+
+      expect(() => {
+        Dom.make('div', tailwindClasses);
+      }).not.toThrow();
+
+      const element = Dom.make('div', tailwindClasses);
+
+      /**
+       * Verify that all class names are present in the element's class attribute
+       */
+      tailwindClasses.forEach((className) => {
+        // eslint-disable-next-line internal-unit-test/no-class-selectors
+        expect(element.className.includes(className)).toBe(true);
+      });
+    });
+
+    it('handles class names with spaces in array items', () => {
+      const element = Dom.make('div', ['class1 class2', 'class3']);
+
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.classList.contains('class1')).toBe(true);
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.classList.contains('class2')).toBe(true);
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.classList.contains('class3')).toBe(true);
+    });
+
+    it('handles class names with spaces in string', () => {
+      const element = Dom.make('div', 'class1 class2 class3');
+
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.classList.contains('class1')).toBe(true);
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.classList.contains('class2')).toBe(true);
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.classList.contains('class3')).toBe(true);
+    });
+
+    it('handles mixed valid and invalid class names', () => {
+      const element = Dom.make('div', ['valid-class', 'py-[theme(spacing.2)]', 'another-valid', 'w-[calc(100%)]']);
+
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.classList.contains('valid-class')).toBe(true);
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.classList.contains('another-valid')).toBe(true);
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.className.includes('py-[theme(spacing.2)]')).toBe(true);
+      // eslint-disable-next-line internal-unit-test/no-class-selectors
+      expect(element.className.includes('w-[calc(100%)]')).toBe(true);
+    });
+
     it('creates text nodes via text()', () => {
       const node = Dom.text('Blok');
 

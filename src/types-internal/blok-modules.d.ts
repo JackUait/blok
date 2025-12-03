@@ -21,6 +21,9 @@ import BlockSettings from '../components/modules/toolbar/blockSettings';
 import Toolbar from '../components/modules/toolbar/index';
 import InlineToolbar from '../components/modules/toolbar/inline';
 
+/** ./react */
+import ReactAdapter from '../components/modules/reactAdapter';
+
 /** . */
 import BlockEvents from '../components/modules/blockEvents';
 import BlockManager from '../components/modules/blockManager';
@@ -61,6 +64,9 @@ export interface BlokModules {
   BlockSettings: BlockSettings,
   Toolbar: Toolbar,
   InlineToolbar: InlineToolbar,
+
+  // React Adapter
+  ReactAdapter: ReactAdapter,
 
   // Modules
   BlockEvents: BlockEvents,

@@ -276,6 +276,11 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       this.reactRoot = null;
     }
 
+    // Ensure any remaining content is cleared from the container
+    if (this.nodes.reactContainer) {
+      this.nodes.reactContainer.innerHTML = '';
+    }
+
     // Handle test mocks for PopoverInline
     const popoverMockInfo = (PopoverInline as unknown as { mock?: { results?: Array<{ value?: Popover | undefined }> } }).mock;
     const lastPopover = popoverMockInfo?.results?.at(-1)?.value;

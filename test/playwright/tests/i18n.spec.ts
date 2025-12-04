@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
-import { TOOLTIP_INTERFACE_SELECTOR, BLOK_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../src/components/constants';
+import { TOOLTIP_INTERFACE_SELECTOR, BLOK_INTERFACE_SELECTOR, INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
@@ -679,80 +679,6 @@ test.describe('blok i18n', () => {
   });
 
   test.describe('ui popover', () => {
-    test('should translate "Filter" search placeholder in toolbox', async ({ page }) => {
-      const uiDictionary = {
-        popover: {
-          Filter: 'Поиск',
-        },
-      };
-
-      await createBlokWithI18n(page, {
-        i18n: {
-          messages: {
-            ui: uiDictionary,
-          },
-        },
-      });
-
-      const block = page.locator(BLOCK_SELECTOR);
-
-      await expect(block).toHaveCount(1);
-      await block.click();
-      await page.locator(PLUS_BUTTON_SELECTOR).click();
-
-      const searchInput = page.locator(`${TOOLBOX_POPOVER_SELECTOR}`).getByRole('searchbox');
-
-      await expect(searchInput).toBeVisible();
-
-      const placeholder = await searchInput.getAttribute('placeholder');
-
-      expect(placeholder).toContain(uiDictionary.popover.Filter);
-    });
-
-    test('should translate "Nothing found" message in toolbox', async ({ page }) => {
-      const uiDictionary = {
-        popover: {
-
-          'Nothing found': 'Ничего не найдено',
-        },
-      };
-
-      await createBlokWithI18n(page, {
-        i18n: {
-          messages: {
-            ui: uiDictionary,
-          },
-        },
-      });
-
-      const block = page.locator(BLOCK_SELECTOR);
-
-      await expect(block).toHaveCount(1);
-      await block.click();
-      await page.locator(PLUS_BUTTON_SELECTOR).click();
-
-      const popoverContainer = page
-        .locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-testid="popover-container"]`)
-        .filter({ has: page.getByRole('searchbox') });
-
-      await expect(popoverContainer).toHaveCount(1);
-      await expect(popoverContainer).toBeVisible();
-
-      const searchInput = popoverContainer.getByRole('searchbox');
-
-      await expect(searchInput).toHaveCount(1);
-      await expect(searchInput).toBeVisible();
-      await searchInput.fill('nonexistenttool12345');
-
-      // Wait for "Nothing found" message to appear
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for search results
-      await page.waitForTimeout(300);
-
-      const nothingFoundMessage = popoverContainer.getByText(uiDictionary.popover['Nothing found']);
-
-      await expect(nothingFoundMessage).toBeVisible();
-    });
-
     test('should translate "Filter" and "Nothing found" in block settings popover', async ({ page }) => {
       const uiDictionary = {
         popover: {
@@ -868,151 +794,6 @@ test.describe('blok i18n', () => {
       await page.waitForTimeout(300);
 
       const nothingFoundMessage = popoverContainer.getByText(uiDictionary.popover['Nothing found']);
-
-      await expect(nothingFoundMessage).toBeVisible();
-    });
-
-    test('should translate "Filter" and "Nothing found" in inline toolbar popover', async ({ page }) => {
-      const uiDictionary = {
-        popover: {
-          Filter: 'Поиск',
-
-          'Nothing found': 'Ничего не найдено',
-        },
-      };
-
-      await page.evaluate(() => {
-        // @ts-expect-error - Define SimpleHeader in window for blok creation
-        window.SimpleHeader = class {
-          private data: { text: string };
-
-          /**
-           *
-           * @param root0 - root data
-           */
-          constructor({ data }: { data: { text: string } }) {
-            this.data = data;
-          }
-
-          /**
-           *
-           */
-          public render(): HTMLHeadingElement {
-            const element = document.createElement('h1');
-
-            element.contentEditable = 'true';
-            element.innerHTML = this.data.text;
-
-            return element;
-          }
-
-          /**
-           *
-           * @param element - heading element
-           */
-          public save(element: HTMLHeadingElement): { text: string; level: number } {
-            return {
-              text: element.innerHTML,
-              level: 1,
-            };
-          }
-
-          /**
-           *
-           */
-          public static get toolbox(): { title: string; icon: string } {
-            return {
-              title: 'Heading',
-              icon: '<svg width="17" height="15" viewBox="0 0 336 276" xmlns="http://www.w3.org/2000/svg"><path d="M291 150V79c0-19-15-34-34-34H79c-19 0-34 15-34 34v42l67-44 81 72 56-29 42 30zm0 52l-43-30-56 30-81-67-66 39v23c0 19 15 34 34 34h178c17 0 31-13 34-29zM79 0h178c44 0 79 35 79 79v118c0 44-35 79-79 79H79c-44 0-79-35-79-79V79C0 35 35 0 79 0z"/></svg>',
-            };
-          }
-
-          /**
-           *
-           */
-          public static get conversionConfig(): { export: string; import: string } {
-            return {
-              export: 'text',
-              import: 'text',
-            };
-          }
-        };
-      });
-
-      await resetBlok(page);
-      await page.evaluate(
-        async ({ holder, uiDict }) => {
-          // @ts-expect-error - Get SimpleHeader from window
-          const SimpleHeader = window.SimpleHeader;
-
-          const blok = new window.Blok({
-            holder: holder,
-            tools: {
-              header: SimpleHeader,
-            },
-            i18n: {
-              messages: {
-                ui: uiDict,
-              },
-            },
-            data: {
-              blocks: [
-                {
-                  type: 'paragraph',
-                  data: {
-                    text: 'Some text to select',
-                  },
-                },
-              ],
-            },
-          });
-
-          window.blokInstance = blok;
-          await blok.isReady;
-        },
-        { holder: HOLDER_ID,
-          uiDict: uiDictionary }
-      );
-
-      const paragraph = await getParagraphLocatorByBlockIndex(page);
-
-      await expect(paragraph).toHaveCount(1);
-
-      await selectText(paragraph, 'Some text');
-
-      // Wait for inline toolbar to appear
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for UI animation
-      await page.waitForTimeout(200);
-
-      const inlinePopover = await openInlineToolbarPopover(page);
-      const convertToButton = inlinePopover.locator('[data-blok-item-name="convert-to"]');
-
-      await expect(convertToButton).toBeVisible();
-      await convertToButton.click();
-
-      const nestedPopover = page.locator('[data-blok-nested="true"]');
-
-      await expect(nestedPopover).toHaveCount(1);
-
-      const nestedPopoverContainer = nestedPopover.locator('[data-blok-testid="popover-container"]');
-
-      await expect(nestedPopoverContainer).toHaveCount(1);
-      await expect(nestedPopoverContainer).toBeVisible();
-
-      const searchInput = nestedPopover.getByRole('searchbox', { name: uiDictionary.popover.Filter });
-
-      await expect(searchInput).toHaveCount(1);
-      await expect(searchInput).toBeVisible();
-
-      const placeholder = await searchInput.getAttribute('placeholder');
-
-      expect(placeholder).toContain(uiDictionary.popover.Filter);
-
-      await searchInput.fill('nonexistent12345');
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for search results
-      await page.waitForTimeout(300);
-
-      const nothingFoundMessage = nestedPopover.getByText(uiDictionary.popover['Nothing found']);
 
       await expect(nothingFoundMessage).toBeVisible();
     });
@@ -1258,18 +1039,16 @@ test.describe('blok i18n', () => {
 
       await selectText(paragraph, 'Some text');
 
-      // Wait for inline toolbar to appear
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for UI animation
-      await page.waitForTimeout(200);
+      // Open inline toolbar popover
+      const inlinePopover = await openInlineToolbarPopover(page);
 
-      // Trigger link tool (Ctrl+K or Cmd+K)
-      await page.keyboard.press(`${MODIFIER_KEY}+k`);
+      // Click on link button to open link input
+      const linkButton = inlinePopover.locator('[data-blok-item-name="link"]');
 
-      // Wait for link input to appear
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for UI animation
-      await page.waitForTimeout(200);
+      await expect(linkButton).toBeVisible();
+      await linkButton.click();
 
-      const linkInput = page.locator('[data-blok-link-tool-input-opened]');
+      const linkInput = page.locator('[data-blok-link-tool-input-opened="true"]');
 
       await expect(linkInput).toBeVisible();
 

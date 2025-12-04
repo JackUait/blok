@@ -403,37 +403,37 @@ export default class Header implements BlockTool {
         number: 1,
         tag: 'H1',
         svg: IconH1,
-        styles: 'text-[2.5em] font-bold',
+        styles: 'text-[2.5em] leading-tight font-bold',
       },
       {
         number: 2,
         tag: 'H2',
         svg: IconH2,
-        styles: 'text-[2em] font-semibold',
+        styles: 'text-[2em] leading-tight font-semibold',
       },
       {
         number: 3,
         tag: 'H3',
         svg: IconH3,
-        styles: 'text-[1.75em] font-semibold',
+        styles: 'text-[1.75em] leading-tight font-semibold',
       },
       {
         number: 4,
         tag: 'H4',
         svg: IconH4,
-        styles: 'text-[1.5em] font-semibold',
+        styles: 'text-[1.5em] leading-tight font-semibold',
       },
       {
         number: 5,
         tag: 'H5',
         svg: IconH5,
-        styles: 'text-[1.25em] font-semibold',
+        styles: 'text-[1.25em] leading-tight font-semibold',
       },
       {
         number: 6,
         tag: 'H6',
         svg: IconH6,
-        styles: 'text-base font-semibold',
+        styles: 'text-base leading-tight font-semibold',
       },
     ];
 

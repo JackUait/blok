@@ -16,6 +16,7 @@ const INLINE_HEIGHT_MOBILE = '46px';
 
 /**
  * Horizontal popover that is displayed inline with the content
+ * @internal
  */
 export class PopoverInline extends PopoverDesktop {
   /**
@@ -23,10 +24,9 @@ export class PopoverInline extends PopoverDesktop {
    */
   public override hide = (): void => {
     // Call parent hide logic manually (can't use super for arrow functions)
-    // This replicates PopoverDesktop.hide behavior
-    this.nodes.popover.removeAttribute(DATA_ATTR.opened);
-    this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
-    this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
+    // This replicates PopoverDesktop.hide behavior using React state management
+    this.setOpenTop(false);
+    this.setOpenLeft(false);
 
     this.itemsDefault.forEach(item => item.reset());
 
@@ -247,6 +247,13 @@ export class PopoverInline extends PopoverDesktop {
     const nestedPopoverEl = nestedPopover.getElement();
 
     nestedPopover.flipper?.setHandleContentEditableTargets(true);
+
+    // Clear initial focus - inline toolbar nested popovers should not auto-focus
+    // Focus will be set on first Tab press via handleFirstTab handler below
+    // Use requestAnimationFrame to run after the parent's focusInitialElement() which also uses rAF
+    requestAnimationFrame(() => {
+      nestedPopover.flipper?.focusItem(-1);
+    });
 
     // Apply nested inline styles to the nested popover container
     const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement | null;

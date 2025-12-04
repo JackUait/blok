@@ -20,7 +20,7 @@ const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const CONVERT_TO_OPTION_SELECTOR = '[data-blok-testid="popover-item"][data-blok-item-name="convert-to"]';
-const NESTED_POPOVER_SELECTOR = '[data-blok-testid="popover"][data-blok-nested="true"]';
+const NESTED_POPOVER_SELECTOR = '[data-blok-nested="true"] [data-blok-testid="popover-container"]';
 const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-search-input"]`;
 const DEFAULT_WAIT_TIMEOUT = 5_000;
@@ -413,7 +413,7 @@ test.describe('ui.block-tunes', () => {
       await convertToOption.click();
 
       await expect(
-        page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`)
+        page.locator(`[data-blok-nested="true"] [data-blok-item-name="header"]`)
       ).toBeVisible();
     });
 
@@ -490,13 +490,13 @@ test.describe('ui.block-tunes', () => {
 
       await expect(
         page
-          .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="testTool"]`)
+          .locator(`[data-blok-nested="true"] [data-blok-item-name="testTool"]`)
           .filter({ hasText: 'Title 1' })
       ).toHaveCount(0);
 
       await expect(
         page
-          .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="testTool"]`)
+          .locator(`[data-blok-nested="true"] [data-blok-item-name="testTool"]`)
           .filter({ hasText: 'Title 2' })
       ).toBeVisible();
     });
@@ -528,7 +528,7 @@ test.describe('ui.block-tunes', () => {
 
       await convertToOption.click();
       await page
-        .locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`)
+        .locator(`[data-blok-nested="true"] [data-blok-item-name="header"]`)
         .click();
 
       const headerBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`);
@@ -577,6 +577,299 @@ test.describe('ui.block-tunes', () => {
       const firstPopoverItem = popoverContainer.locator('[data-blok-testid="popover-item"]:not([data-blok-hidden="true"]):first-of-type');
 
       await expect(firstPopoverItem).toContainText('Tune');
+    });
+  });
+
+  test.describe('keyboard navigation', () => {
+    test('navigates through tune options with ArrowDown and ArrowUp', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaShortcut(page);
+
+      const popoverItems = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"]:not([data-blok-hidden="true"])`);
+      const itemsCount = await popoverItems.count();
+
+      expect(itemsCount).toBeGreaterThan(1);
+
+      // First item should be focused by default (after search input if present)
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+      const firstVisibleItem = popoverItems.first();
+
+      await expect(firstVisibleItem).toHaveAttribute('data-blok-focused', 'true');
+
+      // Navigate down
+      await page.keyboard.press('ArrowDown');
+
+      await expect(firstVisibleItem).not.toHaveAttribute('data-blok-focused', 'true');
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+      await expect(popoverItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
+
+      // Navigate back up
+      await page.keyboard.press('ArrowUp');
+
+      await expect(firstVisibleItem).toHaveAttribute('data-blok-focused', 'true');
+    });
+
+    test('activates focused tune option with Enter key', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaShortcut(page);
+
+      // Navigate to convert-to option
+      const convertToOption = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"][data-blok-item-name="convert-to"]`);
+
+      await expect(convertToOption).toBeVisible();
+
+      // Focus the convert-to option using keyboard
+      while (!await convertToOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await expect(convertToOption).toHaveAttribute('data-blok-focused', 'true');
+
+      // Press Enter to activate (opens nested popover)
+      await page.keyboard.press('Enter');
+
+      // Nested popover should appear
+      await expect(page.locator(NESTED_POPOVER_SELECTOR)).toBeVisible();
+    });
+
+    test('opens nested popover with ArrowRight on focused item with children', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaShortcut(page);
+
+      const convertToOption = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"][data-blok-item-name="convert-to"]`);
+
+      await expect(convertToOption).toBeVisible();
+
+      // Focus the convert-to option
+      while (!await convertToOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      // Press ArrowRight to open nested popover
+      await page.keyboard.press('ArrowRight');
+
+      await expect(page.locator(NESTED_POPOVER_SELECTOR)).toBeVisible();
+    });
+
+    test('closes nested popover with ArrowLeft and returns focus to parent', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaShortcut(page);
+
+      const convertToOption = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"][data-blok-item-name="convert-to"]`);
+
+      // Focus and open nested popover
+      while (!await convertToOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await page.keyboard.press('ArrowRight');
+
+      await expect(page.locator(NESTED_POPOVER_SELECTOR)).toBeVisible();
+
+      // Press ArrowLeft to close nested popover
+      await page.keyboard.press('ArrowLeft');
+
+      await expect(page.locator(NESTED_POPOVER_SELECTOR)).toHaveCount(0);
+
+      // Parent item should be focused again
+      await expect(convertToOption).toHaveAttribute('data-blok-focused', 'true');
+    });
+
+    test('navigates within nested popover using arrow keys', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaShortcut(page);
+
+      const convertToOption = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"][data-blok-item-name="convert-to"]`);
+
+      // Open nested popover
+      while (!await convertToOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await page.keyboard.press('ArrowRight');
+
+      const nestedPopover = page.locator(NESTED_POPOVER_SELECTOR);
+
+      await expect(nestedPopover).toBeVisible();
+
+      // Navigate within nested popover
+      const nestedItems = nestedPopover.locator('[data-blok-testid="popover-item"]');
+      const nestedItemsCount = await nestedItems.count();
+
+      expect(nestedItemsCount).toBeGreaterThan(0);
+
+      // First item in nested popover should be focused
+      // eslint-disable-next-line playwright/no-nth-methods -- need to check first item
+      await expect(nestedItems.first()).toHaveAttribute('data-blok-focused', 'true');
+
+      // Navigate down in nested popover - verify we can navigate if there are multiple items
+      // eslint-disable-next-line playwright/no-conditional-in-test -- checking navigation only when multiple items exist
+      if (nestedItemsCount > 1) {
+        await page.keyboard.press('ArrowDown');
+        // eslint-disable-next-line playwright/no-nth-methods, playwright/no-conditional-expect -- need to check second item, conditionally
+        await expect(nestedItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
+      }
+    });
+
+    test('closes block tunes popover with Escape key', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaShortcut(page);
+
+      const popoverContainer = page.locator(POPOVER_CONTAINER_SELECTOR);
+
+      await expect(popoverContainer).toBeVisible();
+
+      await page.keyboard.press('Escape');
+
+      await expect(popoverContainer).toHaveCount(0);
+    });
+
+    test('selects tool in nested popover with Enter and converts block', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaShortcut(page);
+
+      const convertToOption = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"][data-blok-item-name="convert-to"]`);
+
+      // Navigate to and open nested popover
+      while (!await convertToOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await page.keyboard.press('ArrowRight');
+
+      const nestedPopover = page.locator(NESTED_POPOVER_SELECTOR);
+
+      await expect(nestedPopover).toBeVisible();
+
+      // Navigate to header option and select it
+      const headerOption = nestedPopover.locator('[data-blok-item-name="header"]');
+
+      await expect(headerOption).toBeVisible();
+
+      while (!await headerOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await page.keyboard.press('Enter');
+
+      // Block should be converted to header
+      const headerBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`);
+
+      await expect(headerBlock).toHaveText('Some text');
     });
   });
 });

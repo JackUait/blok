@@ -1,18 +1,23 @@
+import React, { createRef } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
 import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './components/popover-item';
-import Dom from '../../dom';
 import type { SearchInput } from './components/search-input';
 import EventsDispatcher from '../events';
 import Listeners from '../listeners';
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { css, DATA_ATTR } from './popover.const';
 import type { PopoverItemParams } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
-import { twMerge } from '../tw';
+import {
+  PopoverAbstractComponent,
+  type PopoverAbstractComponentHandle
+} from './PopoverAbstractComponent';
 
 /**
- * Class responsible for rendering popover and handling its behaviour
+ * Class responsible for rendering popover and handling its behaviour.
+ * Uses React internally for rendering while maintaining the same public API.
  */
 export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes> extends EventsDispatcher<PopoverEventMap> {
   /**
@@ -26,7 +31,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   protected listeners: Listeners = new Listeners();
 
   /**
-   * Refs to created HTML elements
+   * Refs to created HTML elements.
+   * These are populated from React component refs after rendering.
    */
   protected nodes: Nodes;
 
@@ -51,6 +57,21 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   };
 
   /**
+   * React 18 root instance for persistent rendering
+   */
+  private reactRoot: Root | null = null;
+
+  /**
+   * Container element that hosts the React root
+   */
+  private reactContainer: HTMLElement | null = null;
+
+  /**
+   * Ref to the imperative handle exposed by the React component
+   */
+  private componentRef = createRef<PopoverAbstractComponentHandle>();
+
+  /**
    * Constructs the instance
    * @param params - popover construction params
    * @param itemsRenderParams - popover item render params.
@@ -71,60 +92,23 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       };
     }
 
-    /** Build html elements */
+    // Initialize nodes object
     this.nodes = {} as Nodes;
 
-    this.nodes.popoverContainer = Dom.make('div', [css.popoverContainer], {
-      [DATA_ATTR.popoverContainer]: '',
-      'data-blok-testid': 'popover-container',
-    });
+    // Create React container and render component
+    this.initializeReactRoot();
+    this.renderComponent();
 
-    this.nodes.nothingFoundMessage = Dom.make('div', [ 'hidden cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text p-[3px]' ], {
-      textContent: this.messages.nothingFound,
-      'data-blok-testid': 'popover-nothing-found',
-    });
+    // Populate nodes from React refs after initial render
+    this.syncNodesFromReact();
 
-    this.nodes.popoverContainer.appendChild(this.nodes.nothingFoundMessage);
-    this.nodes.items = Dom.make('div', [ css.items ], {
-      [DATA_ATTR.popoverItems]: '',
-      'data-blok-testid': 'popover-items',
-    });
+    // Append item elements to the items container
+    this.appendItemElements();
 
-    this.items.forEach(item => {
-      const itemEl = item.getElement();
-
-      if (itemEl === null) {
-        return;
-      }
-
-      this.nodes.items.appendChild(itemEl);
-    });
-
-    this.nodes.popoverContainer.appendChild(this.nodes.items);
-
-    this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.handleClick(event));
-
-    this.nodes.popover = Dom.make('div', [
-      this.params.class,
-    ], {
-      [DATA_ATTR.popover]: '',
-      'data-blok-testid': 'popover',
-    });
-
-    // Set CSS variables for popover layout (moved from popover.css)
-    this.nodes.popover.style.setProperty('--width', '200px');
-    this.nodes.popover.style.setProperty('--max-height', '270px');
-    this.nodes.popover.style.setProperty('--item-padding', '3px');
-    this.nodes.popover.style.setProperty('--item-height', 'calc(1.25rem + 2 * var(--item-padding))');
-    this.nodes.popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');
-    this.nodes.popover.style.setProperty('--popover-left', '0');
-    this.nodes.popover.style.setProperty('--nested-popover-overlap', '0.25rem');
-
-    if (this.params.class) {
-      this.nodes.popover.setAttribute('data-blok-popover-custom-class', this.params.class);
+    // Set up click listener on the container
+    if (this.nodes.popoverContainer) {
+      this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.handleClick(event));
     }
-
-    this.nodes.popover.appendChild(this.nodes.popoverContainer);
   }
 
   /**
@@ -138,17 +122,17 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Open popover
    */
   public show(): void {
-    if (!this.nodes.popover.isConnected && !this.nodes.popover.parentNode) {
+    /**
+     * Ensure popover is attached to DOM even if it's still inside the detached React container
+     * (happens in mobile mode where no trigger is passed).
+     */
+    if (!this.nodes.popover.isConnected) {
       document.body.appendChild(this.nodes.popover);
     }
 
-    this.nodes.popover.setAttribute(DATA_ATTR.opened, 'true');
-
-    // Apply opened state classes to container
-    this.nodes.popoverContainer.className = twMerge(
-      css.popoverContainer,
-      css.popoverContainerOpened
-    );
+    // Update React state
+    this.componentRef.current?.setOpened(true);
+    this.componentRef.current?.setContainerOpened(true);
 
     /**
      * Refresh active states for all items.
@@ -165,12 +149,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Closes popover
    */
   public hide(): void {
-    this.nodes.popover.removeAttribute(DATA_ATTR.opened);
-    this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
-    this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
-
-    // Reset container to base closed state
-    this.nodes.popoverContainer.className = css.popoverContainer;
+    // Update React state
+    this.componentRef.current?.setOpened(false);
+    this.componentRef.current?.setOpenTop(false);
+    this.componentRef.current?.setOpenLeft(false);
+    this.componentRef.current?.setContainerOpened(false);
 
     this.itemsDefault.forEach(item => item.reset());
 
@@ -186,9 +169,19 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public destroy(): void {
     this.items.forEach(item => item.destroy());
-    this.nodes.popover.remove();
+    this.nodes.popover?.remove();
     this.listeners.removeAll();
     this.search?.destroy();
+
+    // Cleanup React root
+    if (this.reactRoot) {
+      try {
+        this.reactRoot.unmount();
+      } catch {
+        // Ignore errors if DOM is already cleaned up
+      }
+      this.reactRoot = null;
+    }
   }
 
   /**
@@ -365,10 +358,104 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   protected abstract showNestedItems(item: PopoverItemDefault | PopoverItemHtml): void;
 
   /**
+   * Toggles nothing found message visibility
+   * @param isDisplayed - true if the message should be displayed
+   */
+  protected toggleNothingFoundMessage(isDisplayed: boolean): void {
+    this.componentRef.current?.setNothingFoundVisible(isDisplayed);
+  }
+
+  /**
+   * Sets the open-top state for the popover
+   * @param openTop - true if popover should open above trigger
+   */
+  protected setOpenTop(openTop: boolean): void {
+    this.componentRef.current?.setOpenTop(openTop);
+  }
+
+  /**
+   * Sets the open-left state for the popover
+   * @param openLeft - true if popover should open to the left
+   */
+  protected setOpenLeft(openLeft: boolean): void {
+    this.componentRef.current?.setOpenLeft(openLeft);
+  }
+
+  /**
    * Checks if popover contains the node
    * @param node - node to check
    */
   public hasNode(node: Node): boolean {
     return this.nodes.popover.contains(node);
+  }
+
+  /**
+   * Initializes the React root for rendering
+   */
+  private initializeReactRoot(): void {
+    // Create a container element for the React root
+    this.reactContainer = document.createElement('div');
+    this.reactContainer.style.display = 'contents';
+
+    this.reactRoot = createRoot(this.reactContainer);
+  }
+
+  /**
+   * Renders the React component with current state
+   */
+  private renderComponent(): void {
+    if (!this.reactRoot) {
+      return;
+    }
+
+    // Use flushSync to ensure synchronous rendering for immediate DOM access
+    flushSync(() => {
+      this.reactRoot?.render(
+        <PopoverAbstractComponent
+          ref={this.componentRef}
+          customClass={this.params.class}
+          messages={this.messages}
+        />
+      );
+    });
+  }
+
+  /**
+   * Syncs the nodes object with refs from the React component
+   */
+  private syncNodesFromReact(): void {
+    // Get the actual popover element from the React component
+    const popoverEl = this.componentRef.current?.getPopoverElement();
+    const containerEl = this.componentRef.current?.getContainerElement();
+    const itemsEl = this.componentRef.current?.getItemsElement();
+    const nothingFoundEl = this.componentRef.current?.getNothingFoundElement();
+
+    if (popoverEl) {
+      this.nodes.popover = popoverEl;
+    }
+    if (containerEl) {
+      this.nodes.popoverContainer = containerEl;
+    }
+    if (itemsEl) {
+      this.nodes.items = itemsEl;
+    }
+    if (nothingFoundEl) {
+      this.nodes.nothingFoundMessage = nothingFoundEl;
+    }
+  }
+
+  /**
+   * Appends item elements to the items container
+   */
+  private appendItemElements(): void {
+    this.items.forEach(item => {
+      const itemEl = item.getElement();
+
+      if (itemEl === null) {
+        return;
+      }
+
+      this.nodes.items?.appendChild(itemEl);
+    });
   }
 }

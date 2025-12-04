@@ -43,7 +43,7 @@ describe('SearchInput', () => {
     expect(input).not.toBeNull();
     expect(input.type).toBe('search');
     expect(input.tabIndex).toBe(-1);
-    expect(input.getAttribute('data-blok-flipper-tab-target')).toBe('true');
+    expect(input.getAttribute('data-blok-flipper-navigation-target')).toBe('true');
     expect(input.placeholder).toBe('Filter actions');
   });
 

@@ -85,6 +85,8 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       keyCodes.UP,
       keyCodes.DOWN,
       keyCodes.ENTER,
+      keyCodes.RIGHT,
+      keyCodes.LEFT,
     ],
   });
 
@@ -298,7 +300,6 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
         name: 'convert-to',
         title: I18n.ui(I18nInternalNS.ui.popover, 'Convert to'),
         children: {
-          searchable: true,
           items: convertToItems,
         },
       });

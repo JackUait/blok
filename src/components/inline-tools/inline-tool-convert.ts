@@ -109,7 +109,6 @@ export default class ConvertInlineTool implements InlineTool {
         title: I18nInternal.ui(I18nInternalNS.ui.inlineToolbar.converter, 'Convert to'),
       },
       children: {
-        searchable: isDesktop,
         items: convertToItems,
         onOpen: () => {
           if (isDesktop) {

@@ -4,6 +4,7 @@ import * as _ from './utils';
 /**
  * Flipper construction options
  * @interface FlipperOptions
+ * @internal
  */
 export interface FlipperOptions {
   /**
@@ -38,10 +39,17 @@ export interface FlipperOptions {
    * If not specified all keys are enabled
    */
   allowedKeys?: number[];
+
+  /**
+   * Callback fired when ArrowLeft is pressed.
+   * Used by nested popovers to close and return focus to parent.
+   */
+  onArrowLeft?: () => void;
 }
 
 /**
  * Flipper is a component that iterates passed items array by TAB or Arrows and clicks it by ENTER
+ * @internal
  */
 export default class Flipper {
   /**
@@ -87,6 +95,12 @@ export default class Flipper {
   private flipCallbacks: Array<() => void> = [];
 
   /**
+   * Callback fired when ArrowLeft is pressed.
+   * Used by nested popovers to close and return focus to parent.
+   */
+  private readonly onArrowLeftCallback?: () => void;
+
+  /**
    * @param options - different constructing settings
    */
   constructor(options: FlipperOptions) {
@@ -94,6 +108,7 @@ export default class Flipper {
     this.activateCallback = options.activateCallback;
     this.allowedKeys = options.allowedKeys || Flipper.usedKeys;
     this.handleContentEditableTargets = options.handleContentEditableTargets ?? false;
+    this.onArrowLeftCallback = options.onArrowLeft;
   }
 
   /**
@@ -213,6 +228,20 @@ export default class Flipper {
   }
 
   /**
+   * Checks if current focused item has children (nested menu)
+   * Looks for data-blok-has-children attribute on the current item
+   */
+  private currentItemHasChildren(): boolean {
+    const currentItem = this.iterator?.currentItem;
+
+    if (!currentItem) {
+      return false;
+    }
+
+    return currentItem.hasAttribute('data-blok-has-children');
+  }
+
+  /**
    * Registers a function that should be executed on each navigation action
    * @param cb - function to execute
    */
@@ -314,10 +343,21 @@ export default class Flipper {
         this.handleTabPress(event);
         break;
       case _.keyCodes.LEFT:
+        // ArrowLeft triggers callback only if callback is set (for nested popovers)
+        if (this.onArrowLeftCallback) {
+          this.onArrowLeftCallback();
+        }
+        break;
       case _.keyCodes.UP:
         this.flipLeft();
         break;
       case _.keyCodes.RIGHT:
+        // ArrowRight clicks the focused item to open nested popover, but only if item has children
+        // Otherwise, do nothing (don't activate items without nested menu)
+        if (this.iterator?.currentItem && this.currentItemHasChildren()) {
+          this.handleEnterPress(event);
+        }
+        break;
       case _.keyCodes.DOWN:
         this.flipRight();
         break;
@@ -425,7 +465,8 @@ export default class Flipper {
     }
 
     const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
-    const shouldHandleNativeInput = target.getAttribute('data-blok-flipper-tab-target') === 'true' && event.key === 'Tab';
+    const isNavigationKey = event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'Enter' || event.key === 'ArrowRight' || event.key === 'ArrowLeft';
+    const shouldHandleNativeInput = target.getAttribute('data-blok-flipper-navigation-target') === 'true' && isNavigationKey;
     const isContentEditable = target.isContentEditable;
     const isInlineToolInput = target.closest('[data-blok-link-tool-input-opened="true"]') !== null;
 

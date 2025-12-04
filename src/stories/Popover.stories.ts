@@ -367,7 +367,7 @@ export const ConfirmationState: Story = {
 };
 
 /**
- * Popover search/filter functionality.
+ * Popover search/filter functionality (in block settings).
  */
 export const SearchFiltering: Story = {
   args: {
@@ -404,19 +404,19 @@ export const SearchFiltering: Story = {
       );
     });
 
-    await step('Open toolbox', async () => {
-      const plusButton = canvasElement.querySelector(PLUS_BUTTON_TESTID);
+    await step('Open block settings', async () => {
+      const settingsButton = canvasElement.querySelector(SETTINGS_BUTTON_TESTID);
 
-      if (plusButton) {
-        simulateClick(plusButton);
+      if (settingsButton) {
+        simulateClick(settingsButton);
       }
 
       await waitFor(
         () => {
-          // Popover is appended to document.body, not inside the canvas
-          const popover = document.querySelector(POPOVER_OPENED_SELECTOR);
+          // Block tunes popover is appended to document.body
+          const blockTunesPopover = document.querySelector(BLOCK_TUNES_POPOVER_TESTID);
 
-          expect(popover).toBeInTheDocument();
+          expect(blockTunesPopover).toBeInTheDocument();
         },
         TIMEOUT_ACTION
       );
@@ -427,7 +427,7 @@ export const SearchFiltering: Story = {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Use helper to focus search input and type
-      focusSearchInput('para');
+      focusSearchInput('delete');
 
       await new Promise((resolve) => setTimeout(resolve, 300));
 
@@ -445,7 +445,7 @@ export const SearchFiltering: Story = {
 };
 
 /**
- * Popover nothing found message.
+ * Popover nothing found message (in block settings).
  */
 export const NothingFoundMessage: Story = {
   args: {
@@ -482,25 +482,25 @@ export const NothingFoundMessage: Story = {
       );
     });
 
-    await step('Open toolbox', async () => {
-      const plusButton = canvasElement.querySelector(PLUS_BUTTON_TESTID);
+    await step('Open block settings', async () => {
+      const settingsButton = canvasElement.querySelector(SETTINGS_BUTTON_TESTID);
 
-      if (plusButton) {
-        await userEvent.click(plusButton);
+      if (settingsButton) {
+        await userEvent.click(settingsButton);
       }
 
       await waitFor(
         () => {
-          // Popover is appended to document.body, not inside the canvas
-          const popover = document.querySelector(POPOVER_OPENED_SELECTOR);
+          // Block tunes popover is appended to document.body
+          const blockTunesPopover = document.querySelector(BLOCK_TUNES_POPOVER_TESTID);
 
-          expect(popover).toBeInTheDocument();
+          expect(blockTunesPopover).toBeInTheDocument();
         },
         TIMEOUT_ACTION
       );
     });
 
-    await step('Search for non-existent tool', async () => {
+    await step('Search for non-existent item', async () => {
       // Wait for popover to be fully rendered and search input to be available
       await new Promise((resolve) => setTimeout(resolve, 100));
 

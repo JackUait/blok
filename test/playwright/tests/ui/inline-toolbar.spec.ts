@@ -409,6 +409,359 @@ test.describe('inline toolbar', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
+  test.describe('keyboard navigation', () => {
+    test('navigates through inline toolbar items with Tab', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text to select',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'text to select');
+
+      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+      await expect(toolbar).toBeVisible();
+
+      // Get toolbar items
+      const toolbarItems = page.locator(`${INLINE_TOOL_SELECTOR}:not([data-blok-hidden="true"])`);
+      const itemsCount = await toolbarItems.count();
+
+      expect(itemsCount).toBeGreaterThan(1);
+
+      // First item should NOT be focused by default (inline toolbar doesn't auto-focus)
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+      await expect(toolbarItems.first()).not.toHaveAttribute('data-blok-focused', 'true');
+
+      // Press Tab to focus first item
+      await page.keyboard.press('Tab');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+      await expect(toolbarItems.first()).toHaveAttribute('data-blok-focused', 'true');
+
+      // Navigate with Tab to next item
+      await page.keyboard.press('Tab');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+      await expect(toolbarItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
+    });
+
+    test('navigates through inline toolbar items with ArrowDown and ArrowUp', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text to select',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'text to select');
+
+      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+      await expect(toolbar).toBeVisible();
+
+      const toolbarItems = page.locator(`${INLINE_TOOL_SELECTOR}:not([data-blok-hidden="true"])`);
+      const itemsCount = await toolbarItems.count();
+
+      expect(itemsCount).toBeGreaterThan(1);
+
+      // Press Tab to focus first item (inline toolbar doesn't auto-focus)
+      await page.keyboard.press('Tab');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+      await expect(toolbarItems.first()).toHaveAttribute('data-blok-focused', 'true');
+
+      // Navigate down
+      await page.keyboard.press('ArrowDown');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+      await expect(toolbarItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
+
+      // Navigate back up
+      await page.keyboard.press('ArrowUp');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+      await expect(toolbarItems.first()).toHaveAttribute('data-blok-focused', 'true');
+    });
+
+    test('activates focused inline tool with Enter key', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text to make bold',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'text to make');
+
+      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+      await expect(toolbar).toBeVisible();
+
+      // Navigate to bold button
+      const boldButton = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="bold"]`);
+
+      await expect(boldButton).toBeVisible();
+
+      // Navigate to bold using arrow keys
+      while (!await boldButton.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await expect(boldButton).toHaveAttribute('data-blok-focused', 'true');
+
+      // Activate bold with Enter
+      await page.keyboard.press('Enter');
+
+      // Bold should now be active
+      await expect(boldButton).toHaveAttribute('data-blok-popover-item-active', 'true');
+    });
+
+    test('opens convert-to nested popover with ArrowRight', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text to convert',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'Some text to convert');
+
+      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+      await expect(toolbar).toBeVisible();
+
+      // Focus convert-to option
+      const convertToOption = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="convert-to"]`);
+
+      await expect(convertToOption).toBeVisible();
+
+      while (!await convertToOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      // Press ArrowRight to open nested popover
+      await page.keyboard.press('ArrowRight');
+
+      // Nested popover should appear
+      const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
+
+      await expect(nestedPopover).toBeVisible();
+    });
+
+    test('closes nested popover with ArrowLeft and returns focus to convert-to', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text to convert',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'Some text to convert');
+
+      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+      await expect(toolbar).toBeVisible();
+
+      // Focus and open convert-to nested popover
+      const convertToOption = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="convert-to"]`);
+
+      while (!await convertToOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await page.keyboard.press('ArrowRight');
+
+      const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
+
+      await expect(nestedPopover).toBeVisible();
+
+      // Close with ArrowLeft
+      await page.keyboard.press('ArrowLeft');
+
+      await expect(nestedPopover).toHaveCount(0);
+
+      // Convert-to option should be focused again
+      await expect(convertToOption).toHaveAttribute('data-blok-focused', 'true');
+    });
+
+    test('converts block using keyboard navigation in nested popover', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text to convert',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'Some text to convert');
+
+      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+      await expect(toolbar).toBeVisible();
+
+      // Open convert-to nested popover
+      const convertToOption = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="convert-to"]`);
+
+      while (!await convertToOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await page.keyboard.press('ArrowRight');
+
+      const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
+
+      await expect(nestedPopover).toBeVisible();
+
+      // Navigate to header in nested popover
+      const headerOption = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-item-name="header"]`);
+
+      await expect(headerOption).toBeVisible();
+
+      while (!await headerOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      // Select header with Enter
+      await page.keyboard.press('Enter');
+
+      // Block should be converted
+      const headerBlock = page.locator(HEADER_SELECTOR);
+
+      await expect(headerBlock).toHaveText('Some text to convert');
+    });
+
+    test('closes inline toolbar with Escape key', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text to select',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'text to select');
+
+      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+      await expect(toolbar).toBeVisible();
+
+      await page.keyboard.press('Escape');
+
+      await expect(toolbar).toHaveCount(0);
+    });
+
+    test('does not navigate when Shift+Arrow is pressed (allows text selection)', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text to select and modify',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'text to select');
+
+      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+      await expect(toolbar).toBeVisible();
+
+      const toolbarItems = page.locator(`${INLINE_TOOL_SELECTOR}:not([data-blok-hidden="true"])`);
+
+      // Press Tab to focus first item
+      await page.keyboard.press('Tab');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+      await expect(toolbarItems.first()).toHaveAttribute('data-blok-focused', 'true');
+
+      // Press Shift+ArrowDown - should not navigate (used for extending selection)
+      await page.keyboard.press('Shift+ArrowDown');
+
+      // Focus should remain on first item (not navigate)
+      // Note: This test verifies that Shift+Arrow doesn't trigger flipper navigation
+      const focusedItems = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-focused="true"]`);
+
+      await expect(focusedItems).toHaveCount(1);
+    });
+  });
+
   test('should align with the left coordinate of the selection range', async ({ page }) => {
     await createBlok(page, {
       data: {

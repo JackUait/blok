@@ -8,6 +8,7 @@ import EventsDispatcher from '../../../events';
 
 /**
  * Provides search input element and search logic
+ * @internal
  */
 export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
   /**
@@ -67,7 +68,7 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
        */
       tabIndex: -1,
     }) as HTMLInputElement;
-    this.input.setAttribute('data-blok-flipper-tab-target', 'true');
+    this.input.setAttribute('data-blok-flipper-navigation-target', 'true');
     this.input.setAttribute('data-blok-testid', 'popover-search-input');
 
     this.wrapper.appendChild(iconWrapper);

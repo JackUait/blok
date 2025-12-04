@@ -70,6 +70,7 @@ export const DATA_ATTR = {
   focused: 'data-blok-focused',
   wobble: 'data-blok-popover-item-wobble',
   disabled: 'data-blok-disabled',
+  hasChildren: 'data-blok-has-children',
 } as const;
 
 /**

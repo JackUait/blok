@@ -14,6 +14,7 @@ import { PopoverItemHtml } from './components/popover-item/popover-item-html/pop
 /**
  * Desktop popover.
  * On desktop devices popover behaves like a floating element. Nested popover appears at right or left side.
+ * @internal
  * @todo support rtl for nested popovers and search
  */
 export class PopoverDesktop extends PopoverAbstract {
@@ -64,7 +65,7 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Construct the instance
    * @param params - popover params
-   * @param itemsRenderParams – popover item render params.
+   * @param itemsRenderParams – popover item render params.
    * The parameters that are not set by user via popover api but rather depend on technical implementation
    */
   constructor(params: PopoverParams, itemsRenderParams?: PopoverItemRenderParamsMap) {
@@ -111,7 +112,10 @@ export class PopoverDesktop extends PopoverAbstract {
           keyCodes.UP,
           keyCodes.DOWN,
           keyCodes.ENTER,
+          keyCodes.RIGHT,
+          keyCodes.LEFT,
         ],
+        onArrowLeft: params.onNavigateBack,
       });
     }
 
@@ -169,19 +173,38 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nodes.popover.style.setProperty(CSSVariables.PopoverHeight, this.size.height + 'px');
 
     if (!this.trigger && !this.shouldOpenBottom) {
-      this.nodes.popover.setAttribute(DATA_ATTR.openTop, 'true');
+      this.setOpenTop(true);
       // Apply open-top positioning (moved from popover.css)
       this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, 'calc(-1 * (0.5rem + var(--popover-height)))');
     }
 
     if (!this.trigger && !this.shouldOpenRight) {
-      this.nodes.popover.setAttribute(DATA_ATTR.openLeft, 'true');
+      this.setOpenLeft(true);
       // Apply open-left positioning (moved from popover.css)
       this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * var(--width) + 100%)');
     }
 
     super.show();
     this.flipper?.activate(this.flippableElements);
+
+    // Focus the first item: search field if present, otherwise first menu item
+    requestAnimationFrame(() => {
+      this.focusInitialElement();
+    });
+  }
+
+  /**
+   * Focuses the initial element when popover is shown.
+   * Focuses search field if present, otherwise first menu item.
+   */
+  private focusInitialElement(): void {
+    if (this.search) {
+      this.search.focus();
+
+      return;
+    }
+
+    this.flipper?.focusFirst();
   }
 
   /**
@@ -316,6 +339,8 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
+    const triggerItemElement = this.nestedPopoverTriggerItem?.getElement();
+
     this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.hide);
     this.nestedPopover.hide();
     this.nestedPopover.destroy();
@@ -324,10 +349,33 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper?.activate(this.flippableElements);
     // Use requestAnimationFrame to ensure DOM is updated before focusing
     requestAnimationFrame(() => {
-      this.flipper?.focusFirst();
+      this.focusAfterNestedPopoverClose(triggerItemElement);
     });
 
     this.nestedPopoverTriggerItem?.onChildrenClose();
+  }
+
+  /**
+   * Focuses the appropriate item after nested popover closes.
+   * Focuses the item that opened the nested popover, or falls back to first item.
+   * @param triggerItemElement - element that triggered the nested popover
+   */
+  private focusAfterNestedPopoverClose(triggerItemElement: HTMLElement | null | undefined): void {
+    if (!triggerItemElement || !this.flipper) {
+      this.flipper?.focusFirst();
+
+      return;
+    }
+
+    const triggerIndex = this.flippableElements.indexOf(triggerItemElement);
+
+    if (triggerIndex !== -1) {
+      this.flipper.focusItem(triggerIndex);
+
+      return;
+    }
+
+    this.flipper.focusFirst();
   }
 
   /**
@@ -342,6 +390,7 @@ export class PopoverDesktop extends PopoverAbstract {
       nestingLevel: this.nestingLevel + 1,
       flippable: item.isChildrenFlippable,
       messages: this.messages,
+      onNavigateBack: this.destroyNestedPopoverIfExists.bind(this),
     });
 
     item.onChildrenOpen();
@@ -489,20 +538,29 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   protected get flippableElements(): HTMLElement[] {
     const result = this.items.flatMap(item => {
-      if (!(item instanceof PopoverItemDefault)) {
-        return item instanceof PopoverItemHtml ? item.getControls() : [];
-      }
-
-      if (item.isDisabled) {
-        return [];
-      }
-
-      const element = item.getElement();
-
-      return element ? [ element ] : [];
+      return this.getFlippableElementsForItem(item);
     }).filter((item): item is HTMLElement => item !== undefined && item !== null);
 
     return result;
+  }
+
+  /**
+   * Gets flippable elements for a single item.
+   * @param item - popover item to get elements from
+   * @returns array of HTML elements for keyboard navigation
+   */
+  private getFlippableElementsForItem(item: PopoverItem): HTMLElement[] {
+    if (!(item instanceof PopoverItemDefault)) {
+      return item instanceof PopoverItemHtml ? item.getControls() : [];
+    }
+
+    if (item.isDisabled) {
+      return [];
+    }
+
+    const element = item.getElement();
+
+    return element ? [ element ] : [];
   }
 
   /**
@@ -536,7 +594,7 @@ export class PopoverDesktop extends PopoverAbstract {
    * Handles input inside search field
    * @param data - search input event data
    * @param data.query - search query text
-   * @param data.result - search results
+   * @param data.items - search results
    */
   private onSearch = (data: { query: string, items: SearchableItem[] }): void => {
     const isEmptyQuery = data.query === '';
@@ -563,17 +621,4 @@ export class PopoverDesktop extends PopoverAbstract {
       this.flipper.activate(flippableElements as HTMLElement[]);
     }
   };
-
-  /**
-   * Toggles nothing found message visibility
-   * @param isDisplayed - true if the message should be displayed
-   */
-  private toggleNothingFoundMessage(isDisplayed: boolean): void {
-    this.nodes.nothingFoundMessage.classList.toggle('!block', isDisplayed);
-    if (isDisplayed) {
-      this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
-    } else {
-      this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
-    }
-  }
 }

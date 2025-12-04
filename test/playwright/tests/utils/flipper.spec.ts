@@ -24,6 +24,7 @@ const KEY_CODES = {
   ESC: 27,
   ARROW_LEFT: 37,
   ARROW_UP: 38,
+  ARROW_RIGHT: 39,
   ARROW_DOWN: 40,
   SLASH: 191,
 } as const;
@@ -45,7 +46,7 @@ class SomePlugin {
    * @param event - The keyboard event to handle
    */
   public static pluginInternalKeydownHandler(event: KeyboardEvent): void {
-    const trackedKeyCodes = new Set([9, 13, 37, 38, 40]);
+    const trackedKeyCodes = new Set([9, 13, 27, 37, 38, 39, 40]);
 
     if (!trackedKeyCodes.has(event.keyCode)) {
       return;
@@ -492,7 +493,8 @@ test.describe('flipper', () => {
     await openBlockTunesWithShortcut(page, plugin);
 
     await resetPluginHandlerCallCount(page);
-    await triggerKey(plugin, KEY_CODES.ARROW_LEFT, { key: 'ArrowLeft' });
+    // ESC is not in the allowedKeys for block settings (which uses Tab, Up, Down, Enter, Left, Right)
+    await triggerKey(plugin, KEY_CODES.ESC, { key: 'Escape' });
 
     expect(await getPluginHandlerCallCount(page)).toBe(1);
   });
@@ -1268,16 +1270,16 @@ test.describe('flipper', () => {
     await plugin.click();
     await openBlockTunesWithShortcut(page, plugin);
 
-    // Test that allowedKeys filtering works - ArrowLeft is not in the default allowedKeys
-    // for block settings (which uses Tab, Up, Down, Enter), so it should be ignored
+    // Test that allowedKeys filtering works - ESC is not in the default allowedKeys
+    // for block settings (which uses Tab, Up, Down, Enter, Left, Right), so it should be ignored
     await resetPluginHandlerCallCount(page);
 
-    // ArrowLeft should be handled by plugin since it's not in allowedKeys
-    await triggerKey(plugin, KEY_CODES.ARROW_LEFT, { key: 'ArrowLeft' });
+    // ESC should be handled by plugin since it's not in allowedKeys
+    await triggerKey(plugin, KEY_CODES.ESC, { key: 'Escape' });
 
     const callCount = await getPluginHandlerCallCount(page);
 
-    // ArrowLeft should be handled by plugin (not blocked by flipper)
+    // ESC should be handled by plugin (not blocked by flipper)
     expect(callCount).toBeGreaterThan(0);
   });
 

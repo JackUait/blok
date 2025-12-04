@@ -563,9 +563,9 @@ describe('PopoverDesktop', () => {
       expect(parentItem).toBeDefined();
 
       instance.showNestedPopoverForItem(parentItem!);
-      const nestedPopoverElement = popover.getElement().querySelector(`[${DATA_ATTRIBUTE_NESTED}]`);
 
-      expect(nestedPopoverElement).toBeTruthy();
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+      expect(instance.nestedPopover?.getElement().hasAttribute(DATA_ATTRIBUTE_NESTED)).toBe(true);
 
       popover.hide();
 
@@ -573,7 +573,6 @@ describe('PopoverDesktop', () => {
 
       expect(popover.getElement().hasAttribute('data-blok-popover-opened')).toBe(false);
       expect(flipper.deactivate).toHaveBeenCalled();
-      expect(popover.getElement().querySelector(`[${DATA_ATTRIBUTE_NESTED}]`)).toBeNull();
       expect(instance.nestedPopover).toBeNull();
       expect(instance.nestedPopoverTriggerItem).toBeNull();
       expect(flipper.focusFirst).toHaveBeenCalled();

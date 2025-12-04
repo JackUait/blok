@@ -19,7 +19,7 @@ import type {
 } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { SearchInput } from '../../../src/components/utils/popover/components/search-input';
-import { DATA_ATTRIBUTE_OPENED, DATA_ATTRIBUTE_OPEN_TOP, DATA_ATTRIBUTE_OPEN_LEFT } from '../../../src/components/utils/popover/popover.const';
+import { DATA_ATTRIBUTE_OPENED, DATA_ATTRIBUTE_OPEN_TOP } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTRIBUTE_ACTIVE } from '../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
 
 /**
@@ -268,8 +268,9 @@ describe('PopoverAbstract', () => {
       (popover as unknown as { search?: SearchInput }).search = searchMock;
       popover.on(PopoverEvent.Closed, closedHandler);
 
-      nodes.popover.setAttribute(DATA_ATTRIBUTE_OPEN_TOP, 'true');
-      nodes.popover.setAttribute(DATA_ATTRIBUTE_OPEN_LEFT, 'true');
+      // Use the protected methods to set open states (simulating what subclasses do)
+      (popover as unknown as { setOpenTop: (v: boolean) => void }).setOpenTop(true);
+      (popover as unknown as { setOpenLeft: (v: boolean) => void }).setOpenLeft(true);
       popover.show();
       popover.hide();
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRef } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type {
   PopoverItemDefaultParams as PopoverItemDefaultParams,
@@ -7,35 +7,16 @@ import type {
   PopoverItemType
 } from '@/types/utils/popover/popover-item';
 import { PopoverItem } from '../popover-item';
-import { css, cssInline, cssNestedInline, DATA_ATTR } from './popover-item-default.const';
-import { PopoverItemDefaultComponent } from './PopoverItemDefaultComponent';
-import { twMerge } from '../../../../tw';
+import { DATA_ATTR } from './popover-item-default.const';
+import {
+  PopoverItemDefaultComponent,
+  type PopoverItemDefaultComponentHandle
+} from './PopoverItemDefaultComponent';
 
 /**
  * Selector for icon element
  */
 const ICON_SELECTOR = '[data-blok-testid="popover-item-icon"]';
-
-/**
- * Creates a temporary container and renders React component to extract the element
- * Uses flushSync to ensure synchronous rendering for immediate DOM access
- * @param component - React component to render
- */
-const renderToElement = (component: React.ReactNode): HTMLElement => {
-  const container = document.createElement('div');
-  const root = createRoot(container);
-
-  flushSync(() => {
-    root.render(component);
-  });
-
-  const element = container.firstElementChild as HTMLElement;
-
-  // Unmount React after extracting the element to avoid memory leaks
-  root.unmount();
-
-  return element;
-};
 
 /**
  * Represents single popover item node
@@ -96,6 +77,16 @@ export class PopoverItemDefault extends PopoverItem {
     };
 
   /**
+   * React 18 root instance for persistent rendering
+   */
+  private reactRoot: Root | null = null;
+
+  /**
+   * Ref to the imperative handle exposed by the React component
+   */
+  private componentRef = createRef<PopoverItemDefaultComponentHandle>();
+
+  /**
    * If item is in confirmation state, stores confirmation params such as icon, label, onActivate callback and so on
    */
   private confirmationState: PopoverItemDefaultParams | null = null;
@@ -115,7 +106,7 @@ export class PopoverItemDefault extends PopoverItem {
     super(params);
 
     this.renderParams = renderParams;
-    this.nodes.root = this.make(params, renderParams);
+    this.nodes.root = this.createRootElement(params, renderParams);
   }
 
   /**
@@ -147,15 +138,11 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    const shouldBeActive = isActive !== undefined ? isActive : !this.nodes.root.hasAttribute(DATA_ATTR.active);
+    const currentlyActive = this.nodes.root.hasAttribute(DATA_ATTR.active);
+    const shouldBeActive = isActive !== undefined ? isActive : !currentlyActive;
 
-    if (shouldBeActive) {
-      this.nodes.root.setAttribute(DATA_ATTR.active, 'true');
-    } else {
-      this.nodes.root.removeAttribute(DATA_ATTR.active);
-    }
-
-    this.updateRootClasses();
+    // Update via React imperative handle
+    this.componentRef.current?.setActive(shouldBeActive);
   }
 
   /**
@@ -163,13 +150,8 @@ export class PopoverItemDefault extends PopoverItem {
    * @param isHidden - true if item should be hidden
    */
   public override toggleHidden(isHidden: boolean): void {
-    if (isHidden) {
-      this.nodes.root?.setAttribute(DATA_ATTR.hidden, 'true');
-    } else {
-      this.nodes.root?.removeAttribute(DATA_ATTR.hidden);
-    }
-
-    this.updateRootClasses();
+    // Update via React imperative handle
+    this.componentRef.current?.setHidden(isHidden);
   }
 
   /**
@@ -189,43 +171,96 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
-   * Constructs HTML element corresponding to popover item params
+   * Cleanup method to unmount React root and prevent memory leaks
+   * Should be called when the item is removed from DOM
+   */
+  public override destroy(): void {
+    super.destroy();
+
+    if (this.reactRoot) {
+      try {
+        this.reactRoot.unmount();
+      } catch {
+        // Ignore errors if DOM is already cleaned up by parent popover
+      }
+      this.reactRoot = null;
+    }
+  }
+
+  /**
+   * Creates the root container element and initializes React rendering
    * @param params - item construction params
    * @param renderParams - popover item render params
    */
-  private make(params: PopoverItemDefaultParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Default]): HTMLElement {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
-    const title = params.title || params.label;
+  private createRootElement(params: PopoverItemDefaultParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Default]): HTMLElement {
+    // Create container element that will host the React root
+    const container = document.createElement('div');
 
-    const el = renderToElement(
-      <PopoverItemDefaultComponent
-        icon={params.icon}
-        title={title}
-        secondaryLabel={params.secondaryLabel}
-        isActive={this.isActive}
-        isDisabled={params.isDisabled}
-        hasChildren={this.hasChildren}
-        hideChevron={this.isChevronHidden}
-        wrapperTag={renderParams?.wrapperTag}
-        name={params.name}
-        iconWithGap={renderParams?.iconWithGap}
-        isInline={renderParams?.isInline}
-        isNestedInline={renderParams?.isNestedInline}
-      />
-    );
+    container.style.display = 'contents'; // Make container transparent in layout
+
+    // Create React root and render component
+    this.reactRoot = createRoot(container);
+    this.renderComponent(params, renderParams);
+
+    // Get the actual rendered element (first child of container)
+    // We need to return the actual button/div element, not the container
+    const renderedElement = container.firstElementChild as HTMLElement;
+
+    // Fallback: return container if no child rendered (shouldn't happen)
+    if (!renderedElement) {
+      return container;
+    }
 
     // Store reference to icon element
-    this.nodes.icon = el.querySelector(ICON_SELECTOR);
+    this.nodes.icon = renderedElement.querySelector(ICON_SELECTOR);
 
-    if (params.hint !== undefined && renderParams?.hint?.enabled !== false) {
-      this.addHint(el, {
+    // Add hint if configured
+    const shouldAddHint = params.hint !== undefined && renderParams?.hint?.enabled !== false;
+
+    if (shouldAddHint && params.hint !== undefined) {
+      this.addHint(renderedElement, {
         ...params.hint,
         position: renderParams?.hint?.position || 'right',
         alignment: renderParams?.hint?.alignment || 'center',
       });
     }
 
-    return el;
+    return renderedElement;
+  }
+
+  /**
+   * Renders the React component with current params
+   * @param params - item params to render
+   * @param renderParams - render configuration
+   */
+  private renderComponent(params: PopoverItemDefaultParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Default]): void {
+    if (!this.reactRoot) {
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
+    const title = params.title || params.label;
+
+    // Use flushSync to ensure synchronous rendering for immediate DOM access
+    flushSync(() => {
+      this.reactRoot?.render(
+        <PopoverItemDefaultComponent
+          ref={this.componentRef}
+          icon={params.icon}
+          title={title}
+          secondaryLabel={params.secondaryLabel}
+          isActive={this.isActive}
+          isDisabled={params.isDisabled}
+          hasChildren={this.hasChildren}
+          hideChevron={this.isChevronHidden}
+          wrapperTag={renderParams?.wrapperTag}
+          name={params.name}
+          iconWithGap={renderParams?.iconWithGap}
+          isInline={renderParams?.isInline}
+          isNestedInline={renderParams?.isNestedInline}
+        />
+      );
+    });
   }
 
   /**
@@ -242,18 +277,15 @@ export class PopoverItemDefault extends PopoverItem {
       ...newState,
       confirmation: 'confirmation' in newState ? newState.confirmation : undefined,
     } as PopoverItemDefaultParams;
-    const confirmationEl = this.make(params, this.renderParams);
 
-    this.nodes.root.innerHTML = confirmationEl.innerHTML;
-    this.nodes.root.setAttribute(DATA_ATTR.confirmation, 'true');
-
-    // Update icon reference after innerHTML change
-    this.nodes.icon = this.nodes.root.querySelector(ICON_SELECTOR);
-
+    // Update confirmation state via React imperative handle
+    this.componentRef.current?.setConfirmation(params);
     this.confirmationState = newState;
 
     this.enableSpecialHoverAndFocusBehavior();
-    this.updateRootClasses();
+
+    // Update icon reference after React re-render
+    this.nodes.icon = this.componentRef.current?.getIconElement() ?? this.nodes.root.querySelector(ICON_SELECTOR);
   }
 
   /**
@@ -263,18 +295,15 @@ export class PopoverItemDefault extends PopoverItem {
     if (this.nodes.root === null) {
       return;
     }
-    const itemWithOriginalParams = this.make(this.params, this.renderParams);
 
-    this.nodes.root.innerHTML = itemWithOriginalParams.innerHTML;
-    this.nodes.root.removeAttribute(DATA_ATTR.confirmation);
-
-    // Update icon reference after innerHTML change
-    this.nodes.icon = this.nodes.root.querySelector(ICON_SELECTOR);
-
+    // Clear confirmation state via React imperative handle
+    this.componentRef.current?.setConfirmation(null);
     this.confirmationState = null;
 
     this.disableSpecialHoverAndFocusBehavior();
-    this.updateRootClasses();
+
+    // Update icon reference after React re-render
+    this.nodes.icon = this.componentRef.current?.getIconElement() ?? this.nodes.root.querySelector(ICON_SELECTOR);
   }
 
   /**
@@ -282,8 +311,8 @@ export class PopoverItemDefault extends PopoverItem {
    * This is needed to prevent item from being highlighted as hovered/focused just after click.
    */
   private enableSpecialHoverAndFocusBehavior(): void {
-    this.nodes.root?.setAttribute(DATA_ATTR.noHover, 'true');
-    this.nodes.root?.setAttribute(DATA_ATTR.noFocus, 'true');
+    this.componentRef.current?.setNoHover(true);
+    this.componentRef.current?.setNoFocus(true);
 
     this.nodes.root?.addEventListener('mouseleave', this.removeSpecialHoverBehavior, { once: true });
   }
@@ -302,14 +331,14 @@ export class PopoverItemDefault extends PopoverItem {
    * Removes class responsible for special focus behavior on an item
    */
   private removeSpecialFocusBehavior = (): void => {
-    this.nodes.root?.removeAttribute(DATA_ATTR.noFocus);
+    this.componentRef.current?.setNoFocus(false);
   };
 
   /**
    * Removes class responsible for special hover behavior on an item
    */
   private removeSpecialHoverBehavior = (): void => {
-    this.nodes.root?.removeAttribute(DATA_ATTR.noHover);
+    this.componentRef.current?.setNoHover(false);
   };
 
   /**
@@ -333,51 +362,7 @@ export class PopoverItemDefault extends PopoverItem {
    * Animates item which symbolizes that error occurred while executing 'onActivate()' callback
    */
   private animateError(): void {
-    if (this.nodes.icon?.hasAttribute(DATA_ATTR.wobble)) {
-      return;
-    }
-
-    this.nodes.icon?.setAttribute(DATA_ATTR.wobble, 'true');
-    // Apply wobble animation class directly (moved from popover.css)
-    this.nodes.icon?.classList.add('animate-wobble');
-
-    this.nodes.icon?.addEventListener('animationend', this.onErrorAnimationEnd);
-  }
-
-  /**
-   * Handles finish of error animation
-   */
-  private onErrorAnimationEnd = (): void => {
-    this.nodes.icon?.removeAttribute(DATA_ATTR.wobble);
-    // Remove wobble animation class
-    this.nodes.icon?.classList.remove('animate-wobble');
-    this.nodes.icon?.removeEventListener('animationend', this.onErrorAnimationEnd);
-  };
-
-  /**
-   * Updates root element classes based on current state
-   */
-  private updateRootClasses(): void {
-    if (this.nodes.root === null) {
-      return;
-    }
-
-    const isActive = this.nodes.root.hasAttribute(DATA_ATTR.active);
-    const isHidden = this.nodes.root.hasAttribute(DATA_ATTR.hidden);
-    const isConfirmation = this.nodes.root.hasAttribute(DATA_ATTR.confirmation);
-    const isFocused = this.nodes.root.hasAttribute(DATA_ATTR.focused);
-    const isInline = this.renderParams?.isInline ?? false;
-    const isNestedInline = this.renderParams?.isNestedInline ?? false;
-
-    this.nodes.root.className = twMerge(
-      css.item,
-      isInline && cssInline.item,
-      isNestedInline && cssNestedInline.item,
-      isActive && css.itemActive,
-      this.isDisabled && css.itemDisabled,
-      isFocused && '!bg-item-focus-bg',
-      isConfirmation && '!bg-item-confirm-bg !text-white',
-      isHidden && '!hidden'
-    );
+    // Trigger wobble animation via React imperative handle
+    this.componentRef.current?.triggerWobble();
   }
 }

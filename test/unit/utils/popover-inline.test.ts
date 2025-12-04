@@ -132,6 +132,7 @@ describe('PopoverInline', () => {
         activate: vi.fn(),
         deactivate: vi.fn(),
         focusFirst: vi.fn(),
+        focusItem: vi.fn(),
       },
       on: vi.fn(),
     } as unknown as PopoverDesktop);
@@ -650,6 +651,7 @@ describe('PopoverInline', () => {
           activate: vi.fn(),
           deactivate: vi.fn(),
           focusFirst: vi.fn(),
+          focusItem: vi.fn(),
         },
       } as unknown as PopoverDesktop;
 
@@ -675,6 +677,7 @@ describe('PopoverInline', () => {
         activate: vi.fn(),
         deactivate: vi.fn(),
         focusFirst: vi.fn(),
+        focusItem: vi.fn(),
       };
 
       const onMock = vi.fn();
@@ -756,6 +759,7 @@ describe('PopoverInline', () => {
           activate: vi.fn(),
           deactivate: vi.fn(),
           focusFirst: vi.fn(),
+          focusItem: vi.fn(),
         },
       } as unknown as PopoverDesktop;
 

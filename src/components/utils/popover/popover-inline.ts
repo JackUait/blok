@@ -248,6 +248,13 @@ export class PopoverInline extends PopoverDesktop {
 
     nestedPopover.flipper?.setHandleContentEditableTargets(true);
 
+    // Clear initial focus - inline toolbar nested popovers should not auto-focus
+    // Focus will be set on first Tab press via handleFirstTab handler below
+    // Use requestAnimationFrame to run after the parent's focusInitialElement() which also uses rAF
+    requestAnimationFrame(() => {
+      nestedPopover.flipper?.focusItem(-1);
+    });
+
     // Apply nested inline styles to the nested popover container
     const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement | null;
     if (nestedContainer) {

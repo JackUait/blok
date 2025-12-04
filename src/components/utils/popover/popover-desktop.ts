@@ -65,7 +65,7 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Construct the instance
    * @param params - popover params
-   * @param itemsRenderParams – popover item render params.
+   * @param itemsRenderParams – popover item render params.
    * The parameters that are not set by user via popover api but rather depend on technical implementation
    */
   constructor(params: PopoverParams, itemsRenderParams?: PopoverItemRenderParamsMap) {
@@ -189,12 +189,22 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Focus the first item: search field if present, otherwise first menu item
     requestAnimationFrame(() => {
-      if (this.search) {
-        this.search.focus();
-      } else {
-        this.flipper?.focusFirst();
-      }
+      this.focusInitialElement();
     });
+  }
+
+  /**
+   * Focuses the initial element when popover is shown.
+   * Focuses search field if present, otherwise first menu item.
+   */
+  private focusInitialElement(): void {
+    if (this.search) {
+      this.search.focus();
+
+      return;
+    }
+
+    this.flipper?.focusFirst();
   }
 
   /**
@@ -339,21 +349,33 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper?.activate(this.flippableElements);
     // Use requestAnimationFrame to ensure DOM is updated before focusing
     requestAnimationFrame(() => {
-      // Focus the item that opened the nested popover, or fall back to first item
-      if (triggerItemElement && this.flipper) {
-        const triggerIndex = this.flippableElements.indexOf(triggerItemElement);
-
-        if (triggerIndex !== -1) {
-          this.flipper.focusItem(triggerIndex);
-        } else {
-          this.flipper.focusFirst();
-        }
-      } else {
-        this.flipper?.focusFirst();
-      }
+      this.focusAfterNestedPopoverClose(triggerItemElement);
     });
 
     this.nestedPopoverTriggerItem?.onChildrenClose();
+  }
+
+  /**
+   * Focuses the appropriate item after nested popover closes.
+   * Focuses the item that opened the nested popover, or falls back to first item.
+   * @param triggerItemElement - element that triggered the nested popover
+   */
+  private focusAfterNestedPopoverClose(triggerItemElement: HTMLElement | null | undefined): void {
+    if (!triggerItemElement || !this.flipper) {
+      this.flipper?.focusFirst();
+
+      return;
+    }
+
+    const triggerIndex = this.flippableElements.indexOf(triggerItemElement);
+
+    if (triggerIndex !== -1) {
+      this.flipper.focusItem(triggerIndex);
+
+      return;
+    }
+
+    this.flipper.focusFirst();
   }
 
   /**
@@ -516,20 +538,29 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   protected get flippableElements(): HTMLElement[] {
     const result = this.items.flatMap(item => {
-      if (!(item instanceof PopoverItemDefault)) {
-        return item instanceof PopoverItemHtml ? item.getControls() : [];
-      }
-
-      if (item.isDisabled) {
-        return [];
-      }
-
-      const element = item.getElement();
-
-      return element ? [ element ] : [];
+      return this.getFlippableElementsForItem(item);
     }).filter((item): item is HTMLElement => item !== undefined && item !== null);
 
     return result;
+  }
+
+  /**
+   * Gets flippable elements for a single item.
+   * @param item - popover item to get elements from
+   * @returns array of HTML elements for keyboard navigation
+   */
+  private getFlippableElementsForItem(item: PopoverItem): HTMLElement[] {
+    if (!(item instanceof PopoverItemDefault)) {
+      return item instanceof PopoverItemHtml ? item.getControls() : [];
+    }
+
+    if (item.isDisabled) {
+      return [];
+    }
+
+    const element = item.getElement();
+
+    return element ? [ element ] : [];
   }
 
   /**
@@ -563,7 +594,7 @@ export class PopoverDesktop extends PopoverAbstract {
    * Handles input inside search field
    * @param data - search input event data
    * @param data.query - search query text
-   * @param data.result - search results
+   * @param data.items - search results
    */
   private onSearch = (data: { query: string, items: SearchableItem[] }): void => {
     const isEmptyQuery = data.query === '';

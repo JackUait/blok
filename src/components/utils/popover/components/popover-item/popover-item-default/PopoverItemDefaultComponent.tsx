@@ -308,6 +308,7 @@ export const PopoverItemDefaultComponent = forwardRef<
     ...(isFocused && { [DATA_ATTR.focused]: 'true' }),
     ...(noHover && { [DATA_ATTR.noHover]: 'true' }),
     ...(noFocus && { [DATA_ATTR.noFocus]: 'true' }),
+    ...(hasChildren && { [DATA_ATTR.hasChildren]: 'true' }),
   };
 
   if (wrapperTag === 'button') {

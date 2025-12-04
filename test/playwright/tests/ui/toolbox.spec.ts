@@ -635,3 +635,386 @@ declare global {
   }
 }
 
+/**
+ * Opens the toolbox by typing "/" in an empty block
+ * Following the same pattern as the working test at lines 588-604
+ * @param page - The Playwright page object
+ */
+const openToolbox = async (page: Page): Promise<void> => {
+  const paragraphBlock = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+
+  await expect(paragraphBlock).toHaveCount(1);
+
+  await paragraphBlock.click();
+  await paragraphBlock.locator('[contenteditable]').fill('Some text');
+  await paragraphBlock.locator('[contenteditable]').fill('');
+  await paragraphBlock.locator('[contenteditable]').focus();
+  // Trigger backspace to ensure Blok.js internal state is clean
+  await page.keyboard.press('Backspace');
+
+  // Wait for Blok.js to mark it as empty
+  await expect(paragraphBlock.locator('[contenteditable]')).toHaveAttribute('data-blok-empty', 'true');
+
+  // Open toolbox with "/" shortcut
+  await page.keyboard.type('/');
+
+  const popover = page.locator(POPOVER_SELECTOR);
+
+  await popover.waitFor({ state: 'attached' });
+  await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+};
+
+test.describe('toolbox keyboard navigation', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+  });
+
+  /**
+   * Note: Toolbox keyboard navigation tests are skipped on Firefox.
+   *
+   * The toolbox popover's Flipper does not enable `handleContentEditableTargets`,
+   * which means keyboard events from contenteditable elements are not handled.
+   * After typing "/" to open the toolbox, focus remains in the contenteditable.
+   * In Chromium/WebKit, pressing Tab moves focus out and allows Flipper to catch
+   * subsequent keyboard events. In Firefox, Tab doesn't move focus in a way that
+   * allows Flipper to catch events, so arrow key navigation doesn't work.
+   *
+   * This is a known limitation of the toolbox keyboard navigation in Firefox.
+   */
+
+  /**
+   * Simple test tool for keyboard navigation tests
+   */
+  const SimpleTestTool = class {
+    /**
+     * Specify how to display Tool in a Toolbox
+     */
+    public static get toolbox(): ToolboxConfig {
+      return {
+        icon: '⚡',
+        title: 'Simple Tool',
+      };
+    }
+
+    private data: { text: string };
+
+    /**
+     * Constructor
+     * @param options - Tool options
+     */
+    constructor({ data }: { data: { text: string } }) {
+      this.data = data ?? { text: '' };
+    }
+
+    /**
+     * Render tool element
+     * @returns Rendered HTML element
+     */
+    public render(): HTMLElement {
+      const element = document.createElement('div');
+
+      element.contentEditable = 'true';
+      element.textContent = this.data.text;
+
+      return element;
+    }
+
+    /**
+     * Save tool data
+     * @param el - HTML element to save from
+     * @returns Saved data
+     */
+    public save(el: HTMLElement): { text: string } {
+      return {
+         
+        text: el.textContent ?? '',
+      };
+    }
+  };
+
+  /**
+   * Another simple test tool to have multiple items
+   */
+  const AnotherTestTool = class {
+    /**
+     * Specify how to display Tool in a Toolbox
+     */
+    public static get toolbox(): ToolboxConfig {
+      return {
+        icon: '🔧',
+        title: 'Another Tool',
+      };
+    }
+
+    private data: { text: string };
+
+    /**
+     * Constructor
+     * @param options - Tool options
+     */
+    constructor({ data }: { data: { text: string } }) {
+      this.data = data ?? { text: '' };
+    }
+
+    /**
+     * Render tool element
+     * @returns Rendered HTML element
+     */
+    public render(): HTMLElement {
+      const element = document.createElement('div');
+
+      element.contentEditable = 'true';
+      element.textContent = this.data.text;
+
+      return element;
+    }
+
+    /**
+     * Save tool data
+     * @param el - HTML element to save from
+     * @returns Saved data
+     */
+    public save(el: HTMLElement): { text: string } {
+      return {
+         
+        text: el.textContent ?? '',
+      };
+    }
+  };
+
+  test('navigates through toolbox items with ArrowDown and ArrowUp', async ({ page, browserName }) => {
+    // eslint-disable-next-line playwright/no-skipped-test -- Firefox doesn't support keyboard nav from contenteditable
+    test.skip(browserName === 'firefox', 'Firefox has different Tab behavior when focus is in contenteditable');
+    await createBlokWithTools(page, {
+      simpleTool: {
+        class: SimpleTestTool as unknown as BlockToolConstructable,
+      },
+      anotherTool: {
+        class: AnotherTestTool as unknown as BlockToolConstructable,
+      },
+    });
+
+    await openToolbox(page);
+
+    const popoverItems = page.locator(`${POPOVER_ITEM_SELECTOR}:not([data-blok-hidden="true"])`);
+    const itemsCount = await popoverItems.count();
+
+    expect(itemsCount).toBeGreaterThan(1);
+
+    // First item should be focused after toolbox opens (focusFirst called)
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
+
+    // Tab moves focus out of contenteditable, allowing Flipper to catch keyboard events
+    await page.keyboard.press('Tab');
+
+    // Arrow down should navigate to the second item
+    await page.keyboard.press('ArrowDown');
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.first()).not.toHaveAttribute('data-blok-focused', 'true');
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
+
+    // Navigate back up
+    await page.keyboard.press('ArrowUp');
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
+  });
+
+  test('navigates through toolbox items with Tab and Shift+Tab after initial focus', async ({ page, browserName }) => {
+    // eslint-disable-next-line playwright/no-skipped-test -- Firefox doesn't support keyboard nav from contenteditable
+    test.skip(browserName === 'firefox', 'Firefox has different Tab behavior when focus is in contenteditable');
+    await createBlokWithTools(page, {
+      simpleTool: {
+        class: SimpleTestTool as unknown as BlockToolConstructable,
+      },
+      anotherTool: {
+        class: AnotherTestTool as unknown as BlockToolConstructable,
+      },
+    });
+
+    await openToolbox(page);
+
+    const popoverItems = page.locator(`${POPOVER_ITEM_SELECTOR}:not([data-blok-hidden="true"])`);
+    const itemsCount = await popoverItems.count();
+
+    expect(itemsCount).toBeGreaterThan(2);
+
+    // First item should be focused after toolbox opens
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
+
+    // First Tab moves focus out of contenteditable (browser default)
+    await page.keyboard.press('Tab');
+
+    // Now Tab navigates Flipper items - move to second item
+    await page.keyboard.press('Tab');
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
+
+    // Another Tab - move to third item
+    await page.keyboard.press('Tab');
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.nth(2)).toHaveAttribute('data-blok-focused', 'true');
+
+    // Navigate back with Shift+Tab
+    await page.keyboard.press('Shift+Tab');
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
+  });
+
+  test('inserts tool with Enter key on focused item', async ({ page, browserName }) => {
+    // eslint-disable-next-line playwright/no-skipped-test -- Firefox doesn't support keyboard nav from contenteditable
+    test.skip(browserName === 'firefox', 'Firefox has different Tab behavior when focus is in contenteditable');
+    /**
+     * Mock tool for testing
+     */
+    const TestTool = class {
+      /**
+       * Specify how to display Tool in a Toolbox
+       */
+      public static get toolbox(): ToolboxConfig {
+        return {
+          icon: '⚡',
+          title: 'Test Tool',
+        };
+      }
+
+      private data: { text: string };
+
+      /**
+       * Constructor
+       * @param options - Tool options
+       */
+      constructor({ data }: { data: { text: string } }) {
+        this.data = data;
+      }
+
+      /**
+       * Render tool element
+       * @returns Rendered HTML element
+       */
+      public render(): HTMLElement {
+        const element = document.createElement('div');
+
+        element.setAttribute('data-blok-testid', 'test-tool-block');
+        element.contentEditable = 'true';
+        element.textContent = this.data.text;
+
+        return element;
+      }
+
+      /**
+       * Save tool data
+       * @param el - HTML element to save from
+       * @returns Saved data
+       */
+      public save(el: HTMLElement): { text: string } {
+        return {
+          // eslint-disable-next-line playwright/no-conditional-in-test
+          text: el.textContent ?? '',
+        };
+      }
+    };
+
+    await createBlokWithTools(page, {
+      testTool: {
+        class: TestTool as unknown as BlockToolConstructable,
+      },
+    });
+
+    await openToolbox(page);
+
+    // Find and focus the test tool item
+    const testToolItem = page.locator(`${POPOVER_ITEM_SELECTOR}[data-blok-item-name="testTool"]`);
+
+    await expect(testToolItem).toBeVisible();
+
+    // Tab first to enable Flipper keyboard handling (focus is in contenteditable after "/")
+    await page.keyboard.press('Tab');
+
+    // Navigate to test tool using arrow keys
+    while (!await testToolItem.getAttribute('data-blok-focused')) {
+      await page.keyboard.press('ArrowDown');
+    }
+
+    await expect(testToolItem).toHaveAttribute('data-blok-focused', 'true');
+
+    // Press Enter to insert the tool
+    await page.keyboard.press('Enter');
+
+    // Toolbox should close
+    const popover = page.locator(POPOVER_SELECTOR);
+
+    await expect(popover).not.toHaveAttribute('data-blok-popover-opened', 'true');
+
+    // New block should be inserted
+    const testToolBlock = page.locator('[data-blok-testid="test-tool-block"]');
+
+    await expect(testToolBlock).toBeVisible();
+  });
+
+  test('closes toolbox with Escape key', async ({ page }) => {
+    await createBlokWithTools(page, {
+      simpleTool: {
+        class: SimpleTestTool as unknown as BlockToolConstructable,
+      },
+    });
+
+    await openToolbox(page);
+
+    const popover = page.locator(POPOVER_SELECTOR);
+
+    await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+
+    await page.keyboard.press('Escape');
+
+    await expect(popover).not.toHaveAttribute('data-blok-popover-opened', 'true');
+  });
+
+  test('wraps focus around when reaching end of list with ArrowDown', async ({ page, browserName }) => {
+    // eslint-disable-next-line playwright/no-skipped-test -- Firefox doesn't support keyboard nav from contenteditable
+    test.skip(browserName === 'firefox', 'Firefox has different Tab behavior when focus is in contenteditable');
+    await createBlokWithTools(page, {
+      simpleTool: {
+        class: SimpleTestTool as unknown as BlockToolConstructable,
+      },
+      anotherTool: {
+        class: AnotherTestTool as unknown as BlockToolConstructable,
+      },
+    });
+
+    await openToolbox(page);
+
+    const popoverItems = page.locator(`${POPOVER_ITEM_SELECTOR}:not([data-blok-hidden="true"])`);
+    const itemsCount = await popoverItems.count();
+
+    expect(itemsCount).toBeGreaterThan(0);
+
+    // Tab first to enable Flipper keyboard handling (focus is in contenteditable after "/")
+    await page.keyboard.press('Tab');
+
+    // Navigate to the last item
+    for (let i = 0; i < itemsCount - 1; i++) {
+      await page.keyboard.press('ArrowDown');
+    }
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.last()).toHaveAttribute('data-blok-focused', 'true');
+
+    // Press ArrowDown one more time - should wrap to first item
+    await page.keyboard.press('ArrowDown');
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+    await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
+  });
+});

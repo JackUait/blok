@@ -228,6 +228,20 @@ export default class Flipper {
   }
 
   /**
+   * Checks if current focused item has children (nested menu)
+   * Looks for data-blok-has-children attribute on the current item
+   */
+  private currentItemHasChildren(): boolean {
+    const currentItem = this.iterator?.currentItem;
+
+    if (!currentItem) {
+      return false;
+    }
+
+    return currentItem.hasAttribute('data-blok-has-children');
+  }
+
+  /**
    * Registers a function that should be executed on each navigation action
    * @param cb - function to execute
    */
@@ -329,22 +343,19 @@ export default class Flipper {
         this.handleTabPress(event);
         break;
       case _.keyCodes.LEFT:
+        // ArrowLeft triggers callback only if callback is set (for nested popovers)
         if (this.onArrowLeftCallback) {
           this.onArrowLeftCallback();
-        } else {
-          this.flipLeft();
         }
         break;
       case _.keyCodes.UP:
         this.flipLeft();
         break;
       case _.keyCodes.RIGHT:
-        // ArrowRight clicks the focused item (e.g., to open nested popover) if one is focused
-        // Otherwise, it moves focus to the next item
-        if (this.iterator?.currentItem) {
+        // ArrowRight clicks the focused item to open nested popover, but only if item has children
+        // Otherwise, do nothing (don't activate items without nested menu)
+        if (this.iterator?.currentItem && this.currentItemHasChildren()) {
           this.handleEnterPress(event);
-        } else {
-          this.flipRight();
         }
         break;
       case _.keyCodes.DOWN:

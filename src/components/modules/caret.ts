@@ -245,28 +245,83 @@ export default class Caret extends Module {
    */
   public setToInput(input: HTMLElement, position: string = this.positions.DEFAULT, offset = 0): void {
     const { currentBlock } = this.Blok.BlockManager;
-    const nodeToSet = $.getDeepestNode(input);
 
-    switch (position) {
-      case this.positions.START:
-        this.set(nodeToSet as HTMLElement, 0);
-        break;
-
-      case this.positions.END:
-        if (nodeToSet) {
-          this.set(nodeToSet as HTMLElement, $.getContentLength(nodeToSet));
-        }
-        break;
-
-      default:
-        if (offset) {
-          this.set(nodeToSet as HTMLElement, offset);
-        }
-    }
+    this.setCaretToInputPosition(input, position, offset);
 
     if (currentBlock) {
       currentBlock.currentInput = input;
     }
+  }
+
+  /**
+   * Internal method to handle caret positioning within an input
+   * @param input - the input element
+   * @param position - position type (START, END, DEFAULT)
+   * @param offset - character offset for DEFAULT position
+   */
+  private setCaretToInputPosition(input: HTMLElement, position: string, offset: number): void {
+    if (position === this.positions.START) {
+      this.setCaretToStart(input);
+
+      return;
+    }
+
+    if (position === this.positions.END) {
+      this.setCaretToEnd(input);
+
+      return;
+    }
+
+    // DEFAULT position: use getNodeByOffset to find the correct node for the given offset
+    // This properly handles multi-node content and clamps out-of-bounds offsets
+    this.setCaretToOffset(input, offset);
+  }
+
+  /**
+   * Sets caret to the start of an input
+   * @param input - the input element
+   */
+  private setCaretToStart(input: HTMLElement): void {
+    const nodeToSet = $.getDeepestNode(input, false);
+
+    if (!nodeToSet) {
+      return;
+    }
+
+    this.set(nodeToSet as HTMLElement, 0);
+  }
+
+  /**
+   * Sets caret to the end of an input
+   * @param input - the input element
+   */
+  private setCaretToEnd(input: HTMLElement): void {
+    const nodeToSet = $.getDeepestNode(input, true);
+
+    if (!nodeToSet) {
+      return;
+    }
+
+    this.set(nodeToSet as HTMLElement, $.getContentLength(nodeToSet));
+  }
+
+  /**
+   * Sets caret at a specific offset within an input
+   * Falls back to end position if offset resolution fails
+   * @param input - the input element
+   * @param offset - the character offset
+   */
+  private setCaretToOffset(input: HTMLElement, offset: number): void {
+    const { node, offset: nodeOffset } = $.getNodeByOffset(input, offset);
+
+    if (node) {
+      this.set(node as HTMLElement, nodeOffset);
+
+      return;
+    }
+
+    // Fallback to end of input for empty inputs or when offset resolution fails
+    this.setCaretToEnd(input);
   }
 
   /**

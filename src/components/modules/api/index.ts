@@ -21,6 +21,7 @@ export default class API extends Module {
       caret: this.Blok.CaretAPI.methods,
       tools: this.Blok.ToolsAPI.methods,
       events: this.Blok.EventsAPI.methods,
+      history: this.Blok.HistoryAPI.methods,
       listeners: this.Blok.ListenersAPI.methods,
       notifier: this.Blok.NotifierAPI.methods,
       sanitizer: this.Blok.SanitizerAPI.methods,

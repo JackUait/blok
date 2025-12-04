@@ -29,13 +29,14 @@ export type {
 } from './contexts';
 
 // Hooks
-export { usePopoverSearch, usePopoverPosition } from './hooks';
+export { usePopoverSearch, usePopoverPosition, useHistory } from './hooks';
 export type {
   UsePopoverSearchReturn,
   UsePopoverSearchOptions,
   PopoverPosition,
   UsePopoverPositionOptions,
   UsePopoverPositionReturn,
+  UseHistoryReturn,
 } from './hooks';
 
 // Search input component

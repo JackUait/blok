@@ -13,3 +13,6 @@ export type {
   UsePopoverPositionOptions,
   UsePopoverPositionReturn,
 } from './usePopoverPosition';
+
+export { useHistory } from './useHistory';
+export type { UseHistoryReturn } from './useHistory';

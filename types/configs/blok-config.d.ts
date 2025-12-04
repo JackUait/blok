@@ -41,6 +41,18 @@ export interface BlokConfig {
   hideToolbar?: boolean;
 
   /**
+   * Maximum number of history entries for undo/redo
+   * @default 30
+   */
+  maxHistoryLength?: number;
+
+  /**
+   * Debounce time in milliseconds for batching rapid content changes
+   * @default 300
+   */
+  historyDebounceTime?: number;
+
+  /**
    * Map of Tools to use
    */
   tools?: {

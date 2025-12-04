@@ -1,0 +1,714 @@
+/**
+ * @class History
+ * @classdesc Manages undo/redo functionality using state snapshots
+ * @module History
+ */
+import Module from '../__module';
+import type { OutputData, OutputBlockData } from '../../../types';
+import { BlockChanged, HistoryStateChanged } from '../events';
+import type { BlockMutationEvent } from '../../../types/events/block';
+import Shortcuts from '../utils/shortcuts';
+import type Block from '../block';
+
+/**
+ * Default maximum history stack size
+ */
+const DEFAULT_MAX_HISTORY_LENGTH = 30;
+
+/**
+ * Default debounce time for content changes (ms)
+ */
+const DEFAULT_DEBOUNCE_TIME = 300;
+
+/**
+ * Time to wait after restore before accepting new changes (ms)
+ * This prevents late-firing events from corrupting history
+ */
+const RESTORE_COOLDOWN_TIME = 100;
+
+/**
+ * Represents caret position for restoration after undo/redo
+ */
+interface CaretPosition {
+  /**
+   * ID of the block containing the caret
+   */
+  blockId: string;
+
+  /**
+   * Index of the input element within the block
+   */
+  inputIndex: number;
+
+  /**
+   * Character offset within the input
+   */
+  offset: number;
+}
+
+/**
+ * History entry representing a document state
+ */
+interface HistoryEntry {
+  /**
+   * The document state snapshot
+   */
+  state: OutputData;
+
+  /**
+   * Timestamp when this entry was created
+   */
+  timestamp: number;
+
+  /**
+   * Caret position at the time of the snapshot
+   */
+  caretPosition?: CaretPosition;
+}
+
+/**
+ * History module for undo/redo functionality
+ *
+ * Uses state snapshots approach:
+ * - Captures full document state after mutations
+ * - Debounces rapid changes (typing) into single undo steps
+ * - Provides keyboard shortcuts (Cmd+Z / Cmd+Shift+Z)
+ */
+export default class History extends Module {
+  /**
+   * Stack of past states for undo
+   */
+  private undoStack: HistoryEntry[] = [];
+
+  /**
+   * Stack of future states for redo
+   */
+  private redoStack: HistoryEntry[] = [];
+
+  /**
+   * Debounce timeout for batching rapid changes
+   */
+  private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Flag to prevent recording during undo/redo operations
+   */
+  private isPerformingUndoRedo = false;
+
+  /**
+   * Flag indicating whether initial state has been captured
+   */
+  private initialStateCaptured = false;
+
+  /**
+   * Maximum number of entries in history stack
+   */
+  private get maxHistoryLength(): number {
+    return (this.config as { maxHistoryLength?: number }).maxHistoryLength ?? DEFAULT_MAX_HISTORY_LENGTH;
+  }
+
+  /**
+   * Debounce time for batching changes
+   */
+  private get debounceTime(): number {
+    return (this.config as { historyDebounceTime?: number }).historyDebounceTime ?? DEFAULT_DEBOUNCE_TIME;
+  }
+
+  /**
+   * Module preparation
+   * Sets up event listeners and keyboard shortcuts
+   */
+  public async prepare(): Promise<void> {
+    this.setupEventListeners();
+    this.setupKeyboardShortcuts();
+  }
+
+  /**
+   * Captures the initial document state
+   * Should be called after rendering is complete
+   */
+  public async captureInitialState(): Promise<void> {
+    if (this.initialStateCaptured) {
+      return;
+    }
+
+    const state = await this.getCurrentState();
+
+    if (state) {
+      this.undoStack = [{
+        state,
+        timestamp: Date.now(),
+      }];
+      this.initialStateCaptured = true;
+      this.emitStateChanged();
+    }
+  }
+
+  /**
+   * Performs undo operation
+   * @returns true if undo was performed, false if nothing to undo
+   */
+  public async undo(): Promise<boolean> {
+    // Need at least 2 entries: current state + previous state to restore
+    if (this.undoStack.length < 2) {
+      return false;
+    }
+
+    if (this.isPerformingUndoRedo) {
+      return false;
+    }
+
+    this.isPerformingUndoRedo = true;
+    this.clearDebounce();
+
+    try {
+      // Pop current state and push to redo stack
+      const currentEntry = this.undoStack.pop();
+
+      if (currentEntry) {
+        this.redoStack.push(currentEntry);
+      }
+
+      // Get previous state to restore
+      const previousEntry = this.undoStack[this.undoStack.length - 1];
+
+      if (previousEntry) {
+        await this.restoreState(previousEntry.state, previousEntry.caretPosition);
+        this.emitStateChanged();
+
+        // Keep the flag true for a short period to ignore late events
+        await this.cooldown();
+
+        return true;
+      }
+
+      return false;
+    } finally {
+      this.isPerformingUndoRedo = false;
+    }
+  }
+
+  /**
+   * Performs redo operation
+   * @returns true if redo was performed, false if nothing to redo
+   */
+  public async redo(): Promise<boolean> {
+    if (this.redoStack.length === 0) {
+      return false;
+    }
+
+    if (this.isPerformingUndoRedo) {
+      return false;
+    }
+
+    this.isPerformingUndoRedo = true;
+    this.clearDebounce();
+
+    try {
+      const entryToRestore = this.redoStack.pop();
+
+      if (entryToRestore) {
+        this.undoStack.push(entryToRestore);
+        await this.restoreState(entryToRestore.state, entryToRestore.caretPosition);
+        this.emitStateChanged();
+
+        // Keep the flag true for a short period to ignore late events
+        await this.cooldown();
+
+        return true;
+      }
+
+      return false;
+    } finally {
+      this.isPerformingUndoRedo = false;
+    }
+  }
+
+  /**
+   * Returns whether undo is available
+   */
+  public canUndo(): boolean {
+    return this.undoStack.length > 1;
+  }
+
+  /**
+   * Returns whether redo is available
+   */
+  public canRedo(): boolean {
+    return this.redoStack.length > 0;
+  }
+
+  /**
+   * Clears history stacks
+   */
+  public clear(): void {
+    this.clearDebounce();
+    this.undoStack = [];
+    this.redoStack = [];
+    this.initialStateCaptured = false;
+    this.emitStateChanged();
+  }
+
+  /**
+   * Sets up listeners for block mutation events
+   */
+  private setupEventListeners(): void {
+    this.eventsDispatcher.on(BlockChanged, (payload) => {
+      this.handleBlockMutation(payload.event);
+    });
+  }
+
+  /**
+   * Sets up keyboard shortcuts for undo/redo
+   */
+  private setupKeyboardShortcuts(): void {
+    // Wait for UI to be ready
+    setTimeout(() => {
+      const redactor = this.Blok.UI?.nodes?.redactor;
+
+      if (!redactor) {
+        return;
+      }
+
+      // Undo: Cmd+Z (Mac) / Ctrl+Z (Windows/Linux)
+      Shortcuts.add({
+        name: 'CMD+Z',
+        on: redactor,
+        handler: (event: KeyboardEvent) => {
+          event.preventDefault();
+          void this.undo();
+        },
+      });
+
+      // Redo: Cmd+Shift+Z (Mac) / Ctrl+Shift+Z (Windows/Linux)
+      Shortcuts.add({
+        name: 'CMD+SHIFT+Z',
+        on: redactor,
+        handler: (event: KeyboardEvent) => {
+          event.preventDefault();
+          void this.redo();
+        },
+      });
+
+      // Alternative Redo: Cmd+Y (Windows convention)
+      Shortcuts.add({
+        name: 'CMD+Y',
+        on: redactor,
+        handler: (event: KeyboardEvent) => {
+          event.preventDefault();
+          void this.redo();
+        },
+      });
+    }, 0);
+  }
+
+  /**
+   * Handles block mutation events
+   * Debounces rapid changes and records state snapshots
+   */
+  private handleBlockMutation(_event: BlockMutationEvent): void {
+    // Don't record changes during undo/redo operations
+    if (this.isPerformingUndoRedo) {
+      return;
+    }
+
+    // Ensure initial state is captured
+    if (!this.initialStateCaptured) {
+      void this.captureInitialState();
+
+      return;
+    }
+
+    // Clear existing debounce timeout
+    this.clearDebounce();
+
+    // Debounce to batch rapid changes
+    this.debounceTimeout = setTimeout(() => {
+      void this.recordState();
+    }, this.debounceTime);
+  }
+
+  /**
+   * Records the current state to history
+   */
+  private async recordState(): Promise<void> {
+    // Double-check we're not in undo/redo mode
+    if (this.isPerformingUndoRedo) {
+      return;
+    }
+
+    const state = await this.getCurrentState();
+
+    if (!state) {
+      return;
+    }
+
+    // Capture caret position along with state
+    const caretPosition = this.getCaretPosition();
+
+    // Clear redo stack when new changes are made
+    this.redoStack = [];
+
+    // Add new entry
+    this.undoStack.push({
+      state,
+      timestamp: Date.now(),
+      caretPosition,
+    });
+
+    // Trim stack if exceeds max length
+    while (this.undoStack.length > this.maxHistoryLength) {
+      this.undoStack.shift();
+    }
+
+    this.emitStateChanged();
+  }
+
+  /**
+   * Gets current document state via Saver
+   */
+  private async getCurrentState(): Promise<OutputData | null> {
+    try {
+      const state = await this.Blok.Saver.save();
+
+      return state ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Restores document to a given state using smart diffing
+   * Only updates blocks that have changed to preserve DOM state
+   * @param state - the document state to restore
+   * @param caretPosition - optional caret position to restore after state is applied
+   */
+  private async restoreState(state: OutputData, caretPosition?: CaretPosition): Promise<void> {
+    // Disable modifications observer during restore
+    this.Blok.ModificationsObserver.disable();
+
+    try {
+      await this.applyStateDiff(state);
+    } finally {
+      this.Blok.ModificationsObserver.enable();
+    }
+
+    // Restore caret position after state is applied
+    this.restoreCaretPosition(caretPosition);
+  }
+
+  /**
+   * Apply state changes using diff-based approach
+   * This minimizes DOM changes and preserves focus/selection
+   */
+  private async applyStateDiff(targetState: OutputData): Promise<void> {
+    const { BlockManager, Renderer } = this.Blok;
+    const currentBlocks = BlockManager.blocks;
+    const targetBlocks = targetState.blocks;
+
+    // Build maps for quick lookup
+    const currentBlocksById = new Map<string, { block: typeof currentBlocks[0]; index: number }>();
+
+    currentBlocks.forEach((block, index) => {
+      currentBlocksById.set(block.id, { block, index });
+    });
+
+    const targetBlocksById = new Map<string, { data: OutputBlockData; index: number }>();
+
+    targetBlocks.forEach((blockData, index) => {
+      if (blockData.id) {
+        targetBlocksById.set(blockData.id, { data: blockData, index });
+      }
+    });
+
+    // Find blocks to remove (exist in current but not in target)
+    const blocksToRemove: typeof currentBlocks[0][] = [];
+
+    for (const block of currentBlocks) {
+      if (!targetBlocksById.has(block.id)) {
+        blocksToRemove.push(block);
+      }
+    }
+
+    // Find blocks to add (exist in target but not in current)
+    const blocksToAdd: { data: OutputBlockData; index: number }[] = [];
+
+    for (const [id, { data, index }] of targetBlocksById) {
+      if (!currentBlocksById.has(id)) {
+        blocksToAdd.push({ data, index });
+      }
+    }
+
+    // Find blocks to update (exist in both but may have changed data)
+    const blocksToUpdate: { block: typeof currentBlocks[0]; data: OutputBlockData; targetIndex: number }[] = [];
+
+    for (const [id, { data, index: targetIndex }] of targetBlocksById) {
+      const current = currentBlocksById.get(id);
+
+      if (current) {
+        blocksToUpdate.push({ block: current.block, data, targetIndex });
+      }
+    }
+
+    // If the structure changed significantly, fall back to full re-render
+    // This threshold can be adjusted based on performance needs
+    const totalChanges = blocksToRemove.length + blocksToAdd.length;
+    const significantChange = totalChanges > currentBlocks.length / 2 || totalChanges > 5;
+
+    if (significantChange || currentBlocks.length === 0) {
+      // Full re-render for significant changes
+      await BlockManager.clear();
+      await Renderer.render(targetBlocks);
+
+      return;
+    }
+
+    // Apply incremental changes
+
+    // 1. Remove blocks that no longer exist
+    for (const block of blocksToRemove) {
+      await BlockManager.removeBlock(block);
+    }
+
+    // 2. Update existing blocks with new data (in-place when possible)
+    for (const { block, data } of blocksToUpdate) {
+      // Check if data actually changed
+      const currentData = await block.data;
+      const dataChanged = JSON.stringify(currentData) !== JSON.stringify(data.data);
+
+      if (!dataChanged) {
+        continue;
+      }
+
+      // Try in-place update first to preserve DOM and focus
+      const updated = await block.setData(data.data);
+
+      // Fall back to full re-render if in-place update not supported
+      if (!updated) {
+        await BlockManager.update(block, data.data, data.tunes);
+      }
+    }
+
+    // 3. Add new blocks
+    for (const { data, index } of blocksToAdd) {
+      BlockManager.insert({
+        id: data.id,
+        tool: data.type,
+        data: data.data,
+        index,
+        needToFocus: false,
+      });
+    }
+
+    // 4. Reorder blocks if needed
+    await this.reorderBlocks(targetBlocks);
+  }
+
+  /**
+   * Reorder blocks to match target order
+   */
+  private async reorderBlocks(targetBlocks: OutputBlockData[]): Promise<void> {
+    const { BlockManager } = this.Blok;
+
+    // Create target order map
+    const targetOrder = new Map<string, number>();
+
+    targetBlocks.forEach((block, index) => {
+      if (block.id) {
+        targetOrder.set(block.id, index);
+      }
+    });
+
+    // Get current blocks and their indices
+    const currentBlocks = BlockManager.blocks;
+
+    // Check if reordering is needed by comparing positions
+    const needsReorder = currentBlocks.some((block, i) => {
+      const targetIndex = targetOrder.get(block.id);
+
+      return targetIndex !== undefined && targetIndex !== i;
+    });
+
+    if (!needsReorder) {
+      return;
+    }
+
+    // Apply moves to get blocks in correct order
+    // We iterate from the end to avoid index shifting issues
+    targetBlocks.forEach((targetBlock, targetIndex) => {
+      const targetBlockId = targetBlock.id;
+
+      if (!targetBlockId) {
+        return;
+      }
+
+      const currentIndex = BlockManager.blocks.findIndex(b => b.id === targetBlockId);
+
+      if (currentIndex !== -1 && currentIndex !== targetIndex) {
+        BlockManager.move(targetIndex, currentIndex);
+      }
+    });
+  }
+
+  /**
+   * Wait for a short cooldown period
+   * This helps ignore late-firing events after state restore
+   */
+  private cooldown(): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, RESTORE_COOLDOWN_TIME));
+  }
+
+  /**
+   * Captures current caret position for later restoration
+   * @returns CaretPosition or undefined if caret is not in the editor
+   */
+  private getCaretPosition(): CaretPosition | undefined {
+    const { BlockManager } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return undefined;
+    }
+
+    const currentInput = currentBlock.currentInput;
+
+    if (!currentInput) {
+      return undefined;
+    }
+
+    const inputIndex = currentBlock.inputs.indexOf(currentInput);
+    const offset = this.getCaretOffset(currentInput);
+
+    return {
+      blockId: currentBlock.id,
+      inputIndex: inputIndex >= 0 ? inputIndex : 0,
+      offset,
+    };
+  }
+
+  /**
+   * Gets caret offset within an input element
+   * @param input - the input element
+   * @returns character offset
+   */
+  private getCaretOffset(input: HTMLElement): number {
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return 0;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    // Check if selection is within this input
+    if (!input.contains(range.startContainer)) {
+      return 0;
+    }
+
+    // For native inputs, use selectionStart
+    if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+      return input.selectionStart ?? 0;
+    }
+
+    // For contenteditable, calculate offset by creating a range from start to caret
+    try {
+      const preCaretRange = document.createRange();
+
+      preCaretRange.selectNodeContents(input);
+      preCaretRange.setEnd(range.startContainer, range.startOffset);
+
+      return preCaretRange.toString().length;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Restores caret to a previously saved position
+   * @param caretPosition - the position to restore
+   */
+  private restoreCaretPosition(caretPosition: CaretPosition | undefined): void {
+    if (!caretPosition) {
+      // No saved caret position, focus the first available block
+      this.focusFirstAvailableBlock();
+
+      return;
+    }
+
+    const { BlockManager } = this.Blok;
+    const block = BlockManager.getBlockById(caretPosition.blockId);
+
+    if (!block) {
+      // Block no longer exists, try to focus first available block
+      this.focusFirstAvailableBlock();
+
+      return;
+    }
+
+    // Wait for block to be ready (in case it was just rendered)
+    void block.ready.then(() => {
+      this.setCaretToBlockInput(block, caretPosition);
+    });
+  }
+
+  /**
+   * Focuses the first available focusable block in the editor
+   */
+  private focusFirstAvailableBlock(): void {
+    const { BlockManager, Caret } = this.Blok;
+    const firstBlock = BlockManager.firstBlock;
+
+    if (firstBlock?.focusable) {
+      Caret.setToBlock(firstBlock, Caret.positions.END);
+    }
+  }
+
+  /**
+   * Sets caret to a specific input within a block
+   * @param block - the block to set caret in
+   * @param caretPosition - the saved caret position
+   */
+  private setCaretToBlockInput(block: Block, caretPosition: CaretPosition): void {
+    const { BlockManager, Caret } = this.Blok;
+    const inputs = block.inputs;
+    const targetInputIndex = Math.min(caretPosition.inputIndex, inputs.length - 1);
+    const targetInput = inputs[targetInputIndex];
+
+    if (!targetInput) {
+      // No inputs, just select the block
+      Caret.setToBlock(block, Caret.positions.END);
+
+      return;
+    }
+
+    // Set current block and let Caret.setToInput handle the input assignment
+    BlockManager.currentBlock = block;
+
+    // Try to set exact offset, fall back to end if offset is out of bounds
+    try {
+      Caret.setToInput(targetInput, Caret.positions.DEFAULT, caretPosition.offset);
+    } catch {
+      Caret.setToInput(targetInput, Caret.positions.END);
+    }
+  }
+
+  /**
+   * Clears the debounce timeout
+   */
+  private clearDebounce(): void {
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+      this.debounceTimeout = null;
+    }
+  }
+
+  /**
+   * Emits history state changed event
+   */
+  private emitStateChanged(): void {
+    this.eventsDispatcher.emit(HistoryStateChanged, {
+      canUndo: this.canUndo(),
+      canRedo: this.canRedo(),
+    });
+  }
+}

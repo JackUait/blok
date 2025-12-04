@@ -134,7 +134,7 @@ describe('Flipper', () => {
     flipper.onFlip(onFlipSpy);
     flipper.activate();
 
-    const event = createKeyboardEvent('ArrowRight');
+    const event = createKeyboardEvent('ArrowDown');
 
     flipper.handleExternalKeydown(event);
 
@@ -326,13 +326,13 @@ describe('Flipper', () => {
     flipper.onFlip(callback);
     flipper.activate();
 
-    const initialEvent = createKeyboardEvent('ArrowRight');
+    const initialEvent = createKeyboardEvent('ArrowDown');
 
     flipper.handleExternalKeydown(initialEvent);
     expect(callback).toHaveBeenCalledTimes(1);
 
     flipper.removeOnFlip(callback);
-    const secondEvent = createKeyboardEvent('ArrowRight');
+    const secondEvent = createKeyboardEvent('ArrowDown');
 
     flipper.handleExternalKeydown(secondEvent);
     expect(callback).toHaveBeenCalledTimes(1);
@@ -349,7 +349,7 @@ describe('Flipper', () => {
 
     flipper.activate();
 
-    const event = createKeyboardEvent('ArrowRight');
+    const event = createKeyboardEvent('ArrowDown');
 
     flipper.handleExternalKeydown(event);
 

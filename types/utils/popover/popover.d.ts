@@ -52,6 +52,12 @@ export interface PopoverParams {
    * Popover nesting level. 0 value means that it is a root popover
    */
   nestingLevel?: number;
+
+  /**
+   * Callback fired when user navigates back (ArrowLeft) from nested popover.
+   * Used to close nested popover and return focus to parent.
+   */
+  onNavigateBack?: () => void;
 }
 
 

@@ -537,7 +537,8 @@ export const FlipperProvider = ({
     }
 
     const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
-    const shouldHandleNativeInput = target.getAttribute('data-blok-flipper-tab-target') === 'true' && event.key === 'Tab';
+    const isNavigationKey = event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'Enter' || event.key === 'ArrowRight' || event.key === 'ArrowLeft';
+    const shouldHandleNativeInput = target.getAttribute('data-blok-flipper-navigation-target') === 'true' && isNavigationKey;
     const isContentEditable = target.isContentEditable;
     const isInlineToolInput = target.closest('[data-blok-link-tool-input-opened="true"]') !== null;
 

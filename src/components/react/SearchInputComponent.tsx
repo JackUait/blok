@@ -144,7 +144,7 @@ export const SearchInputComponent = forwardRef<SearchInputComponentHandle, Searc
           value={query}
           onChange={handleChange}
           tabIndex={-1}
-          data-blok-flipper-tab-target="true"
+          data-blok-flipper-navigation-target="true"
           data-blok-testid="popover-search-input"
         />
       </div>

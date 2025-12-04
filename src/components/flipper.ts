@@ -39,6 +39,12 @@ export interface FlipperOptions {
    * If not specified all keys are enabled
    */
   allowedKeys?: number[];
+
+  /**
+   * Callback fired when ArrowLeft is pressed.
+   * Used by nested popovers to close and return focus to parent.
+   */
+  onArrowLeft?: () => void;
 }
 
 /**
@@ -89,6 +95,12 @@ export default class Flipper {
   private flipCallbacks: Array<() => void> = [];
 
   /**
+   * Callback fired when ArrowLeft is pressed.
+   * Used by nested popovers to close and return focus to parent.
+   */
+  private readonly onArrowLeftCallback?: () => void;
+
+  /**
    * @param options - different constructing settings
    */
   constructor(options: FlipperOptions) {
@@ -96,6 +108,7 @@ export default class Flipper {
     this.activateCallback = options.activateCallback;
     this.allowedKeys = options.allowedKeys || Flipper.usedKeys;
     this.handleContentEditableTargets = options.handleContentEditableTargets ?? false;
+    this.onArrowLeftCallback = options.onArrowLeft;
   }
 
   /**
@@ -316,10 +329,24 @@ export default class Flipper {
         this.handleTabPress(event);
         break;
       case _.keyCodes.LEFT:
+        if (this.onArrowLeftCallback) {
+          this.onArrowLeftCallback();
+        } else {
+          this.flipLeft();
+        }
+        break;
       case _.keyCodes.UP:
         this.flipLeft();
         break;
       case _.keyCodes.RIGHT:
+        // ArrowRight clicks the focused item (e.g., to open nested popover) if one is focused
+        // Otherwise, it moves focus to the next item
+        if (this.iterator?.currentItem) {
+          this.handleEnterPress(event);
+        } else {
+          this.flipRight();
+        }
+        break;
       case _.keyCodes.DOWN:
         this.flipRight();
         break;
@@ -427,7 +454,8 @@ export default class Flipper {
     }
 
     const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
-    const shouldHandleNativeInput = target.getAttribute('data-blok-flipper-tab-target') === 'true' && event.key === 'Tab';
+    const isNavigationKey = event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'Enter' || event.key === 'ArrowRight' || event.key === 'ArrowLeft';
+    const shouldHandleNativeInput = target.getAttribute('data-blok-flipper-navigation-target') === 'true' && isNavigationKey;
     const isContentEditable = target.isContentEditable;
     const isInlineToolInput = target.closest('[data-blok-link-tool-input-opened="true"]') !== null;
 

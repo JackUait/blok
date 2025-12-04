@@ -85,6 +85,8 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       keyCodes.UP,
       keyCodes.DOWN,
       keyCodes.ENTER,
+      keyCodes.RIGHT,
+      keyCodes.LEFT,
     ],
   });
 

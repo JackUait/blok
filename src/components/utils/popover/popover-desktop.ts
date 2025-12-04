@@ -112,7 +112,10 @@ export class PopoverDesktop extends PopoverAbstract {
           keyCodes.UP,
           keyCodes.DOWN,
           keyCodes.ENTER,
+          keyCodes.RIGHT,
+          keyCodes.LEFT,
         ],
+        onArrowLeft: params.onNavigateBack,
       });
     }
 
@@ -183,6 +186,15 @@ export class PopoverDesktop extends PopoverAbstract {
 
     super.show();
     this.flipper?.activate(this.flippableElements);
+
+    // Focus the first item: search field if present, otherwise first menu item
+    requestAnimationFrame(() => {
+      if (this.search) {
+        this.search.focus();
+      } else {
+        this.flipper?.focusFirst();
+      }
+    });
   }
 
   /**
@@ -317,6 +329,8 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
+    const triggerItemElement = this.nestedPopoverTriggerItem?.getElement();
+
     this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.hide);
     this.nestedPopover.hide();
     this.nestedPopover.destroy();
@@ -325,7 +339,18 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper?.activate(this.flippableElements);
     // Use requestAnimationFrame to ensure DOM is updated before focusing
     requestAnimationFrame(() => {
-      this.flipper?.focusFirst();
+      // Focus the item that opened the nested popover, or fall back to first item
+      if (triggerItemElement && this.flipper) {
+        const triggerIndex = this.flippableElements.indexOf(triggerItemElement);
+
+        if (triggerIndex !== -1) {
+          this.flipper.focusItem(triggerIndex);
+        } else {
+          this.flipper.focusFirst();
+        }
+      } else {
+        this.flipper?.focusFirst();
+      }
     });
 
     this.nestedPopoverTriggerItem?.onChildrenClose();
@@ -343,6 +368,7 @@ export class PopoverDesktop extends PopoverAbstract {
       nestingLevel: this.nestingLevel + 1,
       flippable: item.isChildrenFlippable,
       messages: this.messages,
+      onNavigateBack: this.destroyNestedPopoverIfExists.bind(this),
     });
 
     item.onChildrenOpen();

@@ -181,12 +181,12 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     }
 
     /** Re-render items */
-    this.items.forEach(item => item.getElement()?.remove());
+    this.items.forEach(item => item.getMountElement?.()?.remove());
 
     this.items = this.buildItems(items);
 
     this.items.forEach(item => {
-      const itemEl = item.getElement();
+      const itemEl = item.getMountElement?.() ?? item.getElement();
 
       if (itemEl === null) {
         return;

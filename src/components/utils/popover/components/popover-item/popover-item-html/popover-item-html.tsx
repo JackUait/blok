@@ -16,7 +16,7 @@ export class PopoverItemHtml extends PopoverItem {
   /**
    * Item html elements
    */
-  private nodes: { root: HTMLElement | null } = { root: null };
+  private nodes: { container: HTMLElement | null; root: HTMLElement | null } = { container: null, root: null };
 
   /**
    * React 18 root instance for persistent rendering
@@ -50,7 +50,10 @@ export class PopoverItemHtml extends PopoverItem {
     this.itemParams = params;
     this.isInline = renderParams?.isInline ?? false;
 
-    this.nodes.root = this.createRootElement(params, renderParams);
+    const { container, renderedElement } = this.createRootElement(params, renderParams);
+
+    this.nodes.container = container;
+    this.nodes.root = renderedElement;
   }
 
   /**
@@ -58,6 +61,13 @@ export class PopoverItemHtml extends PopoverItem {
    */
   public getElement(): HTMLElement {
     return this.nodes.root as HTMLElement;
+  }
+
+  /**
+   * Returns element that should be mounted into DOM to keep React root attached
+   */
+  public override getMountElement(): HTMLElement | null {
+    return this.nodes.container ?? this.nodes.root;
   }
 
   /**
@@ -104,7 +114,10 @@ export class PopoverItemHtml extends PopoverItem {
    * @param params - item params
    * @param renderParams - render configuration
    */
-  private createRootElement(params: PopoverItemHtmlParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Html]): HTMLElement {
+  private createRootElement(
+    params: PopoverItemHtmlParams,
+    renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Html]
+  ): { container: HTMLElement; renderedElement: HTMLElement } {
     const container = document.createElement('div');
 
     container.style.display = 'contents';
@@ -122,11 +135,7 @@ export class PopoverItemHtml extends PopoverItem {
       );
     });
 
-    const renderedElement = container.firstElementChild as HTMLElement;
-
-    if (!renderedElement) {
-      return container;
-    }
+    const renderedElement = (container.firstElementChild as HTMLElement) ?? container;
 
     // Add hint if configured
     if (params.hint !== undefined && renderParams?.hint?.enabled !== false) {
@@ -137,6 +146,6 @@ export class PopoverItemHtml extends PopoverItem {
       });
     }
 
-    return renderedElement;
+    return { container, renderedElement };
   }
 }

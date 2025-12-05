@@ -69,9 +69,11 @@ export class PopoverItemDefault extends PopoverItem {
    * Item html elements
    */
   private nodes: {
+    container: null | HTMLElement,
     root: null | HTMLElement,
     icon: null | HTMLElement
   } = {
+      container: null,
       root: null,
       icon: null,
     };
@@ -106,7 +108,11 @@ export class PopoverItemDefault extends PopoverItem {
     super(params);
 
     this.renderParams = renderParams;
-    this.nodes.root = this.createRootElement(params, renderParams);
+
+    const { container, renderedElement } = this.createRootElement(params, renderParams);
+
+    this.nodes.container = container;
+    this.nodes.root = renderedElement;
   }
 
   /**
@@ -114,6 +120,13 @@ export class PopoverItemDefault extends PopoverItem {
    */
   public getElement(): HTMLElement | null {
     return this.nodes.root;
+  }
+
+  /**
+   * Returns element that should be mounted into DOM to keep React root attached
+   */
+  public override getMountElement(): HTMLElement | null {
+    return this.nodes.container ?? this.nodes.root;
   }
 
   /**
@@ -192,7 +205,10 @@ export class PopoverItemDefault extends PopoverItem {
    * @param params - item construction params
    * @param renderParams - popover item render params
    */
-  private createRootElement(params: PopoverItemDefaultParams, renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Default]): HTMLElement {
+  private createRootElement(
+    params: PopoverItemDefaultParams,
+    renderParams?: PopoverItemRenderParamsMap[PopoverItemType.Default]
+  ): { container: HTMLElement; renderedElement: HTMLElement } {
     // Create container element that will host the React root
     const container = document.createElement('div');
 
@@ -204,12 +220,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     // Get the actual rendered element (first child of container)
     // We need to return the actual button/div element, not the container
-    const renderedElement = container.firstElementChild as HTMLElement;
-
-    // Fallback: return container if no child rendered (shouldn't happen)
-    if (!renderedElement) {
-      return container;
-    }
+    const renderedElement = (container.firstElementChild as HTMLElement) ?? container;
 
     // Store reference to icon element
     this.nodes.icon = renderedElement.querySelector(ICON_SELECTOR);
@@ -225,7 +236,7 @@ export class PopoverItemDefault extends PopoverItem {
       });
     }
 
-    return renderedElement;
+    return { container, renderedElement };
   }
 
   /**

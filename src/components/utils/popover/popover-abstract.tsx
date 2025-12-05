@@ -119,6 +119,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Returns DOM element that should be attached to the document (React container if present).
+   */
+  public getMountElement(): HTMLElement {
+    return (this.reactContainer ?? this.nodes.popover) as HTMLElement;
+  }
+
+  /**
    * Open popover
    */
   public show(): void {
@@ -126,8 +133,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
      * Ensure popover is attached to DOM even if it's still inside the detached React container
      * (happens in mobile mode where no trigger is passed).
      */
-    if (!this.nodes.popover.isConnected) {
-      document.body.appendChild(this.nodes.popover);
+    const mountTarget = this.reactContainer ?? this.nodes.popover;
+
+    if (mountTarget !== null && !mountTarget.isConnected) {
+      document.body.appendChild(mountTarget);
     }
 
     // Update React state
@@ -169,7 +178,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public destroy(): void {
     this.items.forEach(item => item.destroy());
-    this.nodes.popover?.remove();
+    this.reactContainer?.remove();
     this.listeners.removeAll();
     this.search?.destroy();
 
@@ -449,7 +458,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   private appendItemElements(): void {
     this.items.forEach(item => {
-      const itemEl = item.getElement();
+      const itemEl = item.getMountElement?.() ?? item.getElement();
 
       if (itemEl === null) {
         return;

@@ -263,6 +263,9 @@ export const InlineToolbarComponent = forwardRef<InlineToolbarComponentHandle, I
 
         popoverRef.current = popover;
 
+        // Use the React root container (display: contents) to avoid detaching the rendered popover
+        // from its root, which breaks React's cleanup and causes removeChild errors on unmount.
+        const popoverMountElement = popover.getMountElement?.() ?? popover.getElement?.();
         const popoverElement = popover.getElement?.();
         const popoverWidth = popover.size?.width
           ?? popoverElement?.getBoundingClientRect().width
@@ -270,8 +273,8 @@ export const InlineToolbarComponent = forwardRef<InlineToolbarComponentHandle, I
 
         applyPosition(popoverWidth);
 
-        if (popoverElement && wrapperRef.current) {
-          wrapperRef.current.appendChild(popoverElement);
+        if (popoverMountElement && wrapperRef.current) {
+          wrapperRef.current.appendChild(popoverMountElement);
         }
 
         popover.show?.();

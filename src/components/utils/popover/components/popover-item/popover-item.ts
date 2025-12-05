@@ -92,6 +92,15 @@ export abstract class PopoverItem {
   public abstract getElement(): HTMLElement | null;
 
   /**
+   * Returns DOM element that should be mounted into the popover container.
+   * Default implementation returns the main element; subclasses may override
+   * when the mounted element differs from the focusable/root element.
+   */
+  public getMountElement(): HTMLElement | null {
+    return this.getElement();
+  }
+
+  /**
    * Toggles item hidden state
    * @param isHidden - true if item should be hidden
    */

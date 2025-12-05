@@ -159,10 +159,14 @@ export class PopoverDesktop extends PopoverAbstract {
    * Open popover
    */
   public show(): void {
-    if (this.trigger) {
-      document.body.appendChild(this.nodes.popover);
-      const { top, left } = this.calculatePosition();
+    const mountTarget = this.getMountElement();
 
+    if (this.trigger && mountTarget) {
+      document.body.appendChild(mountTarget);
+    }
+
+    if (this.trigger) {
+      const { top, left } = this.calculatePosition();
       this.nodes.popover.style.position = 'absolute';
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
@@ -401,7 +405,7 @@ export class PopoverDesktop extends PopoverAbstract {
      */
     this.nestedPopover.on(PopoverEvent.ClosedOnActivate, this.hide);
 
-    const nestedPopoverEl = this.nestedPopover.getElement();
+    const nestedPopoverEl = this.nestedPopover.getMountElement();
 
     this.nodes.popover.appendChild(nestedPopoverEl);
 

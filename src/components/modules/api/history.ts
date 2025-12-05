@@ -20,6 +20,7 @@ export default class HistoryAPI extends Module {
       canUndo: (): boolean => this.canUndo(),
       canRedo: (): boolean => this.canRedo(),
       clear: (): void => this.clear(),
+      captureInitialState: (): Promise<void> => this.captureInitialState(),
     };
   }
 
@@ -60,5 +61,13 @@ export default class HistoryAPI extends Module {
    */
   private clear(): void {
     this.Blok.History.clear();
+  }
+
+  /**
+   * Captures the initial document state
+   * @returns Promise that resolves when initial state is captured
+   */
+  private async captureInitialState(): Promise<void> {
+    return this.Blok.History.captureInitialState();
   }
 }

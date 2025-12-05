@@ -30,4 +30,11 @@ export interface History {
    * Clears the history stacks, removing all undo/redo history
    */
   clear(): void;
+
+  /**
+   * Captures the initial document state for undo/redo
+   * Typically called after the editor is fully initialized
+   * @returns Promise that resolves when the initial state is captured
+   */
+  captureInitialState(): Promise<void>;
 }

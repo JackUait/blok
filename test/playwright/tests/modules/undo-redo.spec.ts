@@ -392,6 +392,232 @@ test.describe('undo/Redo', () => {
     });
   });
 
+  test.describe('caret Positioning After Block Removal', () => {
+    test('caret focuses last available block when undo removes a block and saved index is out of bounds', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'First block' },
+            },
+          ],
+        },
+      });
+
+      const firstParagraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const firstInput = firstParagraph.locator('[contenteditable="true"]');
+
+      // Focus first block and press Enter to create a new block
+      await firstInput.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+
+      // Wait for history to record block creation
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Now we have two blocks, type in the second block
+      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
+      const secondInput = secondParagraph.locator('[contenteditable="true"]');
+
+      await secondInput.type('Second block');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we have two blocks
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+
+      // Undo typing in second block
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Undo block creation - this should remove the second block
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify we're back to one block
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+
+      // Focus should be in the editor (on the last available block, which is the first block)
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Should be able to type immediately - text appears in the remaining block
+      await page.keyboard.type(' - continued');
+      await expect(firstInput).toContainText('First block - continued');
+    });
+
+    test('caret focuses block at saved index when undo removes a later block', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'First block' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Second block' },
+            },
+          ],
+        },
+      });
+
+      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
+      const secondInput = secondParagraph.locator('[contenteditable="true"]');
+
+      // Focus second block and press Enter to create a third block
+      await secondInput.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+
+      // Wait for history to record block creation
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type in the third block
+      const thirdParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(3)`);
+      const thirdInput = thirdParagraph.locator('[contenteditable="true"]');
+
+      await thirdInput.type('Third block');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we have three blocks
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(3);
+
+      // Undo typing in third block
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Undo block creation - removes the third block
+      // The caret position being restored is from the initial state (before block creation)
+      // which was captured when the second block had focus
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify we're back to two blocks
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+
+      // Focus should be in the editor
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Should be able to type immediately - text should appear in the block that had focus
+      // when the state was captured (the second block, since we clicked it before pressing Enter)
+      await page.keyboard.type(' - edited');
+
+      // Check that at least one block contains the typed text (focus preserved)
+      const allText = await page.locator(PARAGRAPH_SELECTOR).allTextContents();
+
+      expect(allText.some(text => text.includes('- edited'))).toBe(true);
+    });
+
+    test('caret focuses correct block when redo removes a block', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'First block' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Second block' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Third block' },
+            },
+          ],
+        },
+      });
+
+      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
+      const secondInput = secondParagraph.locator('[contenteditable="true"]');
+
+      // Focus second block, select all and delete it
+      await secondInput.click();
+      await page.keyboard.press(`${MODIFIER_KEY}+a`);
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Delete the now-empty block
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we have two blocks left
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+
+      // Undo block deletion (brings back empty block)
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Undo text deletion (restores "Second block" text)
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify we have three blocks again
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(3);
+
+      // Now redo the text deletion
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Redo block deletion - removes the second block again
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify we have two blocks
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+
+      // Focus should be in the editor
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Should be able to type immediately
+      await page.keyboard.type(' - after redo');
+
+      // Text should appear in one of the remaining blocks
+      const allText = await page.locator(PARAGRAPH_SELECTOR).allTextContents();
+
+      expect(allText.some(text => text.includes('- after redo'))).toBe(true);
+    });
+
+    test('caret position is captured in initial state', async ({ page }) => {
+      // Create editor with initial data - autofocus will place caret
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Initial content' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Type some text
+      await input.click();
+      await input.type(' - modified');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify change
+      await expect(input).toContainText('Initial content - modified');
+
+      // Undo to initial state
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify undo worked
+      await expect(input).toContainText('Initial content');
+
+      // Focus should be preserved (initial state now captures caret position)
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Should be able to continue typing
+      await page.keyboard.type('!');
+      await expect(input).toContainText('!');
+    });
+  });
+
   test.describe('caret Positioning', () => {
     test('caret is positioned correctly after undo when offset becomes 0', async ({ page }) => {
       await createBlok(page, {

@@ -36,6 +36,12 @@ interface CaretPosition {
   blockId: string;
 
   /**
+   * Index of the block in the editor at capture time.
+   * Used as fallback when blockId lookup fails (e.g., block was deleted).
+   */
+  blockIndex: number;
+
+  /**
    * Index of the input element within the block
    */
   inputIndex: number;
@@ -135,9 +141,12 @@ export default class History extends Module {
     const state = await this.getCurrentState();
 
     if (state) {
+      const caretPosition = this.getCaretPosition();
+
       this.undoStack = [{
         state,
         timestamp: Date.now(),
+        caretPosition,
       }];
       this.initialStateCaptured = true;
       this.emitStateChanged();
@@ -151,6 +160,9 @@ export default class History extends Module {
   public async undo(): Promise<boolean> {
     // Need at least 2 entries: current state + previous state to restore
     if (this.undoStack.length < 2) {
+      // Preserve caret position when there's nothing to undo
+      this.preserveCaretPosition();
+
       return false;
     }
 
@@ -173,7 +185,13 @@ export default class History extends Module {
       const previousEntry = this.undoStack[this.undoStack.length - 1];
 
       if (previousEntry) {
-        await this.restoreState(previousEntry.state, previousEntry.caretPosition);
+        // Pass both target caret position and fallback from current state
+        // When a block is deleted, we want to fall back to the block preceding the deleted block
+        const fallbackIndex = currentEntry?.caretPosition
+          ? Math.max(0, currentEntry.caretPosition.blockIndex - 1)
+          : undefined;
+
+        await this.restoreState(previousEntry.state, previousEntry.caretPosition, fallbackIndex);
         this.emitStateChanged();
 
         // Keep the flag true for a short period to ignore late events
@@ -205,11 +223,20 @@ export default class History extends Module {
     this.clearDebounce();
 
     try {
+      // Get the current state before popping (to use its caret as fallback)
+      const currentEntry = this.undoStack[this.undoStack.length - 1];
       const entryToRestore = this.redoStack.pop();
 
       if (entryToRestore) {
         this.undoStack.push(entryToRestore);
-        await this.restoreState(entryToRestore.state, entryToRestore.caretPosition);
+
+        // Pass both target caret position and fallback from current state
+        // When a block is deleted during redo, fall back to the block preceding the deleted block
+        const fallbackIndex = currentEntry?.caretPosition
+          ? Math.max(0, currentEntry.caretPosition.blockIndex - 1)
+          : undefined;
+
+        await this.restoreState(entryToRestore.state, entryToRestore.caretPosition, fallbackIndex);
         this.emitStateChanged();
 
         // Keep the flag true for a short period to ignore late events
@@ -382,8 +409,9 @@ export default class History extends Module {
    * Only updates blocks that have changed to preserve DOM state
    * @param state - the document state to restore
    * @param caretPosition - optional caret position to restore after state is applied
+   * @param fallbackBlockIndex - optional block index to use when caret block no longer exists
    */
-  private async restoreState(state: OutputData, caretPosition?: CaretPosition): Promise<void> {
+  private async restoreState(state: OutputData, caretPosition?: CaretPosition, fallbackBlockIndex?: number): Promise<void> {
     // Disable modifications observer during restore
     this.Blok.ModificationsObserver.disable();
 
@@ -394,7 +422,7 @@ export default class History extends Module {
     }
 
     // Restore caret position after state is applied
-    this.restoreCaretPosition(caretPosition);
+    this.restoreCaretPosition(caretPosition, fallbackBlockIndex);
   }
 
   /**
@@ -578,9 +606,11 @@ export default class History extends Module {
 
     const inputIndex = currentBlock.inputs.indexOf(currentInput);
     const offset = this.getCaretOffset(currentInput);
+    const blockIndex = BlockManager.currentBlockIndex;
 
     return {
       blockId: currentBlock.id,
+      blockIndex: blockIndex >= 0 ? blockIndex : 0,
       inputIndex: inputIndex >= 0 ? inputIndex : 0,
       offset,
     };
@@ -626,10 +656,17 @@ export default class History extends Module {
   /**
    * Restores caret to a previously saved position
    * @param caretPosition - the position to restore
+   * @param fallbackBlockIndex - optional block index to use when caret block no longer exists
    */
-  private restoreCaretPosition(caretPosition: CaretPosition | undefined): void {
+  private restoreCaretPosition(caretPosition: CaretPosition | undefined, fallbackBlockIndex?: number): void {
+    if (!caretPosition && fallbackBlockIndex !== undefined) {
+      this.focusBlockAtIndex(fallbackBlockIndex);
+
+      return;
+    }
+
     if (!caretPosition) {
-      // No saved caret position, focus the first available block
+      // No saved caret position and no fallback, focus first available block
       this.focusFirstAvailableBlock();
 
       return;
@@ -639,8 +676,10 @@ export default class History extends Module {
     const block = BlockManager.getBlockById(caretPosition.blockId);
 
     if (!block) {
-      // Block no longer exists, try to focus first available block
-      this.focusFirstAvailableBlock();
+      // Block no longer exists, use fallback index (preceding block) or saved index
+      const indexToUse = fallbackBlockIndex !== undefined ? fallbackBlockIndex : caretPosition.blockIndex;
+
+      this.focusBlockAtIndex(indexToUse);
 
       return;
     }
@@ -660,6 +699,36 @@ export default class History extends Module {
 
     if (firstBlock?.focusable) {
       Caret.setToBlock(firstBlock, Caret.positions.END);
+    }
+  }
+
+  /**
+   * Focuses the block at the given index, or the last available block if index is out of bounds
+   * @param index - the target block index
+   */
+  private focusBlockAtIndex(index: number): void {
+    const { BlockManager, Caret } = this.Blok;
+    const blocksCount = BlockManager.blocks.length;
+
+    if (blocksCount === 0) {
+      return;
+    }
+
+    // Use the block at the saved index, or the last block if index is out of bounds
+    const targetIndex = Math.min(index, blocksCount - 1);
+    const targetBlock = BlockManager.getBlockByIndex(targetIndex);
+
+    if (targetBlock?.focusable) {
+      Caret.setToBlock(targetBlock, Caret.positions.END);
+
+      return;
+    }
+
+    // Fallback to last block if target is not focusable
+    const lastBlock = BlockManager.lastBlock;
+
+    if (lastBlock?.focusable) {
+      Caret.setToBlock(lastBlock, Caret.positions.END);
     }
   }
 
@@ -699,6 +768,29 @@ export default class History extends Module {
     if (this.debounceTimeout) {
       clearTimeout(this.debounceTimeout);
       this.debounceTimeout = null;
+    }
+  }
+
+  /**
+   * Preserves the current caret position by re-focusing the current input
+   * Used when undo/redo has nothing to do but we want to prevent caret from moving
+   */
+  private preserveCaretPosition(): void {
+    const { BlockManager, Caret } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock?.focusable) {
+      return;
+    }
+
+    const currentInput = currentBlock.currentInput;
+
+    if (currentInput) {
+      // Re-focus the current input to ensure caret stays in place
+      currentInput.focus();
+    } else {
+      // Fallback to setting caret to the block
+      Caret.setToBlock(currentBlock, Caret.positions.END);
     }
   }
 

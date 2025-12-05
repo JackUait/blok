@@ -18,7 +18,7 @@ const DEFAULT_MAX_HISTORY_LENGTH = 30;
 /**
  * Default debounce time for content changes (ms)
  */
-const DEFAULT_DEBOUNCE_TIME = 300;
+const DEFAULT_DEBOUNCE_TIME = 200;
 
 /**
  * Time to wait after restore before accepting new changes (ms)
@@ -82,6 +82,12 @@ interface HistoryEntry {
  */
 export default class History extends Module {
   /**
+   * Tracks which History instance should respond to global shortcuts.
+   * Set to the instance that last received a block mutation.
+   */
+  private static activeInstance: History | null = null;
+
+  /**
    * Stack of past states for undo
    */
   private undoStack: HistoryEntry[] = [];
@@ -90,6 +96,11 @@ export default class History extends Module {
    * Stack of future states for redo
    */
   private redoStack: HistoryEntry[] = [];
+
+  /**
+   * Shortcut names registered on document for cleanup
+   */
+  private registeredShortcuts: Array<{ name: string; element: HTMLElement | Document }> = [];
 
   /**
    * Debounce timeout for batching rapid changes
@@ -118,6 +129,13 @@ export default class History extends Module {
    */
   private get debounceTime(): number {
     return (this.config as { historyDebounceTime?: number }).historyDebounceTime ?? DEFAULT_DEBOUNCE_TIME;
+  }
+
+  /**
+   * Whether to use document-level shortcuts for undo/redo
+   */
+  private get globalUndoRedo(): boolean {
+    return (this.config as { globalUndoRedo?: boolean }).globalUndoRedo ?? true;
   }
 
   /**
@@ -297,36 +315,99 @@ export default class History extends Module {
         return;
       }
 
+      const target = this.globalUndoRedo ? document : redactor;
+
       // Undo: Cmd+Z (Mac) / Ctrl+Z (Windows/Linux)
       Shortcuts.add({
         name: 'CMD+Z',
-        on: redactor,
+        on: target,
         handler: (event: KeyboardEvent) => {
+          if (!this.shouldHandleShortcut(event)) {
+            return;
+          }
           event.preventDefault();
           void this.undo();
         },
       });
+      this.registeredShortcuts.push({ name: 'CMD+Z', element: target });
 
       // Redo: Cmd+Shift+Z (Mac) / Ctrl+Shift+Z (Windows/Linux)
       Shortcuts.add({
         name: 'CMD+SHIFT+Z',
-        on: redactor,
+        on: target,
         handler: (event: KeyboardEvent) => {
+          if (!this.shouldHandleShortcut(event)) {
+            return;
+          }
           event.preventDefault();
           void this.redo();
         },
       });
+      this.registeredShortcuts.push({ name: 'CMD+SHIFT+Z', element: target });
 
       // Alternative Redo: Cmd+Y (Windows convention)
       Shortcuts.add({
         name: 'CMD+Y',
-        on: redactor,
+        on: target,
         handler: (event: KeyboardEvent) => {
+          if (!this.shouldHandleShortcut(event)) {
+            return;
+          }
           event.preventDefault();
           void this.redo();
         },
       });
+      this.registeredShortcuts.push({ name: 'CMD+Y', element: target });
     }, 0);
+  }
+
+  /**
+   * Determines whether this instance should handle the shortcut event
+   * @param event - the keyboard event
+   * @returns true if this instance should handle the shortcut
+   */
+  private shouldHandleShortcut(event: KeyboardEvent): boolean {
+    // When using global shortcuts, only the active instance should respond
+    if (this.globalUndoRedo && History.activeInstance !== this) {
+      return false;
+    }
+
+    // Don't intercept shortcuts when focus is in native form controls outside the editor
+    if (this.isNativeFormControl(event.target)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Checks if the target element is a native form control outside the editor
+   * @param target - the event target
+   * @returns true if target is a form control not within this editor
+   */
+  private isNativeFormControl(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    const editorWrapper = this.Blok.UI?.nodes?.wrapper;
+
+    // If target is inside the editor, it's not an external form control
+    if (editorWrapper?.contains(target)) {
+      return false;
+    }
+
+    // Check for native form controls
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      return true;
+    }
+
+    // Check for contenteditable elements outside the editor
+    if (target.isContentEditable) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -334,6 +415,9 @@ export default class History extends Module {
    * Debounces rapid changes and records state snapshots
    */
   private handleBlockMutation(_event: BlockMutationEvent): void {
+    // Mark this instance as active for global shortcuts
+    History.activeInstance = this;
+
     // Don't record changes during undo/redo operations
     if (this.isPerformingUndoRedo) {
       return;
@@ -392,13 +476,52 @@ export default class History extends Module {
   }
 
   /**
-   * Gets current document state via Saver
+   * Gets current document state without sanitization
+   * This captures raw block data for history to preserve inline formatting
    */
   private async getCurrentState(): Promise<OutputData | null> {
     try {
-      const state = await this.Blok.Saver.save();
+      const { BlockManager } = this.Blok;
+      const blocks = BlockManager.blocks;
 
-      return state ?? null;
+      // If there is only one block and it is empty, return empty blocks array
+      if (blocks.length === 1 && blocks[0].isEmpty) {
+        return {
+          time: Date.now(),
+          blocks: [],
+          version: '',
+        };
+      }
+
+      const blockPromises = blocks.map(async (block): Promise<OutputBlockData | null> => {
+        const savedData = await block.save();
+
+        if (!savedData || savedData.data === undefined) {
+          return null;
+        }
+
+        const isValid = await block.validate(savedData.data);
+
+        if (!isValid) {
+          return null;
+        }
+
+        return {
+          id: savedData.id,
+          type: savedData.tool,
+          data: savedData.data,
+          ...(savedData.tunes && Object.keys(savedData.tunes).length > 0 && { tunes: savedData.tunes }),
+        };
+      });
+
+      const results = await Promise.all(blockPromises);
+      const validBlocks = results.filter((block): block is OutputBlockData => block !== null);
+
+      return {
+        time: Date.now(),
+        blocks: validBlocks,
+        version: '',
+      };
     } catch {
       return null;
     }
@@ -802,5 +925,29 @@ export default class History extends Module {
       canUndo: this.canUndo(),
       canRedo: this.canRedo(),
     });
+  }
+
+  /**
+   * Cleans up history module resources
+   * Removes shortcuts and clears state
+   */
+  public destroy(): void {
+    this.clearDebounce();
+
+    // Remove registered shortcuts
+    for (const { name, element } of this.registeredShortcuts) {
+      Shortcuts.remove(element, name);
+    }
+    this.registeredShortcuts = [];
+
+    // Clear active instance if it's this one
+    if (History.activeInstance === this) {
+      History.activeInstance = null;
+    }
+
+    // Clear stacks
+    this.undoStack = [];
+    this.redoStack = [];
+    this.initialStateCaptured = false;
   }
 }

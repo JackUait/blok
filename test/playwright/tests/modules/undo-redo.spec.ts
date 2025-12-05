@@ -84,18 +84,22 @@ const ensureBlokBundleAvailable = async (page: Page): Promise<void> => {
 
 const createBlok = async (
   page: Page,
-  options: { data?: OutputData } = {}
+  options: { data?: OutputData; config?: Record<string, unknown> } = {}
 ): Promise<void> => {
-  const { data = null } = options;
+  const {
+    data = null,
+    config = {},
+  } = options;
 
   await resetBlok(page);
   await ensureBlokBundleAvailable(page);
 
   await page.evaluate(
-    async ({ holder, initialData }) => {
+    async ({ holder, initialData, config: providedConfig }) => {
       const blokConfig: Record<string, unknown> = {
         holder,
         autofocus: true,
+        ...providedConfig,
       };
 
       if (initialData) {
@@ -110,6 +114,7 @@ const createBlok = async (
     {
       holder: HOLDER_ID,
       initialData: data,
+      config,
     }
   );
 };
@@ -678,6 +683,8 @@ test.describe('undo/Redo', () => {
 
       // Wait for history to record
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await expect(input).toHaveText(/Hello World extra long content here$/);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Undo to restore shorter text
       await page.keyboard.press(`${MODIFIER_KEY}+z`);
@@ -692,6 +699,159 @@ test.describe('undo/Redo', () => {
       // Should be able to type immediately - text should appear at the end (clamped position)
       await page.keyboard.type('!');
       await expect(input).toContainText('Hello World!');
+    });
+  });
+
+  test.describe('history Stack Management', () => {
+    test('clears redo stack when new changes happen after undo', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Start' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      await input.click();
+      await input.type(' one');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await input.type(' two');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(input).toHaveText('Start one two');
+
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('Start one');
+
+      await page.keyboard.type(' three');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('Start one three');
+      await expect(input).not.toContainText('two');
+    });
+
+    test('limits undo depth using maxHistoryLength', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'A' },
+            },
+          ],
+        },
+        config: {
+          maxHistoryLength: 2,
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      await input.click();
+      await input.type(' B');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await input.type(' C');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(input).toHaveText('A B C');
+
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('A B');
+
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('A B');
+    });
+  });
+
+  test.describe('global Shortcuts', () => {
+    test('undo uses the last active editor when multiple instances exist', async ({ page }) => {
+      await ensureBlokBundleAvailable(page);
+
+      await page.evaluate(async () => {
+        const createContainer = (id: string): void => {
+          const existing = document.getElementById(id);
+
+          if (existing) {
+            existing.remove();
+          }
+
+          const container = document.createElement('div');
+
+          container.id = id;
+          container.setAttribute('data-blok-testid', id);
+          container.style.border = '1px dotted #388AE5';
+
+          document.body.appendChild(container);
+        };
+
+        const createEditor = async (holder: string, text: string, config: Record<string, unknown> = {}): Promise<void> => {
+          const blok = new window.Blok({
+            holder,
+            autofocus: false,
+            ...config,
+            data: {
+              blocks: [
+                {
+                  type: 'paragraph',
+                  data: { text },
+                },
+              ],
+            },
+          });
+
+          await blok.isReady;
+        };
+
+        createContainer('blok-one');
+        createContainer('blok-two');
+
+        await Promise.all([
+          createEditor('blok-one', 'First editor', { globalUndoRedo: false }),
+          createEditor('blok-two', 'Second editor'),
+        ]);
+      });
+
+      const firstInput = page.locator('[data-blok-testid="blok-one"] [data-blok-component="paragraph"] [contenteditable="true"]');
+      const secondInput = page.locator('[data-blok-testid="blok-two"] [data-blok-component="paragraph"] [contenteditable="true"]');
+
+      await firstInput.click();
+      await firstInput.type(' change');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await secondInput.click();
+      await secondInput.type(' change');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      const firstTextBeforeUndo = (await firstInput.textContent())?.trim();
+      const secondTextBeforeUndo = (await secondInput.textContent())?.trim();
+
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const firstTextAfterUndo = (await firstInput.textContent())?.trim();
+      const secondTextAfterUndo = (await secondInput.textContent())?.trim();
+
+      const firstChanged = firstTextAfterUndo !== firstTextBeforeUndo;
+      const secondChanged = secondTextAfterUndo !== secondTextBeforeUndo;
+
+      expect(firstChanged).toBe(false);
+      expect(secondChanged).toBe(true);
+      expect(secondTextAfterUndo).toContain('Second editor');
     });
   });
 

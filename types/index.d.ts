@@ -85,7 +85,26 @@ export * from './utils/popover';
 
 export { OutputData, OutputBlockData} from './data-formats/output-data';
 export { BlockId } from './data-formats/block-id';
-export { BlockAPI } from './api'
+export {
+  BlockAPI,
+  Blocks,
+  Caret,
+  Events,
+  History,
+  InlineToolbar,
+  Listeners,
+  Notifier,
+  ReadOnly,
+  Sanitizer,
+  Saver,
+  Selection,
+  Styles,
+  Toolbar,
+  Tooltip,
+  I18n,
+  Ui,
+  Tools,
+} from './api';
 export {
   BlockMutationType,
   BlockMutationEvent,

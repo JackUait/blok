@@ -3,6 +3,7 @@ import { userEvent, waitFor, expect } from 'storybook/test';
 import type { OutputData } from '@/types';
 import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID, dispatchKeyboardEvent, focusSearchInput, waitForPointerEvents } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
+import Header from '../tools/header';
 
 interface PopoverArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -22,6 +23,8 @@ const ITEM_FOCUSED_SELECTOR = '[data-blok-focused=\"true\"]';
 const CONFIRMATION_SELECTOR = '[data-blok-popover-item-confirmation="true"]';
 const NOTHING_FOUND_SELECTOR = '[data-blok-nothing-found-displayed="true"]';
 const DELETE_BUTTON_SELECTOR = '[data-blok-item-name="delete"]';
+const CONVERT_TO_SELECTOR = '[data-blok-item-name="convert-to"]';
+const NESTED_POPOVER_SELECTOR = '[data-blok-nested="true"]';
 
 const TIMEOUT_INIT = { timeout: 5000 };
 const TIMEOUT_ACTION = { timeout: 5000 };
@@ -739,6 +742,96 @@ export const MobileOverlay: Story = {
 
           // Overlay exists (visibility controlled by CSS media queries)
           expect(hasOverlay || popover).toBeTruthy();
+        },
+        TIMEOUT_ACTION
+      );
+    });
+  },
+};
+
+/**
+ * Block settings menu with convert-to dropdown open.
+ */
+export const BlockSettingsConvertToOpen: Story = {
+  args: {
+    data: sampleData,
+    tools: {
+      header: Header,
+    },
+  },
+  play: async ({ canvasElement, step }) => {
+    await step('Wait for editor and toolbar to initialize', async () => {
+      await waitFor(
+        () => {
+          const block = canvasElement.querySelector(BLOCK_TESTID);
+
+          expect(block).toBeInTheDocument();
+        },
+        TIMEOUT_INIT
+      );
+      await waitForToolbar(canvasElement);
+    });
+
+    await step('Click block to show toolbar', async () => {
+      const block = canvasElement.querySelector(BLOCK_TESTID);
+
+      if (block) {
+        simulateClick(block);
+      }
+
+      await waitFor(
+        () => {
+          const actionsZone = canvasElement.querySelector(ACTIONS_TESTID);
+
+          expect(actionsZone).toBeInTheDocument();
+        },
+        TIMEOUT_ACTION
+      );
+    });
+
+    await step('Open block settings', async () => {
+      const settingsButton = canvasElement.querySelector(SETTINGS_BUTTON_TESTID);
+
+      if (settingsButton) {
+        simulateClick(settingsButton);
+      }
+
+      await waitFor(
+        () => {
+          const blockTunesPopover = document.querySelector(BLOCK_TUNES_POPOVER_TESTID);
+
+          expect(blockTunesPopover).toBeInTheDocument();
+        },
+        TIMEOUT_ACTION
+      );
+    });
+
+    await step('Click convert-to button to open nested popover', async () => {
+      // Wait for the convert-to button to appear (it's rendered async after block settings opens)
+      await waitFor(
+        () => {
+          const convertToButton = document.querySelector(CONVERT_TO_SELECTOR);
+
+          expect(convertToButton).toBeInTheDocument();
+        },
+        TIMEOUT_ACTION
+      );
+
+      const convertToButton = document.querySelector(CONVERT_TO_SELECTOR);
+
+      if (convertToButton) {
+        simulateClick(convertToButton);
+      }
+
+      // Wait for the popover animation
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      await waitFor(
+        () => {
+          // The nested popover should be opened
+          const nestedPopover = document.querySelector(NESTED_POPOVER_SELECTOR + POPOVER_OPENED_SELECTOR);
+
+          expect(nestedPopover).toBeInTheDocument();
         },
         TIMEOUT_ACTION
       );

@@ -44,6 +44,45 @@ const createTooltipDemo = (_args: TooltipArgs): HTMLElement => {
   return container;
 };
 
+const createAllStatesDemo = (): HTMLElement => {
+  const placements: TooltipArgs['placement'][] = ['bottom', 'top', 'left', 'right'];
+  const container = document.createElement('div');
+
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(180px, 1fr))';
+  container.style.gap = '32px';
+  container.style.alignItems = 'center';
+  container.style.justifyItems = 'center';
+  container.style.minHeight = '400px';
+  container.style.padding = '80px';
+  container.style.backgroundColor = '#fff';
+
+  const makeTrigger = (label: string, testId: string): HTMLButtonElement => {
+    const button = document.createElement('button');
+
+    button.textContent = label;
+    button.style.padding = '12px 24px';
+    button.style.fontSize = '14px';
+    button.style.borderRadius = '6px';
+    button.style.border = '1px solid #ddd';
+    button.style.cursor = 'pointer';
+    button.style.backgroundColor = '#f8f8f8';
+    button.setAttribute('data-blok-testid', testId);
+
+    return button;
+  };
+
+  const defaultTrigger = makeTrigger('Default (hidden)', 'tooltip-trigger-default');
+  const placementTriggers = placements.map((placement) =>
+    makeTrigger(`Shown ${placement}`, `tooltip-trigger-${placement}`)
+  );
+
+  container.appendChild(defaultTrigger);
+  placementTriggers.forEach((trigger) => container.appendChild(trigger));
+
+  return container;
+};
+
 const meta: Meta<TooltipArgs> = {
   title: 'Components/Tooltip',
   tags: ['autodocs'],
@@ -74,145 +113,50 @@ export default meta;
 
 type Story = StoryObj<TooltipArgs>;
 
-/**
- * Default state: Tooltip is hidden.
- */
-export const Default: Story = {
+export const TooltipStates: Story = {
   args: {
     placement: 'bottom',
     content: 'This is a tooltip',
     delay: 0,
   },
-};
-
-/**
- * Tooltip shown below the trigger element.
- */
-export const ShownBottom: Story = {
-  args: {
-    placement: 'bottom',
-    content: 'Tooltip at bottom',
-    delay: 0,
-  },
+  render: createAllStatesDemo,
   play: async ({ canvasElement, step }) => {
-    await step('Show tooltip at bottom', async () => {
-      const trigger = canvasElement.querySelector('[data-blok-testid="tooltip-trigger"]') as HTMLElement;
+    const placements: TooltipArgs['placement'][] = ['bottom', 'top', 'left', 'right'];
+    const triggerDefault = canvasElement.querySelector('[data-blok-testid="tooltip-trigger-default"]') as HTMLElement;
+
+    expect(triggerDefault).toBeInTheDocument();
+
+    const showAndClone = async (placement: TooltipArgs['placement']) => {
+      const trigger = canvasElement.querySelector(`[data-blok-testid="tooltip-trigger-${placement}"]`) as HTMLElement;
 
       expect(trigger).toBeInTheDocument();
 
-      if (trigger) {
-        Tooltip.show(trigger, 'Tooltip at bottom', { placement: 'bottom', delay: 0 });
-      }
+      Tooltip.show(trigger, `Tooltip at ${placement}`, { placement, delay: 0 });
 
       await waitFor(
         () => {
-          const tooltip = document.querySelector(TOOLTIP_TESTID);
+          const tooltip = document.querySelector(TOOLTIP_TESTID) as HTMLElement;
 
           expect(tooltip).toBeInTheDocument();
           expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
-          expect(tooltip).toHaveAttribute('data-blok-placement', 'bottom');
+          expect(tooltip).toHaveAttribute('data-blok-placement', placement);
         },
         TIMEOUT_ACTION
       );
-    });
-  },
-};
 
-/**
- * Tooltip shown above the trigger element.
- */
-export const ShownTop: Story = {
-  args: {
-    placement: 'top',
-    content: 'Tooltip at top',
-    delay: 0,
-  },
-  play: async ({ canvasElement, step }) => {
-    await step('Show tooltip at top', async () => {
-      const trigger = canvasElement.querySelector('[data-blok-testid="tooltip-trigger"]') as HTMLElement;
+      const tooltip = document.querySelector(TOOLTIP_TESTID) as HTMLElement;
+      const clone = tooltip.cloneNode(true) as HTMLElement;
 
-      expect(trigger).toBeInTheDocument();
+      clone.setAttribute('data-blok-testid', `tooltip-${placement}`);
+      document.body.appendChild(clone);
+    };
 
-      if (trigger) {
-        Tooltip.show(trigger, 'Tooltip at top', { placement: 'top', delay: 0 });
+    await step('Show all placements', async () => {
+      for (const placement of placements) {
+        await showAndClone(placement);
       }
 
-      await waitFor(
-        () => {
-          const tooltip = document.querySelector(TOOLTIP_TESTID);
-
-          expect(tooltip).toBeInTheDocument();
-          expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
-          expect(tooltip).toHaveAttribute('data-blok-placement', 'top');
-        },
-        TIMEOUT_ACTION
-      );
-    });
-  },
-};
-
-/**
- * Tooltip shown to the left of the trigger element.
- */
-export const ShownLeft: Story = {
-  args: {
-    placement: 'left',
-    content: 'Tooltip at left',
-    delay: 0,
-  },
-  play: async ({ canvasElement, step }) => {
-    await step('Show tooltip at left', async () => {
-      const trigger = canvasElement.querySelector('[data-blok-testid="tooltip-trigger"]') as HTMLElement;
-
-      expect(trigger).toBeInTheDocument();
-
-      if (trigger) {
-        Tooltip.show(trigger, 'Tooltip at left', { placement: 'left', delay: 0 });
-      }
-
-      await waitFor(
-        () => {
-          const tooltip = document.querySelector(TOOLTIP_TESTID);
-
-          expect(tooltip).toBeInTheDocument();
-          expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
-          expect(tooltip).toHaveAttribute('data-blok-placement', 'left');
-        },
-        TIMEOUT_ACTION
-      );
-    });
-  },
-};
-
-/**
- * Tooltip shown to the right of the trigger element.
- */
-export const ShownRight: Story = {
-  args: {
-    placement: 'right',
-    content: 'Tooltip at right',
-    delay: 0,
-  },
-  play: async ({ canvasElement, step }) => {
-    await step('Show tooltip at right', async () => {
-      const trigger = canvasElement.querySelector('[data-blok-testid="tooltip-trigger"]') as HTMLElement;
-
-      expect(trigger).toBeInTheDocument();
-
-      if (trigger) {
-        Tooltip.show(trigger, 'Tooltip at right', { placement: 'right', delay: 0 });
-      }
-
-      await waitFor(
-        () => {
-          const tooltip = document.querySelector(TOOLTIP_TESTID);
-
-          expect(tooltip).toBeInTheDocument();
-          expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
-          expect(tooltip).toHaveAttribute('data-blok-placement', 'right');
-        },
-        TIMEOUT_ACTION
-      );
+      Tooltip.hide(true);
     });
   },
 };

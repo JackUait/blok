@@ -179,6 +179,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   public destroy(): void {
     this.items.forEach(item => item.destroy());
     this.reactContainer?.remove();
+    // Also remove the popover element if it was moved outside the React container
+    this.nodes.popover?.remove();
     this.listeners.removeAll();
     this.search?.destroy();
 

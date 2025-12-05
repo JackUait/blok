@@ -72,16 +72,6 @@ export default meta;
 type Story = StoryObj<EditorModesArgs>;
 
 /**
- * Normal editing mode (default).
- */
-export const NormalMode: Story = {
-  args: {
-    data: sampleData,
-    readOnly: false,
-  },
-};
-
-/**
  * Read-only mode - content cannot be edited.
  */
 export const ReadOnlyMode: Story = {
@@ -140,26 +130,6 @@ export const NarrowMode: Story = {
 export const EmptyEditor: Story = {
   args: {
     data: undefined,
-    readOnly: false,
-  },
-};
-
-/**
- * Single block editor.
- */
-export const SingleBlock: Story = {
-  args: {
-    data: {
-      time: Date.now(),
-      version: '1.0.0',
-      blocks: [
-        {
-          id: 'single-block-1',
-          type: 'paragraph',
-          data: { text: 'This is the only block in the editor.' },
-        },
-      ],
-    },
     readOnly: false,
   },
 };

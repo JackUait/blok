@@ -316,6 +316,10 @@ export default class History extends Module {
       }
 
       const target = this.globalUndoRedo ? document : redactor;
+      const shortcutNames = ['CMD+Z', 'CMD+SHIFT+Z', 'CMD+Y'];
+
+      // Clear any existing undo/redo shortcuts on the target to avoid duplicate registration errors
+      shortcutNames.forEach(name => Shortcuts.remove(target, name));
 
       // Undo: Cmd+Z (Mac) / Ctrl+Z (Windows/Linux)
       Shortcuts.add({

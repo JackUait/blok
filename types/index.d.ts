@@ -141,6 +141,7 @@ declare class Blok {
 
   public blocks: Blocks;
   public caret: Caret;
+  public history: History;
   public sanitizer: Sanitizer;
   public saver: Saver;
   public selection: Selection;

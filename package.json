@@ -1,6 +1,6 @@
 {
   "name": "@jackuait/blok",
-  "version": "0.4.1-beta.0",
+  "version": "0.4.1-beta.1",
   "description": "Blok — headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch",
   "main": "dist/blok.umd.js",
   "module": "dist/blok.mjs",

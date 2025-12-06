@@ -11,9 +11,7 @@ import jest from 'eslint-plugin-jest';
 import tseslint from 'typescript-eslint';
 import jsdoc from 'eslint-plugin-jsdoc';
 import tailwindcss from 'eslint-plugin-tailwindcss';
-import react from 'eslint-plugin-react';
-import reactHooks from 'eslint-plugin-react-hooks';
-import eslintReact from '@eslint-react/eslint-plugin';
+
 
 const CLASS_SELECTOR_PATTERN = /\.[_a-zA-Z][_a-zA-Z0-9-]*/;
 const ID_SELECTOR_PATTERN = /#[_a-zA-Z][_a-zA-Z0-9-]*/;
@@ -1028,79 +1026,7 @@ export default defineConfig(
       'tailwindcss/no-unnecessary-arbitrary-value': 'error', // Use p-4 instead of p-[16px] when equivalent exists
     },
   },
-  // React component best practices
-  {
-    files: ['src/**/*.tsx'],
-    plugins: {
-      react,
-      'react-hooks': reactHooks,
-      '@eslint-react': eslintReact,
-    },
-    settings: {
-      react: {
-        version: 'detect',
-      },
-    },
-    rules: {
-      // === React Hooks Rules ===
-      'react-hooks/rules-of-hooks': 'error', // Enforce Rules of Hooks
-      'react-hooks/exhaustive-deps': 'warn', // Verify exhaustive deps for useEffect, useMemo, useCallback
 
-      // === JSX Best Practices ===
-      'react/jsx-key': ['error', { checkFragmentShorthand: true, warnOnDuplicates: true }], // Require key prop in iterators
-      'react/jsx-no-duplicate-props': 'error', // Prevent duplicate props
-      'react/jsx-no-undef': 'error', // Disallow undeclared variables in JSX
-      'react/jsx-uses-react': 'error', // Prevent React from being incorrectly marked as unused
-      'react/jsx-uses-vars': 'error', // Prevent variables used in JSX from being incorrectly marked as unused
-      'react/jsx-no-target-blank': 'error', // Require rel="noopener noreferrer" for target="_blank"
-      'react/jsx-curly-brace-presence': ['warn', { props: 'never', children: 'never' }], // Disallow unnecessary curly braces
-      'react/jsx-boolean-value': ['warn', 'never'], // Enforce shorthand boolean syntax: <Comp disabled /> vs <Comp disabled={true} />
-      'react/jsx-fragments': ['warn', 'syntax'], // Prefer <> over <React.Fragment>
-      'react/jsx-no-useless-fragment': 'warn', // Disallow unnecessary fragments
-      'react/jsx-pascal-case': 'error', // Enforce PascalCase for component names
-      'react/self-closing-comp': 'warn', // Enforce self-closing tags for components without children
-
-      // === Component Best Practices ===
-      'react/no-array-index-key': 'warn', // Warn against using array index as key
-      'react/no-children-prop': 'error', // Prevent passing children as props
-      'react/no-danger': 'warn', // Warn about dangerouslySetInnerHTML usage
-      'react/no-danger-with-children': 'error', // Prevent dangerouslySetInnerHTML with children
-      'react/no-deprecated': 'error', // Prevent usage of deprecated methods
-      'react/no-direct-mutation-state': 'error', // Prevent direct state mutation
-      'react/no-find-dom-node': 'error', // Prevent usage of findDOMNode
-      'react/no-is-mounted': 'error', // Prevent usage of isMounted
-      'react/no-render-return-value': 'error', // Prevent using render() return value
-      'react/no-string-refs': 'error', // Prevent string refs, use callback refs or createRef
-      'react/no-unescaped-entities': 'error', // Prevent invalid characters in JSX
-      'react/no-unknown-property': 'error', // Prevent unknown DOM properties
-      'react/no-unstable-nested-components': 'error', // Prevent creating unstable components inside components
-      'react/require-render-return': 'error', // Enforce render method to return value
-      'react/void-dom-elements-no-children': 'error', // Prevent void elements from having children
-
-      // === @eslint-react Advanced Rules ===
-      '@eslint-react/no-leaked-conditional-rendering': 'error', // Prevent leaked conditional rendering (0 && <Component />)
-      '@eslint-react/no-unstable-context-value': 'error', // Prevent unstable context values
-      '@eslint-react/no-unstable-default-props': 'error', // Prevent unstable default props
-      '@eslint-react/jsx-shorthand-boolean': 'warn', // Prefer <Comp disabled /> over <Comp disabled={true} />
-      '@eslint-react/jsx-shorthand-fragment': 'warn', // Prefer <> over <Fragment>
-      '@eslint-react/no-duplicate-key': 'error', // Prevent duplicate keys
-      '@eslint-react/no-missing-key': 'error', // Ensure key prop is present in iterators
-      '@eslint-react/no-children-count': 'warn', // Avoid using Children.count
-      '@eslint-react/no-children-for-each': 'warn', // Avoid using Children.forEach
-      '@eslint-react/no-children-map': 'warn', // Avoid using Children.map
-      '@eslint-react/no-children-only': 'warn', // Avoid using Children.only
-      '@eslint-react/no-children-to-array': 'warn', // Avoid using Children.toArray
-      '@eslint-react/no-clone-element': 'warn', // Avoid using cloneElement
-      '@eslint-react/no-string-refs': 'error', // Prevent string refs
-      '@eslint-react/no-direct-mutation-state': 'error', // Prevent direct state mutation
-      '@eslint-react/no-access-state-in-setstate': 'error', // Prevent accessing state in setState
-      '@eslint-react/no-nested-component-definitions': 'error', // Prevent defining components inside components
-      '@eslint-react/no-useless-fragment': 'warn', // Disallow unnecessary fragments
-      '@eslint-react/prefer-destructuring-assignment': 'warn', // Prefer destructuring props/state
-      '@eslint-react/prefer-use-state-lazy-initialization': 'warn', // Prefer lazy initialization for expensive computations
-      '@eslint-react/no-array-index-key': 'warn', // Warn against using array index as key
-    },
-  },
   {
     files: ['test/unit/**/*.ts'],
     plugins: {

@@ -1,6 +1,3 @@
-import React, { createRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { flushSync } from 'react-dom';
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
 import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './components/popover-item';
 import type { SearchInput } from './components/search-input';
@@ -10,14 +7,12 @@ import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } fr
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { PopoverItemParams } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
-import {
-  PopoverAbstractComponent,
-  type PopoverAbstractComponentHandle
-} from './PopoverAbstractComponent';
+import { css, DATA_ATTR } from './popover.const';
+import { twMerge } from '../tw';
 
 /**
  * Class responsible for rendering popover and handling its behaviour.
- * Uses React internally for rendering while maintaining the same public API.
+ * Uses vanilla DOM manipulation for rendering.
  */
 export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes> extends EventsDispatcher<PopoverEventMap> {
   /**
@@ -32,7 +27,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
   /**
    * Refs to created HTML elements.
-   * These are populated from React component refs after rendering.
    */
   protected nodes: Nodes;
 
@@ -57,21 +51,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   };
 
   /**
-   * React 18 root instance for persistent rendering
-   */
-  private reactRoot: Root | null = null;
-
-  /**
-   * Container element that hosts the React root
-   */
-  private reactContainer: HTMLElement | null = null;
-
-  /**
-   * Ref to the imperative handle exposed by the React component
-   */
-  private componentRef = createRef<PopoverAbstractComponentHandle>();
-
-  /**
    * Constructs the instance
    * @param params - popover construction params
    * @param itemsRenderParams - popover item render params.
@@ -92,15 +71,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       };
     }
 
-    // Initialize nodes object
-    this.nodes = {} as Nodes;
-
-    // Create React container and render component
-    this.initializeReactRoot();
-    this.renderComponent();
-
-    // Populate nodes from React refs after initial render
-    this.syncNodesFromReact();
+    // Initialize nodes object and create DOM elements
+    this.nodes = this.createPopoverDOM() as Nodes;
 
     // Append item elements to the items container
     this.appendItemElements();
@@ -119,29 +91,25 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
-   * Returns DOM element that should be attached to the document (React container if present).
+   * Returns DOM element that should be attached to the document.
    */
   public getMountElement(): HTMLElement {
-    return (this.reactContainer ?? this.nodes.popover) as HTMLElement;
+    return this.nodes.popover as HTMLElement;
   }
 
   /**
    * Open popover
    */
   public show(): void {
-    /**
-     * Ensure popover is attached to DOM even if it's still inside the detached React container
-     * (happens in mobile mode where no trigger is passed).
-     */
-    const mountTarget = this.reactContainer ?? this.nodes.popover;
+    const mountTarget = this.nodes.popover;
 
     if (mountTarget !== null && !mountTarget.isConnected) {
       document.body.appendChild(mountTarget);
     }
 
-    // Update React state
-    this.componentRef.current?.setOpened(true);
-    this.componentRef.current?.setContainerOpened(true);
+    // Update DOM state
+    this.nodes.popover.setAttribute(DATA_ATTR.opened, 'true');
+    this.nodes.popoverContainer.classList.add(...css.popoverContainerOpened.split(' '));
 
     /**
      * Refresh active states for all items.
@@ -158,11 +126,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Closes popover
    */
   public hide(): void {
-    // Update React state
-    this.componentRef.current?.setOpened(false);
-    this.componentRef.current?.setOpenTop(false);
-    this.componentRef.current?.setOpenLeft(false);
-    this.componentRef.current?.setContainerOpened(false);
+    // Update DOM state
+    this.nodes.popover.removeAttribute(DATA_ATTR.opened);
+    this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
+    this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
+    this.nodes.popoverContainer.classList.remove(...css.popoverContainerOpened.split(' '));
 
     this.itemsDefault.forEach(item => item.reset());
 
@@ -178,21 +146,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public destroy(): void {
     this.items.forEach(item => item.destroy());
-    this.reactContainer?.remove();
-    // Also remove the popover element if it was moved outside the React container
     this.nodes.popover?.remove();
     this.listeners.removeAll();
     this.search?.destroy();
-
-    // Cleanup React root
-    if (this.reactRoot) {
-      try {
-        this.reactRoot.unmount();
-      } catch {
-        // Ignore errors if DOM is already cleaned up
-      }
-      this.reactRoot = null;
-    }
   }
 
   /**
@@ -294,6 +250,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.handleItemClick(item);
   }
 
+
   /**
    * - Toggles item active state, if clicked popover item has property 'toggle' set to true.
    *
@@ -373,7 +330,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * @param isDisplayed - true if the message should be displayed
    */
   protected toggleNothingFoundMessage(isDisplayed: boolean): void {
-    this.componentRef.current?.setNothingFoundVisible(isDisplayed);
+    if (isDisplayed) {
+      this.nodes.nothingFoundMessage.classList.remove('hidden');
+      this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
+    } else {
+      this.nodes.nothingFoundMessage.classList.add('hidden');
+      this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
+    }
   }
 
   /**
@@ -381,7 +344,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * @param openTop - true if popover should open above trigger
    */
   protected setOpenTop(openTop: boolean): void {
-    this.componentRef.current?.setOpenTop(openTop);
+    if (openTop) {
+      this.nodes.popover.setAttribute(DATA_ATTR.openTop, 'true');
+    } else {
+      this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
+    }
   }
 
   /**
@@ -389,7 +356,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * @param openLeft - true if popover should open to the left
    */
   protected setOpenLeft(openLeft: boolean): void {
-    this.componentRef.current?.setOpenLeft(openLeft);
+    if (openLeft) {
+      this.nodes.popover.setAttribute(DATA_ATTR.openLeft, 'true');
+    } else {
+      this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
+    }
   }
 
   /**
@@ -401,58 +372,62 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
-   * Initializes the React root for rendering
+   * Creates the popover DOM structure
+   * @returns PopoverNodes object with all required elements
    */
-  private initializeReactRoot(): void {
-    // Create a container element for the React root
-    this.reactContainer = document.createElement('div');
-    this.reactContainer.style.display = 'contents';
+  private createPopoverDOM(): PopoverNodes {
+    // Create root popover element
+    const popover = document.createElement('div');
 
-    this.reactRoot = createRoot(this.reactContainer);
-  }
+    if (this.params.class) {
+      popover.className = this.params.class;
+    }
+    popover.setAttribute(DATA_ATTR.popover, '');
+    if (this.params.class) {
+      popover.setAttribute('data-blok-popover-custom-class', this.params.class);
+    }
+    popover.setAttribute('data-blok-testid', 'popover');
 
-  /**
-   * Renders the React component with current state
-   */
-  private renderComponent(): void {
-    if (!this.reactRoot) {
-      return;
-    }
+    // Set CSS variables
+    popover.style.setProperty('--width', '200px');
+    popover.style.setProperty('--item-padding', '3px');
+    popover.style.setProperty('--item-height', 'calc(1.25rem + 2 * var(--item-padding))');
+    popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');
+    popover.style.setProperty('--popover-left', '0');
+    popover.style.setProperty('--nested-popover-overlap', '0.25rem');
 
-    // Use flushSync to ensure synchronous rendering for immediate DOM access
-    flushSync(() => {
-      this.reactRoot?.render(
-        <PopoverAbstractComponent
-          ref={this.componentRef}
-          customClass={this.params.class}
-          messages={this.messages}
-        />
-      );
-    });
-  }
+    // Create popover container
+    const popoverContainer = document.createElement('div');
+    popoverContainer.className = css.popoverContainer;
+    popoverContainer.setAttribute(DATA_ATTR.popoverContainer, '');
+    popoverContainer.setAttribute('data-blok-testid', 'popover-container');
 
-  /**
-   * Syncs the nodes object with refs from the React component
-   */
-  private syncNodesFromReact(): void {
-    // Get the actual popover element from the React component
-    const popoverEl = this.componentRef.current?.getPopoverElement();
-    const containerEl = this.componentRef.current?.getContainerElement();
-    const itemsEl = this.componentRef.current?.getItemsElement();
-    const nothingFoundEl = this.componentRef.current?.getNothingFoundElement();
+    // Create nothing found message
+    const nothingFoundMessage = document.createElement('div');
+    nothingFoundMessage.className = twMerge(
+      'cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text p-[3px]',
+      'hidden'
+    );
+    nothingFoundMessage.setAttribute('data-blok-testid', 'popover-nothing-found');
+    nothingFoundMessage.textContent = this.messages.nothingFound ?? 'Nothing found';
 
-    if (popoverEl) {
-      this.nodes.popover = popoverEl;
-    }
-    if (containerEl) {
-      this.nodes.popoverContainer = containerEl;
-    }
-    if (itemsEl) {
-      this.nodes.items = itemsEl;
-    }
-    if (nothingFoundEl) {
-      this.nodes.nothingFoundMessage = nothingFoundEl;
-    }
+    // Create items container
+    const items = document.createElement('div');
+    items.className = css.items;
+    items.setAttribute(DATA_ATTR.popoverItems, '');
+    items.setAttribute('data-blok-testid', 'popover-items');
+
+    // Assemble DOM structure
+    popoverContainer.appendChild(nothingFoundMessage);
+    popoverContainer.appendChild(items);
+    popover.appendChild(popoverContainer);
+
+    return {
+      popover,
+      popoverContainer,
+      nothingFoundMessage,
+      items,
+    };
   }
 
   /**

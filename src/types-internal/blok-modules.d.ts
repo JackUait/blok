@@ -15,6 +15,7 @@ import StylesAPI from '../components/modules/api/styles';
 import ToolbarAPI from '../components/modules/api/toolbar';
 import TooltipAPI from '../components/modules/api/tooltip';
 import UiAPI from '../components/modules/api/ui';
+import HistoryAPI from '../components/modules/api/history';
 
 /** ./toolbar */
 import BlockSettings from '../components/modules/toolbar/blockSettings';
@@ -39,6 +40,7 @@ import Saver from '../components/modules/saver';
 import Tools from '../components/modules/tools';
 import UI from '../components/modules/ui';
 import ToolsAPI from '../components/modules/api/tools';
+import History from '../components/modules/history';
 
 export interface BlokModules {
   // API Modules
@@ -59,6 +61,7 @@ export interface BlokModules {
   ToolbarAPI: ToolbarAPI,
   TooltipAPI: TooltipAPI,
   UiAPI: UiAPI,
+  HistoryAPI: HistoryAPI,
 
   // Toolbar Modules
   BlockSettings: BlockSettings,
@@ -82,4 +85,5 @@ export interface BlokModules {
   Saver: Saver,
   Tools: Tools,
   UI: UI,
+  History: History,
 }

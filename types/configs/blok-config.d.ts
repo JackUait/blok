@@ -41,6 +41,26 @@ export interface BlokConfig {
   hideToolbar?: boolean;
 
   /**
+   * Maximum number of history entries for undo/redo
+   * @default 30
+   */
+  maxHistoryLength?: number;
+
+  /**
+   * Debounce time in milliseconds for batching rapid content changes
+   * @default 300
+   */
+  historyDebounceTime?: number;
+
+  /**
+   * Enable document-level undo/redo shortcuts.
+   * When true, Cmd+Z / Ctrl+Z and Cmd+Shift+Z / Ctrl+Shift+Z work even when
+   * the editor is not focused (e.g., after dragging a block).
+   * @default true
+   */
+  globalUndoRedo?: boolean;
+
+  /**
    * Map of Tools to use
    */
   tools?: {

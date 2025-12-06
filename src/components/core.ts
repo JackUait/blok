@@ -53,10 +53,13 @@ export default class Core {
           await this.start();
           await this.render();
 
-          const { BlockManager, Caret, UI, ModificationsObserver } = this.moduleInstances;
+          const { BlockManager, Caret, UI, ModificationsObserver, History } = this.moduleInstances;
 
           UI.checkEmptiness();
           ModificationsObserver.enable();
+
+          // Capture initial state for undo/redo after rendering
+          await History.captureInitialState();
 
           if ((this.configuration as BlokConfig).autofocus === true && this.configuration.readOnly !== true) {
             Caret.setToBlock(BlockManager.blocks[0], Caret.positions.START);
@@ -260,6 +263,7 @@ export default class Core {
       'RectangleSelection',
       'CrossBlockSelection',
       'ReadOnly',
+      'History',
     ];
 
     await modulesToPrepare.reduce(

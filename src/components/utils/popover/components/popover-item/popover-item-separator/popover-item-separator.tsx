@@ -12,10 +12,10 @@ import {
  * Represents popover separator node
  */
 export class PopoverItemSeparator extends PopoverItem {
-  /**
-   * Html elements
-   */
-  private nodes: { root: HTMLElement | null } = { root: null };
+ /**
+  * Html elements
+  */
+  private nodes: { container: HTMLElement | null; root: HTMLElement | null } = { container: null, root: null };
 
   /**
    * React 18 root instance for persistent rendering
@@ -47,7 +47,10 @@ export class PopoverItemSeparator extends PopoverItem {
     this.isInline = renderParams?.isInline ?? false;
     this.isNestedInline = renderParams?.isNestedInline ?? false;
 
-    this.nodes.root = this.createRootElement();
+    const { container, renderedElement } = this.createRootElement();
+
+    this.nodes.container = container;
+    this.nodes.root = renderedElement;
   }
 
   /**
@@ -55,6 +58,13 @@ export class PopoverItemSeparator extends PopoverItem {
    */
   public getElement(): HTMLElement {
     return this.nodes.root as HTMLElement;
+  }
+
+  /**
+   * Returns element that should be mounted into DOM to keep React root attached
+   */
+  public override getMountElement(): HTMLElement | null {
+    return this.nodes.container ?? this.nodes.root;
   }
 
   /**
@@ -84,7 +94,7 @@ export class PopoverItemSeparator extends PopoverItem {
   /**
    * Creates the root container element and initializes React rendering
    */
-  private createRootElement(): HTMLElement {
+  private createRootElement(): { container: HTMLElement; renderedElement: HTMLElement } {
     const container = document.createElement('div');
 
     container.style.display = 'contents';
@@ -103,6 +113,6 @@ export class PopoverItemSeparator extends PopoverItem {
 
     const renderedElement = container.firstElementChild as HTMLElement;
 
-    return renderedElement ?? container;
+    return { container, renderedElement: renderedElement ?? container };
   }
 }

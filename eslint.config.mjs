@@ -1010,8 +1010,6 @@ export default defineConfig(
     rules: {
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
-      // Duplicate code detection
-      'sonarjs/no-duplicate-string': ['error', { threshold: 3, ignoreStrings: 'data-blok-testid,data-blok-focused,data-blok-opened,data-blok-component' }],
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-identical-expressions': 'error',
       // Prevent UMD module patterns

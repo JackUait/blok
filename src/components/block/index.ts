@@ -573,6 +573,55 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
+   * Updates the block's data in-place without destroying the DOM element.
+   * This preserves focus and caret position during updates like undo/redo.
+   *
+   * @param newData - the new data to apply to the block
+   * @returns true if the update was performed in-place, false if a full re-render is needed
+   */
+  public async setData(newData: BlockToolData): Promise<boolean> {
+    // Check if tool supports setData method
+    const toolSetData = (this.toolInstance as { setData?: (data: BlockToolData) => void | Promise<void> }).setData;
+
+    if (typeof toolSetData === 'function') {
+      try {
+        await toolSetData.call(this.toolInstance, newData);
+        this.lastSavedData = newData;
+
+        return true;
+      } catch (e) {
+        _.log(`Tool ${this.name} setData failed: ${e instanceof Error ? e.message : String(e)}`, 'warn');
+
+        return false;
+      }
+    }
+
+    // For tools without setData, try to update innerHTML directly for simple text-based tools
+    const pluginsContent = this.toolRenderedElement;
+
+    if (!pluginsContent) {
+      return false;
+    }
+
+    // Handle simple text-based blocks (like paragraph) with a 'text' property
+    const hasTextProperty = 'text' in newData && typeof newData.text === 'string';
+    const isContentEditable = pluginsContent.getAttribute('contenteditable') === 'true';
+
+    if (hasTextProperty && isContentEditable) {
+      pluginsContent.innerHTML = newData.text as string;
+      this.lastSavedData = newData;
+      this.dropInputsCache();
+      this.toggleInputsEmptyMark();
+      this.call(BlockToolAPI.UPDATED);
+
+      return true;
+    }
+
+    // For other tools, fall back to full re-render
+    return false;
+  }
+
+  /**
    * Call Tool instance destroy method
    */
   public destroy(): void {

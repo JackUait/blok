@@ -1048,8 +1048,9 @@ test.describe('blok i18n', () => {
       await expect(linkButton).toBeVisible();
       await linkButton.click();
 
-      const linkInput = page.locator('[data-blok-link-tool-input-opened="true"]');
+      const linkInput = page.locator('[data-blok-link-tool-input-opened]');
 
+      await expect(linkInput).toHaveAttribute('data-blok-link-tool-input-opened', 'true');
       await expect(linkInput).toBeVisible();
 
       const placeholder = await linkInput.getAttribute('placeholder');

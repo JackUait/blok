@@ -23,9 +23,6 @@ import BlockSettings from './toolbar/blockSettings';
 import Toolbar from './toolbar/index';
 import InlineToolbar from './toolbar/inline';
 
-/** ./react */
-import ReactAdapter from './reactAdapter';
-
 /** . */
 import BlockEvents from './blockEvents';
 import BlockManager from './blockManager';
@@ -67,9 +64,6 @@ export default {
   BlockSettings,
   Toolbar,
   InlineToolbar,
-
-  // React Adapter
-  ReactAdapter,
 
   // Modules
   BlockEvents,

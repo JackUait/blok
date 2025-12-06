@@ -332,8 +332,6 @@ export class PopoverDesktop extends PopoverAbstract {
     const itemOffsetTop = (itemEl ? itemEl.offsetTop : 0) - this.scrollTop;
     const topOffset = this.offsetTop + itemOffsetTop;
 
-    // Get the actual popover element to set CSS variables on
-    // This ensures the variable is available even if nestedPopoverEl is a React container wrapper
     const actualPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`) as HTMLElement | null ?? nestedPopoverEl;
 
     actualPopoverEl.style.setProperty(CSSVariables.TriggerItemTop, topOffset + 'px');
@@ -432,7 +430,7 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Applies positioning styles to nested popover container.
    * This replaces CSS selectors like [data-blok-nested] [data-blok-popover-container]
-   * @param nestedPopoverEl - the nested popover element (mount element, may be React container)
+   * @param nestedPopoverEl - the nested popover element (mount element)
    */
   private applyNestedPopoverPositioning(nestedPopoverEl: HTMLElement): void {
     const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement | null;
@@ -441,9 +439,6 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
-    // Get the actual popover element (with data-blok-popover attribute) to set CSS variables on
-    // This is needed because the mount element may be a React container wrapper with display:contents,
-    // and the popover element has its own default --popover-left value that would override inherited values
     const actualPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`) as HTMLElement | null ?? nestedPopoverEl;
 
     // Check if parent popover has openTop or openLeft state

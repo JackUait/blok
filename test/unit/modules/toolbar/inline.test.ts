@@ -445,17 +445,15 @@ describe('InlineToolbar', () => {
       expect(result).toBe(false);
     });
 
-    it('should return true when node is contained in wrapper via componentRef', () => {
+    it('should return true when node is contained in wrapper via nodes.wrapper', () => {
       const wrapper = document.createElement('div');
       const child = document.createElement('div');
 
       wrapper.appendChild(child);
 
-      // Mock the componentRef to return a wrapper
-      (inlineToolbar as unknown as { componentRef: { current: { getWrapperElement: () => HTMLElement | null } | null } }).componentRef = {
-        current: {
-          getWrapperElement: () => wrapper,
-        },
+      // Mock the nodes.wrapper
+      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement | undefined } }).nodes = {
+        wrapper,
       };
 
       const result = inlineToolbar.containsNode(child);
@@ -480,21 +478,21 @@ describe('InlineToolbar', () => {
   });
 
   describe('destroy', () => {
-    it('should call close on componentRef and cleanup', () => {
+    it('should call hide and destroy on popover and cleanup', () => {
       inlineToolbar.opened = true;
-      const closeSpy = vi.fn();
+      const hideSpy = vi.fn();
+      const destroySpy = vi.fn();
 
-      (inlineToolbar as unknown as { componentRef: { current: { close: () => void; getWrapperElement: () => null; getPopover: () => null } | null } }).componentRef = {
-        current: {
-          close: closeSpy,
-          getWrapperElement: () => null,
-          getPopover: () => null,
-        },
+      // Mock the popover instance
+      (inlineToolbar as unknown as { popover: { hide: () => void; destroy: () => void } | null }).popover = {
+        hide: hideSpy,
+        destroy: destroySpy,
       };
 
       inlineToolbar.destroy();
 
-      expect(closeSpy).toHaveBeenCalled();
+      expect(hideSpy).toHaveBeenCalled();
+      expect(destroySpy).toHaveBeenCalled();
     });
   });
 
@@ -824,14 +822,8 @@ describe('InlineToolbar', () => {
     it('should activate item by name when popover is available', async () => {
       inlineToolbar.opened = true;
 
-      // Mock componentRef to return a popover
-      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
-        current: {
-          getPopover: () => mockPopoverInstance as unknown as Popover,
-          getWrapperElement: () => null,
-          close: vi.fn(),
-        },
-      };
+      // Mock the popover instance directly
+      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
 
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
@@ -849,14 +841,8 @@ describe('InlineToolbar', () => {
         [toolAdapter, toolInstance],
       ]);
 
-      // Mock componentRef to return a popover
-      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
-        current: {
-          getPopover: () => mockPopoverInstance as unknown as Popover,
-          getWrapperElement: () => null,
-          close: vi.fn(),
-        },
-      };
+      // Mock the popover instance directly
+      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
 
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
@@ -874,14 +860,8 @@ describe('InlineToolbar', () => {
         [toolAdapter, toolInstance],
       ]);
 
-      // Mock componentRef to return a popover
-      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
-        current: {
-          getPopover: () => mockPopoverInstance as unknown as Popover,
-          getWrapperElement: () => null,
-          close: vi.fn(),
-        },
-      };
+      // Mock the popover instance directly
+      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
 
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
@@ -919,26 +899,21 @@ describe('InlineToolbar', () => {
     });
   });
 
-  describe('React integration', () => {
-    it('should have componentRef initialized', () => {
-      const componentRef = (inlineToolbar as unknown as { componentRef: { current: unknown } }).componentRef;
-
-      expect(componentRef).toBeDefined();
-      expect(componentRef.current).toBeNull(); // Initially null before render
-    });
-
-    it('should have popover getter that returns null when componentRef is null', () => {
+  describe('popover integration', () => {
+    it('should have popover initialized as null', () => {
       const popover = (inlineToolbar as unknown as { popover: Popover | null }).popover;
 
       expect(popover).toBeNull();
     });
 
-    it('should have popover getter that returns popover from componentRef', () => {
-      (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null } | null } }).componentRef = {
-        current: {
-          getPopover: () => mockPopoverInstance as unknown as Popover,
-        },
-      };
+    it('should have popover getter that returns null when not set', () => {
+      const popover = (inlineToolbar as unknown as { popover: Popover | null }).popover;
+
+      expect(popover).toBeNull();
+    });
+
+    it('should have popover getter that returns popover when set', () => {
+      (inlineToolbar as unknown as { popover: Popover | null }).popover = mockPopoverInstance as unknown as Popover;
 
       const popover = (inlineToolbar as unknown as { popover: Popover | null }).popover;
 

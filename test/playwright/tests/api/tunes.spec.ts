@@ -15,9 +15,7 @@ const HOLDER_ID = 'blok';
 const FIRST_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]:first-of-type`;
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
-const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
-const FIRST_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(1)`;
-const SECOND_POPOVER_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:nth-of-type(2)`;
+const POPOVER_CONTAINER_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-container"]`;
 
 type SerializableTuneMenuItem = {
   icon?: string;
@@ -267,8 +265,24 @@ test.describe('api.tunes', () => {
     await focusBlockAndType(page, 'some text');
     await openBlockTunes(page);
 
-    await expect(page.locator(FIRST_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-blok-item-name', 'test-tune');
-    await expect(page.locator(SECOND_POPOVER_ITEM_SELECTOR)).toHaveAttribute('data-blok-item-name', 'delete');
+    const popoverContainer = page.locator(POPOVER_CONTAINER_SELECTOR);
+
+    await expect(popoverContainer).toHaveCount(1);
+
+    const testTuneItem = popoverContainer.locator('[data-blok-testid="popover-item"][data-blok-item-name="test-tune"]');
+    const deleteItem = popoverContainer.locator('[data-blok-testid="popover-item"][data-blok-item-name="delete"]');
+
+    await expect(testTuneItem).toBeVisible();
+    await expect(deleteItem).toBeVisible();
+
+    // Verify test-tune appears before delete by checking DOM order
+    const itemNames = await popoverContainer.locator('[data-blok-testid="popover-item"]').evaluateAll(
+      (elements) => elements.map((el) => el.getAttribute('data-blok-item-name'))
+    );
+    const testTuneIndex = itemNames.indexOf('test-tune');
+    const deleteIndex = itemNames.indexOf('delete');
+
+    expect(testTuneIndex).toBeLessThan(deleteIndex);
   });
 });
 

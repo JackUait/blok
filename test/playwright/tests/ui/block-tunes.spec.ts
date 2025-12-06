@@ -100,7 +100,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
           }
 
           if (!toolClass && classCode) {
-             
+
             toolClass = new Function(`return (${classCode});`)();
           }
 
@@ -574,9 +574,9 @@ test.describe('ui.block-tunes', () => {
       const itemsCount = await popoverItems.count();
 
       expect(itemsCount).toBeGreaterThan(1);
-      const firstPopoverItem = popoverContainer.locator('[data-blok-testid="popover-item"]:not([data-blok-hidden="true"]):first-of-type');
 
-      await expect(firstPopoverItem).toContainText('Tune');
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing that block-specific tunes appear first requires checking the first item
+      await expect(popoverItems.first()).toContainText('Tune');
     });
   });
 

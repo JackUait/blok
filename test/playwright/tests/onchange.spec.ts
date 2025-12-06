@@ -557,7 +557,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const tuneOption = page.getByTestId('block-tunes-popover').locator('[data-blok-testid="popover-item"]:nth-of-type(4)');
+    const tuneOption = page.getByTestId('block-tunes-popover').getByTestId('popover-item').filter({ hasText: 'Heading 1' });
 
     await tuneOption.click();
 

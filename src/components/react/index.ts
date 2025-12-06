@@ -36,7 +36,3 @@ export type {
   UseHistoryReturn,
 } from './hooks';
 
-// Search input component
-export { SearchInputComponent } from './SearchInputComponent';
-export type { SearchInputComponentProps, SearchInputComponentHandle } from './SearchInputComponent';
-

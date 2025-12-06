@@ -177,6 +177,9 @@ export default class Header implements BlockTool {
         onActivate: (): void => this.setLevel(level.number),
         closeOnActivate: true,
         isActive: this.currentLevel.number === level.number,
+        dataset: {
+          'blok-header-level': String(level.number),
+        },
       };
     });
   }

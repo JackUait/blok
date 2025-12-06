@@ -41,9 +41,6 @@ export { SearchInputComponent } from './SearchInputComponent';
 export type { SearchInputComponentProps, SearchInputComponentHandle } from './SearchInputComponent';
 
 // Popover components
-export { PopoverDesktopComponent } from './PopoverDesktopComponent';
-export type { PopoverDesktopComponentProps, PopoverDesktopComponentHandle } from './PopoverDesktopComponent';
-
 export { PopoverInlineComponent } from './PopoverInlineComponent';
 export type { PopoverInlineComponentProps, PopoverInlineComponentHandle } from './PopoverInlineComponent';
 

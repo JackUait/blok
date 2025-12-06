@@ -1,7 +1,3 @@
-
-import React from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { flushSync } from 'react-dom';
 import Module from '../../__module';
 import $ from '../../dom';
 import SelectionUtils from '../../selection';
@@ -11,19 +7,23 @@ import Shortcuts from '../../utils/shortcuts';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import { CommonInternalSettings } from '../../tools/base';
-import type { Popover } from '../../utils/popover';
+import type { Popover, PopoverItemParams } from '../../utils/popover';
+import { PopoverItemType } from '../../utils/popover';
 import { PopoverInline } from '../../utils/popover/popover-inline';
 import type InlineToolAdapter from 'src/components/tools/inline';
-import { InlineToolbarComponent, type InlineToolbarComponentHandle } from '../../react/InlineToolbarComponent';
+import I18n from '../../i18n';
+import { I18nInternalNS } from '../../i18n/namespace-internal';
+import { DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../constants';
+import { twMerge } from '../../utils/tw';
 
 /**
  * Inline Toolbar elements
  */
 interface InlineToolbarNodes {
   /**
-   * Container element for React root (minimal container)
+   * Wrapper element for the inline toolbar
    */
-  reactContainer: HTMLElement | undefined;
+  wrapper: HTMLElement | undefined;
 }
 
 /**
@@ -41,26 +41,13 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   public opened = false;
 
   /**
-   * React 18 root instance for isolated rendering
+   * Popover instance reference
    */
-  private reactRoot: Root | null = null;
-
-  /**
-   * Ref to the React component's imperative handle
-   */
-  private componentRef: React.MutableRefObject<InlineToolbarComponentHandle | null> = { current: null };
-
-  /**
-   * Popover instance reference (accessed via React component)
-   */
-  private get popover(): Popover | null {
-    return this.componentRef.current?.getPopover() ?? null;
-  }
+  private popover: Popover | null = null;
 
   /**
    * Margin above/below the Toolbar
    */
-
   private readonly toolbarVerticalMargin: number = _.isMobileScreen() ? 20 : 6;
 
   /**
@@ -93,10 +80,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    */
   private shortcutRegistrationScheduled = false;
 
-  /**
-   * Promise resolver for when the popover is ready
-   */
-  private popoverReadyResolver: (() => void) | null = null;
 
   /**
    * @param moduleConfiguration - Module Configuration
@@ -171,7 +154,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     if (shortcutsWereRegistered) {
       this.shortcutsRegistered = true;
     }
-    // If shortcuts weren't registered (tools not ready yet), schedule another retry
   }
 
   /**
@@ -197,7 +179,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
-   * Schedules the next initialization attempt, falling back to setTimeout when requestIdleCallback is unavailable
+   * Schedules the next initialization attempt
    */
   private scheduleInitialization(): void {
     if (this.initialized || this.initializationScheduled) {
@@ -232,7 +214,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   /**
    * Shows Inline Toolbar if something is selected
    * @param [needToClose] - pass true to close toolbar if it is not allowed.
-   *                                  Avoid to use it just for closing IT, better call .close() clearly.
    */
   public async tryToShow(needToClose = false): Promise<void> {
     if (needToClose) {
@@ -258,27 +239,19 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
-    for (const toolInstance of this.tools.values()) {
-
-      toolInstance;
-    }
-
     this.tools = new Map();
-
     this.opened = false;
 
-    // Close via React component handle
-    this.componentRef.current?.close();
-
-    // Unmount React root
-    if (this.reactRoot) {
-      this.reactRoot.unmount();
-      this.reactRoot = null;
+    // Hide and destroy popover
+    if (this.popover) {
+      this.popover.hide?.();
+      this.popover.destroy?.();
+      this.popover = null;
     }
 
-    // Ensure any remaining content is cleared from the container
-    if (this.nodes.reactContainer) {
-      this.nodes.reactContainer.innerHTML = '';
+    // Clear wrapper content
+    if (this.nodes.wrapper) {
+      this.nodes.wrapper.innerHTML = '';
     }
 
     // Handle test mocks for PopoverInline
@@ -296,43 +269,41 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
    * @param {Node} node — node to check
    */
   public containsNode(node: Node): boolean {
-    const wrapperElement = this.componentRef.current?.getWrapperElement();
-
-    if (wrapperElement === undefined || wrapperElement === null) {
+    if (this.nodes.wrapper === undefined) {
       return false;
     }
 
-    return wrapperElement.contains(node);
+    return this.nodes.wrapper.contains(node);
   }
 
   /**
    * Removes UI and its components
    */
   public destroy(): void {
-    // Close via React component
-    this.componentRef.current?.close();
-
-    // Unmount React root
-    if (this.reactRoot) {
-      this.reactRoot.unmount();
-      this.reactRoot = null;
+    if (this.popover) {
+      this.popover.hide?.();
+      this.popover.destroy?.();
+      this.popover = null;
     }
 
-    // Remove the container
     this.removeAllNodes();
   }
 
+
   /**
-   * Making DOM - creates minimal container for React root
+   * Making DOM - creates wrapper element for the inline toolbar
    */
   private make(): void {
-    this.nodes.reactContainer = $.make('div');
-    this.nodes.reactContainer.setAttribute('data-blok-inline-toolbar-root', '');
+    this.nodes.wrapper = $.make('div', twMerge(
+      'absolute top-0 left-0 z-[3] opacity-100 visible',
+      'transition-opacity duration-[250ms] ease-out',
+      'will-change-[opacity,left,top]',
+      '[&_[hidden]]:!hidden'
+    ));
+    this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE);
+    this.nodes.wrapper.setAttribute('data-blok-testid', 'inline-toolbar');
 
-    /**
-     * Append the container to the blok wrapper.
-     */
-    $.append(this.Blok.UI.nodes.wrapper, this.nodes.reactContainer);
+    $.append(this.Blok.UI.nodes.wrapper, this.nodes.wrapper);
   }
 
   /**
@@ -344,63 +315,179 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.initialize();
-
-    /**
-     * Show Inline Toolbar
-     */
-
     this.opened = true;
 
-    // Cleanup existing React root if any
-    if (this.reactRoot) {
-      this.reactRoot.unmount();
-      this.reactRoot = null;
+    // Cleanup existing popover
+    if (this.popover) {
+      this.popover.hide?.();
+      this.popover.destroy?.();
+      this.popover = null;
     }
 
     this.createToolsInstances();
 
-    // Create isolated React root
-    if (!this.nodes.reactContainer) {
+    if (!this.nodes.wrapper) {
       return;
     }
 
-    this.reactRoot = createRoot(this.nodes.reactContainer);
+    // Clear wrapper
+    this.nodes.wrapper.innerHTML = '';
 
+    // Build popover items
+    const popoverItems = await this.buildPopoverItems();
+
+    // Create popover
     const scopeElement = this.Blok.API?.methods?.ui?.nodes?.redactor ?? this.Blok.UI.nodes.redactor;
+
+    this.popover = new PopoverInline({
+      items: popoverItems,
+      scopeElement,
+      messages: {
+        nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
+        search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
+      },
+    });
+
+    // Get popover element and calculate position
+    const popoverMountElement = this.popover.getMountElement?.() ?? this.popover.getElement?.();
+    const popoverElement = this.popover.getElement?.();
+    const popoverWidth = this.popover.size?.width
+      ?? popoverElement?.getBoundingClientRect().width
+      ?? 0;
+
+    this.applyPosition(popoverWidth);
+
+    // Mount popover
+    if (popoverMountElement && this.nodes.wrapper) {
+      this.nodes.wrapper.appendChild(popoverMountElement);
+    }
+
+    this.popover.show?.();
+  }
+
+  /**
+   * Build popover items from tools map
+   */
+  private async buildPopoverItems(): Promise<PopoverItemParams[]> {
+    const popoverItems: PopoverItemParams[] = [];
+    const toolsEntries = Array.from(this.tools.entries());
+
+    for (const [index, [tool, instance]] of toolsEntries.entries()) {
+      const renderedTool = await instance.render();
+      const shortcut = this.getToolShortcut(tool.name);
+      const shortcutBeautified = shortcut !== undefined ? _.beautifyShortcut(shortcut) : undefined;
+
+      const toolTitle = I18n.t(
+        I18nInternalNS.toolNames,
+        tool.title || _.capitalize(tool.name)
+      );
+
+      const items = Array.isArray(renderedTool) ? renderedTool : [renderedTool];
+      const isFirstItem = index === 0;
+
+      for (const item of items) {
+        const processed = this.processPopoverItem(item, tool.name, toolTitle, shortcutBeautified, isFirstItem);
+
+        popoverItems.push(...processed);
+      }
+    }
+
+    return popoverItems;
+  }
+
+  /**
+   * Process a single popover item and return the items to add
+   */
+  private processPopoverItem(
+    item: PopoverItemParams | HTMLElement,
+    toolName: string,
+    toolTitle: string,
+    shortcutBeautified: string | undefined,
+    isFirstItem: boolean
+  ): PopoverItemParams[] {
+    const result: PopoverItemParams[] = [];
+
+    const commonPopoverItemParams = {
+      name: toolName,
+      hint: {
+        title: toolTitle,
+        description: shortcutBeautified,
+      },
+    } as PopoverItemParams;
+
+    // Skip raw HTMLElement items (legacy)
+    if (item instanceof HTMLElement) {
+      return result;
+    }
+
+    if (item.type === PopoverItemType.Html) {
+      result.push({
+        ...commonPopoverItemParams,
+        ...item,
+        type: PopoverItemType.Html,
+      });
+
+      return result;
+    }
+
+    if (item.type === PopoverItemType.Separator) {
+      result.push({
+        type: PopoverItemType.Separator,
+      });
+
+      return result;
+    }
+
+    // Default item
+    const popoverItem = {
+      ...commonPopoverItemParams,
+      ...item,
+      type: PopoverItemType.Default,
+    } as PopoverItemParams;
+
+    result.push(popoverItem);
+
+    // Append separator after first item with children
+    if ('children' in popoverItem && isFirstItem) {
+      result.push({
+        type: PopoverItemType.Separator,
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Calculate and apply position to wrapper
+   */
+  private applyPosition(popoverWidth: number): void {
+    if (!this.nodes.wrapper) {
+      return;
+    }
+
     const wrapperOffset = this.Blok.UI.nodes.wrapper.getBoundingClientRect();
     const contentRect = this.Blok.UI.contentRect;
+    const selectionRect = SelectionUtils.rect as DOMRect;
 
-    // Create a promise that resolves when the popover is ready
-    const popoverReadyPromise = new Promise<void>((resolve) => {
-      this.popoverReadyResolver = resolve;
-    });
+    const newCoords = {
+      x: selectionRect.x - wrapperOffset.x,
+      y: selectionRect.y +
+        selectionRect.height -
+        wrapperOffset.top +
+        this.toolbarVerticalMargin,
+    };
 
-    // Render React component with flushSync for synchronous DOM updates
-    flushSync(() => {
-      this.reactRoot?.render(
-        React.createElement(InlineToolbarComponent, {
-          ref: this.componentRef,
-          toolsMap: this.tools,
-          scopeElement,
-          wrapperOffset,
-          contentRect,
-          toolbarVerticalMargin: this.toolbarVerticalMargin,
-          onClose: () => {
-            // Called when React component triggers close
-          },
-          onReady: () => {
-            // Called when popover is initialized and ready for interaction
-            this.popoverReadyResolver?.();
-            this.popoverReadyResolver = null;
-          },
-          getToolShortcut: (toolName: string) => this.getToolShortcut(toolName),
-        })
-      );
-    });
+    const realRightCoord = newCoords.x + popoverWidth + wrapperOffset.x;
 
-    // Wait for the popover to be ready before returning
-    await popoverReadyPromise;
+    // Prevent overflow on right side
+    if (realRightCoord > contentRect.right) {
+      newCoords.x = contentRect.right - popoverWidth - wrapperOffset.x;
+    }
+
+    this.nodes.wrapper.style.left = Math.floor(newCoords.x) + 'px';
+    this.nodes.wrapper.style.top = Math.floor(newCoords.y) + 'px';
   }
+
 
   /**
    * Need to show Inline Toolbar or not
@@ -498,9 +585,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Returns tools that are available for current block
-   *
-   * Used to check if Inline Toolbar could be shown
-   * and to render tools in the Inline Toolbar
    */
   private getTools(): InlineToolAdapter[] {
     const currentBlock = this.Blok.BlockManager.currentBlock
@@ -528,10 +612,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     const inlineTools = Array.from(currentBlock.tool.inlineTools.values());
 
     return inlineTools.filter((tool) => {
-      /**
-       * We support inline tools in read only mode.
-       * Such tools should have isReadOnlySupported flag set to true
-       */
       if (this.Blok.ReadOnly.isEnabled && tool.isReadOnlySupported !== true) {
         return false;
       }
@@ -557,8 +637,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Try to enable shortcut for a tool, catching any errors silently
-   * @param toolName - tool name
-   * @param shortcut - shortcut to enable, or undefined
    */
   private tryEnableShortcut(toolName: string, shortcut: string | undefined): void {
     if (shortcut === undefined) {
@@ -574,22 +652,11 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Get shortcut name for tool
-   * @param toolName — Tool name
    */
   private getToolShortcut(toolName: string): string | undefined {
     const { Tools } = this.Blok;
 
-    /**
-     * Enable shortcuts
-     * Ignore tool that doesn't have shortcut or empty string
-     */
     const tool = Tools.inlineTools.get(toolName);
-
-    /**
-     * 1) For internal tools, check public getter 'shortcut'
-     * 2) For external tools, check tool's settings
-     * 3) If shortcut is not set in settings, check Tool's public property
-     */
     const internalTools = Tools.internal.inlineTools;
 
     if (Array.from(internalTools.keys()).includes(toolName)) {
@@ -601,8 +668,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Enable Tool shortcut with Blok Shortcuts Module
-   * @param toolName - tool name
-   * @param shortcut - shortcut according to the ShortcutData Module format
    */
   private enableShortcuts(toolName: string, shortcut: string): void {
     const registeredShortcut = this.registeredShortcuts.get(toolName);
@@ -625,19 +690,9 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       handler: (event) => {
         const { currentBlock } = this.Blok.BlockManager;
 
-        /**
-         * Blok is not focused
-         */
         if (!currentBlock) {
           return;
         }
-
-        /**
-         * We allow to fire shortcut with empty selection (isCollapsed=true)
-         * it can be used by tools like «Mention» that works without selection:
-         * Example: by SHIFT+@ show dropdown and insert selected username
-         */
-        // if (SelectionUtils.isCollapsed) return;
 
         if (currentBlock.tool.enabledInlineTools === false) {
           return;
@@ -647,9 +702,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
         void this.activateToolByShortcut(toolName);
       },
-      /**
-       * We need to bind shortcut to the document to make it work in read-only mode
-       */
       on: document,
     });
 
@@ -658,8 +710,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Check if shortcut is already registered by another inline tool
-   * @param toolName - tool that is currently being processed
-   * @param shortcut - shortcut to check
    */
   private isShortcutTakenByAnotherTool(toolName: string, shortcut: string): boolean {
     return Array.from(this.registeredShortcuts.entries()).some(([name, registeredShortcut]) => {
@@ -669,33 +719,23 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Activates inline tool triggered by keyboard shortcut
-   * @param toolName - tool to activate
    */
   private async activateToolByShortcut(toolName: string): Promise<void> {
     if (!this.opened) {
       await this.tryToShow();
     }
 
-    /**
-     * If popover is available (toolbar is open), use it to activate the tool
-     */
     if (this.popover) {
       this.popover.activateItemByName(toolName);
 
       return;
     }
 
-    /**
-     * Toolbar couldn't open (e.g., collapsed selection for typing mode).
-     * Invoke the tool action directly.
-     */
     this.invokeToolActionDirectly(toolName);
   }
 
   /**
    * Invokes the tool's action directly without relying on the popover.
-   * Used when shortcuts are triggered but toolbar can't be shown (e.g., collapsed selection).
-   * @param toolName - name of the tool to invoke
    */
   private invokeToolActionDirectly(toolName: string): void {
     const tool = this.Blok.Tools.inlineTools.get(toolName);
@@ -706,7 +746,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
     const instance = tool.create();
     const rendered = instance.render();
-    const items = Array.isArray(rendered) ? rendered : [ rendered ];
+    const items = Array.isArray(rendered) ? rendered : [rendered];
 
     for (const item of items) {
       if ('onActivate' in item && typeof item.onActivate === 'function') {
@@ -719,10 +759,9 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Get inline tools tools
-   * Tools that has isInline is true
    */
   private get inlineTools(): { [name: string]: IInlineTool } {
-    const result = {} as  { [name: string]: IInlineTool } ;
+    const result = {} as { [name: string]: IInlineTool };
 
     Array
       .from(this.Blok.Tools.inlineTools.entries())
@@ -734,7 +773,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
-   * Register shortcuts for inline tools ahead of time so they are available before the toolbar opens
+   * Register shortcuts for inline tools ahead of time
    */
   private registerInitialShortcuts(): boolean {
     const inlineTools = this.Blok.Tools?.inlineTools;
@@ -747,7 +786,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
     const toolNames = Array.from(inlineTools.keys());
 
-    // If no tools are available yet, schedule retry
     if (toolNames.length === 0) {
       this.scheduleShortcutRegistration();
 

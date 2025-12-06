@@ -40,7 +40,3 @@ export type {
 export { SearchInputComponent } from './SearchInputComponent';
 export type { SearchInputComponentProps, SearchInputComponentHandle } from './SearchInputComponent';
 
-// Popover components
-export { PopoverInlineComponent } from './PopoverInlineComponent';
-export type { PopoverInlineComponentProps, PopoverInlineComponentHandle } from './PopoverInlineComponent';
-

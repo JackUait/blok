@@ -31,6 +31,15 @@ const FILE_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.html
 
 // Import transformations
 const IMPORT_TRANSFORMS = [
+  // EditorJS subpath imports (e.g., @editorjs/editorjs/types -> @jackuait/blok/types)
+  {
+    pattern: /from\s+['"]@editorjs\/editorjs\/([^'"]+)['"]/g,
+    replacement: "from '@jackuait/blok/$1'",
+  },
+  {
+    pattern: /require\s*\(\s*['"]@editorjs\/editorjs\/([^'"]+)['"]\s*\)/g,
+    replacement: "require('@jackuait/blok/$1')",
+  },
   // Main EditorJS import
   {
     pattern: /from\s+['"]@editorjs\/editorjs['"]/g,

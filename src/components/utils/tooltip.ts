@@ -327,6 +327,16 @@ class Tooltip {
    */
   public onHover(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
     element.addEventListener('mouseenter', () => {
+      /**
+       * Don't show tooltip if any Popover is currently open
+       * This prevents tooltips from appearing over open menus
+       */
+      const openedPopover = document.querySelector('[data-blok-popover-opened="true"]');
+
+      if (openedPopover !== null) {
+        return;
+      }
+
       this.show(element, content, options);
     });
     element.addEventListener('mouseleave', () => {

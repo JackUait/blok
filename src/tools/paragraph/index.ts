@@ -160,6 +160,8 @@ export default class Paragraph implements BlockTool {
   private static readonly WRAPPER_CLASSES = [
     'leading-[1.6em]',
     'outline-none',
+    'mt-[2px]',
+    'mb-px',
     '[&>p:first-of-type]:mt-0',
     '[&>p:last-of-type]:mb-0',
   ];

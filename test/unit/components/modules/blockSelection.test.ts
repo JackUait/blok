@@ -33,6 +33,11 @@ const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; init
   holder.setAttribute('data-blok-testid', 'blok-element');
   holder.innerHTML = options?.html ?? '<p>Sample text</p>';
 
+  /**
+   * Mock scrollIntoView for test environment
+   */
+  holder.scrollIntoView = vi.fn();
+
   const inputs = options?.inputs ?? [ document.createElement('div') ];
   let isSelected = options?.initiallySelected ?? false;
 
@@ -633,6 +638,220 @@ describe('BlockSelection', () => {
       blockSelection.destroy();
 
       expect(shortcutsRemove).toHaveBeenCalledWith(modules.UI.nodes.redactor, 'CMD+A');
+    });
+  });
+
+  describe('navigation mode', () => {
+    describe('navigationModeEnabled', () => {
+      it('returns false by default', () => {
+        const { blockSelection } = createBlockSelection();
+
+        expect(blockSelection.navigationModeEnabled).toBe(false);
+      });
+
+      it('returns true after enabling navigation mode', () => {
+        const { blockSelection } = createBlockSelection();
+
+        blockSelection.enableNavigationMode();
+
+        expect(blockSelection.navigationModeEnabled).toBe(true);
+      });
+    });
+
+    describe('navigationFocusedBlock', () => {
+      it('returns undefined when navigation mode is disabled', () => {
+        const { blockSelection } = createBlockSelection();
+
+        expect(blockSelection.navigationFocusedBlock).toBeUndefined();
+      });
+
+      it('returns the focused block when navigation mode is enabled', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 1;
+
+        blockSelection.enableNavigationMode();
+
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[1]);
+      });
+    });
+
+    describe('enableNavigationMode', () => {
+      it('sets navigation focus to current block', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 1;
+
+        blockSelection.enableNavigationMode();
+
+        expect(blockSelection.navigationModeEnabled).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[1]);
+        expect(blocks[1].holder.getAttribute('data-blok-navigation-focused')).toBe('true');
+      });
+
+      it('starts from first block when no current block', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = -1;
+
+        blockSelection.enableNavigationMode();
+
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[0]);
+      });
+
+      it('does nothing if already enabled', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 0;
+
+        blockSelection.enableNavigationMode();
+        blockManager.currentBlockIndex = 2;
+        blockSelection.enableNavigationMode();
+
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[0]);
+      });
+    });
+
+    describe('disableNavigationMode', () => {
+      it('removes navigation highlight from focused block', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 1;
+
+        blockSelection.enableNavigationMode();
+        blockSelection.disableNavigationMode();
+
+        expect(blockSelection.navigationModeEnabled).toBe(false);
+        expect(blocks[1].holder.getAttribute('data-blok-navigation-focused')).toBeNull();
+      });
+
+      it('focuses block for editing when requested', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+        const caret = modules.Caret as unknown as {
+          setToBlock: ReturnType<typeof vi.fn>;
+          positions: { END: string };
+        };
+
+        caret.positions = { END: 'end' };
+        blockManager.currentBlockIndex = 1;
+
+        blockSelection.enableNavigationMode();
+        blockSelection.disableNavigationMode(true);
+
+        expect(caret.setToBlock).toHaveBeenCalledWith(blocks[1], 'end');
+        expect(blockManager.currentBlockIndex).toBe(1);
+      });
+
+      it('does nothing if not enabled', () => {
+        const { blockSelection, modules } = createBlockSelection();
+        const caret = modules.Caret as unknown as { setToBlock: ReturnType<typeof vi.fn> };
+
+        blockSelection.disableNavigationMode(true);
+
+        expect(caret.setToBlock).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('navigateNext', () => {
+      it('moves focus to next block', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 0;
+
+        blockSelection.enableNavigationMode();
+
+        const result = blockSelection.navigateNext();
+
+        expect(result).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[1]);
+        expect(blocks[0].holder.getAttribute('data-blok-navigation-focused')).toBeNull();
+        expect(blocks[1].holder.getAttribute('data-blok-navigation-focused')).toBe('true');
+      });
+
+      it('returns false when at last block', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 2;
+
+        blockSelection.enableNavigationMode();
+
+        const result = blockSelection.navigateNext();
+
+        expect(result).toBe(false);
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[2]);
+      });
+
+      it('returns false when navigation mode is disabled', () => {
+        const { blockSelection } = createBlockSelection();
+
+        const result = blockSelection.navigateNext();
+
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('navigatePrevious', () => {
+      it('moves focus to previous block', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 2;
+
+        blockSelection.enableNavigationMode();
+
+        const result = blockSelection.navigatePrevious();
+
+        expect(result).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[1]);
+        expect(blocks[2].holder.getAttribute('data-blok-navigation-focused')).toBeNull();
+        expect(blocks[1].holder.getAttribute('data-blok-navigation-focused')).toBe('true');
+      });
+
+      it('returns false when at first block', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 0;
+
+        blockSelection.enableNavigationMode();
+
+        const result = blockSelection.navigatePrevious();
+
+        expect(result).toBe(false);
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[0]);
+      });
+
+      it('returns false when navigation mode is disabled', () => {
+        const { blockSelection } = createBlockSelection();
+
+        const result = blockSelection.navigatePrevious();
+
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('clearSelection disables navigation mode', () => {
+      it('disables navigation mode when selection is cleared', () => {
+        const { blockSelection, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 1;
+
+        blockSelection.enableNavigationMode();
+        expect(blockSelection.navigationModeEnabled).toBe(true);
+
+        blockSelection.clearSelection();
+
+        expect(blockSelection.navigationModeEnabled).toBe(false);
+      });
     });
   });
 });

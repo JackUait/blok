@@ -447,3 +447,51 @@ export const StretchedBlock: Story = {
     });
   },
 };
+
+/**
+ * Block in navigation mode - keyboard-based block navigation.
+ * Activated by pressing Escape when focus is in the editor.
+ * Use arrow keys to navigate between blocks, Enter to edit.
+ */
+export const NavigationMode: Story = {
+  args: {
+    data: sampleData,
+    readOnly: false,
+  },
+  play: async ({ canvasElement, step }) => {
+    await step('Wait for editor and toolbar to initialize', async () => {
+      await waitFor(
+        () => {
+          const blocks = canvasElement.querySelectorAll(BLOCK_TESTID);
+
+          expect(blocks.length).toBeGreaterThan(0);
+        },
+        TIMEOUT_INIT
+      );
+      await waitForToolbar(canvasElement);
+    });
+
+    await step('Focus first block', async () => {
+      const block = canvasElement.querySelector(BLOCK_TESTID);
+      const contentEditable = block?.querySelector(CONTENTEDITABLE_SELECTOR);
+
+      if (contentEditable) {
+        simulateClick(contentEditable);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    });
+
+    await step('Enable navigation mode by pressing Escape', async () => {
+      await userEvent.keyboard('{Escape}');
+
+      await waitFor(
+        () => {
+          const navigationFocusedBlock = canvasElement.querySelector('[data-blok-navigation-focused="true"]');
+
+          expect(navigationFocusedBlock).toBeInTheDocument();
+        },
+        TIMEOUT_ACTION
+      );
+    });
+  },
+};

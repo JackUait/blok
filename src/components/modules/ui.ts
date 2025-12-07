@@ -560,14 +560,28 @@ export default class UI extends Module<UINodes> {
    */
   private defaultBehaviour(event: KeyboardEvent): void {
     const { currentBlock } = this.Blok.BlockManager;
-    const keyDownOnBlok = (event.target as HTMLElement).closest('[data-blok-testid="blok-editor"]');
+    const target = event.target;
+    const isTargetElement = target instanceof HTMLElement;
+    const keyDownOnBlok = isTargetElement ? target.closest('[data-blok-testid="blok-editor"]') : null;
     const isMetaKey = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
 
     /**
      * Ignore keydowns from inside the BlockSettings popover (e.g., search input)
      * to prevent closing the popover when typing
      */
-    if (this.Blok.BlockSettings.contains(event.target as HTMLElement)) {
+    if (isTargetElement && this.Blok.BlockSettings.contains(target)) {
+      return;
+    }
+
+    /**
+     * Handle navigation mode keys even when focus is outside the editor
+     * Skip if event was already handled (e.g., by block holder listener)
+     */
+    if (this.Blok.BlockSelection.navigationModeEnabled && !event.defaultPrevented) {
+      this.Blok.BlockEvents.keydown(event);
+    }
+
+    if (this.Blok.BlockSelection.navigationModeEnabled) {
       return;
     }
 
@@ -653,14 +667,28 @@ export default class UI extends Module<UINodes> {
 
   /**
    * Escape pressed
-   * If some of Toolbar components are opened, then close it otherwise close Toolbar
+   * If some of Toolbar components are opened, then close it otherwise close Toolbar.
+   * If focus is in editor content and no toolbars are open, enable navigation mode.
    * @param {Event} event - escape keydown event
    */
   private escapePressed(event: KeyboardEvent): void {
     /**
-     * Clear blocks selection by ESC
+     * If navigation mode is already enabled, disable it and return
      */
-    this.Blok.BlockSelection.clearSelection(event);
+    if (this.Blok.BlockSelection.navigationModeEnabled) {
+      this.Blok.BlockSelection.disableNavigationMode(false);
+
+      return;
+    }
+
+    /**
+     * Clear blocks selection by ESC (but not when entering navigation mode)
+     */
+    if (this.Blok.BlockSelection.anyBlockSelected) {
+      this.Blok.BlockSelection.clearSelection(event);
+
+      return;
+    }
 
     if (this.Blok.Toolbar.toolbox.opened) {
       this.Blok.Toolbar.toolbox.close();
@@ -682,6 +710,23 @@ export default class UI extends Module<UINodes> {
       return;
     }
 
+    /**
+     * If focus is inside editor content and no toolbars are open,
+     * enable navigation mode for keyboard-based block navigation
+     */
+    const target = event.target;
+    const isTargetElement = target instanceof HTMLElement;
+    const isInsideRedactor = isTargetElement && this.nodes.redactor.contains(target);
+    const hasCurrentBlock = this.Blok.BlockManager.currentBlock !== undefined;
+
+    if (isInsideRedactor && hasCurrentBlock) {
+      event.preventDefault();
+      this.Blok.Toolbar.close();
+      this.Blok.BlockSelection.enableNavigationMode();
+
+      return;
+    }
+
     this.Blok.Toolbar.close();
   }
 
@@ -690,9 +735,19 @@ export default class UI extends Module<UINodes> {
    * @param {KeyboardEvent} event - keyboard event
    */
   private enterPressed(event: KeyboardEvent): void {
-    const { BlockManager, BlockSelection } = this.Blok;
+    const { BlockManager, BlockSelection, BlockEvents } = this.Blok;
 
     if (this.someToolbarOpened) {
+      return;
+    }
+
+    /**
+     * If navigation mode is enabled, delegate to BlockEvents to handle Enter.
+     * This will set the caret at the end of the current block.
+     */
+    if (BlockSelection.navigationModeEnabled) {
+      BlockEvents.keydown(event);
+
       return;
     }
 

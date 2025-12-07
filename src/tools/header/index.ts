@@ -112,7 +112,7 @@ export default class Header implements BlockTool {
   /**
    * Base styles for all header levels
    */
-  private static readonly BASE_STYLES = 'py-[0.6em] pb-[3px] px-0 m-0 leading-[1.25em] outline-none [&_p]:!p-0 [&_p]:!m-0 [&_div]:!p-0 [&_div]:!m-0';
+  private static readonly BASE_STYLES = 'py-[3px] px-[2px] m-0 leading-[1.25em] outline-none [&_p]:!p-0 [&_p]:!m-0 [&_div]:!p-0 [&_div]:!m-0';
 
   /**
    * Styles
@@ -406,37 +406,37 @@ export default class Header implements BlockTool {
         number: 1,
         tag: 'H1',
         svg: IconH1,
-        styles: 'text-[2.5em] leading-tight font-bold',
+        styles: 'text-[2.5em] leading-tight font-bold mt-[32px] mb-[4px]',
       },
       {
         number: 2,
         tag: 'H2',
         svg: IconH2,
-        styles: 'text-[2em] leading-tight font-semibold',
+        styles: 'text-[2em] leading-tight font-semibold mt-[22px] mb-[1px]',
       },
       {
         number: 3,
         tag: 'H3',
         svg: IconH3,
-        styles: 'text-[1.75em] leading-tight font-semibold',
+        styles: 'text-[1.75em] leading-tight font-semibold mt-[16px] mb-[1px]',
       },
       {
         number: 4,
         tag: 'H4',
         svg: IconH4,
-        styles: 'text-[1.5em] leading-tight font-semibold',
+        styles: 'text-[1.5em] leading-tight font-semibold mt-[12px] mb-[1px]',
       },
       {
         number: 5,
         tag: 'H5',
         svg: IconH5,
-        styles: 'text-[1.25em] leading-tight font-semibold',
+        styles: 'text-[1.25em] leading-tight font-semibold mt-[12px] mb-[1px]',
       },
       {
         number: 6,
         tag: 'H6',
         svg: IconH6,
-        styles: 'text-base leading-tight font-semibold',
+        styles: 'text-base leading-tight font-semibold mt-[12px] mb-[1px]',
       },
     ];
 

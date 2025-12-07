@@ -29,13 +29,42 @@ export interface ParagraphData extends BlockToolData {
 }
 
 /**
+ * Style overrides for paragraph customization
+ */
+export interface ParagraphStyleConfig {
+  /** Custom font size (e.g., '16px', '1rem') */
+  size?: string;
+  /** Custom line height (e.g., '1.6', '24px') */
+  lineHeight?: string;
+  /** Custom margin top (e.g., '10px', '0.5rem') */
+  marginTop?: string;
+  /** Custom margin bottom (e.g., '10px', '0.5rem') */
+  marginBottom?: string;
+}
+
+/**
  * Tool's config from Editor
+ *
+ * To customize the toolbox icon, use the `toolbox` property in the tool settings:
+ * @example
+ * ```typescript
+ * tools: {
+ *   paragraph: {
+ *     toolbox: {
+ *       icon: '<svg>...</svg>',
+ *       title: 'Custom Text'
+ *     }
+ *   }
+ * }
+ * ```
  */
 export interface ParagraphConfig {
   /** Placeholder for the empty paragraph */
   placeholder?: string;
   /** Whether or not to keep blank paragraphs when saving editor data */
   preserveBlank?: boolean;
+  /** Style overrides for paragraph customization */
+  styles?: ParagraphStyleConfig;
 }
 
 /**
@@ -105,6 +134,13 @@ export default class Paragraph implements BlockTool {
   private _preserveBlank: boolean;
 
   /**
+   * Style configuration for paragraph customization
+   */
+  private _styles: ParagraphStyleConfig;
+
+
+
+  /**
    * Render plugin's main Element and fill it with saved data
    *
    * @param options - constructor options
@@ -125,6 +161,7 @@ export default class Paragraph implements BlockTool {
     this._data = data ?? { text: '' };
     this._element = null;
     this._preserveBlank = config?.preserveBlank ?? false;
+    this._styles = config?.styles ?? {};
   }
 
   /**
@@ -182,6 +219,30 @@ export default class Paragraph implements BlockTool {
     '[&[data-empty=true]]:before:content-[attr(data-placeholder-active)]',
   ];
 
+  /**
+   * Build inline styles from style configuration
+   *
+   * @returns Partial CSSStyleDeclaration with custom styles
+   */
+  private buildInlineStyles(): Partial<CSSStyleDeclaration> {
+    const inlineStyles: Partial<CSSStyleDeclaration> = {};
+
+    if (this._styles.size) {
+      inlineStyles.fontSize = this._styles.size;
+    }
+    if (this._styles.lineHeight) {
+      inlineStyles.lineHeight = this._styles.lineHeight;
+    }
+    if (this._styles.marginTop) {
+      inlineStyles.marginTop = this._styles.marginTop;
+    }
+    if (this._styles.marginBottom) {
+      inlineStyles.marginBottom = this._styles.marginBottom;
+    }
+
+    return inlineStyles;
+  }
+
   private drawView(): HTMLDivElement {
     const div = document.createElement('DIV') as HTMLDivElement;
 
@@ -193,6 +254,15 @@ export default class Paragraph implements BlockTool {
     div.setAttribute(BLOK_TOOL_ATTR, 'paragraph');
     div.contentEditable = 'false';
     div.setAttribute('data-placeholder-active', this.api.i18n.t(this._placeholder));
+
+    /**
+     * Apply inline styles for custom overrides (dynamic values from config)
+     */
+    const inlineStyles = this.buildInlineStyles();
+
+    if (Object.keys(inlineStyles).length > 0) {
+      Object.assign(div.style, inlineStyles);
+    }
 
     if (this._data.text) {
       div.innerHTML = this._data.text;

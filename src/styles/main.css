@@ -55,3 +55,11 @@
     @apply animate-button-clicked;
   }
 }
+
+/**
+ * Navigation mode styles
+ * Applied when user enters block navigation mode via Escape key
+ */
+[data-blok-navigation-focused="true"] {
+  @apply outline outline-2 outline-offset-2 outline-active-icon rounded-sm;
+}

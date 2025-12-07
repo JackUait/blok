@@ -27,6 +27,18 @@ export default class BlockSelection extends Module {
   private anyBlockSelectedCache: boolean | null = null;
 
   /**
+   * Flag indicating whether navigation mode is active.
+   * In navigation mode, user can navigate between blocks using arrow keys
+   * and press Enter to start editing the focused block.
+   */
+  private _navigationModeEnabled = false;
+
+  /**
+   * Index of the currently focused block in navigation mode
+   */
+  private navigationFocusIndex = -1;
+
+  /**
    * Sanitizer Config
    * @returns {SanitizerConfig}
    */
@@ -103,6 +115,26 @@ export default class BlockSelection extends Module {
    */
   public get selectedBlocks(): Block[] {
     return this.Blok.BlockManager.blocks.filter((block: Block) => block.selected);
+  }
+
+  /**
+   * Returns true if navigation mode is currently active
+   * @returns {boolean}
+   */
+  public get navigationModeEnabled(): boolean {
+    return this._navigationModeEnabled;
+  }
+
+  /**
+   * Returns the currently focused block in navigation mode
+   * @returns {Block | undefined}
+   */
+  public get navigationFocusedBlock(): Block | undefined {
+    if (!this._navigationModeEnabled || this.navigationFocusIndex < 0) {
+      return undefined;
+    }
+
+    return this.Blok.BlockManager.getBlockByIndex(this.navigationFocusIndex);
   }
 
   /**
@@ -224,6 +256,13 @@ export default class BlockSelection extends Module {
     this.needToSelectAll = false;
     this.nativeInputSelected = false;
     this.readyToBlockSelection = false;
+
+    /**
+     * Disable navigation mode when selection is cleared
+     */
+    if (this._navigationModeEnabled) {
+      this.disableNavigationMode();
+    }
 
     const isKeyboard = reason && (reason instanceof KeyboardEvent);
     const keyboardEvent = reason as KeyboardEvent;
@@ -371,6 +410,153 @@ export default class BlockSelection extends Module {
    */
   public clearCache(): void {
     this.anyBlockSelectedCache = null;
+  }
+
+  /**
+   * Enables navigation mode starting from the current block.
+   * In this mode, user can navigate between blocks using arrow keys.
+   */
+  public enableNavigationMode(): void {
+    const { BlockManager } = this.Blok;
+
+    if (this._navigationModeEnabled) {
+      return;
+    }
+
+    this._navigationModeEnabled = true;
+
+    /**
+     * Start navigation from current block or first block
+     */
+    const startIndex = BlockManager.currentBlockIndex >= 0
+      ? BlockManager.currentBlockIndex
+      : 0;
+
+    this.setNavigationFocus(startIndex);
+  }
+
+  /**
+   * Disables navigation mode and optionally focuses the block for editing
+   * @param {boolean} focusForEditing - if true, set caret to the focused block
+   */
+  public disableNavigationMode(focusForEditing = false): void {
+    if (!this._navigationModeEnabled) {
+      return;
+    }
+
+    const focusedBlock = this.navigationFocusedBlock;
+
+    /**
+     * Remove navigation highlight from current block
+     */
+    if (focusedBlock) {
+      focusedBlock.holder.removeAttribute('data-blok-navigation-focused');
+    }
+
+    this._navigationModeEnabled = false;
+
+    /**
+     * If requested, focus the block for editing
+     */
+    if (focusForEditing && focusedBlock) {
+      const { Caret, BlockManager } = this.Blok;
+
+      BlockManager.currentBlockIndex = this.navigationFocusIndex;
+      Caret.setToBlock(focusedBlock, Caret.positions.END);
+    }
+
+    this.navigationFocusIndex = -1;
+  }
+
+  /**
+   * Navigate to the next block in navigation mode
+   * @returns {boolean} - true if navigation was successful
+   */
+  public navigateNext(): boolean {
+    if (!this._navigationModeEnabled) {
+      return false;
+    }
+
+    const { BlockManager } = this.Blok;
+    const nextIndex = this.navigationFocusIndex + 1;
+
+    if (nextIndex >= BlockManager.blocks.length) {
+      return false;
+    }
+
+    this.setNavigationFocus(nextIndex);
+
+    return true;
+  }
+
+  /**
+   * Navigate to the previous block in navigation mode
+   * @returns {boolean} - true if navigation was successful
+   */
+  public navigatePrevious(): boolean {
+    if (!this._navigationModeEnabled) {
+      return false;
+    }
+
+    const prevIndex = this.navigationFocusIndex - 1;
+
+    if (prevIndex < 0) {
+      return false;
+    }
+
+    this.setNavigationFocus(prevIndex);
+
+    return true;
+  }
+
+  /**
+   * Sets navigation focus to a specific block index
+   * @param {number} index - block index to focus
+   */
+  private setNavigationFocus(index: number): void {
+    const { BlockManager } = this.Blok;
+    const block = BlockManager.getBlockByIndex(index);
+
+    if (!block) {
+      return;
+    }
+
+    /**
+     * Remove highlight from previous block
+     */
+    const previousBlock = this.navigationFocusedBlock;
+
+    if (previousBlock) {
+      previousBlock.holder.removeAttribute('data-blok-navigation-focused');
+    }
+
+    /**
+     * Update focus index and highlight new block
+     */
+    this.navigationFocusIndex = index;
+    block.holder.setAttribute('data-blok-navigation-focused', 'true');
+
+    /**
+     * Remove text selection and blur active element to hide caret
+     */
+    const selection = SelectionUtils.get();
+
+    selection?.removeAllRanges();
+
+    /**
+     * Blur the active element to remove caret from contenteditable
+     */
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    /**
+     * Scroll block into view if needed
+     */
+    block.holder.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+    });
   }
 
   /**

@@ -33,6 +33,22 @@ export default class BlockEvents extends Module {
    */
   public keydown(event: KeyboardEvent): void {
     /**
+     * Handle navigation mode keys first
+     */
+    if (this.handleNavigationModeKeys(event)) {
+      return;
+    }
+
+    /**
+     * Handle Escape key to enable navigation mode
+     */
+    if (event.key === 'Escape') {
+      this.handleEscapeToEnableNavigation(event);
+
+      return;
+    }
+
+    /**
      * Run common method for all keydown events
      */
     this.beforeKeydownProcessing(event);
@@ -140,6 +156,95 @@ export default class BlockEvents extends Module {
     event.stopPropagation();
 
     return true;
+  }
+
+  /**
+   * Handles Escape key press to enable navigation mode.
+   * Called when user presses Escape while editing a block.
+   * @param event - keyboard event
+   */
+  private handleEscapeToEnableNavigation(event: KeyboardEvent): void {
+    const { BlockSelection, BlockSettings, InlineToolbar, Toolbar } = this.Blok;
+
+    /**
+     * If any toolbar is open, let the UI module handle closing it
+     */
+    if (BlockSettings.opened || InlineToolbar.opened || Toolbar.toolbox.opened) {
+      return;
+    }
+
+    /**
+     * If blocks are selected, let the UI module handle clearing selection
+     */
+    if (BlockSelection.anyBlockSelected) {
+      return;
+    }
+
+    /**
+     * Enable navigation mode
+     */
+    event.preventDefault();
+    Toolbar.close();
+    BlockSelection.enableNavigationMode();
+  }
+
+  /**
+   * Handles keyboard events when navigation mode is active.
+   * In navigation mode:
+   * - ArrowUp/ArrowDown: navigate between blocks
+   * - Enter: exit navigation mode and focus the block for editing
+   * - Escape: exit navigation mode without focusing
+   * @param event - keyboard event
+   * @returns true if event was handled
+   */
+  private handleNavigationModeKeys(event: KeyboardEvent): boolean {
+    const { BlockSelection } = this.Blok;
+
+    if (!BlockSelection.navigationModeEnabled) {
+      return false;
+    }
+
+    const key = event.key;
+
+    switch (key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        event.stopPropagation();
+        BlockSelection.navigateNext();
+
+        return true;
+
+      case 'ArrowUp':
+        event.preventDefault();
+        event.stopPropagation();
+        BlockSelection.navigatePrevious();
+
+        return true;
+
+      case 'Enter':
+        event.preventDefault();
+        event.stopPropagation();
+        BlockSelection.disableNavigationMode(true);
+
+        return true;
+
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        BlockSelection.disableNavigationMode(false);
+
+        return true;
+
+      default:
+        /**
+         * Any other key exits navigation mode and allows normal input
+         */
+        if (this.isPrintableKeyEvent(event)) {
+          BlockSelection.disableNavigationMode(true);
+        }
+
+        return false;
+    }
   }
 
   /**
@@ -680,7 +785,7 @@ export default class BlockEvents extends Module {
       if (this.Blok.BlockManager.currentBlock) {
         this.Blok.BlockManager.currentBlock.updateCurrentInput();
       }
-       
+
     }, 20)();
 
     /**
@@ -773,7 +878,7 @@ export default class BlockEvents extends Module {
       if (this.Blok.BlockManager.currentBlock) {
         this.Blok.BlockManager.currentBlock.updateCurrentInput();
       }
-       
+
     }, 20)();
 
     /**

@@ -9,9 +9,9 @@
  * Each class bundles multiple Tailwind utilities using @apply.
  */
 @layer components {
-  /* Base Block styles - applied to block tool wrappers */
+  /* Base Blok styles - applied to block tool wrappers */
   .blok-block {
-    @apply py-[theme(spacing.block-padding-vertical)] px-0 [&::-webkit-input-placeholder]:!leading-normal;
+    @apply py-[3px] px-[2px] [&::-webkit-input-placeholder]:!leading-normal;
   }
 
   /* Inline Tools styles */
@@ -61,5 +61,5 @@
  * Applied when user enters block navigation mode via Escape key
  */
 [data-blok-navigation-focused="true"] {
-  @apply outline outline-2 outline-offset-2 outline-active-icon rounded-sm;
+  @apply bg-item-focus-bg rounded-md w-content-width max-w-full mx-auto;
 }

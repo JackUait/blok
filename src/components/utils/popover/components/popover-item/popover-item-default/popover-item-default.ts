@@ -182,6 +182,11 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.name) {
       root.setAttribute('data-blok-item-name', params.name);
     }
+    if (params.dataset) {
+      Object.entries(params.dataset).forEach(([key, value]) => {
+        root.setAttribute(`data-${key}`, value);
+      });
+    }
     if (params.isDisabled) {
       root.setAttribute(DATA_ATTR.disabled, 'true');
     }

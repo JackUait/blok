@@ -200,6 +200,10 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
     this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, 'block');
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, true);
 
+    /**
+     * Set fake background to visually indicate selection when focus moves to input
+     */
+    this.selection.setFakeBackground();
     this.selection.save();
 
     if (needFocus) {

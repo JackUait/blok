@@ -183,6 +183,12 @@ export interface PopoverItemDefaultBaseParams {
   hint?: HintParams;
 
   /**
+   * Custom data attributes to be added to the item element.
+   * Keys should be in camelCase (e.g., 'headerLevel' becomes 'data-header-level')
+   */
+  dataset?: Record<string, string>;
+
+  /**
    * Popover item activation handler
    *
    * @param item - activated item

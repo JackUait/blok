@@ -290,6 +290,33 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
+  it('does not show tooltip on hover when a Popover is open', () => {
+    const target = createTargetElement();
+
+    // Create a mock open popover element
+    const openPopover = document.createElement('div');
+
+    openPopover.setAttribute('data-blok-popover-opened', 'true');
+    document.body.appendChild(openPopover);
+
+    onHover(target, 'hover text', { delay: 0 });
+
+    target.dispatchEvent(new Event('mouseenter'));
+
+    const wrapper = getTooltipWrapper();
+
+    // Tooltip should not be shown (aria-hidden should be true or wrapper should not exist)
+    expect(wrapper?.getAttribute('aria-hidden')).not.toBe('false');
+
+    // Clean up the popover
+    openPopover.remove();
+
+    // Now hover should work
+    target.dispatchEvent(new Event('mouseenter'));
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+  });
+
   it('keeps aria-hidden synchronized with CSS class changes', async () => {
     const target = createTargetElement();
 

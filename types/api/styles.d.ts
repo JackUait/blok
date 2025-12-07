@@ -1,10 +1,23 @@
+/**
+ * Style class names for tool styling.
+ * These are single CSS class names that can be safely used with element.classList.add().
+ * The actual styles are defined using Tailwind's @apply directive in the CSS.
+ *
+ * @example
+ * // Add styles to an element
+ * element.classList.add(api.styles.block);
+ *
+ * // Combine with other classes using tailwind-merge
+ * import { twMerge } from '@jackuait/blok/utils/tw';
+ * element.className = twMerge(api.styles.block, 'my-4 bg-gray-100');
+ */
 export interface Styles {
   /**
    * Base block styles - applied to block tool wrappers.
    * Provides vertical padding for consistent block spacing.
    * Includes placeholder styling via pseudo-element.
    *
-   * @example 'py-[theme(spacing.block-padding-vertical)] px-0 [&::-webkit-input-placeholder]:!leading-normal'
+   * @example 'blok-block'
    */
   block: string;
 
@@ -12,7 +25,7 @@ export interface Styles {
    * Styles for Inline Toolbar button.
    * Provides flexbox centering, transparent background, and proper sizing.
    *
-   * @example 'flex justify-center items-center border-0 rounded h-full p-0 w-7 bg-transparent cursor-pointer'
+   * @example 'blok-inline-tool-button'
    */
   inlineToolButton: string;
 
@@ -20,7 +33,7 @@ export interface Styles {
    * Styles for active Inline Toolbar button.
    * Apply alongside inlineToolButton when the tool is active.
    *
-   * @example 'bg-icon-active-bg text-icon-active-text'
+   * @example 'blok-inline-tool-button--active'
    */
   inlineToolButtonActive: string;
 
@@ -28,7 +41,7 @@ export interface Styles {
    * Styles for input elements.
    * Provides full width, border, padding, shadow, and Firefox placeholder workaround.
    *
-   * @example 'w-full rounded-[3px] border border-line-gray px-3 py-2.5 outline-none shadow-input'
+   * @example 'blok-input'
    */
   input: string;
 
@@ -36,7 +49,7 @@ export interface Styles {
    * Loader styles for loading states.
    * Provides relative positioning, border, and spinning animation.
    *
-   * @example 'relative border border-line-gray before:animate-rotation'
+   * @example 'blok-loader'
    */
   loader: string;
 
@@ -45,7 +58,7 @@ export interface Styles {
    * Provides flexbox centering, transparent background, minimum sizing,
    * mobile responsive sizing, and hover states.
    *
-   * @example 'inline-flex items-center justify-center rounded-[3px] cursor-pointer'
+   * @example 'blok-settings-button'
    */
   settingsButton: string;
 
@@ -53,7 +66,7 @@ export interface Styles {
    * Styles for active Settings box buttons.
    * Apply alongside settingsButton when the button is active.
    *
-   * @example 'text-active-icon'
+   * @example 'blok-settings-button--active'
    */
   settingsButtonActive: string;
 
@@ -61,7 +74,7 @@ export interface Styles {
    * Styles for focused Settings box buttons.
    * Apply alongside settingsButton when the button has focus.
    *
-   * @example 'shadow-button-focused bg-item-focus-bg'
+   * @example 'blok-settings-button--focused'
    */
   settingsButtonFocused: string;
 
@@ -69,7 +82,7 @@ export interface Styles {
    * Styles for focused Settings box buttons with animation.
    * Apply alongside settingsButton and settingsButtonFocused for click animation.
    *
-   * @example 'animate-button-clicked'
+   * @example 'blok-settings-button--focused-animated'
    */
   settingsButtonFocusedAnimated: string;
 
@@ -77,7 +90,12 @@ export interface Styles {
    * Styles for general buttons.
    * Provides padding, border, background, shadow, hover states, and SVG styling.
    *
-   * @example 'p-[13px] rounded-[3px] border border-line-gray text-[14.9px] bg-white'
+   * @example 'blok-button'
    */
   button: string;
 }
+
+/**
+ * @deprecated Use Styles instead
+ */
+export type StyleClasses = Styles;

@@ -1,6 +1,6 @@
 {
   "name": "@jackuait/blok",
-  "version": "0.4.1-beta.4",
+  "version": "0.4.1-beta.5",
   "description": "Blok — headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch",
   "main": "dist/blok.umd.js",
   "module": "dist/blok.mjs",
@@ -49,14 +49,15 @@
     "prepublishOnly": "yarn build",
     "prepare": "husky",
     "release": "./scripts/release.sh release",
-    "release:beta": "./scripts/release.sh prerelease beta",
     "release:alpha": "./scripts/release.sh prerelease alpha",
     "release:rc": "./scripts/release.sh prerelease rc",
     "release:dry": "./scripts/release.sh release beta true",
     "storybook": "storybook dev -p 6006 --no-open",
     "storybook:build": "storybook build",
     "storybook:test": "vitest --project=storybook --run",
-    "chromatic": "chromatic --exit-zero-on-changes"
+    "chromatic": "chromatic --exit-zero-on-changes",
+    "release:beta": "npm version prerelease --preid=beta",
+    "publish:beta": "npm publish --tag beta"
   },
   "author": "JackUait",
   "contributors": [

@@ -72,7 +72,7 @@ interface Level {
   /** Display name for this level */
   name: string;
   /** Icon */
-  svg: string;
+  icon: string;
   /** Tailwind classes for styling */
   styles: string;
   /** Inline styles for custom overrides */
@@ -194,7 +194,7 @@ export default class Header implements BlockTool {
   public renderSettings(): MenuConfig {
     return this.levels.map(level => {
       return {
-        icon: level.svg,
+        icon: level.icon,
         label: this.api.i18n.t(level.name),
         onActivate: (): void => this.setLevel(level.number),
         closeOnActivate: true,
@@ -433,15 +433,15 @@ export default class Header implements BlockTool {
     number: number;
     tag: string;
     name: string;
-    svg: string;
+    icon: string;
     styles: string;
   }> = [
-    { number: 1, tag: 'H1', name: 'Heading 1', svg: IconH1, styles: 'text-4xl font-bold mt-8 mb-1' },
-    { number: 2, tag: 'H2', name: 'Heading 2', svg: IconH2, styles: 'text-3xl font-semibold mt-6 mb-px' },
-    { number: 3, tag: 'H3', name: 'Heading 3', svg: IconH3, styles: 'text-2xl font-semibold mt-4 mb-px' },
-    { number: 4, tag: 'H4', name: 'Heading 4', svg: IconH4, styles: 'text-xl font-semibold mt-3 mb-px' },
-    { number: 5, tag: 'H5', name: 'Heading 5', svg: IconH5, styles: 'text-base font-semibold mt-3 mb-px' },
-    { number: 6, tag: 'H6', name: 'Heading 6', svg: IconH6, styles: 'text-sm font-semibold mt-3 mb-px' },
+    { number: 1, tag: 'H1', name: 'Heading 1', icon: IconH1, styles: 'text-4xl font-bold mt-8 mb-1' },
+    { number: 2, tag: 'H2', name: 'Heading 2', icon: IconH2, styles: 'text-3xl font-semibold mt-6 mb-px' },
+    { number: 3, tag: 'H3', name: 'Heading 3', icon: IconH3, styles: 'text-2xl font-semibold mt-4 mb-px' },
+    { number: 4, tag: 'H4', name: 'Heading 4', icon: IconH4, styles: 'text-xl font-semibold mt-3 mb-px' },
+    { number: 5, tag: 'H5', name: 'Heading 5', icon: IconH5, styles: 'text-base font-semibold mt-3 mb-px' },
+    { number: 6, tag: 'H6', name: 'Heading 6', icon: IconH6, styles: 'text-sm font-semibold mt-3 mb-px' },
   ];
 
   /**
@@ -472,7 +472,7 @@ export default class Header implements BlockTool {
         number: defaultLevel.number,
         tag: override.tag?.toUpperCase() || defaultLevel.tag,
         name: override.name || defaultLevel.name,
-        svg: defaultLevel.svg,
+        icon: defaultLevel.icon,
         styles: defaultLevel.styles,
         inlineStyles,
       };

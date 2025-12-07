@@ -12,6 +12,22 @@ export interface HeaderData extends BlockToolData {
 }
 
 /**
+ * Level-specific overrides for customization
+ */
+export interface HeaderLevelConfig {
+  /** Custom HTML tag to use (e.g., 'div', 'p', 'span') */
+  tag?: string;
+  /** Custom display name for this level */
+  name?: string;
+  /** Custom font size (e.g., '3em', '24px') */
+  size?: string;
+  /** Custom margin top (e.g., '20px', '1rem') */
+  marginTop?: string;
+  /** Custom margin bottom (e.g., '10px', '0.5rem') */
+  marginBottom?: string;
+}
+
+/**
  * Header Tool's configuration
  */
 export interface HeaderConfig {
@@ -21,6 +37,8 @@ export interface HeaderConfig {
   levels?: number[];
   /** Default level */
   defaultLevel?: number;
+  /** Level-specific overrides keyed by level number (1-6) */
+  levelOverrides?: Record<number, HeaderLevelConfig>;
 }
 
 /**

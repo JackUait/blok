@@ -3,7 +3,7 @@ import { userEvent, waitFor, expect } from 'storybook/test';
 import type { OutputData } from '@/types';
 import { createEditorContainer, simulateClick, waitForToolbar } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import Header from '../tools/header';
+import Header, { type HeaderConfig } from '../tools/header';
 
 interface HeaderArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -223,4 +223,58 @@ export const Heading6: Story = {
   play: async ({ canvasElement, step }) => {
     await openTunesAndSelectLevel(canvasElement, step, 6);
   },
+};
+
+/**
+ * Creates sample data with all header levels (H1-H6)
+ */
+const createAllHeaderLevelsData = (): OutputData => ({
+  time: Date.now(),
+  version: '1.0.0',
+  blocks: [
+    { id: 'header-h1', type: 'header', data: { text: 'Heading 1', level: 1 } },
+    { id: 'header-h2', type: 'header', data: { text: 'Heading 2', level: 2 } },
+    { id: 'header-h3', type: 'header', data: { text: 'Heading 3', level: 3 } },
+    { id: 'header-h4', type: 'header', data: { text: 'Heading 4', level: 4 } },
+    { id: 'header-h5', type: 'header', data: { text: 'Heading 5', level: 5 } },
+    { id: 'header-h6', type: 'header', data: { text: 'Heading 6', level: 6 } },
+  ],
+});
+
+/**
+ * Custom header level overrides configuration with different font-sizes and margins.
+ */
+const customHeaderConfig: HeaderConfig = {
+  levelOverrides: {
+    1: { size: '100px', marginTop: '32px', marginBottom: '12px' },
+    2: { size: '90px', marginTop: '35px', marginBottom: '20px' },
+    3: { size: '80px', marginTop: '40px', marginBottom: '12px' },
+    4: { size: '70px', marginTop: '30px', marginBottom: '10px' },
+    5: { size: '60px', marginTop: '20px', marginBottom: '8px' },
+    6: { size: '50px', marginTop: '10px', marginBottom: '6px' },
+  },
+};
+
+/**
+ * Creates an editor with custom header configuration.
+ */
+const createCustomHeaderEditor = (args: HeaderArgs): HTMLElement => createEditorContainer({
+  ...args,
+  tools: {
+    header: {
+      class: Header,
+      config: customHeaderConfig,
+    },
+  },
+});
+
+/**
+ * All header levels with custom font-sizes and margins configured via levelOverrides.
+ */
+export const AllLevelsCustomStyles: Story = {
+  args: {
+    minHeight: 600,
+    data: createAllHeaderLevelsData(),
+  },
+  render: createCustomHeaderEditor,
 };

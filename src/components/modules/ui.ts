@@ -735,9 +735,19 @@ export default class UI extends Module<UINodes> {
    * @param {KeyboardEvent} event - keyboard event
    */
   private enterPressed(event: KeyboardEvent): void {
-    const { BlockManager, BlockSelection } = this.Blok;
+    const { BlockManager, BlockSelection, BlockEvents } = this.Blok;
 
     if (this.someToolbarOpened) {
+      return;
+    }
+
+    /**
+     * If navigation mode is enabled, delegate to BlockEvents to handle Enter.
+     * This will set the caret at the end of the current block.
+     */
+    if (BlockSelection.navigationModeEnabled) {
+      BlockEvents.keydown(event);
+
       return;
     }
 

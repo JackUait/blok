@@ -224,6 +224,7 @@ export default class BlockEvents extends Module {
       case 'Enter':
         event.preventDefault();
         event.stopPropagation();
+        event.stopImmediatePropagation();
         BlockSelection.disableNavigationMode(true);
 
         return true;

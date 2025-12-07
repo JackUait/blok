@@ -75,6 +75,8 @@ interface Level {
   svg: string;
   /** Tailwind classes for styling */
   styles: string;
+  /** Inline styles for custom overrides */
+  inlineStyles: Partial<CSSStyleDeclaration>;
 }
 
 /**
@@ -132,7 +134,7 @@ export default class Header implements BlockTool {
   /**
    * Base styles for all header levels
    */
-  private static readonly BASE_STYLES = 'py-[3px] px-[2px] m-0 leading-[1.25em] outline-none [&_p]:!p-0 [&_p]:!m-0 [&_div]:!p-0 [&_div]:!m-0';
+  private static readonly BASE_STYLES = 'py-[3px] px-[2px] m-0 !leading-[1.3] outline-none [&_p]:!p-0 [&_p]:!m-0 [&_div]:!p-0 [&_div]:!m-0';
 
   /**
    * Styles
@@ -358,6 +360,15 @@ export default class Header implements BlockTool {
     tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles);
 
     /**
+     * Apply inline styles for custom overrides (dynamic values from config)
+     */
+    const { inlineStyles } = this.currentLevel;
+
+    if (inlineStyles) {
+      Object.assign(tag.style, inlineStyles);
+    }
+
+    /**
      * Set data attribute for tool identification
      */
     tag.setAttribute(BLOK_TOOL_ATTR, 'header');
@@ -444,19 +455,26 @@ export default class Header implements BlockTool {
     const availableLevels: Level[] = Header.DEFAULT_LEVELS.map(defaultLevel => {
       const override = overrides[defaultLevel.number] || {};
 
-      // Build override styles if any custom values are provided
-      const overrideStyles = [
-        override.size ? `text-[${override.size}]` : '',
-        override.marginTop ? `mt-[${override.marginTop}]` : '',
-        override.marginBottom ? `mb-[${override.marginBottom}]` : '',
-      ].filter(Boolean).join(' ');
+      // Build inline styles for custom overrides (dynamic values don't work with Tailwind)
+      const inlineStyles: Partial<CSSStyleDeclaration> = {};
+
+      if (override.size) {
+        inlineStyles.fontSize = override.size;
+      }
+      if (override.marginTop) {
+        inlineStyles.marginTop = override.marginTop;
+      }
+      if (override.marginBottom) {
+        inlineStyles.marginBottom = override.marginBottom;
+      }
 
       return {
         number: defaultLevel.number,
         tag: override.tag?.toUpperCase() || defaultLevel.tag,
         name: override.name || defaultLevel.name,
         svg: defaultLevel.svg,
-        styles: overrideStyles ? twMerge(defaultLevel.styles, overrideStyles) : defaultLevel.styles,
+        styles: defaultLevel.styles,
+        inlineStyles,
       };
     });
 

@@ -1,5 +1,5 @@
 import Module from '../../__module';
-import $, { calculateBaseline } from '../../dom';
+import $ from '../../dom';
 import * as _ from '../../utils';
 import I18n from '../../i18n';
 import { I18nInternalNS } from '../../i18n/namespace-internal';
@@ -11,6 +11,7 @@ import { IconMenu, IconPlus } from '../../icons';
 import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
+import { BlockChanged } from '../../events/BlockChanged';
 import { twJoin } from '../../utils/tw';
 import {
   BLOK_TOOLBAR_ATTR,
@@ -426,17 +427,18 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
       /**
        * Case 2.2
-       * On Desktop — Toolbar should be moved to the baseline of the first input
+       * On Desktop — Toolbar should be centered vertically relative to the first input
        */
-      const baseline = calculateBaseline(firstInput);
       const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
-      /**
-       * Visual padding inside the SVG icon
-       */
-      const toolbarActionsPaddingBottom = 8;
-      const baselineBasedY = baseline - toolbarActionsHeight + toolbarActionsPaddingBottom + firstInputOffset;
+      const firstInputHeight = firstInputRect!.height;
 
-      return baselineBasedY;
+      /**
+       * Calculate the center of the first input and position toolbar so its center aligns with it
+       */
+      const inputCenterY = firstInputOffset + (firstInputHeight / 2);
+      const centeredY = inputCenterY - (toolbarActionsHeight / 2);
+
+      return centeredY;
     })();
 
     /**
@@ -871,6 +873,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     this.eventsDispatcher.on(BlockSettingsOpened, this.onBlockSettingsOpen);
     this.eventsDispatcher.on(BlockSettingsClosed, this.onBlockSettingsClose);
+
+    /**
+     * Subscribe to block changes to reposition toolbar when block content changes
+     */
+    this.eventsDispatcher.on(BlockChanged, this.onBlockChanged);
   }
 
   /**
@@ -880,6 +887,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.readOnlyMutableListeners.clearAll();
     this.eventsDispatcher.off(BlockSettingsOpened, this.onBlockSettingsOpen);
     this.eventsDispatcher.off(BlockSettingsClosed, this.onBlockSettingsClose);
+    this.eventsDispatcher.off(BlockChanged, this.onBlockChanged);
   }
 
   /**
@@ -897,6 +905,77 @@ export default class Toolbar extends Module<ToolbarNodes> {
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.settingsToggler?.classList.remove(this.CSS.settingsTogglerOpened);
   };
+
+  /**
+   * Handler for BlockChanged event - repositions toolbar when block content changes
+   */
+  private onBlockChanged = (): void => {
+    /**
+     * Only reposition if toolbar is opened and we have a hovered block
+     */
+    if (!this.opened || !this.hoveredBlock) {
+      return;
+    }
+
+    /**
+     * Don't reposition if Block Settings or Toolbox is opened
+     */
+    if (this.Blok.BlockSettings.opened || this.toolboxInstance?.opened) {
+      return;
+    }
+
+    this.repositionToolbar();
+  };
+
+  /**
+   * Repositions the toolbar to stay centered relative to the current block
+   * without closing/opening toolbox or block settings
+   */
+  private repositionToolbar(): void {
+    const { wrapper, plusButton } = this.nodes;
+
+    if (!wrapper || !plusButton || !this.hoveredBlock) {
+      return;
+    }
+
+    const targetBlock = this.hoveredBlock;
+    const targetBlockHolder = targetBlock.holder;
+    const { isMobile } = this.Blok.UI;
+
+    const MAX_OFFSET = 20;
+
+    const firstInput = targetBlock.firstInput;
+    const targetBlockHolderRect = targetBlockHolder.getBoundingClientRect();
+    const firstInputRect = firstInput !== undefined ? firstInput.getBoundingClientRect() : null;
+    const firstInputOffset = firstInputRect !== null ? firstInputRect.top - targetBlockHolderRect.top : null;
+
+    const toolbarY = (() => {
+      const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
+
+      if (isMobile) {
+        const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
+
+        return pluginContentOffset - toolbarActionsHeight;
+      }
+
+      if (firstInput === undefined) {
+        return pluginContentOffset;
+      }
+
+      if (firstInputOffset === null || firstInputOffset > MAX_OFFSET) {
+        return pluginContentOffset;
+      }
+
+      const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
+      const firstInputHeight = firstInputRect!.height;
+      const inputCenterY = firstInputOffset + (firstInputHeight / 2);
+      const centeredY = inputCenterY - (toolbarActionsHeight / 2);
+
+      return centeredY;
+    })();
+
+    wrapper.style.top = `${Math.floor(toolbarY)}px`;
+  }
 
   /**
    * Clicks on the Block Settings toggler

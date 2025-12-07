@@ -53,7 +53,7 @@
     "release:rc": "./scripts/release.sh prerelease rc",
     "release:dry": "./scripts/release.sh release beta true",
     "storybook": "storybook dev -p 6006 --no-open",
-    "storybook:build": "storybook build",
+    "storybook:build": "storybook build --stats-json",
     "storybook:test": "vitest --project=storybook --run",
     "chromatic": "chromatic --exit-zero-on-changes",
     "release:beta": "npm version prerelease --preid=beta",

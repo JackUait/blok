@@ -32,6 +32,22 @@ export interface HeaderData extends BlockToolData {
 }
 
 /**
+ * Level-specific overrides for customization
+ */
+export interface HeaderLevelConfig {
+  /** Custom HTML tag to use (e.g., 'div', 'p', 'span') */
+  tag?: string;
+  /** Custom display name for this level */
+  name?: string;
+  /** Custom font size (e.g., '3em', '24px') */
+  size?: string;
+  /** Custom margin top (e.g., '20px', '1rem') */
+  marginTop?: string;
+  /** Custom margin bottom (e.g., '10px', '0.5rem') */
+  marginBottom?: string;
+}
+
+/**
  * Tool's config from Editor
  */
 export interface HeaderConfig {
@@ -41,6 +57,8 @@ export interface HeaderConfig {
   levels?: number[];
   /** Default level */
   defaultLevel?: number;
+  /** Level-specific overrides keyed by level number (1-6) */
+  levelOverrides?: Record<number, HeaderLevelConfig>;
 }
 
 /**
@@ -51,6 +69,8 @@ interface Level {
   number: number;
   /** HTML tag corresponding with level number */
   tag: string;
+  /** Display name for this level */
+  name: string;
   /** Icon */
   svg: string;
   /** Tailwind classes for styling */
@@ -173,7 +193,7 @@ export default class Header implements BlockTool {
     return this.levels.map(level => {
       return {
         icon: level.svg,
-        label: this.api.i18n.t(`Heading ${level.number}`),
+        label: this.api.i18n.t(level.name),
         onActivate: (): void => this.setLevel(level.number),
         closeOnActivate: true,
         isActive: this.currentLevel.number === level.number,
@@ -396,49 +416,49 @@ export default class Header implements BlockTool {
   }
 
   /**
+   * Default level configurations using Tailwind CSS classes
+   */
+  private static readonly DEFAULT_LEVELS: Array<{
+    number: number;
+    tag: string;
+    name: string;
+    svg: string;
+    styles: string;
+  }> = [
+    { number: 1, tag: 'H1', name: 'Heading 1', svg: IconH1, styles: 'text-4xl font-bold mt-8 mb-1' },
+    { number: 2, tag: 'H2', name: 'Heading 2', svg: IconH2, styles: 'text-3xl font-semibold mt-6 mb-px' },
+    { number: 3, tag: 'H3', name: 'Heading 3', svg: IconH3, styles: 'text-2xl font-semibold mt-4 mb-px' },
+    { number: 4, tag: 'H4', name: 'Heading 4', svg: IconH4, styles: 'text-xl font-semibold mt-3 mb-px' },
+    { number: 5, tag: 'H5', name: 'Heading 5', svg: IconH5, styles: 'text-base font-semibold mt-3 mb-px' },
+    { number: 6, tag: 'H6', name: 'Heading 6', svg: IconH6, styles: 'text-sm font-semibold mt-3 mb-px' },
+  ];
+
+  /**
    * Available header levels
    *
    * @returns Level array
    */
   private get levels(): Level[] {
-    const availableLevels: Level[] = [
-      {
-        number: 1,
-        tag: 'H1',
-        svg: IconH1,
-        styles: 'text-[2.5em] leading-tight font-bold mt-[32px] mb-[4px]',
-      },
-      {
-        number: 2,
-        tag: 'H2',
-        svg: IconH2,
-        styles: 'text-[2em] leading-tight font-semibold mt-[22px] mb-[1px]',
-      },
-      {
-        number: 3,
-        tag: 'H3',
-        svg: IconH3,
-        styles: 'text-[1.75em] leading-tight font-semibold mt-[16px] mb-[1px]',
-      },
-      {
-        number: 4,
-        tag: 'H4',
-        svg: IconH4,
-        styles: 'text-[1.5em] leading-tight font-semibold mt-[12px] mb-[1px]',
-      },
-      {
-        number: 5,
-        tag: 'H5',
-        svg: IconH5,
-        styles: 'text-[1.25em] leading-tight font-semibold mt-[12px] mb-[1px]',
-      },
-      {
-        number: 6,
-        tag: 'H6',
-        svg: IconH6,
-        styles: 'text-base leading-tight font-semibold mt-[12px] mb-[1px]',
-      },
-    ];
+    const overrides = this._settings.levelOverrides || {};
+
+    const availableLevels: Level[] = Header.DEFAULT_LEVELS.map(defaultLevel => {
+      const override = overrides[defaultLevel.number] || {};
+
+      // Build override styles if any custom values are provided
+      const overrideStyles = [
+        override.size ? `text-[${override.size}]` : '',
+        override.marginTop ? `mt-[${override.marginTop}]` : '',
+        override.marginBottom ? `mb-[${override.marginBottom}]` : '',
+      ].filter(Boolean).join(' ');
+
+      return {
+        number: defaultLevel.number,
+        tag: override.tag?.toUpperCase() || defaultLevel.tag,
+        name: override.name || defaultLevel.name,
+        svg: defaultLevel.svg,
+        styles: overrideStyles ? twMerge(defaultLevel.styles, overrideStyles) : defaultLevel.styles,
+      };
+    });
 
     return this._settings.levels
       ? availableLevels.filter(l => this._settings.levels!.includes(l.number))

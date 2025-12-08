@@ -142,6 +142,91 @@ export const areBlocksMergeable = (targetBlock: Block, blockToMerge: Block): boo
 };
 
 /**
+ * Returns list of tools that all specified blocks can be converted to.
+ * Only returns tools that are valid conversion targets for ALL blocks.
+ * @param blocks - array of blocks to get common conversion items for
+ * @param allBlockTools - all block tools available in the blok
+ */
+export const getConvertibleToolsForBlocks = async (blocks: BlockAPI[], allBlockTools: BlockToolAdapter[]): Promise<BlockToolAdapter[]> => {
+  if (blocks.length === 0) {
+    return [];
+  }
+
+  /**
+   * If only one block, use the single block function
+   */
+  if (blocks.length === 1) {
+    return getConvertibleToolsForBlock(blocks[0], allBlockTools);
+  }
+
+  /**
+   * Check that all blocks have export conversion config
+   */
+  for (const block of blocks) {
+    const blockTool = allBlockTools.find((tool) => tool.name === block.name);
+
+    if (blockTool !== undefined && !isToolConvertable(blockTool, 'export')) {
+      return [];
+    }
+  }
+
+  /**
+   * Get the set of tool names that all blocks currently use
+   */
+  const blockToolNames = new Set(blocks.map((block) => block.name));
+
+  /**
+   * Filter tools that have import conversion config and valid toolbox
+   */
+  return allBlockTools.reduce((result, tool) => {
+    /**
+     * Skip tools without «import» rule specified
+     */
+    if (!isToolConvertable(tool, 'import')) {
+      return result;
+    }
+
+    /**
+     * Skip tools that does not specify toolbox
+     */
+    if (tool.toolbox === undefined) {
+      return result;
+    }
+
+    /** Filter out invalid toolbox entries */
+    const actualToolboxItems = tool.toolbox.filter((toolboxItem) => {
+      /**
+       * Skip items that don't pass 'toolbox' property or do not have an icon
+       */
+      if (isEmpty(toolboxItem) || toolboxItem.icon === undefined) {
+        return false;
+      }
+
+      /**
+       * For multiple blocks, we skip the tool if ALL selected blocks are already of this type
+       * (with no toolbox data override)
+       */
+      const hasToolboxData = toolboxItem.data !== undefined;
+
+      if (!hasToolboxData && blockToolNames.size === 1 && blockToolNames.has(tool.name)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (actualToolboxItems.length > 0) {
+      result.push({
+        ...tool,
+        toolbox: actualToolboxItems,
+      } as BlockToolAdapter);
+    }
+
+    return result;
+  }, [] as BlockToolAdapter[]);
+};
+
+/**
  * Using conversionConfig, convert block data to string.
  * @param blockData - block data to convert
  * @param conversionConfig - tool's conversion config

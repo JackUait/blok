@@ -286,9 +286,14 @@ export default class BlockSelection extends Module {
       this.selection.restore();
     }
 
-    if (!this.anyBlockSelected || RectangleSelection.isRectActivated()) {
+    /**
+     * Always clear rectangle selection state
+     */
+    if (RectangleSelection.isRectActivated()) {
       this.Blok.RectangleSelection.clearSelection();
+    }
 
+    if (!this.anyBlockSelected) {
       return;
     }
 

@@ -17,6 +17,7 @@ const createBlokStub = (): UI['Blok'] => {
   const blockSettingsWrapper = document.createElement('div');
   const toolbarWrapper = document.createElement('div');
   const toolbarSettingsToggler = document.createElement('button');
+  const toolbarPlusButton = document.createElement('button');
 
   return {
     BlockManager: {
@@ -65,6 +66,7 @@ const createBlokStub = (): UI['Blok'] => {
       nodes: {
         wrapper: toolbarWrapper,
         settingsToggler: toolbarSettingsToggler,
+        plusButton: toolbarPlusButton,
       },
       toolbox: {
         opened: false,
@@ -684,6 +686,58 @@ describe('UI module', () => {
 
       expect(blok.BlockSettings.close).toHaveBeenCalledTimes(1);
       expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(blockStub);
+    });
+
+    it('does not clear block selection when clicking on settings toggler', () => {
+      const { ui, blok } = createUI();
+      const settingsToggler = blok.Toolbar.nodes.settingsToggler as HTMLElement;
+
+      (ui as unknown as { documentClicked: (event: MouseEvent) => void }).documentClicked({
+        target: settingsToggler,
+        isTrusted: true,
+      } as unknown as MouseEvent);
+
+      expect(blok.BlockSelection.clearSelection).not.toHaveBeenCalled();
+    });
+
+    it('does not clear block selection when clicking inside block settings', () => {
+      const { ui, blok } = createUI();
+      const blockSettingsElement = document.createElement('div');
+
+      vi.mocked(blok.BlockSettings.contains).mockReturnValue(true);
+
+      (ui as unknown as { documentClicked: (event: MouseEvent) => void }).documentClicked({
+        target: blockSettingsElement,
+        isTrusted: true,
+      } as unknown as MouseEvent);
+
+      expect(blok.BlockSelection.clearSelection).not.toHaveBeenCalled();
+    });
+
+    it('does not close toolbar when clicking on settings toggler', () => {
+      const { ui, blok } = createUI();
+      const settingsToggler = blok.Toolbar.nodes.settingsToggler as HTMLElement;
+
+      (ui as unknown as { documentClicked: (event: MouseEvent) => void }).documentClicked({
+        target: settingsToggler,
+        isTrusted: true,
+      } as unknown as MouseEvent);
+
+      expect(blok.Toolbar.close).not.toHaveBeenCalled();
+      expect(blok.BlockManager.unsetCurrentBlock).not.toHaveBeenCalled();
+    });
+
+    it('does not close toolbar when clicking on plus button', () => {
+      const { ui, blok } = createUI();
+      const plusButton = blok.Toolbar.nodes.plusButton as HTMLElement;
+
+      (ui as unknown as { documentClicked: (event: MouseEvent) => void }).documentClicked({
+        target: plusButton,
+        isTrusted: true,
+      } as unknown as MouseEvent);
+
+      expect(blok.Toolbar.close).not.toHaveBeenCalled();
+      expect(blok.BlockManager.unsetCurrentBlock).not.toHaveBeenCalled();
     });
   });
 

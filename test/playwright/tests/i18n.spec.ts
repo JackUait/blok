@@ -522,57 +522,6 @@ test.describe('blok i18n', () => {
       await expect(deleteButton).toContainText(blockTunesDictionary.delete.Delete);
     });
 
-
-    test('should translate "Click to delete" confirmation message', async ({ page }) => {
-      const blockTunesDictionary = {
-        delete: {
-
-          'Click to delete': 'Нажмите для удаления',
-        },
-      };
-
-      await createBlokWithI18n(page, {
-        i18n: {
-          messages: {
-            blockTunes: blockTunesDictionary,
-          },
-        },
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: {
-                text: 'Some text',
-              },
-            },
-          ],
-        },
-      });
-
-      const block = page.locator(BLOCK_SELECTOR);
-
-      await expect(block).toHaveCount(1);
-      await block.click();
-      await page.locator(SETTINGS_BUTTON_SELECTOR).click();
-
-      const deleteButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="delete"]`);
-
-      await deleteButton.click();
-
-      // Wait for confirmation popover to appear
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for UI animation
-      await page.waitForTimeout(100);
-
-      // Check if confirmation message appears (it might be in a nested popover or notification)
-      const confirmationText = blockTunesDictionary.delete['Click to delete'];
-      const confirmationElement = page.locator(`text=${confirmationText}`);
-
-      // The confirmation might appear in different ways, so we check if it exists
-      const confirmationExists = await confirmationElement.count() > 0;
-
-      expect(confirmationExists).toBeTruthy();
-    });
-
     test('should translate tool name in Convert To', async ({ page }) => {
       const toolNamesDictionary = {
         Heading: 'Заголовок',

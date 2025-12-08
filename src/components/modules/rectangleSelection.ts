@@ -158,6 +158,11 @@ export default class RectangleSelection extends Module {
       return;
     }
 
+    /**
+     * Hide the toolbar immediately so it does not obstruct drag selection.
+     */
+    this.Blok.Toolbar.close();
+
     this.mousedown = true;
     this.startX = pageX;
     this.startY = pageY;
@@ -276,6 +281,15 @@ export default class RectangleSelection extends Module {
    * Handle mouse up
    */
   private processMouseUp(): void {
+    /**
+     * Show toolbar for multi-block selection after mouse up
+     */
+    const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
+
+    if (selectedBlocks.length > 1) {
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+    }
+
     this.clearSelection();
     this.endSelection();
   }

@@ -352,6 +352,27 @@ describe('BlockSelection', () => {
 
       expect(replaceSpy).toHaveBeenCalledWith(event);
     });
+
+    it('clears selected blocks even when rectangle selection is active', () => {
+      const isRectActivatedMock = vi.fn(() => true);
+      const rectangleClearSelectionMock = vi.fn();
+
+      const { blockSelection, blocks } = createBlockSelection({
+        RectangleSelection: {
+          clearSelection: rectangleClearSelectionMock,
+          isRectActivated: isRectActivatedMock,
+        } as unknown as BlokModules['RectangleSelection'],
+      });
+
+      blocks[0].selected = true;
+      blocks[1].selected = true;
+
+      blockSelection.clearSelection();
+
+      expect(blocks[0].selected).toBe(false);
+      expect(blocks[1].selected).toBe(false);
+      expect(rectangleClearSelectionMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('copySelectedBlocks', () => {

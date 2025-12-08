@@ -470,16 +470,7 @@ test.describe('header Tool', () => {
 
       const deleteOption = page.getByTestId('popover-item').filter({ hasText: 'Delete' });
 
-      // First click shows confirmation
       await deleteOption.click();
-
-      // Wait for confirmation state
-      const confirmDelete = page.getByTestId('popover-item').filter({ hasText: 'Click to delete' });
-
-      await expect(confirmDelete).toBeVisible();
-
-      // Second click confirms deletion
-      await confirmDelete.click();
 
       // After deletion, the header block should be removed
       const headerBlock = page.locator(HEADER_BLOCK_SELECTOR);

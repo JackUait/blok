@@ -63,3 +63,13 @@
 [data-blok-navigation-focused="true"] {
   @apply bg-item-focus-bg rounded-md w-content-width max-w-full mx-auto;
 }
+
+/**
+ * Delete button hover styles
+ * Makes the delete button text and icon appear red on hover
+ */
+@media (hover: hover) {
+  [data-blok-item-name="delete"]:hover {
+    @apply text-item-confirm-bg transition-colors;
+  }
+}

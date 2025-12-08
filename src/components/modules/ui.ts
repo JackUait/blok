@@ -464,16 +464,14 @@ export default class UI extends Module<UINodes> {
 
       const hoveredBlock = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
-      /**
-       * Do not trigger 'block-hovered' for cross-block selection
-       */
-      if (this.Blok.BlockSelection.anyBlockSelected) {
-        return;
-      }
-
       if (!hoveredBlock) {
         return;
       }
+
+      /**
+       * For multi-block selection, still emit 'block-hovered' event so toolbar can follow the hovered block.
+       * The toolbar module will handle the logic of whether to move or not.
+       */
 
       if (blockHoveredState.lastHovered === hoveredBlock) {
         return;
@@ -826,9 +824,22 @@ export default class UI extends Module<UINodes> {
     const clickedInsideToolbar = this.Blok.Toolbar.contains(target);
     const clickedInsideBlokSurface = clickedInsideOfBlok || clickedInsideToolbar;
 
+    /**
+     * Check if click is on Block Settings, Settings Toggler, or Plus Button
+     * These elements have their own click handlers and should not trigger default behavior
+     */
+    const isClickedInsideBlockSettings = this.Blok.BlockSettings.contains(target);
+    const isClickedInsideBlockSettingsToggler = this.Blok.Toolbar.nodes.settingsToggler?.contains(target);
+    const isClickedInsidePlusButton = this.Blok.Toolbar.nodes.plusButton?.contains(target);
+    const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler || isClickedInsidePlusButton;
+
     const shouldClearCurrentBlock = !clickedInsideBlokSurface || (!clickedInsideRedactor && !clickedInsideToolbar);
 
-    if (shouldClearCurrentBlock) {
+    /**
+     * Don't clear current block when clicking on settings toggler, plus button, or inside block settings
+     * These elements need the current block to function properly
+     */
+    if (shouldClearCurrentBlock && !doNotProcess) {
       /**
        * Clear pointer on BlockManager
        *
@@ -838,17 +849,6 @@ export default class UI extends Module<UINodes> {
       this.Blok.BlockManager.unsetCurrentBlock();
       this.Blok.Toolbar.close();
     }
-
-    /**
-     * If Block Settings opened, close them by click on document.
-     *
-     * But allow clicking inside Block Settings.
-     * Also, do not process clicks on the Block Settings Toggler or Plus Button, because they have their own click listeners
-     */
-    const isClickedInsideBlockSettings = this.Blok.BlockSettings.contains(target);
-    const isClickedInsideBlockSettingsToggler = this.Blok.Toolbar.nodes.settingsToggler?.contains(target);
-    const isClickedInsidePlusButton = this.Blok.Toolbar.nodes.plusButton?.contains(target);
-    const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler || isClickedInsidePlusButton;
 
     const shouldCloseBlockSettings = this.Blok.BlockSettings.opened && !doNotProcess;
     if (shouldCloseBlockSettings) {
@@ -862,8 +862,12 @@ export default class UI extends Module<UINodes> {
 
     /**
      * Clear Selection if user clicked somewhere
+     * But preserve selection when clicking on block settings toggler or inside block settings
+     * to allow multi-block operations like conversion
      */
-    this.Blok.BlockSelection.clearSelection(event);
+    if (!doNotProcess) {
+      this.Blok.BlockSelection.clearSelection(event);
+    }
   }
 
   /**

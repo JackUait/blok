@@ -103,12 +103,14 @@ describe('CrossBlockSelection', () => {
         clearCache: blockSelectionClearCache,
         clearSelection: blockSelectionClearSelection,
         anyBlockSelected: false,
+        selectedBlocks: [],
       },
       InlineToolbar: {
         close: inlineToolbarClose,
       },
       Toolbar: {
         close: toolbarClose,
+        moveAndOpenForMultipleBlocks: vi.fn(),
       },
       Caret: {
         positions: {

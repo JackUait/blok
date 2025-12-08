@@ -19,6 +19,7 @@ import {
   BLOK_TOOLBOX_OPENED_ATTR,
   BLOK_DRAG_HANDLE_ATTR,
 } from '../../constants';
+import SelectionUtils from '../../selection';
 
 /**
  * @todo Tab on non-empty block should open Block Settings of the hoveredBlock (not where caret is set)
@@ -112,6 +113,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Used to distinguish between click and drag
    */
   private settingsTogglerMouseDownPosition: { x: number; y: number } | null = null;
+
+  /**
+   * Mouse position when mousedown occurred on plus button
+   * Used to distinguish between click and drag
+   */
+  private plusButtonMouseDownPosition: { x: number; y: number } | null = null;
 
   /**
    * @class
@@ -463,6 +470,69 @@ export default class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * Move Toolbar to the specified block (or first selected block) and open it for multi-block selection.
+   * Keeps the add button visible so users can still insert blocks while multiple are selected.
+   * @param block - optional block to position the toolbar at (defaults to first selected block)
+   */
+  public moveAndOpenForMultipleBlocks(block?: Block): void {
+    const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
+
+    if (selectedBlocks.length < 2) {
+      return;
+    }
+
+    /**
+     * Some UI elements creates inside requestIdleCallback, so they can be not ready yet
+     */
+    if (this.toolboxInstance === null) {
+      _.log('Can\'t open Toolbar since Blok initialization is not finished yet', 'warn');
+
+      return;
+    }
+
+    /**
+     * Close Toolbox when we move toolbar
+     */
+    if (this.toolboxInstance.opened) {
+      this.toolboxInstance.close();
+    }
+
+    if (this.Blok.BlockSettings.opened) {
+      this.Blok.BlockSettings.close();
+    }
+
+    /**
+     * Use the provided block or fall back to the first selected block as the anchor for the toolbar
+     */
+    const targetBlock = block ?? selectedBlocks[0];
+
+    this.hoveredBlock = targetBlock;
+
+    const { wrapper, plusButton } = this.nodes;
+
+    if (!wrapper || !plusButton) {
+      return;
+    }
+
+    const targetBlockHolder = targetBlock.holder;
+
+    /**
+     * Position toolbar at the top of the target block
+     */
+    const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
+
+    wrapper.style.top = `${Math.floor(pluginContentOffset)}px`;
+    targetBlockHolder.appendChild(wrapper);
+
+    /**
+     * Always show the settings toggler for multi-block selection
+     */
+    this.blockTunesToggler.show();
+
+    this.open();
+  }
+
+  /**
    * Close the Toolbar
    */
   public close(): void {
@@ -480,6 +550,14 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.blockActions.hide();
     this.toolboxInstance?.close();
     this.Blok.BlockSettings.close();
+
+    /**
+     * Restore plus button visibility in case it was hidden by other interactions
+     */
+    if (this.nodes.plusButton) {
+      this.nodes.plusButton.style.display = '';
+    }
+
     this.reset();
   }
 
@@ -575,10 +653,64 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.nodes.plusButton = plusButton;
     $.append(actions, plusButton);
 
-    this.readOnlyMutableListeners.on(plusButton, 'click', () => {
+    /**
+     * Plus button mousedown handler
+     * Stores the initial mouse position to distinguish between click and drag
+     */
+    this.readOnlyMutableListeners.on(plusButton, 'mousedown', (e) => {
+      const mouseEvent = e as MouseEvent;
+
+      /**
+       * Store the mouse position when mousedown occurs
+       * This will be used to determine if the user dragged or clicked
+       */
+      this.plusButtonMouseDownPosition = {
+        x: mouseEvent.clientX,
+        y: mouseEvent.clientY,
+      };
+    }, true);
+
+    /**
+     * Plus button mouseup handler
+     * Only opens the toolbox if the mouse didn't move significantly (i.e., it was a click, not a drag)
+     *
+     * We use mouseup instead of click because when multiple blocks are selected,
+     * the browser may not generate a click event due to focus/selection changes
+     * during the mousedown phase.
+     */
+    this.readOnlyMutableListeners.on(plusButton, 'mouseup', (e) => {
+      e.stopPropagation();
+
+      const mouseEvent = e as MouseEvent;
+
+      /**
+       * Check if this was a drag or a click by comparing mouse positions
+       * If the mouse moved more than the threshold, it was a drag - don't open toolbox
+       */
+      const mouseDownPos = this.plusButtonMouseDownPosition;
+
+      this.plusButtonMouseDownPosition = null;
+
+      /**
+       * If mouseDownPos is null, it means mousedown didn't happen on this element
+       * (e.g., user started drag from elsewhere), so ignore this mouseup
+       */
+      if (mouseDownPos === null) {
+        return;
+      }
+
+      const wasDragged = (
+        Math.abs(mouseEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
+        Math.abs(mouseEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
+      );
+
+      if (wasDragged) {
+        return;
+      }
+
       tooltip.hide(true);
       this.plusButtonClicked();
-    }, false);
+    }, true);
 
     /**
      * Add events to show/hide tooltip for plus button
@@ -773,6 +905,21 @@ export default class Toolbar extends Module<ToolbarNodes> {
       this.Blok.BlockSettings.close();
     }
 
+    /**
+     * Clear block selection when plus button is clicked
+     * This allows users to add new blocks even when multiple blocks are selected
+     */
+    if (this.Blok.BlockSelection.anyBlockSelected) {
+      this.Blok.BlockSelection.clearSelection();
+    }
+
+    /**
+     * Remove native text selection that may have been created during cross-block selection
+     * This needs to happen regardless of anyBlockSelected state, as cross-block selection
+     * via Shift+Arrow creates native text selection that spans multiple blocks
+     */
+    SelectionUtils.get()?.removeAllRanges();
+
     this.toolboxInstance?.toggle();
   }
 
@@ -809,10 +956,16 @@ export default class Toolbar extends Module<ToolbarNodes> {
       }, true);
 
       /**
-       * Settings toggler click handler
+       * Settings toggler mouseup handler
        * Only opens the menu if the mouse didn't move significantly (i.e., it was a click, not a drag)
+       *
+       * We use mouseup instead of click because SortableJS (used for drag-and-drop) calls
+       * removeAllRanges() during drag preparation, which causes the activeElement to change
+       * from the contenteditable DIV to BODY. When the activeElement changes between mousedown
+       * and mouseup, the browser doesn't generate a click event. By using mouseup, we can
+       * still detect clicks even when SortableJS interferes.
        */
-      this.readOnlyMutableListeners.on(settingsToggler, 'click', (e) => {
+      this.readOnlyMutableListeners.on(settingsToggler, 'mouseup', (e) => {
         e.stopPropagation();
 
         const mouseEvent = e as MouseEvent;
@@ -825,7 +978,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
         this.settingsTogglerMouseDownPosition = null;
 
-        const wasDragged = mouseDownPos !== null && (
+        /**
+         * If mouseDownPos is null, it means mousedown didn't happen on this element
+         * (e.g., user started drag from elsewhere), so ignore this mouseup
+         */
+        if (mouseDownPos === null) {
+          return;
+        }
+
+        const wasDragged = (
           Math.abs(mouseEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
           Math.abs(mouseEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
         );
@@ -861,6 +1022,29 @@ export default class Toolbar extends Module<ToolbarNodes> {
          * Do not move toolbar if Block Settings or Toolbox opened
          */
         if (this.Blok.BlockSettings.opened || this.toolboxInstance?.opened) {
+          return;
+        }
+
+        /**
+         * Check if multiple blocks are selected
+         */
+        const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
+        const isMultiBlockSelection = selectedBlocks.length > 1;
+        const isHoveredBlockSelected = isMultiBlockSelection && selectedBlocks.some(block => block === hoveredBlock);
+
+        /**
+         * For multi-block selection, only move toolbar if the hovered block is one of the selected blocks
+         */
+        if (isMultiBlockSelection && isHoveredBlockSelected) {
+          this.moveAndOpenForMultipleBlocks(hoveredBlock);
+
+          return;
+        }
+
+        /**
+         * For multi-block selection where hovered block is not selected, do nothing
+         */
+        if (isMultiBlockSelection) {
           return;
         }
 

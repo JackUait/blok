@@ -38,23 +38,21 @@ describe('DeleteTune', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders block tune config with translated labels and confirmation handler', () => {
+  it('renders block tune config with translated label and direct handler', () => {
     const { api, i18n } = createApiMocks();
     const tune = new DeleteTune({ api });
     const handleClickSpy = vi.spyOn(tune, 'handleClick').mockImplementation(() => {});
 
-    type MenuConfigWithConfirmation = Extract<MenuConfig, { confirmation: unknown }>;
+    type MenuConfigWithActivate = Extract<MenuConfig, { onActivate: unknown }>;
 
-    const config = tune.render() as MenuConfigWithConfirmation;
+    const config = tune.render() as MenuConfigWithActivate;
 
-    expect(i18n.t).toHaveBeenNthCalledWith(1, 'Delete');
-    expect(i18n.t).toHaveBeenNthCalledWith(2, 'Click to delete');
+    expect(i18n.t).toHaveBeenCalledWith('Delete');
     expect(config.icon).toBe(IconCross);
     expect(config.title).toBe('Delete');
     expect(config.name).toBe('delete');
-    expect(config.confirmation?.title).toBe('Click to delete');
 
-    config.confirmation?.onActivate?.(config);
+    config.onActivate?.(config);
 
     expect(handleClickSpy).toHaveBeenCalledTimes(1);
   });

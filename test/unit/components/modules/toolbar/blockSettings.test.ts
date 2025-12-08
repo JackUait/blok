@@ -70,12 +70,14 @@ vi.mock('../../../../../src/components/flipper', () => {
   };
 });
 
-const { getConvertibleToolsForBlockMock } = vi.hoisted(() => ({
+const { getConvertibleToolsForBlockMock, getConvertibleToolsForBlocksMock } = vi.hoisted(() => ({
   getConvertibleToolsForBlockMock: vi.fn(),
+  getConvertibleToolsForBlocksMock: vi.fn(),
 }));
 
 vi.mock('../../../../../src/components/utils/blocks', () => ({
   getConvertibleToolsForBlock: getConvertibleToolsForBlockMock,
+  getConvertibleToolsForBlocks: getConvertibleToolsForBlocksMock,
 }));
 
 const { isMobileScreenMock } = vi.hoisted(() => ({
@@ -164,6 +166,8 @@ type BlokMock = {
     selectBlock: Mock<(block: Block) => void>;
     clearCache: Mock<() => void>;
     unselectBlock: Mock<(block: Block) => void>;
+    selectedBlocks: Block[];
+    allBlocksSelected: boolean;
   };
   BlockManager: {
     currentBlock?: Block;
@@ -208,6 +212,8 @@ const createBlokMock = (): BlokMock => {
     selectBlock: vi.fn(),
     clearCache: vi.fn(),
     unselectBlock: vi.fn(),
+    selectedBlocks: [] as Block[],
+    allBlocksSelected: false,
   };
   const blockManager = {
     currentBlock: undefined as Block | undefined,
@@ -264,6 +270,7 @@ describe('BlockSettings', () => {
     popoverInstances.length = 0;
     flipperInstances.length = 0;
     getConvertibleToolsForBlockMock.mockReset();
+    getConvertibleToolsForBlocksMock.mockReset();
     isMobileScreenMock.mockClear();
 
     eventsDispatcher = {

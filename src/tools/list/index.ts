@@ -51,8 +51,51 @@ export interface ListData extends BlockToolData {
 export interface ListConfig {
   /** Default list style */
   defaultStyle?: ListStyle;
-  /** Available list styles */
+  /**
+   * Available list styles for the settings menu.
+   * When specified, only these styles will be available in the block settings dropdown.
+   */
   styles?: ListStyle[];
+  /**
+   * List styles to show in the toolbox.
+   * When specified, only these list types will appear as separate entries in the toolbox.
+   * If not specified, all list types (unordered, ordered, checklist) will be shown.
+   *
+   * @example
+   * // Show only bulleted and numbered lists in toolbox
+   * toolboxStyles: ['unordered', 'ordered']
+   *
+   * @example
+   * // Show only checklist in toolbox
+   * toolboxStyles: ['checklist']
+   */
+  toolboxStyles?: ListStyle[];
+  /**
+   * Custom color for list items.
+   * Accepts any valid CSS color value (hex, rgb, hsl, named colors, etc.)
+   *
+   * @example
+   * // Set list items to a hex color
+   * itemColor: '#3b82f6'
+   *
+   * @example
+   * // Set list items to an rgb color
+   * itemColor: 'rgb(59, 130, 246)'
+   */
+  itemColor?: string;
+  /**
+   * Custom font size for list items.
+   * Accepts any valid CSS font-size value (px, rem, em, etc.)
+   *
+   * @example
+   * // Set list items to 18px
+   * itemSize: '18px'
+   *
+   * @example
+   * // Set list items to 1.25rem
+   * itemSize: '1.25rem'
+   */
+  itemSize?: string;
 }
 
 /**
@@ -86,10 +129,12 @@ export default class List implements BlockTool {
   private static readonly CHECKBOX_STYLES = 'mt-1 w-4 h-4 cursor-pointer accent-current';
 
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
-    { style: 'unordered', name: 'Unordered', icon: IconListUnordered, tag: 'ul' },
-    { style: 'ordered', name: 'Ordered', icon: IconListOrdered, tag: 'ol' },
+    { style: 'unordered', name: 'Bulleted list', icon: IconListUnordered, tag: 'ul' },
+    { style: 'ordered', name: 'Numbered list', icon: IconListOrdered, tag: 'ol' },
     { style: 'checklist', name: 'Checklist', icon: IconListChecklist, tag: 'ul' },
   ];
+
+
 
   constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<ListData, ListConfig>) {
     this.api = api;
@@ -138,6 +183,24 @@ export default class List implements BlockTool {
       return List.STYLE_CONFIGS;
     }
     return List.STYLE_CONFIGS.filter(s => configuredStyles.includes(s.style));
+  }
+
+  private get itemColor(): string | undefined {
+    return this._settings.itemColor;
+  }
+
+  private get itemSize(): string | undefined {
+    return this._settings.itemSize;
+  }
+
+  private applyItemStyles(el: HTMLElement): void {
+    const element = el;
+    if (this.itemColor) {
+      element.style.color = this.itemColor;
+    }
+    if (this.itemSize) {
+      element.style.fontSize = this.itemSize;
+    }
   }
 
   public render(): HTMLElement {
@@ -195,6 +258,7 @@ export default class List implements BlockTool {
     li.contentEditable = this.readOnly ? 'false' : 'true';
     li.innerHTML = item.content;
     li.setAttribute('data-item-index', String(index));
+    this.applyItemStyles(li);
     return li;
   }
 
@@ -202,6 +266,7 @@ export default class List implements BlockTool {
     const wrapper = document.createElement('div');
     wrapper.className = List.CHECKLIST_ITEM_STYLES;
     wrapper.setAttribute('data-item-index', String(index));
+    this.applyItemStyles(wrapper);
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
@@ -233,7 +298,7 @@ export default class List implements BlockTool {
   private handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      this.addNewItem();
+      this.handleEnter();
       return;
     }
 
@@ -242,7 +307,7 @@ export default class List implements BlockTool {
     }
   }
 
-  private addNewItem(): void {
+  private handleEnter(): void {
     const selection = window.getSelection();
     if (!selection || !this._element) return;
 
@@ -253,14 +318,55 @@ export default class List implements BlockTool {
     if (!currentItem) return;
 
     const currentIndex = parseInt(currentItem.getAttribute('data-item-index') || '0', 10);
-    const range = selection.getRangeAt(0);
     const contentEl = this.getContentElement(currentItem);
     if (!contentEl) return;
 
+    const currentContent = contentEl.innerHTML.trim();
+
+    // If current item is empty, exit the list and create a new paragraph
+    if (currentContent === '' || currentContent === '<br>') {
+      this.exitListAndCreateParagraph(currentIndex);
+      return;
+    }
+
+    // Otherwise, add a new item
+    this.addNewItem(currentIndex);
+  }
+
+  private exitListAndCreateParagraph(currentIndex: number): void {
+    // Remove the empty item
+    this._data.items.splice(currentIndex, 1);
+
+    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
+
+    // If no items left, delete the entire list block and insert a paragraph
+    if (this._data.items.length === 0) {
+      this.api.blocks.delete(currentBlockIndex);
+      this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex, true);
+      return;
+    }
+
+    // Re-render the list without the empty item
+    this.rerender();
+
+    // Insert a new paragraph block after the current list block
+    this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex + 1, true);
+  }
+
+  private addNewItem(currentIndex: number): void {
+    const selection = window.getSelection();
+    if (!selection || !this._element) return;
+
+    const currentItem = this._element.querySelector(`[data-item-index="${currentIndex}"]`) as HTMLElement;
+    if (!currentItem) return;
+
+    const contentEl = this.getContentElement(currentItem);
+    if (!contentEl) return;
+
+    const range = selection.getRangeAt(0);
     const { beforeContent, afterContent } = this.splitContentAtCursor(contentEl, range);
 
     this._data.items[currentIndex].content = beforeContent;
-    contentEl.innerHTML = beforeContent;
 
     const newItem: ListItem = { content: afterContent, checked: false };
     this._data.items.splice(currentIndex + 1, 0, newItem);
@@ -554,18 +660,21 @@ export default class List implements BlockTool {
     return [
       {
         icon: IconListUnordered,
-        title: 'Bulleted List',
+        title: 'Bulleted list',
         data: { style: 'unordered' },
+        name: 'bulleted-list',
       },
       {
         icon: IconListOrdered,
-        title: 'Numbered List',
+        title: 'Numbered list',
         data: { style: 'ordered' },
+        name: 'numbered-list',
       },
       {
         icon: IconListChecklist,
         title: 'Checklist',
         data: { style: 'checklist' },
+        name: 'check-list',
       },
     ];
   }

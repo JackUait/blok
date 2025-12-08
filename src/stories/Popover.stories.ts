@@ -278,7 +278,8 @@ export const BlockTunesPopover: Story = {
 };
 
 /**
- * Popover confirmation state (delete action).
+ * Popover confirmation state - demonstrates the visual appearance of an item in confirmation mode.
+ * Note: This manually applies confirmation styling since the default delete tune doesn't have confirmation.
  */
 export const ConfirmationState: Story = {
   args: {
@@ -319,7 +320,7 @@ export const ConfirmationState: Story = {
       const settingsButton = canvasElement.querySelector(SETTINGS_BUTTON_TESTID);
 
       if (settingsButton) {
-        await userEvent.click(settingsButton);
+        simulateClick(settingsButton);
       }
 
       await waitFor(
@@ -333,20 +334,22 @@ export const ConfirmationState: Story = {
       );
     });
 
-    await step('Click delete to trigger confirmation', async () => {
+    await step('Apply confirmation state styling to delete button', async () => {
       // Wait for popover items to be fully rendered
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Delete button is inside the popover which is in document.body
       const deleteButton = document.querySelector(DELETE_BUTTON_SELECTOR);
 
       if (deleteButton) {
-        // Use userEvent.click for proper click handling
-        await userEvent.click(deleteButton);
+        // Manually apply confirmation state styling for visual demonstration
+        // This matches the styling applied by popover-item-default.ts applyConfirmationState()
+        deleteButton.setAttribute('data-blok-popover-item-confirmation', 'true');
+        deleteButton.setAttribute('data-blok-popover-item-no-hover', 'true');
+        deleteButton.setAttribute('data-blok-popover-item-no-focus', 'true');
+        // eslint-disable-next-line internal-storybook/no-class-selectors
+        deleteButton.classList.add('!bg-item-confirm-bg', '!text-white');
       }
-
-      // Wait for confirmation state animation
-      await new Promise((resolve) => setTimeout(resolve, 100));
 
       await waitFor(
         () => {

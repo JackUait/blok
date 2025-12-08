@@ -28,7 +28,10 @@
     "Text": "",
     "Link": "",
     "Bold": "",
-    "Italic": ""
+    "Italic": "",
+    "Bulleted list": "",
+    "Numbered list": "",
+    "Checklist": ""
   },
   "tools": {
     "link": {
@@ -36,6 +39,11 @@
     },
     "stub": {
       "The block can not be displayed correctly.": ""
+    },
+    "list": {
+      "Bulleted list": "",
+      "Numbered list": "",
+      "Checklist": ""
     }
   },
   "blockTunes": {

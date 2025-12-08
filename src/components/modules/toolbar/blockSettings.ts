@@ -306,7 +306,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
         result.push({
           icon: toolboxItem.icon,
           title: I18n.t(I18nInternalNS.toolNames, titleKey),
-          name: tool.name,
+          name: toolboxItem.name ?? tool.name,
           closeOnActivate: true,
           onActivate: async () => {
             const { BlockManager, Caret, Toolbar } = this.Blok;
@@ -409,11 +409,11 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * Converts multiple selected blocks to a target tool type
-   * Processes blocks in reverse order to maintain correct indices
+   * Converts blocks in order and merges them into a single block
    * @param blocks - array of blocks to convert
    * @param targetToolName - name of the tool to convert to
    * @param toolboxData - optional data overrides for the new blocks
-   * @returns the first converted block (last in processing order) or null if all conversions failed
+   * @returns the merged block or null if all conversions failed
    */
   private async convertMultipleBlocks(
     blocks: Block[],
@@ -421,7 +421,15 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     toolboxData?: Record<string, unknown>
   ): Promise<Block | null> {
     const { BlockManager } = this.Blok;
-    const blocksToConvert = [...blocks].reverse();
+
+    if (blocks.length === 0) {
+      return null;
+    }
+
+    /**
+     * Convert blocks in order (first to last)
+     */
+    const blocksToConvert = [...blocks];
     const convertedBlocks: Block[] = [];
 
     for (const block of blocksToConvert) {
@@ -432,10 +440,27 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       }
     }
 
+    if (convertedBlocks.length === 0) {
+      return null;
+    }
+
     /**
-     * Return the last converted block (which is the first in visual order)
+     * Merge all converted blocks into the first one
+     * Process from the second block onwards, merging each into the first
      */
-    return convertedBlocks.length > 0 ? convertedBlocks[convertedBlocks.length - 1] : null;
+    const targetBlock = convertedBlocks[0];
+
+    for (let i = 1; i < convertedBlocks.length; i++) {
+      const blockToMerge = convertedBlocks[i];
+
+      try {
+        await BlockManager.mergeBlocks(targetBlock, blockToMerge);
+      } catch (e) {
+        console.warn(`Failed to merge block ${blockToMerge.id} into ${targetBlock.id}:`, e);
+      }
+    }
+
+    return targetBlock;
   }
 
   /**

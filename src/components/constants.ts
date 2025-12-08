@@ -176,6 +176,7 @@ export const BLOK_TOOL_ATTR = 'data-blok-tool';
 export const BLOK_TOOL_PARAGRAPH_SELECTOR = '[data-blok-tool="paragraph"]';
 export const BLOK_TOOL_HEADER_SELECTOR = '[data-blok-tool="header"]';
 export const BLOK_TOOL_STUB_SELECTOR = '[data-blok-tool="stub"]';
+export const BLOK_TOOL_LIST_SELECTOR = '[data-blok-tool="list"]';
 
 /**
  * Stub-specific attributes

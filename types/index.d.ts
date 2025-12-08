@@ -145,6 +145,7 @@ export interface API {
 
 import { HeaderConstructable } from './tools/header';
 import { ParagraphConstructable } from './tools/paragraph';
+import { ListConstructable } from './tools/list';
 
 /**
  * Main Blok class
@@ -161,6 +162,11 @@ declare class Blok {
    * Paragraph tool bundled with Blok
    */
   public static Paragraph: ParagraphConstructable;
+
+  /**
+   * List tool bundled with Blok
+   */
+  public static List: ListConstructable;
 
   public isReady: Promise<void>;
 

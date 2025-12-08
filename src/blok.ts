@@ -14,6 +14,7 @@ import * as _ from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import Header from './tools/header';
 import Paragraph from './tools/paragraph';
+import List from './tools/list';
 
 /**
  * Blok
@@ -50,6 +51,11 @@ export default class Blok {
    * Paragraph tool bundled with Blok
    */
   public static Paragraph = Paragraph;
+
+  /**
+   * List tool bundled with Blok
+   */
+  public static List = List;
 
   /**
    * @param {BlokConfig|string|undefined} [configuration] - user configuration

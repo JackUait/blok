@@ -33,6 +33,8 @@ export interface ListItem {
   content: string;
   /** Checked state for checklist items */
   checked?: boolean;
+  /** Nested items for indentation */
+  items?: ListItem[];
 }
 
 /**
@@ -128,6 +130,21 @@ export default class List implements BlockTool {
   private static readonly CHECKLIST_ITEM_STYLES = 'flex items-start gap-2 py-0.5';
   private static readonly CHECKBOX_STYLES = 'mt-1 w-4 h-4 cursor-pointer accent-current';
 
+  /**
+   * Placeholder styling classes using Tailwind arbitrary variants.
+   * Applied to ::before pseudo-element only when element is empty.
+   */
+  private static readonly PLACEHOLDER_CLASSES = [
+    'empty:before:pointer-events-none',
+    'empty:before:text-gray-text',
+    'empty:before:cursor-text',
+    'empty:before:content-[attr(data-placeholder)]',
+    '[&[data-blok-empty=true]]:before:pointer-events-none',
+    '[&[data-blok-empty=true]]:before:text-gray-text',
+    '[&[data-blok-empty=true]]:before:cursor-text',
+    '[&[data-blok-empty=true]]:before:content-[attr(data-placeholder)]',
+  ];
+
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
     { style: 'unordered', name: 'Bulleted list', icon: IconListUnordered, tag: 'ul' },
     { style: 'ordered', name: 'Numbered list', icon: IconListOrdered, tag: 'ol' },
@@ -164,13 +181,28 @@ export default class List implements BlockTool {
     }
 
     const normalizedItems = data.items.length > 0
-      ? data.items.map(item => ({
-          content: typeof item === 'string' ? item : (item.content || ''),
-          checked: typeof item === 'object' ? Boolean(item.checked) : false,
-        }))
+      ? data.items.map(item => this.normalizeItem(item))
       : [{ content: '', checked: false }];
 
     return { style, items: normalizedItems };
+  }
+
+  private normalizeItem(item: ListItem | string): ListItem {
+    if (typeof item === 'string') {
+      return { content: item, checked: false };
+    }
+
+    const normalizedItem: ListItem = {
+      content: item.content || '',
+      checked: Boolean(item.checked),
+    };
+
+    // Preserve nested items
+    if (item.items && Array.isArray(item.items) && item.items.length > 0) {
+      normalizedItem.items = item.items.map(nestedItem => this.normalizeItem(nestedItem));
+    }
+
+    return normalizedItem;
   }
 
   private get currentStyleConfig(): StyleConfig {
@@ -193,6 +225,12 @@ export default class List implements BlockTool {
     return this._settings.itemSize;
   }
 
+  private static readonly DEFAULT_PLACEHOLDER = 'List';
+
+  private get placeholder(): string {
+    return this.api.i18n.t(List.DEFAULT_PLACEHOLDER);
+  }
+
   private applyItemStyles(el: HTMLElement): void {
     const element = el;
     if (this.itemColor) {
@@ -201,6 +239,39 @@ export default class List implements BlockTool {
     if (this.itemSize) {
       element.style.fontSize = this.itemSize;
     }
+  }
+
+  private applyPlaceholder(el: HTMLElement): void {
+    if (this.placeholder) {
+      el.setAttribute('data-placeholder', this.placeholder);
+    }
+  }
+
+  private addFocusHandler(el: HTMLElement): void {
+    if (this.readOnly) {
+      return;
+    }
+
+    el.addEventListener('focus', () => {
+      const element = el;
+      const isEmpty = element.innerHTML.trim() === '' || element.innerHTML === '<br>';
+      if (!isEmpty) {
+        return;
+      }
+
+      // Clear any <br> tags to ensure clean empty state for placeholder
+      if (element.innerHTML === '<br>') {
+        element.innerHTML = '';
+      }
+
+      // Set caret at the start for empty items (at the placeholder position)
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      range.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
   }
 
   public render(): HTMLElement {
@@ -229,43 +300,105 @@ export default class List implements BlockTool {
     return wrapper;
   }
 
-  private createStandardListContent(items: ListItem[], style: ListStyle): HTMLElement {
+  /**
+   * Ordered list style cycle for nested levels:
+   * Level 0: decimal (1, 2, 3...)
+   * Level 1: lower-alpha (a, b, c...)
+   * Level 2: lower-roman (i, ii, iii...)
+   * Level 3+: cycle repeats
+   */
+  private static readonly ORDERED_LIST_STYLES = ['list-decimal', 'list-[lower-alpha]', 'list-[lower-roman]'];
+
+  private getOrderedListStyle(depth: number): string {
+    return List.ORDERED_LIST_STYLES[depth % List.ORDERED_LIST_STYLES.length];
+  }
+
+  private createStandardListContent(items: ListItem[], style: ListStyle, parentPath: number[] = []): HTMLElement {
     const styleConfig = this.currentStyleConfig;
     const list = document.createElement(styleConfig.tag);
-    list.className = twMerge('pl-6', style === 'ordered' ? 'list-decimal' : 'list-disc');
+    const depth = parentPath.length;
+    const listStyleClass = style === 'ordered' ? this.getOrderedListStyle(depth) : 'list-disc';
+    list.className = twMerge('pl-6', listStyleClass);
 
     items.forEach((item, index) => {
-      list.appendChild(this.createListItem(item, index));
+      list.appendChild(this.createListItem(item, index, parentPath));
     });
 
     return list;
   }
 
-  private createChecklistContent(items: ListItem[]): HTMLElement {
+  private createChecklistContent(items: ListItem[], parentPath: number[] = []): HTMLElement {
     const list = document.createElement('div');
     list.className = 'space-y-0.5';
 
     items.forEach((item, index) => {
-      list.appendChild(this.createChecklistItem(item, index));
+      const currentPath = [...parentPath, index];
+      list.appendChild(this.createChecklistItem(item, index, currentPath));
+
+      // Render nested items for checklist recursively
+      if (item.items && item.items.length > 0) {
+        const nestedContainer = this.createChecklistContent(item.items, currentPath);
+        nestedContainer.className = 'pl-6 space-y-0.5';
+        list.appendChild(nestedContainer);
+      }
     });
 
     return list;
   }
 
-  private createListItem(item: ListItem, index: number): HTMLLIElement {
+  private createListItem(item: ListItem, index: number, itemPath: number[] = []): HTMLLIElement {
     const li = document.createElement('li');
-    li.className = List.ITEM_STYLES;
-    li.contentEditable = this.readOnly ? 'false' : 'true';
-    li.innerHTML = item.content;
+    li.className = twMerge(List.ITEM_STYLES, ...List.PLACEHOLDER_CLASSES);
     li.setAttribute('data-item-index', String(index));
+
+    // Store the full path to this item for nested item tracking
+    const currentPath = [...itemPath, index];
+    li.setAttribute('data-item-path', JSON.stringify(currentPath));
     this.applyItemStyles(li);
+    this.applyPlaceholder(li);
+
+    // If this item has nested items, render them recursively
+    if (item.items && item.items.length > 0) {
+      li.contentEditable = 'false';
+
+      // Create a content wrapper for the main item text
+      const contentWrapper = document.createElement('div');
+      contentWrapper.contentEditable = this.readOnly ? 'false' : 'true';
+      contentWrapper.innerHTML = item.content;
+      contentWrapper.className = twMerge('outline-none', ...List.PLACEHOLDER_CLASSES);
+      this.applyPlaceholder(contentWrapper);
+      this.addFocusHandler(contentWrapper);
+
+      li.appendChild(contentWrapper);
+
+      // Create nested list recursively
+      const nestedList = document.createElement(this.currentStyleConfig.tag);
+      const nestedDepth = currentPath.length;
+      const nestedListStyleClass = this._data.style === 'ordered' ? this.getOrderedListStyle(nestedDepth) : 'list-disc';
+      nestedList.className = twMerge('pl-6 mt-1', nestedListStyleClass);
+
+      item.items.forEach((nestedItem, nestedIndex) => {
+        // Recursively create nested items with the full path
+        const nestedLi = this.createListItem(nestedItem, nestedIndex, currentPath);
+        nestedList.appendChild(nestedLi);
+      });
+
+      li.appendChild(nestedList);
+    } else {
+      // No nested items - make the li itself editable
+      li.contentEditable = this.readOnly ? 'false' : 'true';
+      li.innerHTML = item.content;
+      this.addFocusHandler(li);
+    }
+
     return li;
   }
 
-  private createChecklistItem(item: ListItem, index: number): HTMLDivElement {
+  private createChecklistItem(item: ListItem, index: number, itemPath: number[]): HTMLDivElement {
     const wrapper = document.createElement('div');
     wrapper.className = List.CHECKLIST_ITEM_STYLES;
     wrapper.setAttribute('data-item-index', String(index));
+    wrapper.setAttribute('data-item-path', JSON.stringify(itemPath));
     this.applyItemStyles(wrapper);
 
     const checkbox = document.createElement('input');
@@ -277,14 +410,21 @@ export default class List implements BlockTool {
     const content = document.createElement('div');
     content.className = twMerge(
       'flex-1 outline-none leading-[1.6em]',
-      item.checked ? 'line-through opacity-60' : ''
+      item.checked ? 'line-through opacity-60' : '',
+      ...List.PLACEHOLDER_CLASSES
     );
     content.contentEditable = this.readOnly ? 'false' : 'true';
     content.innerHTML = item.content;
+    this.applyPlaceholder(content);
+    this.addFocusHandler(content);
 
     if (!this.readOnly) {
       checkbox.addEventListener('change', () => {
-        this._data.items[index].checked = checkbox.checked;
+        // Update the correct item using the path
+        const itemToUpdate = this.getItemAtPath(itemPath);
+        if (itemToUpdate) {
+          itemToUpdate.checked = checkbox.checked;
+        }
         content.classList.toggle('line-through', checkbox.checked);
         content.classList.toggle('opacity-60', checkbox.checked);
       });
@@ -304,6 +444,18 @@ export default class List implements BlockTool {
 
     if (event.key === 'Backspace') {
       this.handleBackspace(event);
+      return;
+    }
+
+    if (event.key === 'Tab' && event.shiftKey) {
+      event.preventDefault();
+      this.handleOutdent();
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      this.handleIndent();
     }
   }
 
@@ -317,7 +469,9 @@ export default class List implements BlockTool {
     const currentItem = this.findItemElement(focusNode);
     if (!currentItem) return;
 
-    const currentIndex = parseInt(currentItem.getAttribute('data-item-index') || '0', 10);
+    const itemPath = this.getItemPath(currentItem);
+    if (!itemPath || itemPath.length === 0) return;
+
     const contentEl = this.getContentElement(currentItem);
     if (!contentEl) return;
 
@@ -325,21 +479,28 @@ export default class List implements BlockTool {
 
     // If current item is empty, exit the list and create a new paragraph
     if (currentContent === '' || currentContent === '<br>') {
-      this.exitListAndCreateParagraph(currentIndex);
+      this.exitListAndCreateParagraph(itemPath);
       return;
     }
 
     // Otherwise, add a new item
-    this.addNewItem(currentIndex);
+    this.addNewItem(itemPath);
   }
 
-  private exitListAndCreateParagraph(currentIndex: number): void {
+  private exitListAndCreateParagraph(itemPath: number[]): void {
+    const currentIndex = itemPath[itemPath.length - 1];
+    const parentPath = itemPath.slice(0, -1);
+
+    // Get the array containing this item
+    const itemsArray = this.getItemsArrayAtPath(parentPath);
+    if (!itemsArray) return;
+
     // Remove the empty item
-    this._data.items.splice(currentIndex, 1);
+    itemsArray.splice(currentIndex, 1);
 
     const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
 
-    // If no items left, delete the entire list block and insert a paragraph
+    // If no items left at root level, delete the entire list block and insert a paragraph
     if (this._data.items.length === 0) {
       this.api.blocks.delete(currentBlockIndex);
       const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex, true);
@@ -350,16 +511,27 @@ export default class List implements BlockTool {
     // Re-render the list without the empty item
     this.rerender();
 
-    // Insert a new paragraph block after the current list block and focus it
-    const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex + 1, true);
-    this.api.caret.setToBlock(newBlock, 'start');
+    // If item is at root level, skip to inserting paragraph
+    if (parentPath.length === 0) {
+      // Insert a new paragraph block after the current list block and focus it
+      const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex + 1, true);
+      this.api.caret.setToBlock(newBlock, 'start');
+      return;
+    }
+
+    // Focus the parent item or next sibling at the same level
+    const focusPath = itemsArray.length > 0
+      ? [...parentPath, Math.min(currentIndex, itemsArray.length - 1)]
+      : parentPath;
+    this.focusItemAtPath(focusPath);
   }
 
-  private addNewItem(currentIndex: number): void {
+  private addNewItem(itemPath: number[]): void {
     const selection = window.getSelection();
     if (!selection || !this._element) return;
 
-    const currentItem = this._element.querySelector(`[data-item-index="${currentIndex}"]`) as HTMLElement;
+    const pathStr = JSON.stringify(itemPath);
+    const currentItem = this._element.querySelector(`[data-item-path='${pathStr}']`) as HTMLElement;
     if (!currentItem) return;
 
     const contentEl = this.getContentElement(currentItem);
@@ -368,13 +540,27 @@ export default class List implements BlockTool {
     const range = selection.getRangeAt(0);
     const { beforeContent, afterContent } = this.splitContentAtCursor(contentEl, range);
 
-    this._data.items[currentIndex].content = beforeContent;
+    const currentIndex = itemPath[itemPath.length - 1];
+    const parentPath = itemPath.slice(0, -1);
+
+    // Get the array containing this item
+    const itemsArray = this.getItemsArrayAtPath(parentPath);
+    if (!itemsArray) return;
+
+    // Update the current item's content
+    const currentItemData = itemsArray[currentIndex];
+    if (!currentItemData) return;
+
+    currentItemData.content = beforeContent;
 
     const newItem: ListItem = { content: afterContent, checked: false };
-    this._data.items.splice(currentIndex + 1, 0, newItem);
+    itemsArray.splice(currentIndex + 1, 0, newItem);
 
     this.rerender();
-    this.focusItem(currentIndex + 1);
+
+    // Focus the new item at the correct path
+    const newItemPath = [...parentPath, currentIndex + 1];
+    this.focusItemAtPath(newItemPath);
   }
 
   private splitContentAtCursor(contentEl: HTMLElement, range: Range): { beforeContent: string; afterContent: string } {
@@ -436,6 +622,210 @@ export default class List implements BlockTool {
     this.focusItem(currentIndex - 1, prevContent.length);
   }
 
+  /**
+   * Sync DOM content to this._data.items to ensure data is up-to-date
+   * before performing operations like indent/outdent
+   */
+  private syncDataFromDOM(): void {
+    if (!this._element) return;
+
+    const items = this.extractItemsFromDOM();
+    if (items.length > 0) {
+      this._data.items = items;
+    }
+  }
+
+  private handleIndent(): void {
+    const selection = window.getSelection();
+    if (!selection || !this._element) return;
+
+    const focusNode = selection.focusNode;
+    if (!focusNode) return;
+
+    const currentItem = this.findItemElement(focusNode);
+    if (!currentItem) return;
+
+    const itemPath = this.getItemPath(currentItem);
+    if (!itemPath || itemPath.length === 0) return;
+
+    const currentIndex = itemPath[itemPath.length - 1];
+
+    // Cannot indent the first item at any level (no previous sibling to nest under)
+    if (currentIndex === 0) return;
+
+    // Sync DOM content to data before modifying
+    this.syncDataFromDOM();
+
+    // Get the parent array that contains this item
+    const parentArray = this.getItemsArrayAtPath(itemPath.slice(0, -1));
+    if (!parentArray) return;
+
+    // Get the current item data
+    const itemToIndent = parentArray[currentIndex];
+    if (!itemToIndent) return;
+
+    // Get the previous item at the same level
+    const previousItem = parentArray[currentIndex - 1];
+    if (!previousItem) return;
+
+    // Initialize nested items array if it doesn't exist
+    if (!previousItem.items) {
+      previousItem.items = [];
+    }
+
+    // Move current item as a child of the previous item (deep copy to preserve nested items)
+    previousItem.items.push(this.deepCopyItem(itemToIndent));
+
+    // Remove the item from the current level
+    parentArray.splice(currentIndex, 1);
+
+    this.rerender();
+
+    // Focus the indented item - build the new path
+    const newPath = [...itemPath.slice(0, -1), currentIndex - 1, previousItem.items.length - 1];
+    this.focusItemAtPath(newPath);
+  }
+
+  /**
+   * Get the path array from an item element's data-item-path attribute
+   */
+  private getItemPath(element: HTMLElement): number[] | null {
+    const pathAttr = element.getAttribute('data-item-path');
+    if (!pathAttr) {
+      // Fallback for items without path (shouldn't happen after fix)
+      const index = element.getAttribute('data-item-index');
+      return index !== null ? [parseInt(index, 10)] : null;
+    }
+    try {
+      return JSON.parse(pathAttr);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get the items array at a given path (empty path returns root items)
+   */
+  private getItemsArrayAtPath(path: number[]): ListItem[] | null {
+    if (path.length === 0) {
+      return this._data.items;
+    }
+
+    return path.reduce<ListItem[] | null>((current, index, i) => {
+      if (!current) return null;
+      const item = current[index];
+      if (!item) return null;
+      if (i === path.length - 1) {
+        return item.items || null;
+      }
+      return item.items || null;
+    }, this._data.items);
+  }
+
+  /**
+   * Get a specific item at a given path
+   */
+  private getItemAtPath(path: number[]): ListItem | null {
+    if (path.length === 0) return null;
+
+    const parentArray = this.getItemsArrayAtPath(path.slice(0, -1));
+    if (!parentArray) return null;
+
+    return parentArray[path[path.length - 1]] || null;
+  }
+
+  /**
+   * Deep copy a list item including all nested items
+   */
+  private deepCopyItem(item: ListItem): ListItem {
+    const copy: ListItem = {
+      content: item.content,
+      checked: item.checked,
+    };
+    if (item.items && item.items.length > 0) {
+      copy.items = item.items.map(nestedItem => this.deepCopyItem(nestedItem));
+    }
+    return copy;
+  }
+
+  /**
+   * Focus an item at a specific path
+   */
+  private focusItemAtPath(path: number[]): void {
+    if (!this._element || path.length === 0) return;
+
+    const pathStr = JSON.stringify(path);
+    const item = this._element.querySelector(`[data-item-path='${pathStr}']`);
+    if (!item) return;
+
+    const contentEl = this.getContentElement(item as HTMLElement);
+    if (!contentEl) return;
+
+    contentEl.focus();
+  }
+
+  private handleOutdent(): void {
+    const selection = window.getSelection();
+    if (!selection || !this._element) return;
+
+    const focusNode = selection.focusNode;
+    if (!focusNode) return;
+
+    const currentItem = this.findItemElement(focusNode);
+    if (!currentItem) return;
+
+    const itemPath = this.getItemPath(currentItem);
+    if (!itemPath || itemPath.length <= 1) {
+      // Item is at root level, cannot outdent further
+      return;
+    }
+
+    // Sync DOM content to data before modifying
+    this.syncDataFromDOM();
+
+    const currentIndex = itemPath[itemPath.length - 1];
+    const parentPath = itemPath.slice(0, -1);
+    const parentIndex = parentPath[parentPath.length - 1];
+
+    // Get the parent item that contains this nested item
+    const parentItem = this.getItemAtPath(parentPath);
+    if (!parentItem || !parentItem.items || !parentItem.items[currentIndex]) return;
+
+    // Get the nested item to outdent
+    const itemToOutdent = this.deepCopyItem(parentItem.items[currentIndex]);
+
+    // Get any siblings that come after the current item - they should become children of the outdented item
+    const followingSiblings = parentItem.items.slice(currentIndex + 1).map(item => this.deepCopyItem(item));
+
+    // If there are following siblings, add them as children of the outdented item
+    if (followingSiblings.length > 0) {
+      const existingItems = itemToOutdent.items || [];
+      itemToOutdent.items = [...existingItems, ...followingSiblings];
+    }
+
+    // Remove the outdented item and all following siblings from the parent's nested array
+    parentItem.items.splice(currentIndex);
+
+    // Clean up empty nested arrays
+    if (parentItem.items.length === 0) {
+      delete parentItem.items;
+    }
+
+    // Get the grandparent array (where we'll insert the outdented item)
+    const grandparentPath = parentPath.slice(0, -1);
+    const grandparentArray = this.getItemsArrayAtPath(grandparentPath);
+    if (!grandparentArray) return;
+
+    // Insert after the parent item at the grandparent level
+    grandparentArray.splice(parentIndex + 1, 0, itemToOutdent);
+
+    this.rerender();
+
+    // Focus the outdented item at its new path
+    const newPath = [...grandparentPath, parentIndex + 1];
+    this.focusItemAtPath(newPath);
+  }
+
   private isAtStart(element: HTMLElement, range: Range): boolean {
     const preCaretRange = document.createRange();
     preCaretRange.selectNodeContents(element);
@@ -480,7 +870,9 @@ export default class List implements BlockTool {
   private focusItem(index: number, offset?: number): void {
     if (!this._element) return;
 
-    const item = this._element.querySelector(`[data-item-index="${index}"]`);
+    // Use path-based lookup for root items
+    const pathStr = JSON.stringify([index]);
+    const item = this._element.querySelector(`[data-item-path='${pathStr}']`);
     if (!item) return;
 
     const contentEl = this.getContentElement(item as HTMLElement);
@@ -572,14 +964,109 @@ export default class List implements BlockTool {
   private extractItemsFromDOM(): ListItem[] {
     if (!this._element) return [];
 
-    const items: ListItem[] = [];
-    const itemElements = this._element.querySelectorAll('[data-item-index]');
+    if (this._data.style === 'checklist') {
+      return this.extractChecklistItemsFromDOM();
+    }
 
-    itemElements.forEach((itemEl) => {
-      items.push(this.extractItemData(itemEl as HTMLElement));
+    // Get all root-level items (path length of 1)
+    const rootItemElements = this._element.querySelectorAll('[data-item-path]');
+    const items: ListItem[] = [];
+
+    rootItemElements.forEach((itemEl) => {
+      const pathAttr = itemEl.getAttribute('data-item-path');
+      if (!pathAttr) return;
+
+      try {
+        const path = JSON.parse(pathAttr) as number[];
+        // Only process root-level items (path length of 1)
+        if (path.length === 1) {
+          const item = this.extractItemDataRecursive(itemEl as HTMLElement);
+          items.push(item);
+        }
+      } catch {
+        // Skip items with invalid paths
+      }
     });
 
     return items;
+  }
+
+  /**
+   * Extract checklist items from DOM, handling the flat sibling structure
+   */
+  private extractChecklistItemsFromDOM(): ListItem[] {
+    if (!this._element) return [];
+
+    const allElements = this._element.querySelectorAll('[data-item-path]');
+
+    // Build a map of items by their path
+    const itemMap = new Map<string, ListItem>();
+    const rootItems: ListItem[] = [];
+
+    allElements.forEach((itemEl) => {
+      const pathAttr = itemEl.getAttribute('data-item-path');
+      if (!pathAttr) return;
+
+      try {
+        const path = JSON.parse(pathAttr) as number[];
+        const item = this.extractItemData(itemEl as HTMLElement);
+        itemMap.set(pathAttr, item);
+
+        if (path.length === 1) {
+          // Root level item
+          rootItems[path[0]] = item;
+        } else {
+          // Nested item - find parent and add to its items array
+          this.addNestedItemToParent(itemMap, path, item);
+        }
+      } catch {
+        // Skip items with invalid paths
+      }
+    });
+
+    // Filter out any undefined entries
+    return rootItems.filter(Boolean);
+  }
+
+  /**
+   * Helper to add a nested item to its parent
+   */
+  private addNestedItemToParent(
+    itemMap: Map<string, ListItem>,
+    path: number[],
+    item: ListItem
+  ): void {
+    const parentPath = path.slice(0, -1);
+    const parentPathStr = JSON.stringify(parentPath);
+    const parentItem = itemMap.get(parentPathStr);
+    if (!parentItem) return;
+
+    if (!parentItem.items) {
+      parentItem.items = [];
+    }
+    parentItem.items[path[path.length - 1]] = item;
+  }
+
+  /**
+   * Recursively extract item data including all nested items
+   */
+  private extractItemDataRecursive(itemEl: HTMLElement): ListItem {
+    const item = this.extractItemData(itemEl);
+
+    // Check for nested list within this item
+    const nestedList = itemEl.querySelector(':scope > ul, :scope > ol');
+    const nestedItems = nestedList?.querySelectorAll(':scope > li[data-item-path]');
+
+    if (!nestedItems || nestedItems.length === 0) {
+      return item;
+    }
+
+    item.items = [];
+    nestedItems.forEach((nestedEl) => {
+      item.items!.push(this.extractItemDataRecursive(nestedEl as HTMLElement));
+    });
+
+    return item;
   }
 
   private extractItemData(itemEl: HTMLElement): ListItem {
@@ -590,6 +1077,12 @@ export default class List implements BlockTool {
         content: content?.innerHTML || '',
         checked: checkbox?.checked || false,
       };
+    }
+
+    // For standard lists, check if item has nested content
+    const contentWrapper = itemEl.querySelector(':scope > div[contenteditable]') as HTMLElement;
+    if (contentWrapper) {
+      return { content: contentWrapper.innerHTML || '', checked: false };
     }
 
     return { content: itemEl.innerHTML || '', checked: false };

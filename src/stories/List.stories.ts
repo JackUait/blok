@@ -64,6 +64,142 @@ const allListTypesData: OutputData = {
   ],
 };
 
+/**
+ * Sample data with all three list types containing nested items
+ */
+const allListTypesWithNestedData: OutputData = {
+  time: Date.now(),
+  version: '1.0.0',
+  blocks: [
+    {
+      id: 'nested-unordered-list',
+      type: 'list',
+      data: {
+        style: 'unordered',
+        items: [
+          {
+            content: 'Fruits',
+            checked: false,
+            items: [
+              {
+                content: 'Citrus',
+                checked: false,
+                items: [
+                  { content: 'Orange', checked: false },
+                  { content: 'Lemon', checked: false },
+                  { content: 'Grapefruit', checked: false },
+                ],
+              },
+              {
+                content: 'Berries',
+                checked: false,
+                items: [
+                  { content: 'Strawberry', checked: false },
+                  { content: 'Blueberry', checked: false },
+                ],
+              },
+            ],
+          },
+          {
+            content: 'Vegetables',
+            checked: false,
+            items: [
+              { content: 'Carrot', checked: false },
+              { content: 'Broccoli', checked: false },
+            ],
+          },
+          { content: 'Grains', checked: false },
+        ],
+      },
+    },
+    {
+      id: 'nested-ordered-list',
+      type: 'list',
+      data: {
+        style: 'ordered',
+        items: [
+          {
+            content: 'Getting Started',
+            checked: false,
+            items: [
+              { content: 'Install dependencies', checked: false },
+              { content: 'Configure environment', checked: false },
+              {
+                content: 'Set up database',
+                checked: false,
+                items: [
+                  { content: 'Create schema', checked: false },
+                  { content: 'Run migrations', checked: false },
+                  { content: 'Seed initial data', checked: false },
+                ],
+              },
+            ],
+          },
+          {
+            content: 'Development',
+            checked: false,
+            items: [
+              { content: 'Write code', checked: false },
+              { content: 'Write tests', checked: false },
+            ],
+          },
+          {
+            content: 'Deployment',
+            checked: false,
+            items: [
+              { content: 'Build application', checked: false },
+              { content: 'Deploy to server', checked: false },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      id: 'nested-checklist',
+      type: 'list',
+      data: {
+        style: 'checklist',
+        items: [
+          {
+            content: 'Project Setup',
+            checked: true,
+            items: [
+              { content: 'Create repository', checked: true },
+              { content: 'Initialize project', checked: true },
+              {
+                content: 'Configure tooling',
+                checked: false,
+                items: [
+                  { content: 'ESLint', checked: true },
+                  { content: 'Prettier', checked: true },
+                  { content: 'TypeScript', checked: false },
+                ],
+              },
+            ],
+          },
+          {
+            content: 'Feature Development',
+            checked: false,
+            items: [
+              { content: 'Design UI mockups', checked: true },
+              { content: 'Implement components', checked: false },
+              { content: 'Add unit tests', checked: false },
+            ],
+          },
+          {
+            content: 'Release',
+            checked: false,
+            items: [
+              { content: 'Update changelog', checked: false },
+              { content: 'Tag version', checked: false },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+};
+
 const createEditor = (args: ListCustomStylesArgs): HTMLElement => {
   const hasCustomStyles = args.itemColor || args.itemSize;
 
@@ -336,6 +472,103 @@ export const ConvertParagraphsToNumberedList: Story = {
         },
         TIMEOUT_ACTION
       );
+    });
+  },
+};
+
+/**
+ * All three list types (unordered, ordered, checklist) with deeply nested items.
+ * Demonstrates hierarchical data structures with multiple nesting levels.
+ */
+export const AllListTypesWithNestedItems: Story = {
+  args: {
+    data: allListTypesWithNestedData,
+    minHeight: 600,
+    readOnly: false,
+  },
+  play: async ({ canvasElement, step }) => {
+    await step('Wait for editor to initialize with all three lists', async () => {
+      await waitFor(
+        () => {
+          const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
+
+          expect(lists.length).toBe(3);
+        },
+        TIMEOUT_INIT
+      );
+    });
+
+    await step('Verify unordered list has nested items', async () => {
+      const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
+      const unorderedList = lists[0];
+
+      expect(unorderedList).toBeInTheDocument();
+
+      // Check for nested items using data-item-path attribute (path length > 1 means nested)
+      const allItems = unorderedList?.querySelectorAll('[data-item-path]');
+      const nestedItems = Array.from(allItems ?? []).filter((item) => {
+        const path = JSON.parse(item.getAttribute('data-item-path') || '[]');
+
+        return path.length > 1;
+      });
+
+      expect(nestedItems?.length).toBeGreaterThan(0);
+    });
+
+    await step('Verify ordered list has nested items', async () => {
+      const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
+      const orderedList = lists[1];
+
+      expect(orderedList).toBeInTheDocument();
+
+      // Check for nested items using data-item-path attribute (path length > 1 means nested)
+      const allItems = orderedList?.querySelectorAll('[data-item-path]');
+      const nestedItems = Array.from(allItems ?? []).filter((item) => {
+        const path = JSON.parse(item.getAttribute('data-item-path') || '[]');
+
+        return path.length > 1;
+      });
+
+      expect(nestedItems?.length).toBeGreaterThan(0);
+    });
+
+    await step('Verify checklist has nested items with checkboxes', async () => {
+      const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
+      const checklist = lists[2];
+
+      expect(checklist).toBeInTheDocument();
+
+      // Check for checkboxes in nested items
+      const checkboxes = checklist?.querySelectorAll('input[type="checkbox"]');
+
+      expect(checkboxes?.length).toBeGreaterThan(3);
+
+      // Verify some checkboxes are checked (based on our test data)
+      const checkedBoxes = checklist?.querySelectorAll('input[type="checkbox"]:checked');
+
+      expect(checkedBoxes?.length).toBeGreaterThan(0);
+    });
+
+    await step('Toggle a nested checklist item', async () => {
+      const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
+      const checklist = lists[2];
+      const checkboxes = checklist?.querySelectorAll('input[type="checkbox"]');
+
+      // Find an unchecked checkbox to toggle
+      const uncheckedCheckbox = Array.from(checkboxes ?? []).find(
+        (cb) => !(cb as HTMLInputElement).checked
+      ) as HTMLInputElement | undefined;
+
+      if (uncheckedCheckbox) {
+        await userEvent.click(uncheckedCheckbox);
+
+        await waitFor(
+          () => {
+            expect(uncheckedCheckbox.checked).toBe(true);
+          },
+          TIMEOUT_ACTION
+        );
+      }
     });
   },
 };

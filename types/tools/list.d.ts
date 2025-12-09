@@ -14,6 +14,8 @@ export interface ListItem {
   content: string;
   /** Checked state for checklist items */
   checked?: boolean;
+  /** Nested items for indentation */
+  items?: ListItem[];
 }
 
 /**
@@ -34,6 +36,12 @@ export interface ListConfig {
   defaultStyle?: ListStyle;
   /** Available list styles */
   styles?: ListStyle[];
+  /** List styles to show in the toolbox */
+  toolboxStyles?: ListStyle[];
+  /** Custom color for list items */
+  itemColor?: string;
+  /** Custom font size for list items */
+  itemSize?: string;
 }
 
 /**

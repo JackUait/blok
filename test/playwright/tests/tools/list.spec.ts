@@ -356,6 +356,260 @@ test.describe('list tool', () => {
     });
   });
 
+  test.describe('indentation with Tab/Shift+Tab', () => {
+    test('tab indents item under previous sibling', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListData(['First item', 'Second item']),
+      });
+
+      // Click on second item
+      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+
+      await secondItem.click();
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+
+      // Second item should now be nested under first item (path [0, 0])
+      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
+
+      await expect(nestedItem).toBeVisible();
+      await expect(nestedItem).toHaveText('Second item');
+    });
+
+    test('tab does not indent first item', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListData(['First item', 'Second item']),
+      });
+
+      // Click on first item
+      const firstItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]']`);
+
+      await firstItem.click();
+
+      // Press Tab - should not indent (no previous sibling)
+      await page.keyboard.press('Tab');
+
+      // First item should still be at root level (2 items with path length 1)
+      const rootItems = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]'], ${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+
+      await expect(rootItems).toHaveCount(2);
+    });
+
+    test('shift+tab outdents nested item to root level', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListData(['First item', 'Second item']),
+      });
+
+      // First indent the second item
+      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+
+      await secondItem.click();
+      await page.keyboard.press('Tab');
+
+      // Verify it's nested (path [0, 0])
+      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
+
+      await expect(nestedItem).toBeVisible();
+
+      // Now outdent with Shift+Tab
+      await nestedItem.click();
+      await page.keyboard.press('Shift+Tab');
+
+      // Item should be back at root level (2 items with path length 1)
+      const rootItems = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]'], ${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+
+      await expect(rootItems).toHaveCount(2);
+    });
+
+    test('shift+tab on root item does nothing', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListData(['First item', 'Second item']),
+      });
+
+      // Click on first item (root level)
+      const firstItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]']`);
+
+      await firstItem.click();
+
+      // Press Shift+Tab - should not change anything
+      await page.keyboard.press('Shift+Tab');
+
+      // Should still have 2 root items
+      const rootItems = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]'], ${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+
+      await expect(rootItems).toHaveCount(2);
+    });
+
+    test('indentation works with ordered list', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListData(['First', 'Second'], 'ordered'),
+      });
+
+      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+
+      await secondItem.click();
+      await page.keyboard.press('Tab');
+
+      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
+
+      await expect(nestedItem).toBeVisible();
+      await expect(nestedItem).toHaveText('Second');
+    });
+
+    test('indentation works with checklist', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListData(['Task one', 'Task two'], 'checklist'),
+      });
+
+      // For checklist, click on the contenteditable part
+      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]'] [contenteditable="true"]`);
+
+      await secondItem.click();
+      await page.keyboard.press('Tab');
+
+      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
+
+      await expect(nestedItem).toBeVisible();
+    });
+
+    test('saves nested items correctly', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListData(['Parent', 'Child']),
+      });
+
+      // Indent second item
+      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+
+      await secondItem.click();
+      await page.keyboard.press('Tab');
+
+      // Wait for nested item to appear
+      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
+
+      await expect(nestedItem).toBeVisible();
+
+      // Save and verify data structure
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks).toHaveLength(1);
+      expect(savedData?.blocks[0].data.items).toHaveLength(1);
+      expect(savedData?.blocks[0].data.items[0].content).toBe('Parent');
+      expect(savedData?.blocks[0].data.items[0].items).toHaveLength(1);
+      expect(savedData?.blocks[0].data.items[0].items[0].content).toBe('Child');
+    });
+
+    test('outdent moves following siblings as children of outdented item', async ({ page }) => {
+      // Create a list with nested items: Parent > [Child1, Child2, Child3]
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'list',
+              data: {
+                style: 'unordered',
+                items: [
+                  {
+                    content: 'Parent',
+                    checked: false,
+                    items: [
+                      { content: 'Child1', checked: false },
+                      { content: 'Child2', checked: false },
+                      { content: 'Child3', checked: false },
+                    ],
+                  },
+                  { content: 'Sibling', checked: false },
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      // Click on Child1 (path [0, 0]) and outdent it
+      const child1 = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
+
+      await expect(child1).toBeVisible();
+      await child1.click();
+      await page.keyboard.press('Shift+Tab');
+
+      // Save and verify the structure
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      // Should now have: Parent, Child1 (with Child2 and Child3 as children), Sibling
+      expect(savedData?.blocks).toHaveLength(1);
+      expect(savedData?.blocks[0].data.items).toHaveLength(3);
+      expect(savedData?.blocks[0].data.items[0].content).toBe('Parent');
+      expect(savedData?.blocks[0].data.items[0].items).toBeUndefined(); // Parent should have no children now
+      expect(savedData?.blocks[0].data.items[1].content).toBe('Child1');
+      expect(savedData?.blocks[0].data.items[1].items).toHaveLength(2);
+      expect(savedData?.blocks[0].data.items[1].items[0].content).toBe('Child2');
+      expect(savedData?.blocks[0].data.items[1].items[1].content).toBe('Child3');
+      expect(savedData?.blocks[0].data.items[2].content).toBe('Sibling');
+    });
+
+    test('outdent preserves correct order with items after parent', async ({ page }) => {
+      // Create: Item A, Item B > [Item C], Item D, Item E
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'list',
+              data: {
+                style: 'unordered',
+                items: [
+                  { content: 'Item A', checked: false },
+                  {
+                    content: 'Item B',
+                    checked: false,
+                    items: [{ content: 'Item C', checked: false }],
+                  },
+                  { content: 'Item D', checked: false },
+                  { content: 'Item E', checked: false },
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      // Click on Item C (path [1, 0]) and outdent it
+      const itemC = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1,0]']`);
+
+      await expect(itemC).toBeVisible();
+      await itemC.click();
+      await page.keyboard.press('Shift+Tab');
+
+      // Save and verify the structure
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      // Should now have: Item A, Item B, Item C, Item D, Item E (all at root level)
+      expect(savedData?.blocks).toHaveLength(1);
+      expect(savedData?.blocks[0].data.items).toHaveLength(5);
+      expect(savedData?.blocks[0].data.items[0].content).toBe('Item A');
+      expect(savedData?.blocks[0].data.items[1].content).toBe('Item B');
+      expect(savedData?.blocks[0].data.items[1].items).toBeUndefined(); // B should have no children
+      expect(savedData?.blocks[0].data.items[2].content).toBe('Item C');
+      expect(savedData?.blocks[0].data.items[3].content).toBe('Item D');
+      expect(savedData?.blocks[0].data.items[4].content).toBe('Item E');
+    });
+  });
+
   test.describe('data saving', () => {
     test('saves list data correctly', async ({ page }) => {
       await createBlok(page, {

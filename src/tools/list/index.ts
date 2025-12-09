@@ -46,6 +46,8 @@ export interface ListData extends BlockToolData {
   style: ListStyle;
   /** Array of list items */
   items: ListItem[];
+  /** Starting number for ordered lists (defaults to 1) */
+  start?: number;
 }
 
 /**
@@ -147,6 +149,7 @@ export default class List implements BlockTool {
     this._settings = config || {};
     this._data = this.normalizeData(data);
   }
+  sanitize?: SanitizerConfig | undefined;
 
   private normalizeData(data: ListData | Record<string, never>): ListData {
     const defaultStyle = this._settings.defaultStyle || 'unordered';
@@ -165,6 +168,7 @@ export default class List implements BlockTool {
       return {
         style,
         items: [{ content: '', checked: false }],
+        ...(data.start !== undefined && data.start !== 1 ? { start: data.start } : {}),
       };
     }
 
@@ -172,7 +176,11 @@ export default class List implements BlockTool {
       ? data.items.map(item => this.normalizeItem(item))
       : [{ content: '', checked: false }];
 
-    return { style, items: normalizedItems };
+    return {
+      style,
+      items: normalizedItems,
+      ...(data.start !== undefined && data.start !== 1 ? { start: data.start } : {}),
+    };
   }
 
   private normalizeItem(item: ListItem | string): ListItem {
@@ -281,6 +289,20 @@ export default class List implements BlockTool {
     const depth = parentPath.length;
     const listStyleClass = style === 'ordered' ? this.getOrderedListStyle(depth) : 'list-disc';
     list.className = twMerge('pl-6', listStyleClass);
+
+    // Apply start attribute and dynamic padding for ordered lists at root level
+    if (style === 'ordered' && depth === 0 && this._data.start !== undefined && this._data.start !== 1) {
+      (list as HTMLOListElement).start = this._data.start;
+    }
+
+    // Calculate dynamic padding for ordered lists with large numbers
+    const maxNumber = style === 'ordered' && depth === 0 ? (this._data.start ?? 1) + items.length - 1 : 0;
+    const digitCount = String(maxNumber).length;
+    // Base padding is 1.5rem (24px) for up to 2 digits, add ~0.75rem per extra digit
+    if (style === 'ordered' && depth === 0 && digitCount > 2) {
+      const extraPadding = (digitCount - 2) * 0.75;
+      list.style.paddingLeft = `${1.5 + extraPadding}rem`;
+    }
 
     items.forEach((item, index) => {
       list.appendChild(this.createListItem(item, index, parentPath));
@@ -1010,10 +1032,17 @@ export default class List implements BlockTool {
 
     const items = this.extractItemsFromDOM();
 
-    return {
+    const result: ListData = {
       style: this._data.style,
       items: items.length > 0 ? items : this._data.items,
     };
+
+    // Include start property for ordered lists with non-default start
+    if (this._data.style === 'ordered' && this._data.start !== undefined && this._data.start !== 1) {
+      result.start = this._data.start;
+    }
+
+    return result;
   }
 
   private extractItemsFromDOM(): ListItem[] {
@@ -1160,6 +1189,11 @@ export default class List implements BlockTool {
       style,
       items: items.length > 0 ? items : [{ content: '', checked: false }],
     };
+
+    // Extract start attribute from pasted ordered lists
+    if (style === 'ordered' && content instanceof HTMLOListElement && content.start !== 1) {
+      this._data.start = content.start;
+    }
 
     this.rerender();
   }

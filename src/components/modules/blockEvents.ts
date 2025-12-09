@@ -422,18 +422,30 @@ export default class BlockEvents extends Module {
     }
 
     /**
+     * Extract the starting number from the pattern
+     */
+    const startNumber = parseInt(orderedMatch[1], 10);
+
+    /**
      * Extract the remaining content after the pattern
      * Since we matched the full content including the space, the remaining content is empty
      */
     const remainingContent = '';
 
     /**
-     * Convert to ordered list
+     * Convert to ordered list with the captured start number
      */
-    const newBlock = BlockManager.replace(currentBlock, 'list', {
+    const listData: { style: string; items: { content: string; checked: boolean }[]; start?: number } = {
       style: 'ordered',
       items: [{ content: remainingContent, checked: false }],
-    });
+    };
+
+    // Only include start if it's not 1 (the default)
+    if (startNumber !== 1) {
+      listData.start = startNumber;
+    }
+
+    const newBlock = BlockManager.replace(currentBlock, 'list', listData);
 
     /**
      * Set caret to the beginning of the new list item

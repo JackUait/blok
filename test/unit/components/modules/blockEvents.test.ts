@@ -1277,7 +1277,7 @@ describe('BlockEvents', () => {
       });
     });
 
-    it('converts to ordered list when "42. " pattern is detected', () => {
+    it('converts to ordered list when "42. " pattern is detected with start number', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
@@ -1312,6 +1312,7 @@ describe('BlockEvents', () => {
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
         style: 'ordered',
         items: [{ content: '', checked: false }],
+        start: 42,
       });
     });
 

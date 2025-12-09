@@ -273,7 +273,16 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       return false;
     }
 
-    return this.nodes.wrapper.contains(node);
+    if (this.nodes.wrapper.contains(node)) {
+      return true;
+    }
+
+    // Also check if node is inside the popover (including nested popovers)
+    if (this.popover !== null && this.popover.hasNode(node)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

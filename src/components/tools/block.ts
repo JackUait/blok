@@ -51,7 +51,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    * @param readOnly - True if Blok is in read-only mode
    */
   public create(data: BlockToolData, block: BlockAPI, readOnly: boolean): IBlockTool {
-     
+
     return new this.constructable({
       data,
       block,
@@ -87,6 +87,9 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
    *
    * - If one is an object and another is an array than internal config is replaced with user-defined
    * config. This is made to allow user to override default tool's toolbox representation (single/multiple entries)
+   *
+   * Additionally, if the tool's config contains a `toolboxStyles` array, only toolbox entries
+   * whose `data.style` matches one of the specified styles will be included.
    */
   public get toolbox(): ToolboxConfigEntry[] | undefined {
     const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox] as ToolboxConfig | undefined;
@@ -98,35 +101,57 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
     if (userToolboxSettings === false) {
       return;
     }
+
+    const mergedEntries = this.mergeToolboxSettings(toolToolboxSettings, userToolboxSettings);
+
+    return this.filterToolboxEntriesByStyles(mergedEntries);
+  }
+
+  /**
+   * Merges tool's internal toolbox settings with user-defined settings
+   */
+  private mergeToolboxSettings(
+    toolSettings: ToolboxConfig,
+    userSettings: ToolboxConfig | undefined | null
+  ): ToolboxConfigEntry[] {
     /**
      * Return tool's toolbox settings if user settings are not defined
      */
-    if (userToolboxSettings === undefined || userToolboxSettings === null) {
-      return Array.isArray(toolToolboxSettings) ? toolToolboxSettings : [ toolToolboxSettings ];
+    if (userSettings === undefined || userSettings === null) {
+      return Array.isArray(toolSettings) ? toolSettings : [ toolSettings ];
     }
 
     /**
-     * Otherwise merge user settings with tool's settings
+     * User provided single entry to override array of tool entries
      */
-    if (!Array.isArray(userToolboxSettings) && Array.isArray(toolToolboxSettings)) {
-      return [ userToolboxSettings ];
+    if (!Array.isArray(userSettings) && Array.isArray(toolSettings)) {
+      return [ userSettings ];
     }
 
-    if (!Array.isArray(userToolboxSettings)) {
+    /**
+     * Both are single entries - merge them
+     */
+    if (!Array.isArray(userSettings)) {
       return [
         {
-          ...toolToolboxSettings,
-          ...userToolboxSettings,
+          ...toolSettings,
+          ...userSettings,
         },
       ];
     }
 
-    if (!Array.isArray(toolToolboxSettings)) {
-      return userToolboxSettings;
+    /**
+     * User provided array but tool has single entry
+     */
+    if (!Array.isArray(toolSettings)) {
+      return userSettings;
     }
 
-    return userToolboxSettings.map((item, i) => {
-      const toolToolboxEntry = toolToolboxSettings[i];
+    /**
+     * Both are arrays - merge item by item
+     */
+    return userSettings.map((item, i) => {
+      const toolToolboxEntry = toolSettings[i];
 
       if (toolToolboxEntry) {
         return {
@@ -136,6 +161,28 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
       }
 
       return item;
+    });
+  }
+
+  /**
+   * Filters toolbox entries based on toolboxStyles config if specified.
+   * This allows tools like List to show only specific variants in the toolbox.
+   */
+  private filterToolboxEntriesByStyles(entries: ToolboxConfigEntry[]): ToolboxConfigEntry[] {
+    const toolboxStyles = this.settings.toolboxStyles as string[] | undefined;
+
+    if (!toolboxStyles || !Array.isArray(toolboxStyles) || toolboxStyles.length === 0) {
+      return entries;
+    }
+
+    return entries.filter(entry => {
+      const entryData = entry.data as { style?: string } | undefined;
+
+      if (!entryData || !entryData.style) {
+        return true; // Keep entries without style data
+      }
+
+      return toolboxStyles.includes(entryData.style);
     });
   }
 

@@ -52,10 +52,10 @@ class SomePlugin {
       return;
     }
 
-     
+
     const context = globalThis as typeof globalThis & { __pluginHandlerCallCount?: number };
 
-     
+
     context.__pluginHandlerCallCount = (context.__pluginHandlerCallCount ?? 0) + 1;
   }
 
@@ -164,7 +164,7 @@ const createBlok = async (page: Page, options: BlokSetupOptions = {}): Promise<v
       window.blokInstance = blok;
       await blok.isReady;
 
-       
+
       (globalThis as typeof globalThis & { __pluginHandlerCallCount?: number }).__pluginHandlerCallCount = 0;
     },
     {
@@ -275,17 +275,17 @@ const selectTextByOffset = async (locator: Locator, start: number, end: number):
 
 const resetPluginHandlerCallCount = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
-     
+
     (globalThis as typeof globalThis & { __pluginHandlerCallCount?: number }).__pluginHandlerCallCount = 0;
   });
 };
 
 const getPluginHandlerCallCount = async (page: Page): Promise<number> => {
   return await page.evaluate(() => {
-     
+
     const context = globalThis as typeof globalThis & { __pluginHandlerCallCount?: number };
 
-     
+
     return context.__pluginHandlerCallCount ?? 0;
   });
 };
@@ -337,13 +337,13 @@ test.describe('flipper', () => {
 
     await openBlockTunesWithShortcut(page, plugin);
 
+    // Navigate using arrow keys - these should be intercepted by the flipper
+    // and NOT reach the plugin's keydown handler
+    await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
+    await triggerKey(plugin, KEY_CODES.ARROW_UP, { key: 'ArrowUp' });
     await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
 
-    await expect(page.locator('[data-blok-item-name="delete"]')).toHaveAttribute('data-blok-focused', 'true');
-
-    await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
-    await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
-
+    // Verify navigation keys were intercepted (plugin handler was not called)
     expect(await getPluginHandlerCallCount(page)).toBe(0);
   });
 
@@ -398,14 +398,16 @@ test.describe('flipper', () => {
 
     await openBlockTunesWithShortcut(page, plugin);
 
-    const initialIndex = await getFocusedPopoverIndex(page);
-    const itemCount = await page.locator(POPOVER_ITEM_SELECTOR).count();
-
+    // First Tab press establishes initial focus on the first item
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
       code: 'Tab',
     });
 
+    const initialIndex = await getFocusedPopoverIndex(page);
+    const itemCount = await page.locator(POPOVER_ITEM_SELECTOR).count();
+
+    // Second Tab press should move focus to the next item
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
       code: 'Tab',
@@ -415,6 +417,7 @@ test.describe('flipper', () => {
 
     expect(nextIndex).toBe((initialIndex + 1) % itemCount);
 
+    // Shift+Tab should move focus back to the initial item
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
       code: 'Tab',
@@ -452,14 +455,14 @@ test.describe('flipper', () => {
         throw new Error('Delete item not found');
       }
 
-       
+
       const context = globalThis as typeof globalThis & { __deleteItemClicks?: number };
 
-       
+
       context.__deleteItemClicks = 0;
 
       deleteItem.addEventListener('click', () => {
-         
+
         context.__deleteItemClicks = (context.__deleteItemClicks ?? 0) + 1;
       });
     });
@@ -467,10 +470,10 @@ test.describe('flipper', () => {
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
 
     const deleteItemClickCount = await page.evaluate(() => {
-       
+
       const context = globalThis as typeof globalThis & { __deleteItemClicks?: number };
 
-       
+
       return context.__deleteItemClicks ?? 0;
     });
 
@@ -573,7 +576,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -594,7 +597,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -615,7 +618,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -643,14 +646,14 @@ test.describe('flipper', () => {
     await plugin.click();
     await openBlockTunesWithShortcut(page, plugin);
 
-    const hasFocusBefore = await page.evaluate(() => {
+    const hasFocusBeforeTab = await page.evaluate(() => {
       const blok = window.blokInstance;
 
       if (!blok) {
         return null;
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -660,7 +663,33 @@ test.describe('flipper', () => {
       return blockSettings.flipper.hasFocus();
     });
 
-    expect(hasFocusBefore).toBe(true);
+    // No item is focused yet when popover first opens
+    expect(hasFocusBeforeTab).toBe(false);
+
+    // Press Tab to establish initial focus
+    await triggerKey(plugin, KEY_CODES.TAB, {
+      key: 'Tab',
+      code: 'Tab',
+    });
+
+    const hasFocusAfterTab = await page.evaluate(() => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        return null;
+      }
+
+
+      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+
+      if (!blockSettings || !blockSettings.flipper) {
+        return null;
+      }
+
+      return blockSettings.flipper.hasFocus();
+    });
+
+    expect(hasFocusAfterTab).toBe(true);
 
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
@@ -674,7 +703,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -709,7 +738,7 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -754,21 +783,21 @@ test.describe('flipper', () => {
         return null;
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
       }
 
-       
+
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-       
+
       context.__flipCallbackCount = 0;
 
       const callback = (): void => {
-         
+
         context.__flipCallbackCount = (context.__flipCallbackCount ?? 0) + 1;
       };
 
@@ -776,7 +805,7 @@ test.describe('flipper', () => {
 
       return {
         flipper: blockSettings.flipper,
-         
+
         getCount: (): number => context.__flipCallbackCount ?? 0,
       };
     });
@@ -789,14 +818,15 @@ test.describe('flipper', () => {
     });
 
     const countAfterInitialTab = await page.evaluate(() => {
-       
+
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-       
+
       return context.__flipCallbackCount ?? 0;
     });
 
-    expect(countAfterInitialTab).toBe(0);
+    // The initial Tab press moves focus to the first item, which triggers the callback
+    expect(countAfterInitialTab).toBe(1);
 
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
@@ -804,14 +834,14 @@ test.describe('flipper', () => {
     });
 
     const countAfterFirstFlip = await page.evaluate(() => {
-       
+
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-       
+
       return context.__flipCallbackCount ?? 0;
     });
 
-    expect(countAfterFirstFlip).toBe(1);
+    expect(countAfterFirstFlip).toBe(2);
 
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
@@ -819,14 +849,14 @@ test.describe('flipper', () => {
     });
 
     const countAfterSecondFlip = await page.evaluate(() => {
-       
+
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-       
+
       return context.__flipCallbackCount ?? 0;
     });
 
-    expect(countAfterSecondFlip).toBe(2);
+    expect(countAfterSecondFlip).toBe(3);
   });
 
   test('removeOnFlip removes callback correctly', async ({ page }) => {
@@ -851,28 +881,28 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
       }
 
-       
+
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-       
+
       context.__flipCallbackCount = 0;
 
       const callback = (): void => {
-         
+
         context.__flipCallbackCount = (context.__flipCallbackCount ?? 0) + 1;
       };
 
       blockSettings.flipper.onFlip(callback);
 
       // Store callback reference for removal
-       
+
       (globalThis as typeof globalThis & { __flipCallback?: () => void }).__flipCallback = callback;
     });
 
@@ -881,16 +911,11 @@ test.describe('flipper', () => {
       code: 'Tab',
     });
 
-    await triggerKey(plugin, KEY_CODES.TAB, {
-      key: 'Tab',
-      code: 'Tab',
-    });
-
     const countBeforeRemoval = await page.evaluate(() => {
-       
+
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-       
+
       return context.__flipCallbackCount ?? 0;
     });
 
@@ -903,19 +928,19 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
       }
 
-       
+
       const context = globalThis as typeof globalThis & { __flipCallback?: () => void };
 
-       
+
       if (context.__flipCallback) {
-         
+
         blockSettings.flipper.removeOnFlip(context.__flipCallback);
       }
     });
@@ -926,10 +951,10 @@ test.describe('flipper', () => {
     });
 
     const countAfterRemoval = await page.evaluate(() => {
-       
+
       const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
 
-       
+
       return context.__flipCallbackCount ?? 0;
     });
 
@@ -962,7 +987,7 @@ test.describe('flipper', () => {
           throw new Error('Blok not found');
         }
 
-         
+
         const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
         if (!blockSettings || !blockSettings.flipper) {
@@ -1027,7 +1052,7 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1096,19 +1121,19 @@ test.describe('flipper', () => {
         throw new Error('No focused item found');
       }
 
-       
+
       const context = globalThis as typeof globalThis & { __activateCallbackCount?: number; __activateCallbackItem?: HTMLElement };
 
-       
+
       context.__activateCallbackCount = 0;
-       
+
       context.__activateCallbackItem = undefined;
 
       // Simulate what activateCallback would do
       focusedItem.addEventListener('click', () => {
-         
+
         context.__activateCallbackCount = (context.__activateCallbackCount ?? 0) + 1;
-         
+
         context.__activateCallbackItem = focusedItem as HTMLElement;
       }, { once: true });
     });
@@ -1116,13 +1141,13 @@ test.describe('flipper', () => {
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
 
     const callbackResult = await page.evaluate(() => {
-       
+
       const context = globalThis as typeof globalThis & { __activateCallbackCount?: number; __activateCallbackItem?: HTMLElement };
 
       return {
-         
+
         count: context.__activateCallbackCount ?? 0,
-         
+
         itemText: context.__activateCallbackItem?.textContent ?? null,
       };
     });
@@ -1143,7 +1168,7 @@ test.describe('flipper', () => {
         return { error: 'Blok not found' };
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1194,7 +1219,7 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1221,7 +1246,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1242,7 +1267,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
@@ -1332,14 +1357,14 @@ test.describe('flipper', () => {
         throw new Error('Delete item not found');
       }
 
-       
+
       const context = globalThis as typeof globalThis & { __deleteItemClicks?: number };
 
-       
+
       context.__deleteItemClicks = 0;
 
       deleteItem.addEventListener('click', () => {
-         
+
         context.__deleteItemClicks = (context.__deleteItemClicks ?? 0) + 1;
       });
     });
@@ -1349,10 +1374,10 @@ test.describe('flipper', () => {
     await triggerKey(plugin, KEY_CODES.ENTER, { key: 'Enter' });
 
     const deleteItemClickCount = await page.evaluate(() => {
-       
+
       const context = globalThis as typeof globalThis & { __deleteItemClicks?: number };
 
-       
+
       return context.__deleteItemClicks ?? 0;
     });
 
@@ -1382,35 +1407,35 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
       }
 
-       
+
       const context = globalThis as typeof globalThis & { __callback1Count?: number; __callback2Count?: number; __callback3Count?: number };
 
-       
+
       context.__callback1Count = 0;
-       
+
       context.__callback2Count = 0;
-       
+
       context.__callback3Count = 0;
 
       const callback1 = (): void => {
-         
+
         context.__callback1Count = (context.__callback1Count ?? 0) + 1;
       };
 
       const callback2 = (): void => {
-         
+
         context.__callback2Count = (context.__callback2Count ?? 0) + 1;
       };
 
       const callback3 = (): void => {
-         
+
         context.__callback3Count = (context.__callback3Count ?? 0) + 1;
       };
 
@@ -1435,15 +1460,15 @@ test.describe('flipper', () => {
     });
 
     const callbackCounts = await page.evaluate(() => {
-       
+
       const context = globalThis as typeof globalThis & { __callback1Count?: number; __callback2Count?: number; __callback3Count?: number };
 
       return {
-         
+
         callback1: context.__callback1Count ?? 0,
-         
+
         callback2: context.__callback2Count ?? 0,
-         
+
         callback3: context.__callback3Count ?? 0,
       };
     });
@@ -1475,7 +1500,7 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-       
+
       const blockSettings = (blok as any).module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {

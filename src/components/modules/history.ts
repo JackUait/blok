@@ -209,7 +209,18 @@ export default class History extends Module {
           ? Math.max(0, currentEntry.caretPosition.blockIndex - 1)
           : undefined;
 
-        await this.restoreState(previousEntry.state, previousEntry.caretPosition, fallbackIndex);
+        // If the previous entry has no caret position (e.g., initial state),
+        // use the current entry's caret position as a fallback
+        const fallbackCaretPosition = !previousEntry.caretPosition
+          ? currentEntry?.caretPosition
+          : undefined;
+
+        await this.restoreState(
+          previousEntry.state,
+          previousEntry.caretPosition,
+          fallbackIndex,
+          fallbackCaretPosition
+        );
         this.emitStateChanged();
 
         // Keep the flag true for a short period to ignore late events
@@ -537,8 +548,14 @@ export default class History extends Module {
    * @param state - the document state to restore
    * @param caretPosition - optional caret position to restore after state is applied
    * @param fallbackBlockIndex - optional block index to use when caret block no longer exists
+   * @param fallbackCaretPosition - optional caret position to use when the target state has no caret position
    */
-  private async restoreState(state: OutputData, caretPosition?: CaretPosition, fallbackBlockIndex?: number): Promise<void> {
+  private async restoreState(
+    state: OutputData,
+    caretPosition?: CaretPosition,
+    fallbackBlockIndex?: number,
+    fallbackCaretPosition?: CaretPosition
+  ): Promise<void> {
     // Disable modifications observer during restore
     this.Blok.ModificationsObserver.disable();
 
@@ -549,7 +566,7 @@ export default class History extends Module {
     }
 
     // Restore caret position after state is applied
-    this.restoreCaretPosition(caretPosition, fallbackBlockIndex);
+    this.restoreCaretPosition(caretPosition, fallbackBlockIndex, fallbackCaretPosition);
   }
 
   /**
@@ -784,22 +801,45 @@ export default class History extends Module {
    * Restores caret to a previously saved position
    * @param caretPosition - the position to restore
    * @param fallbackBlockIndex - optional block index to use when caret block no longer exists
+   * @param fallbackCaretPosition - optional caret position to use when the target state has no caret position
    */
-  private restoreCaretPosition(caretPosition: CaretPosition | undefined, fallbackBlockIndex?: number): void {
+  private restoreCaretPosition(
+    caretPosition: CaretPosition | undefined,
+    fallbackBlockIndex?: number,
+    fallbackCaretPosition?: CaretPosition
+  ): void {
+    // If no caret position but have fallback caret position, use it
+    if (!caretPosition && fallbackCaretPosition) {
+      // Try to use the fallback caret position's block index and input index
+      // The block ID might not exist in the restored state, so we use the index as fallback
+      this.focusBlockAtIndexWithInput(
+        fallbackCaretPosition.blockIndex,
+        fallbackCaretPosition.inputIndex,
+        fallbackCaretPosition.offset
+      );
+
+      return;
+    }
+
+    // If no caret position but have fallback block index, use it
     if (!caretPosition && fallbackBlockIndex !== undefined) {
       this.focusBlockAtIndex(fallbackBlockIndex);
 
       return;
     }
 
+    // No saved caret position and no fallback, focus first available block
     if (!caretPosition) {
-      // No saved caret position and no fallback, focus first available block
       this.focusFirstAvailableBlock();
 
       return;
     }
 
     const { BlockManager } = this.Blok;
+
+    // Look up block by ID. Note: we need to look up the block again after waiting
+    // because the block instance might have been replaced during state restoration
+    // (e.g., BlockManager.update creates a new block with the same ID)
     const block = BlockManager.getBlockById(caretPosition.blockId);
 
     if (!block) {
@@ -812,8 +852,32 @@ export default class History extends Module {
     }
 
     // Wait for block to be ready (in case it was just rendered)
+    // Then look up the block again by ID to get the current instance
+    // This is necessary because the block might have been replaced during rendering
     void block.ready.then(() => {
-      this.setCaretToBlockInput(block, caretPosition);
+      // Re-lookup the block by ID to get the current instance
+      // The original block reference might be stale if the block was replaced
+      const currentBlock = BlockManager.getBlockById(caretPosition.blockId);
+
+      if (!currentBlock) {
+        // Block was removed during rendering, use fallback
+        const indexToUse = fallbackBlockIndex !== undefined ? fallbackBlockIndex : caretPosition.blockIndex;
+
+        this.focusBlockAtIndex(indexToUse);
+
+        return;
+      }
+
+      // If the block was replaced, wait for the new block to be ready
+      if (currentBlock !== block) {
+        void currentBlock.ready.then(() => {
+          this.setCaretToBlockInput(currentBlock, caretPosition);
+        });
+
+        return;
+      }
+
+      this.setCaretToBlockInput(currentBlock, caretPosition);
     });
   }
 
@@ -860,32 +924,90 @@ export default class History extends Module {
   }
 
   /**
+   * Focuses the block at the given index with a specific input and offset
+   * Used when restoring caret position from a fallback that has input/offset info
+   * @param blockIndex - the target block index
+   * @param inputIndex - the target input index within the block
+   * @param offset - the character offset within the input
+   */
+  private focusBlockAtIndexWithInput(blockIndex: number, inputIndex: number, offset: number): void {
+    const { BlockManager, Caret } = this.Blok;
+    const blocksCount = BlockManager.blocks.length;
+
+    if (blocksCount === 0) {
+      return;
+    }
+
+    // Check if the block index is out of bounds
+    const isOutOfBounds = blockIndex >= blocksCount;
+
+    // Use the block at the saved index, or the last block if index is out of bounds
+    const targetIndex = Math.min(blockIndex, blocksCount - 1);
+    const targetBlock = BlockManager.getBlockByIndex(targetIndex);
+
+    if (!targetBlock?.focusable) {
+      this.focusFirstAvailableBlock();
+
+      return;
+    }
+
+    // If the block index was out of bounds, set caret to the END of the block
+    // because the original block no longer exists
+    if (isOutOfBounds) {
+      void targetBlock.ready.then(() => {
+        Caret.setToBlock(targetBlock, Caret.positions.END);
+      });
+
+      return;
+    }
+
+    // Create a synthetic caret position to use with setCaretToBlockInput
+    const syntheticCaretPosition: CaretPosition = {
+      blockId: targetBlock.id,
+      blockIndex: targetIndex,
+      inputIndex,
+      offset,
+    };
+
+    // Wait for block to be ready and set caret
+    void targetBlock.ready.then(() => {
+      this.setCaretToBlockInput(targetBlock, syntheticCaretPosition);
+    });
+  }
+
+  /**
    * Sets caret to a specific input within a block
    * @param block - the block to set caret in
    * @param caretPosition - the saved caret position
    */
   private setCaretToBlockInput(block: Block, caretPosition: CaretPosition): void {
     const { BlockManager, Caret } = this.Blok;
-    const inputs = block.inputs;
-    const targetInputIndex = Math.min(caretPosition.inputIndex, inputs.length - 1);
-    const targetInput = inputs[targetInputIndex];
 
-    if (!targetInput) {
-      // No inputs, just select the block
-      Caret.setToBlock(block, Caret.positions.END);
+    // Use requestAnimationFrame to ensure the DOM has been updated
+    // This is necessary because the block's inputs might not be available immediately
+    // after the block is rendered, especially for complex tools like lists
+    requestAnimationFrame(() => {
+      const inputs = block.inputs;
+      const targetInputIndex = Math.min(caretPosition.inputIndex, inputs.length - 1);
+      const targetInput = inputs[targetInputIndex];
 
-      return;
-    }
+      if (!targetInput) {
+        // No inputs, just select the block
+        Caret.setToBlock(block, Caret.positions.END);
 
-    // Set current block and let Caret.setToInput handle the input assignment
-    BlockManager.currentBlock = block;
+        return;
+      }
 
-    // Try to set exact offset, fall back to end if offset is out of bounds
-    try {
-      Caret.setToInput(targetInput, Caret.positions.DEFAULT, caretPosition.offset);
-    } catch {
-      Caret.setToInput(targetInput, Caret.positions.END);
-    }
+      // Set current block and let Caret.setToInput handle the input assignment
+      BlockManager.currentBlock = block;
+
+      // Try to set exact offset, fall back to end if offset is out of bounds
+      try {
+        Caret.setToInput(targetInput, Caret.positions.DEFAULT, caretPosition.offset);
+      } catch {
+        Caret.setToInput(targetInput, Caret.positions.END);
+      }
+    });
   }
 
   /**

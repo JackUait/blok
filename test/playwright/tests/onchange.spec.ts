@@ -594,7 +594,6 @@ test.describe('onChange callback', () => {
     const deleteOption = page.getByTestId('block-tunes-popover').locator('[data-blok-item-name=delete]:visible');
 
     await deleteOption.click();
-    await deleteOption.click();
 
     await waitForOnChangeCallCount(page, 1);
 

@@ -13,8 +13,10 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { isMobileScreen, keyCodes } from '../../utils';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
-import { IconReplace } from '../../icons';
-import { getConvertibleToolsForBlock } from '../../utils/blocks';
+import { IconReplace, IconCross } from '../../icons';
+import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
+import BlockAPI from '../../block/api';
+import type BlockToolAdapter from '../../tools/block';
 
 /**
  * HTML Elements that used for BlockSettings
@@ -128,7 +130,16 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    * @param trigger - element to position the popover relative to
    */
   public async open(targetBlock?: Block, trigger?: HTMLElement): Promise<void> {
-    const block = targetBlock ?? this.Blok.BlockManager.currentBlock;
+    const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
+    const hasMultipleBlocksSelected = selectedBlocks.length > 1;
+
+    /**
+     * When multiple blocks are selected, use the first selected block as the anchor
+     * Otherwise, use the target block or current block
+     */
+    const block = hasMultipleBlocksSelected
+      ? selectedBlocks[0]
+      : (targetBlock ?? this.Blok.BlockManager.currentBlock);
 
     if (block === undefined) {
       return;
@@ -144,11 +155,14 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
     /**
      * Highlight content of a Block we are working with
+     * For multiple blocks, they should already be selected
      */
-    this.Blok.BlockSelection.selectBlock(block);
-    this.Blok.BlockSelection.clearCache();
+    if (!hasMultipleBlocksSelected) {
+      this.Blok.BlockSelection.selectBlock(block);
+      this.Blok.BlockSelection.clearCache();
+    }
 
-    /** Get tool's settings data */
+    /** Get tool's settings data - only relevant for single block selection */
     const { toolTunes, commonTunes } = block.getTunes();
 
     /** Tell to subscribers that block settings is opened */
@@ -176,9 +190,6 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
 
     this.popover.show();
-    if (PopoverClass === PopoverDesktop) {
-      this.flipperInstance.focusItem(0);
-    }
     this.attachFlipperKeydownListener(block);
   }
 
@@ -230,11 +241,10 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     this.detachFlipperKeydownListener();
 
     /**
-     * Remove highlighted content of a Block we are working with
+     * Remove highlighted content of Blocks we are working with
+     * Handle both single and multiple block selection
      */
-    if (!this.Blok.CrossBlockSelection.isCrossBlockSelectionStarted && this.Blok.BlockManager.currentBlock) {
-      this.Blok.BlockSelection.unselectBlock(this.Blok.BlockManager.currentBlock);
-    }
+    this.clearBlockSelectionOnClose();
 
     /** Tell to subscribers that block settings is closed */
     this.eventsDispatcher.emit(this.events.closed);
@@ -256,8 +266,13 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
    */
   private async getTunesItems(currentBlock: Block, commonTunes: MenuConfigItem[], toolTunes?: MenuConfigItem[]): Promise<PopoverItemParams[]> {
     const items = [] as MenuConfigItem[];
+    const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
+    const hasMultipleBlocksSelected = selectedBlocks.length > 1;
 
-    if (toolTunes !== undefined && toolTunes.length > 0) {
+    /**
+     * Only show tool-specific tunes when a single block is selected
+     */
+    if (!hasMultipleBlocksSelected && toolTunes !== undefined && toolTunes.length > 0) {
       items.push(...toolTunes);
       items.push({
         type: PopoverItemType.Separator,
@@ -265,7 +280,19 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     const allBlockTools = Array.from(this.Blok.Tools.blockTools.values());
-    const convertibleTools = await getConvertibleToolsForBlock(currentBlock, allBlockTools);
+
+    /**
+     * Get convertible tools based on selection:
+     * - For single block: use existing single-block conversion logic
+     * - For multiple blocks: find tools that ALL selected blocks can convert to
+     */
+    const convertibleTools = hasMultipleBlocksSelected
+      ? await getConvertibleToolsForBlocks(
+          selectedBlocks.map((block) => new BlockAPI(block)),
+          allBlockTools
+        )
+      : await getConvertibleToolsForBlock(currentBlock, allBlockTools);
+
     const convertToItems = convertibleTools.reduce<PopoverItemParams[]>((result, tool) => {
       if (tool.toolbox === undefined) {
         return result;
@@ -277,16 +304,24 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
         result.push({
           icon: toolboxItem.icon,
           title: I18n.t(I18nInternalNS.toolNames, titleKey),
-          name: tool.name,
+          name: toolboxItem.name ?? tool.name,
           closeOnActivate: true,
           onActivate: async () => {
-            const { BlockManager, Caret, Toolbar } = this.Blok;
+            const { Caret, Toolbar } = this.Blok;
 
-            const newBlock = await BlockManager.convert(currentBlock, tool.name, toolboxItem.data);
+            const newBlock = await this.convertBlock(
+              currentBlock,
+              selectedBlocks,
+              hasMultipleBlocksSelected,
+              tool,
+              toolboxItem.data
+            );
 
             Toolbar.close();
 
-            Caret.setToBlock(newBlock, Caret.positions.END);
+            if (newBlock) {
+              Caret.setToBlock(newBlock, Caret.positions.END);
+            }
           },
         });
       });
@@ -308,7 +343,36 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       });
     }
 
-    items.push(...commonTunes);
+    /**
+     * For single block selection, show all common tunes (delete, move, etc.)
+     * For multiple blocks, only show delete option with multi-block delete behavior
+     */
+    if (!hasMultipleBlocksSelected) {
+      items.push(...commonTunes);
+    } else {
+      items.push({
+        icon: IconCross,
+        title: I18n.t(I18nInternalNS.blockTunes.delete, 'Delete'),
+        name: 'delete',
+        closeOnActivate: true,
+        onActivate: () => {
+          const { BlockManager, Caret, Toolbar } = this.Blok;
+          const indexToInsert = BlockManager.removeSelectedBlocks();
+
+          if (indexToInsert !== undefined && BlockManager.blocks.length === 0) {
+            BlockManager.insert();
+          }
+
+          const currentBlock = BlockManager.currentBlock;
+
+          if (currentBlock) {
+            Caret.setToBlock(currentBlock, Caret.positions.END);
+          }
+
+          Toolbar.close();
+        },
+      });
+    }
 
     return items;
   }
@@ -319,6 +383,362 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
   private onPopoverClose = (): void => {
     this.close();
   };
+
+  /**
+   * Clears block selection when block settings is closed
+   * Handles both single and multiple block selection scenarios
+   */
+  private clearBlockSelectionOnClose(): void {
+    if (this.Blok.CrossBlockSelection.isCrossBlockSelectionStarted) {
+      return;
+    }
+
+    const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
+    const hasMultipleBlocksSelected = selectedBlocks.length > 1;
+
+    if (hasMultipleBlocksSelected) {
+      this.Blok.BlockSelection.allBlocksSelected = false;
+
+      return;
+    }
+
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+
+    if (currentBlock) {
+      this.Blok.BlockSelection.unselectBlock(currentBlock);
+    }
+  }
+
+  /**
+   * Converts multiple selected blocks to a target tool type.
+   * For tools that support multi-item data (like lists), all blocks are combined into a single block.
+   * Otherwise, each block is converted individually and remains as a separate block.
+   * @param blocks - array of blocks to convert
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides for the new blocks
+   * @returns the resulting block (merged or last converted) or null if all conversions failed
+   */
+  private async convertBlock(
+    currentBlock: Block,
+    selectedBlocks: Block[],
+    hasMultipleBlocksSelected: boolean,
+    tool: BlockToolAdapter,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    const { BlockManager } = this.Blok;
+
+    if (hasMultipleBlocksSelected) {
+      return this.convertMultipleBlocks(selectedBlocks, tool.name, toolboxData);
+    }
+
+    /**
+     * Check if we should explode a multi-item block (like List) into separate blocks
+     * This happens when converting to a tool that doesn't support multiple items
+     */
+    const explodableItems = await this.getExplodableItems(currentBlock);
+    const shouldExplode = !this.canToolMergeMultipleItems(tool) && explodableItems !== null;
+
+    if (shouldExplode) {
+      return this.convertMultiItemBlockToSeparateBlocks(currentBlock, tool.name, toolboxData);
+    }
+
+    return BlockManager.convert(currentBlock, tool.name, toolboxData);
+  }
+
+  /**
+   * Converts multiple selected blocks to a target tool type.
+   * For tools that support multi-item data (like lists), all blocks are combined into a single block.
+   * Otherwise, each block is converted individually and remains as a separate block.
+   * @param blocks - array of blocks to convert
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides for the new blocks
+   * @returns the resulting block (merged or last converted) or null if all conversions failed
+   */
+  private async convertMultipleBlocks(
+    blocks: Block[],
+    targetToolName: string,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    const { Tools } = this.Blok;
+
+    if (blocks.length === 0) {
+      return null;
+    }
+
+    /**
+     * Check if the target tool's conversion config import function can handle
+     * newline-separated content to create multiple items (like lists do).
+     * We detect this by checking if the import function returns data with an 'items' array.
+     */
+    const targetTool = Tools.blockTools.get(targetToolName);
+    const shouldMergeIntoSingleBlock = targetTool && this.canToolMergeMultipleItems(targetTool);
+
+    if (shouldMergeIntoSingleBlock) {
+      return this.convertBlocksToSingleMergedBlock(blocks, targetToolName, toolboxData);
+    }
+
+    /**
+     * Convert each block individually, maintaining them as separate blocks
+     */
+    return this.convertBlocksIndividually(blocks, targetToolName, toolboxData);
+  }
+
+  /**
+   * Checks if a tool can merge multiple items into a single block.
+   * This is determined by testing if the tool's import function creates an 'items' array.
+   * @param tool - the target tool adapter
+   * @returns true if the tool supports merging multiple items
+   */
+  private canToolMergeMultipleItems(tool: BlockToolAdapter): boolean {
+    const conversionConfig = tool.conversionConfig;
+
+    if (!conversionConfig?.import) {
+      return false;
+    }
+
+    /**
+     * Test the import function with a sample multi-line string
+     * to see if it creates multiple items
+     */
+    try {
+      const testResult = typeof conversionConfig.import === 'function'
+        ? conversionConfig.import('line1\nline2', tool.settings)
+        : { [conversionConfig.import]: 'line1\nline2' };
+
+      return Array.isArray(testResult?.items) && testResult.items.length > 1;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Converts multiple blocks into a single merged block by combining their exported content.
+   * Used for tools like lists that can hold multiple items.
+   * @param blocks - blocks to convert and merge
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides
+   * @returns the merged block or null if conversion failed
+   */
+  private async convertBlocksToSingleMergedBlock(
+    blocks: Block[],
+    targetToolName: string,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    const { BlockManager } = this.Blok;
+
+    /**
+     * Export all blocks' content and combine with newlines
+     */
+    const exportedContents: string[] = [];
+
+    for (const block of blocks) {
+      try {
+        const content = await block.exportDataAsString();
+
+        exportedContents.push(content);
+      } catch {
+        // Skip blocks that fail to export
+      }
+    }
+
+    if (exportedContents.length === 0) {
+      return null;
+    }
+
+    /**
+     * Convert the first block with combined content
+     */
+    const firstBlock = blocks[0];
+    const combinedContent = exportedContents.join('\n');
+
+    /**
+     * Get the target tool to use its conversion config
+     */
+    const targetTool = this.Blok.Tools.blockTools.get(targetToolName);
+
+    if (!targetTool) {
+      return null;
+    }
+
+    /**
+     * Import the combined content using the target tool's conversion config
+     */
+    const importedData = typeof targetTool.conversionConfig?.import === 'function'
+      ? targetTool.conversionConfig.import(combinedContent, targetTool.settings)
+      : { [targetTool.conversionConfig?.import as string]: combinedContent };
+
+    const newBlockData = toolboxData
+      ? Object.assign(importedData, toolboxData)
+      : importedData;
+
+    /**
+     * Replace the first block with the new merged block
+     */
+    const newBlock = BlockManager.replace(firstBlock, targetToolName, newBlockData);
+
+    /**
+     * Remove the remaining blocks (they've been merged into the first one)
+     */
+    const remainingBlocks = blocks.slice(1);
+
+    for (const block of remainingBlocks) {
+      await BlockManager.removeBlock(block, false);
+    }
+
+    return newBlock;
+  }
+
+  /**
+   * Converts blocks individually, keeping them as separate blocks.
+   * @param blocks - blocks to convert
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides
+   * @returns the last converted block or null if all conversions failed
+   */
+  private async convertBlocksIndividually(
+    blocks: Block[],
+    targetToolName: string,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    const { BlockManager } = this.Blok;
+    const convertedBlocks: Block[] = [];
+
+    for (const block of blocks) {
+      const convertedBlock = await this.convertBlockSafely(BlockManager, block, targetToolName, toolboxData);
+
+      if (convertedBlock) {
+        convertedBlocks.push(convertedBlock);
+      }
+    }
+
+    return convertedBlocks.length > 0
+      ? convertedBlocks[convertedBlocks.length - 1]
+      : null;
+  }
+
+  /**
+   * Safely converts a single block, catching any errors
+   * @param blockManager - the block manager instance
+   * @param block - block to convert
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides
+   * @returns the converted block or null if conversion failed
+   */
+  private async convertBlockSafely(
+    blockManager: typeof this.Blok.BlockManager,
+    block: Block,
+    targetToolName: string,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    try {
+      return await blockManager.convert(block, targetToolName, toolboxData);
+    } catch (e) {
+      console.warn(`Failed to convert block ${block.id}:`, e);
+
+      return null;
+    }
+  }
+
+  /**
+   * Checks if a block contains multiple items that should be exploded into separate blocks
+   * when converting to a single-item tool.
+   * @param block - block to check
+   * @returns array of content strings if block should be exploded, null otherwise
+   */
+  private async getExplodableItems(block: Block): Promise<string[] | null> {
+    try {
+      const blockData = await block.data;
+
+      /**
+       * Check if block has an 'items' array with multiple items (like List tool)
+       */
+      if (!Array.isArray(blockData?.items) || blockData.items.length <= 1) {
+        return null;
+      }
+
+      /**
+       * Extract content from each item, handling nested items recursively
+       */
+      const extractContent = (items: Array<{ content?: string; items?: unknown[] }>): string[] => {
+        const contents: string[] = [];
+
+        for (const item of items) {
+          if (item.content !== undefined && item.content !== '') {
+            contents.push(item.content);
+          }
+          if (Array.isArray(item.items) && item.items.length > 0) {
+            contents.push(...extractContent(item.items as Array<{ content?: string; items?: unknown[] }>));
+          }
+        }
+
+        return contents;
+      };
+
+      return extractContent(blockData.items);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Converts a multi-item block (like List) into multiple single-item blocks.
+   * Each item becomes a separate block of the target type.
+   * @param block - block to convert
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides
+   * @returns the last created block or null if conversion failed
+   */
+  private async convertMultiItemBlockToSeparateBlocks(
+    block: Block,
+    targetToolName: string,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    const { BlockManager, Tools } = this.Blok;
+    const items = await this.getExplodableItems(block);
+
+    if (!items || items.length === 0) {
+      return null;
+    }
+
+    const targetTool = Tools.blockTools.get(targetToolName);
+    const conversionImport = targetTool?.conversionConfig?.import;
+
+    if (!conversionImport) {
+      return null;
+    }
+
+    const blockIndex = BlockManager.getBlockIndex(block);
+
+    /**
+     * Remove the original block first
+     */
+    await BlockManager.removeBlock(block, false);
+
+    /**
+     * Create a new block for each item
+     */
+    const createdBlocks = items.map((content, index) => {
+      /**
+       * Import the content using the target tool's conversion config
+       */
+      const importedData = typeof conversionImport === 'function'
+        ? conversionImport(content, targetTool?.settings)
+        : { [conversionImport as string]: content };
+
+      const newBlockData = toolboxData
+        ? Object.assign(importedData, toolboxData)
+        : importedData;
+
+      return BlockManager.insert({
+        tool: targetToolName,
+        data: newBlockData,
+        index: blockIndex + index,
+        needToFocus: false,
+      });
+    });
+
+    return createdBlocks.length > 0 ? createdBlocks[createdBlocks.length - 1] : null;
+  }
 
   /**
    * Attaches keydown listener to delegate navigation events to the shared flipper

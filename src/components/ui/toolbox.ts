@@ -350,7 +350,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       return {
         icon: toolboxItem.icon,
         title: I18n.t(I18nInternalNS.toolNames, toolboxItem.title || _.capitalize(tool.name)),
-        name: tool.name,
+        name: toolboxItem.name ?? tool.name,
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);
         },

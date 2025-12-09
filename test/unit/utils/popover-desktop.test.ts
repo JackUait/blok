@@ -468,7 +468,7 @@ describe('PopoverDesktop', () => {
 
 
   describe('flippableElements', () => {
-    it('includes only enabled default items and controls from HTML items', () => {
+    it('includes only enabled default items and wrapper element from HTML items', () => {
       const htmlElement = document.createElement('div');
       const htmlButton = document.createElement('button');
       const htmlInput = document.createElement('input');
@@ -505,7 +505,13 @@ describe('PopoverDesktop', () => {
 
       const elements = instance.flippableElements;
 
-      expect(elements).toEqual([defaultElement!, htmlButton, htmlInput]);
+      // HTML items return their wrapper element (not inner controls) for keyboard navigation
+      const htmlItemWrapper = instance.items.find(
+        item => item.name === 'custom-html'
+      )?.getElement();
+
+      expect(htmlItemWrapper).not.toBeNull();
+      expect(elements).toEqual([defaultElement!, htmlItemWrapper!]);
     });
   });
 

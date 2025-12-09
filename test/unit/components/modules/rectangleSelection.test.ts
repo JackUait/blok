@@ -12,6 +12,7 @@ type PartialModules = Partial<BlokModules>;
 
 type ToolbarModuleMock = {
   close: Mock<() => void>;
+  moveAndOpenForMultipleBlocks: Mock<() => void>;
 };
 
 type InlineToolbarModuleMock = {
@@ -22,6 +23,7 @@ type BlockSelectionModuleMock = {
   allBlocksSelected: boolean;
   selectBlockByIndex: Mock<(index: number) => void>;
   unSelectBlockByIndex: Mock<(index: number) => void>;
+  selectedBlocks: BlockType[];
 };
 
 type BlockManagerModuleMock = {
@@ -72,6 +74,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
 
   const toolbarMock: ToolbarModuleMock = {
     close: vi.fn<() => void>(),
+    moveAndOpenForMultipleBlocks: vi.fn<() => void>(),
   };
 
   const inlineToolbarMock: InlineToolbarModuleMock = {
@@ -82,6 +85,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
     allBlocksSelected: false,
     selectBlockByIndex: vi.fn<(index: number) => void>(),
     unSelectBlockByIndex: vi.fn<(index: number) => void>(),
+    selectedBlocks: [],
   };
 
   const blockManagerMock: BlockManagerModuleMock = {

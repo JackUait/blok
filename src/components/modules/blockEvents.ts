@@ -304,6 +304,154 @@ export default class BlockEvents extends Module {
     this.Blok.UI.checkEmptiness();
   }
 
+  /**
+   * Regex patterns for detecting list shortcuts.
+   * Matches patterns like "1. ", "1) ", "2. ", etc. at the start of text
+   */
+  private static readonly ORDERED_LIST_PATTERN = /^(\d+)[.)]\s$/;
+
+  /**
+   * Regex pattern for detecting checklist shortcuts.
+   * Matches patterns like "[] ", "[ ] ", "[x] ", "[X] " at the start of text
+   */
+  private static readonly CHECKLIST_PATTERN = /^\[(x|X| )?\]\s$/;
+
+  /**
+   * Regex pattern for detecting bulleted list shortcuts.
+   * Matches patterns like "- " or "* " at the start of text
+   */
+  private static readonly UNORDERED_LIST_PATTERN = /^[-*]\s$/;
+
+  /**
+   * Input event handler for Block
+   * Detects markdown-like shortcuts for auto-converting to lists
+   * @param {InputEvent} event - input event
+   */
+  public input(event: InputEvent): void {
+    /**
+     * Only handle insertText events (typing) that end with a space
+     */
+    if (event.inputType !== 'insertText' || event.data !== ' ') {
+      return;
+    }
+
+    this.handleListShortcut();
+  }
+
+  /**
+   * Check if current block content matches a list shortcut pattern
+   * and convert to appropriate list type
+   */
+  private handleListShortcut(): void {
+    const { BlockManager, Caret, Tools } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return;
+    }
+
+    /**
+     * Only convert default blocks (paragraphs)
+     */
+    if (!currentBlock.tool.isDefault) {
+      return;
+    }
+
+    /**
+     * Check if list tool is available
+     */
+    const listTool = Tools.blockTools.get('list');
+
+    if (!listTool) {
+      return;
+    }
+
+    const currentInput = currentBlock.currentInput;
+
+    if (!currentInput) {
+      return;
+    }
+
+    const textContent = currentInput.textContent || '';
+
+    /**
+     * Check for checklist pattern (e.g., "[] ", "[ ] ", "[x] ", "[X] ")
+     */
+    const checklistMatch = BlockEvents.CHECKLIST_PATTERN.exec(textContent);
+
+    if (checklistMatch) {
+      /**
+       * Determine if the checkbox should be checked
+       * [x] or [X] means checked, [] or [ ] means unchecked
+       */
+      const isChecked = checklistMatch[1]?.toLowerCase() === 'x';
+
+      const newBlock = BlockManager.replace(currentBlock, 'list', {
+        style: 'checklist',
+        items: [{ content: '', checked: isChecked }],
+      });
+
+      Caret.setToBlock(newBlock, Caret.positions.START);
+
+      return;
+    }
+
+    /**
+     * Check for unordered/bulleted list pattern (e.g., "- " or "* ")
+     */
+    const unorderedMatch = BlockEvents.UNORDERED_LIST_PATTERN.exec(textContent);
+
+    if (unorderedMatch) {
+      const newBlock = BlockManager.replace(currentBlock, 'list', {
+        style: 'unordered',
+        items: [{ content: '', checked: false }],
+      });
+
+      Caret.setToBlock(newBlock, Caret.positions.START);
+
+      return;
+    }
+
+    /**
+     * Check for ordered list pattern (e.g., "1. " or "1) ")
+     */
+    const orderedMatch = BlockEvents.ORDERED_LIST_PATTERN.exec(textContent);
+
+    if (!orderedMatch) {
+      return;
+    }
+
+    /**
+     * Extract the starting number from the pattern
+     */
+    const startNumber = parseInt(orderedMatch[1], 10);
+
+    /**
+     * Extract the remaining content after the pattern
+     * Since we matched the full content including the space, the remaining content is empty
+     */
+    const remainingContent = '';
+
+    /**
+     * Convert to ordered list with the captured start number
+     */
+    const listData: { style: string; items: { content: string; checked: boolean }[]; start?: number } = {
+      style: 'ordered',
+      items: [{ content: remainingContent, checked: false }],
+    };
+
+    // Only include start if it's not 1 (the default)
+    if (startNumber !== 1) {
+      listData.start = startNumber;
+    }
+
+    const newBlock = BlockManager.replace(currentBlock, 'list', listData);
+
+    /**
+     * Set caret to the beginning of the new list item
+     */
+    Caret.setToBlock(newBlock, Caret.positions.START);
+  }
 
   /**
    * Copying selected blocks

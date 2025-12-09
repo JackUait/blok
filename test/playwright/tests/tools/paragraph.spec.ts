@@ -377,15 +377,7 @@ test.describe('paragraph tool', () => {
 
       const deleteOption = page.getByTestId('popover-item').filter({ hasText: 'Delete' });
 
-      // First click shows confirmation
       await deleteOption.click();
-
-      const confirmDelete = page.getByTestId('popover-item').filter({ hasText: 'Click to delete' });
-
-      await expect(confirmDelete).toBeVisible();
-
-      // Second click confirms deletion
-      await confirmDelete.click();
 
       // After deletion, the original text should be gone (a new empty block may be created)
       await expect(page.getByText('Test paragraph')).toHaveCount(0);

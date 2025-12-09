@@ -9,6 +9,7 @@ import {
   isBlockConvertable,
   isSameBlockData,
   getConvertibleToolsForBlock,
+  getConvertibleToolsForBlocks,
   areBlocksMergeable,
   convertBlockDataToString,
   convertStringToBlockData
@@ -16,11 +17,11 @@ import {
 
 // Mock VERSION global variable
 declare global {
-   
+
   var VERSION: string;
 }
 
- 
+
 (globalThis as { VERSION?: string }).VERSION = 'test-version';
 
 /**
@@ -989,6 +990,291 @@ describe('blocks utilities', () => {
         text: 'Hello',
         hasConfig: false,
       });
+    });
+  });
+
+  describe('getConvertibleToolsForBlocks', () => {
+    const mockSave = vi.fn();
+    const createMockBlock = (name: string): BlockAPI => ({
+      id: `block-${name}`,
+      name,
+      save: mockSave,
+    } as unknown as BlockAPI);
+
+    it('should return empty array when no blocks are provided', async () => {
+      const allBlockTools: BlockToolAdapter[] = [];
+
+      const result = await getConvertibleToolsForBlocks([], allBlockTools);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should delegate to getConvertibleToolsForBlock when only one block is provided', async () => {
+      const mockTool = {
+        name: 'header',
+        conversionConfig: {
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'H',
+            title: 'Header',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [mockTool];
+      const mockBlock = createMockBlock('paragraph');
+
+      mockSave.mockResolvedValue({
+        tool: 'paragraph',
+        data: { text: 'Test' },
+      } as SavedData);
+
+      const result = await getConvertibleToolsForBlocks([mockBlock], allBlockTools);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('header');
+    });
+
+    it('should return tools that all blocks can convert to', async () => {
+      const mockTool1 = {
+        name: 'header',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'H',
+            title: 'Header',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const mockTool2 = {
+        name: 'paragraph',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'P',
+            title: 'Paragraph',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [mockTool1, mockTool2];
+      const mockBlock1 = createMockBlock('paragraph');
+      const mockBlock2 = createMockBlock('paragraph');
+
+      const result = await getConvertibleToolsForBlocks([mockBlock1, mockBlock2], allBlockTools);
+
+      // Should return header since both blocks are paragraphs and can convert to header
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('header');
+    });
+
+    it('should return empty array when any block has no export conversion config', async () => {
+      const mockTool1 = {
+        name: 'header',
+        conversionConfig: {
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'H',
+            title: 'Header',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const mockTool2 = {
+        name: 'paragraph',
+        conversionConfig: {
+          import: 'text',
+          // No export config
+        },
+        toolbox: [
+          {
+            icon: 'P',
+            title: 'Paragraph',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [mockTool1, mockTool2];
+      const mockBlock1 = createMockBlock('paragraph');
+      const mockBlock2 = createMockBlock('paragraph');
+
+      const result = await getConvertibleToolsForBlocks([mockBlock1, mockBlock2], allBlockTools);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should filter out tools without import conversion config', async () => {
+      const mockTool1 = {
+        name: 'header',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'H',
+            title: 'Header',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const mockTool2 = {
+        name: 'list',
+        conversionConfig: {
+          export: 'text',
+          // No import config
+        },
+        toolbox: [
+          {
+            icon: '•',
+            title: 'List',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const mockTool3 = {
+        name: 'paragraph',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'P',
+            title: 'Paragraph',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [mockTool1, mockTool2, mockTool3];
+      const mockBlock1 = createMockBlock('paragraph');
+      const mockBlock2 = createMockBlock('paragraph');
+
+      const result = await getConvertibleToolsForBlocks([mockBlock1, mockBlock2], allBlockTools);
+
+      // Should only return header since list has no import config
+      // paragraph is excluded because all blocks are already paragraphs
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('header');
+    });
+
+    it('should exclude tool when all selected blocks are already of that type', async () => {
+      const mockTool = {
+        name: 'paragraph',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'P',
+            title: 'Paragraph',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [mockTool];
+      const mockBlock1 = createMockBlock('paragraph');
+      const mockBlock2 = createMockBlock('paragraph');
+
+      const result = await getConvertibleToolsForBlocks([mockBlock1, mockBlock2], allBlockTools);
+
+      // Should return empty since all blocks are already paragraphs
+      expect(result).toEqual([]);
+    });
+
+    it('should include tool when blocks have mixed types', async () => {
+      const mockTool1 = {
+        name: 'header',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'H',
+            title: 'Header',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const mockTool2 = {
+        name: 'paragraph',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'P',
+            title: 'Paragraph',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [mockTool1, mockTool2];
+      const mockBlock1 = createMockBlock('paragraph');
+      const mockBlock2 = createMockBlock('header');
+
+      const result = await getConvertibleToolsForBlocks([mockBlock1, mockBlock2], allBlockTools);
+
+      // Should return both tools since blocks have mixed types
+      expect(result).toHaveLength(2);
+    });
+
+    it('should filter out toolbox items without icon', async () => {
+      const mockTool = {
+        name: 'header',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'H',
+            title: 'Header',
+          },
+          {
+            title: 'No Icon Header',
+            // No icon
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const mockTool2 = {
+        name: 'paragraph',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'P',
+            title: 'Paragraph',
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [mockTool, mockTool2];
+      const mockBlock1 = createMockBlock('paragraph');
+      const mockBlock2 = createMockBlock('paragraph');
+
+      const result = await getConvertibleToolsForBlocks([mockBlock1, mockBlock2], allBlockTools);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].toolbox).toHaveLength(1);
+      expect(result[0].toolbox![0].icon).toBe('H');
     });
   });
 });

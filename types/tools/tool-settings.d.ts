@@ -24,7 +24,14 @@ export interface ToolboxConfigEntry {
   /**
    * May contain overrides for tool default data
    */
-  data?: BlockToolData
+  data?: BlockToolData;
+
+  /**
+   * Unique name for the toolbox entry, used for data-blok-item-name attribute.
+   * If not provided, falls back to the tool name.
+   * Useful when a tool has multiple toolbox entries (e.g., list with ordered/unordered/checklist variants).
+   */
+  name?: string;
 }
 
 /**

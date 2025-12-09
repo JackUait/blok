@@ -209,3 +209,39 @@ export const IconWarning = `
 </svg>
 `;
 
+// Unordered List icon
+export const IconListUnordered = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path
+    d="M8 5h9M8 10h9M8 15h9M4 5h.01M4 10h.01M4 15h.01"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
+`;
+
+// Ordered List icon
+export const IconListOrdered = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path
+    d="M8 5h9M8 10h9M8 15h9M4.5 4v2.5M3.5 6.5h2M3.5 10h1.5l-1.5 2h2M3.5 14.5v1c0 .2761.22386.5.5.5h1c.27614 0 .5-.2239.5-.5v-.5c0-.2761-.22386-.5-.5-.5H4c-.27614 0-.5-.2239-.5-.5v-.5c0-.2761.22386-.5.5-.5h1c.27614 0 .5.2239.5.5"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
+`;
+
+// Checklist icon
+export const IconListChecklist = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path
+    d="M10 5h7M10 10h7M10 15h7M3 5l1 1 2-2M3 10l1 1 2-2M3 15l1 1 2-2"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
+`;
+

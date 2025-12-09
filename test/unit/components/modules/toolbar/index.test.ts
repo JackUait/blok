@@ -162,3 +162,115 @@ describe('Toolbar module interactions', () => {
   });
 });
 
+
+
+describe('Plus button interactions', () => {
+  let toolbar: Toolbar;
+
+  type MutableListeners = {
+    on: (
+      element: EventTarget,
+      eventType: string,
+      handler: (event: Event) => void,
+      options?: boolean | AddEventListenerOptions
+    ) => void;
+    clearAll: () => void;
+  };
+
+  const getBlok = (): BlokModules =>
+    (toolbar as unknown as { Blok: BlokModules }).Blok;
+
+  beforeEach(() => {
+    const eventsDispatcher = {
+      on: vi.fn(),
+      off: vi.fn(),
+    };
+
+    toolbar = new Toolbar({
+      config: {},
+      eventsDispatcher: eventsDispatcher as unknown as typeof toolbar['eventsDispatcher'],
+    });
+
+    toolbar.state = {
+      BlockSettings: {
+        opened: false,
+        close: vi.fn(),
+        getElement: vi.fn(() => document.createElement('div')),
+      },
+      UI: {
+        nodes: {
+          wrapper: document.createElement('div'),
+        },
+      },
+      BlockManager: {
+        currentBlock: null,
+        blocks: [],
+        length: 0,
+      },
+      BlockSelection: {
+        anyBlockSelected: true,
+        clearSelection: vi.fn(),
+      },
+      InlineToolbar: {
+        opened: false,
+      },
+      ReadOnly: {
+        isEnabled: false,
+      },
+    } as unknown as Toolbar['Blok'];
+
+    (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes = {
+      wrapper: document.createElement('div'),
+      content: document.createElement('div'),
+      actions: document.createElement('div'),
+      plusButton: document.createElement('button'),
+      settingsToggler: document.createElement('button'),
+    };
+
+    const readOnlyMutableListeners: MutableListeners = {
+      on: vi.fn(),
+      clearAll: vi.fn(),
+    };
+
+    (toolbar as unknown as { readOnlyMutableListeners: MutableListeners }).readOnlyMutableListeners =
+      readOnlyMutableListeners;
+
+    (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void; open: () => void; toggle: () => void; hasFocus: () => boolean } }).toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+      open: vi.fn(),
+      toggle: vi.fn(),
+      hasFocus: vi.fn(),
+    };
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('clears block selection when plus button is clicked with blocks selected', () => {
+    const plusButtonClicked = (toolbar as unknown as { plusButtonClicked: () => void }).plusButtonClicked;
+    const clearSelectionSpy = getBlok().BlockSelection.clearSelection;
+    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { toggle: () => void } }).toolboxInstance;
+    const toggleSpy = vi.spyOn(toolboxInstance, 'toggle');
+
+    plusButtonClicked.call(toolbar);
+
+    expect(clearSelectionSpy).toHaveBeenCalled();
+    expect(toggleSpy).toHaveBeenCalled();
+  });
+
+  it('does not clear selection when no blocks are selected', () => {
+    (getBlok().BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = false;
+
+    const plusButtonClicked = (toolbar as unknown as { plusButtonClicked: () => void }).plusButtonClicked;
+    const clearSelectionSpy = getBlok().BlockSelection.clearSelection;
+    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { toggle: () => void } }).toolboxInstance;
+    const toggleSpy = vi.spyOn(toolboxInstance, 'toggle');
+
+    plusButtonClicked.call(toolbar);
+
+    expect(clearSelectionSpy).not.toHaveBeenCalled();
+    expect(toggleSpy).toHaveBeenCalled();
+  });
+});

@@ -120,6 +120,13 @@ export default class CrossBlockSelection extends Module {
     nextBlock.holder.scrollIntoView({
       block: 'nearest',
     });
+
+    /**
+     * Show toolbar for multi-block selection
+     */
+    if (this.isCrossBlockSelectionStarted) {
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+    }
   }
 
   /**
@@ -193,11 +200,18 @@ export default class CrossBlockSelection extends Module {
 
   /**
    * Mouse up event handler.
-   * Removes the listeners
+   * Removes the listeners and shows toolbar for multi-block selection
    */
   private onMouseUp = (): void => {
     this.listeners.off(document, 'mouseover', this.onMouseOver);
     this.listeners.off(document, 'mouseup', this.onMouseUp);
+
+    /**
+     * Show toolbar for multi-block selection after mouse up
+     */
+    if (this.isCrossBlockSelectionStarted) {
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+    }
   };
 
   /**

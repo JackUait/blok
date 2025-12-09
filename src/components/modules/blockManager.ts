@@ -209,7 +209,7 @@ export default class BlockManager extends Module {
     this.sortable = new Sortable(this.Blok.UI.nodes.redactor, {
       animation: 150,
       forceFallback: true,
-       
+
       handle: BLOK_DRAG_HANDLE_SELECTOR,
       onStart: () => {
         this.Blok.UI.nodes.wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
@@ -764,7 +764,7 @@ export default class BlockManager extends Module {
 
     const nodes = this.blocksStore.nodes;
 
-     
+
     const firstLevelBlock = normalizedElement.closest(BLOK_ELEMENT_SELECTOR);
 
     if (!firstLevelBlock) {
@@ -852,8 +852,8 @@ export default class BlockManager extends Module {
     if (!normalizedChildNode) {
       return undefined;
     }
-    
-     
+
+
     const firstLevelBlock = normalizedChildNode.closest(BLOK_ELEMENT_SELECTOR);
 
     if (!firstLevelBlock) {
@@ -1028,6 +1028,11 @@ export default class BlockManager extends Module {
       }
     });
 
+    this.readOnlyMutableListeners.on(block.holder, 'input', (event: Event) => {
+      if (event instanceof InputEvent) {
+        BlockEvents.input(event);
+      }
+    });
 
     block.on('didMutated', (affectedBlock: Block) => {
       return this.blockDidMutated(BlockChangedMutationType, affectedBlock, {

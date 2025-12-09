@@ -887,6 +887,97 @@ test.describe('blockToolAdapter', () => {
 
       expect(tool.toolbox).toBeUndefined();
     });
+
+    test('filters toolbox entries by toolboxStyles config', () => {
+      const baseOptions = createBlockToolOptions();
+      const baseConstructable = ensureBlockToolConstructable(baseOptions.constructable);
+
+      /**
+       * Block tool stub with multiple toolbox entries containing style data.
+       */
+      class ToolWithMultipleStyles extends baseConstructable {
+        public static override toolbox: ToolboxConfigEntry[] = [
+          { title: 'Unordered', data: { style: 'unordered' } },
+          { title: 'Ordered', data: { style: 'ordered' } },
+          { title: 'Checklist', data: { style: 'checklist' } },
+        ];
+      }
+
+      const tool = new BlockToolAdapter(createBlockToolOptions({
+        constructable: ToolWithMultipleStyles,
+        config: {
+          toolbox: undefined,
+          config: {
+            toolboxStyles: ['unordered', 'ordered'],
+          },
+        },
+      }));
+
+      expect(tool.toolbox).toStrictEqual([
+        { title: 'Unordered', data: { style: 'unordered' } },
+        { title: 'Ordered', data: { style: 'ordered' } },
+      ]);
+    });
+
+    test('returns all toolbox entries when toolboxStyles is not specified', () => {
+      const baseOptions = createBlockToolOptions();
+      const baseConstructable = ensureBlockToolConstructable(baseOptions.constructable);
+
+      /**
+       * Block tool stub with multiple toolbox entries containing style data.
+       */
+      class ToolWithMultipleStyles extends baseConstructable {
+        public static override toolbox: ToolboxConfigEntry[] = [
+          { title: 'Unordered', data: { style: 'unordered' } },
+          { title: 'Ordered', data: { style: 'ordered' } },
+          { title: 'Checklist', data: { style: 'checklist' } },
+        ];
+      }
+
+      const tool = new BlockToolAdapter(createBlockToolOptions({
+        constructable: ToolWithMultipleStyles,
+        config: {
+          toolbox: undefined,
+        },
+      }));
+
+      expect(tool.toolbox).toStrictEqual([
+        { title: 'Unordered', data: { style: 'unordered' } },
+        { title: 'Ordered', data: { style: 'ordered' } },
+        { title: 'Checklist', data: { style: 'checklist' } },
+      ]);
+    });
+
+    test('keeps entries without style data when filtering by toolboxStyles', () => {
+      const baseOptions = createBlockToolOptions();
+      const baseConstructable = ensureBlockToolConstructable(baseOptions.constructable);
+
+      /**
+       * Block tool stub with mixed toolbox entries (some with style, some without).
+       */
+      class ToolWithMixedEntries extends baseConstructable {
+        public static override toolbox: ToolboxConfigEntry[] = [
+          { title: 'Default' },
+          { title: 'Unordered', data: { style: 'unordered' } },
+          { title: 'Ordered', data: { style: 'ordered' } },
+        ];
+      }
+
+      const tool = new BlockToolAdapter(createBlockToolOptions({
+        constructable: ToolWithMixedEntries,
+        config: {
+          toolbox: undefined,
+          config: {
+            toolboxStyles: ['ordered'],
+          },
+        },
+      }));
+
+      expect(tool.toolbox).toStrictEqual([
+        { title: 'Default' },
+        { title: 'Ordered', data: { style: 'ordered' } },
+      ]);
+    });
   });
 
   test.describe('create', () => {

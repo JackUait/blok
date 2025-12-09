@@ -16,11 +16,6 @@
       content: attr(data-default-text);
     }
 
-    .show-block-boundaries #showBlocksBoundariesButton .toggle-text-swap::before,
-    .thin-mode #enableThinModeButton .toggle-text-swap::before {
-      content: attr(data-toggled-text);
-    }
-
     .thin-mode .thin-mode-content {
       max-width: 500px;
       border-left-width: 1px;
@@ -50,12 +45,6 @@
           &nbsp;
           <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] transition-all duration-150 cursor-pointer text-center select-none" id="toggleReadOnlyButton">
             toggle
-          </button>
-        </div>
-        <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
-          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] transition-all duration-150 cursor-pointer text-center select-none" id="showBlocksBoundariesButton">
-            <span class="toggle-text-swap" data-default-text="Show" data-toggled-text="Hide"></span>
-            blocks boundaries
           </button>
         </div>
         <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
@@ -119,6 +108,9 @@
             placeholder: 'Header'
           },
           shortcut: 'CMD+SHIFT+H'
+        },
+        list: {
+          class: Blok.List,
         },
       },
 
@@ -242,15 +234,6 @@
 
       readOnlyIndicator.textContent = readOnlyState ? 'On' : 'Off';
     });
-
-    /**
-    * Button for displaying blocks borders. Useful for UI development
-    */
-    const showBlocksBoundariesButton = document.getElementById("showBlocksBoundariesButton");
-
-    showBlocksBoundariesButton.addEventListener('click', () => {
-      document.body.classList.toggle("show-block-boundaries")
-    })
 
     /**
     * Button for enabling the 'Thin' mode

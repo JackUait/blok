@@ -57,7 +57,7 @@ export default class SelectionUtils {
    * Elements that currently imitate the selection highlight
    */
   private fakeBackgroundElements: HTMLElement[] = [];
-  
+
   /**
    * Returns selected anchor
    * {@link https://developer.mozilla.org/ru/docs/Web/API/Selection/anchorNode}
@@ -387,9 +387,21 @@ export default class SelectionUtils {
    * Removes fake background
    */
   public removeFakeBackground(): void {
-    if (!this.fakeBackgroundElements.length) {
-      this.isFakeBackgroundEnabled = false;
+    // First, remove tracked elements
+    this.removeTrackedFakeBackgroundElements();
 
+    // Also clean up any orphaned fake background elements in the DOM
+    // This handles cases where elements were restored by undo/redo
+    this.removeOrphanedFakeBackgroundElements();
+
+    this.isFakeBackgroundEnabled = false;
+  }
+
+  /**
+   * Removes fake background elements that are tracked in fakeBackgroundElements array
+   */
+  private removeTrackedFakeBackgroundElements(): void {
+    if (!this.fakeBackgroundElements.length) {
       return;
     }
 
@@ -412,7 +424,18 @@ export default class SelectionUtils {
     }
 
     this.fakeBackgroundElements = [];
-    this.isFakeBackgroundEnabled = false;
+  }
+
+  /**
+   * Removes any fake background elements from the DOM that are not tracked
+   * This handles cleanup after undo/redo operations that may restore fake background elements
+   */
+  private removeOrphanedFakeBackgroundElements(): void {
+    const orphanedElements = document.querySelectorAll('[data-blok-fake-background="true"]');
+
+    orphanedElements.forEach((element) => {
+      this.unwrapFakeBackground(element as HTMLElement);
+    });
   }
 
   /**

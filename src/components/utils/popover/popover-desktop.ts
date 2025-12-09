@@ -561,8 +561,14 @@ export class PopoverDesktop extends PopoverAbstract {
    * @returns array of HTML elements for keyboard navigation
    */
   private getFlippableElementsForItem(item: PopoverItem): HTMLElement[] {
+    if (item instanceof PopoverItemHtml) {
+      const element = item.getElement();
+
+      return element ? [element] : [];
+    }
+
     if (!(item instanceof PopoverItemDefault)) {
-      return item instanceof PopoverItemHtml ? item.getControls() : [];
+      return [];
     }
 
     if (item.isDisabled) {

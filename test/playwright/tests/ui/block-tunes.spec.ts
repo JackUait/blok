@@ -419,10 +419,15 @@ test.describe('ui.block-tunes', () => {
 
     test('hides convert option when there is nothing to convert to', async ({ page }) => {
       await createBlok(page, {
+        tools: {
+          testTool: {
+            classCode: toolWithoutConversionExportClass(),
+          },
+        },
         data: {
           blocks: [
             {
-              type: 'paragraph',
+              type: 'testTool',
               data: {
                 text: 'Some text',
               },
@@ -607,20 +612,23 @@ test.describe('ui.block-tunes', () => {
 
       expect(itemsCount).toBeGreaterThan(1);
 
-      // First item should be focused by default (after search input if present)
       // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
       const firstVisibleItem = popoverItems.first();
 
+      // When popover opens with search, search input is focused first.
+      // Press ArrowDown to move focus to the first item.
+      await page.keyboard.press('ArrowDown');
+
       await expect(firstVisibleItem).toHaveAttribute('data-blok-focused', 'true');
 
-      // Navigate down
+      // Navigate down to second item
       await page.keyboard.press('ArrowDown');
 
       await expect(firstVisibleItem).not.toHaveAttribute('data-blok-focused', 'true');
       // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
       await expect(popoverItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
 
-      // Navigate back up
+      // Navigate back up to first item
       await page.keyboard.press('ArrowUp');
 
       await expect(firstVisibleItem).toHaveAttribute('data-blok-focused', 'true');

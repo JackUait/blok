@@ -206,12 +206,16 @@ const createEditor = (args: ListCustomStylesArgs): HTMLElement => {
   const listTool = hasCustomStyles
     ? ({
         class: Blok.List,
+        inlineToolbar: true,
         config: {
           itemColor: args.itemColor,
           itemSize: args.itemSize,
         } as ListConfig,
       } as ToolSettings)
-    : Blok.List;
+    : ({
+        class: Blok.List,
+        inlineToolbar: true,
+      } as ToolSettings);
 
   return createEditorContainer({
     ...args,

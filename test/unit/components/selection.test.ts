@@ -537,4 +537,28 @@ describe('SelectionUtils', () => {
     getSelectionSpy.mockRestore();
     logSpy.mockRestore();
   });
+
+  it('removes orphaned fake background elements from DOM', () => {
+    const utilsInstance = new SelectionUtils();
+    const { paragraph } = createBlokZone('Some text');
+
+    // Manually create orphaned fake background elements (simulating undo/redo restoration)
+    const orphanedWrapper = document.createElement('span');
+
+    orphanedWrapper.setAttribute('data-blok-fake-background', 'true');
+    orphanedWrapper.setAttribute('data-blok-testid', 'fake-background');
+    orphanedWrapper.textContent = 'orphaned';
+    paragraph.appendChild(orphanedWrapper);
+
+    // Verify orphaned element exists
+    expect(document.querySelector('[data-blok-fake-background="true"]')).not.toBeNull();
+
+    // Call removeFakeBackground - it should clean up orphaned elements even though
+    // they are not tracked in fakeBackgroundElements array
+    utilsInstance.removeFakeBackground();
+
+    // Verify orphaned element is removed and content is preserved
+    expect(document.querySelector('[data-blok-fake-background="true"]')).toBeNull();
+    expect(paragraph.textContent).toContain('orphaned');
+  });
 });

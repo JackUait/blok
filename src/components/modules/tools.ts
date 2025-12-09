@@ -1,4 +1,5 @@
 import Paragraph from '../../tools/paragraph';
+import List from '../../tools/list';
 import Module from '../__module';
 import * as _ from '../utils';
 import PromiseQueue from '../utils/promise-queue';
@@ -284,6 +285,11 @@ export default class Tools extends Module {
         config: {
           preserveBlank: true,
         },
+        isInternal: true,
+      },
+      list: {
+        class: toToolConstructable(List),
+        inlineToolbar: true,
         isInternal: true,
       },
       stub: {

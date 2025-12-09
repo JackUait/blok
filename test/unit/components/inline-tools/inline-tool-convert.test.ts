@@ -225,4 +225,498 @@ describe('ConvertInlineTool', () => {
     expect(selectionAPI.restore).not.toHaveBeenCalled();
     expect(selectionAPI.removeFakeBackground).not.toHaveBeenCalled();
   });
+
+  describe('List item conversion - merge with previous item', () => {
+    const createToolWithListSupport = (): ReturnType<typeof createTool> & {
+      blocksAPI: ReturnType<typeof createTool>['blocksAPI'] & {
+        getBlockIndex: ReturnType<typeof vi.fn>;
+        insert: ReturnType<typeof vi.fn>;
+        delete: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+      };
+    } => {
+      const base = createTool();
+      const blocksAPI = {
+        ...base.blocksAPI,
+        getBlockIndex: vi.fn(),
+        insert: vi.fn(),
+        delete: vi.fn(),
+        update: vi.fn(),
+      };
+
+      const api = {
+        blocks: blocksAPI,
+        selection: base.selectionAPI,
+        tools: base.toolsAPI,
+        caret: base.caretAPI,
+        i18n: {},
+      } as unknown as API;
+
+      return {
+        tool: new ConvertInlineTool({ api }),
+        blocksAPI,
+        selectionAPI: base.selectionAPI,
+        toolsAPI: base.toolsAPI,
+        caretAPI: base.caretAPI,
+      };
+    };
+
+    it('converts middle item to separate block between list parts', async () => {
+      const { tool, blocksAPI, toolsAPI, caretAPI } = createToolWithListSupport();
+
+      const listItemContent = document.createElement('div');
+
+      listItemContent.setAttribute('contenteditable', 'true');
+      listItemContent.innerHTML = 'Item B';
+
+      const listItem = document.createElement('div');
+
+      listItem.setAttribute('data-item-path', '[1]'); // Middle item
+      listItem.appendChild(listItemContent);
+      document.body.appendChild(listItem);
+
+      // List: Item A, Item B, Item C
+      // Converting Item B should split the list: [Item A] + [paragraph] + [Item C]
+      const currentBlock = {
+        id: 'list-split',
+        name: 'list',
+        getActiveToolboxEntry: vi.fn().mockResolvedValue({ title: 'Bulleted list' }),
+        save: vi.fn().mockResolvedValue({
+          data: {
+            style: 'unordered',
+            items: [
+              { content: 'Item A', checked: false },
+              { content: 'Item B', checked: false },
+              { content: 'Item C', checked: false },
+            ],
+          },
+        }),
+      };
+
+      const convertibleTool = {
+        name: 'paragraph',
+        toolbox: [{ title: 'Text', icon: '<svg>P</svg>' }],
+      } as unknown as BlockToolAdapter;
+
+      const newBlock = { id: 'new-paragraph' };
+
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(createSelectionMock(listItemContent));
+      blocksAPI.getBlockByElement.mockReturnValue(currentBlock);
+      blocksAPI.getBlockIndex.mockReturnValue(0);
+      blocksAPI.insert.mockReturnValue(newBlock);
+      toolsAPI.getBlockTools.mockReturnValue([convertibleTool]);
+      vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([convertibleTool]);
+      vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
+      vi.spyOn(I18nInternal, 't').mockImplementation(() => 'Text');
+      vi.spyOn(I18nInternal, 'ui').mockImplementation(() => 'Convert to');
+
+      const config = await tool.render();
+      const menuConfig = config as MenuConfigWithChildren;
+      const items = menuConfig.children?.items ?? [];
+
+      await items[0]?.onActivate?.();
+
+      // Should update the original list with only Item A
+      expect(blocksAPI.update).toHaveBeenCalledWith('list-split', {
+        style: 'unordered',
+        items: [
+          { content: 'Item A', checked: false },
+        ],
+      });
+
+      // Should insert a paragraph block after the first list
+      expect(blocksAPI.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Item B' },
+        undefined,
+        1,
+        false
+      );
+
+      // Should insert a second list with Item C
+      expect(blocksAPI.insert).toHaveBeenCalledWith(
+        'list',
+        {
+          style: 'unordered',
+          items: [
+            { content: 'Item C', checked: false },
+          ],
+        },
+        undefined,
+        2,
+        false
+      );
+
+      expect(caretAPI.setToBlock).toHaveBeenCalledWith(newBlock, 'end');
+    });
+
+    it('converts first item to separate block when no previous item exists', async () => {
+      const { tool, blocksAPI, toolsAPI, caretAPI } = createToolWithListSupport();
+
+      const listItemContent = document.createElement('div');
+
+      listItemContent.setAttribute('contenteditable', 'true');
+      listItemContent.innerHTML = 'First item';
+
+      const listItem = document.createElement('div');
+
+      listItem.setAttribute('data-item-path', '[0]'); // First item
+      listItem.appendChild(listItemContent);
+      document.body.appendChild(listItem);
+
+      const currentBlock = {
+        id: 'list-first',
+        name: 'list',
+        getActiveToolboxEntry: vi.fn().mockResolvedValue({ title: 'Bulleted list' }),
+        save: vi.fn().mockResolvedValue({
+          data: {
+            style: 'unordered',
+            items: [
+              { content: 'First item', checked: false },
+              { content: 'Second item', checked: false },
+            ],
+          },
+        }),
+      };
+
+      const convertibleTool = {
+        name: 'paragraph',
+        toolbox: [{ title: 'Text', icon: '<svg>P</svg>' }],
+      } as unknown as BlockToolAdapter;
+
+      const newBlock = { id: 'new-paragraph' };
+
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(createSelectionMock(listItemContent));
+      blocksAPI.getBlockByElement.mockReturnValue(currentBlock);
+      blocksAPI.getBlockIndex.mockReturnValue(0);
+      blocksAPI.insert.mockReturnValue(newBlock);
+      toolsAPI.getBlockTools.mockReturnValue([convertibleTool]);
+      vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([convertibleTool]);
+      vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
+      vi.spyOn(I18nInternal, 't').mockImplementation(() => 'Text');
+      vi.spyOn(I18nInternal, 'ui').mockImplementation(() => 'Convert to');
+
+      const config = await tool.render();
+      const menuConfig = config as MenuConfigWithChildren;
+      const items = menuConfig.children?.items ?? [];
+
+      await items[0]?.onActivate?.();
+
+      // Should insert a new paragraph block at position 0 (before the list)
+      expect(blocksAPI.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'First item' },
+        undefined,
+        0,
+        false
+      );
+
+      // Should update the original list with remaining items
+      expect(blocksAPI.update).toHaveBeenCalledWith('list-first', {
+        style: 'unordered',
+        items: [
+          { content: 'Second item', checked: false },
+        ],
+      });
+
+      // Should NOT delete the list (we update it instead)
+      expect(blocksAPI.delete).not.toHaveBeenCalled();
+
+      expect(caretAPI.setToBlock).toHaveBeenCalledWith(newBlock, 'end');
+    });
+
+    it('deletes list when converting the only item', async () => {
+      const { tool, blocksAPI, toolsAPI, caretAPI } = createToolWithListSupport();
+
+      const listItemContent = document.createElement('div');
+
+      listItemContent.setAttribute('contenteditable', 'true');
+      listItemContent.innerHTML = 'Only item';
+
+      const listItem = document.createElement('div');
+
+      listItem.setAttribute('data-item-path', '[0]');
+      listItem.appendChild(listItemContent);
+      document.body.appendChild(listItem);
+
+      const currentBlock = {
+        id: 'list-only',
+        name: 'list',
+        getActiveToolboxEntry: vi.fn().mockResolvedValue({ title: 'Bulleted list' }),
+        save: vi.fn().mockResolvedValue({
+          data: {
+            style: 'unordered',
+            items: [{ content: 'Only item', checked: false }],
+          },
+        }),
+      };
+
+      const convertibleTool = {
+        name: 'paragraph',
+        toolbox: [{ title: 'Text', icon: '<svg>P</svg>' }],
+      } as unknown as BlockToolAdapter;
+
+      const newBlock = { id: 'new-paragraph' };
+
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(createSelectionMock(listItemContent));
+      blocksAPI.getBlockByElement.mockReturnValue(currentBlock);
+      blocksAPI.getBlockIndex.mockReturnValue(0);
+      blocksAPI.insert.mockReturnValue(newBlock);
+      toolsAPI.getBlockTools.mockReturnValue([convertibleTool]);
+      vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([convertibleTool]);
+      vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
+      vi.spyOn(I18nInternal, 't').mockImplementation(() => 'Text');
+      vi.spyOn(I18nInternal, 'ui').mockImplementation(() => 'Convert to');
+
+      const config = await tool.render();
+      const menuConfig = config as MenuConfigWithChildren;
+      const items = menuConfig.children?.items ?? [];
+
+      await items[0]?.onActivate?.();
+
+      // Should insert a new paragraph block
+      expect(blocksAPI.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Only item' },
+        undefined,
+        0,
+        false
+      );
+
+      // Should delete the list block
+      expect(blocksAPI.delete).toHaveBeenCalledWith(0);
+
+      expect(caretAPI.setToBlock).toHaveBeenCalledWith(newBlock, 'end');
+    });
+
+    it('converts nested item to separate block between list parts', async () => {
+      const { tool, blocksAPI, toolsAPI, caretAPI } = createToolWithListSupport();
+
+      const listItemContent = document.createElement('div');
+
+      listItemContent.setAttribute('contenteditable', 'true');
+      listItemContent.innerHTML = 'Nested item';
+
+      const listItem = document.createElement('div');
+
+      listItem.setAttribute('data-item-path', '[0,0]'); // First nested item under first parent
+      listItem.appendChild(listItemContent);
+      document.body.appendChild(listItem);
+
+      // List structure:
+      // - Parent
+      //   - Nested item (converting this)
+      // - Item C
+      const currentBlock = {
+        id: 'list-nested',
+        name: 'list',
+        getActiveToolboxEntry: vi.fn().mockResolvedValue({ title: 'Bulleted list' }),
+        save: vi.fn().mockResolvedValue({
+          data: {
+            style: 'unordered',
+            items: [
+              {
+                content: 'Parent',
+                checked: false,
+                items: [
+                  { content: 'Nested item', checked: false },
+                ],
+              },
+              { content: 'Item C', checked: false },
+            ],
+          },
+        }),
+      };
+
+      const convertibleTool = {
+        name: 'paragraph',
+        toolbox: [{ title: 'Text', icon: '<svg>P</svg>' }],
+      } as unknown as BlockToolAdapter;
+
+      const newBlock = { id: 'new-paragraph' };
+
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(createSelectionMock(listItemContent));
+      blocksAPI.getBlockByElement.mockReturnValue(currentBlock);
+      blocksAPI.getBlockIndex.mockReturnValue(0);
+      blocksAPI.insert.mockReturnValue(newBlock);
+      toolsAPI.getBlockTools.mockReturnValue([convertibleTool]);
+      vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([convertibleTool]);
+      vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
+      vi.spyOn(I18nInternal, 't').mockImplementation(() => 'Text');
+      vi.spyOn(I18nInternal, 'ui').mockImplementation(() => 'Convert to');
+
+      const config = await tool.render();
+      const menuConfig = config as MenuConfigWithChildren;
+      const items = menuConfig.children?.items ?? [];
+
+      await items[0]?.onActivate?.();
+
+      // Should update the original list with Parent (no nested items)
+      expect(blocksAPI.update).toHaveBeenCalledWith('list-nested', {
+        style: 'unordered',
+        items: [
+          { content: 'Parent', checked: false },
+        ],
+      });
+
+      // Should insert a paragraph block after the first list
+      expect(blocksAPI.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Nested item' },
+        undefined,
+        1,
+        false
+      );
+
+      // Should insert a second list with Item C
+      expect(blocksAPI.insert).toHaveBeenCalledWith(
+        'list',
+        {
+          style: 'unordered',
+          items: [
+            { content: 'Item C', checked: false },
+          ],
+        },
+        undefined,
+        2,
+        false
+      );
+
+      expect(caretAPI.setToBlock).toHaveBeenCalledWith(newBlock, 'end');
+    });
+
+    it('converts nested item with sibling to separate block', async () => {
+      const { tool, blocksAPI, toolsAPI, caretAPI } = createToolWithListSupport();
+
+      const listItemContent = document.createElement('div');
+
+      listItemContent.setAttribute('contenteditable', 'true');
+      listItemContent.innerHTML = 'Second nested';
+
+      const listItem = document.createElement('div');
+
+      listItem.setAttribute('data-item-path', '[0,1]'); // Second nested item
+      listItem.appendChild(listItemContent);
+      document.body.appendChild(listItem);
+
+      // List structure:
+      // - Parent
+      //   - First nested
+      //   - Second nested (converting this)
+      const currentBlock = {
+        id: 'list-nested-sibling',
+        name: 'list',
+        getActiveToolboxEntry: vi.fn().mockResolvedValue({ title: 'Bulleted list' }),
+        save: vi.fn().mockResolvedValue({
+          data: {
+            style: 'unordered',
+            items: [
+              {
+                content: 'Parent',
+                checked: false,
+                items: [
+                  { content: 'First nested', checked: false },
+                  { content: 'Second nested', checked: false },
+                ],
+              },
+            ],
+          },
+        }),
+      };
+
+      const convertibleTool = {
+        name: 'paragraph',
+        toolbox: [{ title: 'Text', icon: '<svg>P</svg>' }],
+      } as unknown as BlockToolAdapter;
+
+      const newBlock = { id: 'new-paragraph' };
+
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(createSelectionMock(listItemContent));
+      blocksAPI.getBlockByElement.mockReturnValue(currentBlock);
+      blocksAPI.getBlockIndex.mockReturnValue(0);
+      blocksAPI.insert.mockReturnValue(newBlock);
+      toolsAPI.getBlockTools.mockReturnValue([convertibleTool]);
+      vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([convertibleTool]);
+      vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
+      vi.spyOn(I18nInternal, 't').mockImplementation(() => 'Text');
+      vi.spyOn(I18nInternal, 'ui').mockImplementation(() => 'Convert to');
+
+      const config = await tool.render();
+      const menuConfig = config as MenuConfigWithChildren;
+      const items = menuConfig.children?.items ?? [];
+
+      await items[0]?.onActivate?.();
+
+      // Should update the original list with Parent and First nested only
+      expect(blocksAPI.update).toHaveBeenCalledWith('list-nested-sibling', {
+        style: 'unordered',
+        items: [
+          {
+            content: 'Parent',
+            checked: false,
+            items: [
+              { content: 'First nested', checked: false },
+            ],
+          },
+        ],
+      });
+
+      // Should insert a paragraph block after the first list
+      expect(blocksAPI.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Second nested' },
+        undefined,
+        1,
+        false
+      );
+
+      // Should NOT insert a second list (no items after)
+      expect(blocksAPI.insert).toHaveBeenCalledTimes(1);
+
+      expect(caretAPI.setToBlock).toHaveBeenCalledWith(newBlock, 'end');
+    });
+
+    it('uses standard convert for non-list blocks', async () => {
+      const { tool, blocksAPI, toolsAPI, caretAPI } = createToolWithListSupport();
+      const anchorNode = document.createElement('div');
+
+      anchorNode.textContent = 'Some paragraph text';
+
+      const currentBlock = {
+        id: 'paragraph-block',
+        name: 'paragraph',
+        getActiveToolboxEntry: vi.fn().mockResolvedValue({ title: 'Text' }),
+      };
+
+      const convertibleTool = {
+        name: 'header',
+        toolbox: [{ title: 'Heading', icon: '<svg>H</svg>', data: { level: 2 } }],
+      } as unknown as BlockToolAdapter;
+
+      const convertedBlock = { id: 'converted-header' };
+
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(createSelectionMock(anchorNode));
+      blocksAPI.getBlockByElement.mockReturnValue(currentBlock);
+      blocksAPI.convert.mockResolvedValue(convertedBlock);
+      toolsAPI.getBlockTools.mockReturnValue([convertibleTool]);
+      vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([convertibleTool]);
+      vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
+      vi.spyOn(I18nInternal, 't').mockImplementation(() => 'Heading');
+      vi.spyOn(I18nInternal, 'ui').mockImplementation(() => 'Convert to');
+
+      const config = await tool.render();
+      const menuConfig = config as MenuConfigWithChildren;
+      const items = menuConfig.children?.items ?? [];
+
+      await items[0]?.onActivate?.();
+
+      // Should use standard convert for non-list blocks
+      expect(blocksAPI.convert).toHaveBeenCalledWith('paragraph-block', 'header', { level: 2 });
+      expect(caretAPI.setToBlock).toHaveBeenCalledWith(convertedBlock, 'end');
+
+      // Should NOT use list-specific methods
+      expect(blocksAPI.insert).not.toHaveBeenCalled();
+      expect(blocksAPI.update).not.toHaveBeenCalled();
+    });
+  });
 });

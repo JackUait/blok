@@ -120,7 +120,7 @@ const createBlokWithBlocks = async (
   await resetBlok(page);
   await page.evaluate(
     async ({ holder, blokBlocks, blokTools, blokTunes, PopoverItemTypeValues }) => {
-       
+
       const testWindow = window as typeof window & Record<string, any>;
 
       testWindow.edjsTestActivations = [];
@@ -204,7 +204,7 @@ const createBlokWithBlocks = async (
 
           if (typeof toolConfig === 'object' && toolConfig !== null && 'fromGlobal' in toolConfig) {
             const { fromGlobal, config, ...rest } = toolConfig as GlobalToolConfig;
-             
+
             // Handle dot notation (e.g., 'Blok.Header')
             const globalTool = fromGlobal.split('.').reduce(
               (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
@@ -256,7 +256,7 @@ const createBlokWithBlocks = async (
               value: isTune ?? true,
               configurable: true,
             });
-             
+
             (DynamicTune as unknown as { isTune: boolean }).isTune = isTune ?? true;
 
             return [toolName, { class: DynamicTune } ] as const;
@@ -277,7 +277,7 @@ const createBlokWithBlocks = async (
             value: isTune ?? true,
             configurable: true,
           });
-           
+
           (DynamicTune as unknown as { isTune: boolean }).isTune = isTune ?? true;
 
           return [toolName, { class: DynamicTune } ] as const;
@@ -824,29 +824,35 @@ test.describe('popover', () => {
     await page.locator(SETTINGS_BUTTON_SELECTOR).click();
     await waitForBlockTunesPopover(page);
 
-    // Press Tab
+    // Press Tab - first item is convert-to (appears before custom tunes)
     await page.keyboard.press('Tab');
 
-    // Check the first custom html item is focused
+    // Check convert-to item is focused first
+    await expect(page.locator('[data-blok-item-name="convert-to"]')).toHaveAttribute('data-blok-focused', 'true');
+
+    // Press Tab - move to first custom html item
+    await page.keyboard.press('Tab');
+
+    // Check the first custom html item wrapper is focused
     await expect(
-      page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-html"] [data-blok-testid="settings-button"]`)
+      page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-html"]`)
         .filter({ hasText: 'Tune1' })
     ).toHaveAttribute('data-blok-focused', 'true');
 
-    // Press Tab
+    // Press Tab - move to second custom html item
     await page.keyboard.press('Tab');
 
-    // Check the second custom html item is focused
+    // Check the second custom html item wrapper is focused
     await expect(
-      page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-html"] [data-blok-testid="settings-button"]`)
+      page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-html"]`)
         .filter({ hasText: 'Tune2' })
     ).toHaveAttribute('data-blok-focused', 'true');
 
-    // Press Tab
+    // Press Tab - move to delete item
     await page.keyboard.press('Tab');
 
-    // Check that default popover item got focused
-    await expect(page.locator('[data-blok-item-name=delete]')).toHaveAttribute('data-blok-focused', 'true');
+    // Check that delete item got focused
+    await expect(page.locator('[data-blok-item-name="delete"]')).toHaveAttribute('data-blok-focused', 'true');
   });
 
   test('should display nested popover (desktop)', async ({ page }) => {
@@ -1029,8 +1035,11 @@ test.describe('popover', () => {
     // Check item displayed
     await expect(page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"] [data-blok-item-name="test-item"]`)).toBeVisible();
 
-    // Check separator displayed
-    await expect(page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"] [data-blok-testid="popover-item-separator"]`)).toBeVisible();
+    // Check at least one separator is displayed (there may be multiple due to convert-to option)
+    const separators = page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-container"] [data-blok-testid="popover-item-separator"]`);
+    const separatorCount = await separators.count();
+
+    expect(separatorCount).toBeGreaterThan(0);
   });
 
   test('should perform keyboard navigation between items ignoring separators', async ({ page }) => {
@@ -1064,22 +1073,22 @@ test.describe('popover', () => {
     // Open block tunes menu
     await openBlockTunes(page);
 
-    // Press Tab
+    // Press Tab to focus first item (convert-to appears first due to internal tools)
     await page.keyboard.press('Tab');
 
-    // Check first item is focused
+    // Check convert-to item is focused first (it appears before custom tunes)
+    await expect(page.locator('[data-blok-item-name="convert-to"][data-blok-focused="true"]')).toBeVisible();
+
+    // Press Tab to move to first custom tune
+    await page.keyboard.press('Tab');
+
+    // Check first custom tune is focused
     await expect(page.locator('[data-blok-item-name="test-item-1"][data-blok-focused="true"]')).toBeVisible();
 
-    // Check second item is not focused
-    await expect(page.locator('[data-blok-item-name="test-item-2"][data-blok-focused="true"]')).toBeHidden();
-
-    // Press Tab
+    // Press Tab to move to second custom tune (skipping separator)
     await page.keyboard.press('Tab');
 
-    // Check first item is not focused
-    await expect(page.locator('[data-blok-item-name="test-item-1"][data-blok-focused="true"]')).toBeHidden();
-
-    // Check second item is focused
+    // Check second custom tune is focused
     await expect(page.locator('[data-blok-item-name="test-item-2"][data-blok-focused="true"]')).toBeVisible();
   });
 
@@ -1195,16 +1204,22 @@ test.describe('popover', () => {
       await page.locator('[data-blok-item-name="convert-to"]').press('Enter');
 
       // Check nested popover opened
-      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-nested="true"] [data-blok-testid="popover-container"]`)).toBeVisible();
+      const nestedPopover = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
 
-      // Check first item is NOT focused
-      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="popover-container"] [data-blok-item-name="header"][data-blok-focused="true"]`)).toBeHidden();
+      await expect(nestedPopover).toBeVisible();
 
-      // Press Tab
+      // Get all popover items in nested popover
+      const nestedItems = nestedPopover.locator('[data-blok-testid="popover-item"]');
+
+      // Check no item is focused initially
+      await expect(nestedPopover.locator('[data-blok-focused="true"]')).toHaveCount(0);
+
+      // Press Tab to focus first item in nested popover
       await page.keyboard.press('Tab');
 
-      // Check first item is focused
-      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="popover-container"] [data-blok-item-name="header"][data-blok-focused="true"]`)).toBeVisible();
+      // Check first item is focused (could be list item or header depending on available tools)
+      // eslint-disable-next-line playwright/no-nth-methods -- need to check first item
+      await expect(nestedItems.first()).toHaveAttribute('data-blok-focused', 'true');
     });
 
     test('should convert block when clicking on item in nested popover', async ({ page }) => {

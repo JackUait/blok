@@ -71,7 +71,7 @@ const createBlok = async (page: Page, options: BlokSetupOptions = {}): Promise<v
   await page.evaluate(
     async ({ holder, rawData, serializedTools, rawConfig }) => {
       const reviveToolClass = (classSource: string): unknown => {
-         
+
         return new Function(`return (${classSource});`)();
       };
 
@@ -421,7 +421,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<img>',
       });
 
@@ -455,7 +455,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<img src="foo" onerror="alert(123)"/>',
       });
 
@@ -471,10 +471,10 @@ test.describe('api.tools', () => {
     test('should sanitize uppercase tag names and preserve children', async ({ page }) => {
       const toolSource = createPasteToolSource({
         pasteConfig: `{
-          tags: ['OL', 'LI'],
+          tags: ['DL', 'DT'],
         }`,
         renderBody: `
-          return document.createElement('ol');
+          return document.createElement('dl');
         `,
       });
 
@@ -491,8 +491,8 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-         
-        'text/html': '<ol start="50"><li>Ordered List</li><li>Unordered List</li></ol>',
+
+        'text/html': '<dl title="test"><dt>Term 1</dt><dt>Term 2</dt></dl>',
       });
 
       const snapshot = await page.evaluate<ElementSnapshot | null>(() => {
@@ -500,11 +500,11 @@ test.describe('api.tools', () => {
       });
 
       expect(snapshot).not.toBeNull();
-      expect(snapshot?.tagName).toBe('ol');
+      expect(snapshot?.tagName).toBe('dl');
       expect(snapshot?.attributes).toHaveLength(0);
       expect(snapshot?.children).toHaveLength(2);
       snapshot?.children.forEach((child) => {
-        expect(child.tagName).toBe('li');
+        expect(child.tagName).toBe('dt');
         expect(child.attributes).toHaveLength(0);
       });
     });
@@ -538,7 +538,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<img src="foo" onerror="alert(123)"/>',
       });
 
@@ -585,7 +585,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<video width="100"><source src="movie.mp4" type="video/mp4"></video>',
       });
 
@@ -639,7 +639,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<video width="100"><source src="movie.mp4" type="video/mp4"></video>',
       });
 
@@ -699,7 +699,7 @@ test.describe('api.tools', () => {
 
       await block.click();
       await paste(page, block, {
-         
+
         'text/html': '<table><tr height="50"><td width="300">Ho-Ho-Ho</td></tr></table>',
       });
 

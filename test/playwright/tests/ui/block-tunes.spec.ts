@@ -419,10 +419,15 @@ test.describe('ui.block-tunes', () => {
 
     test('hides convert option when there is nothing to convert to', async ({ page }) => {
       await createBlok(page, {
+        tools: {
+          testTool: {
+            classCode: toolWithoutConversionExportClass(),
+          },
+        },
         data: {
           blocks: [
             {
-              type: 'paragraph',
+              type: 'testTool',
               data: {
                 text: 'Some text',
               },

@@ -743,8 +743,8 @@ test.describe('multi-block conversion', () => {
 
       await expect(listBlocks).toHaveCount(1);
 
-      // The single list should have 3 items
-      const listItems = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"] li`);
+      // The single list should have 3 items (using data-item-path attribute, not li elements)
+      const listItems = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"] [data-item-path]`);
 
       await expect(listItems).toHaveCount(3);
 
@@ -787,8 +787,8 @@ test.describe('multi-block conversion', () => {
 
       await expect(listBlocks).toHaveCount(1);
 
-      // The single list should have 3 items
-      const listItems = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"] li`);
+      // The single list should have 3 items (using data-item-path attribute, not li elements)
+      const listItems = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"] [data-item-path]`);
 
       await expect(listItems).toHaveCount(3);
 

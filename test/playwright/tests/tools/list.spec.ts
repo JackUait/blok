@@ -19,11 +19,13 @@ const PARAGRAPH_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="pa
 type SerializableToolConfig = {
   className?: string;
   config?: Record<string, unknown>;
+  inlineToolbar?: boolean | string[];
 };
 
 type CreateBlokOptions = {
   data?: OutputData;
   tools?: Record<string, SerializableToolConfig>;
+  inlineToolbar?: boolean;
 };
 
 declare global {
@@ -52,7 +54,7 @@ const resetBlok = async (page: Page): Promise<void> => {
 };
 
 const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
-  const { data = null, tools = {} } = options;
+  const { data = null, tools = {}, inlineToolbar } = options;
 
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
@@ -61,13 +63,18 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
     name,
     className: tool.className ?? null,
     config: tool.config ?? {},
+    inlineToolbar: tool.inlineToolbar,
   }));
 
   await page.evaluate(
-    async ({ holder, data: initialData, serializedTools: toolsConfig }) => {
+    async ({ holder, data: initialData, serializedTools: toolsConfig, inlineToolbar: enableInlineToolbar }) => {
       const blokConfig: Record<string, unknown> = {
         holder: holder,
       };
+
+      if (enableInlineToolbar !== undefined) {
+        blokConfig.inlineToolbar = enableInlineToolbar;
+      }
 
       if (initialData) {
         blokConfig.data = initialData;
@@ -75,8 +82,8 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 
       if (toolsConfig.length > 0) {
         const resolvedTools = toolsConfig.reduce<
-          Record<string, { class: unknown } & Record<string, unknown>>
-        >((accumulator, { name, className, config }) => {
+          Record<string, { class: unknown; inlineToolbar?: boolean | string[] } & Record<string, unknown>>
+        >((accumulator, { name, className, config, inlineToolbar: toolInlineToolbar }) => {
           let toolClass: unknown = null;
 
           if (className) {
@@ -90,12 +97,18 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
             throw new Error(`Tool "${name}" is not available globally`);
           }
 
+          const toolConfig: { class: unknown; inlineToolbar?: boolean | string[] } & Record<string, unknown> = {
+            class: toolClass,
+            ...config,
+          };
+
+          if (toolInlineToolbar !== undefined) {
+            toolConfig.inlineToolbar = toolInlineToolbar;
+          }
+
           return {
             ...accumulator,
-            [name]: {
-              class: toolClass,
-              ...config,
-            },
+            [name]: toolConfig,
           };
         }, {});
 
@@ -111,6 +124,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
       holder: HOLDER_ID,
       data,
       serializedTools,
+      inlineToolbar,
     }
   );
 };
@@ -118,6 +132,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 const defaultTools: Record<string, SerializableToolConfig> = {
   list: {
     className: 'Blok.List',
+    inlineToolbar: true,
   },
 };
 
@@ -191,12 +206,13 @@ test.describe('list tool', () => {
       });
 
       const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"]`);
+      const listItemContent = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"] [contenteditable="true"]`);
 
       await listItem.click();
       await page.keyboard.press('End');
       await page.keyboard.type(' - Updated');
 
-      await expect(listItem).toHaveText('Original text - Updated');
+      await expect(listItemContent).toHaveText('Original text - Updated');
     });
 
     test('creates new item on Enter in non-empty item', async ({ page }) => {
@@ -373,9 +389,10 @@ test.describe('list tool', () => {
 
       // Second item should now be nested under first item (path [0, 0])
       const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
+      const nestedItemContent = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]'] [contenteditable="true"]`);
 
       await expect(nestedItem).toBeVisible();
-      await expect(nestedItem).toHaveText('Second item');
+      await expect(nestedItemContent).toHaveText('Second item');
     });
 
     test('tab does not indent first item', async ({ page }) => {
@@ -457,9 +474,10 @@ test.describe('list tool', () => {
       await page.keyboard.press('Tab');
 
       const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
+      const nestedItemContent = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]'] [contenteditable="true"]`);
 
       await expect(nestedItem).toBeVisible();
-      await expect(nestedItem).toHaveText('Second');
+      await expect(nestedItemContent).toHaveText('Second');
     });
 
     test('indentation works with checklist', async ({ page }) => {
@@ -636,9 +654,8 @@ test.describe('list tool', () => {
         },
       });
 
-      // Click on Item B (path [1]) - the item with nested children
-      // For items with nested content, we need to click on the content wrapper
-      const itemB = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]'] [contenteditable="true"]`);
+      // Click on Item B - use getByText to find the specific contenteditable element
+      const itemB = page.getByText('Item B', { exact: true });
 
       await expect(itemB).toBeVisible();
       await itemB.click();

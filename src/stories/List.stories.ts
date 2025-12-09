@@ -466,7 +466,7 @@ export const ConvertParagraphsToNumberedList: Story = {
           expect(paragraphs.length).toBe(0);
 
           // Verify list has 3 items (one for each converted paragraph)
-          const listItems = list?.querySelectorAll('li');
+          const listItems = list?.querySelectorAll('[data-item-path]');
 
           expect(listItems?.length).toBe(3);
         },

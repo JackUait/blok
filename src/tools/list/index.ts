@@ -113,8 +113,6 @@ interface StyleConfig {
   name: string;
   /** Icon SVG */
   icon: string;
-  /** HTML tag for the list */
-  tag: 'ul' | 'ol';
 }
 
 /**
@@ -130,15 +128,15 @@ export default class List implements BlockTool {
 
   private static readonly BASE_STYLES = 'outline-none py-1';
   private static readonly ITEM_STYLES = 'outline-none py-0.5 leading-[1.6em]';
-  private static readonly CHECKLIST_ITEM_STYLES = 'flex items-start gap-2 py-0.5';
-  private static readonly CHECKBOX_STYLES = 'mt-1 w-4 h-4 cursor-pointer accent-current';
+  private static readonly CHECKLIST_ITEM_STYLES = 'flex items-start py-0.5';
+  private static readonly CHECKBOX_STYLES = 'mt-1 w-4 mr-2 h-4 cursor-pointer accent-current';
 
 
 
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
-    { style: 'unordered', name: 'Bulleted list', icon: IconListUnordered, tag: 'ul' },
-    { style: 'ordered', name: 'Numbered list', icon: IconListOrdered, tag: 'ol' },
-    { style: 'checklist', name: 'Checklist', icon: IconListChecklist, tag: 'ul' },
+    { style: 'unordered', name: 'Bulleted list', icon: IconListUnordered },
+    { style: 'ordered', name: 'Numbered list', icon: IconListOrdered },
+    { style: 'checklist', name: 'Checklist', icon: IconListChecklist },
   ];
 
 
@@ -270,42 +268,22 @@ export default class List implements BlockTool {
     return wrapper;
   }
 
-  /**
-   * Ordered list style cycle for nested levels:
-   * Level 0: decimal (1, 2, 3...)
-   * Level 1: lower-alpha (a, b, c...)
-   * Level 2: lower-roman (i, ii, iii...)
-   * Level 3+: cycle repeats
-   */
-  private static readonly ORDERED_LIST_STYLES = ['list-decimal', 'list-[lower-alpha]', 'list-[lower-roman]'];
 
-  private getOrderedListStyle(depth: number): string {
-    return List.ORDERED_LIST_STYLES[depth % List.ORDERED_LIST_STYLES.length];
-  }
 
   private createStandardListContent(items: ListItem[], style: ListStyle, parentPath: number[] = []): HTMLElement {
-    const styleConfig = this.currentStyleConfig;
-    const list = document.createElement(styleConfig.tag);
     const depth = parentPath.length;
-    const listStyleClass = style === 'ordered' ? this.getOrderedListStyle(depth) : 'list-disc';
-    list.className = twMerge('pl-6', listStyleClass);
+    const list = document.createElement('div');
+    list.setAttribute('role', 'list');
+    list.className = 'pl-0.5';
 
-    // Apply start attribute and dynamic padding for ordered lists at root level
-    if (style === 'ordered' && depth === 0 && this._data.start !== undefined && this._data.start !== 1) {
-      (list as HTMLOListElement).start = this._data.start;
-    }
-
-    // Calculate dynamic padding for ordered lists with large numbers
-    const maxNumber = style === 'ordered' && depth === 0 ? (this._data.start ?? 1) + items.length - 1 : 0;
-    const digitCount = String(maxNumber).length;
-    // Base padding is 1.5rem (24px) for up to 2 digits, add ~0.75rem per extra digit
-    if (style === 'ordered' && depth === 0 && digitCount > 2) {
-      const extraPadding = (digitCount - 2) * 0.75;
-      list.style.paddingLeft = `${1.5 + extraPadding}rem`;
+    // Store start value as data attribute for ordered lists
+    const startValue = style === 'ordered' && depth === 0 ? (this._data.start ?? 1) : 1;
+    if (style === 'ordered') {
+      list.setAttribute('data-list-start', String(startValue));
     }
 
     items.forEach((item, index) => {
-      list.appendChild(this.createListItem(item, index, parentPath));
+      list.appendChild(this.createListItem(item, index, parentPath, startValue));
     });
 
     return list;
@@ -313,6 +291,7 @@ export default class List implements BlockTool {
 
   private createChecklistContent(items: ListItem[], parentPath: number[] = []): HTMLElement {
     const list = document.createElement('div');
+    list.setAttribute('role', 'list');
     list.className = 'space-y-0.5';
 
     items.forEach((item, index) => {
@@ -330,21 +309,27 @@ export default class List implements BlockTool {
     return list;
   }
 
-  private createListItem(item: ListItem, index: number, itemPath: number[] = []): HTMLLIElement {
-    const li = document.createElement('li');
-    li.className = twMerge(List.ITEM_STYLES, ...PLACEHOLDER_CLASSES);
-    li.setAttribute('data-item-index', String(index));
+  private createListItem(item: ListItem, index: number, itemPath: number[] = [], startValue: number = 1): HTMLDivElement {
+    const listItem = document.createElement('div');
+    listItem.setAttribute('role', 'listitem');
+    listItem.className = twMerge(List.ITEM_STYLES, 'flex', ...PLACEHOLDER_CLASSES);
+    listItem.setAttribute('data-item-index', String(index));
 
     // Store the full path to this item for nested item tracking
     const currentPath = [...itemPath, index];
-    li.setAttribute('data-item-path', JSON.stringify(currentPath));
-    this.applyItemStyles(li);
-    this.setupItemPlaceholder(li);
+    listItem.setAttribute('data-item-path', JSON.stringify(currentPath));
+    this.applyItemStyles(listItem);
+
+    // Create marker element
+    const marker = this.createListMarker(index, itemPath.length, startValue);
+    listItem.appendChild(marker);
+
+    // Create content container
+    const contentContainer = document.createElement('div');
+    contentContainer.className = 'flex-1 min-w-0';
 
     // If this item has nested items, render them recursively
     if (item.items && item.items.length > 0) {
-      li.contentEditable = 'false';
-
       // Create a content wrapper for the main item text
       const contentWrapper = document.createElement('div');
       contentWrapper.contentEditable = this.readOnly ? 'false' : 'true';
@@ -352,33 +337,129 @@ export default class List implements BlockTool {
       contentWrapper.className = twMerge('outline-none', ...PLACEHOLDER_CLASSES);
       this.setupItemPlaceholder(contentWrapper);
 
-      li.appendChild(contentWrapper);
+      contentContainer.appendChild(contentWrapper);
 
       // Create nested list recursively
-      const nestedList = document.createElement(this.currentStyleConfig.tag);
-      const nestedDepth = currentPath.length;
-      const nestedListStyleClass = this._data.style === 'ordered' ? this.getOrderedListStyle(nestedDepth) : 'list-disc';
-      nestedList.className = twMerge('pl-6 mt-1', nestedListStyleClass);
+      const nestedList = document.createElement('div');
+      nestedList.setAttribute('role', 'list');
+      nestedList.className = 'pl-0.5 mt-1';
 
       item.items.forEach((nestedItem, nestedIndex) => {
         // Recursively create nested items with the full path
-        const nestedLi = this.createListItem(nestedItem, nestedIndex, currentPath);
-        nestedList.appendChild(nestedLi);
+        const nestedListItem = this.createListItem(nestedItem, nestedIndex, currentPath, 1);
+        nestedList.appendChild(nestedListItem);
       });
 
-      li.appendChild(nestedList);
+      contentContainer.appendChild(nestedList);
     } else {
-      // No nested items - make the li itself editable
-      li.contentEditable = this.readOnly ? 'false' : 'true';
-      li.innerHTML = item.content;
-      this.setupItemPlaceholder(li);
+      // No nested items - make the content container editable
+      contentContainer.contentEditable = this.readOnly ? 'false' : 'true';
+      contentContainer.innerHTML = item.content;
+      contentContainer.className = twMerge(contentContainer.className, 'outline-none', ...PLACEHOLDER_CLASSES);
+      this.setupItemPlaceholder(contentContainer);
     }
 
-    return li;
+    listItem.appendChild(contentContainer);
+    return listItem;
+  }
+
+  /**
+   * Create the marker element (bullet or number) for a list item
+   */
+  private createListMarker(index: number, depth: number, startValue: number): HTMLElement {
+    const marker = document.createElement('span');
+    marker.className = 'flex-shrink-0 select-none';
+    marker.setAttribute('aria-hidden', 'true');
+    marker.contentEditable = 'false';
+
+    if (this._data.style === 'ordered') {
+      const markerText = this.getOrderedMarkerText(index, depth, startValue);
+      marker.textContent = markerText;
+      marker.className = twMerge(marker.className, 'text-right');
+      marker.style.paddingRight = '11px';
+      // Width is set dynamically based on marker text content
+      marker.style.minWidth = 'fit-content';
+    } else {
+      // Unordered list - use bullet character based on depth with 24px size
+      const bulletChar = this.getBulletCharacter(depth);
+      marker.textContent = bulletChar;
+      marker.className = twMerge(marker.className, 'w-6 text-center flex justify-center');
+      marker.style.paddingLeft = '1px';
+      marker.style.paddingRight = '13px';
+      marker.style.fontSize = '24px';
+      marker.style.fontFamily = 'Arial';
+    }
+
+    return marker;
+  }
+
+  /**
+   * Get the appropriate bullet character based on nesting depth
+   */
+  private getBulletCharacter(depth: number): string {
+    const bullets = ['•', '◦', '▪'];
+    return bullets[depth % bullets.length];
+  }
+
+  /**
+   * Get the ordered list marker text based on depth and index
+   * Level 0: decimal (1, 2, 3...)
+   * Level 1: lower-alpha (a, b, c...)
+   * Level 2: lower-roman (i, ii, iii...)
+   */
+  private getOrderedMarkerText(index: number, depth: number, startValue: number): string {
+    const actualNumber = startValue + index;
+    const style = depth % 3;
+
+    switch (style) {
+      case 0:
+        return `${actualNumber}.`;
+      case 1:
+        return `${this.numberToLowerAlpha(actualNumber)}.`;
+      case 2:
+        return `${this.numberToLowerRoman(actualNumber)}.`;
+      default:
+        return `${actualNumber}.`;
+    }
+  }
+
+  /**
+   * Convert number to lowercase letter (1=a, 2=b, ..., 26=z, 27=aa, etc.)
+   */
+  private numberToLowerAlpha(num: number): string {
+    const convertRecursive = (n: number): string => {
+      if (n <= 0) return '';
+      const adjusted = n - 1;
+      return convertRecursive(Math.floor(adjusted / 26)) + String.fromCharCode(97 + (adjusted % 26));
+    };
+    return convertRecursive(num);
+  }
+
+  /**
+   * Convert number to lowercase Roman numerals
+   */
+  private numberToLowerRoman(num: number): string {
+    const romanNumerals: [number, string][] = [
+      [1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'],
+      [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'],
+      [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']
+    ];
+
+    const convertRecursive = (remaining: number, index: number): string => {
+      if (remaining <= 0 || index >= romanNumerals.length) return '';
+      const [value, numeral] = romanNumerals[index];
+      if (remaining >= value) {
+        return numeral + convertRecursive(remaining - value, index);
+      }
+      return convertRecursive(remaining, index + 1);
+    };
+
+    return convertRecursive(num, 0);
   }
 
   private createChecklistItem(item: ListItem, index: number, itemPath: number[]): HTMLDivElement {
     const wrapper = document.createElement('div');
+    wrapper.setAttribute('role', 'listitem');
     wrapper.className = List.CHECKLIST_ITEM_STYLES;
     wrapper.setAttribute('data-item-index', String(index));
     wrapper.setAttribute('data-item-path', JSON.stringify(itemPath));
@@ -620,14 +701,21 @@ export default class List implements BlockTool {
       return item.querySelector('[contenteditable]') as HTMLElement;
     }
 
-    // For standard lists, check if item has a content wrapper (for items with nested content)
-    const contentWrapper = item.querySelector(':scope > div[contenteditable]') as HTMLElement;
-    if (contentWrapper) {
-      return contentWrapper;
+    // For standard lists with non-semantic structure, find the content container
+    // It's the second child (after the marker) or a nested contenteditable div
+    const contentContainer = item.querySelector(':scope > div.flex-1') as HTMLElement;
+    if (!contentContainer) {
+      return null;
     }
 
-    // For leaf items, the li itself is the content element
-    return item;
+    // Check if there's a nested contenteditable wrapper (for items with children)
+    const nestedWrapper = contentContainer.querySelector(':scope > div[contenteditable]') as HTMLElement;
+    if (nestedWrapper) {
+      return nestedWrapper;
+    }
+
+    // Otherwise the content container itself is editable
+    return contentContainer;
   }
 
   private handleBackspace(event: KeyboardEvent): void {
@@ -1137,9 +1225,10 @@ export default class List implements BlockTool {
   private extractItemDataRecursive(itemEl: HTMLElement): ListItem {
     const item = this.extractItemData(itemEl);
 
-    // Check for nested list within this item
-    const nestedList = itemEl.querySelector(':scope > ul, :scope > ol');
-    const nestedItems = nestedList?.querySelectorAll(':scope > li[data-item-path]');
+    // Check for nested list within this item (now a div with role="list")
+    const contentContainer = itemEl.querySelector(':scope > div.flex-1') as HTMLElement;
+    const nestedList = contentContainer?.querySelector(':scope > div[role="list"]');
+    const nestedItems = nestedList?.querySelectorAll(':scope > div[data-item-path]');
 
     if (!nestedItems || nestedItems.length === 0) {
       return item;
@@ -1163,13 +1252,19 @@ export default class List implements BlockTool {
       };
     }
 
-    // For standard lists, check if item has nested content
-    const contentWrapper = itemEl.querySelector(':scope > div[contenteditable]') as HTMLElement;
-    if (contentWrapper) {
-      return { content: contentWrapper.innerHTML || '', checked: false };
+    // For standard lists with non-semantic structure
+    const contentContainer = itemEl.querySelector(':scope > div.flex-1') as HTMLElement;
+    if (!contentContainer) {
+      return { content: '', checked: false };
     }
 
-    return { content: itemEl.innerHTML || '', checked: false };
+    // Check for nested content wrapper
+    const nestedWrapper = contentContainer.querySelector(':scope > div[contenteditable]') as HTMLElement;
+    if (nestedWrapper) {
+      return { content: nestedWrapper.innerHTML || '', checked: false };
+    }
+
+    return { content: contentContainer.innerHTML || '', checked: false };
   }
 
   public merge(data: ListData): void {

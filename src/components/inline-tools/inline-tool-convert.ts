@@ -635,6 +635,16 @@ export default class ConvertInlineTool implements InlineTool {
     content: string,
     toolboxData?: Record<string, unknown>
   ): Record<string, unknown> {
+    // Handle list conversions specially - list tool expects items array, not text field
+    if (toolName === 'list') {
+      const style = (toolboxData?.style as string) || 'unordered';
+
+      return {
+        style,
+        items: [{ content, checked: false }],
+      };
+    }
+
     // Common block types and their content field names
     const contentFieldMap: Record<string, string> = {
       paragraph: 'text',

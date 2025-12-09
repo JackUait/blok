@@ -638,7 +638,7 @@ test.describe('list tool', () => {
 
       // Click on Item B (path [1]) - the item with nested children
       // For items with nested content, we need to click on the content wrapper
-      const itemB = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]'] > div[contenteditable]`);
+      const itemB = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]'] [contenteditable="true"]`);
 
       await expect(itemB).toBeVisible();
       await itemB.click();

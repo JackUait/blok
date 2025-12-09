@@ -307,11 +307,15 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
           name: toolboxItem.name ?? tool.name,
           closeOnActivate: true,
           onActivate: async () => {
-            const { BlockManager, Caret, Toolbar } = this.Blok;
+            const { Caret, Toolbar } = this.Blok;
 
-            const newBlock = hasMultipleBlocksSelected
-              ? await this.convertMultipleBlocks(selectedBlocks, tool.name, toolboxItem.data)
-              : await BlockManager.convert(currentBlock, tool.name, toolboxItem.data);
+            const newBlock = await this.convertBlock(
+              currentBlock,
+              selectedBlocks,
+              hasMultipleBlocksSelected,
+              tool,
+              toolboxItem.data
+            );
 
             Toolbar.close();
 
@@ -403,6 +407,42 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     if (currentBlock) {
       this.Blok.BlockSelection.unselectBlock(currentBlock);
     }
+  }
+
+  /**
+   * Converts multiple selected blocks to a target tool type.
+   * For tools that support multi-item data (like lists), all blocks are combined into a single block.
+   * Otherwise, each block is converted individually and remains as a separate block.
+   * @param blocks - array of blocks to convert
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides for the new blocks
+   * @returns the resulting block (merged or last converted) or null if all conversions failed
+   */
+  private async convertBlock(
+    currentBlock: Block,
+    selectedBlocks: Block[],
+    hasMultipleBlocksSelected: boolean,
+    tool: BlockToolAdapter,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    const { BlockManager } = this.Blok;
+
+    if (hasMultipleBlocksSelected) {
+      return this.convertMultipleBlocks(selectedBlocks, tool.name, toolboxData);
+    }
+
+    /**
+     * Check if we should explode a multi-item block (like List) into separate blocks
+     * This happens when converting to a tool that doesn't support multiple items
+     */
+    const explodableItems = await this.getExplodableItems(currentBlock);
+    const shouldExplode = !this.canToolMergeMultipleItems(tool) && explodableItems !== null;
+
+    if (shouldExplode) {
+      return this.convertMultiItemBlockToSeparateBlocks(currentBlock, tool.name, toolboxData);
+    }
+
+    return BlockManager.convert(currentBlock, tool.name, toolboxData);
   }
 
   /**
@@ -597,6 +637,107 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
 
       return null;
     }
+  }
+
+  /**
+   * Checks if a block contains multiple items that should be exploded into separate blocks
+   * when converting to a single-item tool.
+   * @param block - block to check
+   * @returns array of content strings if block should be exploded, null otherwise
+   */
+  private async getExplodableItems(block: Block): Promise<string[] | null> {
+    try {
+      const blockData = await block.data;
+
+      /**
+       * Check if block has an 'items' array with multiple items (like List tool)
+       */
+      if (!Array.isArray(blockData?.items) || blockData.items.length <= 1) {
+        return null;
+      }
+
+      /**
+       * Extract content from each item, handling nested items recursively
+       */
+      const extractContent = (items: Array<{ content?: string; items?: unknown[] }>): string[] => {
+        const contents: string[] = [];
+
+        for (const item of items) {
+          if (item.content !== undefined && item.content !== '') {
+            contents.push(item.content);
+          }
+          if (Array.isArray(item.items) && item.items.length > 0) {
+            contents.push(...extractContent(item.items as Array<{ content?: string; items?: unknown[] }>));
+          }
+        }
+
+        return contents;
+      };
+
+      return extractContent(blockData.items);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Converts a multi-item block (like List) into multiple single-item blocks.
+   * Each item becomes a separate block of the target type.
+   * @param block - block to convert
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides
+   * @returns the last created block or null if conversion failed
+   */
+  private async convertMultiItemBlockToSeparateBlocks(
+    block: Block,
+    targetToolName: string,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    const { BlockManager, Tools } = this.Blok;
+    const items = await this.getExplodableItems(block);
+
+    if (!items || items.length === 0) {
+      return null;
+    }
+
+    const targetTool = Tools.blockTools.get(targetToolName);
+    const conversionImport = targetTool?.conversionConfig?.import;
+
+    if (!conversionImport) {
+      return null;
+    }
+
+    const blockIndex = BlockManager.getBlockIndex(block);
+
+    /**
+     * Remove the original block first
+     */
+    await BlockManager.removeBlock(block, false);
+
+    /**
+     * Create a new block for each item
+     */
+    const createdBlocks = items.map((content, index) => {
+      /**
+       * Import the content using the target tool's conversion config
+       */
+      const importedData = typeof conversionImport === 'function'
+        ? conversionImport(content, targetTool?.settings)
+        : { [conversionImport as string]: content };
+
+      const newBlockData = toolboxData
+        ? Object.assign(importedData, toolboxData)
+        : importedData;
+
+      return BlockManager.insert({
+        tool: targetToolName,
+        data: newBlockData,
+        index: blockIndex + index,
+        needToFocus: false,
+      });
+    });
+
+    return createdBlocks.length > 0 ? createdBlocks[createdBlocks.length - 1] : null;
   }
 
   /**

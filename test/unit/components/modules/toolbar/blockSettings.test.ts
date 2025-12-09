@@ -346,7 +346,8 @@ describe('BlockSettings', () => {
     expect(popover?.show).toHaveBeenCalledTimes(1);
     expect(popover?.on).toHaveBeenCalledWith('closed', expect.any(Function));
 
-    expect(flipperInstances[0]?.focusItem).toHaveBeenCalledWith(0);
+    // Note: focusItem(0) is no longer called here because the popover's
+    // focusInitialElement() handles initial focus (search input or first item)
     expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
 
     getTunesItemsSpy.mockRestore();

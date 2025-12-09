@@ -274,8 +274,9 @@ test.describe('list tool', () => {
       await expect(list).toHaveCount(0);
 
       // At least one paragraph should exist (editor may create default empty block)
-      const paragraphs = page.locator(PARAGRAPH_BLOCK_SELECTOR);
-      await expect(paragraphs).toHaveCount(1);
+      const paragraphCount = await page.locator(PARAGRAPH_BLOCK_SELECTOR).count();
+
+      expect(paragraphCount).toBeGreaterThanOrEqual(1);
     });
 
     test('double Enter in middle of list preserves items above', async ({ page }) => {

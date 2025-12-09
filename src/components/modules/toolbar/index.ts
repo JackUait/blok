@@ -11,6 +11,7 @@ import { IconMenu, IconPlus } from '../../icons';
 import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
+import type { BlockChangedPayload } from '../../events/BlockChanged';
 import { BlockChanged } from '../../events/BlockChanged';
 import { twJoin } from '../../utils/tw';
 import {
@@ -119,6 +120,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Used to distinguish between click and drag
    */
   private plusButtonMouseDownPosition: { x: number; y: number } | null = null;
+
+  /**
+   * Last calculated toolbar Y position
+   * Used to avoid unnecessary repositioning when the position hasn't changed
+   */
+  private lastToolbarY: number | null = null;
 
   /**
    * @class
@@ -369,6 +376,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.hoveredBlock = targetBlock;
+    this.lastToolbarY = null; // Reset cached position when moving to a new block
 
     const { wrapper, plusButton } = this.nodes;
 
@@ -380,78 +388,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const { isMobile } = this.Blok.UI;
 
 
-    /**
-     * 1. Mobile:
-     *  - Toolbar at the bottom of the block
-     *
-     * 2. Desktop:
-     *   There are two cases of a toolbar position:
-     *      2.1 Toolbar is moved to the top of the block (+ padding top of the block)
-     *       - when the first input is far from the top of the block, for example in Image tool
-     *       - when block has no inputs
-     *      2.2 Toolbar is moved to the baseline of the first input
-     *       - when the first input is close to the top of the block
-     */
-    const MAX_OFFSET = 20;
-
-    /**
-     * Compute first input position
-     */
-    const firstInput = targetBlock.firstInput;
-    const targetBlockHolderRect = targetBlockHolder.getBoundingClientRect();
-    const firstInputRect = firstInput !== undefined ? firstInput.getBoundingClientRect() : null;
-
-    /**
-     * Compute the offset of the first input from the top of the block
-     */
-    const firstInputOffset = firstInputRect !== null ? firstInputRect.top - targetBlockHolderRect.top : null;
-
-    const toolbarY = (() => {
-      const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
-
-      /**
-       * Case 1.
-       * On mobile — Toolbar above the block content (negative offset)
-       */
-      if (isMobile) {
-        const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
-
-        return pluginContentOffset - toolbarActionsHeight;
-      }
-
-      /**
-       * Case 2.1
-       * On Desktop — without inputs or with the first input far from the top of the block
-       *            Toolbar should be moved to the top of the block
-       */
-      if (firstInput === undefined) {
-        return pluginContentOffset;
-      }
-
-      if (firstInputOffset === null || firstInputOffset > MAX_OFFSET) {
-        return pluginContentOffset;
-      }
-
-      /**
-       * Case 2.2
-       * On Desktop — Toolbar should be centered vertically relative to the first input
-       */
-      const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
-      const firstInputHeight = firstInputRect!.height;
-
-      /**
-       * Calculate the center of the first input and position toolbar so its center aligns with it
-       */
-      const inputCenterY = firstInputOffset + (firstInputHeight / 2);
-      const centeredY = inputCenterY - (toolbarActionsHeight / 2);
-
-      return centeredY;
-    })();
+    const toolbarY = this.calculateToolbarY(targetBlock, plusButton, isMobile);
 
     /**
      * Move Toolbar to the Top coordinate of Block
      */
-    wrapper.style.top = `${Math.floor(toolbarY)}px`;
+    const newToolbarY = Math.floor(toolbarY);
+
+    this.lastToolbarY = newToolbarY;
+    wrapper.style.top = `${newToolbarY}px`;
     targetBlockHolder.appendChild(wrapper);
 
     /**
@@ -507,6 +452,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const targetBlock = block ?? selectedBlocks[0];
 
     this.hoveredBlock = targetBlock;
+    this.lastToolbarY = null; // Reset cached position when moving to a new block
 
     const { wrapper, plusButton } = this.nodes;
 
@@ -516,12 +462,10 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
     const targetBlockHolder = targetBlock.holder;
 
-    /**
-     * Position toolbar at the top of the target block
-     */
-    const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
+    const newToolbarY = Math.floor(this.calculateToolbarY(targetBlock, plusButton, false));
 
-    wrapper.style.top = `${Math.floor(pluginContentOffset)}px`;
+    this.lastToolbarY = newToolbarY;
+    wrapper.style.top = `${newToolbarY}px`;
     targetBlockHolder.appendChild(wrapper);
 
     /**
@@ -565,6 +509,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Reset the Toolbar position to prevent DOM height growth, for example after blocks deletion
    */
   private reset(): void {
+    this.lastToolbarY = null; // Reset cached position when toolbar is reset
+
     if (this.nodes.wrapper) {
       this.nodes.wrapper.style.top = 'unset';
 
@@ -1093,7 +1039,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
   /**
    * Handler for BlockChanged event - repositions toolbar when block content changes
    */
-  private onBlockChanged = (): void => {
+  private onBlockChanged = (payload: BlockChangedPayload): void => {
     /**
      * Only reposition if toolbar is opened and we have a hovered block
      */
@@ -1108,11 +1054,50 @@ export default class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
+    /**
+     * Only reposition if the changed block is the hovered block.
+     * This prevents unnecessary repositioning when other blocks change,
+     * and avoids toolbar jumping when interacting with checklist items.
+     */
+    const changedBlockId = payload.event.detail.target.id;
+
+    if (changedBlockId !== this.hoveredBlock.id) {
+      return;
+    }
+
     this.repositionToolbar();
   };
 
   /**
-   * Repositions the toolbar to stay centered relative to the current block
+   * Calculates the Y position for the toolbar, centered on the first line of the block
+   * @param targetBlock - the block to position the toolbar relative to
+   * @param plusButton - the plus button element (used to get toolbar height)
+   * @param isMobile - whether the current view is mobile
+   * @returns the Y position in pixels
+   */
+  private calculateToolbarY(targetBlock: Block, plusButton: HTMLElement, isMobile: boolean): number {
+    const targetBlockHolder = targetBlock.holder;
+    const holderRect = targetBlockHolder.getBoundingClientRect();
+    const contentRect = targetBlock.pluginsContent.getBoundingClientRect();
+    const contentOffset = contentRect.top - holderRect.top;
+
+    const contentStyle = window.getComputedStyle(targetBlock.pluginsContent);
+    const contentPaddingTop = parseInt(contentStyle.paddingTop, 10) || 0;
+    const lineHeight = parseFloat(contentStyle.lineHeight) || 24;
+    const toolbarHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
+
+    if (isMobile) {
+      return contentOffset - toolbarHeight;
+    }
+
+    const firstLineTop = contentOffset + contentPaddingTop;
+    const firstLineCenterY = firstLineTop + (lineHeight / 2);
+
+    return firstLineCenterY - (toolbarHeight / 2);
+  }
+
+  /**
+   * Repositions the toolbar to stay centered on the first line of the current block
    * without closing/opening toolbox or block settings
    */
   private repositionToolbar(): void {
@@ -1122,43 +1107,26 @@ export default class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
-    const targetBlock = this.hoveredBlock;
-    const targetBlockHolder = targetBlock.holder;
-    const { isMobile } = this.Blok.UI;
+    const newToolbarY = Math.floor(this.calculateToolbarY(this.hoveredBlock, plusButton, this.Blok.UI.isMobile));
 
-    const MAX_OFFSET = 20;
+    /**
+     * Only update the toolbar position if it has actually changed significantly.
+     * This prevents unnecessary repositioning when block changes don't affect
+     * the toolbar's position (e.g., toggling checkbox styles in a checklist).
+     *
+     * We use a tolerance of 2px to account for:
+     * - Floating-point precision issues in getBoundingClientRect()
+     * - Minor layout changes that don't warrant toolbar repositioning
+     * - Browser rendering differences during DOM mutations
+     */
+    const POSITION_TOLERANCE = 2;
+    const positionChanged = this.lastToolbarY === null ||
+      Math.abs(newToolbarY - this.lastToolbarY) > POSITION_TOLERANCE;
 
-    const firstInput = targetBlock.firstInput;
-    const targetBlockHolderRect = targetBlockHolder.getBoundingClientRect();
-    const firstInputRect = firstInput !== undefined ? firstInput.getBoundingClientRect() : null;
-    const firstInputOffset = firstInputRect !== null ? firstInputRect.top - targetBlockHolderRect.top : null;
-
-    const toolbarY = (() => {
-      const pluginContentOffset = parseInt(window.getComputedStyle(targetBlock.pluginsContent).paddingTop, 10);
-
-      if (isMobile) {
-        const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
-
-        return pluginContentOffset - toolbarActionsHeight;
-      }
-
-      if (firstInput === undefined) {
-        return pluginContentOffset;
-      }
-
-      if (firstInputOffset === null || firstInputOffset > MAX_OFFSET) {
-        return pluginContentOffset;
-      }
-
-      const toolbarActionsHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
-      const firstInputHeight = firstInputRect!.height;
-      const inputCenterY = firstInputOffset + (firstInputHeight / 2);
-      const centeredY = inputCenterY - (toolbarActionsHeight / 2);
-
-      return centeredY;
-    })();
-
-    wrapper.style.top = `${Math.floor(toolbarY)}px`;
+    if (positionChanged) {
+      this.lastToolbarY = newToolbarY;
+      wrapper.style.top = `${newToolbarY}px`;
+    }
   }
 
   /**

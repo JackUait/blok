@@ -342,15 +342,17 @@ export default class List implements BlockTool {
     // If no items left, delete the entire list block and insert a paragraph
     if (this._data.items.length === 0) {
       this.api.blocks.delete(currentBlockIndex);
-      this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex, true);
+      const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex, true);
+      this.api.caret.setToBlock(newBlock, 'start');
       return;
     }
 
     // Re-render the list without the empty item
     this.rerender();
 
-    // Insert a new paragraph block after the current list block
-    this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex + 1, true);
+    // Insert a new paragraph block after the current list block and focus it
+    const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex + 1, true);
+    this.api.caret.setToBlock(newBlock, 'start');
   }
 
   private addNewItem(currentIndex: number): void {

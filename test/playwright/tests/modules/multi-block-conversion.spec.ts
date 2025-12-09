@@ -714,4 +714,130 @@ test.describe('multi-block conversion', () => {
       await expect(headers).toHaveCount(2);
     });
   });
+
+  test.describe('converting multiple blocks to list', () => {
+    test('converts multiple paragraphs into a single list with multiple items', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First item' } },
+        { type: 'paragraph', data: { text: 'Second item' } },
+        { type: 'paragraph', data: { text: 'Third item' } },
+      ], [
+        { name: 'list', className: 'Blok.List' },
+      ]);
+
+      await selectAllBlocksViaShift(page, 3);
+      await openBlockTunesForSelectedBlocks(page);
+
+      const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
+
+      await convertToOption.click();
+
+      // Select bulleted list option
+      const listOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="bulleted-list"]`);
+
+      await expect(listOption).toBeVisible();
+      await listOption.click();
+
+      // Should have exactly ONE list block (not three separate lists)
+      const listBlocks = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`);
+
+      await expect(listBlocks).toHaveCount(1);
+
+      // The single list should have 3 items
+      const listItems = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"] li`);
+
+      await expect(listItems).toHaveCount(3);
+
+      // Verify content is preserved in the list items
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(1);
+      expect(savedData.blocks[0].type).toBe('list');
+      expect(savedData.blocks[0].data.items).toHaveLength(3);
+      expect(savedData.blocks[0].data.items[0].content).toBe('First item');
+      expect(savedData.blocks[0].data.items[1].content).toBe('Second item');
+      expect(savedData.blocks[0].data.items[2].content).toBe('Third item');
+    });
+
+    test('converts mixed block types into a single list', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Paragraph text' } },
+        { type: 'header', data: { text: 'Header text', level: 2 } },
+        { type: 'paragraph', data: { text: 'Another paragraph' } },
+      ], [
+        { name: 'header', className: 'Blok.Header' },
+        { name: 'list', className: 'Blok.List' },
+      ]);
+
+      await selectAllBlocksViaShift(page, 3);
+      await openBlockTunesForSelectedBlocks(page);
+
+      const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
+
+      await convertToOption.click();
+
+      // Select numbered list option
+      const listOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="numbered-list"]`);
+
+      await expect(listOption).toBeVisible();
+      await listOption.click();
+
+      // Should have exactly ONE list block
+      const listBlocks = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`);
+
+      await expect(listBlocks).toHaveCount(1);
+
+      // The single list should have 3 items
+      const listItems = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"] li`);
+
+      await expect(listItems).toHaveCount(3);
+
+      // Verify content is preserved
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(1);
+      expect(savedData.blocks[0].type).toBe('list');
+      expect(savedData.blocks[0].data.style).toBe('ordered');
+      expect(savedData.blocks[0].data.items).toHaveLength(3);
+    });
+
+    test('converts subset of blocks into a single list', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First paragraph' } },
+        { type: 'paragraph', data: { text: 'Second paragraph' } },
+        { type: 'paragraph', data: { text: 'Third paragraph' } },
+        { type: 'paragraph', data: { text: 'Fourth paragraph' } },
+      ], [
+        { name: 'list', className: 'Blok.List' },
+      ]);
+
+      // Select only first two blocks
+      await selectBlocksWithShift(page, 0, 2);
+      await openBlockTunesForSelectedBlocks(page);
+
+      const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
+
+      await convertToOption.click();
+
+      const listOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="bulleted-list"]`);
+
+      await listOption.click();
+
+      // Should have 1 list block and 2 remaining paragraph blocks
+      const listBlocks = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`);
+      const paragraphBlocks = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(listBlocks).toHaveCount(1);
+      await expect(paragraphBlocks).toHaveCount(2);
+
+      // The list should have 2 items (from the first two paragraphs)
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(3);
+      expect(savedData.blocks[0].type).toBe('list');
+      expect(savedData.blocks[0].data.items).toHaveLength(2);
+      expect(savedData.blocks[1].type).toBe('paragraph');
+      expect(savedData.blocks[2].type).toBe('paragraph');
+    });
+  });
 });

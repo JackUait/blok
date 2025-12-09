@@ -16,6 +16,7 @@ import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } fro
 import { IconReplace, IconCross } from '../../icons';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
 import BlockAPI from '../../block/api';
+import type BlockToolAdapter from '../../tools/block';
 
 /**
  * HTML Elements that used for BlockSettings
@@ -189,9 +190,6 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
 
     this.popover.show();
-    if (PopoverClass === PopoverDesktop) {
-      this.flipperInstance.focusItem(0);
-    }
     this.attachFlipperKeydownListener(block);
   }
 
@@ -408,31 +406,164 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
   }
 
   /**
-   * Converts multiple selected blocks to a target tool type
-   * Converts blocks in order and merges them into a single block
+   * Converts multiple selected blocks to a target tool type.
+   * For tools that support multi-item data (like lists), all blocks are combined into a single block.
+   * Otherwise, each block is converted individually and remains as a separate block.
    * @param blocks - array of blocks to convert
    * @param targetToolName - name of the tool to convert to
    * @param toolboxData - optional data overrides for the new blocks
-   * @returns the merged block or null if all conversions failed
+   * @returns the resulting block (merged or last converted) or null if all conversions failed
    */
   private async convertMultipleBlocks(
     blocks: Block[],
     targetToolName: string,
     toolboxData?: Record<string, unknown>
   ): Promise<Block | null> {
-    const { BlockManager } = this.Blok;
+    const { Tools } = this.Blok;
 
     if (blocks.length === 0) {
       return null;
     }
 
     /**
-     * Convert blocks in order (first to last)
+     * Check if the target tool's conversion config import function can handle
+     * newline-separated content to create multiple items (like lists do).
+     * We detect this by checking if the import function returns data with an 'items' array.
      */
-    const blocksToConvert = [...blocks];
+    const targetTool = Tools.blockTools.get(targetToolName);
+    const shouldMergeIntoSingleBlock = targetTool && this.canToolMergeMultipleItems(targetTool);
+
+    if (shouldMergeIntoSingleBlock) {
+      return this.convertBlocksToSingleMergedBlock(blocks, targetToolName, toolboxData);
+    }
+
+    /**
+     * Convert each block individually, maintaining them as separate blocks
+     */
+    return this.convertBlocksIndividually(blocks, targetToolName, toolboxData);
+  }
+
+  /**
+   * Checks if a tool can merge multiple items into a single block.
+   * This is determined by testing if the tool's import function creates an 'items' array.
+   * @param tool - the target tool adapter
+   * @returns true if the tool supports merging multiple items
+   */
+  private canToolMergeMultipleItems(tool: BlockToolAdapter): boolean {
+    const conversionConfig = tool.conversionConfig;
+
+    if (!conversionConfig?.import) {
+      return false;
+    }
+
+    /**
+     * Test the import function with a sample multi-line string
+     * to see if it creates multiple items
+     */
+    try {
+      const testResult = typeof conversionConfig.import === 'function'
+        ? conversionConfig.import('line1\nline2', tool.settings)
+        : { [conversionConfig.import]: 'line1\nline2' };
+
+      return Array.isArray(testResult?.items) && testResult.items.length > 1;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Converts multiple blocks into a single merged block by combining their exported content.
+   * Used for tools like lists that can hold multiple items.
+   * @param blocks - blocks to convert and merge
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides
+   * @returns the merged block or null if conversion failed
+   */
+  private async convertBlocksToSingleMergedBlock(
+    blocks: Block[],
+    targetToolName: string,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    const { BlockManager } = this.Blok;
+
+    /**
+     * Export all blocks' content and combine with newlines
+     */
+    const exportedContents: string[] = [];
+
+    for (const block of blocks) {
+      try {
+        const content = await block.exportDataAsString();
+
+        exportedContents.push(content);
+      } catch {
+        // Skip blocks that fail to export
+      }
+    }
+
+    if (exportedContents.length === 0) {
+      return null;
+    }
+
+    /**
+     * Convert the first block with combined content
+     */
+    const firstBlock = blocks[0];
+    const combinedContent = exportedContents.join('\n');
+
+    /**
+     * Get the target tool to use its conversion config
+     */
+    const targetTool = this.Blok.Tools.blockTools.get(targetToolName);
+
+    if (!targetTool) {
+      return null;
+    }
+
+    /**
+     * Import the combined content using the target tool's conversion config
+     */
+    const importedData = typeof targetTool.conversionConfig?.import === 'function'
+      ? targetTool.conversionConfig.import(combinedContent, targetTool.settings)
+      : { [targetTool.conversionConfig?.import as string]: combinedContent };
+
+    const newBlockData = toolboxData
+      ? Object.assign(importedData, toolboxData)
+      : importedData;
+
+    /**
+     * Replace the first block with the new merged block
+     */
+    const newBlock = BlockManager.replace(firstBlock, targetToolName, newBlockData);
+
+    /**
+     * Remove the remaining blocks (they've been merged into the first one)
+     */
+    const remainingBlocks = blocks.slice(1);
+
+    for (const block of remainingBlocks) {
+      await BlockManager.removeBlock(block, false);
+    }
+
+    return newBlock;
+  }
+
+  /**
+   * Converts blocks individually, keeping them as separate blocks.
+   * @param blocks - blocks to convert
+   * @param targetToolName - name of the tool to convert to
+   * @param toolboxData - optional data overrides
+   * @returns the last converted block or null if all conversions failed
+   */
+  private async convertBlocksIndividually(
+    blocks: Block[],
+    targetToolName: string,
+    toolboxData?: Record<string, unknown>
+  ): Promise<Block | null> {
+    const { BlockManager } = this.Blok;
     const convertedBlocks: Block[] = [];
 
-    for (const block of blocksToConvert) {
+    for (const block of blocks) {
       const convertedBlock = await this.convertBlockSafely(BlockManager, block, targetToolName, toolboxData);
 
       if (convertedBlock) {
@@ -440,27 +571,9 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       }
     }
 
-    if (convertedBlocks.length === 0) {
-      return null;
-    }
-
-    /**
-     * Merge all converted blocks into the first one
-     * Process from the second block onwards, merging each into the first
-     */
-    const targetBlock = convertedBlocks[0];
-
-    for (let i = 1; i < convertedBlocks.length; i++) {
-      const blockToMerge = convertedBlocks[i];
-
-      try {
-        await BlockManager.mergeBlocks(targetBlock, blockToMerge);
-      } catch (e) {
-        console.warn(`Failed to merge block ${blockToMerge.id} into ${targetBlock.id}:`, e);
-      }
-    }
-
-    return targetBlock;
+    return convertedBlocks.length > 0
+      ? convertedBlocks[convertedBlocks.length - 1]
+      : null;
   }
 
   /**

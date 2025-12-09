@@ -7,6 +7,7 @@
 import { IconListUnordered, IconListOrdered, IconListChecklist } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { BLOK_TOOL_ATTR } from '../../components/constants';
+import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import type {
   API,
   BlockTool,
@@ -130,20 +131,7 @@ export default class List implements BlockTool {
   private static readonly CHECKLIST_ITEM_STYLES = 'flex items-start gap-2 py-0.5';
   private static readonly CHECKBOX_STYLES = 'mt-1 w-4 h-4 cursor-pointer accent-current';
 
-  /**
-   * Placeholder styling classes using Tailwind arbitrary variants.
-   * Applied to ::before pseudo-element only when element is empty.
-   */
-  private static readonly PLACEHOLDER_CLASSES = [
-    'empty:before:pointer-events-none',
-    'empty:before:text-gray-text',
-    'empty:before:cursor-text',
-    'empty:before:content-[attr(data-placeholder)]',
-    '[&[data-blok-empty=true]]:before:pointer-events-none',
-    '[&[data-blok-empty=true]]:before:text-gray-text',
-    '[&[data-blok-empty=true]]:before:cursor-text',
-    '[&[data-blok-empty=true]]:before:content-[attr(data-placeholder)]',
-  ];
+
 
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
     { style: 'unordered', name: 'Bulleted list', icon: IconListUnordered, tag: 'ul' },
@@ -241,37 +229,11 @@ export default class List implements BlockTool {
     }
   }
 
-  private applyPlaceholder(el: HTMLElement): void {
-    if (this.placeholder) {
-      el.setAttribute('data-placeholder', this.placeholder);
-    }
-  }
-
-  private addFocusHandler(el: HTMLElement): void {
+  private setupItemPlaceholder(el: HTMLElement): void {
     if (this.readOnly) {
       return;
     }
-
-    el.addEventListener('focus', () => {
-      const element = el;
-      const isEmpty = element.innerHTML.trim() === '' || element.innerHTML === '<br>';
-      if (!isEmpty) {
-        return;
-      }
-
-      // Clear any <br> tags to ensure clean empty state for placeholder
-      if (element.innerHTML === '<br>') {
-        element.innerHTML = '';
-      }
-
-      // Set caret at the start for empty items (at the placeholder position)
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      range.collapse(true);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    });
+    setupPlaceholder(el, this.placeholder);
   }
 
   public render(): HTMLElement {
@@ -348,14 +310,14 @@ export default class List implements BlockTool {
 
   private createListItem(item: ListItem, index: number, itemPath: number[] = []): HTMLLIElement {
     const li = document.createElement('li');
-    li.className = twMerge(List.ITEM_STYLES, ...List.PLACEHOLDER_CLASSES);
+    li.className = twMerge(List.ITEM_STYLES, ...PLACEHOLDER_CLASSES);
     li.setAttribute('data-item-index', String(index));
 
     // Store the full path to this item for nested item tracking
     const currentPath = [...itemPath, index];
     li.setAttribute('data-item-path', JSON.stringify(currentPath));
     this.applyItemStyles(li);
-    this.applyPlaceholder(li);
+    this.setupItemPlaceholder(li);
 
     // If this item has nested items, render them recursively
     if (item.items && item.items.length > 0) {
@@ -365,9 +327,8 @@ export default class List implements BlockTool {
       const contentWrapper = document.createElement('div');
       contentWrapper.contentEditable = this.readOnly ? 'false' : 'true';
       contentWrapper.innerHTML = item.content;
-      contentWrapper.className = twMerge('outline-none', ...List.PLACEHOLDER_CLASSES);
-      this.applyPlaceholder(contentWrapper);
-      this.addFocusHandler(contentWrapper);
+      contentWrapper.className = twMerge('outline-none', ...PLACEHOLDER_CLASSES);
+      this.setupItemPlaceholder(contentWrapper);
 
       li.appendChild(contentWrapper);
 
@@ -388,7 +349,7 @@ export default class List implements BlockTool {
       // No nested items - make the li itself editable
       li.contentEditable = this.readOnly ? 'false' : 'true';
       li.innerHTML = item.content;
-      this.addFocusHandler(li);
+      this.setupItemPlaceholder(li);
     }
 
     return li;
@@ -411,12 +372,11 @@ export default class List implements BlockTool {
     content.className = twMerge(
       'flex-1 outline-none leading-[1.6em]',
       item.checked ? 'line-through opacity-60' : '',
-      ...List.PLACEHOLDER_CLASSES
+      ...PLACEHOLDER_CLASSES
     );
     content.contentEditable = this.readOnly ? 'false' : 'true';
     content.innerHTML = item.content;
-    this.applyPlaceholder(content);
-    this.addFocusHandler(content);
+    this.setupItemPlaceholder(content);
 
     if (!this.readOnly) {
       checkbox.addEventListener('change', () => {
@@ -491,7 +451,13 @@ export default class List implements BlockTool {
     const currentIndex = itemPath[itemPath.length - 1];
     const parentPath = itemPath.slice(0, -1);
 
-    // Get the array containing this item
+    // If item is nested (not at root level), un-nest it instead of exiting
+    if (parentPath.length > 0) {
+      this.unnestEmptyItem(itemPath);
+      return;
+    }
+
+    // Get the array containing this item (root level)
     const itemsArray = this.getItemsArrayAtPath(parentPath);
     if (!itemsArray) return;
 
@@ -511,19 +477,57 @@ export default class List implements BlockTool {
     // Re-render the list without the empty item
     this.rerender();
 
-    // If item is at root level, skip to inserting paragraph
-    if (parentPath.length === 0) {
-      // Insert a new paragraph block after the current list block and focus it
-      const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex + 1, true);
-      this.api.caret.setToBlock(newBlock, 'start');
-      return;
+    // Insert a new paragraph block after the current list block and focus it
+    const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex + 1, true);
+    this.api.caret.setToBlock(newBlock, 'start');
+  }
+
+  /**
+   * Un-nest an empty item by moving it to the parent level.
+   * This is called when Enter is pressed on an empty nested item.
+   */
+  private unnestEmptyItem(itemPath: number[]): void {
+    const currentIndex = itemPath[itemPath.length - 1];
+    const parentPath = itemPath.slice(0, -1);
+    const parentIndex = parentPath[parentPath.length - 1];
+
+    // Get the parent item that contains this nested item
+    const parentItem = this.getItemAtPath(parentPath);
+    if (!parentItem || !parentItem.items) return;
+
+    // Get the empty item to un-nest
+    const itemToUnnest = this.deepCopyItem(parentItem.items[currentIndex]);
+
+    // Get any siblings that come after the current item - they should become children of the un-nested item
+    const followingSiblings = parentItem.items.slice(currentIndex + 1).map(item => this.deepCopyItem(item));
+
+    // If there are following siblings, add them as children of the un-nested item
+    if (followingSiblings.length > 0) {
+      const existingItems = itemToUnnest.items || [];
+      itemToUnnest.items = [...existingItems, ...followingSiblings];
     }
 
-    // Focus the parent item or next sibling at the same level
-    const focusPath = itemsArray.length > 0
-      ? [...parentPath, Math.min(currentIndex, itemsArray.length - 1)]
-      : parentPath;
-    this.focusItemAtPath(focusPath);
+    // Remove the un-nested item and all following siblings from the parent's nested array
+    parentItem.items.splice(currentIndex);
+
+    // Clean up empty nested arrays
+    if (parentItem.items.length === 0) {
+      delete parentItem.items;
+    }
+
+    // Get the grandparent array (where we'll insert the un-nested item)
+    const grandparentPath = parentPath.slice(0, -1);
+    const grandparentArray = this.getItemsArrayAtPath(grandparentPath);
+    if (!grandparentArray) return;
+
+    // Insert after the parent item at the grandparent level
+    grandparentArray.splice(parentIndex + 1, 0, itemToUnnest);
+
+    this.rerender();
+
+    // Focus the un-nested item at its new path
+    const newPath = [...grandparentPath, parentIndex + 1];
+    this.focusItemAtPath(newPath);
   }
 
   private addNewItem(itemPath: number[]): void {
@@ -540,6 +544,9 @@ export default class List implements BlockTool {
     const range = selection.getRangeAt(0);
     const { beforeContent, afterContent } = this.splitContentAtCursor(contentEl, range);
 
+    // Sync DOM content to data before modifying
+    this.syncDataFromDOM();
+
     const currentIndex = itemPath[itemPath.length - 1];
     const parentPath = itemPath.slice(0, -1);
 
@@ -553,7 +560,15 @@ export default class List implements BlockTool {
 
     currentItemData.content = beforeContent;
 
+    // Create new item with afterContent
     const newItem: ListItem = { content: afterContent, checked: false };
+
+    // If current item has nested children, move them to the new item
+    if (currentItemData.items && currentItemData.items.length > 0) {
+      newItem.items = currentItemData.items;
+      delete currentItemData.items;
+    }
+
     itemsArray.splice(currentIndex + 1, 0, newItem);
 
     this.rerender();
@@ -579,9 +594,18 @@ export default class List implements BlockTool {
   }
 
   private getContentElement(item: HTMLElement): HTMLElement | null {
-    return this._data.style === 'checklist'
-      ? item.querySelector('[contenteditable]') as HTMLElement
-      : item;
+    if (this._data.style === 'checklist') {
+      return item.querySelector('[contenteditable]') as HTMLElement;
+    }
+
+    // For standard lists, check if item has a content wrapper (for items with nested content)
+    const contentWrapper = item.querySelector(':scope > div[contenteditable]') as HTMLElement;
+    if (contentWrapper) {
+      return contentWrapper;
+    }
+
+    // For leaf items, the li itself is the content element
+    return item;
   }
 
   private handleBackspace(event: KeyboardEvent): void {
@@ -653,6 +677,9 @@ export default class List implements BlockTool {
     // Cannot indent the first item at any level (no previous sibling to nest under)
     if (currentIndex === 0) return;
 
+    // Save cursor position before modifying DOM
+    const cursorOffset = this.saveCursorOffset(currentItem);
+
     // Sync DOM content to data before modifying
     this.syncDataFromDOM();
 
@@ -683,7 +710,7 @@ export default class List implements BlockTool {
 
     // Focus the indented item - build the new path
     const newPath = [...itemPath.slice(0, -1), currentIndex - 1, previousItem.items.length - 1];
-    this.focusItemAtPath(newPath);
+    this.focusItemAtPath(newPath, cursorOffset);
   }
 
   /**
@@ -749,9 +776,9 @@ export default class List implements BlockTool {
   }
 
   /**
-   * Focus an item at a specific path
+   * Focus an item at a specific path, optionally restoring cursor position
    */
-  private focusItemAtPath(path: number[]): void {
+  private focusItemAtPath(path: number[], cursorOffset?: number): void {
     if (!this._element || path.length === 0) return;
 
     const pathStr = JSON.stringify(path);
@@ -762,6 +789,31 @@ export default class List implements BlockTool {
     if (!contentEl) return;
 
     contentEl.focus();
+
+    if (cursorOffset !== undefined) {
+      this.setCursorAtOffset(contentEl, cursorOffset);
+    }
+  }
+
+  /**
+   * Save the current cursor offset within an item element
+   */
+  private saveCursorOffset(itemElement: HTMLElement): number {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return 0;
+
+    const contentEl = this.getContentElement(itemElement);
+    if (!contentEl) return 0;
+
+    const range = selection.getRangeAt(0);
+
+    // Calculate the offset from the start of the content element
+    const preCaretRange = document.createRange();
+    preCaretRange.selectNodeContents(contentEl);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+
+    // Get the text length before the cursor
+    return preCaretRange.toString().length;
   }
 
   private handleOutdent(): void {
@@ -779,6 +831,9 @@ export default class List implements BlockTool {
       // Item is at root level, cannot outdent further
       return;
     }
+
+    // Save cursor position before modifying DOM
+    const cursorOffset = this.saveCursorOffset(currentItem);
 
     // Sync DOM content to data before modifying
     this.syncDataFromDOM();
@@ -823,7 +878,7 @@ export default class List implements BlockTool {
 
     // Focus the outdented item at its new path
     const newPath = [...grandparentPath, parentIndex + 1];
-    this.focusItemAtPath(newPath);
+    this.focusItemAtPath(newPath, cursorOffset);
   }
 
   private isAtStart(element: HTMLElement, range: Range): boolean {

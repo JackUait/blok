@@ -8,6 +8,7 @@
 import { IconText } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { BLOK_TOOL_ATTR } from '../../components/constants';
+import { PLACEHOLDER_ACTIVE_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import type {
   API,
   BlockTool,
@@ -203,21 +204,7 @@ export default class Paragraph implements BlockTool {
     '[&>p:last-of-type]:mb-0',
   ];
 
-  /**
-   * Placeholder styling classes using Tailwind arbitrary variants.
-   * Applied to ::before pseudo-element only when element is empty.
-   * Uses content attribute to display the placeholder text.
-   */
-  private static readonly PLACEHOLDER_CLASSES = [
-    'empty:before:pointer-events-none',
-    'empty:before:text-gray-text',
-    'empty:before:cursor-text',
-    'empty:before:content-[attr(data-placeholder-active)]',
-    '[&[data-empty=true]]:before:pointer-events-none',
-    '[&[data-empty=true]]:before:text-gray-text',
-    '[&[data-empty=true]]:before:cursor-text',
-    '[&[data-empty=true]]:before:content-[attr(data-placeholder-active)]',
-  ];
+
 
   /**
    * Build inline styles from style configuration
@@ -249,11 +236,10 @@ export default class Paragraph implements BlockTool {
     div.className = twMerge(
       this.api.styles.block,
       Paragraph.WRAPPER_CLASSES,
-      Paragraph.PLACEHOLDER_CLASSES
+      PLACEHOLDER_ACTIVE_CLASSES
     );
     div.setAttribute(BLOK_TOOL_ATTR, 'paragraph');
     div.contentEditable = 'false';
-    div.setAttribute('data-placeholder-active', this.api.i18n.t(this._placeholder));
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)
@@ -271,6 +257,9 @@ export default class Paragraph implements BlockTool {
     if (!this.readOnly) {
       div.contentEditable = 'true';
       div.addEventListener('keyup', this.onKeyUp);
+      setupPlaceholder(div, this.api.i18n.t(this._placeholder), 'data-placeholder-active');
+    } else {
+      div.setAttribute('data-placeholder-active', this.api.i18n.t(this._placeholder));
     }
 
     return div;

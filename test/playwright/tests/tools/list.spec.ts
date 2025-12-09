@@ -608,6 +608,62 @@ test.describe('list tool', () => {
       expect(savedData?.blocks[0].data.items[3].content).toBe('Item D');
       expect(savedData?.blocks[0].data.items[4].content).toBe('Item E');
     });
+
+    test('enter on item with nested children moves nested items to new sibling', async ({ page }) => {
+      // Create: Item A, Item B > [Item C, Item D]
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'list',
+              data: {
+                style: 'unordered',
+                items: [
+                  { content: 'Item A', checked: false },
+                  {
+                    content: 'Item B',
+                    checked: false,
+                    items: [
+                      { content: 'Item C', checked: false },
+                      { content: 'Item D', checked: false },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      // Click on Item B (path [1]) - the item with nested children
+      // For items with nested content, we need to click on the content wrapper
+      const itemB = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]'] > div[contenteditable]`);
+
+      await expect(itemB).toBeVisible();
+      await itemB.click();
+      await page.keyboard.press('End');
+
+      // Press Enter to create a new item after Item B
+      await page.keyboard.press('Enter');
+
+      // Save and verify the structure
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      // Should have: Item A, Item B (no nested), new empty item (with nested C, D)
+      // The nested items move to the new item because cursor was at the end of Item B
+      expect(savedData?.blocks).toHaveLength(1);
+      expect(savedData?.blocks[0].data.items).toHaveLength(3);
+      expect(savedData?.blocks[0].data.items[0].content).toBe('Item A');
+      expect(savedData?.blocks[0].data.items[1].content).toBe('Item B');
+      expect(savedData?.blocks[0].data.items[1].items).toBeUndefined(); // Item B no longer has nested items
+      expect(savedData?.blocks[0].data.items[2].content).toBe(''); // New empty item
+      expect(savedData?.blocks[0].data.items[2].items).toHaveLength(2); // Nested items moved here
+      expect(savedData?.blocks[0].data.items[2].items[0].content).toBe('Item C');
+      expect(savedData?.blocks[0].data.items[2].items[1].content).toBe('Item D');
+    });
   });
 
   test.describe('data saving', () => {

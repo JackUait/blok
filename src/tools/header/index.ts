@@ -8,6 +8,7 @@
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { BLOK_TOOL_ATTR } from '../../components/constants';
+import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import type {
   API,
   BlockTool,
@@ -357,7 +358,7 @@ export default class Header implements BlockTool {
     /**
      * Add styles class using twMerge to combine base and level-specific styles
      */
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles);
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES);
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)
@@ -379,9 +380,13 @@ export default class Header implements BlockTool {
     tag.contentEditable = this.readOnly ? 'false' : 'true';
 
     /**
-     * Add Placeholder
+     * Add Placeholder with caret positioning support
      */
-    tag.setAttribute('data-placeholder', this.api.i18n.t(this._settings.placeholder || ''));
+    if (!this.readOnly) {
+      setupPlaceholder(tag, this.api.i18n.t(this._settings.placeholder || ''));
+    } else {
+      tag.setAttribute('data-placeholder', this.api.i18n.t(this._settings.placeholder || ''));
+    }
 
     return tag;
   }

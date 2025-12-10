@@ -231,6 +231,7 @@ describe('PopoverInline', () => {
       expect(PopoverDesktop).toHaveBeenCalledWith(
         {
           ...mocks.mockPopoverParams,
+          flipper: expect.any(Object),
         },
         {
           [PopoverItemType.Default]: {

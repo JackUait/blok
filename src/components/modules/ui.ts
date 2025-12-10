@@ -702,6 +702,18 @@ export default class UI extends Module<UINodes> {
       return;
     }
 
+    /**
+     * If a nested popover is open (like convert-to dropdown),
+     * close only the nested popover, not the entire inline toolbar
+     */
+    if (this.Blok.InlineToolbar.opened && this.Blok.InlineToolbar.hasNestedPopoverOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.Blok.InlineToolbar.closeNestedPopover();
+
+      return;
+    }
+
     if (this.Blok.InlineToolbar.opened) {
       this.Blok.InlineToolbar.close();
 

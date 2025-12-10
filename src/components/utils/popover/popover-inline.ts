@@ -1,4 +1,4 @@
-import { isMobileScreen } from '../../utils';
+import { isMobileScreen, keyCodes } from '../../utils';
 import type { PopoverItem } from './components/popover-item';
 import { PopoverItemDefault, PopoverItemType } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
@@ -7,6 +7,8 @@ import { css, cssInline, CSSVariables, DATA_ATTR, getNestedLevelAttrValue } from
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { twMerge } from '../tw';
+import Flipper from '../../flipper';
+import { css as popoverItemCls } from './components/popover-item';
 
 /**
  * Inline popover height CSS variables
@@ -19,6 +21,20 @@ const INLINE_HEIGHT_MOBILE = '46px';
  * @internal
  */
 export class PopoverInline extends PopoverDesktop {
+  /**
+   * Returns true if a nested popover is currently open
+   */
+  public get hasNestedPopoverOpen(): boolean {
+    return this.nestedPopover !== null && this.nestedPopover !== undefined;
+  }
+
+  /**
+   * Closes the nested popover if one is open
+   */
+  public closeNestedPopover(): void {
+    this.destroyNestedPopoverIfExists();
+  }
+
   /**
    * Closes popover - override as arrow function to match parent
    */
@@ -57,9 +73,25 @@ export class PopoverInline extends PopoverDesktop {
   constructor(params: PopoverParams) {
     const isHintEnabled = !isMobileScreen();
 
+    /**
+     * Create a custom Flipper for inline toolbar that only responds to vertical navigation.
+     * Left/Right arrow keys should have no effect in the inline toolbar.
+     * Navigation is done via Up/Down arrows and Tab/Shift+Tab.
+     */
+    const inlineFlipper = new Flipper({
+      focusedItemClass: popoverItemCls.focused,
+      allowedKeys: [
+        keyCodes.TAB,
+        keyCodes.UP,
+        keyCodes.DOWN,
+        keyCodes.ENTER,
+      ],
+    });
+
     super(
       {
         ...params,
+        flipper: inlineFlipper,
       },
       {
         [PopoverItemType.Default]: {
@@ -136,6 +168,7 @@ export class PopoverInline extends PopoverDesktop {
           this.showNestedItems(item);
         }
       });
+
   }
 
   /**
@@ -333,4 +366,5 @@ export class PopoverInline extends PopoverDesktop {
 
     super.handleItemClick(item);
   }
+
 }

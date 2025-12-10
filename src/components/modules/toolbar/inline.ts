@@ -41,6 +41,39 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   public opened = false;
 
   /**
+   * Returns true if a nested popover (like convert-to dropdown) is currently open
+   */
+  public get hasNestedPopoverOpen(): boolean {
+    const popoverInline = this.popover as PopoverInline | null;
+
+    if (popoverInline === null) {
+      return false;
+    }
+
+    return popoverInline.hasNestedPopoverOpen;
+  }
+
+  /**
+   * Closes only the nested popover if one is open.
+   * Returns true if a nested popover was closed, false otherwise.
+   */
+  public closeNestedPopover(): boolean {
+    const popoverInline = this.popover as PopoverInline | null;
+
+    if (popoverInline === null) {
+      return false;
+    }
+
+    if (!popoverInline.hasNestedPopoverOpen) {
+      return false;
+    }
+
+    popoverInline.closeNestedPopover();
+
+    return true;
+  }
+
+  /**
    * Popover instance reference
    */
   private popover: Popover | null = null;
@@ -94,8 +127,9 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
     /**
      * Handle arrow key events for inline toolbar
-     * - Close toolbar when arrow key is pressed without Shift (allows cursor movement)
+     * - Close toolbar when Up/Down arrow key is pressed without Shift (allows cursor movement)
      *   but only if no toolbar item is focused (user hasn't started keyboard navigation via Tab)
+     * - Left/Right arrow keys have no effect within the inline toolbar (per accessibility requirements)
      * - Show toolbar when Shift+Arrow is pressed (extends selection)
      *
      * Note: We listen on window with capture=true to ensure this runs before
@@ -103,25 +137,26 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
      */
     this.listeners.on(window, 'keydown', (event: Event) => {
       const keyboardEvent = event as KeyboardEvent;
-      const isArrowKey = keyboardEvent.key === 'ArrowDown' ||
-        keyboardEvent.key === 'ArrowUp' ||
-        keyboardEvent.key === 'ArrowLeft' ||
-        keyboardEvent.key === 'ArrowRight';
+      const isVerticalArrowKey = keyboardEvent.key === 'ArrowDown' || keyboardEvent.key === 'ArrowUp';
+      const isHorizontalArrowKey = keyboardEvent.key === 'ArrowLeft' || keyboardEvent.key === 'ArrowRight';
 
       /**
-       * Close inline toolbar when arrow key is pressed without Shift
+       * Close inline toolbar when Up/Down arrow key is pressed without Shift
        * This allows the user to move the cursor and collapse the selection
        *
        * However, if the user has already started keyboard navigation within the toolbar
        * (by pressing Tab to focus on a toolbar item), we should allow arrow key navigation
        * within the toolbar instead of closing it.
        *
+       * Left/Right arrow keys should have no effect within the inline toolbar,
+       * so we don't close the toolbar when they are pressed.
+       *
        * We check:
        * 1. If the main popover's Flipper has focus
-       * 2. If a nested popover is open (even if no item is focused, ArrowLeft should close it)
+       * 2. If a nested popover is open (even if no item is focused)
        * 3. If the nested popover's Flipper has focus
        */
-      const shouldCheckForClose = isArrowKey && !keyboardEvent.shiftKey && this.opened;
+      const shouldCheckForClose = isVerticalArrowKey && !keyboardEvent.shiftKey && this.opened;
       const popoverWithFlipper = this.popover as PopoverInline | null;
       const mainFlipperHasFocus = popoverWithFlipper?.flipper?.hasFocus() ?? false;
       const nestedPopover = (this.popover as { nestedPopover?: { flipper?: { hasFocus(): boolean } } | null })?.nestedPopover;
@@ -131,6 +166,17 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
       if (shouldCheckForClose && !shouldKeepOpen) {
         this.close();
+
+        return;
+      }
+
+      /**
+       * When the inline toolbar is open and the flipper has focus,
+       * prevent horizontal arrow keys from doing anything (no navigation, no closing)
+       */
+      if (isHorizontalArrowKey && this.opened && mainFlipperHasFocus) {
+        keyboardEvent.preventDefault();
+        keyboardEvent.stopPropagation();
 
         return;
       }

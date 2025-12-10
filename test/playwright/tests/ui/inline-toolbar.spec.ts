@@ -163,7 +163,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
             }
 
             if (!toolClass && classCode) {
-               
+
               toolClass = new Function(`return (${classCode});`)();
             }
 
@@ -1138,6 +1138,64 @@ test.describe('inline toolbar', () => {
 
     expect(toolbarSnapshot[0]?.name).toBe('convert-to');
     expect(toolbarSnapshot[1]?.hasSeparator).toBe(true);
+  });
+
+  test('should close inline toolbar when clicking outside after opening convert-to dropdown', async ({ page }) => {
+    await createBlok(page, {
+      tools: {
+        header: {
+          className: 'Blok.Header',
+        },
+      },
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'First paragraph with some text to select',
+            },
+          },
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Second paragraph to click on',
+            },
+          },
+        ],
+      },
+    });
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
+
+    await expect(firstParagraph).toBeVisible();
+    await expect(secondParagraph).toBeVisible();
+
+    // Select text in the first paragraph to show inline toolbar
+    await selectText(firstParagraph, 'some text');
+
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    await expect(toolbar).toBeVisible();
+
+    // Click on the convert-to button to open the dropdown
+    const convertToButton = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="convert-to"]`);
+
+    await expect(convertToButton).toBeVisible();
+    await convertToButton.click();
+
+    // Verify the nested popover (convert-to dropdown) is open
+    const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
+
+    await expect(nestedPopover).toBeVisible();
+
+    // Click on the second paragraph (outside the inline toolbar)
+    await secondParagraph.click();
+
+    // Verify the inline toolbar is closed
+    await expect(toolbar).toHaveCount(0);
   });
 });
 

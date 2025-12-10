@@ -822,6 +822,7 @@ export default class UI extends Module<UINodes> {
     const clickedInsideOfBlok = this.nodes.holder.contains(target) || Selection.isAtBlok;
     const clickedInsideRedactor = this.nodes.redactor.contains(target);
     const clickedInsideToolbar = this.Blok.Toolbar.contains(target);
+    const clickedInsideInlineToolbar = this.Blok.InlineToolbar.containsNode(target);
     const clickedInsideBlokSurface = clickedInsideOfBlok || clickedInsideToolbar;
 
     /**
@@ -867,6 +868,15 @@ export default class UI extends Module<UINodes> {
      */
     if (!doNotProcess) {
       this.Blok.BlockSelection.clearSelection(event);
+    }
+
+    /**
+     * Close Inline Toolbar when clicking outside of it
+     * This handles clicks anywhere outside the inline toolbar,
+     * including inside the editor content area or on page controls
+     */
+    if (this.Blok.InlineToolbar.opened && !clickedInsideInlineToolbar) {
+      this.Blok.InlineToolbar.close();
     }
   }
 

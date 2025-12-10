@@ -475,6 +475,92 @@ describe('InlineToolbar', () => {
 
       expect(result).toBe(false);
     });
+
+    it('should return true when node is inside popover (including nested popovers)', () => {
+      const wrapper = document.createElement('div');
+      const nodeInNestedPopover = document.createElement('div');
+
+      // Mock the nodes.wrapper (node is NOT in wrapper)
+      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement | undefined } }).nodes = {
+        wrapper,
+      };
+
+      // Mock the popover with hasNode returning true (simulating node in nested popover)
+      const mockPopover = {
+        hasNode: vi.fn(() => true),
+      };
+
+      (inlineToolbar as unknown as { popover: { hasNode: (node: Node) => boolean } | null }).popover = mockPopover;
+
+      const result = inlineToolbar.containsNode(nodeInNestedPopover);
+
+      expect(result).toBe(true);
+      expect(mockPopover.hasNode).toHaveBeenCalledWith(nodeInNestedPopover);
+    });
+
+    it('should return false when node is not in wrapper and not in popover', () => {
+      const wrapper = document.createElement('div');
+      const externalNode = document.createElement('div');
+
+      // Mock the nodes.wrapper (node is NOT in wrapper)
+      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement | undefined } }).nodes = {
+        wrapper,
+      };
+
+      // Mock the popover with hasNode returning false
+      const mockPopover = {
+        hasNode: vi.fn(() => false),
+      };
+
+      (inlineToolbar as unknown as { popover: { hasNode: (node: Node) => boolean } | null }).popover = mockPopover;
+
+      const result = inlineToolbar.containsNode(externalNode);
+
+      expect(result).toBe(false);
+      expect(mockPopover.hasNode).toHaveBeenCalledWith(externalNode);
+    });
+
+    it('should not check popover when node is already in wrapper', () => {
+      const wrapper = document.createElement('div');
+      const child = document.createElement('div');
+
+      wrapper.appendChild(child);
+
+      // Mock the nodes.wrapper
+      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement | undefined } }).nodes = {
+        wrapper,
+      };
+
+      // Mock the popover
+      const mockPopover = {
+        hasNode: vi.fn(() => true),
+      };
+
+      (inlineToolbar as unknown as { popover: { hasNode: (node: Node) => boolean } | null }).popover = mockPopover;
+
+      const result = inlineToolbar.containsNode(child);
+
+      expect(result).toBe(true);
+      // hasNode should not be called since node is already in wrapper
+      expect(mockPopover.hasNode).not.toHaveBeenCalled();
+    });
+
+    it('should return false when popover is null and node is not in wrapper', () => {
+      const wrapper = document.createElement('div');
+      const externalNode = document.createElement('div');
+
+      // Mock the nodes.wrapper (node is NOT in wrapper)
+      (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement | undefined } }).nodes = {
+        wrapper,
+      };
+
+      // Popover is null
+      (inlineToolbar as unknown as { popover: null }).popover = null;
+
+      const result = inlineToolbar.containsNode(externalNode);
+
+      expect(result).toBe(false);
+    });
   });
 
   describe('destroy', () => {

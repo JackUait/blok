@@ -544,106 +544,6 @@ test.describe('inline toolbar', () => {
       await expect(boldButton).toHaveAttribute('data-blok-popover-item-active', 'true');
     });
 
-    test('opens convert-to nested popover with ArrowRight', async ({ page }) => {
-      await createBlok(page, {
-        tools: {
-          header: {
-            className: 'Blok.Header',
-          },
-        },
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: {
-                text: 'Some text to convert',
-              },
-            },
-          ],
-        },
-      });
-
-      const paragraph = page.locator(PARAGRAPH_SELECTOR);
-
-      await selectText(paragraph, 'Some text to convert');
-
-      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
-
-      await expect(toolbar).toBeVisible();
-
-      // Focus convert-to option
-      const convertToOption = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="convert-to"]`);
-
-      await expect(convertToOption).toBeVisible();
-
-      // Press Tab first to focus on toolbar, then navigate to convert-to using arrow keys
-      await page.keyboard.press('Tab');
-
-      while (!await convertToOption.getAttribute('data-blok-focused')) {
-        await page.keyboard.press('ArrowDown');
-      }
-
-      // Press ArrowRight to open nested popover
-      await page.keyboard.press('ArrowRight');
-
-      // Nested popover should appear
-      const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
-
-      await expect(nestedPopover).toBeVisible();
-    });
-
-    test('closes nested popover with ArrowLeft and returns focus to convert-to', async ({ page }) => {
-      await createBlok(page, {
-        tools: {
-          header: {
-            className: 'Blok.Header',
-          },
-        },
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: {
-                text: 'Some text to convert',
-              },
-            },
-          ],
-        },
-      });
-
-      const paragraph = page.locator(PARAGRAPH_SELECTOR);
-
-      await selectText(paragraph, 'Some text to convert');
-
-      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
-
-      await expect(toolbar).toBeVisible();
-
-      // Focus and open convert-to nested popover
-      const convertToOption = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="convert-to"]`);
-
-      // Press Tab first to focus on toolbar, then navigate to convert-to using arrow keys
-      await page.keyboard.press('Tab');
-
-      while (!await convertToOption.getAttribute('data-blok-focused')) {
-        await page.keyboard.press('ArrowDown');
-      }
-
-      await page.keyboard.press('ArrowRight');
-
-      const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
-
-      await expect(nestedPopover).toBeVisible();
-
-      // Close with ArrowLeft
-      await page.keyboard.press('ArrowLeft');
-
-      await expect(nestedPopover).toHaveCount(0);
-
-      // Convert-to option should be focused again
-      await expect(convertToOption).toHaveAttribute('data-blok-focused', 'true');
-    });
-
     test('converts block using keyboard navigation in nested popover', async ({ page }) => {
       await createBlok(page, {
         tools: {
@@ -681,7 +581,8 @@ test.describe('inline toolbar', () => {
         await page.keyboard.press('ArrowDown');
       }
 
-      await page.keyboard.press('ArrowRight');
+      // Use Enter to open nested popover (ArrowRight is blocked in inline toolbar per accessibility requirements)
+      await page.keyboard.press('Enter');
 
       const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
 
@@ -784,34 +685,6 @@ test.describe('inline toolbar', () => {
 
       // Press Escape again to close the inline toolbar
       await page.keyboard.press('Escape');
-
-      await expect(toolbar).toHaveCount(0);
-    });
-
-    test('closes inline toolbar when arrow key is pressed without Shift', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: {
-                text: 'Some text to select',
-              },
-            },
-          ],
-        },
-      });
-
-      const paragraph = page.locator(PARAGRAPH_SELECTOR);
-
-      await selectText(paragraph, 'text to select');
-
-      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
-
-      await expect(toolbar).toBeVisible();
-
-      // Press ArrowRight without Shift - should close the inline toolbar
-      await page.keyboard.press('ArrowRight');
 
       await expect(toolbar).toHaveCount(0);
     });
@@ -1099,6 +972,11 @@ test.describe('inline toolbar', () => {
     await boldButton.click();
 
     await expect(boldButton).toHaveAttribute('data-blok-popover-item-active', 'true');
+
+    // Close the toolbar before selecting new text to ensure fresh state
+    await page.evaluate(() => {
+      window.blokInstance?.inlineToolbar?.close();
+    });
 
     await selectText(paragraph, 'plain part');
 

@@ -160,7 +160,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
             }
 
             if (!toolClass && classCode) {
-               
+
               toolClass = new Function(`return (${classCode});`)();
             }
 
@@ -340,7 +340,7 @@ test.describe('read-only mode', () => {
   });
 
   test('only shows read-only inline tools when blok is locked', async ({ page }) => {
-    
+
     await createBlok(page, {
       readOnly: true,
       data: {
@@ -381,6 +381,11 @@ test.describe('read-only mode', () => {
 
     await toggleReadOnly(page, false);
     await waitForReadOnlyState(page, false);
+
+    // Click outside to close the inline toolbar before re-selecting
+    await page.mouse.click(10, 10);
+
+
     await selectText(headerBlock, 'Read me');
 
     await expect(readOnlyToolItem).toBeVisible();
@@ -435,7 +440,7 @@ test.describe('read-only mode', () => {
 
     await expect(paragraph).toHaveCount(1);
     await paste(page, paragraph, {
-       
+
       'text/plain': ' + pasted text',
     });
 
@@ -446,7 +451,7 @@ test.describe('read-only mode', () => {
     await paragraph.click();
 
     await paste(page, paragraph, {
-       
+
       'text/plain': ' + pasted text',
     });
 

@@ -48,6 +48,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     InlineToolbar: {
       opened: false,
       tryToShow: vi.fn(async () => undefined),
+      close: vi.fn(),
     } as unknown as BlokModules['InlineToolbar'],
     BlockManager: {
       currentBlock: undefined,

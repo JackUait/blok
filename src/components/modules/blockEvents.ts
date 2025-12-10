@@ -865,6 +865,7 @@ export default class BlockEvents extends Module {
      */
     if (!event.shiftKey) {
       this.Blok.Toolbar.close();
+      this.Blok.InlineToolbar.close();
     }
 
     const selection = SelectionUtils.get();
@@ -973,6 +974,7 @@ export default class BlockEvents extends Module {
      */
     if (!event.shiftKey) {
       this.Blok.Toolbar.close();
+      this.Blok.InlineToolbar.close();
     }
 
     const selection = window.getSelection();

@@ -92,8 +92,49 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       eventsDispatcher,
     });
 
-    this.listeners.on(document, 'keydown', (event: Event) => {
+    /**
+     * Handle arrow key events for inline toolbar
+     * - Close toolbar when arrow key is pressed without Shift (allows cursor movement)
+     *   but only if no toolbar item is focused (user hasn't started keyboard navigation via Tab)
+     * - Show toolbar when Shift+Arrow is pressed (extends selection)
+     *
+     * Note: We listen on window with capture=true to ensure this runs before
+     * the Flipper's keydown handler which also uses capture phase
+     */
+    this.listeners.on(window, 'keydown', (event: Event) => {
       const keyboardEvent = event as KeyboardEvent;
+      const isArrowKey = keyboardEvent.key === 'ArrowDown' ||
+        keyboardEvent.key === 'ArrowUp' ||
+        keyboardEvent.key === 'ArrowLeft' ||
+        keyboardEvent.key === 'ArrowRight';
+
+      /**
+       * Close inline toolbar when arrow key is pressed without Shift
+       * This allows the user to move the cursor and collapse the selection
+       *
+       * However, if the user has already started keyboard navigation within the toolbar
+       * (by pressing Tab to focus on a toolbar item), we should allow arrow key navigation
+       * within the toolbar instead of closing it.
+       *
+       * We check:
+       * 1. If the main popover's Flipper has focus
+       * 2. If a nested popover is open (even if no item is focused, ArrowLeft should close it)
+       * 3. If the nested popover's Flipper has focus
+       */
+      const shouldCheckForClose = isArrowKey && !keyboardEvent.shiftKey && this.opened;
+      const popoverWithFlipper = this.popover as PopoverInline | null;
+      const mainFlipperHasFocus = popoverWithFlipper?.flipper?.hasFocus() ?? false;
+      const nestedPopover = (this.popover as { nestedPopover?: { flipper?: { hasFocus(): boolean } } | null })?.nestedPopover;
+      const hasNestedPopover = nestedPopover !== null && nestedPopover !== undefined;
+      const nestedFlipperHasFocus = nestedPopover?.flipper?.hasFocus() ?? false;
+      const shouldKeepOpen = mainFlipperHasFocus || hasNestedPopover || nestedFlipperHasFocus;
+
+      if (shouldCheckForClose && !shouldKeepOpen) {
+        this.close();
+
+        return;
+      }
+
       const isShiftArrow = keyboardEvent.shiftKey &&
         (keyboardEvent.key === 'ArrowDown' || keyboardEvent.key === 'ArrowUp');
 
@@ -124,11 +165,6 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
-    if (!this.Blok?.UI?.nodes?.wrapper || this.Blok.Tools === undefined) {
-      this.scheduleInitialization();
-
-      return;
-    }
 
     this.make();
     this.tryRegisterShortcuts();

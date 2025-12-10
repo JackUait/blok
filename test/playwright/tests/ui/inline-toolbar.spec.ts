@@ -735,6 +735,59 @@ test.describe('inline toolbar', () => {
       await expect(toolbar).toHaveCount(0);
     });
 
+    test('closes only nested popover with Escape key, keeping inline toolbar open', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text to convert',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'Some text to convert');
+
+      const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+      await expect(toolbar).toBeVisible();
+
+      // Click on convert-to option to open nested popover
+      const convertToOption = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="convert-to"]`);
+
+      await expect(convertToOption).toBeVisible();
+      await convertToOption.click();
+
+      // Nested popover should appear
+      const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
+
+      await expect(nestedPopover).toBeVisible();
+
+      // Press Escape to close nested popover
+      await page.keyboard.press('Escape');
+
+      // Nested popover should be closed
+      await expect(nestedPopover).toHaveCount(0);
+
+      // Inline toolbar should still be visible (not flickering/re-rendered)
+      await expect(toolbar).toBeVisible();
+
+      // Press Escape again to close the inline toolbar
+      await page.keyboard.press('Escape');
+
+      await expect(toolbar).toHaveCount(0);
+    });
+
     test('closes inline toolbar when arrow key is pressed without Shift', async ({ page }) => {
       await createBlok(page, {
         data: {

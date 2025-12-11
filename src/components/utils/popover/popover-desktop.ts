@@ -353,12 +353,12 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedPopover.getElement().remove();
     this.nestedPopover = null;
     this.flipper?.activate(this.flippableElements);
-    // Use requestAnimationFrame to ensure DOM is updated before focusing
-    requestAnimationFrame(() => {
-      this.focusAfterNestedPopoverClose(triggerItemElement);
-    });
+    // Focus the trigger item synchronously to ensure keyboard events work immediately
+    this.focusAfterNestedPopoverClose(triggerItemElement);
 
     this.nestedPopoverTriggerItem?.onChildrenClose();
+    // Reset trigger item so clicking the same item again will open the nested popover
+    this.nestedPopoverTriggerItem = null;
   }
 
   /**
@@ -376,7 +376,8 @@ export class PopoverDesktop extends PopoverAbstract {
     const triggerIndex = this.flippableElements.indexOf(triggerItemElement);
 
     if (triggerIndex !== -1) {
-      this.flipper.focusItem(triggerIndex);
+      // Don't skip next Tab - user expects Tab to move to next item after closing nested popover
+      this.flipper.focusItem(triggerIndex, { skipNextTab: false });
 
       return;
     }

@@ -572,11 +572,9 @@ test.describe('inline tool link', () => {
     await page.keyboard.press('Escape');
 
     await expect(linkInput).toBeHidden();
-    // Inline toolbar might also close or just the input.
-    // Usually Escape closes the whole Inline Toolbar or just the tool actions depending on implementation.
-    // In LinkTool, clear() calls closeActions().
-    // But Escape is handled by InlineToolbar which closes itself and calls clear() on tools.
-    await expect(page.locator(INLINE_TOOLBAR_SELECTOR)).toBeHidden();
+    // Escape closes only the link input (nested popover), not the entire inline toolbar.
+    // The toolbar remains visible so users can select other formatting options.
+    await expect(page.locator(INLINE_TOOLBAR_SELECTOR)).toBeVisible();
   });
 
   test('should not create link if input is empty and Enter is pressed (new link)', async ({ page }) => {

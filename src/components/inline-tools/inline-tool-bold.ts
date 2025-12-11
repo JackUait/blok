@@ -508,9 +508,21 @@ export default class BoldInlineTool implements InlineTool {
 
     BoldInlineTool.normalizeAllBoldTags();
 
-    const boldElement = selection ? BoldInlineTool.findBoldElement(selection.focusNode) : null;
+    /**
+     * Find the bold element from the inserted range.
+     * After insertion, selection.focusNode may point to the parent container (e.g., DIV)
+     * rather than inside the <strong> element, so we need to look at the range's
+     * startContainer or commonAncestorContainer to find the bold element.
+     */
+    const boldElement = this.findBoldElementFromRangeOrSelection(insertedRange, selection);
 
     if (!boldElement) {
+      /**
+       * Even if we can't find the bold element, we should still notify selection change
+       * to update the toolbar button state based on the current selection.
+       */
+      this.notifySelectionChange();
+
       return;
     }
 
@@ -796,6 +808,34 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     parent.removeChild(element);
+  }
+
+  /**
+   * Find bold element from an inserted range or fall back to selection
+   * @param insertedRange - Range spanning inserted content
+   * @param selection - Current selection as fallback
+   */
+  private findBoldElementFromRangeOrSelection(insertedRange: Range | undefined, selection: Selection | null): HTMLElement | null {
+    if (!insertedRange) {
+      return selection ? BoldInlineTool.findBoldElement(selection.focusNode) : null;
+    }
+
+    const fromStart = BoldInlineTool.findBoldElement(insertedRange.startContainer);
+
+    if (fromStart) {
+      return fromStart;
+    }
+
+    const fromAncestor = BoldInlineTool.findBoldElement(insertedRange.commonAncestorContainer);
+
+    if (fromAncestor) {
+      return fromAncestor;
+    }
+
+    const isStartContainerBold = insertedRange.startContainer.nodeType === Node.ELEMENT_NODE &&
+      BoldInlineTool.isBoldTag(insertedRange.startContainer as Element);
+
+    return isStartContainerBold ? insertedRange.startContainer as HTMLElement : null;
   }
 
   /**

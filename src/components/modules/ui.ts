@@ -702,6 +702,21 @@ export default class UI extends Module<UINodes> {
       return;
     }
 
+    /**
+     * If a nested popover is open (like convert-to dropdown),
+     * close only the nested popover, not the entire inline toolbar.
+     * We use stopImmediatePropagation to prevent other keydown listeners
+     * (like the one on block.holder) from also handling this event.
+     */
+    if (this.Blok.InlineToolbar.opened && this.Blok.InlineToolbar.hasNestedPopoverOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      this.Blok.InlineToolbar.closeNestedPopover();
+
+      return;
+    }
+
     if (this.Blok.InlineToolbar.opened) {
       this.Blok.InlineToolbar.close();
 
@@ -1080,6 +1095,15 @@ export default class UI extends Module<UINodes> {
 
     const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).getAttribute('data-blok-inline-toolbar') === 'true';
     const shouldCloseInlineToolbar = clickedOutsideBlockContent && !this.Blok.InlineToolbar.containsNode(focusedElement);
+
+    /**
+     * If the inline toolbar is already open without a nested popover,
+     * don't close or re-render it. This prevents the toolbar from flickering
+     * when the user closes a nested popover (e.g., via Esc key).
+     */
+    if (this.Blok.InlineToolbar.opened && !this.Blok.InlineToolbar.hasNestedPopoverOpen) {
+      return;
+    }
 
     if (shouldCloseInlineToolbar) {
       /**

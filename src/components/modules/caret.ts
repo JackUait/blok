@@ -254,6 +254,67 @@ export default class Caret extends Module {
   }
 
   /**
+   * Sets caret to a block at a specific X position (horizontal coordinate).
+   * Used for Notion-style vertical navigation to preserve horizontal caret position.
+   * @param block - Block to set caret in
+   * @param targetX - Target X coordinate, or null to use start/end position
+   * @param atFirstLine - If true, place caret on first line; if false, place on last line
+   */
+  public setToBlockAtXPosition(block: Block, targetX: number | null, atFirstLine: boolean): void {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    BlockSelection.clearSelection();
+
+    if (!block.focusable) {
+      window.getSelection()?.removeAllRanges();
+      BlockSelection.selectBlock(block);
+      BlockManager.currentBlock = block;
+
+      return;
+    }
+
+    const element = atFirstLine ? block.firstInput : block.lastInput;
+
+    if (!element) {
+      return;
+    }
+
+    if (targetX !== null) {
+      caretUtils.setCaretAtXPosition(element, targetX, atFirstLine);
+    } else {
+      const position = atFirstLine ? this.positions.START : this.positions.END;
+
+      this.setCaretToInputPosition(element, position, 0);
+    }
+
+    BlockManager.setCurrentBlockByChildNode(block.holder);
+    BlockManager.currentBlock!.currentInput = element;
+  }
+
+  /**
+   * Sets caret to an input at a specific X position (horizontal coordinate).
+   * Used for Notion-style vertical navigation to preserve horizontal caret position.
+   * @param input - Input element to set caret in
+   * @param targetX - Target X coordinate, or null to use start/end position
+   * @param atFirstLine - If true, place caret on first line; if false, place on last line
+   */
+  public setToInputAtXPosition(input: HTMLElement, targetX: number | null, atFirstLine: boolean): void {
+    const { currentBlock } = this.Blok.BlockManager;
+
+    if (targetX !== null) {
+      caretUtils.setCaretAtXPosition(input, targetX, atFirstLine);
+    } else {
+      const position = atFirstLine ? this.positions.START : this.positions.END;
+
+      this.setCaretToInputPosition(input, position, 0);
+    }
+
+    if (currentBlock) {
+      currentBlock.currentInput = input;
+    }
+  }
+
+  /**
    * Internal method to handle caret positioning within an input
    * @param input - the input element
    * @param position - position type (START, END, DEFAULT)
@@ -526,6 +587,179 @@ export default class Caret extends Module {
 
     if (previousBlock !== null && navigationAllowed) {
       this.setToBlock(previousBlock as Block, this.positions.END);
+
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Helper method to navigate to a target block.
+   * If target is focusable, sets caret to it; otherwise selects it.
+   * @param targetBlock - Block to navigate to (or null)
+   * @param atFirstLine - If true, place caret at first line; if false, at last line
+   * @returns {boolean} - true if navigation occurred
+   */
+  private navigateToBlock(targetBlock: Block | null, atFirstLine: boolean): boolean {
+    if (targetBlock === null) {
+      return false;
+    }
+
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    BlockSelection.clearSelection();
+
+    if (targetBlock.focusable) {
+      this.setToBlockAtXPosition(targetBlock, null, atFirstLine);
+    } else {
+      BlockSelection.selectBlock(targetBlock);
+      BlockManager.currentBlock = targetBlock;
+    }
+
+    return true;
+  }
+
+  /**
+   * Navigates to the next block using vertical (Arrow Down) navigation.
+   * Implements Notion-style behavior: line-by-line within block, then jump to next block.
+   * Preserves horizontal caret position when moving between blocks.
+   * @returns {boolean} - true if navigation to next block occurred
+   */
+  public navigateVerticalNext(): boolean {
+    const { BlockManager } = this.Blok;
+    const { currentBlock, nextBlock } = BlockManager;
+
+    if (currentBlock === undefined) {
+      return false;
+    }
+
+    /**
+     * For non-focusable blocks (images, embeds, contentless), navigate to next block
+     */
+    if (!currentBlock.focusable) {
+      return this.navigateToBlock(nextBlock, true);
+    }
+
+    /**
+     * For empty blocks, jump immediately to the next block
+     */
+    if (currentBlock.isEmpty) {
+      return this.navigateToBlock(nextBlock, true);
+    }
+
+    const { currentInput } = currentBlock;
+
+    /**
+     * Check if caret is at the last line - if not, let browser handle line navigation
+     */
+    const isAtLastLine = currentInput !== undefined ? caretUtils.isCaretAtLastLine(currentInput) : true;
+
+    if (!isAtLastLine) {
+      return false;
+    }
+
+    /**
+     * Save the current caret X position before navigation
+     */
+    const caretX = caretUtils.getCaretXPosition();
+
+    /**
+     * Navigate to next input within the block first
+     */
+    const { nextInput } = currentBlock;
+
+    if (nextInput) {
+      this.setToInputAtXPosition(nextInput, caretX, true);
+
+      return true;
+    }
+
+    /**
+     * Navigate to next block, preserving horizontal position
+     */
+    if (nextBlock !== null) {
+      this.setToBlockAtXPosition(nextBlock, caretX, true);
+
+      return true;
+    }
+
+    /**
+     * At the last block - check if we should create a new block
+     */
+    const isAtEnd = currentInput !== undefined ? caretUtils.isCaretAtEndOfInput(currentInput) : true;
+
+    if (!currentBlock.tool.isDefault && isAtEnd) {
+      const newBlock = BlockManager.insertAtEnd() as Block;
+
+      this.setToBlock(newBlock, this.positions.START);
+
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Navigates to the previous block using vertical (Arrow Up) navigation.
+   * Implements Notion-style behavior: line-by-line within block, then jump to previous block.
+   * Preserves horizontal caret position when moving between blocks.
+   * @returns {boolean} - true if navigation to previous block occurred
+   */
+  public navigateVerticalPrevious(): boolean {
+    const { BlockManager } = this.Blok;
+    const { currentBlock, previousBlock } = BlockManager;
+
+    if (currentBlock === undefined) {
+      return false;
+    }
+
+    /**
+     * For non-focusable blocks (images, embeds, contentless), navigate to previous block
+     */
+    if (!currentBlock.focusable) {
+      return this.navigateToBlock(previousBlock, false);
+    }
+
+    /**
+     * For empty blocks, jump immediately to the previous block
+     */
+    if (currentBlock.isEmpty) {
+      return this.navigateToBlock(previousBlock, false);
+    }
+
+    const { currentInput } = currentBlock;
+
+    /**
+     * Check if caret is at the first line - if not, let browser handle line navigation
+     */
+    const isAtFirstLine = currentInput !== undefined ? caretUtils.isCaretAtFirstLine(currentInput) : true;
+
+    if (!isAtFirstLine) {
+      return false;
+    }
+
+    /**
+     * Save the current caret X position before navigation
+     */
+    const caretX = caretUtils.getCaretXPosition();
+
+    /**
+     * Navigate to previous input within the block first
+     */
+    const { previousInput } = currentBlock;
+
+    if (previousInput) {
+      this.setToInputAtXPosition(previousInput, caretX, false);
+
+      return true;
+    }
+
+    /**
+     * Navigate to previous block, preserving horizontal position
+     */
+    if (previousBlock !== null) {
+      this.setToBlockAtXPosition(previousBlock as Block, caretX, false);
 
       return true;
     }

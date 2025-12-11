@@ -48,6 +48,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     InlineToolbar: {
       opened: false,
       tryToShow: vi.fn(async () => undefined),
+      close: vi.fn(),
     } as unknown as BlokModules['InlineToolbar'],
     BlockManager: {
       currentBlock: undefined,
@@ -63,6 +64,8 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     Caret: {
       navigateNext: vi.fn(() => false),
       navigatePrevious: vi.fn(() => false),
+      navigateVerticalNext: vi.fn(() => false),
+      navigateVerticalPrevious: vi.fn(() => false),
       setToBlock: vi.fn(),
       insertContentAtCaretPosition: vi.fn(),
       positions: {
@@ -685,7 +688,32 @@ describe('BlockEvents', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('prevents default when caret navigation succeeds', () => {
+    it('prevents default when vertical caret navigation succeeds for DOWN key', () => {
+      const toolbarClose = vi.fn();
+      const navigateVerticalNext = vi.fn().mockReturnValue(true);
+      const clearSelection = vi.fn();
+      const blockEvents = createBlockEvents({
+        Toolbar: {
+          close: toolbarClose,
+        } as unknown as BlokModules['Toolbar'],
+        Caret: {
+          navigateVerticalNext,
+        } as unknown as BlokModules['Caret'],
+        BlockSelection: {
+          clearSelection,
+        } as unknown as BlokModules['BlockSelection'],
+      });
+      const event = createKeyboardEvent({ keyCode: keyCodes.DOWN });
+
+      (blockEvents as unknown as { arrowRightAndDown: (event: KeyboardEvent) => void }).arrowRightAndDown(event);
+
+      expect(toolbarClose).toHaveBeenCalledTimes(1);
+      expect(navigateVerticalNext).toHaveBeenCalledTimes(1);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(clearSelection).not.toHaveBeenCalled();
+    });
+
+    it('prevents default when horizontal caret navigation succeeds for RIGHT key', () => {
       const toolbarClose = vi.fn();
       const navigateNext = vi.fn().mockReturnValue(true);
       const clearSelection = vi.fn();
@@ -700,7 +728,7 @@ describe('BlockEvents', () => {
           clearSelection,
         } as unknown as BlokModules['BlockSelection'],
       });
-      const event = createKeyboardEvent({ keyCode: keyCodes.DOWN });
+      const event = createKeyboardEvent({ keyCode: keyCodes.RIGHT });
 
       (blockEvents as unknown as { arrowRightAndDown: (event: KeyboardEvent) => void }).arrowRightAndDown(event);
 
@@ -747,7 +775,32 @@ describe('BlockEvents', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('prevents default when navigating to previous element succeeds', () => {
+    it('prevents default when vertical navigation succeeds for UP key', () => {
+      const toolbarClose = vi.fn();
+      const navigateVerticalPrevious = vi.fn().mockReturnValue(true);
+      const clearSelection = vi.fn();
+      const blockEvents = createBlockEvents({
+        Toolbar: {
+          close: toolbarClose,
+        } as unknown as BlokModules['Toolbar'],
+        Caret: {
+          navigateVerticalPrevious,
+        } as unknown as BlokModules['Caret'],
+        BlockSelection: {
+          clearSelection,
+        } as unknown as BlokModules['BlockSelection'],
+      });
+      const event = createKeyboardEvent({ keyCode: keyCodes.UP });
+
+      (blockEvents as unknown as { arrowLeftAndUp: (event: KeyboardEvent) => void }).arrowLeftAndUp(event);
+
+      expect(toolbarClose).toHaveBeenCalledTimes(1);
+      expect(navigateVerticalPrevious).toHaveBeenCalledTimes(1);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(clearSelection).not.toHaveBeenCalled();
+    });
+
+    it('prevents default when horizontal navigation succeeds for LEFT key', () => {
       const toolbarClose = vi.fn();
       const navigatePrevious = vi.fn().mockReturnValue(true);
       const clearSelection = vi.fn();
@@ -762,7 +815,7 @@ describe('BlockEvents', () => {
           clearSelection,
         } as unknown as BlokModules['BlockSelection'],
       });
-      const event = createKeyboardEvent({ keyCode: keyCodes.UP });
+      const event = createKeyboardEvent({ keyCode: keyCodes.LEFT });
 
       (blockEvents as unknown as { arrowLeftAndUp: (event: KeyboardEvent) => void }).arrowLeftAndUp(event);
 

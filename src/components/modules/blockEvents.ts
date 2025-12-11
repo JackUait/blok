@@ -865,6 +865,7 @@ export default class BlockEvents extends Module {
      */
     if (!event.shiftKey) {
       this.Blok.Toolbar.close();
+      this.Blok.InlineToolbar.close();
     }
 
     const selection = SelectionUtils.get();
@@ -913,9 +914,33 @@ export default class BlockEvents extends Module {
       return;
     }
 
-    const navigateNext = keyCode === _.keyCodes.DOWN || (keyCode === _.keyCodes.RIGHT && !this.isRtl);
+    /**
+     * Determine navigation type based on key pressed:
+     * - Arrow Down: use vertical navigation (Notion-style line-by-line)
+     * - Arrow Right: use horizontal navigation (character-by-character)
+     */
+    const isDownKey = keyCode === _.keyCodes.DOWN;
+    const isRightKey = keyCode === _.keyCodes.RIGHT && !this.isRtl;
 
-    const isNavigated = navigateNext ? this.Blok.Caret.navigateNext() : this.Blok.Caret.navigatePrevious();
+    const isNavigated = (() => {
+      if (isDownKey) {
+        /**
+         * Arrow Down: Notion-style vertical navigation
+         * Only navigate to next block when caret is at the last line
+         */
+        return this.Blok.Caret.navigateVerticalNext();
+      }
+
+      if (isRightKey) {
+        /**
+         * Arrow Right: horizontal navigation
+         * Navigate to next block when caret is at the end of input
+         */
+        return this.Blok.Caret.navigateNext();
+      }
+
+      return false;
+    })();
 
     if (isNavigated) {
       /**
@@ -973,6 +998,7 @@ export default class BlockEvents extends Module {
      */
     if (!event.shiftKey) {
       this.Blok.Toolbar.close();
+      this.Blok.InlineToolbar.close();
     }
 
     const selection = window.getSelection();
@@ -1008,8 +1034,34 @@ export default class BlockEvents extends Module {
       void this.Blok.InlineToolbar.tryToShow();
     }
 
-    const navigatePrevious = keyCode === _.keyCodes.UP || (keyCode === _.keyCodes.LEFT && !this.isRtl);
-    const isNavigated = navigatePrevious ? this.Blok.Caret.navigatePrevious() : this.Blok.Caret.navigateNext();
+    /**
+     * Determine navigation type based on key pressed:
+     * - Arrow Up: use vertical navigation (Notion-style line-by-line)
+     * - Arrow Left: use horizontal navigation (character-by-character)
+     */
+    const isUpKey = keyCode === _.keyCodes.UP;
+    const isLeftKey = keyCode === _.keyCodes.LEFT && !this.isRtl;
+
+    const isNavigated = (() => {
+      if (isUpKey) {
+        /**
+         * Arrow Up: Notion-style vertical navigation
+         * Only navigate to previous block when caret is at the first line
+         */
+        return this.Blok.Caret.navigateVerticalPrevious();
+      }
+
+      if (isLeftKey) {
+        /**
+         * Arrow Left: horizontal navigation
+         * Navigate to previous block when caret is at the start of input
+         */
+        return this.Blok.Caret.navigatePrevious();
+      }
+
+      return false;
+    })();
+
     if (isNavigated) {
       /**
        * Default behaviour moves cursor by 1 character, we need to prevent it

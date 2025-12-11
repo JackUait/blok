@@ -5,7 +5,6 @@ import { PopoverItemDefault, PopoverItemType } from '../../../src/components/uti
 import type { PopoverItemHtml } from '../../../src/components/utils/popover/components/popover-item/popover-item-html/popover-item-html';
 import { CSSVariables, DATA_ATTR, getNestedLevelAttrValue } from '../../../src/components/utils/popover/popover.const';
 import type { PopoverParams } from '@/types/utils/popover/popover';
-import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import Flipper from '../../../src/components/flipper';
 
 // Mock dependencies
@@ -231,6 +230,7 @@ describe('PopoverInline', () => {
       expect(PopoverDesktop).toHaveBeenCalledWith(
         {
           ...mocks.mockPopoverParams,
+          flipper: expect.any(Object),
         },
         {
           [PopoverItemType.Default]: {
@@ -669,8 +669,7 @@ describe('PopoverInline', () => {
       expect(nestedPopoverEl.getAttribute(DATA_ATTR.nestedLevel)).toBe(getNestedLevelAttrValue(1));
     });
 
-    it('should focus nested popover on first Tab press and remove listener', () => {
-      const flippableElements = [ document.createElement('button') ];
+    it('should enable flipper to handle contenteditable targets for nested popover', () => {
       const nestedPopoverEl = document.createElement('div');
       const nestedPopoverFlipper = {
         setHandleContentEditableTargets: vi.fn(),
@@ -688,124 +687,21 @@ describe('PopoverInline', () => {
         flipper: nestedPopoverFlipper,
       } as unknown as PopoverDesktop;
 
-      Object.defineProperty(nestedPopover, 'flippableElements', {
-        configurable: true,
-        get: () => flippableElements,
+      mocks.superMethods.showNestedPopoverForItem.mockReturnValue(nestedPopover);
+
+      // Delete the mock 'showNestedPopoverForItem' from the instance so that PopoverInline.prototype.showNestedPopoverForItem is used
+      delete (mocks.popoverInline as unknown as Record<string, unknown>).showNestedPopoverForItem;
+
+      const item = createMockDefaultItem({
+        hasChildren: true,
+        getElement: vi.fn(() => document.createElement('div')),
       });
 
-      const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
-      const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+      (mocks.popoverInline as unknown as { showNestedPopoverForItem: (item: PopoverItemDefault) => PopoverDesktop })
+        .showNestedPopoverForItem(item);
 
-      try {
-        mocks.superMethods.showNestedPopoverForItem.mockReturnValue(nestedPopover);
-
-        // Delete the mock 'showNestedPopoverForItem' from the instance so that PopoverInline.prototype.showNestedPopoverForItem is used
-        delete (mocks.popoverInline as unknown as Record<string, unknown>).showNestedPopoverForItem;
-
-        const item = createMockDefaultItem({
-          hasChildren: true,
-          getElement: vi.fn(() => document.createElement('div')),
-        });
-
-        (mocks.popoverInline as unknown as { showNestedPopoverForItem: (item: PopoverItemDefault) => PopoverDesktop })
-          .showNestedPopoverForItem(item);
-
-        const keydownCall = addEventListenerSpy.mock.calls.find(([ eventName ]) => eventName === 'keydown');
-
-        expect(keydownCall).toBeDefined();
-
-        const handleFirstTab = keydownCall?.[1] as EventListener;
-
-        if (!handleFirstTab) {
-          throw new Error('handleFirstTab listener is not registered');
-        }
-
-        mocks.mockPopoverDesktop.nestedPopover = nestedPopover;
-        // Also set on the actual instance since 'this.nestedPopover' is checked in the handler
-        (mocks.popoverInline as unknown as { nestedPopover: PopoverDesktop | null }).nestedPopover = nestedPopover;
-
-        const preventDefault = vi.fn();
-        const stopPropagation = vi.fn();
-
-        const event = {
-          key: 'Tab',
-          shiftKey: false,
-          preventDefault,
-          stopPropagation,
-        } as unknown as KeyboardEvent;
-
-        handleFirstTab(event);
-
-        expect(preventDefault).toHaveBeenCalled();
-        expect(stopPropagation).toHaveBeenCalled();
-        expect(nestedPopoverFlipper.activate).toHaveBeenCalledWith(flippableElements);
-        expect(nestedPopoverFlipper.focusFirst).toHaveBeenCalled();
-        expect(removeEventListenerSpy).toHaveBeenCalledWith('keydown', handleFirstTab, true);
-      } finally {
-        addEventListenerSpy.mockRestore();
-        removeEventListenerSpy.mockRestore();
-      }
-    });
-
-    it('should remove Tab listener when nested popover closes', () => {
-      const nestedPopoverEl = document.createElement('div');
-      const onMock = vi.fn();
-      const nestedPopover = {
-        getElement: vi.fn(() => nestedPopoverEl),
-        nestingLevel: 1,
-        on: onMock,
-        flipper: {
-          setHandleContentEditableTargets: vi.fn(),
-          activate: vi.fn(),
-          deactivate: vi.fn(),
-          focusFirst: vi.fn(),
-          focusItem: vi.fn(),
-        },
-      } as unknown as PopoverDesktop;
-
-      Object.defineProperty(nestedPopover, 'flippableElements', {
-        configurable: true,
-        get: () => [],
-      });
-
-      const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
-      const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
-
-      try {
-        mocks.superMethods.showNestedPopoverForItem.mockReturnValue(nestedPopover);
-
-        // Delete the mock 'showNestedPopoverForItem' from the instance so that PopoverInline.prototype.showNestedPopoverForItem is used
-        delete (mocks.popoverInline as unknown as Record<string, unknown>).showNestedPopoverForItem;
-
-        const item = createMockDefaultItem({
-          hasChildren: true,
-          getElement: vi.fn(() => document.createElement('div')),
-        });
-
-        (mocks.popoverInline as unknown as { showNestedPopoverForItem: (item: PopoverItemDefault) => PopoverDesktop })
-          .showNestedPopoverForItem(item);
-
-        const keydownCall = addEventListenerSpy.mock.calls.find(([ eventName ]) => eventName === 'keydown');
-
-        expect(keydownCall).toBeDefined();
-
-        const handleFirstTab = keydownCall?.[1] as EventListener;
-
-        if (!handleFirstTab) {
-          throw new Error('handleFirstTab listener is not registered');
-        }
-
-        const closedHandler = onMock.mock.calls.find(([ event ]) => event === PopoverEvent.Closed)?.[1] as () => void;
-
-        expect(closedHandler).toBeInstanceOf(Function);
-
-        closedHandler();
-
-        expect(removeEventListenerSpy).toHaveBeenCalledWith('keydown', handleFirstTab, true);
-      } finally {
-        addEventListenerSpy.mockRestore();
-        removeEventListenerSpy.mockRestore();
-      }
+      // Verify that flipper is configured to handle contenteditable targets
+      expect(nestedPopoverFlipper.setHandleContentEditableTargets).toHaveBeenCalledWith(true);
     });
   });
 

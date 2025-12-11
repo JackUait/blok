@@ -308,7 +308,6 @@ export class PopoverItemDefault extends PopoverItem {
       css.item,
       isInline && cssInline.item,
       isNestedInline && cssNestedInline.item,
-      this.isActive && css.itemActive,
       this.params.isDisabled && css.itemDisabled
     );
   }
@@ -348,10 +347,8 @@ export class PopoverItemDefault extends PopoverItem {
 
     if (isActive) {
       this.nodes.root.setAttribute(DATA_ATTR.active, 'true');
-      this.nodes.root.classList.add(...css.itemActive.split(' '));
     } else {
       this.nodes.root.removeAttribute(DATA_ATTR.active);
-      this.nodes.root.classList.remove(...css.itemActive.split(' '));
     }
   }
 

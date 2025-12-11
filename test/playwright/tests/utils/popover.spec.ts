@@ -1211,13 +1211,7 @@ test.describe('popover', () => {
       // Get all popover items in nested popover
       const nestedItems = nestedPopover.locator('[data-blok-testid="popover-item"]');
 
-      // Check no item is focused initially
-      await expect(nestedPopover.locator('[data-blok-focused="true"]')).toHaveCount(0);
-
-      // Press Tab to focus first item in nested popover
-      await page.keyboard.press('Tab');
-
-      // Check first item is focused (could be list item or header depending on available tools)
+      // When opening nested popover via keyboard (Enter), first item should be auto-focused for accessibility
       // eslint-disable-next-line playwright/no-nth-methods -- need to check first item
       await expect(nestedItems.first()).toHaveAttribute('data-blok-focused', 'true');
     });

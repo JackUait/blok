@@ -629,6 +629,56 @@ describe('UI module', () => {
       expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenLastCalledWith(blockContent);
       expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
     });
+
+    it('does not re-render inline toolbar when already open without nested popover', () => {
+      const { ui, blok, wrapper } = createUI();
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.setAttribute('data-blok-testid', 'blok-editor');
+      wrapper.appendChild(blockContent);
+
+      // Set up inline toolbar as already open without nested popover
+      blok.InlineToolbar.opened = true;
+      (blok.InlineToolbar as unknown as { hasNestedPopoverOpen: boolean }).hasNestedPopoverOpen = false;
+      blok.BlockManager.currentBlock = {
+        id: 'test',
+        name: 'paragraph',
+        holder: document.createElement('div'),
+      } as unknown as typeof blok.BlockManager.currentBlock;
+
+      mockSelectionAnchor(blockContent);
+
+      (ui as unknown as { selectionChanged: () => void }).selectionChanged();
+
+      // Should not call tryToShow when toolbar is already open without nested popover
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+    });
+
+    it('re-renders inline toolbar when open with nested popover', async () => {
+      const { ui, blok, wrapper } = createUI();
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.setAttribute('data-blok-testid', 'blok-editor');
+      wrapper.appendChild(blockContent);
+
+      // Set up inline toolbar as open with nested popover
+      blok.InlineToolbar.opened = true;
+      (blok.InlineToolbar as unknown as { hasNestedPopoverOpen: boolean }).hasNestedPopoverOpen = true;
+      blok.BlockManager.currentBlock = {
+        id: 'test',
+        name: 'paragraph',
+        holder: document.createElement('div'),
+      } as unknown as typeof blok.BlockManager.currentBlock;
+
+      mockSelectionAnchor(blockContent);
+
+      await (ui as unknown as { selectionChanged: () => Promise<void> }).selectionChanged();
+
+      // Should call tryToShow when toolbar has nested popover open
+      expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
+    });
   });
 
   describe('DOM interactions', () => {

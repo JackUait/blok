@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
@@ -489,8 +490,8 @@ test.describe('list tool (ListItem)', () => {
       // Press Tab to indent
       await page.keyboard.press('Tab');
 
-      // Wait for DOM to update
-      await page.waitForTimeout(100);
+      // Wait for the second item to be indented (depth attribute changes)
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-list-depth', '1');
 
       // Verify focus is on a contenteditable element
       const activeElement = await page.evaluate(() => {
@@ -520,8 +521,8 @@ test.describe('list tool (ListItem)', () => {
       // Press Shift+Tab to outdent
       await page.keyboard.press('Shift+Tab');
 
-      // Wait for DOM to update
-      await page.waitForTimeout(100);
+      // Wait for the nested item to be outdented (depth attribute changes to 0)
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-list-depth', '0');
 
       // Verify focus is on a contenteditable element
       const activeElement = await page.evaluate(() => {
@@ -546,8 +547,8 @@ test.describe('list tool (ListItem)', () => {
       await page.keyboard.press('End');
       await page.keyboard.press('Enter');
 
-      // Wait for DOM to update
-      await page.waitForTimeout(100);
+      // Wait for the second list block to appear
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
 
       // Verify focus is on a contenteditable element in the second list block
       const activeElement = await page.evaluate(() => {
@@ -582,8 +583,8 @@ test.describe('list tool (ListItem)', () => {
       // Press Backspace to merge with previous item
       await page.keyboard.press('Backspace');
 
-      // Wait for DOM to update
-      await page.waitForTimeout(100);
+      // Wait for the blocks to merge (only one list block should remain)
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(1);
 
       // Verify focus is on a contenteditable element in the first (now only) list block
       const activeElement = await page.evaluate(() => {
@@ -615,8 +616,8 @@ test.describe('list tool (ListItem)', () => {
       // Enter on empty item should exit list
       await page.keyboard.press('Enter');
 
-      // Wait for DOM to update
-      await page.waitForTimeout(100);
+      // Wait for paragraph to appear (list should be converted)
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toBeVisible();
 
       // Verify focus is on a contenteditable element (should be paragraph)
       const activeElement = await page.evaluate(() => {
@@ -661,8 +662,8 @@ test.describe('list tool (ListItem)', () => {
       await page.keyboard.press('Backspace');
       await page.keyboard.press('Backspace');
 
-      // Wait for DOM to update
-      await page.waitForTimeout(200);
+      // Wait for items to reduce to 2
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
 
       // Now should only have 2 items, renumbered to 1. and 2.
       const remainingMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
@@ -690,8 +691,8 @@ test.describe('list tool (ListItem)', () => {
       await page.keyboard.press('Backspace');
       await page.keyboard.press('Backspace');
 
-      // Wait for DOM to update
-      await page.waitForTimeout(200);
+      // Wait for items to reduce to 2
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
 
       // Now should only have 2 items, renumbered to 1. and 2.
       const remainingMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
@@ -714,8 +715,8 @@ test.describe('list tool (ListItem)', () => {
       await page.keyboard.press('End');
       await page.keyboard.press('Enter');
 
-      // Wait for DOM to update
-      await page.waitForTimeout(200);
+      // Wait for the second list block to appear
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
 
       // Now should have 2 items with correct numbering
       const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
@@ -725,7 +726,9 @@ test.describe('list tool (ListItem)', () => {
 
       // Create a third item
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(200);
+
+      // Wait for the third list block to appear
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(3);
 
       const threeMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
       await expect(threeMarkers).toHaveCount(3);

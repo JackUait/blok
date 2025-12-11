@@ -280,13 +280,6 @@ export class PopoverInline extends PopoverDesktop {
 
     nestedPopover.flipper?.setHandleContentEditableTargets(true);
 
-    // Clear initial focus - inline toolbar nested popovers should not auto-focus
-    // Focus will be set on first Tab press via handleFirstTab handler below
-    // Use requestAnimationFrame to run after the parent's focusInitialElement() which also uses rAF
-    requestAnimationFrame(() => {
-      nestedPopover.flipper?.focusItem(-1);
-    });
-
     // Apply nested inline styles to the nested popover container
     const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement | null;
     if (nestedContainer) {
@@ -301,32 +294,6 @@ export class PopoverInline extends PopoverDesktop {
     if (nestedItems) {
       nestedItems.className = twMerge(nestedItems.className, 'block w-full');
     }
-
-    const handleFirstTab = (event: KeyboardEvent): void => {
-      if (event.key !== 'Tab' || event.shiftKey) {
-        return;
-      }
-
-      if (this.nestedPopover !== nestedPopover) {
-        document.removeEventListener('keydown', handleFirstTab, true);
-
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      nestedPopover.flipper?.activate((nestedPopover as unknown as PopoverInline).flippableElements);
-      nestedPopover.flipper?.focusFirst();
-
-      document.removeEventListener('keydown', handleFirstTab, true);
-    };
-
-    document.addEventListener('keydown', handleFirstTab, true);
-
-    nestedPopover.on(PopoverEvent.Closed, () => {
-      document.removeEventListener('keydown', handleFirstTab, true);
-    });
 
     /**
      * We need to add data attribute with nesting level, which will help position nested popover.

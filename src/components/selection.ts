@@ -389,15 +389,16 @@ export default class SelectionUtils {
    * Unwraps the highlight spans and restores the selection
    */
   public removeFakeBackground(): void {
+    // Always clean up any orphaned fake background elements in the DOM
+    // This handles cleanup after undo/redo operations that may restore fake background elements
+    this.removeOrphanedFakeBackgroundElements();
+
     if (!this.isFakeBackgroundEnabled) {
       return;
     }
 
     // Remove the highlight spans
     this.removeHighlightSpans();
-
-    // Also clean up any legacy fake background elements in the DOM (for backwards compatibility)
-    this.removeOrphanedFakeBackgroundElements();
 
     this.isFakeBackgroundEnabled = false;
     this.selectionContainer = null;
@@ -630,6 +631,7 @@ export default class SelectionUtils {
     if (extension > 0) {
       const bgColor = 'rgba(0, 0, 0, 0.08)';
 
+      // eslint-disable-next-line no-param-reassign
       wrapper.style.boxShadow = `0 ${extension}px 0 ${bgColor}, 0 -${extension}px 0 ${bgColor}`;
     }
   }

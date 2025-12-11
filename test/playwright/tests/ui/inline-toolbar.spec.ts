@@ -978,15 +978,15 @@ test.describe('inline toolbar', () => {
       window.blokInstance?.inlineToolbar?.close();
     });
 
-    await selectText(paragraph, 'plain part');
-
-    // Open the toolbar via API and wait for it to be visible
-    await page.evaluate(async () => {
-      await window.blokInstance?.inlineToolbar?.open();
-    });
-
     const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
 
+    // Wait for toolbar to be hidden before selecting new text
+    await expect(toolbar).toHaveCount(0);
+
+    await selectText(paragraph, 'plain part');
+
+    // Wait for the toolbar to appear automatically via selectionchange event
+    // This ensures the selection is properly established before checking the active state
     await expect(toolbar).toBeVisible();
 
     // Re-locate the bold button after the toolbar is visible to ensure we're checking the new instance

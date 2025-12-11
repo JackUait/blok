@@ -980,15 +980,19 @@ test.describe('inline toolbar', () => {
 
     await selectText(paragraph, 'plain part');
 
-    await page.evaluate(() => {
-      window.blokInstance?.inlineToolbar?.open();
+    // Open the toolbar via API and wait for it to be visible
+    await page.evaluate(async () => {
+      await window.blokInstance?.inlineToolbar?.open();
     });
 
     const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
 
     await expect(toolbar).toBeVisible();
 
-    await expect(boldButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
+    // Re-locate the bold button after the toolbar is visible to ensure we're checking the new instance
+    const boldButtonAfterReopen = page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="bold"]`);
+
+    await expect(boldButtonAfterReopen).not.toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
   test('should restore caret after converting a block', async ({ page }) => {
@@ -1168,11 +1172,10 @@ test.describe('inline toolbar', () => {
 
     await expect(nestedPopover).toBeVisible();
 
-    // Click on the second paragraph (outside the inline toolbar)
-    // Use force: true because the inline toolbar may be positioned over the second paragraph
-    // and intercept pointer events in CI environments with different viewport sizes
-    // eslint-disable-next-line playwright/no-force-option
-    await secondParagraph.click({ force: true });
+    // Click outside the inline toolbar to close it
+    // Use page.mouse.click at a position that's definitely outside the toolbar
+    // This is more reliable than clicking on an element that might be covered by the toolbar
+    await page.mouse.click(10, 10);
 
     // Verify the inline toolbar is closed
     await expect(toolbar).toHaveCount(0);

@@ -8,6 +8,7 @@ import { IconListUnordered, IconListOrdered, IconListChecklist } from '../../com
 import { twMerge } from '../../components/utils/tw';
 import { BLOK_TOOL_ATTR } from '../../components/constants';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { stripFakeBackgroundElements } from '../../components/utils';
 import type {
   API,
   BlockTool,
@@ -1248,7 +1249,7 @@ export default class List implements BlockTool {
       const content = itemEl.querySelector('[contenteditable]') as HTMLElement;
 
       return {
-        content: this.stripFakeBackgroundElements(content?.innerHTML || ''),
+        content: stripFakeBackgroundElements(content?.innerHTML || ''),
         checked: checkbox?.checked || false,
       };
     }
@@ -1264,47 +1265,10 @@ export default class List implements BlockTool {
     const nestedWrapper = contentContainer.querySelector(':scope > div[contenteditable]') as HTMLElement;
 
     if (nestedWrapper) {
-      return { content: this.stripFakeBackgroundElements(nestedWrapper.innerHTML || ''), checked: false };
+      return { content: stripFakeBackgroundElements(nestedWrapper.innerHTML || ''), checked: false };
     }
 
-    return { content: this.stripFakeBackgroundElements(contentContainer.innerHTML || ''), checked: false };
-  }
-
-  /**
-   * Strips fake background wrapper elements from HTML content
-   * These elements are used by the inline toolbar for visual selection highlighting
-   * and should not be persisted in saved data
-   * @param html - HTML content that may contain fake background elements
-   * @returns HTML content with fake background wrappers removed but their content preserved
-   */
-  private stripFakeBackgroundElements(html: string): string {
-    if (!html || !html.includes('data-blok-fake-background')) {
-      return html;
-    }
-
-    const tempDiv = document.createElement('div');
-
-    tempDiv.innerHTML = html;
-
-    const fakeBackgrounds = tempDiv.querySelectorAll('[data-blok-fake-background="true"]');
-
-    fakeBackgrounds.forEach((element) => {
-      const parent = element.parentNode;
-
-      if (!parent) {
-        return;
-      }
-
-      // Move all children before the fake background element
-      while (element.firstChild) {
-        parent.insertBefore(element.firstChild, element);
-      }
-
-      // Remove the empty fake background element
-      parent.removeChild(element);
-    });
-
-    return tempDiv.innerHTML;
+    return { content: stripFakeBackgroundElements(contentContainer.innerHTML || ''), checked: false };
   }
 
   public merge(data: ListData): void {

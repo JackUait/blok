@@ -9,6 +9,7 @@ import { IconText } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { BLOK_TOOL_ATTR } from '../../components/constants';
 import { PLACEHOLDER_ACTIVE_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { stripFakeBackgroundElements } from '../../components/utils';
 import type {
   API,
   BlockTool,
@@ -318,45 +319,8 @@ export default class Paragraph implements BlockTool {
    */
   public save(toolsContent: HTMLDivElement): ParagraphData {
     return {
-      text: this.stripFakeBackgroundElements(toolsContent.innerHTML),
+      text: stripFakeBackgroundElements(toolsContent.innerHTML),
     };
-  }
-
-  /**
-   * Strips fake background wrapper elements from HTML content
-   * These elements are used by the inline toolbar for visual selection highlighting
-   * and should not be persisted in saved data
-   * @param html - HTML content that may contain fake background elements
-   * @returns HTML content with fake background wrappers removed but their content preserved
-   */
-  private stripFakeBackgroundElements(html: string): string {
-    if (!html || !html.includes('data-blok-fake-background')) {
-      return html;
-    }
-
-    const tempDiv = document.createElement('div');
-
-    tempDiv.innerHTML = html;
-
-    const fakeBackgrounds = tempDiv.querySelectorAll('[data-blok-fake-background="true"]');
-
-    fakeBackgrounds.forEach((element) => {
-      const parent = element.parentNode;
-
-      if (!parent) {
-        return;
-      }
-
-      // Move all children before the fake background element
-      while (element.firstChild) {
-        parent.insertBefore(element.firstChild, element);
-      }
-
-      // Remove the empty fake background element
-      parent.removeChild(element);
-    });
-
-    return tempDiv.innerHTML;
   }
 
   /**

@@ -442,6 +442,189 @@ export const isCaretAtEndOfInput = (input: HTMLElement): boolean => {
 };
 
 /**
+ * Checks if the caret is at the first (top) line of a multi-line input.
+ * This is used for Notion-style navigation where Arrow Up should only
+ * move to the previous block when the caret can't move up within the current block.
+ *
+ * @param input - the contenteditable element or native input to check
+ * @returns true if caret is at the first line (or input is single-line)
+ */
+export const isCaretAtFirstLine = (input: HTMLElement): boolean => {
+  /**
+   * For single-line native inputs, always return true
+   */
+  if ($.isNativeInput(input) && input.tagName === 'INPUT') {
+    return true;
+  }
+
+  /**
+   * For textarea, check if cursor is before the first newline
+   */
+  if ($.isNativeInput(input)) {
+    const nativeInput = input as HTMLTextAreaElement;
+    const selectionStart = nativeInput.selectionStart ?? 0;
+    const textBeforeCursor = nativeInput.value.substring(0, selectionStart);
+
+    return !textBeforeCursor.includes('\n');
+  }
+
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return true;
+  }
+
+  const range = selection.getRangeAt(0);
+
+  /**
+   * Get the bounding rect of the current caret position
+   */
+  const caretRect = range.getBoundingClientRect();
+
+  /**
+   * If caret rect has no height (collapsed at start), use a temporary range
+   */
+  if (caretRect.height === 0 && caretRect.top === 0) {
+    return true;
+  }
+
+  /**
+   * Get the first line's position by creating a range at the start of the input
+   */
+  const firstNode = $.getDeepestNode(input, false);
+
+  if (!firstNode) {
+    return true;
+  }
+
+  const firstLineRange = document.createRange();
+
+  try {
+    firstLineRange.setStart(firstNode, 0);
+    firstLineRange.setEnd(firstNode, 0);
+  } catch {
+    return true;
+  }
+
+  const firstLineRect = firstLineRange.getBoundingClientRect();
+
+  /**
+   * If the first line rect has no dimensions, fall back to input's top
+   */
+  if (firstLineRect.height === 0 && firstLineRect.top === 0) {
+    const inputRect = input.getBoundingClientRect();
+
+    /**
+     * Consider caret at first line if it's within the first line height from top
+     * Use a threshold based on typical line height
+     */
+    const lineHeight = parseFloat(window.getComputedStyle(input).lineHeight) || 20;
+
+    return caretRect.top < inputRect.top + lineHeight;
+  }
+
+  /**
+   * Compare the vertical positions - if caret is on the same line as the first character,
+   * they should have similar top values (within a small threshold for rounding)
+   */
+  const threshold = 5; // pixels tolerance for line comparison
+
+  return Math.abs(caretRect.top - firstLineRect.top) < threshold;
+};
+
+/**
+ * Checks if the caret is at the last (bottom) line of a multi-line input.
+ * This is used for Notion-style navigation where Arrow Down should only
+ * move to the next block when the caret can't move down within the current block.
+ *
+ * @param input - the contenteditable element or native input to check
+ * @returns true if caret is at the last line (or input is single-line)
+ */
+export const isCaretAtLastLine = (input: HTMLElement): boolean => {
+  /**
+   * For single-line native inputs, always return true
+   */
+  if ($.isNativeInput(input) && input.tagName === 'INPUT') {
+    return true;
+  }
+
+  /**
+   * For textarea, check if cursor is after the last newline
+   */
+  if ($.isNativeInput(input)) {
+    const nativeInput = input as HTMLTextAreaElement;
+    const selectionEnd = nativeInput.selectionEnd ?? nativeInput.value.length;
+    const textAfterCursor = nativeInput.value.substring(selectionEnd);
+
+    return !textAfterCursor.includes('\n');
+  }
+
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return true;
+  }
+
+  const range = selection.getRangeAt(0);
+
+  /**
+   * Get the bounding rect of the current caret position
+   */
+  const caretRect = range.getBoundingClientRect();
+
+  /**
+   * If caret rect has no height (collapsed at end), use input's bottom
+   */
+  if (caretRect.height === 0 && caretRect.bottom === 0) {
+    return true;
+  }
+
+  /**
+   * Get the last line's position by creating a range at the end of the input
+   */
+  const lastNode = $.getDeepestNode(input, true);
+
+  if (!lastNode) {
+    return true;
+  }
+
+  const lastLineRange = document.createRange();
+  const lastNodeLength = $.getContentLength(lastNode);
+
+  try {
+    lastLineRange.setStart(lastNode, lastNodeLength);
+    lastLineRange.setEnd(lastNode, lastNodeLength);
+  } catch {
+    return true;
+  }
+
+  const lastLineRect = lastLineRange.getBoundingClientRect();
+
+  /**
+   * If the last line rect has no dimensions, fall back to input's bottom
+   */
+  if (lastLineRect.height === 0 && lastLineRect.bottom === 0) {
+    const inputRect = input.getBoundingClientRect();
+
+    /**
+     * Consider caret at last line if it's within the last line height from bottom
+     * Use a threshold based on typical line height
+     */
+    const lineHeight = parseFloat(window.getComputedStyle(input).lineHeight) || 20;
+
+    return caretRect.bottom > inputRect.bottom - lineHeight;
+  }
+
+  /**
+   * Compare the vertical positions - if caret is on the same line as the last character,
+   * they should have similar bottom values (within a small threshold for rounding)
+   */
+  const threshold = 5; // pixels tolerance for line comparison
+
+  return Math.abs(caretRect.bottom - lastLineRect.bottom) < threshold;
+};
+
+/**
  * Set focus to contenteditable or native input element
  * @param element - element where to set focus
  * @param atStart - where to set focus: at the start or at the end
@@ -540,4 +723,269 @@ export const focus = (element: HTMLElement, atStart = true): void => {
 
   selection.removeAllRanges();
   selection.addRange(range);
+};
+
+/**
+ * Gets the current caret's X coordinate (horizontal position).
+ * Used for Notion-style navigation to preserve horizontal position when moving between blocks.
+ * @returns The X coordinate of the caret, or null if no selection exists
+ */
+export const getCaretXPosition = (): number | null => {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return null;
+  }
+
+  const range = selection.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
+
+  /**
+   * If the range has valid dimensions, return the left position
+   */
+  const hasValidDimensions = rect.width !== 0 || rect.height !== 0 || rect.x !== 0;
+
+  if (hasValidDimensions) {
+    return rect.left;
+  }
+
+  /**
+   * If the range has no dimensions (e.g., collapsed at start of empty element),
+   * try to get position from the container element
+   */
+  const container = range.startContainer;
+  const element = container.nodeType === Node.ELEMENT_NODE
+    ? container as HTMLElement
+    : container.parentElement;
+
+  if (!element) {
+    return null;
+  }
+
+  const elementRect = element.getBoundingClientRect();
+
+  return elementRect.left;
+};
+
+/**
+ * Sets the caret position in an element at the closest position to the target X coordinate.
+ * This is used for Notion-style navigation to preserve horizontal position when moving between blocks.
+ * @param element - The contenteditable element or native input to set caret in
+ * @param targetX - The target X coordinate to match
+ * @param atFirstLine - If true, place caret on the first line; if false, place on the last line
+ */
+export const setCaretAtXPosition = (element: HTMLElement, targetX: number, atFirstLine: boolean): void => {
+  /**
+   * For native inputs, we need to find the character position that best matches the X coordinate
+   */
+  if ($.isNativeInput(element)) {
+    setCaretAtXPositionInNativeInput(element as HTMLInputElement | HTMLTextAreaElement, targetX, atFirstLine);
+
+    return;
+  }
+
+  setCaretAtXPositionInContentEditable(element, targetX, atFirstLine);
+};
+
+/**
+ * Sets caret position in a native input element at the closest position to target X
+ */
+const setCaretAtXPositionInNativeInput = (
+  input: HTMLInputElement | HTMLTextAreaElement,
+  targetX: number,
+  atFirstLine: boolean
+): void => {
+  input.focus();
+
+  const value = input.value;
+
+  if (value.length === 0) {
+    input.setSelectionRange(0, 0);
+
+    return;
+  }
+
+  /**
+   * For textareas with multiple lines, find the target line first
+   */
+  if (input.tagName === 'TEXTAREA') {
+    const lines = value.split('\n');
+    const targetLineIndex = atFirstLine ? 0 : lines.length - 1;
+    const charOffset = lines.slice(0, targetLineIndex).reduce((acc, line) => acc + line.length + 1, 0);
+
+    const lineStart = charOffset;
+    const lineEnd = charOffset + lines[targetLineIndex].length;
+
+    /**
+     * Binary search to find the best position within the line
+     */
+    const bestPosition = findBestPositionInRange(input, lineStart, lineEnd, targetX);
+
+    input.setSelectionRange(bestPosition, bestPosition);
+
+    return;
+  }
+
+  /**
+   * For single-line inputs, search the entire value
+   */
+  const bestPosition = findBestPositionInRange(input, 0, value.length, targetX);
+
+  input.setSelectionRange(bestPosition, bestPosition);
+};
+
+/**
+ * Binary search to find the character position closest to target X in a native input
+ */
+const findBestPositionInRange = (
+  input: HTMLInputElement | HTMLTextAreaElement,
+  start: number,
+  end: number,
+  targetX: number
+): number => {
+  /**
+   * Create a temporary span to measure character positions
+   * This is a workaround since native inputs don't expose character positions directly
+   */
+  const inputRect = input.getBoundingClientRect();
+  const style = window.getComputedStyle(input);
+  const paddingLeft = parseFloat(style.paddingLeft) || 0;
+
+  /**
+   * For native inputs, we approximate position based on character width
+   * This is not perfect but provides reasonable behavior
+   */
+  const relativeX = targetX - inputRect.left - paddingLeft;
+
+  if (relativeX <= 0) {
+    return start;
+  }
+
+  /**
+   * Estimate character width and find approximate position
+   */
+  const text = input.value.substring(start, end);
+  const fontSize = parseFloat(style.fontSize) || 16;
+  const avgCharWidth = fontSize * 0.6; // Approximate average character width
+
+  const estimatedPosition = Math.round(relativeX / avgCharWidth);
+  const clampedPosition = Math.min(Math.max(estimatedPosition, 0), text.length);
+
+  return start + clampedPosition;
+};
+
+/**
+ * Sets caret position in a contenteditable element at the closest position to target X
+ */
+const setCaretAtXPositionInContentEditable = (
+  element: HTMLElement,
+  targetX: number,
+  atFirstLine: boolean
+): void => {
+  const selection = window.getSelection();
+
+  if (!selection) {
+    return;
+  }
+
+  /**
+   * Get the target line's Y position
+   */
+  const targetNode = atFirstLine
+    ? $.getDeepestNode(element, false)
+    : $.getDeepestNode(element, true);
+
+  if (!targetNode) {
+    focus(element, atFirstLine);
+
+    return;
+  }
+
+  /**
+   * Use document.caretPositionFromPoint or document.caretRangeFromPoint
+   * to find the position closest to the target X coordinate
+   */
+  const targetY = getTargetYPosition(element, targetNode, atFirstLine);
+
+  if (targetY === null) {
+    focus(element, atFirstLine);
+
+    return;
+  }
+
+  /**
+   * Try to use caretPositionFromPoint (standard) or caretRangeFromPoint (WebKit)
+   */
+  const caretPosition = getCaretPositionFromPoint(targetX, targetY);
+
+  if (caretPosition) {
+    const range = document.createRange();
+
+    try {
+      range.setStart(caretPosition.node, caretPosition.offset);
+      range.setEnd(caretPosition.node, caretPosition.offset);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      return;
+    } catch {
+      // Fall through to fallback
+    }
+  }
+
+  /**
+   * Fallback: place caret at start or end
+   */
+  focus(element, atFirstLine);
+};
+
+/**
+ * Gets the Y coordinate for the target line (first or last)
+ */
+const getTargetYPosition = (element: HTMLElement, targetNode: Node, atFirstLine: boolean): number | null => {
+  const range = document.createRange();
+
+  try {
+    if (atFirstLine) {
+      range.setStart(targetNode, 0);
+      range.setEnd(targetNode, 0);
+    } else {
+      const length = $.getContentLength(targetNode);
+
+      range.setStart(targetNode, length);
+      range.setEnd(targetNode, length);
+    }
+
+    const rect = range.getBoundingClientRect();
+
+    if (rect.height === 0 && rect.top === 0) {
+      const elementRect = element.getBoundingClientRect();
+
+      return atFirstLine ? elementRect.top + 10 : elementRect.bottom - 10;
+    }
+
+    /**
+     * Return the vertical center of the line
+     */
+    return rect.top + rect.height / 2;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Gets caret position from screen coordinates using browser APIs.
+ * Uses the standard caretPositionFromPoint API which is now widely supported.
+ */
+const getCaretPositionFromPoint = (x: number, y: number): { node: Node; offset: number } | null => {
+  const caretPosition = document.caretPositionFromPoint(x, y);
+
+  if (caretPosition === null) {
+    return null;
+  }
+
+  return {
+    node: caretPosition.offsetNode,
+    offset: caretPosition.offset,
+  };
 };

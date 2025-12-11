@@ -586,8 +586,6 @@ export default class SelectionUtils {
     wrapper.style.color = 'inherit';
     wrapper.style.boxDecorationBreak = 'clone';
     (wrapper.style as unknown as Record<string, string>)['-webkit-box-decoration-break'] = 'clone';
-    // Use box-shadow to extend the highlight to match line-height
-    wrapper.style.boxShadow = '0 0.2em 0 rgba(0, 0, 0, 0.08), 0 -0.2em 0 rgba(0, 0, 0, 0.08)';
 
     const contents = range.extractContents();
 
@@ -598,7 +596,42 @@ export default class SelectionUtils {
     wrapper.appendChild(contents);
     range.insertNode(wrapper);
 
+    // Calculate and apply box-shadow to match line-height
+    // This must be done after insertion so we can get computed styles
+    this.applyLineHeightExtension(wrapper);
+
     return wrapper;
+  }
+
+  /**
+   * Applies box-shadow to extend the highlight to match the parent's line-height
+   * @param wrapper - the highlight wrapper element
+   */
+  private applyLineHeightExtension(wrapper: HTMLElement): void {
+    const parent = wrapper.parentElement;
+
+    if (!parent) {
+      return;
+    }
+
+    const parentStyle = window.getComputedStyle(parent);
+    const wrapperHeight = wrapper.getBoundingClientRect().height;
+
+    const lineHeight = parseFloat(parentStyle.lineHeight);
+
+    // If lineHeight is NaN (e.g., "normal"), estimate it as 1.2 * fontSize
+    const fontSize = parseFloat(window.getComputedStyle(wrapper).fontSize);
+    const effectiveLineHeight = isNaN(lineHeight) ? fontSize * 1.2 : lineHeight;
+
+    // Calculate the vertical extension needed on each side
+    // The difference between line-height and the wrapper's actual height, divided by 2
+    const extension = Math.max(0, (effectiveLineHeight - wrapperHeight) / 2);
+
+    if (extension > 0) {
+      const bgColor = 'rgba(0, 0, 0, 0.08)';
+
+      wrapper.style.boxShadow = `0 ${extension}px 0 ${bgColor}, 0 -${extension}px 0 ${bgColor}`;
+    }
   }
 
   /**

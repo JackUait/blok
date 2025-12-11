@@ -984,6 +984,10 @@ test.describe('inline toolbar', () => {
       window.blokInstance?.inlineToolbar?.open();
     });
 
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    await expect(toolbar).toBeVisible();
+
     await expect(boldButton).not.toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
@@ -1165,7 +1169,10 @@ test.describe('inline toolbar', () => {
     await expect(nestedPopover).toBeVisible();
 
     // Click on the second paragraph (outside the inline toolbar)
-    await secondParagraph.click();
+    // Use force: true because the inline toolbar may be positioned over the second paragraph
+    // and intercept pointer events in CI environments with different viewport sizes
+    // eslint-disable-next-line playwright/no-force-option
+    await secondParagraph.click({ force: true });
 
     // Verify the inline toolbar is closed
     await expect(toolbar).toHaveCount(0);

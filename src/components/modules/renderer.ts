@@ -4,11 +4,29 @@ import type { BlockId, BlockToolData, OutputBlockData } from '../../../types';
 import type BlockToolAdapter from '../tools/block';
 import type { StubData } from '../../tools/stub';
 import type Block from '../block';
+import {
+  analyzeDataFormat,
+  expandToHierarchical,
+  shouldExpandToHierarchical,
+  type DataFormatAnalysis,
+} from '../utils/data-model-transform';
 
 /**
  * Module that responsible for rendering Blocks on blok initialization
  */
 export default class Renderer extends Module {
+  /**
+   * Stores the detected input data format for use during save
+   */
+  private detectedInputFormat: DataFormatAnalysis['format'] = 'flat';
+
+  /**
+   * Get the detected input format
+   */
+  public getDetectedInputFormat(): DataFormatAnalysis['format'] {
+    return this.detectedInputFormat;
+  }
+
   /**
    * Renders passed blocks as one batch
    * @param blocksData - blocks to render
@@ -20,11 +38,21 @@ export default class Renderer extends Module {
       if (blocksData.length === 0) {
         BlockManager.insert();
       } else {
+        // Analyze and potentially transform the input data
+        const dataModelConfig = this.config.dataModel || 'auto';
+        const analysis = analyzeDataFormat(blocksData);
+        this.detectedInputFormat = analysis.format;
+
+        // Transform to hierarchical if config requires it
+        const processedBlocks = shouldExpandToHierarchical(dataModelConfig, analysis.format)
+          ? expandToHierarchical(blocksData)
+          : blocksData;
+
         /**
          * Create Blocks instances
          */
-        const blocks = blocksData.map((blockData) => {
-          const { tunes, id } = blockData;
+        const blocks = processedBlocks.map((blockData: OutputBlockData) => {
+          const { tunes, id, parent, content } = blockData;
           const originalTool = blockData.type;
           const availabilityResult = (() => {
             if (Tools.available.has(originalTool)) {
@@ -49,6 +77,8 @@ export default class Renderer extends Module {
                 tool,
                 data,
                 tunes,
+                parentId: parent,
+                contentIds: content,
               });
             } catch (error) {
               _.log(`Block «${tool}» skipped because of plugins error`, 'error', {
@@ -66,6 +96,8 @@ export default class Renderer extends Module {
                 tool: Tools.stubTool,
                 data: stubData,
                 tunes,
+                parentId: parent,
+                contentIds: content,
               });
             }
           };

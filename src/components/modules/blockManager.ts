@@ -250,6 +250,8 @@ export default class BlockManager extends Module {
    * @param {string} options.tool - tools passed in blok config {@link BlokConfig#tools}
    * @param {string} [options.id] - unique id for this block
    * @param {BlockToolData} [options.data] - constructor params
+   * @param {string} [options.parentId] - parent block id for hierarchical structure
+   * @param {string[]} [options.contentIds] - array of child block ids
    * @returns {Block}
    */
   public composeBlock({
@@ -257,7 +259,16 @@ export default class BlockManager extends Module {
     data = {},
     id = undefined,
     tunes: tunesData = {},
-  }: {tool: string; id?: string; data?: BlockToolData; tunes?: {[name: string]: BlockTuneData}}): Block {
+    parentId,
+    contentIds,
+  }: {
+    tool: string;
+    id?: string;
+    data?: BlockToolData;
+    tunes?: {[name: string]: BlockTuneData};
+    parentId?: string;
+    contentIds?: string[];
+  }): Block {
     const readOnly = this.Blok.ReadOnly.isEnabled;
     const tool = this.Blok.Tools.blockTools.get(name);
 
@@ -272,6 +283,8 @@ export default class BlockManager extends Module {
       api: this.Blok.API,
       readOnly,
       tunesData,
+      parentId,
+      contentIds,
     }, this.eventsDispatcher);
 
     if (!readOnly) {

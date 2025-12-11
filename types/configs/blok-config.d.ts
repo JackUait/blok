@@ -4,6 +4,14 @@ import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
 
+/**
+ * Data model format for input/output
+ * - 'legacy': Use nested items structure (e.g., List items[] with nested items[])
+ * - 'hierarchical': Use flat blocks with parent/content references (Notion-like)
+ * - 'auto': Auto-detect input format and preserve it on output (default)
+ */
+export type DataModelFormat = 'legacy' | 'hierarchical' | 'auto';
+
 export interface BlokConfig {
   /**
    * Element where Blok will be appended
@@ -21,6 +29,19 @@ export interface BlokConfig {
    * If not specified, Paragraph Tool will be used
    */
   defaultBlock?: string;
+
+  /**
+   * Data model format for input/output.
+   * - 'legacy': Always use nested items structure (e.g., List items[] with nested items[])
+   * - 'hierarchical': Always use flat blocks with parent/content references (Notion-like)
+   * - 'auto': Auto-detect input format and preserve it on output (default)
+   *
+   * With 'auto', existing articles using legacy format will continue to work unchanged,
+   * while new hierarchical data will be preserved as-is.
+   *
+   * @default 'auto'
+   */
+  dataModel?: DataModelFormat;
 
 
 

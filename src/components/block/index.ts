@@ -72,6 +72,18 @@ interface BlockConstructorOptions {
    * Tunes data for current Block
    */
   tunesData: { [name: string]: BlockTuneData };
+
+  /**
+   * Parent block id for hierarchical structure (Notion-like flat-with-references model).
+   * When present, this block is a child of the block with the specified id.
+   */
+  parentId?: string;
+
+  /**
+   * Array of child block ids (Notion-like flat-with-references model).
+   * References blocks that are children of this block.
+   */
+  contentIds?: string[];
 }
 
 /**
@@ -122,6 +134,18 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * Block unique identifier
    */
   public id: string;
+
+  /**
+   * Parent block id for hierarchical structure (Notion-like flat-with-references model).
+   * Null if this is a root-level block.
+   */
+  public parentId: string | null;
+
+  /**
+   * Array of child block ids (Notion-like flat-with-references model).
+   * Empty array if block has no children.
+   */
+  public contentIds: string[];
 
   /**
    * Block Tool`s name
@@ -232,6 +256,8 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @param options.tool — block's tool
    * @param options.api - Blok API module for pass it to the Block Tunes
    * @param options.readOnly - Read-Only flag
+   * @param [options.parentId] - parent block id for hierarchical structure
+   * @param [options.contentIds] - array of child block ids
    * @param [eventBus] - Blok common event bus. Allows to subscribe on some Blok events. Could be omitted when "virtual" Block is created. See BlocksAPI@composeBlockData.
    */
   constructor({
@@ -240,6 +266,8 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     tool,
     readOnly,
     tunesData,
+    parentId,
+    contentIds,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
     this.ready = new Promise((resolve) => {
@@ -247,6 +275,8 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     });
     this.name = tool.name;
     this.id = id;
+    this.parentId = parentId ?? null;
+    this.contentIds = contentIds ?? [];
     this.settings = tool.settings;
     this.config = this.settings;
     this.blokEventBus = eventBus || null;

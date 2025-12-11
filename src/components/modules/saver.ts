@@ -11,9 +11,18 @@ import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type Block from '../block';
 import * as _ from '../utils';
 import { sanitizeBlocks } from '../utils/sanitizer';
+import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
 
 type SaverValidatedData = ValidatedData & {
   tunes?: Record<string, BlockTuneData>;
+  /**
+   * Parent block id for hierarchical structure (Notion-like flat-with-references model)
+   */
+  parentId?: string | null;
+  /**
+   * Array of child block ids (Notion-like flat-with-references model)
+   */
+  contentIds?: string[];
 };
 
 type SanitizableBlockData = SaverValidatedData & Pick<SavedData, 'data' | 'tool'>;
@@ -99,6 +108,8 @@ export default class Saver extends Module {
     return {
       ...normalizedData,
       isValid,
+      parentId: block.parentId,
+      contentIds: block.contentIds,
     };
   }
 
@@ -108,9 +119,9 @@ export default class Saver extends Module {
    * @returns {OutputData}
    */
   private makeOutput(allExtractedData: SaverValidatedData[]): OutputData {
-    const blocks: OutputData['blocks'] = [];
+    const extractedBlocks: OutputData['blocks'] = [];
 
-    allExtractedData.forEach(({ id, tool, data, tunes, isValid }) => {
+    allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds }) => {
       if (!isValid) {
         _.log(`Block «${tool}» skipped because saved data is invalid`);
 
@@ -125,7 +136,7 @@ export default class Saver extends Module {
 
       /** If it was stub Block, get original data */
       if (tool === this.Blok.Tools.stubTool && this.isStubSavedData(data)) {
-        blocks.push(data);
+        extractedBlocks.push(data);
 
         return;
       }
@@ -137,6 +148,9 @@ export default class Saver extends Module {
       }
 
       const isTunesEmpty = tunes === undefined || _.isEmpty(tunes);
+      const hasParent = parentId !== undefined && parentId !== null;
+      const hasContent = contentIds !== undefined && contentIds.length > 0;
+
       const output: OutputData['blocks'][number] = {
         id,
         type: tool,
@@ -144,14 +158,28 @@ export default class Saver extends Module {
         ...!isTunesEmpty && {
           tunes,
         },
+        ...hasParent && {
+          parent: parentId,
+        },
+        ...hasContent && {
+          content: contentIds,
+        },
       };
 
-      blocks.push(output);
+      extractedBlocks.push(output);
     });
+
+    // Apply data model transformation if needed
+    const dataModelConfig = this.config.dataModel || 'auto';
+    const detectedInputFormat = this.Blok.Renderer?.getDetectedInputFormat?.() ?? 'flat';
+
+    const finalBlocks = shouldCollapseToLegacy(dataModelConfig, detectedInputFormat)
+      ? collapseToLegacy(extractedBlocks)
+      : extractedBlocks;
 
     return {
       time: +new Date(),
-      blocks,
+      blocks: finalBlocks,
       version: _.getBlokVersion(),
     };
   }

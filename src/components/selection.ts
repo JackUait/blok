@@ -54,9 +54,10 @@ export default class SelectionUtils {
   public isFakeBackgroundEnabled = false;
 
   /**
-   * Elements that currently imitate the selection highlight
+   * The contenteditable element that had the selection when fake background was enabled
+   * Used to restore focus and selection when fake background is removed
    */
-  private fakeBackgroundElements: HTMLElement[] = [];
+  private selectionContainer: HTMLElement | null = null;
 
   /**
    * Returns selected anchor
@@ -385,36 +386,44 @@ export default class SelectionUtils {
 
   /**
    * Removes fake background
+   * Unwraps the highlight spans and restores the selection
    */
   public removeFakeBackground(): void {
-    // First, remove tracked elements
-    this.removeTrackedFakeBackgroundElements();
-
-    // Also clean up any orphaned fake background elements in the DOM
-    // This handles cases where elements were restored by undo/redo
-    this.removeOrphanedFakeBackgroundElements();
-
-    this.isFakeBackgroundEnabled = false;
-  }
-
-  /**
-   * Removes fake background elements that are tracked in fakeBackgroundElements array
-   */
-  private removeTrackedFakeBackgroundElements(): void {
-    if (!this.fakeBackgroundElements.length) {
+    if (!this.isFakeBackgroundEnabled) {
       return;
     }
 
-    const firstElement = this.fakeBackgroundElements[0];
-    const lastElement = this.fakeBackgroundElements[this.fakeBackgroundElements.length - 1];
+    // Remove the highlight spans
+    this.removeHighlightSpans();
 
-    const firstChild = firstElement.firstChild;
-    const lastChild = lastElement.lastChild;
+    // Also clean up any legacy fake background elements in the DOM (for backwards compatibility)
+    this.removeOrphanedFakeBackgroundElements();
 
-    this.fakeBackgroundElements.forEach((element) => {
-      this.unwrapFakeBackground(element);
+    this.isFakeBackgroundEnabled = false;
+    this.selectionContainer = null;
+  }
+
+  /**
+   * Removes highlight spans and reconstructs the saved selection range
+   */
+  private removeHighlightSpans(): void {
+    const highlightSpans = document.querySelectorAll('[data-blok-fake-background="true"]');
+
+    if (highlightSpans.length === 0) {
+      return;
+    }
+
+    const firstSpan = highlightSpans[0] as HTMLElement;
+    const lastSpan = highlightSpans[highlightSpans.length - 1] as HTMLElement;
+
+    const firstChild = firstSpan.firstChild;
+    const lastChild = lastSpan.lastChild;
+
+    highlightSpans.forEach((element) => {
+      this.unwrapFakeBackground(element as HTMLElement);
     });
 
+    // Reconstruct the selection range after unwrapping
     if (firstChild && lastChild) {
       const newRange = document.createRange();
 
@@ -422,13 +431,12 @@ export default class SelectionUtils {
       newRange.setEnd(lastChild, lastChild.textContent?.length || 0);
       this.savedSelectionRange = newRange;
     }
-
-    this.fakeBackgroundElements = [];
   }
 
   /**
    * Removes any fake background elements from the DOM that are not tracked
    * This handles cleanup after undo/redo operations that may restore fake background elements
+   * Also provides backwards compatibility with old fake background approach
    */
   private removeOrphanedFakeBackgroundElements(): void {
     const orphanedElements = document.querySelectorAll('[data-blok-fake-background="true"]');
@@ -439,7 +447,9 @@ export default class SelectionUtils {
   }
 
   /**
-   * Sets fake background
+   * Sets fake background by wrapping selected text in highlight spans
+   * Uses a gray background color to simulate the "unfocused selection" appearance
+   * similar to how Notion shows selections when focus moves to another element
    */
   public setFakeBackground(): void {
     this.removeFakeBackground();
@@ -456,6 +466,15 @@ export default class SelectionUtils {
       return;
     }
 
+    // Find the contenteditable container that holds the selection
+    const container = range.commonAncestorContainer;
+    const element = container.nodeType === Node.ELEMENT_NODE
+      ? container as HTMLElement
+      : container.parentElement;
+
+    this.selectionContainer = element?.closest('[contenteditable="true"]') as HTMLElement | null;
+
+    // Collect text nodes and wrap them with highlight spans
     const textNodes = this.collectTextNodes(range);
 
     if (textNodes.length === 0) {
@@ -467,7 +486,7 @@ export default class SelectionUtils {
     const anchorEndNode = range.endContainer;
     const anchorEndOffset = range.endOffset;
 
-    this.fakeBackgroundElements = [];
+    const highlightSpans: HTMLElement[] = [];
 
     textNodes.forEach((textNode) => {
       const segmentRange = document.createRange();
@@ -484,21 +503,25 @@ export default class SelectionUtils {
       segmentRange.setStart(textNode, startOffset);
       segmentRange.setEnd(textNode, endOffset);
 
-      const wrapper = this.wrapRangeWithFakeBackground(segmentRange);
+      const wrapper = this.wrapRangeWithHighlight(segmentRange);
 
       if (wrapper) {
-        this.fakeBackgroundElements.push(wrapper);
+        highlightSpans.push(wrapper);
       }
     });
 
-    if (!this.fakeBackgroundElements.length) {
+    if (highlightSpans.length === 0) {
       return;
     }
 
+    // Create a visual range spanning all highlight spans
     const visualRange = document.createRange();
 
-    visualRange.setStartBefore(this.fakeBackgroundElements[0]);
-    visualRange.setEndAfter(this.fakeBackgroundElements[this.fakeBackgroundElements.length - 1]);
+    visualRange.setStartBefore(highlightSpans[0]);
+    visualRange.setEndAfter(highlightSpans[highlightSpans.length - 1]);
+
+    // Save the range for later restoration
+    this.savedSelectionRange = visualRange.cloneRange();
 
     selection.removeAllRanges();
     selection.addRange(visualRange);
@@ -544,10 +567,10 @@ export default class SelectionUtils {
   }
 
   /**
-   * Wraps passed range (that belongs to the single text node) with fake background element
+   * Wraps passed range with a highlight span styled like an unfocused selection (gray)
    * @param range - range to wrap
    */
-  private wrapRangeWithFakeBackground(range: Range): HTMLElement | null {
+  private wrapRangeWithHighlight(range: Range): HTMLElement | null {
     if (range.collapsed) {
       return null;
     }
@@ -557,11 +580,14 @@ export default class SelectionUtils {
     wrapper.setAttribute('data-blok-testid', 'fake-background');
     wrapper.setAttribute('data-blok-fake-background', 'true');
     wrapper.setAttribute('data-blok-mutation-free', 'true');
-    wrapper.style.backgroundColor = '#a8d6ff';
+    // Use gray color to simulate unfocused selection (like Notion's gray selection)
+    // This mimics the browser's native unfocused selection appearance
+    wrapper.style.backgroundColor = 'rgba(0, 0, 0, 0.08)';
     wrapper.style.color = 'inherit';
-    wrapper.style.display = 'inline';
-    wrapper.style.padding = '0';
-    wrapper.style.margin = '0';
+    wrapper.style.boxDecorationBreak = 'clone';
+    (wrapper.style as unknown as Record<string, string>)['-webkit-box-decoration-break'] = 'clone';
+    // Use box-shadow to extend the highlight to match line-height
+    wrapper.style.boxShadow = '0 0.2em 0 rgba(0, 0, 0, 0.08), 0 -0.2em 0 rgba(0, 0, 0, 0.08)';
 
     const contents = range.extractContents();
 
@@ -576,7 +602,7 @@ export default class SelectionUtils {
   }
 
   /**
-   * Removes fake background wrapper
+   * Removes fake background wrapper (legacy support)
    * @param element - wrapper element
    */
   private unwrapFakeBackground(element: HTMLElement): void {

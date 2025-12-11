@@ -5,8 +5,27 @@
  * Used for automatic detection and transformation when dataModel config is 'auto'.
  */
 import type { OutputBlockData, BlockId } from '../../../types';
-import type { ListData, ListItem } from '../../tools/list';
 import { generateBlockId } from '../utils';
+
+/**
+ * Legacy list item structure for data model transformation.
+ * Used internally for transforming legacy nested list data to the hierarchical model.
+ */
+interface LegacyListItem {
+  content: string;
+  checked?: boolean;
+  items?: LegacyListItem[];
+}
+
+/**
+ * Legacy list data structure for data model transformation.
+ * Used internally for transforming legacy nested list data to the hierarchical model.
+ */
+interface LegacyListData {
+  style: 'unordered' | 'ordered' | 'checklist';
+  items: LegacyListItem[];
+  start?: number;
+}
 
 /**
  * Result of analyzing the input data format
@@ -25,7 +44,7 @@ export interface DataFormatAnalysis {
 /**
  * Recursively check if any list item has nested items
  */
-const hasNestedListItems = (items: ListItem[]): boolean => {
+const hasNestedListItems = (items: LegacyListItem[]): boolean => {
   return items.some(item => item.items !== undefined && item.items.length > 0);
 };
 
@@ -40,7 +59,7 @@ const hasNestedItems = (block: OutputBlockData): boolean => {
     return false;
   }
 
-  return hasNestedListItems(block.data.items as ListItem[]);
+  return hasNestedListItems(block.data.items as LegacyListItem[]);
 };
 
 /**
@@ -75,7 +94,7 @@ export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis
  * Expand list items recursively, collecting child IDs
  */
 const expandListItems = (
-  items: ListItem[],
+  items: LegacyListItem[],
   parentId: BlockId | undefined,
   depth: number,
   style: string,
@@ -123,7 +142,7 @@ const expandListItems = (
  * Expand a List block with nested items into flat list_item blocks
  */
 const expandListToHierarchical = (
-  listData: ListData,
+  listData: LegacyListData,
   tunes?: OutputBlockData['tunes']
 ): OutputBlockData[] => {
   const blocks: OutputBlockData[] = [];
@@ -152,7 +171,7 @@ export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData
 
     if (isListBlock) {
       // Expand List tool nested items to flat blocks
-      const listData = block.data as ListData;
+      const listData = block.data as LegacyListData;
       const expanded = expandListToHierarchical(listData, block.tunes);
 
       expandedBlocks.push(...expanded);
@@ -193,8 +212,8 @@ const collectChildItems = (
   contentIds: BlockId[],
   blockMap: Map<BlockId, OutputBlockData>,
   processedIds: Set<BlockId>
-): ListItem[] => {
-  const childItems: ListItem[] = [];
+): LegacyListItem[] => {
+  const childItems: LegacyListItem[] = [];
 
   for (const childId of contentIds) {
     const childBlock = blockMap.get(childId);
@@ -217,15 +236,15 @@ const collectListItems = (
   block: OutputBlockData,
   blockMap: Map<BlockId, OutputBlockData>,
   processedIds: Set<BlockId>
-): ListItem[] => {
-  const items: ListItem[] = [];
+): LegacyListItem[] => {
+  const items: LegacyListItem[] = [];
 
   // Mark this block as processed
   if (block.id) {
     processedIds.add(block.id);
   }
 
-  const item: ListItem = {
+  const item: LegacyListItem = {
     content: block.data?.text || '',
     checked: block.data?.checked,
   };
@@ -268,7 +287,7 @@ const processRootListItem = (
       style,
       items: listItems,
       ...(style === 'ordered' && start !== undefined && start !== 1 ? { start } : {}),
-    } as ListData,
+    } as LegacyListData,
     ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
   };
 

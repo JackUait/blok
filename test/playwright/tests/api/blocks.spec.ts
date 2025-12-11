@@ -1284,7 +1284,7 @@ test.describe('api.blocks', () => {
         }
       }`;
 
-      const LIST_TOOL_SOURCE = `class ListTool {
+      const QUOTE_TOOL_SOURCE = `class QuoteTool {
         constructor(options) {
           this.data = options.data;
         }
@@ -1298,8 +1298,8 @@ test.describe('api.blocks', () => {
 
         static get toolbox() {
           return {
-            icon: '•',
-            title: 'List',
+            icon: '"',
+            title: 'Quote',
           };
         }
 
@@ -1326,8 +1326,8 @@ test.describe('api.blocks', () => {
             classSource: HEADER_TOOL_SOURCE,
           },
           {
-            name: 'list',
-            classSource: LIST_TOOL_SOURCE,
+            name: 'quote',
+            classSource: QUOTE_TOOL_SOURCE,
           },
         ],
         data: {
@@ -1357,9 +1357,9 @@ test.describe('api.blocks', () => {
       // Open "Convert to" submenu
       const convertToMenu = await openConvertToMenu(page);
 
-      // Check that both header and list tools are available
+      // Check that both header and quote tools are available
       await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
-      await expect(convertToMenu.locator('[data-blok-item-name="list"]')).toBeVisible();
+      await expect(convertToMenu.locator('[data-blok-item-name="quote"]')).toBeVisible();
     });
 
     test('should not show conversion options when block has no export config', async ({ page }) => {

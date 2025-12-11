@@ -1286,8 +1286,9 @@ describe('BlockEvents', () => {
       (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
 
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '',
         style: 'ordered',
-        items: [{ content: '', checked: false }],
+        checked: false,
       });
       expect(setToBlock).toHaveBeenCalledWith({ id: 'new-block' }, 'start-position');
     });
@@ -1325,8 +1326,9 @@ describe('BlockEvents', () => {
       (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
 
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '',
         style: 'ordered',
-        items: [{ content: '', checked: false }],
+        checked: false,
       });
     });
 
@@ -1363,8 +1365,9 @@ describe('BlockEvents', () => {
       (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
 
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '',
         style: 'ordered',
-        items: [{ content: '', checked: false }],
+        checked: false,
         start: 42,
       });
     });
@@ -1455,8 +1458,9 @@ describe('BlockEvents', () => {
       (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
 
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '',
         style: 'checklist',
-        items: [{ content: '', checked: false }],
+        checked: false,
       });
       expect(setToBlock).toHaveBeenCalledWith({ id: 'new-block' }, 'start-position');
     });
@@ -1494,8 +1498,9 @@ describe('BlockEvents', () => {
       (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
 
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '',
         style: 'checklist',
-        items: [{ content: '', checked: false }],
+        checked: false,
       });
       expect(setToBlock).toHaveBeenCalledWith({ id: 'new-block' }, 'start-position');
     });
@@ -1533,8 +1538,9 @@ describe('BlockEvents', () => {
       (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
 
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '',
         style: 'checklist',
-        items: [{ content: '', checked: true }],
+        checked: true,
       });
       expect(setToBlock).toHaveBeenCalledWith({ id: 'new-block' }, 'start-position');
     });
@@ -1572,8 +1578,9 @@ describe('BlockEvents', () => {
       (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
 
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '',
         style: 'checklist',
-        items: [{ content: '', checked: true }],
+        checked: true,
       });
       expect(setToBlock).toHaveBeenCalledWith({ id: 'new-block' }, 'start-position');
     });
@@ -1611,8 +1618,9 @@ describe('BlockEvents', () => {
       (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
 
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '',
         style: 'unordered',
-        items: [{ content: '', checked: false }],
+        checked: false,
       });
       expect(setToBlock).toHaveBeenCalledWith({ id: 'new-block' }, 'start-position');
     });
@@ -1650,8 +1658,9 @@ describe('BlockEvents', () => {
       (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
 
       expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '',
         style: 'unordered',
-        items: [{ content: '', checked: false }],
+        checked: false,
       });
       expect(setToBlock).toHaveBeenCalledWith({ id: 'new-block' }, 'start-position');
     });

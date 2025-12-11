@@ -41,6 +41,22 @@ export const PLACEHOLDER_ACTIVE_CLASSES: string[] = [
 ];
 
 /**
+ * Placeholder classes that only show placeholder when element is focused.
+ * Uses data-placeholder-active attribute and only displays when element is empty AND focused.
+ * Used by paragraph tool.
+ */
+export const PLACEHOLDER_FOCUS_ONLY_CLASSES: string[] = [
+  'empty:focus:before:pointer-events-none',
+  'empty:focus:before:text-gray-text',
+  'empty:focus:before:cursor-text',
+  'empty:focus:before:content-[attr(data-placeholder-active)]',
+  '[&[data-empty=true]:focus]:before:pointer-events-none',
+  '[&[data-empty=true]:focus]:before:text-gray-text',
+  '[&[data-empty=true]:focus]:before:cursor-text',
+  '[&[data-empty=true]:focus]:before:content-[attr(data-placeholder-active)]',
+];
+
+/**
  * Check if an element's content is empty
  *
  * @param element - The element to check

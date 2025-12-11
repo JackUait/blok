@@ -387,8 +387,9 @@ export default class BlockEvents extends Module {
       const isChecked = checklistMatch[1]?.toLowerCase() === 'x';
 
       const newBlock = BlockManager.replace(currentBlock, 'list', {
+        text: '',
         style: 'checklist',
-        items: [{ content: '', checked: isChecked }],
+        checked: isChecked,
       });
 
       Caret.setToBlock(newBlock, Caret.positions.START);
@@ -403,8 +404,9 @@ export default class BlockEvents extends Module {
 
     if (unorderedMatch) {
       const newBlock = BlockManager.replace(currentBlock, 'list', {
+        text: '',
         style: 'unordered',
-        items: [{ content: '', checked: false }],
+        checked: false,
       });
 
       Caret.setToBlock(newBlock, Caret.positions.START);
@@ -435,9 +437,10 @@ export default class BlockEvents extends Module {
     /**
      * Convert to ordered list with the captured start number
      */
-    const listData: { style: string; items: { content: string; checked: boolean }[]; start?: number } = {
+    const listData: { text: string; style: string; checked: boolean; start?: number } = {
+      text: remainingContent,
       style: 'ordered',
-      items: [{ content: remainingContent, checked: false }],
+      checked: false,
     };
 
     // Only include start if it's not 1 (the default)

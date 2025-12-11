@@ -136,19 +136,27 @@ const defaultTools: Record<string, SerializableToolConfig> = {
   },
 };
 
-const createListData = (items: string[], style: 'unordered' | 'ordered' | 'checklist' = 'unordered'): OutputData => ({
-  blocks: [
-    {
-      type: 'list',
-      data: {
-        style,
-        items: items.map(content => ({ content, checked: false })),
-      },
+/**
+ * Create list data with multiple items as separate blocks (new hierarchical format).
+ * Each item is a separate block with text, style, and optional depth for nesting.
+ */
+const createListItems = (
+  items: Array<{ text: string; depth?: number; checked?: boolean }>,
+  style: 'unordered' | 'ordered' | 'checklist' = 'unordered'
+): OutputData => ({
+  blocks: items.map((item, index) => ({
+    id: `list-item-${index}`,
+    type: 'list',
+    data: {
+      text: item.text,
+      style,
+      checked: item.checked ?? false,
+      ...(item.depth !== undefined && item.depth > 0 ? { depth: item.depth } : {}),
     },
-  ],
+  })),
 });
 
-test.describe('list tool', () => {
+test.describe('list tool (ListItem)', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
@@ -159,42 +167,72 @@ test.describe('list tool', () => {
   });
 
   test.describe('rendering', () => {
-    test('renders unordered list with items', async ({ page }) => {
+    test('renders unordered list items', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['First item', 'Second item', 'Third item']),
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+          { text: 'Third item' },
+        ]),
       });
 
-      const list = page.locator(LIST_BLOCK_SELECTOR);
+      const listItems = page.locator(LIST_BLOCK_SELECTOR);
 
-      await expect(list).toBeVisible();
+      await expect(listItems).toHaveCount(3);
       await expect(page.getByText('First item')).toBeVisible();
       await expect(page.getByText('Second item')).toBeVisible();
       await expect(page.getByText('Third item')).toBeVisible();
     });
 
-    test('renders ordered list', async ({ page }) => {
+    test('renders ordered list items', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['First', 'Second'], 'ordered'),
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+        ], 'ordered'),
       });
 
-      const list = page.locator(LIST_BLOCK_SELECTOR);
+      const listItems = page.locator(LIST_BLOCK_SELECTOR);
 
-      await expect(list).toBeVisible();
-      await expect(list).toHaveAttribute('data-list-style', 'ordered');
+      await expect(listItems).toHaveCount(2);
+      await expect(listItems.first()).toHaveAttribute('data-list-style', 'ordered');
     });
 
-    test('renders checklist', async ({ page }) => {
+    test('renders checklist items', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['Task one', 'Task two'], 'checklist'),
+        data: createListItems([
+          { text: 'Task one', checked: false },
+          { text: 'Task two', checked: true },
+        ], 'checklist'),
       });
 
-      const list = page.locator(LIST_BLOCK_SELECTOR);
+      const listItems = page.locator(LIST_BLOCK_SELECTOR);
 
-      await expect(list).toBeVisible();
-      await expect(list).toHaveAttribute('data-list-style', 'checklist');
+      await expect(listItems).toHaveCount(2);
+      await expect(listItems.first()).toHaveAttribute('data-list-style', 'checklist');
+    });
+
+    test('renders ordered list items with custom start number', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'list-1', type: 'list', data: { text: 'First', style: 'ordered', start: 800 } },
+            { id: 'list-2', type: 'list', data: { text: 'Second', style: 'ordered' } },
+            { id: 'list-3', type: 'list', data: { text: 'Third', style: 'ordered' } },
+          ],
+        },
+      });
+
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+
+      await expect(markers).toHaveCount(3);
+      await expect(markers.nth(0)).toHaveText('800.');
+      await expect(markers.nth(1)).toHaveText('801.');
+      await expect(markers.nth(2)).toHaveText('802.');
     });
   });
 
@@ -202,54 +240,53 @@ test.describe('list tool', () => {
     test('allows editing list item text', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['Original text']),
+        data: createListItems([{ text: 'Original text' }]),
       });
 
-      const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"]`);
-      const listItemContent = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"] [contenteditable="true"]`);
+      const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
 
       await listItem.click();
       await page.keyboard.press('End');
       await page.keyboard.type(' - Updated');
 
-      await expect(listItemContent).toHaveText('Original text - Updated');
+      await expect(listItem).toHaveText('Original text - Updated');
     });
 
     test('creates new item on Enter in non-empty item', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['First item']),
+        data: createListItems([{ text: 'First item' }]),
       });
 
-      const firstItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"]`);
+      const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
 
-      await firstItem.click();
+      await listItem.click();
       await page.keyboard.press('End');
       await page.keyboard.press('Enter');
 
-      // Should have two items now
-      const items = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index]`);
+      // Should have two list blocks now
+      const items = page.locator(LIST_BLOCK_SELECTOR);
 
       await expect(items).toHaveCount(2);
     });
   });
 
-  test.describe('double Enter to exit list', () => {
-    test('first Enter creates empty item, second Enter exits list and creates paragraph', async ({ page }) => {
+  test.describe('enter on empty item exits list', () => {
+    test('enter on empty item creates paragraph', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['First item']),
+        data: createListItems([{ text: 'First item' }]),
       });
 
-      const firstItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"]`);
+      const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
 
-      await firstItem.click();
+      await listItem.click();
       await page.keyboard.press('End');
 
       // First Enter - creates a new empty item
       await page.keyboard.press('Enter');
 
-      const items = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index]`);
+      const items = page.locator(LIST_BLOCK_SELECTOR);
 
       await expect(items).toHaveCount(2);
 
@@ -257,13 +294,7 @@ test.describe('list tool', () => {
       await page.keyboard.press('Enter');
 
       // Should still have the list with one item
-      const list = page.locator(LIST_BLOCK_SELECTOR);
-
-      await expect(list).toBeVisible();
-
-      const remainingItems = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index]`);
-
-      await expect(remainingItems).toHaveCount(1);
+      await expect(items).toHaveCount(1);
 
       // Should have a new paragraph block after the list
       const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
@@ -271,15 +302,15 @@ test.describe('list tool', () => {
       await expect(paragraph).toBeVisible();
     });
 
-    test('double Enter on single empty item replaces list with paragraph', async ({ page }) => {
+    test('enter on single empty item replaces list with paragraph', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['']),
+        data: createListItems([{ text: '' }]),
       });
 
-      const emptyItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"]`);
+      const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
 
-      await emptyItem.click();
+      await listItem.click();
 
       // Enter on empty item should exit list
       await page.keyboard.press('Enter');
@@ -289,397 +320,114 @@ test.describe('list tool', () => {
 
       await expect(list).toHaveCount(0);
 
-      // At least one paragraph should exist (editor may create default empty block)
+      // At least one paragraph should exist
       const paragraphCount = await page.locator(PARAGRAPH_BLOCK_SELECTOR).count();
 
       expect(paragraphCount).toBeGreaterThanOrEqual(1);
     });
-
-    test('double Enter in middle of list preserves items above', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createListData(['First item', 'Second item', 'Third item']),
-      });
-
-      // Click on second item
-      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="1"]`);
-
-      await secondItem.click();
-      await page.keyboard.press('End');
-
-      // First Enter - creates new empty item after second
-      await page.keyboard.press('Enter');
-
-      // Second Enter - exits list
-      await page.keyboard.press('Enter');
-
-      // List should still exist with items
-      const list = page.locator(LIST_BLOCK_SELECTOR);
-
-      await expect(list).toBeVisible();
-
-      // Paragraph should be created
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
-
-      await expect(paragraph).toBeVisible();
-    });
-
-    test('works with ordered list', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createListData(['Item one'], 'ordered'),
-      });
-
-      const item = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"]`);
-
-      await item.click();
-      await page.keyboard.press('End');
-
-      // First Enter
-      await page.keyboard.press('Enter');
-
-      // Second Enter
-      await page.keyboard.press('Enter');
-
-      // Should have paragraph after list
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
-
-      await expect(paragraph).toBeVisible();
-    });
-
-    test('works with checklist', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createListData(['Task'], 'checklist'),
-      });
-
-      // For checklist, the contenteditable is inside a wrapper div
-      const checklistItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"] [contenteditable="true"]`);
-
-      await checklistItem.click();
-      await page.keyboard.press('End');
-
-      // First Enter
-      await page.keyboard.press('Enter');
-
-      // Second Enter
-      await page.keyboard.press('Enter');
-
-      // Should have paragraph after list
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
-
-      await expect(paragraph).toBeVisible();
-    });
   });
 
   test.describe('indentation with Tab/Shift+Tab', () => {
-    test('tab indents item under previous sibling', async ({ page }) => {
+    test('tab increases depth on second item', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['First item', 'Second item']),
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+        ]),
       });
 
       // Click on second item
-      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
 
       await secondItem.click();
 
       // Press Tab to indent
       await page.keyboard.press('Tab');
 
-      // Second item should now be nested under first item (path [0, 0])
-      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
-      const nestedItemContent = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]'] [contenteditable="true"]`);
+      // Save and verify depth increased
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
 
-      await expect(nestedItem).toBeVisible();
-      await expect(nestedItemContent).toHaveText('Second item');
+      expect(savedData?.blocks).toHaveLength(2);
+      expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
     test('tab does not indent first item', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['First item', 'Second item']),
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+        ]),
       });
 
       // Click on first item
-      const firstItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]']`);
+      const firstItem = page.locator(LIST_BLOCK_SELECTOR).first().locator('[contenteditable="true"]');
 
       await firstItem.click();
 
-      // Press Tab - should not indent (no previous sibling)
+      // Press Tab - should not indent
       await page.keyboard.press('Tab');
 
-      // First item should still be at root level (2 items with path length 1)
-      const rootItems = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]'], ${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
-
-      await expect(rootItems).toHaveCount(2);
-    });
-
-    test('shift+tab outdents nested item to root level', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createListData(['First item', 'Second item']),
+      // Save and verify depth is still 0
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
       });
 
-      // First indent the second item
-      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+    });
 
-      await secondItem.click();
-      await page.keyboard.press('Tab');
+    test('shift+tab decreases depth', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Nested item', depth: 1 },
+        ]),
+      });
 
-      // Verify it's nested (path [0, 0])
-      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
+      // Click on second (nested) item
+      const nestedItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
 
-      await expect(nestedItem).toBeVisible();
-
-      // Now outdent with Shift+Tab
       await nestedItem.click();
+
+      // Press Shift+Tab to outdent
       await page.keyboard.press('Shift+Tab');
 
-      // Item should be back at root level (2 items with path length 1)
-      const rootItems = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]'], ${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
+      // Save and verify depth decreased
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
 
-      await expect(rootItems).toHaveCount(2);
+      expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
     });
 
     test('shift+tab on root item does nothing', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['First item', 'Second item']),
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+        ]),
       });
 
       // Click on first item (root level)
-      const firstItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]']`);
+      const firstItem = page.locator(LIST_BLOCK_SELECTOR).first().locator('[contenteditable="true"]');
 
       await firstItem.click();
 
       // Press Shift+Tab - should not change anything
       await page.keyboard.press('Shift+Tab');
 
-      // Should still have 2 root items
-      const rootItems = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0]'], ${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
-
-      await expect(rootItems).toHaveCount(2);
-    });
-
-    test('indentation works with ordered list', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createListData(['First', 'Second'], 'ordered'),
-      });
-
-      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
-
-      await secondItem.click();
-      await page.keyboard.press('Tab');
-
-      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
-      const nestedItemContent = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]'] [contenteditable="true"]`);
-
-      await expect(nestedItem).toBeVisible();
-      await expect(nestedItemContent).toHaveText('Second');
-    });
-
-    test('indentation works with checklist', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createListData(['Task one', 'Task two'], 'checklist'),
-      });
-
-      // For checklist, click on the contenteditable part
-      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]'] [contenteditable="true"]`);
-
-      await secondItem.click();
-      await page.keyboard.press('Tab');
-
-      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
-
-      await expect(nestedItem).toBeVisible();
-    });
-
-    test('saves nested items correctly', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createListData(['Parent', 'Child']),
-      });
-
-      // Indent second item
-      const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1]']`);
-
-      await secondItem.click();
-      await page.keyboard.press('Tab');
-
-      // Wait for nested item to appear
-      const nestedItem = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
-
-      await expect(nestedItem).toBeVisible();
-
-      // Save and verify data structure
+      // Save and verify still 2 items at root level
       const savedData = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks).toHaveLength(1);
-      expect(savedData?.blocks[0].data.items).toHaveLength(1);
-      expect(savedData?.blocks[0].data.items[0].content).toBe('Parent');
-      expect(savedData?.blocks[0].data.items[0].items).toHaveLength(1);
-      expect(savedData?.blocks[0].data.items[0].items[0].content).toBe('Child');
-    });
-
-    test('outdent moves following siblings as children of outdented item', async ({ page }) => {
-      // Create a list with nested items: Parent > [Child1, Child2, Child3]
-      await createBlok(page, {
-        tools: defaultTools,
-        data: {
-          blocks: [
-            {
-              type: 'list',
-              data: {
-                style: 'unordered',
-                items: [
-                  {
-                    content: 'Parent',
-                    checked: false,
-                    items: [
-                      { content: 'Child1', checked: false },
-                      { content: 'Child2', checked: false },
-                      { content: 'Child3', checked: false },
-                    ],
-                  },
-                  { content: 'Sibling', checked: false },
-                ],
-              },
-            },
-          ],
-        },
-      });
-
-      // Click on Child1 (path [0, 0]) and outdent it
-      const child1 = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[0,0]']`);
-
-      await expect(child1).toBeVisible();
-      await child1.click();
-      await page.keyboard.press('Shift+Tab');
-
-      // Save and verify the structure
-      const savedData = await page.evaluate(async () => {
-        return await window.blokInstance?.save();
-      });
-
-      // Should now have: Parent, Child1 (with Child2 and Child3 as children), Sibling
-      expect(savedData?.blocks).toHaveLength(1);
-      expect(savedData?.blocks[0].data.items).toHaveLength(3);
-      expect(savedData?.blocks[0].data.items[0].content).toBe('Parent');
-      expect(savedData?.blocks[0].data.items[0].items).toBeUndefined(); // Parent should have no children now
-      expect(savedData?.blocks[0].data.items[1].content).toBe('Child1');
-      expect(savedData?.blocks[0].data.items[1].items).toHaveLength(2);
-      expect(savedData?.blocks[0].data.items[1].items[0].content).toBe('Child2');
-      expect(savedData?.blocks[0].data.items[1].items[1].content).toBe('Child3');
-      expect(savedData?.blocks[0].data.items[2].content).toBe('Sibling');
-    });
-
-    test('outdent preserves correct order with items after parent', async ({ page }) => {
-      // Create: Item A, Item B > [Item C], Item D, Item E
-      await createBlok(page, {
-        tools: defaultTools,
-        data: {
-          blocks: [
-            {
-              type: 'list',
-              data: {
-                style: 'unordered',
-                items: [
-                  { content: 'Item A', checked: false },
-                  {
-                    content: 'Item B',
-                    checked: false,
-                    items: [{ content: 'Item C', checked: false }],
-                  },
-                  { content: 'Item D', checked: false },
-                  { content: 'Item E', checked: false },
-                ],
-              },
-            },
-          ],
-        },
-      });
-
-      // Click on Item C (path [1, 0]) and outdent it
-      const itemC = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-path='[1,0]']`);
-
-      await expect(itemC).toBeVisible();
-      await itemC.click();
-      await page.keyboard.press('Shift+Tab');
-
-      // Save and verify the structure
-      const savedData = await page.evaluate(async () => {
-        return await window.blokInstance?.save();
-      });
-
-      // Should now have: Item A, Item B, Item C, Item D, Item E (all at root level)
-      expect(savedData?.blocks).toHaveLength(1);
-      expect(savedData?.blocks[0].data.items).toHaveLength(5);
-      expect(savedData?.blocks[0].data.items[0].content).toBe('Item A');
-      expect(savedData?.blocks[0].data.items[1].content).toBe('Item B');
-      expect(savedData?.blocks[0].data.items[1].items).toBeUndefined(); // B should have no children
-      expect(savedData?.blocks[0].data.items[2].content).toBe('Item C');
-      expect(savedData?.blocks[0].data.items[3].content).toBe('Item D');
-      expect(savedData?.blocks[0].data.items[4].content).toBe('Item E');
-    });
-
-    test('enter on item with nested children moves nested items to new sibling', async ({ page }) => {
-      // Create: Item A, Item B > [Item C, Item D]
-      await createBlok(page, {
-        tools: defaultTools,
-        data: {
-          blocks: [
-            {
-              type: 'list',
-              data: {
-                style: 'unordered',
-                items: [
-                  { content: 'Item A', checked: false },
-                  {
-                    content: 'Item B',
-                    checked: false,
-                    items: [
-                      { content: 'Item C', checked: false },
-                      { content: 'Item D', checked: false },
-                    ],
-                  },
-                ],
-              },
-            },
-          ],
-        },
-      });
-
-      // Click on Item B - use getByText to find the specific contenteditable element
-      const itemB = page.getByText('Item B', { exact: true });
-
-      await expect(itemB).toBeVisible();
-      await itemB.click();
-      await page.keyboard.press('End');
-
-      // Press Enter to create a new item after Item B
-      await page.keyboard.press('Enter');
-
-      // Save and verify the structure
-      const savedData = await page.evaluate(async () => {
-        return await window.blokInstance?.save();
-      });
-
-      // Should have: Item A, Item B (no nested), new empty item (with nested C, D)
-      // The nested items move to the new item because cursor was at the end of Item B
-      expect(savedData?.blocks).toHaveLength(1);
-      expect(savedData?.blocks[0].data.items).toHaveLength(3);
-      expect(savedData?.blocks[0].data.items[0].content).toBe('Item A');
-      expect(savedData?.blocks[0].data.items[1].content).toBe('Item B');
-      expect(savedData?.blocks[0].data.items[1].items).toBeUndefined(); // Item B no longer has nested items
-      expect(savedData?.blocks[0].data.items[2].content).toBe(''); // New empty item
-      expect(savedData?.blocks[0].data.items[2].items).toHaveLength(2); // Nested items moved here
-      expect(savedData?.blocks[0].data.items[2].items[0].content).toBe('Item C');
-      expect(savedData?.blocks[0].data.items[2].items[1].content).toBe('Item D');
+      expect(savedData?.blocks).toHaveLength(2);
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
     });
   });
 
@@ -687,43 +435,303 @@ test.describe('list tool', () => {
     test('saves list data correctly', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
-        data: createListData(['First', 'Second']),
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+        ]),
       });
 
       const savedData = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks).toHaveLength(1);
-      expect(savedData?.blocks[0].type).toBe('list');
-      expect(savedData?.blocks[0].data.items).toHaveLength(2);
-      expect(savedData?.blocks[0].data.items[0].content).toBe('First');
-      expect(savedData?.blocks[0].data.items[1].content).toBe('Second');
-    });
-
-    test('saves after double Enter correctly', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createListData(['Keep this item']),
-      });
-
-      const item = page.locator(`${LIST_BLOCK_SELECTOR} [data-item-index="0"]`);
-
-      await item.click();
-      await page.keyboard.press('End');
-      await page.keyboard.press('Enter');
-      await page.keyboard.press('Enter');
-
-      const savedData = await page.evaluate(async () => {
-        return await window.blokInstance?.save();
-      });
-
-      // Should have list block and paragraph block
       expect(savedData?.blocks).toHaveLength(2);
       expect(savedData?.blocks[0].type).toBe('list');
-      expect(savedData?.blocks[0].data.items).toHaveLength(1);
-      expect(savedData?.blocks[0].data.items[0].content).toBe('Keep this item');
-      expect(savedData?.blocks[1].type).toBe('paragraph');
+      expect(savedData?.blocks[0].data.text).toBe('First');
+      expect(savedData?.blocks[1].data.text).toBe('Second');
+    });
+
+    test('saves nested items with depth', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'Parent' },
+          { text: 'Child', depth: 1 },
+        ]),
+      });
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks).toHaveLength(2);
+      expect(savedData?.blocks[0].data.text).toBe('Parent');
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[1].data.text).toBe('Child');
+      expect(savedData?.blocks[1].data.depth).toBe(1);
+    });
+  });
+
+  test.describe('focus management', () => {
+    test('focus remains on content element after indent', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+        ]),
+      });
+
+      // Click on second item
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      await secondItem.click();
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+
+      // Wait for DOM to update
+      await page.waitForTimeout(100);
+
+      // Verify focus is on a contenteditable element
+      const activeElement = await page.evaluate(() => {
+        const active = document.activeElement;
+        return {
+          isContentEditable: active?.getAttribute('contenteditable') === 'true',
+          tagName: active?.tagName,
+        };
+      });
+
+      expect(activeElement.isContentEditable).toBe(true);
+    });
+
+    test('focus remains on content element after outdent', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Nested item', depth: 1 },
+        ]),
+      });
+
+      // Click on nested item
+      const nestedItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      await nestedItem.click();
+
+      // Press Shift+Tab to outdent
+      await page.keyboard.press('Shift+Tab');
+
+      // Wait for DOM to update
+      await page.waitForTimeout(100);
+
+      // Verify focus is on a contenteditable element
+      const activeElement = await page.evaluate(() => {
+        const active = document.activeElement;
+        return {
+          isContentEditable: active?.getAttribute('contenteditable') === 'true',
+          tagName: active?.tagName,
+        };
+      });
+
+      expect(activeElement.isContentEditable).toBe(true);
+    });
+
+    test('focus moves to new item after enter', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([{ text: 'First item' }]),
+      });
+
+      const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
+      await listItem.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+
+      // Wait for DOM to update
+      await page.waitForTimeout(100);
+
+      // Verify focus is on a contenteditable element in the second list block
+      const activeElement = await page.evaluate(() => {
+        const active = document.activeElement;
+        const listBlocks = document.querySelectorAll('[data-blok-tool="list"]');
+        const secondBlock = listBlocks[1];
+        const isInSecondBlock = secondBlock?.contains(active);
+        return {
+          isContentEditable: active?.getAttribute('contenteditable') === 'true',
+          isInSecondBlock,
+        };
+      });
+
+      expect(activeElement.isContentEditable).toBe(true);
+      expect(activeElement.isInSecondBlock).toBe(true);
+    });
+
+    test('focus remains on content element after backspace merge', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+        ]),
+      });
+
+      // Click on second item at the start
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      await secondItem.click();
+      await page.keyboard.press('Home');
+
+      // Press Backspace to merge with previous item
+      await page.keyboard.press('Backspace');
+
+      // Wait for DOM to update
+      await page.waitForTimeout(100);
+
+      // Verify focus is on a contenteditable element in the first (now only) list block
+      const activeElement = await page.evaluate(() => {
+        const active = document.activeElement;
+        const listBlocks = document.querySelectorAll('[data-blok-tool="list"]');
+        const firstBlock = listBlocks[0];
+        const isInFirstBlock = firstBlock?.contains(active);
+        return {
+          isContentEditable: active?.getAttribute('contenteditable') === 'true',
+          isInFirstBlock,
+          blockCount: listBlocks.length,
+        };
+      });
+
+      expect(activeElement.isContentEditable).toBe(true);
+      expect(activeElement.isInFirstBlock).toBe(true);
+      expect(activeElement.blockCount).toBe(1);
+    });
+
+    test('focus moves to paragraph after exiting list', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([{ text: '' }]),
+      });
+
+      const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
+      await listItem.click();
+
+      // Enter on empty item should exit list
+      await page.keyboard.press('Enter');
+
+      // Wait for DOM to update
+      await page.waitForTimeout(100);
+
+      // Verify focus is on a contenteditable element (should be paragraph)
+      const activeElement = await page.evaluate(() => {
+        const active = document.activeElement;
+        const paragraph = document.querySelector('[data-blok-tool="paragraph"]');
+        const isInParagraph = paragraph?.contains(active);
+        return {
+          isContentEditable: active?.getAttribute('contenteditable') === 'true',
+          isInParagraph,
+        };
+      });
+
+      expect(activeElement.isContentEditable).toBe(true);
+      expect(activeElement.isInParagraph).toBe(true);
+    });
+  });
+
+  test.describe('ordered list renumbering', () => {
+    test('renumbers when first item is deleted', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+          { text: 'Third' },
+        ], 'ordered'),
+      });
+
+      // Verify initial numbering
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(markers).toHaveCount(3);
+      await expect(markers.nth(0)).toHaveText('1.');
+      await expect(markers.nth(1)).toHaveText('2.');
+      await expect(markers.nth(2)).toHaveText('3.');
+
+      // Click on first item content to focus it
+      const firstItem = page.locator(LIST_BLOCK_SELECTOR).first().locator('[contenteditable="true"]');
+      await firstItem.click();
+
+      // Select all and delete
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+
+      // Wait for DOM to update
+      await page.waitForTimeout(200);
+
+      // Now should only have 2 items, renumbered to 1. and 2.
+      const remainingMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(remainingMarkers).toHaveCount(2);
+      await expect(remainingMarkers.nth(0)).toHaveText('1.');
+      await expect(remainingMarkers.nth(1)).toHaveText('2.');
+    });
+
+    test('renumbers when middle item is deleted', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+          { text: 'Third' },
+        ], 'ordered'),
+      });
+
+      // Click on second item content to focus it
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      await secondItem.click();
+
+      // Select all and delete
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+
+      // Wait for DOM to update
+      await page.waitForTimeout(200);
+
+      // Now should only have 2 items, renumbered to 1. and 2.
+      const remainingMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(remainingMarkers).toHaveCount(2);
+      await expect(remainingMarkers.nth(0)).toHaveText('1.');
+      await expect(remainingMarkers.nth(1)).toHaveText('2.');
+    });
+
+    test('numbers new items correctly when created via Enter', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+        ], 'ordered'),
+      });
+
+      // Click on first item and press Enter to create new item
+      const firstItem = page.locator(LIST_BLOCK_SELECTOR).first().locator('[contenteditable="true"]');
+      await firstItem.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+
+      // Wait for DOM to update
+      await page.waitForTimeout(200);
+
+      // Now should have 2 items with correct numbering
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(markers).toHaveCount(2);
+      await expect(markers.nth(0)).toHaveText('1.');
+      await expect(markers.nth(1)).toHaveText('2.');
+
+      // Create a third item
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(200);
+
+      const threeMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(threeMarkers).toHaveCount(3);
+      await expect(threeMarkers.nth(0)).toHaveText('1.');
+      await expect(threeMarkers.nth(1)).toHaveText('2.');
+      await expect(threeMarkers.nth(2)).toHaveText('3.');
     });
   });
 });

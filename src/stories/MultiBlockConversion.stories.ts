@@ -34,7 +34,7 @@ const TIMEOUT_INIT = { timeout: 5000 };
 const TIMEOUT_ACTION = { timeout: 5000 };
 
 /**
- * Sample data with different block types for conversion testing
+ * Sample data with different block types for conversion testing (using ListItem model)
  */
 const mixedBlocksData: OutputData = {
   time: Date.now(),
@@ -48,10 +48,7 @@ const mixedBlocksData: OutputData = {
     {
       id: 'convert-list-1',
       type: 'list',
-      data: {
-        style: 'unordered',
-        items: [{ content: 'List item one', checked: false }],
-      },
+      data: { text: 'List item one', style: 'unordered' },
     },
     {
       id: 'convert-header-2',

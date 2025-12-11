@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import List, { type ListConfig, type ListData } from '../../../src/tools/list';
+import List, { type ListItemConfig, type ListItemData } from '../../../src/tools/list';
 import I18n from '../../../src/components/i18n';
 import defaultDictionary from '../../../src/components/i18n/locales/en/messages.json';
 import type { API, BlockToolConstructorOptions } from '../../../types';
@@ -36,10 +36,10 @@ const createMockAPI = (): API =>
  * Creates list tool constructor options
  */
 const createListOptions = (
-  data: Partial<ListData> = {},
-  config: ListConfig = {}
-): BlockToolConstructorOptions<ListData, ListConfig> => ({
-  data: { style: 'unordered', items: [{ content: '', checked: false }], ...data } as ListData,
+  data: Partial<ListItemData> = {},
+  config: ListItemConfig = {}
+): BlockToolConstructorOptions<ListItemData, ListItemConfig> => ({
+  data: { text: '', style: 'unordered', ...data } as ListItemData,
   config,
   api: createMockAPI(),
   readOnly: false,

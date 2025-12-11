@@ -291,6 +291,7 @@ export default class Tools extends Module {
         class: toToolConstructable(List),
         inlineToolbar: true,
         isInternal: true,
+        toolbox: false,
       },
       stub: {
         class: toToolConstructable(Stub),

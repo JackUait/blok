@@ -716,7 +716,7 @@ test.describe('multi-block conversion', () => {
   });
 
   test.describe('converting multiple blocks to list', () => {
-    test('converts multiple paragraphs into a single list with multiple items', async ({ page }) => {
+    test('converts multiple paragraphs to list items', async ({ page }) => {
       await createBlokWithBlocks(page, [
         { type: 'paragraph', data: { text: 'First item' } },
         { type: 'paragraph', data: { text: 'Second item' } },
@@ -738,28 +738,25 @@ test.describe('multi-block conversion', () => {
       await expect(listOption).toBeVisible();
       await listOption.click();
 
-      // Should have exactly ONE list block (not three separate lists)
+      // With ListItem model, each paragraph becomes a separate list block
       const listBlocks = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`);
 
-      await expect(listBlocks).toHaveCount(1);
-
-      // The single list should have 3 items (using data-item-path attribute, not li elements)
-      const listItems = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"] [data-item-path]`);
-
-      await expect(listItems).toHaveCount(3);
+      await expect(listBlocks).toHaveCount(3);
 
       // Verify content is preserved in the list items
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks).toHaveLength(1);
+      expect(savedData.blocks).toHaveLength(3);
       expect(savedData.blocks[0].type).toBe('list');
-      expect(savedData.blocks[0].data.items).toHaveLength(3);
-      expect(savedData.blocks[0].data.items[0].content).toBe('First item');
-      expect(savedData.blocks[0].data.items[1].content).toBe('Second item');
-      expect(savedData.blocks[0].data.items[2].content).toBe('Third item');
+      expect(savedData.blocks[0].data.text).toBe('First item');
+      expect(savedData.blocks[0].data.style).toBe('unordered');
+      expect(savedData.blocks[1].type).toBe('list');
+      expect(savedData.blocks[1].data.text).toBe('Second item');
+      expect(savedData.blocks[2].type).toBe('list');
+      expect(savedData.blocks[2].data.text).toBe('Third item');
     });
 
-    test('converts mixed block types into a single list', async ({ page }) => {
+    test('converts mixed block types to list items', async ({ page }) => {
       await createBlokWithBlocks(page, [
         { type: 'paragraph', data: { text: 'Paragraph text' } },
         { type: 'header', data: { text: 'Header text', level: 2 } },
@@ -782,26 +779,23 @@ test.describe('multi-block conversion', () => {
       await expect(listOption).toBeVisible();
       await listOption.click();
 
-      // Should have exactly ONE list block
+      // With ListItem model, each block becomes a separate list block
       const listBlocks = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`);
 
-      await expect(listBlocks).toHaveCount(1);
-
-      // The single list should have 3 items (using data-item-path attribute, not li elements)
-      const listItems = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"] [data-item-path]`);
-
-      await expect(listItems).toHaveCount(3);
+      await expect(listBlocks).toHaveCount(3);
 
       // Verify content is preserved
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks).toHaveLength(1);
+      expect(savedData.blocks).toHaveLength(3);
       expect(savedData.blocks[0].type).toBe('list');
       expect(savedData.blocks[0].data.style).toBe('ordered');
-      expect(savedData.blocks[0].data.items).toHaveLength(3);
+      expect(savedData.blocks[0].data.text).toBe('Paragraph text');
+      expect(savedData.blocks[1].data.text).toBe('Header text');
+      expect(savedData.blocks[2].data.text).toBe('Another paragraph');
     });
 
-    test('converts subset of blocks into a single list', async ({ page }) => {
+    test('converts subset of blocks to list items', async ({ page }) => {
       await createBlokWithBlocks(page, [
         { type: 'paragraph', data: { text: 'First paragraph' } },
         { type: 'paragraph', data: { text: 'Second paragraph' } },
@@ -823,38 +817,27 @@ test.describe('multi-block conversion', () => {
 
       await listOption.click();
 
-      // Should have 1 list block and 2 remaining paragraph blocks
+      // Should have 2 list blocks and 2 remaining paragraph blocks
       const listBlocks = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`);
       const paragraphBlocks = page.locator(PARAGRAPH_SELECTOR);
 
-      await expect(listBlocks).toHaveCount(1);
+      await expect(listBlocks).toHaveCount(2);
       await expect(paragraphBlocks).toHaveCount(2);
 
-      // The list should have 2 items (from the first two paragraphs)
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks).toHaveLength(3);
+      expect(savedData.blocks).toHaveLength(4);
       expect(savedData.blocks[0].type).toBe('list');
-      expect(savedData.blocks[0].data.items).toHaveLength(2);
-      expect(savedData.blocks[1].type).toBe('paragraph');
+      expect(savedData.blocks[1].type).toBe('list');
       expect(savedData.blocks[2].type).toBe('paragraph');
+      expect(savedData.blocks[3].type).toBe('paragraph');
     });
   });
 
-  test.describe('converting list to separate blocks', () => {
-    test('converts list with multiple items into separate paragraph blocks', async ({ page }) => {
+  test.describe('converting list items to other blocks', () => {
+    test('converts list item to paragraph', async ({ page }) => {
       await createBlokWithBlocks(page, [
-        {
-          type: 'list',
-          data: {
-            style: 'unordered',
-            items: [
-              { content: 'First item', checked: false },
-              { content: 'Second item', checked: false },
-              { content: 'Third item', checked: false },
-            ],
-          },
-        },
+        { type: 'list', data: { text: 'List item text', style: 'unordered' } },
       ], [
         { name: 'list', className: 'Blok.List' },
       ]);
@@ -875,35 +858,22 @@ test.describe('multi-block conversion', () => {
       await expect(paragraphOption).toBeVisible();
       await paragraphOption.click();
 
-      // Should have 3 paragraph blocks (one for each list item)
+      // Should have 1 paragraph block
       const paragraphBlocks = page.locator(PARAGRAPH_SELECTOR);
 
-      await expect(paragraphBlocks).toHaveCount(3);
+      await expect(paragraphBlocks).toHaveCount(1);
 
-      // Verify content is preserved in each paragraph
+      // Verify content is preserved
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks).toHaveLength(3);
+      expect(savedData.blocks).toHaveLength(1);
       expect(savedData.blocks[0].type).toBe('paragraph');
-      expect(savedData.blocks[0].data.text).toBe('First item');
-      expect(savedData.blocks[1].type).toBe('paragraph');
-      expect(savedData.blocks[1].data.text).toBe('Second item');
-      expect(savedData.blocks[2].type).toBe('paragraph');
-      expect(savedData.blocks[2].data.text).toBe('Third item');
+      expect(savedData.blocks[0].data.text).toBe('List item text');
     });
 
-    test('converts list with multiple items into separate header blocks', async ({ page }) => {
+    test('converts list item to header', async ({ page }) => {
       await createBlokWithBlocks(page, [
-        {
-          type: 'list',
-          data: {
-            style: 'ordered',
-            items: [
-              { content: 'First heading', checked: false },
-              { content: 'Second heading', checked: false },
-            ],
-          },
-        },
+        { type: 'list', data: { text: 'List item heading', style: 'ordered' } },
       ], [
         { name: 'list', className: 'Blok.List' },
         { name: 'header', className: 'Blok.Header' },
@@ -925,117 +895,56 @@ test.describe('multi-block conversion', () => {
       await expect(headerOption).toBeVisible();
       await headerOption.click();
 
-      // Should have 2 header blocks (one for each list item)
+      // Should have 1 header block
       const headerBlocks = page.locator(HEADER_SELECTOR);
 
-      await expect(headerBlocks).toHaveCount(2);
-
-      // Verify content is preserved in each header
-      const savedData = await saveBlok(page);
-
-      expect(savedData.blocks).toHaveLength(2);
-      expect(savedData.blocks[0].type).toBe('header');
-      expect(savedData.blocks[0].data.text).toBe('First heading');
-      expect(savedData.blocks[1].type).toBe('header');
-      expect(savedData.blocks[1].data.text).toBe('Second heading');
-    });
-
-    test('converts list with nested items into flat separate blocks', async ({ page }) => {
-      await createBlokWithBlocks(page, [
-        {
-          type: 'list',
-          data: {
-            style: 'unordered',
-            items: [
-              {
-                content: 'Parent item',
-                checked: false,
-                items: [
-                  { content: 'Nested item 1', checked: false },
-                  { content: 'Nested item 2', checked: false },
-                ],
-              },
-              { content: 'Another parent', checked: false },
-            ],
-          },
-        },
-      ], [
-        { name: 'list', className: 'Blok.List' },
-      ]);
-
-      // Click on the list block to select it
-      const listBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`);
-
-      await listBlock.click();
-      await openBlockTunesForSelectedBlocks(page);
-
-      const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
-
-      await convertToOption.click();
-
-      // Select paragraph option
-      const paragraphOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);
-
-      await expect(paragraphOption).toBeVisible();
-      await paragraphOption.click();
-
-      // Should have 4 paragraph blocks (parent + 2 nested + another parent)
-      const paragraphBlocks = page.locator(PARAGRAPH_SELECTOR);
-
-      await expect(paragraphBlocks).toHaveCount(4);
-
-      // Verify content is preserved in each paragraph
-      const savedData = await saveBlok(page);
-
-      expect(savedData.blocks).toHaveLength(4);
-      expect(savedData.blocks[0].data.text).toBe('Parent item');
-      expect(savedData.blocks[1].data.text).toBe('Nested item 1');
-      expect(savedData.blocks[2].data.text).toBe('Nested item 2');
-      expect(savedData.blocks[3].data.text).toBe('Another parent');
-    });
-
-    test('single item list converts to single block normally', async ({ page }) => {
-      await createBlokWithBlocks(page, [
-        {
-          type: 'list',
-          data: {
-            style: 'unordered',
-            items: [
-              { content: 'Single item', checked: false },
-            ],
-          },
-        },
-      ], [
-        { name: 'list', className: 'Blok.List' },
-      ]);
-
-      // Click on the list block to select it
-      const listBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`);
-
-      await listBlock.click();
-      await openBlockTunesForSelectedBlocks(page);
-
-      const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
-
-      await convertToOption.click();
-
-      // Select paragraph option
-      const paragraphOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);
-
-      await expect(paragraphOption).toBeVisible();
-      await paragraphOption.click();
-
-      // Should have 1 paragraph block (single item list converts normally)
-      const paragraphBlocks = page.locator(PARAGRAPH_SELECTOR);
-
-      await expect(paragraphBlocks).toHaveCount(1);
+      await expect(headerBlocks).toHaveCount(1);
 
       // Verify content is preserved
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks).toHaveLength(1);
+      expect(savedData.blocks[0].type).toBe('header');
+      expect(savedData.blocks[0].data.text).toBe('List item heading');
+    });
+
+    test('converts multiple list items to paragraphs', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'list', data: { text: 'First item', style: 'unordered' } },
+        { type: 'list', data: { text: 'Second item', style: 'unordered' } },
+        { type: 'list', data: { text: 'Third item', style: 'unordered' } },
+      ], [
+        { name: 'list', className: 'Blok.List' },
+      ]);
+
+      await selectAllBlocksViaShift(page, 3);
+      await openBlockTunesForSelectedBlocks(page);
+
+      const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
+
+      await convertToOption.click();
+
+      // Select paragraph option
+      const paragraphOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);
+
+      await expect(paragraphOption).toBeVisible();
+      await paragraphOption.click();
+
+      // Should have 3 paragraph blocks
+      const paragraphBlocks = page.locator(PARAGRAPH_SELECTOR);
+
+      await expect(paragraphBlocks).toHaveCount(3);
+
+      // Verify content is preserved in each paragraph
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(3);
       expect(savedData.blocks[0].type).toBe('paragraph');
-      expect(savedData.blocks[0].data.text).toBe('Single item');
+      expect(savedData.blocks[0].data.text).toBe('First item');
+      expect(savedData.blocks[1].type).toBe('paragraph');
+      expect(savedData.blocks[1].data.text).toBe('Second item');
+      expect(savedData.blocks[2].type).toBe('paragraph');
+      expect(savedData.blocks[2].data.text).toBe('Third item');
     });
   });
 });

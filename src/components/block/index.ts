@@ -1088,6 +1088,14 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     const placeholderText = typeof placeholder === 'string' ? placeholder.trim() : '';
 
     /**
+     * Paragraph tool handles its own placeholder via data-placeholder-active attribute
+     * with focus-only classes, so we skip the block-level placeholder for it.
+     */
+    if (this.name === 'paragraph') {
+      return;
+    }
+
+    /**
      * Placeholder styling classes using Tailwind arbitrary variants.
      * Applied to ::before pseudo-element only when element is empty.
      * Uses arbitrary properties for `content: attr(data-blok-placeholder)`.

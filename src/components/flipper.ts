@@ -179,8 +179,10 @@ export default class Flipper {
   /**
    * Focus item at specified position without triggering flip callbacks
    * @param position - index of item to focus. Negative value clears focus.
+   * @param options - optional settings for focus behavior
+   * @param options.skipNextTab - if true, skip the next Tab press (default: true for position 0 when no current item)
    */
-  public focusItem(position: number): void {
+  public focusItem(position: number, options?: { skipNextTab?: boolean }): void {
     const iterator = this.iterator;
 
     if (!iterator) {
@@ -197,7 +199,9 @@ export default class Flipper {
       return;
     }
 
-    if (!iterator.currentItem && position === 0) {
+    const shouldSkipNextTab = options?.skipNextTab ?? (!iterator.currentItem && position === 0);
+
+    if (shouldSkipNextTab) {
       this.skipNextTabFocus = true;
     }
 

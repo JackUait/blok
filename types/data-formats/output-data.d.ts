@@ -26,6 +26,21 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
    * Block Tunes data
    */
   tunes?: {[name: string]: BlockTuneData};
+
+  /**
+   * Parent block id for hierarchical/nested blocks (Notion-like flat-with-references model).
+   * When present, this block is a child of the block with the specified id.
+   * Omit for root-level blocks.
+   */
+  parent?: BlockId;
+
+  /**
+   * Array of child block ids (Notion-like flat-with-references model).
+   * References blocks that are children of this block.
+   * The referenced blocks should have their `parent` field set to this block's id.
+   * Omit if block has no children.
+   */
+  content?: BlockId[];
 }
 
 export interface OutputData {

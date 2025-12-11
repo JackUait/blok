@@ -733,5 +733,43 @@ test.describe('list tool (ListItem)', () => {
       await expect(threeMarkers.nth(1)).toHaveText('2.');
       await expect(threeMarkers.nth(2)).toHaveText('3.');
     });
+
+    test('renumbers correctly when items are reordered via blocks.move()', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+          { text: 'Third' },
+        ], 'ordered'),
+      });
+
+      // Verify initial numbering
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(markers).toHaveCount(3);
+      await expect(markers.nth(0)).toHaveText('1.');
+      await expect(markers.nth(1)).toHaveText('2.');
+      await expect(markers.nth(2)).toHaveText('3.');
+
+      // Move the third item (index 2) to the first position (index 0)
+      await page.evaluate(() => {
+        window.blokInstance?.blocks.move(0, 2);
+      });
+
+      // Wait for the moved() hook to execute and update markers
+      await expect(page.getByText('Third')).toBeVisible();
+
+      // Verify items are now in the new order: Third, First, Second
+      const listBlocks = page.locator(LIST_BLOCK_SELECTOR);
+      await expect(listBlocks.nth(0).locator('[contenteditable="true"]')).toHaveText('Third');
+      await expect(listBlocks.nth(1).locator('[contenteditable="true"]')).toHaveText('First');
+      await expect(listBlocks.nth(2).locator('[contenteditable="true"]')).toHaveText('Second');
+
+      // Verify markers are renumbered correctly: 1, 2, 3
+      const reorderedMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(reorderedMarkers.nth(0)).toHaveText('1.');
+      await expect(reorderedMarkers.nth(1)).toHaveText('2.');
+      await expect(reorderedMarkers.nth(2)).toHaveText('3.');
+    });
   });
 });

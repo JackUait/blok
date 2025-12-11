@@ -227,10 +227,19 @@ export default class ListItem implements BlockTool {
 
   /**
    * Called after block was moved.
-   * Updates the marker to reflect the new position.
+   * Updates the marker to reflect the new position,
+   * and also updates all sibling list items since their indices may have changed.
    */
   public moved(): void {
-    this.updateMarkerIfOrdered();
+    if (this._data.style !== 'ordered' || !this._element) {
+      return;
+    }
+
+    // Update this block's marker
+    this.updateMarker();
+
+    // Update all sibling ordered list items since their indices may have changed
+    this.updateSiblingListMarkers();
   }
 
   /**
@@ -258,6 +267,253 @@ export default class ListItem implements BlockTool {
     const siblingIndex = this.getSiblingIndex();
     const markerText = this.getOrderedMarkerText(siblingIndex, depth);
     marker.textContent = markerText;
+  }
+
+  /**
+   * Update markers on all sibling ordered list items.
+   * Called when this block is moved to ensure all list numbers are correct.
+   */
+  private updateSiblingListMarkers(): void {
+    const currentBlockIndex = this.blockId
+      ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
+      : this.api.blocks.getCurrentBlockIndex();
+
+    const currentDepth = this.getDepth();
+    const blocksCount = this.api.blocks.getBlocksCount();
+
+    // Find the start of this list group by walking backwards
+    const groupStartIndex = this.findListGroupStartIndex(currentBlockIndex, currentDepth);
+
+    // Update all ordered list items from groupStartIndex forward at this depth
+    this.updateMarkersInRange(groupStartIndex, blocksCount, currentBlockIndex, currentDepth);
+  }
+
+  /**
+   * Find the starting index of a list group by walking backwards
+   */
+  private findListGroupStartIndex(currentBlockIndex: number, currentDepth: number): number {
+    const findStart = (index: number, startIndex: number): number => {
+      if (index < 0) {
+        return startIndex;
+      }
+
+      const block = this.api.blocks.getBlockByIndex(index);
+      if (!block || block.name !== ListItem.TOOL_NAME) {
+        return startIndex;
+      }
+
+      const blockDepth = this.getBlockDepth(block);
+      if (blockDepth < currentDepth) {
+        return startIndex; // Hit a parent, stop
+      }
+
+      const newStartIndex = blockDepth === currentDepth ? index : startIndex;
+      return findStart(index - 1, newStartIndex);
+    };
+
+    return findStart(currentBlockIndex - 1, currentBlockIndex);
+  }
+
+  /**
+   * Update markers for all list items in a range at the given depth
+   */
+  private updateMarkersInRange(
+    startIndex: number,
+    endIndex: number,
+    skipIndex: number,
+    targetDepth: number
+  ): void {
+    const processBlock = (index: number): void => {
+      if (index >= endIndex) {
+        return;
+      }
+
+      if (index === skipIndex) {
+        processBlock(index + 1);
+        return;
+      }
+
+      const block = this.api.blocks.getBlockByIndex(index);
+      if (!block || block.name !== ListItem.TOOL_NAME) {
+        return; // Stop when we hit a non-list block
+      }
+
+      const blockDepth = this.getBlockDepth(block);
+      if (blockDepth < targetDepth) {
+        return; // Hit a parent, stop searching forward
+      }
+
+      if (blockDepth === targetDepth) {
+        this.updateBlockMarker(block);
+      }
+
+      processBlock(index + 1);
+    };
+
+    processBlock(startIndex);
+  }
+
+  /**
+   * Get the depth of a block by reading from its DOM
+   */
+  private getBlockDepth(block: ReturnType<typeof this.api.blocks.getBlockByIndex>): number {
+    if (!block) {
+      return 0;
+    }
+
+    const blockHolder = block.holder;
+    const listItemEl = blockHolder?.querySelector('[role="listitem"]');
+    const styleAttr = listItemEl?.getAttribute('style');
+
+    const paddingMatch = styleAttr?.match(/padding-left:\s*(\d+)px/);
+    return paddingMatch ? Math.round(parseInt(paddingMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
+  }
+
+  /**
+   * Update the marker of a specific block by finding its marker element and recalculating
+   */
+  private updateBlockMarker(block: ReturnType<typeof this.api.blocks.getBlockByIndex>): void {
+    if (!block) {
+      return;
+    }
+
+    const blockHolder = block.holder;
+    const listItemEl = blockHolder?.querySelector('[data-list-style="ordered"]');
+    if (!listItemEl) {
+      return; // Not an ordered list
+    }
+
+    const marker = listItemEl.querySelector('[data-list-marker]');
+    if (!marker) {
+      return;
+    }
+
+    // Calculate the correct index for this block
+    const blockIndex = this.api.blocks.getBlockIndex(block.id);
+    if (blockIndex === undefined || blockIndex === null) {
+      return;
+    }
+
+    const blockDepth = this.getBlockDepth(block);
+    const siblingIndex = this.countPrecedingSiblingsAtDepth(blockIndex, blockDepth);
+
+    // Get the start value for this list group
+    const startValue = this.getListStartValueForBlock(blockIndex, blockDepth, siblingIndex);
+    const actualNumber = startValue + siblingIndex;
+    const markerText = this.formatOrderedMarker(actualNumber, blockDepth);
+
+    marker.textContent = markerText;
+  }
+
+  /**
+   * Format an ordered list marker based on the number and depth
+   */
+  private formatOrderedMarker(number: number, depth: number): string {
+    const style = depth % 3;
+
+    if (style === 1) {
+      return `${this.numberToLowerAlpha(number)}.`;
+    }
+    if (style === 2) {
+      return `${this.numberToLowerRoman(number)}.`;
+    }
+    return `${number}.`;
+  }
+
+  /**
+   * Count preceding list items at the same depth for a given block index
+   */
+  private countPrecedingSiblingsAtDepth(blockIndex: number, targetDepth: number): number {
+    if (blockIndex <= 0) {
+      return 0;
+    }
+
+    return this.countPrecedingListItemsAtDepthFromIndex(blockIndex - 1, targetDepth);
+  }
+
+  /**
+   * Recursively count preceding list items at the given depth starting from index
+   */
+  private countPrecedingListItemsAtDepthFromIndex(index: number, targetDepth: number): number {
+    if (index < 0) {
+      return 0;
+    }
+
+    const block = this.api.blocks.getBlockByIndex(index);
+    if (!block || block.name !== ListItem.TOOL_NAME) {
+      return 0;
+    }
+
+    const blockDepth = this.getBlockDepth(block);
+
+    if (blockDepth < targetDepth) {
+      return 0; // Hit a parent
+    }
+
+    if (blockDepth === targetDepth) {
+      return 1 + this.countPrecedingListItemsAtDepthFromIndex(index - 1, targetDepth);
+    }
+
+    // Deeper depth, skip and continue
+    return this.countPrecedingListItemsAtDepthFromIndex(index - 1, targetDepth);
+  }
+
+  /**
+   * Get the list start value for a block at a given index and depth
+   */
+  private getListStartValueForBlock(blockIndex: number, targetDepth: number, siblingIndex: number): number {
+    if (siblingIndex === 0) {
+      return this.getBlockStartValue(blockIndex);
+    }
+
+    // Find the first item in this list group
+    const firstItemIndex = this.findFirstListItemIndexFromBlock(blockIndex - 1, targetDepth, siblingIndex);
+    if (firstItemIndex === null) {
+      return 1;
+    }
+
+    return this.getBlockStartValue(firstItemIndex);
+  }
+
+  /**
+   * Get the start value from a block's data-list-start attribute
+   */
+  private getBlockStartValue(blockIndex: number): number {
+    const block = this.api.blocks.getBlockByIndex(blockIndex);
+    if (!block) {
+      return 1;
+    }
+
+    const blockHolder = block.holder;
+    const listItemEl = blockHolder?.querySelector('[data-list-style]');
+    const startAttr = listItemEl?.getAttribute('data-list-start');
+    return startAttr ? parseInt(startAttr, 10) : 1;
+  }
+
+  /**
+   * Find the first list item in a consecutive group
+   */
+  private findFirstListItemIndexFromBlock(index: number, targetDepth: number, remainingCount: number): number | null {
+    if (index < 0 || remainingCount <= 0) {
+      return index + 1;
+    }
+
+    const block = this.api.blocks.getBlockByIndex(index);
+    if (!block || block.name !== ListItem.TOOL_NAME) {
+      return index + 1;
+    }
+
+    const blockDepth = this.getBlockDepth(block);
+
+    if (blockDepth < targetDepth) {
+      return index + 1;
+    }
+
+    if (blockDepth === targetDepth) {
+      return this.findFirstListItemIndexFromBlock(index - 1, targetDepth, remainingCount - 1);
+    }
+
+    return this.findFirstListItemIndexFromBlock(index - 1, targetDepth, remainingCount);
   }
 
   private createItemElement(): HTMLElement {

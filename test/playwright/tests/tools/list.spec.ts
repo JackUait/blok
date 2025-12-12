@@ -794,5 +794,77 @@ test.describe('list tool (ListItem)', () => {
       await expect(reorderedMarkers.nth(1)).toHaveText('2.');
       await expect(reorderedMarkers.nth(2)).toHaveText('3.');
     });
+
+    test('renumbers correctly when new item is inserted at end', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+        ], 'ordered'),
+      });
+
+      // Verify initial numbering
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(markers).toHaveCount(2);
+      await expect(markers.nth(0)).toHaveText('1.');
+      await expect(markers.nth(1)).toHaveText('2.');
+
+      // Insert a new list item at the end via API (simulates what happens during undo restoration)
+      await page.evaluate(() => {
+        window.blokInstance?.blocks.insert('list', {
+          text: 'Third',
+          style: 'ordered',
+          depth: 0,
+        }, undefined, undefined, false);
+      });
+
+      // Wait for items to increase to 3
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(3);
+
+      // Verify all items are numbered correctly: 1, 2, 3
+      const afterInsertMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(afterInsertMarkers).toHaveCount(3);
+      await expect(afterInsertMarkers.nth(0)).toHaveText('1.');
+      await expect(afterInsertMarkers.nth(1)).toHaveText('2.');
+      await expect(afterInsertMarkers.nth(2)).toHaveText('3.');
+    });
+
+    test('renumbers correctly when new item is inserted in middle', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Third' },
+        ], 'ordered'),
+      });
+
+      // Verify initial numbering
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(markers).toHaveCount(2);
+      await expect(markers.nth(0)).toHaveText('1.');
+      await expect(markers.nth(1)).toHaveText('2.');
+
+      // Insert a new list item in the middle via API (simulates what happens during undo restoration)
+      // Insert at index 1 (after First, before Third)
+      await page.evaluate(() => {
+        window.blokInstance?.blocks.insert('list', {
+          text: 'Second',
+          style: 'ordered',
+          depth: 0,
+        }, undefined, 1, false);
+      });
+
+      // Wait for items to increase to 3
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(3);
+
+      // Verify all items are numbered correctly: 1, 2, 3
+      // The inserted "Second" should be 2, and "Third" should update to 3
+      const afterInsertMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(afterInsertMarkers).toHaveCount(3);
+      await expect(afterInsertMarkers.nth(0)).toHaveText('1.');
+      await expect(afterInsertMarkers.nth(1)).toHaveText('2.');
+      await expect(afterInsertMarkers.nth(2)).toHaveText('3.');
+    });
   });
 });

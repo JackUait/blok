@@ -220,10 +220,11 @@ export default class ListItem implements BlockTool {
 
   /**
    * Called after block content is added to the page.
-   * Updates the marker with the correct index now that we know our position.
+   * Updates the marker with the correct index now that we know our position,
+   * and also updates all sibling list items since their indices may have changed.
    */
   public rendered(): void {
-    this.updateMarkerIfOrdered();
+    this.updateMarkersAfterPositionChange();
   }
 
   /**
@@ -232,6 +233,14 @@ export default class ListItem implements BlockTool {
    * and also updates all sibling list items since their indices may have changed.
    */
   public moved(): void {
+    this.updateMarkersAfterPositionChange();
+  }
+
+  /**
+   * Updates this block's marker and all sibling ordered list markers.
+   * Called after this block's position may have changed (rendered, moved).
+   */
+  private updateMarkersAfterPositionChange(): void {
     if (this._data.style !== 'ordered' || !this._element) {
       return;
     }

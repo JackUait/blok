@@ -37,7 +37,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('data-placeholder-active')).toBe('Start typing...');
+      expect(element.getAttribute('data-blok-placeholder-active')).toBe('Start typing...');
     });
 
     it('uses empty placeholder when not provided', () => {
@@ -45,7 +45,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('data-placeholder-active')).toBe('');
+      expect(element.getAttribute('data-blok-placeholder-active')).toBe('');
     });
 
     it('uses DEFAULT_PLACEHOLDER static value when config is undefined', () => {
@@ -189,7 +189,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('data-placeholder-active')).toBe('Enter text here...');
+      expect(element.getAttribute('data-blok-placeholder-active')).toBe('Enter text here...');
       expect(element.style.fontSize).toBe('14px');
       expect(element.style.lineHeight).toBe('1.5');
     });
@@ -227,7 +227,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('data-placeholder-active')).toBe('Type something...');
+      expect(element.getAttribute('data-blok-placeholder-active')).toBe('Type something...');
       expect(element.style.fontSize).toBe('15px');
       expect(element.style.lineHeight).toBe('1.6');
       expect(element.style.marginTop).toBe('8px');

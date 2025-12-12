@@ -343,7 +343,8 @@ test.describe('blok configuration options', () => {
           return null;
         }
 
-        return contentEditable.getAttribute('data-blok-placeholder');
+        // Paragraph tool uses data-blok-placeholder-active attribute
+        return contentEditable.getAttribute('data-blok-placeholder-active');
       }, { paragraphSelector: PARAGRAPH_SELECTOR });
     };
 
@@ -370,7 +371,7 @@ test.describe('blok configuration options', () => {
 
       await expect.poll(async () => {
         return await getPlaceholderValue(page);
-      }).toBeNull();
+      }).toBe('');
     });
 
     test('does not set placeholder when option is omitted', async ({ page }) => {
@@ -378,7 +379,7 @@ test.describe('blok configuration options', () => {
 
       await expect.poll(async () => {
         return await getPlaceholderValue(page);
-      }).toBeNull();
+      }).toBe('');
     });
   });
 

@@ -54,6 +54,7 @@ export const StaticPlaceholder: Story = {
   args: {
     placeholder: DEFAULT_PLACEHOLDER,
     data: undefined,
+    autofocus: true,
   },
 };
 
@@ -64,6 +65,7 @@ export const CustomPlaceholder: Story = {
   args: {
     placeholder: 'Write your story...',
     data: undefined,
+    autofocus: true,
   },
 };
 
@@ -232,6 +234,7 @@ export const LongPlaceholder: Story = {
   args: {
     placeholder: 'This is a very long placeholder text that might need to be truncated or wrapped depending on the container width...',
     data: undefined,
+    autofocus: true,
   },
 };
 

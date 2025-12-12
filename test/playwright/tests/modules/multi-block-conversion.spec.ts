@@ -917,7 +917,7 @@ test.describe('multi-block conversion', () => {
         { name: 'list', className: 'Blok.List' },
       ]);
 
-      await selectAllBlocksViaShift(page, 3);
+      await selectBlocksWithShift(page, 0, 3);
       await openBlockTunesForSelectedBlocks(page);
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);

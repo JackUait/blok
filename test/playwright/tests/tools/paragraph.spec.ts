@@ -549,7 +549,7 @@ test.describe('paragraph tool', () => {
       const paragraphContent = page.locator(PARAGRAPH_BLOCK_SELECTOR).locator('[contenteditable="true"]');
 
       // Default placeholder is shown on empty paragraphs
-      await expect(paragraphContent).toHaveAttribute('data-placeholder-active');
+      await expect(paragraphContent).toHaveAttribute('data-blok-placeholder-active');
     });
   });
 

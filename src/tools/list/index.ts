@@ -146,6 +146,7 @@ export default class ListItem implements BlockTool {
       // Note: parent and content are available on the block
     }
   }
+  sanitize?: SanitizerConfig | undefined;
 
   private normalizeData(data: ListItemData | Record<string, never>): ListItemData {
     const defaultStyle = this._settings.defaultStyle || 'unordered';
@@ -240,6 +241,44 @@ export default class ListItem implements BlockTool {
 
     // Update all sibling ordered list items since their indices may have changed
     this.updateSiblingListMarkers();
+  }
+
+  /**
+   * Called when this block is about to be removed.
+   * Updates sibling ordered list markers to renumber correctly after removal.
+   */
+  public removed(): void {
+    if (this._data.style !== 'ordered') {
+      return;
+    }
+
+    // Schedule marker update for next frame, after DOM has been updated
+    requestAnimationFrame(() => {
+      this.updateAllOrderedListMarkers();
+    });
+  }
+
+  /**
+   * Update markers on all ordered list items in the editor.
+   * Called when a list item is removed to ensure correct renumbering.
+   */
+  private updateAllOrderedListMarkers(): void {
+    const blocksCount = this.api.blocks.getBlocksCount();
+
+    Array.from({ length: blocksCount }, (_, i) => i).forEach(i => {
+      const block = this.api.blocks.getBlockByIndex(i);
+      if (!block || block.name !== ListItem.TOOL_NAME) {
+        return;
+      }
+
+      const blockHolder = block.holder;
+      const listItemEl = blockHolder?.querySelector('[data-list-style="ordered"]');
+      if (!listItemEl) {
+        return; // Not an ordered list
+      }
+
+      this.updateBlockMarker(block);
+    });
   }
 
   /**
@@ -523,6 +562,7 @@ export default class ListItem implements BlockTool {
     wrapper.className = ListItem.BASE_STYLES;
     wrapper.setAttribute(BLOK_TOOL_ATTR, ListItem.TOOL_NAME);
     wrapper.setAttribute('data-list-style', style);
+    wrapper.setAttribute('data-list-depth', String(this.getDepth()));
 
     // Store start value as data attribute for sibling items to read
     if (this._data.start !== undefined && this._data.start !== 1) {
@@ -931,71 +971,65 @@ export default class ListItem implements BlockTool {
     const contentEl = this.getContentElement();
     if (!contentEl) return;
 
-    // Only handle at start of content
+    // Sync current content from DOM before any deletion happens
+    // This is critical for preserving data when whole content is selected
+    this.syncContentFromDOM();
+
+    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
+    const currentContent = this._data.text;
+    const currentDepth = this.getDepth();
+
+    // Check if entire content is selected
+    const isEntireContentSelected = this.isEntireContentSelected(contentEl, range);
+
+    // Handle case when entire content is selected and deleted
+    // Just clear the content and show placeholder - don't delete the block
+    if (isEntireContentSelected && !selection.isCollapsed) {
+      event.preventDefault();
+
+      // Clear the content and update data
+      contentEl.innerHTML = '';
+      this._data.text = '';
+
+      // Set caret to the now-empty content element
+      const newRange = document.createRange();
+      newRange.setStart(contentEl, 0);
+      newRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+
+      return;
+    }
+
+    // Only handle at start of content for non-selection cases
     if (!this.isAtStart(contentEl, range)) return;
 
     event.preventDefault();
 
-    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
-    const currentContent = this._data.text;
+    const isEmptyContent = !currentContent || currentContent === '' || currentContent === '<br>';
 
-    // If first block, convert to paragraph
-    if (currentBlockIndex === 0) {
-      this.api.blocks.delete(currentBlockIndex);
-      const newBlock = this.api.blocks.insert('paragraph', { text: currentContent }, undefined, currentBlockIndex, true);
-      this.setCaretToBlockContent(newBlock, 'start');
-      return;
-    }
-
-    // Try to merge with previous block
-    const previousBlock = this.api.blocks.getBlockByIndex(currentBlockIndex - 1);
-
-    if (!previousBlock) {
-      return;
-    }
-
-    // Get the length of previous block's content before merge for caret positioning
-    const previousBlockHolder = previousBlock.holder;
-    const previousContentEl = previousBlockHolder?.querySelector('[contenteditable="true"]') as HTMLElement;
-    const previousContentLength = previousContentEl?.textContent?.length ?? 0;
-
-    // Merge content with previous block by calling its merge method
-    // The merge method appends current content to the previous block
-    previousBlock.call('merge', { text: currentContent, style: this._data.style, checked: this._data.checked });
-
-    // Delete current block after merging
+    // Convert to paragraph (preserving indentation for nested items)
     this.api.blocks.delete(currentBlockIndex);
+    const newBlock = this.api.blocks.insert(
+      'paragraph',
+      { text: isEmptyContent ? '' : currentContent },
+      undefined,
+      currentBlockIndex,
+      true
+    );
 
-    // Set caret to the merge point in the previous block (end of original content)
-    requestAnimationFrame(() => {
-      if (!previousContentEl) {
-        this.api.caret.setToBlock(previousBlock, 'end');
-        return;
-      }
+    // Apply indentation to the new paragraph if the list item was nested
+    if (currentDepth > 0) {
+      requestAnimationFrame(() => {
+        const holder = newBlock.holder;
+        if (holder) {
+          holder.style.marginLeft = `${currentDepth * ListItem.INDENT_PER_LEVEL}px`;
+          holder.setAttribute('data-blok-depth', String(currentDepth));
+        }
+      });
+    }
 
-      previousContentEl.focus();
-
-      // Set caret at the position where content was merged
-      const sel = window.getSelection();
-      if (!sel) return;
-
-      const newRange = document.createRange();
-      // Find the text node and position at the merge point
-      const textNodes = this.collectTextNodes(previousContentEl);
-      const caretPosition = this.findCaretPosition(textNodes, previousContentLength);
-
-      if (caretPosition) {
-        newRange.setStart(caretPosition.node, caretPosition.offset);
-        newRange.collapse(true);
-      } else {
-        // Fallback: set to end
-        newRange.selectNodeContents(previousContentEl);
-        newRange.collapse(false);
-      }
-
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-    });
+    this.setCaretToBlockContent(newBlock, 'start');
   }
 
   /**
@@ -1184,6 +1218,28 @@ export default class ListItem implements BlockTool {
     return preCaretRange.toString().length === 0;
   }
 
+  /**
+   * Check if the entire content of an element is selected
+   * @param element - The content element to check
+   * @param range - The current selection range
+   * @returns true if the entire content is selected
+   */
+  private isEntireContentSelected(element: HTMLElement, range: Range): boolean {
+    // Check if selection starts at the beginning
+    const preCaretRange = document.createRange();
+    preCaretRange.selectNodeContents(element);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    const isAtStart = preCaretRange.toString().length === 0;
+
+    // Check if selection ends at the end
+    const postCaretRange = document.createRange();
+    postCaretRange.selectNodeContents(element);
+    postCaretRange.setStart(range.endContainer, range.endOffset);
+    const isAtEnd = postCaretRange.toString().length === 0;
+
+    return isAtStart && isAtEnd;
+  }
+
   private splitContentAtCursor(contentEl: HTMLElement, range: Range): { beforeContent: string; afterContent: string } {
     const beforeRange = document.createRange();
     beforeRange.setStart(contentEl, 0);
@@ -1364,19 +1420,19 @@ export default class ListItem implements BlockTool {
       {
         icon: IconListUnordered,
         title: 'Bulleted list',
-        data: { style: 'unordered', text: '' },
+        data: { style: 'unordered' },
         name: 'bulleted-list',
       },
       {
         icon: IconListOrdered,
         title: 'Numbered list',
-        data: { style: 'ordered', text: '' },
+        data: { style: 'ordered' },
         name: 'numbered-list',
       },
       {
         icon: IconListChecklist,
         title: 'Checklist',
-        data: { style: 'checklist', text: '' },
+        data: { style: 'checklist' },
         name: 'check-list',
       },
     ];

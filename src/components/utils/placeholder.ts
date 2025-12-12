@@ -26,34 +26,34 @@ export const PLACEHOLDER_CLASSES: string[] = [
 ];
 
 /**
- * Alternative placeholder classes using data-placeholder-active attribute.
+ * Alternative placeholder classes using data-blok-placeholder-active attribute.
  * Used by some tools that need a different attribute name.
  */
 export const PLACEHOLDER_ACTIVE_CLASSES: string[] = [
   'empty:before:pointer-events-none',
   'empty:before:text-gray-text',
   'empty:before:cursor-text',
-  'empty:before:content-[attr(data-placeholder-active)]',
+  'empty:before:content-[attr(data-blok-placeholder-active)]',
   '[&[data-empty=true]]:before:pointer-events-none',
   '[&[data-empty=true]]:before:text-gray-text',
   '[&[data-empty=true]]:before:cursor-text',
-  '[&[data-empty=true]]:before:content-[attr(data-placeholder-active)]',
+  '[&[data-empty=true]]:before:content-[attr(data-blok-placeholder-active)]',
 ];
 
 /**
  * Placeholder classes that only show placeholder when element is focused.
- * Uses data-placeholder-active attribute and only displays when element is empty AND focused.
+ * Uses data-blok-placeholder-active attribute and only displays when element is empty AND focused.
  * Used by paragraph tool.
  */
 export const PLACEHOLDER_FOCUS_ONLY_CLASSES: string[] = [
   'empty:focus:before:pointer-events-none',
   'empty:focus:before:text-gray-text',
   'empty:focus:before:cursor-text',
-  'empty:focus:before:content-[attr(data-placeholder-active)]',
+  'empty:focus:before:content-[attr(data-blok-placeholder-active)]',
   '[&[data-empty=true]:focus]:before:pointer-events-none',
   '[&[data-empty=true]:focus]:before:text-gray-text',
   '[&[data-empty=true]:focus]:before:cursor-text',
-  '[&[data-empty=true]:focus]:before:content-[attr(data-placeholder-active)]',
+  '[&[data-empty=true]:focus]:before:content-[attr(data-blok-placeholder-active)]',
 ];
 
 /**
@@ -113,7 +113,7 @@ const handleEmptyElement = (element: HTMLElement): void => {
 export const setupPlaceholder = (
   element: HTMLElement,
   placeholder?: string,
-  attributeName: 'data-placeholder' | 'data-placeholder-active' = 'data-placeholder'
+  attributeName: 'data-placeholder' | 'data-blok-placeholder-active' = 'data-placeholder'
 ): void => {
   // Always set the attribute, even if empty (for consistency and testing)
   element.setAttribute(attributeName, placeholder ?? '');
@@ -134,7 +134,7 @@ export const setupPlaceholder = (
 export const applyPlaceholderAttribute = (
   element: HTMLElement,
   placeholder: string,
-  attributeName: 'data-placeholder' | 'data-placeholder-active' = 'data-placeholder'
+  attributeName: 'data-placeholder' | 'data-blok-placeholder-active' = 'data-placeholder'
 ): void => {
   element.setAttribute(attributeName, placeholder);
 };

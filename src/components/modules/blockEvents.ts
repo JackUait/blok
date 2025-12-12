@@ -375,6 +375,13 @@ export default class BlockEvents extends Module {
     const textContent = currentInput.textContent || '';
 
     /**
+     * Get the depth from the block holder if it was previously a nested list item
+     * This preserves nesting when converting back to a list
+     */
+    const depthAttr = currentBlock.holder.getAttribute('data-blok-depth');
+    const depth = depthAttr ? parseInt(depthAttr, 10) : 0;
+
+    /**
      * Check for checklist pattern (e.g., "[] ", "[ ] ", "[x] ", "[X] ")
      */
     const checklistMatch = BlockEvents.CHECKLIST_PATTERN.exec(textContent);
@@ -390,6 +397,7 @@ export default class BlockEvents extends Module {
         text: '',
         style: 'checklist',
         checked: isChecked,
+        ...(depth > 0 ? { depth } : {}),
       });
 
       Caret.setToBlock(newBlock, Caret.positions.START);
@@ -407,6 +415,7 @@ export default class BlockEvents extends Module {
         text: '',
         style: 'unordered',
         checked: false,
+        ...(depth > 0 ? { depth } : {}),
       });
 
       Caret.setToBlock(newBlock, Caret.positions.START);
@@ -437,7 +446,7 @@ export default class BlockEvents extends Module {
     /**
      * Convert to ordered list with the captured start number
      */
-    const listData: { text: string; style: string; checked: boolean; start?: number } = {
+    const listData: { text: string; style: string; checked: boolean; start?: number; depth?: number } = {
       text: remainingContent,
       style: 'ordered',
       checked: false,
@@ -446,6 +455,11 @@ export default class BlockEvents extends Module {
     // Only include start if it's not 1 (the default)
     if (startNumber !== 1) {
       listData.start = startNumber;
+    }
+
+    // Preserve depth if the block was previously nested
+    if (depth > 0) {
+      listData.depth = depth;
     }
 
     const newBlock = BlockManager.replace(currentBlock, 'list', listData);

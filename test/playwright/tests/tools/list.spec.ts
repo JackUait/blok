@@ -493,6 +493,12 @@ test.describe('list tool (ListItem)', () => {
       // Wait for the second item to be indented (depth attribute changes)
       await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-list-depth', '1');
 
+      // Wait for focus to be restored after requestAnimationFrame in setCaretToBlockContent
+      await page.waitForFunction(() => {
+        const active = document.activeElement;
+        return active?.getAttribute('contenteditable') === 'true';
+      }, { timeout: 2000 });
+
       // Verify focus is on a contenteditable element
       const activeElement = await page.evaluate(() => {
         const active = document.activeElement;
@@ -566,7 +572,7 @@ test.describe('list tool (ListItem)', () => {
       expect(activeElement.isInSecondBlock).toBe(true);
     });
 
-    test('focus remains on content element after backspace merge', async ({ page }) => {
+    test('backspace at start converts list item to paragraph (Notion behavior)', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createListItems([
@@ -575,33 +581,47 @@ test.describe('list tool (ListItem)', () => {
         ]),
       });
 
-      // Click on second item at the start
+      // Click on second item and set cursor to the start using JavaScript
+      // (Home key behavior varies across browsers)
       const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
       await secondItem.click();
-      await page.keyboard.press('Home');
+      await page.evaluate(() => {
+        const selection = window.getSelection();
+        const listBlocks = document.querySelectorAll('[data-blok-tool="list"]');
+        const secondBlock = listBlocks[1];
+        const contentEl = secondBlock?.querySelector('[contenteditable="true"]');
+        if (contentEl && selection) {
+          const range = document.createRange();
+          range.setStart(contentEl, 0);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      });
 
-      // Press Backspace to merge with previous item
+      // Press Backspace - should convert to paragraph, not merge
       await page.keyboard.press('Backspace');
 
-      // Wait for the blocks to merge (only one list block should remain)
+      // Should still have one list block (first item) and a new paragraph
       await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toBeVisible();
 
-      // Verify focus is on a contenteditable element in the first (now only) list block
+      // Verify the paragraph contains the second item's text
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toContainText('Second item');
+
+      // Verify focus is on a contenteditable element in the paragraph
       const activeElement = await page.evaluate(() => {
         const active = document.activeElement;
-        const listBlocks = document.querySelectorAll('[data-blok-tool="list"]');
-        const firstBlock = listBlocks[0];
-        const isInFirstBlock = firstBlock?.contains(active);
+        const paragraph = document.querySelector('[data-blok-tool="paragraph"]');
+        const isInParagraph = paragraph?.contains(active);
         return {
           isContentEditable: active?.getAttribute('contenteditable') === 'true',
-          isInFirstBlock,
-          blockCount: listBlocks.length,
+          isInParagraph,
         };
       });
 
       expect(activeElement.isContentEditable).toBe(true);
-      expect(activeElement.isInFirstBlock).toBe(true);
-      expect(activeElement.blockCount).toBe(1);
+      expect(activeElement.isInParagraph).toBe(true);
     });
 
     test('focus moves to paragraph after exiting list', async ({ page }) => {
@@ -617,7 +637,8 @@ test.describe('list tool (ListItem)', () => {
       await page.keyboard.press('Enter');
 
       // Wait for paragraph to appear (list should be converted)
-      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toBeVisible();
+      // Use .first() since there may be multiple paragraphs (e.g., a default empty one)
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR).first()).toBeVisible();
 
       // Verify focus is on a contenteditable element (should be paragraph)
       const activeElement = await page.evaluate(() => {
@@ -682,14 +703,10 @@ test.describe('list tool (ListItem)', () => {
         ], 'ordered'),
       });
 
-      // Click on second item content to focus it
-      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
-      await secondItem.click();
-
-      // Select all and delete
-      await page.keyboard.press('Meta+a');
-      await page.keyboard.press('Backspace');
-      await page.keyboard.press('Backspace');
+      // Delete the second item via the API
+      await page.evaluate(() => {
+        window.blokInstance?.blocks.delete(1);
+      });
 
       // Wait for items to reduce to 2
       await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
@@ -723,6 +740,9 @@ test.describe('list tool (ListItem)', () => {
       await expect(markers).toHaveCount(2);
       await expect(markers.nth(0)).toHaveText('1.');
       await expect(markers.nth(1)).toHaveText('2.');
+
+      // Type content in the second item (empty items exit list on Enter)
+      await page.keyboard.type('Second');
 
       // Create a third item
       await page.keyboard.press('Enter');

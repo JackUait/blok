@@ -101,7 +101,7 @@ export enum BlockToolAPI {
   MOVED = 'moved',
   UPDATED = 'updated',
   REMOVED = 'removed',
-   
+
   ON_PASTE = 'onPaste',
 }
 
@@ -344,7 +344,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     }
 
     try {
-       
+
       method.call(this.toolInstance, params);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
@@ -1088,7 +1088,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     const placeholderText = typeof placeholder === 'string' ? placeholder.trim() : '';
 
     /**
-     * Paragraph tool handles its own placeholder via data-placeholder-active attribute
+     * Paragraph tool handles its own placeholder via data-blok-placeholder-active attribute
      * with focus-only classes, so we skip the block-level placeholder for it.
      */
     if (this.name === 'paragraph') {

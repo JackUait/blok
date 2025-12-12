@@ -1257,6 +1257,7 @@ describe('BlockEvents', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = '1. ';
       const currentBlock = {
@@ -1264,6 +1265,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);
@@ -1297,6 +1299,7 @@ describe('BlockEvents', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = '1) ';
       const currentBlock = {
@@ -1304,6 +1307,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);
@@ -1336,6 +1340,7 @@ describe('BlockEvents', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = '42. ';
       const currentBlock = {
@@ -1343,6 +1348,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);
@@ -1375,6 +1381,7 @@ describe('BlockEvents', () => {
     it('does not convert when pattern is not at the start', () => {
       const replace = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = 'hello 1. ';
       const currentBlock = {
@@ -1382,6 +1389,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);
@@ -1429,6 +1437,7 @@ describe('BlockEvents', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = '[] ';
       const currentBlock = {
@@ -1436,6 +1445,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);
@@ -1469,6 +1479,7 @@ describe('BlockEvents', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = '[ ] ';
       const currentBlock = {
@@ -1476,6 +1487,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);
@@ -1509,6 +1521,7 @@ describe('BlockEvents', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = '[x] ';
       const currentBlock = {
@@ -1516,6 +1529,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);
@@ -1549,6 +1563,7 @@ describe('BlockEvents', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = '[X] ';
       const currentBlock = {
@@ -1556,6 +1571,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);
@@ -1589,6 +1605,7 @@ describe('BlockEvents', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = '- ';
       const currentBlock = {
@@ -1596,6 +1613,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);
@@ -1629,6 +1647,7 @@ describe('BlockEvents', () => {
       const replace = vi.fn().mockReturnValue({ id: 'new-block' });
       const setToBlock = vi.fn();
       const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
 
       currentInput.textContent = '* ';
       const currentBlock = {
@@ -1636,6 +1655,7 @@ describe('BlockEvents', () => {
           isDefault: true,
         },
         currentInput,
+        holder,
       } as unknown as Block;
       const listTool = { name: 'list' };
       const blockTools = new Map([['list', listTool]]);

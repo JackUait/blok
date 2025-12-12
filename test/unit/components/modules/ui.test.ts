@@ -51,6 +51,7 @@ const createBlokStub = (): UI['Blok'] => {
       close: vi.fn(),
       tryToShow: vi.fn(() => Promise.resolve()),
       containsNode: vi.fn(() => false),
+      hasFlipperFocus: false,
     },
     BlockSettings: {
       opened: false,
@@ -673,11 +674,72 @@ describe('UI module', () => {
       } as unknown as typeof blok.BlockManager.currentBlock;
 
       mockSelectionAnchor(blockContent);
+      // Mock a non-empty selection to prevent early return due to empty selection check
+      mockSelection({ isCollapsed: false } as Selection);
+      vi.spyOn(SelectionUtils, 'text', 'get').mockReturnValue('selected text');
 
       await (ui as unknown as { selectionChanged: () => Promise<void> }).selectionChanged();
 
       // Should call tryToShow when toolbar has nested popover open
       expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
+    });
+
+    it('does not close inline toolbar when selection appears empty but flipper has focus', () => {
+      const { ui, blok, wrapper } = createUI();
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.setAttribute('data-blok-testid', 'blok-editor');
+      wrapper.appendChild(blockContent);
+
+      // Set up inline toolbar as already open with flipper focus
+      blok.InlineToolbar.opened = true;
+      (blok.InlineToolbar as unknown as { hasNestedPopoverOpen: boolean }).hasNestedPopoverOpen = false;
+      (blok.InlineToolbar as unknown as { hasFlipperFocus: boolean }).hasFlipperFocus = true;
+      blok.BlockManager.currentBlock = {
+        id: 'test',
+        name: 'paragraph',
+        holder: document.createElement('div'),
+      } as unknown as typeof blok.BlockManager.currentBlock;
+
+      mockSelectionAnchor(blockContent);
+      // Mock an empty/collapsed selection (simulates webkit behavior during Tab navigation)
+      mockSelection({ isCollapsed: true } as Selection);
+      vi.spyOn(SelectionUtils, 'text', 'get').mockReturnValue('');
+
+      (ui as unknown as { selectionChanged: () => void }).selectionChanged();
+
+      // Should NOT close the toolbar when flipper has focus, even if selection appears empty
+      expect(blok.InlineToolbar.close).not.toHaveBeenCalled();
+    });
+
+    it('closes inline toolbar when selection is empty and flipper does not have focus', () => {
+      const { ui, blok, wrapper } = createUI();
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.setAttribute('data-blok-testid', 'blok-editor');
+      wrapper.appendChild(blockContent);
+
+      // Set up inline toolbar as already open without flipper focus
+      blok.InlineToolbar.opened = true;
+      (blok.InlineToolbar as unknown as { hasNestedPopoverOpen: boolean }).hasNestedPopoverOpen = false;
+      (blok.InlineToolbar as unknown as { hasFlipperFocus: boolean }).hasFlipperFocus = false;
+      blok.BlockManager.currentBlock = {
+        id: 'test',
+        name: 'paragraph',
+        holder: document.createElement('div'),
+      } as unknown as typeof blok.BlockManager.currentBlock;
+
+      mockSelectionAnchor(blockContent);
+      // Mock an empty/collapsed selection
+      mockSelection({ isCollapsed: true } as Selection);
+      vi.spyOn(SelectionUtils, 'text', 'get').mockReturnValue('');
+
+      (ui as unknown as { selectionChanged: () => void }).selectionChanged();
+
+      // Should close the toolbar when flipper does not have focus and selection is empty
+      expect(blok.InlineToolbar.close).toHaveBeenCalled();
     });
   });
 

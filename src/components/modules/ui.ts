@@ -1104,11 +1104,16 @@ export default class UI extends Module<UINodes> {
      *
      * However, if the selection is now collapsed or empty (e.g., user deleted the selected text),
      * we should close the inline toolbar since there's nothing to format.
+     *
+     * Important: Don't close the toolbar if a flipper item is focused (user is navigating
+     * with Tab/Arrow keys). In some browsers (webkit), keyboard navigation within the
+     * popover can trigger selectionchange events that make the selection appear empty.
      */
     const currentSelection = Selection.get();
     const selectionIsEmpty = !currentSelection || currentSelection.isCollapsed || Selection.text.length === 0;
+    const hasFlipperFocus = this.Blok.InlineToolbar.hasFlipperFocus;
 
-    if (selectionIsEmpty && this.Blok.InlineToolbar.opened) {
+    if (selectionIsEmpty && this.Blok.InlineToolbar.opened && !hasFlipperFocus) {
       this.Blok.InlineToolbar.close();
 
       return;

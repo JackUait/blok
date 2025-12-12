@@ -213,6 +213,10 @@ export default class BlockManager extends Module {
       handle: BLOK_DRAG_HANDLE_SELECTOR,
       onStart: () => {
         this.Blok.UI.nodes.wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
+
+        /** Unselect all blocks */
+        this.Blok.BlockSelection.allBlocksSelected = false;
+
         tooltip.hide(true);
       },
       onEnd: (evt) => {
@@ -222,6 +226,13 @@ export default class BlockManager extends Module {
         }
 
         this.move(evt.newIndex, evt.oldIndex, true);
+
+        /** Select the moved block to provide visual feedback */
+        const movedBlock = this.getBlockByIndex(evt.newIndex);
+
+        if (movedBlock) {
+          this.Blok.BlockSelection.selectBlock(movedBlock);
+        }
       },
     });
   }

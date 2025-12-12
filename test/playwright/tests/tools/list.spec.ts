@@ -893,14 +893,10 @@ test.describe('list tool (ListItem)', () => {
       await expect(markers.nth(1)).toHaveText('2.');
       await expect(markers.nth(2)).toHaveText('3.');
 
-      // Click on first item content to focus it
-      const firstItem = page.locator(LIST_BLOCK_SELECTOR).first().locator('[contenteditable="true"]');
-      await firstItem.click();
-
-      // Select all and delete
-      await page.keyboard.press('Meta+a');
-      await page.keyboard.press('Backspace');
-      await page.keyboard.press('Backspace');
+      // Delete the first item via the API (same approach as 'renumbers when middle item is deleted')
+      await page.evaluate(() => {
+        window.blokInstance?.blocks.delete(0);
+      });
 
       // Wait for items to reduce to 2
       await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);

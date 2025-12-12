@@ -656,6 +656,125 @@ test.describe('list tool (ListItem)', () => {
     });
   });
 
+  test.describe('style boundaries - list numbering resets on style change', () => {
+    test('ordered list restarts numbering after unordered item at same depth', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'list-1', type: 'list', data: { text: 'Ordered 1', style: 'ordered' } },
+            { id: 'list-2', type: 'list', data: { text: 'Ordered 2', style: 'ordered' } },
+            { id: 'list-3', type: 'list', data: { text: 'Unordered', style: 'unordered' } },
+            { id: 'list-4', type: 'list', data: { text: 'Ordered 3', style: 'ordered' } },
+            { id: 'list-5', type: 'list', data: { text: 'Ordered 4', style: 'ordered' } },
+          ],
+        },
+      });
+
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+
+      // First two ordered items: 1. 2.
+      await expect(markers.nth(0)).toHaveText('1.');
+      await expect(markers.nth(1)).toHaveText('2.');
+      // Third is unordered bullet
+      await expect(markers.nth(2)).toHaveText('•');
+      // Fourth and fifth should restart: 1. 2. (not 3. 4.)
+      await expect(markers.nth(3)).toHaveText('1.');
+      await expect(markers.nth(4)).toHaveText('2.');
+    });
+
+    test('ordered list restarts numbering after checklist item at same depth', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'list-1', type: 'list', data: { text: 'Ordered 1', style: 'ordered' } },
+            { id: 'list-2', type: 'list', data: { text: 'Task', style: 'checklist', checked: false } },
+            { id: 'list-3', type: 'list', data: { text: 'Ordered 2', style: 'ordered' } },
+          ],
+        },
+      });
+
+      const orderedMarkers = page.locator(`${LIST_BLOCK_SELECTOR}[data-list-style="ordered"] [data-list-marker]`);
+
+      // Both ordered items should be numbered 1. (not 1. and 2.)
+      await expect(orderedMarkers.nth(0)).toHaveText('1.');
+      await expect(orderedMarkers.nth(1)).toHaveText('1.');
+    });
+
+    test('nested ordered lists restart numbering after different style at same depth', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'list-1', type: 'list', data: { text: 'Parent 1', style: 'ordered' } },
+            { id: 'list-2', type: 'list', data: { text: 'Nested ordered 1', style: 'ordered', depth: 1 } },
+            { id: 'list-3', type: 'list', data: { text: 'Nested ordered 2', style: 'ordered', depth: 1 } },
+            { id: 'list-4', type: 'list', data: { text: 'Nested unordered', style: 'unordered', depth: 1 } },
+            { id: 'list-5', type: 'list', data: { text: 'Nested ordered 3', style: 'ordered', depth: 1 } },
+            { id: 'list-6', type: 'list', data: { text: 'Parent 2', style: 'ordered' } },
+          ],
+        },
+      });
+
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+
+      // Parent 1: 1.
+      await expect(markers.nth(0)).toHaveText('1.');
+      // Nested ordered 1, 2: a. b. (depth 1 uses lowercase letters)
+      await expect(markers.nth(1)).toHaveText('a.');
+      await expect(markers.nth(2)).toHaveText('b.');
+      // Nested unordered: hollow circle (depth 1 bullet)
+      await expect(markers.nth(3)).toHaveText('◦');
+      // Nested ordered 3 should restart: a. (not c.)
+      await expect(markers.nth(4)).toHaveText('a.');
+      // Parent 2: 2.
+      await expect(markers.nth(5)).toHaveText('2.');
+    });
+
+    test('multiple style changes create independent list groups', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'list-1', type: 'list', data: { text: 'Ordered A', style: 'ordered' } },
+            { id: 'list-2', type: 'list', data: { text: 'Unordered 1', style: 'unordered' } },
+            { id: 'list-3', type: 'list', data: { text: 'Ordered B', style: 'ordered' } },
+            { id: 'list-4', type: 'list', data: { text: 'Unordered 2', style: 'unordered' } },
+            { id: 'list-5', type: 'list', data: { text: 'Ordered C', style: 'ordered' } },
+          ],
+        },
+      });
+
+      const orderedMarkers = page.locator(`${LIST_BLOCK_SELECTOR}[data-list-style="ordered"] [data-list-marker]`);
+
+      // All three ordered items should each be 1. (each is its own group)
+      await expect(orderedMarkers.nth(0)).toHaveText('1.');
+      await expect(orderedMarkers.nth(1)).toHaveText('1.');
+      await expect(orderedMarkers.nth(2)).toHaveText('1.');
+    });
+
+    test('custom start value works correctly after style boundary', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'list-1', type: 'list', data: { text: 'Ordered 1', style: 'ordered' } },
+            { id: 'list-2', type: 'list', data: { text: 'Unordered', style: 'unordered' } },
+            { id: 'list-3', type: 'list', data: { text: 'Ordered starting at 5', style: 'ordered', start: 5 } },
+            { id: 'list-4', type: 'list', data: { text: 'Ordered 2', style: 'ordered' } },
+          ],
+        },
+      });
+
+      const orderedMarkers = page.locator(`${LIST_BLOCK_SELECTOR}[data-list-style="ordered"] [data-list-marker]`);
+
+      await expect(orderedMarkers.nth(0)).toHaveText('1.');
+      await expect(orderedMarkers.nth(1)).toHaveText('5.');
+      await expect(orderedMarkers.nth(2)).toHaveText('6.');
+    });
+  });
+
   test.describe('ordered list renumbering', () => {
     test('renumbers when first item is deleted', async ({ page }) => {
       await createBlok(page, {

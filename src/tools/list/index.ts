@@ -320,6 +320,7 @@ export default class ListItem implements BlockTool {
   /**
    * Update markers on all sibling ordered list items.
    * Called when this block is moved to ensure all list numbers are correct.
+   * Respects style boundaries - only updates items with the same style.
    */
   private updateSiblingListMarkers(): void {
     const currentBlockIndex = this.blockId
@@ -327,19 +328,22 @@ export default class ListItem implements BlockTool {
       : this.api.blocks.getCurrentBlockIndex();
 
     const currentDepth = this.getDepth();
+    const currentStyle = this._data.style;
     const blocksCount = this.api.blocks.getBlocksCount();
 
-    // Find the start of this list group by walking backwards
-    const groupStartIndex = this.findListGroupStartIndex(currentBlockIndex, currentDepth);
+    // Find the start of this list group by walking backwards (respecting style boundaries)
+    const groupStartIndex = this.findListGroupStartIndex(currentBlockIndex, currentDepth, currentStyle);
 
-    // Update all ordered list items from groupStartIndex forward at this depth
-    this.updateMarkersInRange(groupStartIndex, blocksCount, currentBlockIndex, currentDepth);
+    // Update all ordered list items from groupStartIndex forward at this depth (respecting style boundaries)
+    this.updateMarkersInRange(groupStartIndex, blocksCount, currentBlockIndex, currentDepth, currentStyle);
   }
 
   /**
-   * Find the starting index of a list group by walking backwards
+   * Find the starting index of a list group by walking backwards.
+   * Stops at style boundaries at the same depth (when encountering a different list style).
+   * Items at deeper depths are skipped regardless of their style.
    */
-  private findListGroupStartIndex(currentBlockIndex: number, currentDepth: number): number {
+  private findListGroupStartIndex(currentBlockIndex: number, currentDepth: number, currentStyle?: ListItemStyle): number {
     const findStart = (index: number, startIndex: number): number => {
       if (index < 0) {
         return startIndex;
@@ -355,21 +359,35 @@ export default class ListItem implements BlockTool {
         return startIndex; // Hit a parent, stop
       }
 
-      const newStartIndex = blockDepth === currentDepth ? index : startIndex;
-      return findStart(index - 1, newStartIndex);
+      // If at deeper depth, skip it and continue (ignore style at deeper depths)
+      if (blockDepth > currentDepth) {
+        return findStart(index - 1, startIndex);
+      }
+
+      // At same depth - check style boundary if currentStyle is provided
+      const blockStyle = this.getBlockStyle(block);
+      if (currentStyle !== undefined && blockStyle !== currentStyle) {
+        return startIndex; // Style boundary at same depth - treat as separate list
+      }
+
+      // Same depth and same style - update startIndex and continue
+      return findStart(index - 1, index);
     };
 
     return findStart(currentBlockIndex - 1, currentBlockIndex);
   }
 
   /**
-   * Update markers for all list items in a range at the given depth
+   * Update markers for all list items in a range at the given depth.
+   * Stops at style boundaries at the same depth (when encountering a different list style).
+   * Items at deeper depths are skipped regardless of their style.
    */
   private updateMarkersInRange(
     startIndex: number,
     endIndex: number,
     skipIndex: number,
-    targetDepth: number
+    targetDepth: number,
+    targetStyle?: ListItemStyle
   ): void {
     const processBlock = (index: number): void => {
       if (index >= endIndex) {
@@ -391,9 +409,20 @@ export default class ListItem implements BlockTool {
         return; // Hit a parent, stop searching forward
       }
 
-      if (blockDepth === targetDepth) {
-        this.updateBlockMarker(block);
+      // If at deeper depth, skip it and continue (ignore style at deeper depths)
+      if (blockDepth > targetDepth) {
+        processBlock(index + 1);
+        return;
       }
+
+      // At same depth - check style boundary if targetStyle is provided
+      const blockStyle = this.getBlockStyle(block);
+      if (targetStyle !== undefined && blockStyle !== targetStyle) {
+        return; // Style boundary at same depth - stop updating
+      }
+
+      // Same depth and same style - update marker and continue
+      this.updateBlockMarker(block);
 
       processBlock(index + 1);
     };
@@ -415,6 +444,21 @@ export default class ListItem implements BlockTool {
 
     const paddingMatch = styleAttr?.match(/padding-left:\s*(\d+)px/);
     return paddingMatch ? Math.round(parseInt(paddingMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
+  }
+
+  /**
+   * Get the style of a block by reading from its DOM
+   */
+  private getBlockStyle(block: ReturnType<typeof this.api.blocks.getBlockByIndex>): ListItemStyle | null {
+    if (!block) {
+      return null;
+    }
+
+    const blockHolder = block.holder;
+    const listItemEl = blockHolder?.querySelector('[data-list-style]');
+    const style = listItemEl?.getAttribute('data-list-style');
+
+    return (style as ListItemStyle) || null;
   }
 
   /**
@@ -443,10 +487,11 @@ export default class ListItem implements BlockTool {
     }
 
     const blockDepth = this.getBlockDepth(block);
-    const siblingIndex = this.countPrecedingSiblingsAtDepth(blockIndex, blockDepth);
+    const blockStyle = this.getBlockStyle(block) || 'ordered';
+    const siblingIndex = this.countPrecedingSiblingsAtDepth(blockIndex, blockDepth, blockStyle);
 
     // Get the start value for this list group
-    const startValue = this.getListStartValueForBlock(blockIndex, blockDepth, siblingIndex);
+    const startValue = this.getListStartValueForBlock(blockIndex, blockDepth, siblingIndex, blockStyle);
     const actualNumber = startValue + siblingIndex;
     const markerText = this.formatOrderedMarker(actualNumber, blockDepth);
 
@@ -469,20 +514,22 @@ export default class ListItem implements BlockTool {
   }
 
   /**
-   * Count preceding list items at the same depth for a given block index
+   * Count preceding list items at the same depth and style for a given block index
    */
-  private countPrecedingSiblingsAtDepth(blockIndex: number, targetDepth: number): number {
+  private countPrecedingSiblingsAtDepth(blockIndex: number, targetDepth: number, targetStyle?: ListItemStyle): number {
     if (blockIndex <= 0) {
       return 0;
     }
 
-    return this.countPrecedingListItemsAtDepthFromIndex(blockIndex - 1, targetDepth);
+    return this.countPrecedingListItemsAtDepthFromIndex(blockIndex - 1, targetDepth, targetStyle);
   }
 
   /**
-   * Recursively count preceding list items at the given depth starting from index
+   * Recursively count preceding list items at the given depth and style starting from index.
+   * Stops at style boundaries at the same depth (when encountering a different list style).
+   * Items at deeper depths are skipped regardless of their style.
    */
-  private countPrecedingListItemsAtDepthFromIndex(index: number, targetDepth: number): number {
+  private countPrecedingListItemsAtDepthFromIndex(index: number, targetDepth: number, targetStyle?: ListItemStyle): number {
     if (index < 0) {
       return 0;
     }
@@ -498,24 +545,31 @@ export default class ListItem implements BlockTool {
       return 0; // Hit a parent
     }
 
-    if (blockDepth === targetDepth) {
-      return 1 + this.countPrecedingListItemsAtDepthFromIndex(index - 1, targetDepth);
+    // If at deeper depth, skip it and continue (ignore style at deeper depths)
+    if (blockDepth > targetDepth) {
+      return this.countPrecedingListItemsAtDepthFromIndex(index - 1, targetDepth, targetStyle);
     }
 
-    // Deeper depth, skip and continue
-    return this.countPrecedingListItemsAtDepthFromIndex(index - 1, targetDepth);
+    // At same depth - check style boundary if targetStyle is provided
+    const blockStyle = this.getBlockStyle(block);
+    if (targetStyle !== undefined && blockStyle !== targetStyle) {
+      return 0; // Style boundary at same depth - treat as separate list
+    }
+
+    // Same depth and same style (or no style check) - count it and continue
+    return 1 + this.countPrecedingListItemsAtDepthFromIndex(index - 1, targetDepth, targetStyle);
   }
 
   /**
    * Get the list start value for a block at a given index and depth
    */
-  private getListStartValueForBlock(blockIndex: number, targetDepth: number, siblingIndex: number): number {
+  private getListStartValueForBlock(blockIndex: number, targetDepth: number, siblingIndex: number, targetStyle?: ListItemStyle): number {
     if (siblingIndex === 0) {
       return this.getBlockStartValue(blockIndex);
     }
 
     // Find the first item in this list group
-    const firstItemIndex = this.findFirstListItemIndexFromBlock(blockIndex - 1, targetDepth, siblingIndex);
+    const firstItemIndex = this.findFirstListItemIndexFromBlock(blockIndex - 1, targetDepth, siblingIndex, targetStyle);
     if (firstItemIndex === null) {
       return 1;
     }
@@ -539,9 +593,11 @@ export default class ListItem implements BlockTool {
   }
 
   /**
-   * Find the first list item in a consecutive group
+   * Find the first list item in a consecutive group.
+   * Stops at style boundaries at the same depth (when encountering a different list style).
+   * Items at deeper depths are skipped regardless of their style.
    */
-  private findFirstListItemIndexFromBlock(index: number, targetDepth: number, remainingCount: number): number | null {
+  private findFirstListItemIndexFromBlock(index: number, targetDepth: number, remainingCount: number, targetStyle?: ListItemStyle): number | null {
     if (index < 0 || remainingCount <= 0) {
       return index + 1;
     }
@@ -557,11 +613,19 @@ export default class ListItem implements BlockTool {
       return index + 1;
     }
 
-    if (blockDepth === targetDepth) {
-      return this.findFirstListItemIndexFromBlock(index - 1, targetDepth, remainingCount - 1);
+    // If at deeper depth, skip it and continue (ignore style at deeper depths)
+    if (blockDepth > targetDepth) {
+      return this.findFirstListItemIndexFromBlock(index - 1, targetDepth, remainingCount, targetStyle);
     }
 
-    return this.findFirstListItemIndexFromBlock(index - 1, targetDepth, remainingCount);
+    // At same depth - check style boundary if targetStyle is provided
+    const blockStyle = this.getBlockStyle(block);
+    if (targetStyle !== undefined && blockStyle !== targetStyle) {
+      return index + 1; // Style boundary at same depth - treat as separate list
+    }
+
+    // Same depth and same style - decrement count and continue
+    return this.findFirstListItemIndexFromBlock(index - 1, targetDepth, remainingCount - 1, targetStyle);
   }
 
   private createItemElement(): HTMLElement {
@@ -726,8 +790,10 @@ export default class ListItem implements BlockTool {
   private static readonly TOOL_NAME = 'list';
 
   /**
-   * Recursively count consecutive preceding list blocks at the same depth.
-   * Stops when encountering a block that's not a list, or a list at a different depth.
+   * Recursively count consecutive preceding list blocks at the same depth and style.
+   * Stops when encountering a block that's not a list, a list at a shallower depth (parent),
+   * or a list with a different style at the same depth (treating style changes as list boundaries).
+   * Items at deeper depths are skipped regardless of their style.
    */
   private countPrecedingListItemsAtDepth(index: number, targetDepth: number): number {
     if (index < 0) {
@@ -739,11 +805,12 @@ export default class ListItem implements BlockTool {
       return 0;
     }
 
-    // We need to get the block's data to check its depth
+    // We need to get the block's data to check its depth and style
     // Since we can't directly access another block's tool data,
-    // we'll check via the DOM for the depth attribute
+    // we'll check via the DOM for the depth and style attributes
     const blockHolder = block.holder;
     const listItemEl = blockHolder?.querySelector('[data-list-style]');
+
     const depthAttr = listItemEl?.querySelector('[role="listitem"]')?.getAttribute('style');
 
     // Calculate depth from padding (paddingLeft = depth * 24px)
@@ -755,13 +822,19 @@ export default class ListItem implements BlockTool {
       return 0;
     }
 
-    // If at same depth, count it and continue
-    if (blockDepth === targetDepth) {
-      return 1 + this.countPrecedingListItemsAtDepth(index - 1, targetDepth);
+    // If at deeper depth, skip it and continue checking (ignore style at deeper depths)
+    if (blockDepth > targetDepth) {
+      return this.countPrecedingListItemsAtDepth(index - 1, targetDepth);
     }
 
-    // If at deeper depth, skip it and continue checking
-    return this.countPrecedingListItemsAtDepth(index - 1, targetDepth);
+    // At same depth - check style boundary
+    const blockStyle = listItemEl?.getAttribute('data-list-style');
+    if (blockStyle !== this._data.style) {
+      return 0; // Style boundary at same depth - treat as separate list
+    }
+
+    // Same depth and same style - count it and continue
+    return 1 + this.countPrecedingListItemsAtDepth(index - 1, targetDepth);
   }
 
   /**
@@ -835,7 +908,9 @@ export default class ListItem implements BlockTool {
 
   /**
    * Find the index of the first list item in this consecutive group.
-   * Walks backwards through the blocks counting items at the same depth.
+   * Walks backwards through the blocks counting items at the same depth and style.
+   * Stops at style boundaries at the same depth (when encountering a different list style).
+   * Items at deeper depths are skipped regardless of their style.
    */
   private findFirstListItemIndex(index: number, targetDepth: number, remainingCount: number): number | null {
     if (index < 0 || remainingCount <= 0) {
@@ -849,6 +924,7 @@ export default class ListItem implements BlockTool {
 
     const blockHolder = block.holder;
     const listItemEl = blockHolder?.querySelector('[data-list-style]');
+
     const depthAttr = listItemEl?.querySelector('[role="listitem"]')?.getAttribute('style');
 
     const paddingMatch = depthAttr?.match(/padding-left:\s*(\d+)px/);
@@ -859,13 +935,19 @@ export default class ListItem implements BlockTool {
       return index + 1;
     }
 
-    // If at same depth, decrement count and continue
-    if (blockDepth === targetDepth) {
-      return this.findFirstListItemIndex(index - 1, targetDepth, remainingCount - 1);
+    // If at deeper depth, skip it and continue checking (ignore style at deeper depths)
+    if (blockDepth > targetDepth) {
+      return this.findFirstListItemIndex(index - 1, targetDepth, remainingCount);
     }
 
-    // If at deeper depth, skip it and continue checking
-    return this.findFirstListItemIndex(index - 1, targetDepth, remainingCount);
+    // At same depth - check style boundary
+    const blockStyle = listItemEl?.getAttribute('data-list-style');
+    if (blockStyle !== this._data.style) {
+      return index + 1; // Style boundary at same depth - treat as separate list
+    }
+
+    // Same depth and same style - decrement count and continue
+    return this.findFirstListItemIndex(index - 1, targetDepth, remainingCount - 1);
   }
 
   private numberToLowerAlpha(num: number): string {
@@ -1281,8 +1363,16 @@ export default class ListItem implements BlockTool {
   }
 
   private setStyle(style: ListItemStyle): void {
+    const previousStyle = this._data.style;
     this._data.style = style;
     this.rerender();
+
+    // If style changed, update all ordered list markers since style boundaries have changed
+    if (previousStyle !== style) {
+      requestAnimationFrame(() => {
+        this.updateAllOrderedListMarkers();
+      });
+    }
   }
 
   private rerender(): void {

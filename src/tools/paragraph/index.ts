@@ -8,7 +8,7 @@
 import { IconText } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { BLOK_TOOL_ATTR } from '../../components/constants';
-import { PLACEHOLDER_ACTIVE_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { stripFakeBackgroundElements } from '../../components/utils';
 import type {
   API,
@@ -234,19 +234,10 @@ export default class Paragraph implements BlockTool {
   private drawView(): HTMLDivElement {
     const div = document.createElement('DIV') as HTMLDivElement;
 
-    /**
-     * Use PLACEHOLDER_ACTIVE_CLASSES when a placeholder is explicitly provided,
-     * so the placeholder is visible without requiring focus.
-     * Use PLACEHOLDER_FOCUS_ONLY_CLASSES when no placeholder is provided (default behavior).
-     */
-    const placeholderClasses = this._placeholder
-      ? PLACEHOLDER_ACTIVE_CLASSES
-      : PLACEHOLDER_FOCUS_ONLY_CLASSES;
-
     div.className = twMerge(
       this.api.styles.block,
       Paragraph.WRAPPER_CLASSES,
-      placeholderClasses
+      PLACEHOLDER_FOCUS_ONLY_CLASSES
     );
     div.setAttribute(BLOK_TOOL_ATTR, 'paragraph');
     div.contentEditable = 'false';

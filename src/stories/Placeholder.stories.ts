@@ -70,9 +70,10 @@ export const CustomPlaceholder: Story = {
 };
 
 /**
- * Placeholder visible when block is focused (active placeholder).
+ * Placeholder visible only when block is focused.
+ * When the paragraph is blurred, the placeholder is hidden.
  */
-export const ActivePlaceholderFocused: Story = {
+export const PlaceholderOnlyOnFocus: Story = {
   args: {
     placeholder: DEFAULT_PLACEHOLDER,
     data: undefined,
@@ -89,7 +90,7 @@ export const ActivePlaceholderFocused: Story = {
       );
     });
 
-    await step('Focus empty block to show active placeholder', async () => {
+    await step('Focus empty block to show placeholder', async () => {
       const block = canvasElement.querySelector(BLOCK_TESTID);
       const contentEditable = block?.querySelector(CONTENTEDITABLE_SELECTOR);
 
@@ -98,6 +99,25 @@ export const ActivePlaceholderFocused: Story = {
       }
 
       expect(contentEditable).toHaveFocus();
+      // Placeholder should be visible when focused
+      expect(contentEditable).toHaveAttribute('data-blok-placeholder-active', DEFAULT_PLACEHOLDER);
+    });
+
+    await step('Blur block to hide placeholder', async () => {
+      const block = canvasElement.querySelector(BLOCK_TESTID);
+      const contentEditable = block?.querySelector(CONTENTEDITABLE_SELECTOR) as HTMLElement;
+
+      if (contentEditable) {
+        contentEditable.blur();
+      }
+
+      await waitFor(
+        () => {
+          expect(contentEditable).not.toHaveFocus();
+        },
+        TIMEOUT_ACTION
+      );
+      // Placeholder is still in the attribute but CSS hides it when not focused
     });
   },
 };

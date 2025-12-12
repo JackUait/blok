@@ -380,10 +380,6 @@ export default class Paragraph implements BlockTool {
     return {
       text: {
         br: true,
-        a: true,
-        b: true,
-        i: true,
-        mark: true,
       },
     };
   }

@@ -1105,10 +1105,22 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private calculateToolbarY(targetBlock: Block, plusButton: HTMLElement, isMobile: boolean): number {
     const targetBlockHolder = targetBlock.holder;
     const holderRect = targetBlockHolder.getBoundingClientRect();
-    const contentRect = targetBlock.pluginsContent.getBoundingClientRect();
+
+    /**
+     * Use the hovered target element (e.g., a nested list item) if available,
+     * otherwise fall back to the block's pluginsContent
+     */
+    const listItemElement = this.hoveredTarget?.closest('[role="listitem"]');
+    /**
+     * For list items, find the actual text content element ([contenteditable]) and use its position
+     * to properly center the toolbar on the text, not on the marker which may have different font-size
+     */
+    const textElement = listItemElement?.querySelector('[contenteditable]');
+    const contentElement = textElement ?? listItemElement ?? targetBlock.pluginsContent;
+    const contentRect = contentElement.getBoundingClientRect();
     const contentOffset = contentRect.top - holderRect.top;
 
-    const contentStyle = window.getComputedStyle(targetBlock.pluginsContent);
+    const contentStyle = window.getComputedStyle(contentElement);
     const contentPaddingTop = parseInt(contentStyle.paddingTop, 10) || 0;
     const lineHeight = parseFloat(contentStyle.lineHeight) || 24;
     const toolbarHeight = parseInt(window.getComputedStyle(plusButton).height, 10);

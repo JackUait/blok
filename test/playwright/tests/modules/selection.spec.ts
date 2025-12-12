@@ -16,6 +16,7 @@ const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
+const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const FAKE_BACKGROUND_SELECTOR = '[data-blok-testid="fake-background"]';
 
 declare global {
@@ -605,5 +606,154 @@ test.describe('modules/selection', () => {
     for (const index of [0, 1, 2]) {
       await expect(getBlockByIndex(page, index)).toHaveAttribute('data-blok-selected', 'true');
     }
+  });
+
+  test('fake background is cleared after undo following block conversion', async ({ page }) => {
+    /**
+     * Regression test: When a user converts a block via the inline toolbar
+     * (which uses fake background to preserve selection visual) and then
+     * undoes the conversion, fake background spans should not persist in the DOM.
+     */
+    const HISTORY_DEBOUNCE_WAIT = 300;
+    const STATE_CHANGE_WAIT = 200;
+
+    const waitForDelay = async (delayMs: number): Promise<void> => {
+      await page.evaluate(
+        async (timeout) => {
+          await new Promise<void>((resolve) => {
+            window.setTimeout(resolve, timeout);
+          });
+        },
+        delayMs
+      );
+    };
+
+    await page.evaluate(async ({ holder }) => {
+      // Ensure clean state
+      if (window.blokInstance) {
+        await window.blokInstance.destroy?.();
+        window.blokInstance = undefined;
+      }
+
+      document.getElementById(holder)?.remove();
+
+      const container = document.createElement('div');
+
+      container.id = holder;
+      container.setAttribute('data-blok-testid', holder);
+      container.style.border = '1px dotted #388AE5';
+      document.body.appendChild(container);
+
+      // Access Header from window.Blok global
+      const BlokClass = window.Blok as unknown as {
+        Header: unknown;
+        new (config: Record<string, unknown>): typeof window.blokInstance;
+      };
+
+      const blok = new BlokClass({
+        holder,
+        autofocus: true,
+        tools: {
+          header: BlokClass.Header,
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Some important text here' },
+            },
+          ],
+        },
+      });
+
+      window.blokInstance = blok;
+
+      if (blok) {
+        await blok.isReady;
+      }
+    }, { holder: HOLDER_ID });
+
+    const paragraph = getParagraphByIndex(page, 0);
+
+    // Select some text
+    await selectText(paragraph, 'important');
+
+    // Set fake background (simulating what inline toolbar does)
+    await page.evaluate(() => {
+      window.blokInstance?.selection.setFakeBackground();
+    });
+
+    // Verify fake background is present
+    await expect(page.locator(FAKE_BACKGROUND_SELECTOR)).not.toHaveCount(0);
+
+    // Convert the block to header via API (simulating what Convert inline tool does)
+    await page.evaluate(async () => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not available');
+      }
+
+      const blocks = await blok.save();
+      const blockId = blocks.blocks[0]?.id;
+
+      await blok.blocks.convert(blockId ?? '', 'header');
+    });
+
+    // Wait for history to record the change
+    await waitForDelay(HISTORY_DEBOUNCE_WAIT);
+
+    // Verify block was converted to header
+    const headerSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`;
+
+    await expect(page.locator(headerSelector)).toHaveCount(1);
+
+    // Undo the conversion
+    await page.keyboard.press(UNDO_SHORTCUT);
+
+    // Wait for undo to complete
+    await waitForDelay(STATE_CHANGE_WAIT);
+
+    // Verify block is back to paragraph
+    await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+
+    // Verify no fake background elements remain in the DOM after undo
+    await expect(page.locator(FAKE_BACKGROUND_SELECTOR)).toHaveCount(0);
+
+    // Also verify text content is preserved
+    const paragraphText = await getParagraphByIndex(page, 0).innerText();
+
+    expect(paragraphText.trim()).toBe('Some important text here');
+  });
+
+  test('clearFakeBackground API method removes fake background and resets state', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Test text for selection',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByIndex(page, 0);
+
+    await selectText(paragraph, 'text');
+
+    // Set fake background
+    await page.evaluate(() => {
+      window.blokInstance?.selection.setFakeBackground();
+    });
+
+    // Verify fake background is present
+    await expect(page.locator(FAKE_BACKGROUND_SELECTOR)).not.toHaveCount(0);
+
+    // Call clearFakeBackground
+    await page.evaluate(() => {
+      window.blokInstance?.selection.clearFakeBackground();
+    });
+
+    // Verify fake background elements are removed
+    await expect(page.locator(FAKE_BACKGROUND_SELECTOR)).toHaveCount(0);
   });
 });

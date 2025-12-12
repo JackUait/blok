@@ -179,6 +179,13 @@ export default class CrossBlockSelection extends Module {
     const { UI } = this.Blok;
 
     /**
+     * UI might not be ready yet or editor might be destroyed
+     */
+    if (!UI.nodes.redactor) {
+      return;
+    }
+
+    /**
      * Each mouse down on must disable selectAll state
      */
     if (!SelectionUtils.isCollapsed) {

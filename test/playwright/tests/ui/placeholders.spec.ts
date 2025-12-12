@@ -141,12 +141,14 @@ test.describe('placeholders', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test('shows placeholder when provided in config', async ({ page }) => {
+  test('shows placeholder when provided in config and focused', async ({ page }) => {
     await createBlok(page, { placeholder: PLACEHOLDER_TEXT });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
     await expect(paragraph).toBeVisible();
+    // Placeholder is only visible when focused
+    await paragraph.click();
     await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
   });
 
@@ -192,6 +194,8 @@ test.describe('placeholders', () => {
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
     await expect(paragraph).toBeVisible();
+    // Focus first to show placeholder
+    await paragraph.click();
     await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
 
     await paragraph.type('a');
@@ -205,10 +209,51 @@ test.describe('placeholders', () => {
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
     await expect(paragraph).toBeVisible();
+    // Focus first to show placeholder
+    await paragraph.click();
     await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
 
     await paragraph.type('   ');
 
+    await expectPlaceholderContent(paragraph, 'none');
+  });
+
+  test('hides placeholder when paragraph is blurred (unfocused)', async ({ page }) => {
+    await createBlok(page, { placeholder: PLACEHOLDER_TEXT, autofocus: true });
+
+    const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
+
+    await expect(paragraph).toBeVisible();
+    // Placeholder should be visible when focused
+    await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
+
+    // Blur the paragraph by clicking outside of it
+    await page.mouse.click(10, 10);
+
+    // Placeholder should be hidden when blurred
+    await expectPlaceholderContent(paragraph, 'none');
+  });
+
+  test('shows placeholder only when empty paragraph receives focus', async ({ page }) => {
+    await createBlok(page, { placeholder: PLACEHOLDER_TEXT });
+
+    const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
+
+    await expect(paragraph).toBeVisible();
+
+    // Placeholder should be hidden initially (not focused)
+    await expectPlaceholderContent(paragraph, 'none');
+
+    // Click to focus
+    await paragraph.click();
+
+    // Placeholder should now be visible
+    await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
+
+    // Blur by clicking outside
+    await page.mouse.click(10, 10);
+
+    // Placeholder should be hidden again
     await expectPlaceholderContent(paragraph, 'none');
   });
 });

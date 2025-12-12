@@ -213,6 +213,10 @@ export default class BlockManager extends Module {
       handle: BLOK_DRAG_HANDLE_SELECTOR,
       onStart: () => {
         this.Blok.UI.nodes.wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
+
+        /** Unselect all blocks */
+        this.Blok.BlockSelection.allBlocksSelected = false;
+
         tooltip.hide(true);
       },
       onEnd: (evt) => {
@@ -222,6 +226,13 @@ export default class BlockManager extends Module {
         }
 
         this.move(evt.newIndex, evt.oldIndex, true);
+
+        /** Select the moved block to provide visual feedback */
+        const movedBlock = this.getBlockByIndex(evt.newIndex);
+
+        if (movedBlock) {
+          this.Blok.BlockSelection.selectBlock(movedBlock);
+        }
       },
     });
   }
@@ -397,6 +408,13 @@ export default class BlockManager extends Module {
    */
   public insertMany(blocks: Block[], index = 0): void {
     this.blocksStore.insertMany(blocks, index);
+
+    // Apply indentation for blocks with parentId (hierarchical structure)
+    blocks.forEach(block => {
+      if (block.parentId !== null) {
+        this.updateBlockIndentation(block);
+      }
+    });
   }
 
   /**
@@ -585,7 +603,16 @@ export default class BlockManager extends Module {
      */
     if (targetBlock.mergeable && isBlockConvertable(blockToMerge, 'export') && isBlockConvertable(targetBlock, 'import')) {
       const blockToMergeDataStringified = await blockToMerge.exportDataAsString();
-      const cleanData = clean(blockToMergeDataStringified, targetBlock.tool.sanitizeConfig);
+
+      /**
+       * Extract the field-specific sanitize rules for the field that will receive the imported content.
+       */
+      const importProp = targetBlock.tool.conversionConfig?.import;
+      const fieldSanitizeConfig = _.isString(importProp) && _.isObject(targetBlock.tool.sanitizeConfig[importProp])
+        ? targetBlock.tool.sanitizeConfig[importProp] as SanitizerConfig
+        : targetBlock.tool.sanitizeConfig;
+
+      const cleanData = clean(blockToMergeDataStringified, fieldSanitizeConfig);
       const blockToMergeData = convertStringToBlockData(cleanData, targetBlock.tool.conversionConfig);
 
       await completeMerge(blockToMergeData);
@@ -762,6 +789,74 @@ export default class BlockManager extends Module {
    */
   public getBlockById(id: string): Block | undefined {
     return this.blocksStore.array.find((block) => block.id === id);
+  }
+
+  /**
+   * Returns the depth (nesting level) of a block in the hierarchy.
+   * Root-level blocks have depth 0.
+   * @param block - the block to get depth for
+   * @returns {number} - depth level (0 for root, 1 for first level children, etc.)
+   */
+  public getBlockDepth(block: Block): number {
+    const calculateDepth = (parentId: string | null, currentDepth: number): number => {
+      if (parentId === null) {
+        return currentDepth;
+      }
+
+      const parentBlock = this.getBlockById(parentId);
+
+      if (parentBlock === undefined) {
+        return currentDepth;
+      }
+
+      return calculateDepth(parentBlock.parentId, currentDepth + 1);
+    };
+
+    return calculateDepth(block.parentId, 0);
+  }
+
+  /**
+   * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
+   * @param block - the block to reparent
+   * @param newParentId - the new parent block id, or null for root level
+   */
+  public setBlockParent(block: Block, newParentId: string | null): void {
+    const oldParentId = block.parentId;
+
+    // Remove from old parent's contentIds
+    const oldParent = oldParentId !== null ? this.getBlockById(oldParentId) : undefined;
+
+    if (oldParent !== undefined) {
+      oldParent.contentIds = oldParent.contentIds.filter(id => id !== block.id);
+    }
+
+    // Add to new parent's contentIds
+    const newParent = newParentId !== null ? this.getBlockById(newParentId) : undefined;
+    const shouldAddToNewParent = newParent !== undefined && !newParent.contentIds.includes(block.id);
+
+    if (shouldAddToNewParent) {
+      newParent.contentIds.push(block.id);
+    }
+
+    // Update block's parentId - parentId is a public mutable property on Block
+    // eslint-disable-next-line no-param-reassign
+    block.parentId = newParentId;
+
+    // Update visual indentation
+    this.updateBlockIndentation(block);
+  }
+
+  /**
+   * Updates the visual indentation of a block based on its depth in the hierarchy.
+   * @param block - the block to update indentation for
+   */
+  public updateBlockIndentation(block: Block): void {
+    const depth = this.getBlockDepth(block);
+    const indentationPx = depth * 24; // 24px per level
+    const { holder } = block;
+
+    holder.style.marginLeft = indentationPx > 0 ? `${indentationPx}px` : '';
+    holder.setAttribute('data-blok-depth', depth.toString());
   }
 
   /**
@@ -948,11 +1043,18 @@ export default class BlockManager extends Module {
     const exportedData = await blockToConvert.exportDataAsString();
 
     /**
-     * Clean exported data with replacing sanitizer config
+     * Clean exported data with replacing sanitizer config.
+     * We need to extract the field-specific sanitize rules for the field that will receive the imported content.
+     * The tool's sanitizeConfig has the format { fieldName: { tagRules } }, but clean() expects just { tagRules }.
      */
+    const importProp = replacingTool.conversionConfig?.import;
+    const fieldSanitizeConfig = _.isString(importProp) && _.isObject(replacingTool.sanitizeConfig[importProp])
+      ? replacingTool.sanitizeConfig[importProp] as SanitizerConfig
+      : replacingTool.sanitizeConfig;
+
     const cleanData: string = clean(
       exportedData,
-      composeSanitizerConfig(this.config.sanitizer as SanitizerConfig, replacingTool.sanitizeConfig)
+      composeSanitizerConfig(this.config.sanitizer as SanitizerConfig, fieldSanitizeConfig)
     );
 
     /**

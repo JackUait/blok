@@ -28,6 +28,12 @@ export interface Selection {
   removeFakeBackground(): void;
 
   /**
+   * Clears all fake background state - both DOM elements and internal flags
+   * This is useful for cleanup after undo/redo operations or when the selection context has been lost
+   */
+  clearFakeBackground(): void;
+
+  /**
    * Save selection range.
    * Allows to save selection to be able to temporally move focus away.
    * Might be useful for inline tools

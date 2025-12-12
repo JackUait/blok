@@ -24,6 +24,7 @@ export default class SelectionAPI extends Module {
       restore: () => this.selectionUtils.restore(),
       setFakeBackground: () => this.selectionUtils.setFakeBackground(),
       removeFakeBackground: () => this.selectionUtils.removeFakeBackground(),
+      clearFakeBackground: () => this.selectionUtils.clearFakeBackground(),
     };
   }
 

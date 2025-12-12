@@ -204,8 +204,11 @@ export default class Blocks {
     const prevBlock = this.blocks[index];
 
     prevBlock.holder.replaceWith(block.holder);
+    prevBlock.call(BlockToolAPI.REMOVED);
 
     this.blocks[index] = block;
+
+    block.call(BlockToolAPI.RENDERED);
   }
 
   /**

@@ -442,6 +442,35 @@ export const isCaretAtEndOfInput = (input: HTMLElement): boolean => {
 };
 
 /**
+ * Gets a valid DOMRect for the caret position.
+ * Falls back to container element rect or input rect if the caret rect has no dimensions.
+ */
+const getValidCaretRect = (range: Range, input: HTMLElement): DOMRect => {
+  const caretRect = range.getBoundingClientRect();
+
+  if (caretRect.height !== 0 || caretRect.top !== 0) {
+    return caretRect;
+  }
+
+  const container = range.startContainer;
+  const element = container.nodeType === Node.ELEMENT_NODE
+    ? container as HTMLElement
+    : container.parentElement;
+
+  if (!element) {
+    return input.getBoundingClientRect();
+  }
+
+  const elementRect = element.getBoundingClientRect();
+
+  if (elementRect.height !== 0 || elementRect.top !== 0) {
+    return elementRect;
+  }
+
+  return input.getBoundingClientRect();
+};
+
+/**
  * Checks if the caret is at the first (top) line of a multi-line input.
  * This is used for Notion-style navigation where Arrow Up should only
  * move to the previous block when the caret can't move up within the current block.
@@ -477,16 +506,9 @@ export const isCaretAtFirstLine = (input: HTMLElement): boolean => {
   const range = selection.getRangeAt(0);
 
   /**
-   * Get the bounding rect of the current caret position
+   * Get a valid caret rect, with fallbacks for zero-dimension rects
    */
-  const caretRect = range.getBoundingClientRect();
-
-  /**
-   * If caret rect has no height (collapsed at start), use a temporary range
-   */
-  if (caretRect.height === 0 && caretRect.top === 0) {
-    return true;
-  }
+  const caretRect = getValidCaretRect(range, input);
 
   /**
    * Get the first line's position by creating a range at the start of the input
@@ -568,16 +590,9 @@ export const isCaretAtLastLine = (input: HTMLElement): boolean => {
   const range = selection.getRangeAt(0);
 
   /**
-   * Get the bounding rect of the current caret position
+   * Get a valid caret rect, with fallbacks for zero-dimension rects
    */
-  const caretRect = range.getBoundingClientRect();
-
-  /**
-   * If caret rect has no height (collapsed at end), use input's bottom
-   */
-  if (caretRect.height === 0 && caretRect.bottom === 0) {
-    return true;
-  }
+  const caretRect = getValidCaretRect(range, input);
 
   /**
    * Get the last line's position by creating a range at the end of the input
@@ -639,6 +654,12 @@ export const focus = (element: HTMLElement, atStart = true): void => {
 
     return;
   }
+
+  /**
+   * Focus the contenteditable element to ensure caret is visible.
+   * Without focus, the selection range can be set but the caret won't be visible.
+   */
+  element.focus();
 
   const range = document.createRange();
   const selection = window.getSelection();
@@ -889,6 +910,11 @@ const setCaretAtXPositionInContentEditable = (
   }
 
   /**
+   * Focus the element first to ensure it can receive a selection.
+   */
+  element.focus();
+
+  /**
    * Get the target line's Y position
    */
   const targetNode = atFirstLine
@@ -896,7 +922,7 @@ const setCaretAtXPositionInContentEditable = (
     : $.getDeepestNode(element, true);
 
   if (!targetNode) {
-    focus(element, atFirstLine);
+    setSelectionToElement(element, selection, atFirstLine);
 
     return;
   }
@@ -908,7 +934,7 @@ const setCaretAtXPositionInContentEditable = (
   const targetY = getTargetYPosition(element, targetNode, atFirstLine);
 
   if (targetY === null) {
-    focus(element, atFirstLine);
+    setSelectionToElement(element, selection, atFirstLine);
 
     return;
   }
@@ -918,7 +944,12 @@ const setCaretAtXPositionInContentEditable = (
    */
   const caretPosition = getCaretPositionFromPoint(targetX, targetY);
 
-  if (caretPosition) {
+  /**
+   * Verify that the returned caret position is actually inside the target element.
+   * In Firefox, caretPositionFromPoint can return nodes outside the element
+   * (e.g., sibling elements like list markers) when the X coordinate is at the edge.
+   */
+  if (caretPosition && element.contains(caretPosition.node)) {
     const range = document.createRange();
 
     try {
@@ -934,9 +965,54 @@ const setCaretAtXPositionInContentEditable = (
   }
 
   /**
-   * Fallback: place caret at start or end
+   * Fallback: set selection to start or end of element
    */
-  focus(element, atFirstLine);
+  setSelectionToElement(element, selection, atFirstLine);
+};
+
+/**
+ * Sets selection to the start or end of an element.
+ * This is a cross-browser compatible way to position the caret.
+ */
+const setSelectionToElement = (
+  element: HTMLElement,
+  _selection: Selection,
+  atFirstLine: boolean
+): void => {
+  /**
+   * Firefox and WebKit require the element to have focus before
+   * a selection can be set on it. We must also get a fresh Selection
+   * object AFTER focusing, as the pre-focus Selection may not work
+   * with the newly focused element in Firefox.
+   */
+  element.focus();
+
+  const freshSelection = window.getSelection();
+
+  if (!freshSelection) {
+    return;
+  }
+
+  const targetNode = atFirstLine
+    ? $.getDeepestNode(element, false)
+    : $.getDeepestNode(element, true);
+
+  if (!targetNode) {
+    return;
+  }
+
+  const range = document.createRange();
+  const offset = atFirstLine ? 0 : $.getContentLength(targetNode);
+
+  try {
+    range.setStart(targetNode, offset);
+    range.setEnd(targetNode, offset);
+    freshSelection.removeAllRanges();
+    freshSelection.addRange(range);
+  } catch {
+    // If setting range fails, use the focus utility which handles edge cases
+    focus(element, atFirstLine);
+  }
 };
 
 /**

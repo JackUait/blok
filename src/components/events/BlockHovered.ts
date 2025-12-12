@@ -13,4 +13,9 @@ export interface BlockHoveredPayload {
    * Hovered block
    */
   block: Block;
+
+  /**
+   * The actual element that was hovered (could be a nested element like a list item)
+   */
+  target?: Element;
 }

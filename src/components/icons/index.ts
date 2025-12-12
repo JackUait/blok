@@ -209,8 +209,8 @@ export const IconWarning = `
 </svg>
 `;
 
-// Unordered List icon
-export const IconListUnordered = `
+// Bulleted List icon
+export const IconListBulleted = `
 <svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path
     d="M8 5h9M8 10h9M8 15h9M4 5h.01M4 10h.01M4 15h.01"
@@ -221,15 +221,10 @@ export const IconListUnordered = `
 </svg>
 `;
 
-// Ordered List icon
-export const IconListOrdered = `
+// Numbered List icon
+export const IconListNumbered = `
 <svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path
-    d="M8 5h9M8 10h9M8 15h9M4.5 4v2.5M3.5 6.5h2M3.5 10h1.5l-1.5 2h2M3.5 14.5v1c0 .2761.22386.5.5.5h1c.27614 0 .5-.2239.5-.5v-.5c0-.2761-.22386-.5-.5-.5H4c-.27614 0-.5-.2239-.5-.5v-.5c0-.2761.22386-.5.5-.5h1c.27614 0 .5.2239.5.5"
-    stroke="currentColor"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
+  <path d="M7.90873 4.60317h9.61907M4.70238 6.20635V3L3.5 4.20238m1.60317 7.61512H3.5l1.52702-2.37514c.02625-.03721.04486-.07925.05477-.12369.0099-.04444.01091-.09039.00295-.13523-.04569-.2068-.20922-.57233-.78315-.57233-.80159 0-.80159.71261-.80159.71261v.17795m0 7.92693h.80159c.21259 0 .41648-.0845.56681-.2348.15032-.1503.23477-.3542.23477-.5668 0-.2126-.08445-.4165-.23477-.5668-.15033-.1503-.35422-.2348-.56681-.2348h-.4008l1.20238-1.6032H3.5m4.40873-4.0079h9.61907m-9.61907 5.6111h9.61907" stroke="#000" stroke-width=".841667" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

@@ -307,20 +307,23 @@ export default class BlockEvents extends Module {
   /**
    * Regex patterns for detecting list shortcuts.
    * Matches patterns like "1. ", "1) ", "2. ", etc. at the start of text
+   * Captures remaining content after the shortcut in group 2
    */
-  private static readonly ORDERED_LIST_PATTERN = /^(\d+)[.)]\s$/;
+  private static readonly ORDERED_LIST_PATTERN = /^(\d+)[.)]\s([\s\S]*)$/;
 
   /**
    * Regex pattern for detecting checklist shortcuts.
    * Matches patterns like "[] ", "[ ] ", "[x] ", "[X] " at the start of text
+   * Captures remaining content after the shortcut in group 2
    */
-  private static readonly CHECKLIST_PATTERN = /^\[(x|X| )?\]\s$/;
+  private static readonly CHECKLIST_PATTERN = /^\[(x|X| )?\]\s([\s\S]*)$/;
 
   /**
    * Regex pattern for detecting bulleted list shortcuts.
    * Matches patterns like "- " or "* " at the start of text
+   * Captures remaining content after the shortcut in group 1
    */
-  private static readonly UNORDERED_LIST_PATTERN = /^[-*]\s$/;
+  private static readonly UNORDERED_LIST_PATTERN = /^[-*]\s([\s\S]*)$/;
 
   /**
    * Input event handler for Block
@@ -340,10 +343,12 @@ export default class BlockEvents extends Module {
 
   /**
    * Check if current block content matches a list shortcut pattern
-   * and convert to appropriate list type
+   * and convert to appropriate list type.
+   * Supports conversion even when there's existing text after the shortcut.
+   * Preserves HTML content and maintains caret position.
    */
   private handleListShortcut(): void {
-    const { BlockManager, Caret, Tools } = this.Blok;
+    const { BlockManager, Tools } = this.Blok;
     const currentBlock = BlockManager.currentBlock;
 
     if (!currentBlock) {
@@ -372,7 +377,17 @@ export default class BlockEvents extends Module {
       return;
     }
 
+    /**
+     * Use textContent to match the shortcut pattern
+     */
     const textContent = currentInput.textContent || '';
+
+    /**
+     * Get the depth from the block holder if it was previously a nested list item
+     * This preserves nesting when converting back to a list
+     */
+    const depthAttr = currentBlock.holder.getAttribute('data-blok-depth');
+    const depth = depthAttr ? parseInt(depthAttr, 10) : 0;
 
     /**
      * Check for checklist pattern (e.g., "[] ", "[ ] ", "[x] ", "[X] ")
@@ -386,12 +401,22 @@ export default class BlockEvents extends Module {
        */
       const isChecked = checklistMatch[1]?.toLowerCase() === 'x';
 
+      /**
+       * Extract remaining content (group 2) and calculate shortcut length
+       * Shortcut length: "[" + optional char + "]" + " " = 3 or 4 chars
+       */
+      const shortcutLength = checklistMatch[1] !== undefined ? 4 : 3;
+      const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
+      const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
+
       const newBlock = BlockManager.replace(currentBlock, 'list', {
+        text: remainingHtml,
         style: 'checklist',
-        items: [{ content: '', checked: isChecked }],
+        checked: isChecked,
+        ...(depth > 0 ? { depth } : {}),
       });
 
-      Caret.setToBlock(newBlock, Caret.positions.START);
+      this.setCaretAfterConversion(newBlock, caretOffset);
 
       return;
     }
@@ -402,12 +427,22 @@ export default class BlockEvents extends Module {
     const unorderedMatch = BlockEvents.UNORDERED_LIST_PATTERN.exec(textContent);
 
     if (unorderedMatch) {
+      /**
+       * Extract remaining content (group 1) and calculate shortcut length
+       * Shortcut length: "-" or "*" + " " = 2 chars
+       */
+      const shortcutLength = 2;
+      const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
+      const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
+
       const newBlock = BlockManager.replace(currentBlock, 'list', {
+        text: remainingHtml,
         style: 'unordered',
-        items: [{ content: '', checked: false }],
+        checked: false,
+        ...(depth > 0 ? { depth } : {}),
       });
 
-      Caret.setToBlock(newBlock, Caret.positions.START);
+      this.setCaretAfterConversion(newBlock, caretOffset);
 
       return;
     }
@@ -427,17 +462,20 @@ export default class BlockEvents extends Module {
     const startNumber = parseInt(orderedMatch[1], 10);
 
     /**
-     * Extract the remaining content after the pattern
-     * Since we matched the full content including the space, the remaining content is empty
+     * Extract remaining content (group 2) and calculate shortcut length
+     * Shortcut length: number digits + "." or ")" + " " = orderedMatch[1].length + 2
      */
-    const remainingContent = '';
+    const shortcutLength = orderedMatch[1].length + 2;
+    const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
+    const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
     /**
      * Convert to ordered list with the captured start number
      */
-    const listData: { style: string; items: { content: string; checked: boolean }[]; start?: number } = {
+    const listData: { text: string; style: string; checked: boolean; start?: number; depth?: number } = {
+      text: remainingHtml,
       style: 'ordered',
-      items: [{ content: remainingContent, checked: false }],
+      checked: false,
     };
 
     // Only include start if it's not 1 (the default)
@@ -445,12 +483,133 @@ export default class BlockEvents extends Module {
       listData.start = startNumber;
     }
 
+    // Preserve depth if the block was previously nested
+    if (depth > 0) {
+      listData.depth = depth;
+    }
+
     const newBlock = BlockManager.replace(currentBlock, 'list', listData);
 
+    this.setCaretAfterConversion(newBlock, caretOffset);
+  }
+
+  /**
+   * Extract HTML content after a shortcut prefix
+   * @param input - the input element
+   * @param shortcutLength - length of the shortcut in text characters
+   * @returns HTML string with the content after the shortcut
+   */
+  private extractRemainingHtml(input: HTMLElement, shortcutLength: number): string {
+    const innerHTML = input.innerHTML || '';
+
     /**
-     * Set caret to the beginning of the new list item
+     * Create a temporary element to manipulate the HTML
      */
-    Caret.setToBlock(newBlock, Caret.positions.START);
+    const temp = document.createElement('div');
+
+    temp.innerHTML = innerHTML;
+
+    /**
+     * Walk through text nodes and collect nodes to modify
+     */
+    const walker = document.createTreeWalker(temp, NodeFilter.SHOW_TEXT, null);
+    const nodesToModify = this.collectNodesToModify(walker, shortcutLength);
+
+    /**
+     * Apply modifications
+     */
+    for (const { node, removeCount } of nodesToModify) {
+      const text = node.textContent || '';
+
+      if (removeCount >= text.length) {
+        node.remove();
+      } else {
+        node.textContent = text.slice(removeCount);
+      }
+    }
+
+    return temp.innerHTML;
+  }
+
+  /**
+   * Collect text nodes that need modification to remove shortcut characters
+   * @param walker - TreeWalker for text nodes
+   * @param charsToRemove - total characters to remove
+   * @returns array of nodes with their removal counts
+   */
+  private collectNodesToModify(
+    walker: TreeWalker,
+    charsToRemove: number
+  ): Array<{ node: Text; removeCount: number }> {
+    const result: Array<{ node: Text; removeCount: number }> = [];
+
+    if (charsToRemove <= 0 || !walker.nextNode()) {
+      return result;
+    }
+
+    const textNode = walker.currentNode as Text;
+    const nodeLength = textNode.textContent?.length || 0;
+
+    if (nodeLength <= charsToRemove) {
+      result.push({ node: textNode, removeCount: nodeLength });
+
+      return result.concat(this.collectNodesToModify(walker, charsToRemove - nodeLength));
+    }
+
+    result.push({ node: textNode, removeCount: charsToRemove });
+
+    return result;
+  }
+
+  /**
+   * Get the current caret offset within the input element
+   * @param input - the input element
+   * @returns offset in text characters from the start
+   */
+  private getCaretOffset(input: HTMLElement): number {
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return 0;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    /**
+     * Create a range from start of input to current caret position
+     */
+    const preCaretRange = document.createRange();
+
+    preCaretRange.selectNodeContents(input);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+
+    /**
+     * Get the text length up to the caret
+     */
+    return preCaretRange.toString().length;
+  }
+
+  /**
+   * Set caret position in the new block after conversion
+   * @param block - the new block
+   * @param offset - desired caret offset in text characters
+   */
+  private setCaretAfterConversion(block: Block, offset: number): void {
+    const { Caret } = this.Blok;
+
+    /**
+     * If offset is 0 or negative, set to start
+     */
+    if (offset <= 0) {
+      Caret.setToBlock(block, Caret.positions.START);
+
+      return;
+    }
+
+    /**
+     * Set caret to the specific offset
+     */
+    Caret.setToBlock(block, Caret.positions.DEFAULT, offset);
   }
 
   /**

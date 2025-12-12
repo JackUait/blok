@@ -487,6 +487,7 @@ export default class UI extends Module<UINodes> {
 
       this.eventsDispatcher.emit(BlockHovered, {
         block,
+        target: event.target as Element,
       });
     };
 
@@ -951,7 +952,7 @@ export default class UI extends Module<UINodes> {
      * (used for showing Block Settings toggler after opening and closing Inline Toolbar)
      */
     if (!this.Blok.ReadOnly.isEnabled && !this.Blok.Toolbar.contains(initialTarget)) {
-      this.Blok.Toolbar.moveAndOpen();
+      this.Blok.Toolbar.moveAndOpen(undefined, clickedNode);
     }
   }
 
@@ -1100,7 +1101,24 @@ export default class UI extends Module<UINodes> {
      * If the inline toolbar is already open without a nested popover,
      * don't close or re-render it. This prevents the toolbar from flickering
      * when the user closes a nested popover (e.g., via Esc key).
+     *
+     * However, if the selection is now collapsed or empty (e.g., user deleted the selected text),
+     * we should close the inline toolbar since there's nothing to format.
+     *
+     * Important: Don't close the toolbar if a flipper item is focused (user is navigating
+     * with Tab/Arrow keys). In some browsers (webkit), keyboard navigation within the
+     * popover can trigger selectionchange events that make the selection appear empty.
      */
+    const currentSelection = Selection.get();
+    const selectionIsEmpty = !currentSelection || currentSelection.isCollapsed || Selection.text.length === 0;
+    const hasFlipperFocus = this.Blok.InlineToolbar.hasFlipperFocus;
+
+    if (selectionIsEmpty && this.Blok.InlineToolbar.opened && !hasFlipperFocus) {
+      this.Blok.InlineToolbar.close();
+
+      return;
+    }
+
     if (this.Blok.InlineToolbar.opened && !this.Blok.InlineToolbar.hasNestedPopoverOpen) {
       return;
     }

@@ -4,7 +4,7 @@ import type { OutputData, ToolSettings } from '@/types';
 import { createEditorContainer, simulateClick, waitForToolbar, triggerSelectAll } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
 import Blok from '../blok';
-import type { ListConfig } from '../tools/list';
+import type { ListConfig } from '../../types/tools/list';
 
 // Constants
 const TIMEOUT_INIT = { timeout: 5000 };
@@ -19,184 +19,65 @@ interface ListCustomStylesArgs extends EditorFactoryOptions {
 }
 
 /**
- * Sample data with all three list types
+ * Sample data with all three list types (ListItem model - each item is a separate block)
  */
 const allListTypesData: OutputData = {
   time: Date.now(),
   version: '1.0.0',
   blocks: [
-    {
-      id: 'unordered-list',
-      type: 'list',
-      data: {
-        style: 'unordered',
-        items: [
-          { content: 'Unordered item one', checked: false },
-          { content: 'Unordered item two', checked: false },
-          { content: 'Unordered item three', checked: false },
-        ],
-      },
-    },
-    {
-      id: 'ordered-list',
-      type: 'list',
-      data: {
-        style: 'ordered',
-        items: [
-          { content: 'Ordered item one', checked: false },
-          { content: 'Ordered item two', checked: false },
-          { content: 'Ordered item three', checked: false },
-        ],
-      },
-    },
-    {
-      id: 'checklist',
-      type: 'list',
-      data: {
-        style: 'checklist',
-        items: [
-          { content: 'Checklist item one', checked: false },
-          { content: 'Checklist item two (completed)', checked: true },
-          { content: 'Checklist item three', checked: false },
-        ],
-      },
-    },
+    // Unordered list items
+    { id: 'unordered-1', type: 'list', data: { text: 'Unordered item one', style: 'unordered' } },
+    { id: 'unordered-2', type: 'list', data: { text: 'Unordered item two', style: 'unordered' } },
+    { id: 'unordered-3', type: 'list', data: { text: 'Unordered item three', style: 'unordered' } },
+    // Ordered list items
+    { id: 'ordered-1', type: 'list', data: { text: 'Ordered item one', style: 'ordered' } },
+    { id: 'ordered-2', type: 'list', data: { text: 'Ordered item two', style: 'ordered' } },
+    { id: 'ordered-3', type: 'list', data: { text: 'Ordered item three', style: 'ordered' } },
+    // Checklist items
+    { id: 'checklist-1', type: 'list', data: { text: 'Checklist item one', style: 'checklist', checked: false } },
+    { id: 'checklist-2', type: 'list', data: { text: 'Checklist item two (completed)', style: 'checklist', checked: true } },
+    { id: 'checklist-3', type: 'list', data: { text: 'Checklist item three', style: 'checklist', checked: false } },
   ],
 };
 
 /**
- * Sample data with all three list types containing nested items
+ * Sample data with nested list items (using depth property)
  */
 const allListTypesWithNestedData: OutputData = {
   time: Date.now(),
   version: '1.0.0',
   blocks: [
-    {
-      id: 'nested-unordered-list',
-      type: 'list',
-      data: {
-        style: 'unordered',
-        items: [
-          {
-            content: 'Fruits',
-            checked: false,
-            items: [
-              {
-                content: 'Citrus',
-                checked: false,
-                items: [
-                  { content: 'Orange', checked: false },
-                  { content: 'Lemon', checked: false },
-                  { content: 'Grapefruit', checked: false },
-                ],
-              },
-              {
-                content: 'Berries',
-                checked: false,
-                items: [
-                  { content: 'Strawberry', checked: false },
-                  { content: 'Blueberry', checked: false },
-                ],
-              },
-            ],
-          },
-          {
-            content: 'Vegetables',
-            checked: false,
-            items: [
-              { content: 'Carrot', checked: false },
-              { content: 'Broccoli', checked: false },
-            ],
-          },
-          { content: 'Grains', checked: false },
-        ],
-      },
-    },
-    {
-      id: 'nested-ordered-list',
-      type: 'list',
-      data: {
-        style: 'ordered',
-        items: [
-          {
-            content: 'Getting Started',
-            checked: false,
-            items: [
-              { content: 'Install dependencies', checked: false },
-              { content: 'Configure environment', checked: false },
-              {
-                content: 'Set up database',
-                checked: false,
-                items: [
-                  { content: 'Create schema', checked: false },
-                  { content: 'Run migrations', checked: false },
-                  { content: 'Seed initial data', checked: false },
-                ],
-              },
-            ],
-          },
-          {
-            content: 'Development',
-            checked: false,
-            items: [
-              { content: 'Write code', checked: false },
-              { content: 'Write tests', checked: false },
-            ],
-          },
-          {
-            content: 'Deployment',
-            checked: false,
-            items: [
-              { content: 'Build application', checked: false },
-              { content: 'Deploy to server', checked: false },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      id: 'nested-checklist',
-      type: 'list',
-      data: {
-        style: 'checklist',
-        items: [
-          {
-            content: 'Project Setup',
-            checked: true,
-            items: [
-              { content: 'Create repository', checked: true },
-              { content: 'Initialize project', checked: true },
-              {
-                content: 'Configure tooling',
-                checked: false,
-                items: [
-                  { content: 'ESLint', checked: true },
-                  { content: 'Prettier', checked: true },
-                  { content: 'TypeScript', checked: false },
-                ],
-              },
-            ],
-          },
-          {
-            content: 'Feature Development',
-            checked: false,
-            items: [
-              { content: 'Design UI mockups', checked: true },
-              { content: 'Implement components', checked: false },
-              { content: 'Add unit tests', checked: false },
-            ],
-          },
-          {
-            content: 'Release',
-            checked: false,
-            items: [
-              { content: 'Update changelog', checked: false },
-              { content: 'Tag version', checked: false },
-            ],
-          },
-        ],
-      },
-    },
+    // Unordered nested list
+    { id: 'u-1', type: 'list', data: { text: 'Fruits', style: 'unordered', depth: 0 } },
+    { id: 'u-2', type: 'list', data: { text: 'Citrus', style: 'unordered', depth: 1 } },
+    { id: 'u-3', type: 'list', data: { text: 'Orange', style: 'unordered', depth: 2 } },
+    { id: 'u-4', type: 'list', data: { text: 'Lemon', style: 'unordered', depth: 2 } },
+    { id: 'u-5', type: 'list', data: { text: 'Berries', style: 'unordered', depth: 1 } },
+    { id: 'u-6', type: 'list', data: { text: 'Strawberry', style: 'unordered', depth: 2 } },
+    { id: 'u-7', type: 'list', data: { text: 'Blueberry', style: 'unordered', depth: 2 } },
+    { id: 'u-8', type: 'list', data: { text: 'Vegetables', style: 'unordered', depth: 0 } },
+    { id: 'u-9', type: 'list', data: { text: 'Carrot', style: 'unordered', depth: 1 } },
+    // Ordered nested list
+    { id: 'o-1', type: 'list', data: { text: 'Getting Started', style: 'ordered', depth: 0 } },
+    { id: 'o-2', type: 'list', data: { text: 'Install dependencies', style: 'ordered', depth: 1 } },
+    { id: 'o-3', type: 'list', data: { text: 'Configure environment', style: 'ordered', depth: 1 } },
+    { id: 'o-4', type: 'list', data: { text: 'Set up database', style: 'ordered', depth: 1 } },
+    { id: 'o-5', type: 'list', data: { text: 'Create schema', style: 'ordered', depth: 2 } },
+    { id: 'o-6', type: 'list', data: { text: 'Run migrations', style: 'ordered', depth: 2 } },
+    { id: 'o-7', type: 'list', data: { text: 'Development', style: 'ordered', depth: 0 } },
+    { id: 'o-8', type: 'list', data: { text: 'Write code', style: 'ordered', depth: 1 } },
+    { id: 'o-9', type: 'list', data: { text: 'Write tests', style: 'ordered', depth: 1 } },
+    // Checklist nested list
+    { id: 'c-1', type: 'list', data: { text: 'Project Setup', style: 'checklist', checked: true, depth: 0 } },
+    { id: 'c-2', type: 'list', data: { text: 'Create repository', style: 'checklist', checked: true, depth: 1 } },
+    { id: 'c-3', type: 'list', data: { text: 'Initialize project', style: 'checklist', checked: true, depth: 1 } },
+    { id: 'c-4', type: 'list', data: { text: 'Configure tooling', style: 'checklist', checked: false, depth: 1 } },
+    { id: 'c-5', type: 'list', data: { text: 'ESLint', style: 'checklist', checked: true, depth: 2 } },
+    { id: 'c-6', type: 'list', data: { text: 'Prettier', style: 'checklist', checked: true, depth: 2 } },
+    { id: 'c-7', type: 'list', data: { text: 'TypeScript', style: 'checklist', checked: false, depth: 2 } },
+    { id: 'c-8', type: 'list', data: { text: 'Feature Development', style: 'checklist', checked: false, depth: 0 } },
+    { id: 'c-9', type: 'list', data: { text: 'Design UI mockups', style: 'checklist', checked: true, depth: 1 } },
+    { id: 'c-10', type: 'list', data: { text: 'Implement components', style: 'checklist', checked: false, depth: 1 } },
   ],
 };
 
@@ -273,18 +154,9 @@ export const InteractiveChecklist: Story = {
       time: Date.now(),
       version: '1.0.0',
       blocks: [
-        {
-          id: 'interactive-checklist',
-          type: 'list',
-          data: {
-            style: 'checklist',
-            items: [
-              { content: 'Click me to mark as done', checked: false },
-              { content: 'Already completed task', checked: true },
-              { content: 'Another task to check off', checked: false },
-            ],
-          },
-        },
+        { id: 'ic-1', type: 'list', data: { text: 'Click me to mark as done', style: 'checklist', checked: false } },
+        { id: 'ic-2', type: 'list', data: { text: 'Already completed task', style: 'checklist', checked: true } },
+        { id: 'ic-3', type: 'list', data: { text: 'Another task to check off', style: 'checklist', checked: false } },
       ],
     },
     readOnly: false,
@@ -330,7 +202,7 @@ export const ReadOnlyLists: Story = {
 };
 
 /**
- * Converts a paragraph into a numbered list.
+ * Converts paragraphs into list items.
  */
 export const ConvertParagraphsToNumberedList: Story = {
   args: {
@@ -338,27 +210,9 @@ export const ConvertParagraphsToNumberedList: Story = {
       time: Date.now(),
       version: '1.0.0',
       blocks: [
-        {
-          id: 'para-1',
-          type: 'paragraph',
-          data: {
-            text: 'First paragraph to convert',
-          },
-        },
-        {
-          id: 'para-2',
-          type: 'paragraph',
-          data: {
-            text: 'Second paragraph to convert',
-          },
-        },
-        {
-          id: 'para-3',
-          type: 'paragraph',
-          data: {
-            text: 'Third paragraph to convert',
-          },
-        },
+        { id: 'para-1', type: 'paragraph', data: { text: 'First paragraph to convert' } },
+        { id: 'para-2', type: 'paragraph', data: { text: 'Second paragraph to convert' } },
+        { id: 'para-3', type: 'paragraph', data: { text: 'Third paragraph to convert' } },
       ],
     },
     readOnly: false,
@@ -457,22 +311,17 @@ export const ConvertParagraphsToNumberedList: Story = {
         simulateClick(listOption);
       }
 
-      // Verify conversion - all paragraphs should now be list items in a single list
+      // Verify conversion - each paragraph becomes a separate list block
       await waitFor(
         () => {
-          const list = canvasElement.querySelector('[data-blok-component="list"]');
+          const listBlocks = canvasElement.querySelectorAll('[data-blok-component="list"]');
 
-          expect(list).toBeInTheDocument();
+          expect(listBlocks.length).toBe(3);
 
           // Verify no paragraphs remain
           const paragraphs = canvasElement.querySelectorAll('[data-blok-component="paragraph"]');
 
           expect(paragraphs.length).toBe(0);
-
-          // Verify list has 3 items (one for each converted paragraph)
-          const listItems = list?.querySelectorAll('[data-item-path]');
-
-          expect(listItems?.length).toBe(3);
         },
         TIMEOUT_ACTION
       );
@@ -481,7 +330,7 @@ export const ConvertParagraphsToNumberedList: Story = {
 };
 
 /**
- * All three list types (unordered, ordered, checklist) with deeply nested items.
+ * All three list types (unordered, ordered, checklist) with nested items using depth.
  * Demonstrates hierarchical data structures with multiple nesting levels.
  */
 export const AllListTypesWithNestedItems: Story = {
@@ -491,75 +340,34 @@ export const AllListTypesWithNestedItems: Story = {
     readOnly: false,
   },
   play: async ({ canvasElement, step }) => {
-    await step('Wait for editor to initialize with all three lists', async () => {
+    await step('Wait for editor to initialize with list blocks', async () => {
       await waitFor(
         () => {
-          const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
+          const listBlocks = canvasElement.querySelectorAll('[data-blok-component="list"]');
 
-          expect(lists.length).toBe(3);
+          expect(listBlocks.length).toBeGreaterThan(0);
         },
         TIMEOUT_INIT
       );
     });
 
-    await step('Verify unordered list has nested items', async () => {
-      const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
-      const unorderedList = lists[0];
+    await step('Verify checklist items have checkboxes', async () => {
+      // Check for checkboxes in checklist items
+      const checkboxes = canvasElement.querySelectorAll('input[type="checkbox"]');
 
-      expect(unorderedList).toBeInTheDocument();
-
-      // Check for nested items using data-item-path attribute (path length > 1 means nested)
-      const allItems = unorderedList?.querySelectorAll('[data-item-path]');
-      const nestedItems = Array.from(allItems ?? []).filter((item) => {
-        const path = JSON.parse(item.getAttribute('data-item-path') || '[]');
-
-        return path.length > 1;
-      });
-
-      expect(nestedItems?.length).toBeGreaterThan(0);
-    });
-
-    await step('Verify ordered list has nested items', async () => {
-      const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
-      const orderedList = lists[1];
-
-      expect(orderedList).toBeInTheDocument();
-
-      // Check for nested items using data-item-path attribute (path length > 1 means nested)
-      const allItems = orderedList?.querySelectorAll('[data-item-path]');
-      const nestedItems = Array.from(allItems ?? []).filter((item) => {
-        const path = JSON.parse(item.getAttribute('data-item-path') || '[]');
-
-        return path.length > 1;
-      });
-
-      expect(nestedItems?.length).toBeGreaterThan(0);
-    });
-
-    await step('Verify checklist has nested items with checkboxes', async () => {
-      const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
-      const checklist = lists[2];
-
-      expect(checklist).toBeInTheDocument();
-
-      // Check for checkboxes in nested items
-      const checkboxes = checklist?.querySelectorAll('input[type="checkbox"]');
-
-      expect(checkboxes?.length).toBeGreaterThan(3);
+      expect(checkboxes.length).toBeGreaterThan(0);
 
       // Verify some checkboxes are checked (based on our test data)
-      const checkedBoxes = checklist?.querySelectorAll('input[type="checkbox"]:checked');
+      const checkedBoxes = canvasElement.querySelectorAll('input[type="checkbox"]:checked');
 
-      expect(checkedBoxes?.length).toBeGreaterThan(0);
+      expect(checkedBoxes.length).toBeGreaterThan(0);
     });
 
-    await step('Toggle a nested checklist item', async () => {
-      const lists = canvasElement.querySelectorAll('[data-blok-component="list"]');
-      const checklist = lists[2];
-      const checkboxes = checklist?.querySelectorAll('input[type="checkbox"]');
+    await step('Toggle a checklist item', async () => {
+      const checkboxes = canvasElement.querySelectorAll('input[type="checkbox"]');
 
       // Find an unchecked checkbox to toggle
-      const uncheckedCheckbox = Array.from(checkboxes ?? []).find(
+      const uncheckedCheckbox = Array.from(checkboxes).find(
         (cb) => !(cb as HTMLInputElement).checked
       ) as HTMLInputElement | undefined;
 

@@ -7,25 +7,19 @@ import { MenuConfig } from './menu-config';
 export type ListStyle = 'unordered' | 'ordered' | 'checklist';
 
 /**
- * Single list item data
- */
-export interface ListItem {
-  /** Item content (can include HTML) */
-  content: string;
-  /** Checked state for checklist items */
-  checked?: boolean;
-  /** Nested items for indentation */
-  items?: ListItem[];
-}
-
-/**
  * List Tool's input and output data format
  */
 export interface ListData extends BlockToolData {
+  /** Item text content (can include HTML) */
+  text: string;
   /** List style: unordered, ordered, or checklist */
   style: ListStyle;
-  /** Array of list items */
-  items: ListItem[];
+  /** Checked state for checklist items */
+  checked?: boolean;
+  /** Starting number for ordered lists (only applies to root items) */
+  start?: number;
+  /** Nesting depth level (0 = root, 1 = first indent, etc.) */
+  depth?: number;
 }
 
 /**
@@ -34,13 +28,26 @@ export interface ListData extends BlockToolData {
 export interface ListConfig {
   /** Default list style */
   defaultStyle?: ListStyle;
-  /** Available list styles */
+  /**
+   * Available list styles for the settings menu.
+   * When specified, only these styles will be available in the block settings dropdown.
+   */
   styles?: ListStyle[];
-  /** List styles to show in the toolbox */
+  /**
+   * List styles to show in the toolbox.
+   * When specified, only these list types will appear as separate entries in the toolbox.
+   * If not specified, all list types (unordered, ordered, checklist) will be shown.
+   */
   toolboxStyles?: ListStyle[];
-  /** Custom color for list items */
+  /**
+   * Custom color for list items.
+   * Accepts any valid CSS color value (hex, rgb, hsl, named colors, etc.)
+   */
   itemColor?: string;
-  /** Custom font size for list items */
+  /**
+   * Custom font size for list items.
+   * Accepts any valid CSS font-size value (px, rem, em, etc.)
+   */
   itemSize?: string;
 }
 

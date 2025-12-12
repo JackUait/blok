@@ -221,6 +221,10 @@ export default class History extends Module {
           fallbackIndex,
           fallbackCaretPosition
         );
+
+        // Clean up any orphaned fake background elements that may have been restored
+        this.Blok.SelectionAPI.methods.clearFakeBackground();
+
         this.emitStateChanged();
 
         // Keep the flag true for a short period to ignore late events
@@ -266,6 +270,10 @@ export default class History extends Module {
           : undefined;
 
         await this.restoreState(entryToRestore.state, entryToRestore.caretPosition, fallbackIndex);
+
+        // Clean up any orphaned fake background elements that may have been restored
+        this.Blok.SelectionAPI.methods.clearFakeBackground();
+
         this.emitStateChanged();
 
         // Keep the flag true for a short period to ignore late events
@@ -462,6 +470,10 @@ export default class History extends Module {
     if (this.isPerformingUndoRedo) {
       return;
     }
+
+    // Clean up any fake background elements before capturing state
+    // This ensures fake background spans are never persisted to history
+    this.Blok.SelectionAPI.methods.clearFakeBackground();
 
     const state = await this.getCurrentState();
 

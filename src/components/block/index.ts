@@ -101,7 +101,7 @@ export enum BlockToolAPI {
   MOVED = 'moved',
   UPDATED = 'updated',
   REMOVED = 'removed',
-   
+
   ON_PASTE = 'onPaste',
 }
 
@@ -126,7 +126,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private static readonly styles = {
     wrapper: 'relative opacity-100 animate-fade-in first:mt-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
     content: 'relative mx-auto transition-colors duration-150 ease-out max-w-content',
-    contentSelected: 'bg-selection [&_[contenteditable]]:select-none [&_img]:opacity-55 [&_[data-blok-tool=stub]]:opacity-55',
+    contentSelected: 'bg-selection rounded-[4px] [&_[contenteditable]]:select-none [&_img]:opacity-55 [&_[data-blok-tool=stub]]:opacity-55',
     contentStretched: 'max-w-none',
   };
 
@@ -344,7 +344,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     }
 
     try {
-       
+
       method.call(this.toolInstance, params);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
@@ -363,6 +363,21 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     }
 
     await this.toolInstance.merge(data);
+  }
+
+  /**
+   * Returns the horizontal offset of the content at the hovered element.
+   * Delegates to the tool's getContentOffset method if implemented.
+   *
+   * @param hoveredElement - The element that is currently being hovered
+   * @returns Object with left offset in pixels, or undefined if no offset should be applied
+   */
+  public getContentOffset(hoveredElement: Element): { left: number } | undefined {
+    if (typeof this.toolInstance.getContentOffset === 'function') {
+      return this.toolInstance.getContentOffset(hoveredElement);
+    }
+
+    return undefined;
   }
 
   /**
@@ -1086,6 +1101,14 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     const placeholderAttribute = 'data-blok-placeholder';
     const placeholder = this.config?.placeholder;
     const placeholderText = typeof placeholder === 'string' ? placeholder.trim() : '';
+
+    /**
+     * Paragraph tool handles its own placeholder via data-blok-placeholder-active attribute
+     * with focus-only classes, so we skip the block-level placeholder for it.
+     */
+    if (this.name === 'paragraph') {
+      return;
+    }
 
     /**
      * Placeholder styling classes using Tailwind arbitrary variants.

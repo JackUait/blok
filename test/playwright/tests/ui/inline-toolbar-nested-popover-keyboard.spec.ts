@@ -123,6 +123,9 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
  * Navigate with Tab key until the target element is focused
  */
 const tabUntilFocused = async (page: Page, targetLocator: Locator, maxAttempts = 10): Promise<void> => {
+  // First ensure the element is visible before trying to interact
+  await expect(targetLocator).toBeVisible({ timeout: 5000 });
+
   for (let i = 0; i < maxAttempts; i++) {
     const isFocused = await targetLocator.getAttribute('data-blok-focused');
 
@@ -500,6 +503,9 @@ test.describe('inline toolbar keyboard navigation after closing nested popover',
       await page.keyboard.press('Escape');
       await expect(nestedPopover).toHaveCount(0);
 
+      // Wait for toolbar to be stable after closing nested popover
+      await expect(toolbar).toBeVisible();
+
       // Verify Tab works
       await page.keyboard.press('Tab');
 
@@ -507,6 +513,9 @@ test.describe('inline toolbar keyboard navigation after closing nested popover',
 
       await expect(focusedItems).toHaveCount(1);
       await expect(convertToOption).not.toHaveAttribute('data-blok-focused', 'true');
+
+      // Ensure toolbar is still visible after Tab navigation
+      await expect(toolbar).toBeVisible();
 
       // Second cycle: reopen with Enter (need to navigate back to convert-to first)
       await tabUntilFocused(page, convertToOption);

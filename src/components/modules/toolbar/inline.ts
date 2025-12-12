@@ -74,6 +74,23 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
+   * Returns true if a flipper item is focused (user is navigating with keyboard)
+   */
+  public get hasFlipperFocus(): boolean {
+    const popoverInline = this.popover as PopoverInline | null;
+
+    if (popoverInline === null) {
+      return false;
+    }
+
+    const mainFlipperHasFocus = popoverInline.flipper?.hasFocus() ?? false;
+    const nestedPopover = (popoverInline as unknown as { nestedPopover?: { flipper?: { hasFocus(): boolean } } | null }).nestedPopover;
+    const nestedFlipperHasFocus = nestedPopover?.flipper?.hasFocus() ?? false;
+
+    return mainFlipperHasFocus || nestedFlipperHasFocus;
+  }
+
+  /**
    * Popover instance reference
    */
   private popover: Popover | null = null;
@@ -159,7 +176,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       const shouldCheckForClose = isVerticalArrowKey && !keyboardEvent.shiftKey && this.opened;
       const popoverWithFlipper = this.popover as PopoverInline | null;
       const mainFlipperHasFocus = popoverWithFlipper?.flipper?.hasFocus() ?? false;
-      const nestedPopover = (this.popover as { nestedPopover?: { flipper?: { hasFocus(): boolean } } | null })?.nestedPopover;
+      const nestedPopover = (this.popover as unknown as { nestedPopover?: { flipper?: { hasFocus(): boolean } } | null } | null)?.nestedPopover;
       const hasNestedPopover = nestedPopover !== null && nestedPopover !== undefined;
       const nestedFlipperHasFocus = nestedPopover?.flipper?.hasFocus() ?? false;
       const shouldKeepOpen = mainFlipperHasFocus || hasNestedPopover || nestedFlipperHasFocus;

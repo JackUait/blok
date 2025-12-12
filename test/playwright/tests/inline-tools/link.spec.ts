@@ -15,7 +15,7 @@ const HOLDER_ID = 'blok';
 const PARAGRAPH_CONTENT_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
-const LINK_INPUT_SELECTOR = '[data-blok-link-tool-input-opened]';
+const LINK_INPUT_SELECTOR = '[data-blok-link-tool-input-opened="true"]';
 const NOTIFIER_SELECTOR = '[data-blok-testid="notifier-container"]';
 
 const getParagraphByText = (page: Page, text: string): Locator => {

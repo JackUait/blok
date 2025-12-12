@@ -21,6 +21,7 @@ import type {
   PasteConfig,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
+import type { MoveEvent } from '../../../types/tools/hook-events';
 
 /**
  * List item styles
@@ -229,10 +230,11 @@ export default class ListItem implements BlockTool {
 
   /**
    * Called after block was moved.
-   * Updates the marker to reflect the new position,
-   * and also updates all sibling list items since their indices may have changed.
+   * Validates and adjusts depth to follow list formation rules,
+   * then updates the marker to reflect the new position.
    */
-  public moved(): void {
+  public moved(event: MoveEvent): void {
+    this.validateAndAdjustDepthAfterMove(event.detail.toIndex);
     this.updateMarkersAfterPositionChange();
   }
 
@@ -250,6 +252,78 @@ export default class ListItem implements BlockTool {
 
     // Update all sibling ordered list items since their indices may have changed
     this.updateSiblingListMarkers();
+  }
+
+  /**
+   * Validates and adjusts the depth of this list item after a drag-and-drop move.
+   * Ensures the depth follows list formation rules:
+   * 1. First item (index 0) must be at depth 0
+   * 2. Item depth cannot exceed previousItem.depth + 1
+   *
+   * @param newIndex - The new index where the block was moved to
+   */
+  private validateAndAdjustDepthAfterMove(newIndex: number): void {
+    const currentDepth = this.getDepth();
+    const maxAllowedDepth = this.calculateMaxAllowedDepth(newIndex);
+
+    if (currentDepth > maxAllowedDepth) {
+      this.adjustDepthTo(maxAllowedDepth);
+    }
+  }
+
+  /**
+   * Calculates the maximum allowed depth for a list item at the given index.
+   *
+   * Rules:
+   * 1. First item (index 0) must be at depth 0
+   * 2. For other items: maxDepth = previousListItem.depth + 1
+   * 3. If previous block is not a list item, maxDepth = 0
+   *
+   * @param blockIndex - The index of the block
+   * @returns The maximum allowed depth (0 or more)
+   */
+  private calculateMaxAllowedDepth(blockIndex: number): number {
+    // First item must be at depth 0
+    if (blockIndex === 0) {
+      return 0;
+    }
+
+    const previousBlock = this.api.blocks.getBlockByIndex(blockIndex - 1);
+
+    // If previous block doesn't exist or isn't a list item, max depth is 0
+    if (!previousBlock || previousBlock.name !== ListItem.TOOL_NAME) {
+      return 0;
+    }
+
+    // Max depth is previous item's depth + 1
+    const previousBlockDepth = this.getBlockDepth(previousBlock);
+
+    return previousBlockDepth + 1;
+  }
+
+  /**
+   * Adjusts the depth of this list item to the specified value.
+   * Updates internal data and the DOM element's indentation.
+   *
+   * @param newDepth - The new depth value
+   */
+  private adjustDepthTo(newDepth: number): void {
+    this._data.depth = newDepth;
+
+    // Update DOM element's indentation
+    const listItemEl = this._element?.querySelector('[role="listitem"]');
+
+    if (listItemEl instanceof HTMLElement) {
+      listItemEl.style.paddingLeft = newDepth > 0
+        ? `${newDepth * ListItem.INDENT_PER_LEVEL}px`
+        : '';
+    }
+
+    // Persist the change via API
+    void this.api.blocks.update(this.blockId || '', {
+      ...this._data,
+      depth: newDepth,
+    });
   }
 
   /**

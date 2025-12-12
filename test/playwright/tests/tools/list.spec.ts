@@ -1249,4 +1249,110 @@ test.describe('list tool (ListItem)', () => {
       await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(0);
     });
   });
+
+  test.describe('drag and drop depth validation', () => {
+    test('nested item moved to first position becomes depth 0', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Nested item', depth: 1 },
+        ]),
+      });
+
+      // Move nested item (index 1) to first position (index 0)
+      await page.evaluate(() => {
+        window.blokInstance?.blocks.move(0, 1);
+      });
+
+      // Wait for DOM update after move
+      await expect(page.getByText('Nested item')).toBeVisible();
+
+      // Verify depth is adjusted to 0
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+    });
+
+    test('deeply nested item moved to first position becomes depth 0', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'Level 0' },
+          { text: 'Level 1', depth: 1 },
+          { text: 'Level 2', depth: 2 },
+        ]),
+      });
+
+      // Move depth-2 item to first position
+      await page.evaluate(() => {
+        window.blokInstance?.blocks.move(0, 2);
+      });
+
+      // Wait for DOM update after move
+      await expect(page.getByText('Level 2')).toBeVisible();
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      // First item should be depth 0
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+    });
+
+    test('item depth is capped to previousItem.depth + 1 after move', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+          { text: 'Deep item', depth: 2 },
+        ]),
+      });
+
+      // Move the deep item (index 2, depth 2) to position 1 (after First which is depth 0)
+      await page.evaluate(() => {
+        window.blokInstance?.blocks.move(1, 2);
+      });
+
+      // Wait for DOM update after move
+      await expect(page.getByText('Deep item')).toBeVisible();
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      // Deep item should be capped at depth 1 (previous item depth 0 + 1)
+      expect(savedData?.blocks[1].data.depth).toBe(1);
+    });
+
+    test('nested item preserves valid depth after move', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second', depth: 1 },
+          { text: 'Third', depth: 1 },
+        ]),
+      });
+
+      // Move Third (index 2, depth 1) to position 1 (after First which is depth 0)
+      // Depth 1 is valid because previous item (First) is depth 0, and 0+1=1
+      await page.evaluate(() => {
+        window.blokInstance?.blocks.move(1, 2);
+      });
+
+      // Wait for DOM update after move
+      await expect(page.getByText('Third')).toBeVisible();
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      // Depth should remain 1 since it's still valid
+      expect(savedData?.blocks[1].data.depth).toBe(1);
+    });
+  });
 });

@@ -14,6 +14,7 @@ const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
 const CONTENTLESS_TOOL_SELECTOR = '[data-blok-testid-type="contentless-tool"]';
+const LIST_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="list"]`;
 
 declare global {
   interface Window {
@@ -241,6 +242,85 @@ const setCaretAtOffset = async (locator: Locator, offset: number): Promise<void>
       selection.addRange(range);
     }
   }, offset);
+};
+
+/**
+ * Creates a Blok editor with list tool enabled
+ */
+const createBlokWithListTool = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
+      holder: holder,
+      tools: {
+         
+        list: (window as any).Blok.List,
+      },
+      data: { blocks: blokBlocks },
+    });
+
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID, blocks });
+};
+
+/**
+ * Create list data with multiple items as separate blocks
+ */
+const createListItems = (
+  items: Array<{ text: string; depth?: number }>,
+  style: 'unordered' | 'ordered' | 'checklist' = 'ordered'
+): OutputData['blocks'] => items.map((item, index) => ({
+  id: `list-item-${index}`,
+  type: 'list',
+  data: {
+    text: item.text,
+    style,
+    ...(item.depth !== undefined && item.depth > 0 ? { depth: item.depth } : {}),
+  },
+}));
+
+/**
+ * Checks if the caret is visible by verifying the selection range has non-zero dimensions
+ * and is within the viewport
+ */
+const getCaretVisibility = async (page: Page): Promise<{
+  isVisible: boolean;
+  rect: { top: number; left: number; bottom: number; right: number; height: number; width: number } | null;
+  inViewport: boolean;
+}> => {
+  return page.evaluate(() => {
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return { isVisible: false, rect: null, inViewport: false };
+    }
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    // A zero-dimension rect means the caret is not properly rendered
+    const hasValidDimensions = rect.height > 0 || (rect.width === 0 && rect.left !== 0);
+
+    // Check if the rect is within the viewport
+    const inViewport = rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <= window.innerHeight &&
+      rect.right <= window.innerWidth;
+
+    return {
+      isVisible: hasValidDimensions,
+      rect: {
+        top: rect.top,
+        left: rect.left,
+        bottom: rect.bottom,
+        right: rect.right,
+        height: rect.height,
+        width: rect.width,
+      },
+      inViewport,
+    };
+  });
 };
 
 test.describe('arrow up/down keydown - Notion-style vertical navigation', () => {
@@ -606,6 +686,125 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       const caretInfo = await getCaretInfoOrThrow(block1);
 
       expect(caretInfo.inside).toBe(true);
+    });
+  });
+
+  test.describe('list item navigation with caret visibility', () => {
+    test('caret remains visible when navigating down through list items from start of first item', async ({ page }) => {
+      await createBlokWithListTool(page, createListItems([
+        { text: 'First' },
+        { text: 'Second' },
+        { text: 'Third' },
+      ]));
+
+      const firstItem = page.locator(LIST_BLOCK_SELECTOR).nth(0).locator('[contenteditable="true"]');
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      const thirdItem = page.locator(LIST_BLOCK_SELECTOR).nth(2).locator('[contenteditable="true"]');
+
+      // Click on the first list item and set caret at position 0 (before "F")
+      await firstItem.click();
+      await setCaretAtOffset(firstItem, 0);
+
+      // Verify initial caret visibility
+      const initialVisibility = await getCaretVisibility(page);
+
+      expect(initialVisibility.isVisible).toBe(true);
+
+      // Press ArrowDown to move to second item
+      await page.keyboard.press('ArrowDown');
+      await waitForCaretInBlock(page, secondItem, 1);
+
+      // Verify caret is visible after first ArrowDown
+      const afterFirstDown = await getCaretVisibility(page);
+
+      expect(afterFirstDown.isVisible).toBe(true);
+      expect(afterFirstDown.inViewport).toBe(true);
+
+      // Press ArrowDown again to move to third item
+      await page.keyboard.press('ArrowDown');
+      await waitForCaretInBlock(page, thirdItem, 2);
+
+      // Verify caret is still visible after second ArrowDown
+      const afterSecondDown = await getCaretVisibility(page);
+
+      expect(afterSecondDown.isVisible).toBe(true);
+      expect(afterSecondDown.inViewport).toBe(true);
+
+      // Verify caret is actually inside the third item
+      const caretInfo = await getCaretInfo(thirdItem);
+
+      expect(caretInfo?.inside).toBe(true);
+    });
+
+    test('caret remains visible when navigating up through list items', async ({ page }) => {
+      await createBlokWithListTool(page, createListItems([
+        { text: 'First' },
+        { text: 'Second' },
+        { text: 'Third' },
+      ]));
+
+      const firstItem = page.locator(LIST_BLOCK_SELECTOR).nth(0).locator('[contenteditable="true"]');
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      const thirdItem = page.locator(LIST_BLOCK_SELECTOR).nth(2).locator('[contenteditable="true"]');
+
+      // Click on the third list item and set caret at position 0
+      await thirdItem.click();
+      await setCaretAtOffset(thirdItem, 0);
+
+      // Press ArrowUp to move to second item
+      await page.keyboard.press('ArrowUp');
+      await waitForCaretInBlock(page, secondItem, 1);
+
+      // Verify caret is visible after first ArrowUp
+      const afterFirstUp = await getCaretVisibility(page);
+
+      expect(afterFirstUp.isVisible).toBe(true);
+      expect(afterFirstUp.inViewport).toBe(true);
+
+      // Press ArrowUp again to move to first item
+      await page.keyboard.press('ArrowUp');
+      await waitForCaretInBlock(page, firstItem, 0);
+
+      // Verify caret is still visible after second ArrowUp
+      const afterSecondUp = await getCaretVisibility(page);
+
+      expect(afterSecondUp.isVisible).toBe(true);
+      expect(afterSecondUp.inViewport).toBe(true);
+
+      // Verify caret is actually inside the first item
+      const caretInfo = await getCaretInfo(firstItem);
+
+      expect(caretInfo?.inside).toBe(true);
+    });
+
+    test('caret preserves horizontal position when navigating through list items', async ({ page }) => {
+      await createBlokWithListTool(page, createListItems([
+        { text: 'First item here' },
+        { text: 'Second item text' },
+        { text: 'Third one' },
+      ]));
+
+      const firstItem = page.locator(LIST_BLOCK_SELECTOR).nth(0).locator('[contenteditable="true"]');
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+
+      // Click on the first list item and set caret in the middle
+      await firstItem.click();
+      await setCaretAtOffset(firstItem, 6); // After "First "
+
+      // Get initial X position
+      const xBefore = await getCaretXPosition(page);
+
+      // Navigate down
+      await page.keyboard.press('ArrowDown');
+      await waitForCaretInBlock(page, secondItem, 1);
+
+      // Get X position after navigation
+      const xAfter = await getCaretXPosition(page);
+
+      // Positions should be approximately the same (within 50px tolerance)
+      expect(xBefore).not.toBeNull();
+      expect(xAfter).not.toBeNull();
+      expect(Math.abs(xAfter! - xBefore!)).toBeLessThan(50);
     });
   });
 });

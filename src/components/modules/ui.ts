@@ -1100,7 +1100,19 @@ export default class UI extends Module<UINodes> {
      * If the inline toolbar is already open without a nested popover,
      * don't close or re-render it. This prevents the toolbar from flickering
      * when the user closes a nested popover (e.g., via Esc key).
+     *
+     * However, if the selection is now collapsed or empty (e.g., user deleted the selected text),
+     * we should close the inline toolbar since there's nothing to format.
      */
+    const currentSelection = Selection.get();
+    const selectionIsEmpty = !currentSelection || currentSelection.isCollapsed || Selection.text.length === 0;
+
+    if (selectionIsEmpty && this.Blok.InlineToolbar.opened) {
+      this.Blok.InlineToolbar.close();
+
+      return;
+    }
+
     if (this.Blok.InlineToolbar.opened && !this.Blok.InlineToolbar.hasNestedPopoverOpen) {
       return;
     }

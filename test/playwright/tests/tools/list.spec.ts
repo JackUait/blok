@@ -1086,4 +1086,171 @@ test.describe('list tool (ListItem)', () => {
       await expect(afterInsertMarkers.nth(2)).toHaveText('3.');
     });
   });
+
+  test.describe('list shortcuts with existing content', () => {
+    test('converts paragraph with existing text to ordered list when "1. " is typed at start', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              id: 'test-para',
+              type: 'paragraph',
+              data: {
+                text: 'Shopping list',
+              },
+            },
+          ],
+        },
+      });
+
+      // Click at the start of the paragraph
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+
+      // Move cursor to start
+      await page.keyboard.press('Home');
+
+      // Type the ordered list shortcut
+      await page.keyboard.type('1. ');
+
+      // The paragraph should be converted to a list
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(0);
+
+      // The list item should contain the original text
+      const listContent = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
+      await expect(listContent).toHaveText('Shopping list');
+
+      // Verify it's an ordered list
+      const marker = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(marker).toHaveText('1.');
+    });
+
+    test('converts paragraph with existing text to unordered list when "- " is typed at start', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              id: 'test-para',
+              type: 'paragraph',
+              data: {
+                text: 'Buy groceries',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+      await page.keyboard.press('Home');
+
+      await page.keyboard.type('- ');
+
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(0);
+
+      const listContent = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
+      await expect(listContent).toHaveText('Buy groceries');
+
+      // Verify it's an unordered list (bullet marker)
+      const marker = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(marker).toHaveText('•');
+    });
+
+    test('converts paragraph with existing text to checklist when "[] " is typed at start', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              id: 'test-para',
+              type: 'paragraph',
+              data: {
+                text: 'Task to complete',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+      await page.keyboard.press('Home');
+
+      await page.keyboard.type('[] ');
+
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(0);
+
+      const listContent = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
+      await expect(listContent).toHaveText('Task to complete');
+
+      // Verify it's a checklist (checkbox present)
+      const checkbox = page.locator(`${LIST_BLOCK_SELECTOR} input[type="checkbox"]`);
+      await expect(checkbox).toHaveCount(1);
+      await expect(checkbox).not.toBeChecked();
+    });
+
+    test('preserves HTML formatting when converting to list', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        inlineToolbar: true,
+        data: {
+          blocks: [
+            {
+              id: 'test-para',
+              type: 'paragraph',
+              data: {
+                text: '<b>Bold</b> and <i>italic</i> text',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+      await page.keyboard.press('Home');
+
+      await page.keyboard.type('- ');
+
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(1);
+
+      // Verify HTML is preserved (editor may normalize <b> to <strong>)
+      const listContent = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
+      const html = await listContent.innerHTML();
+      expect(html).toMatch(/<(b|strong)>Bold<\/(b|strong)>/);
+      expect(html).toContain('<i>italic</i>');
+    });
+
+    test('does not convert when shortcut is typed in the middle of text', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              id: 'test-para',
+              type: 'paragraph',
+              data: {
+                text: 'Buy milk',
+              },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+
+      // Type "1. " in the middle (after "Buy ")
+      await page.keyboard.type('1. ');
+
+      // Should remain a paragraph, not convert to list
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(0);
+    });
+  });
 });

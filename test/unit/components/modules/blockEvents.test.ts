@@ -90,6 +90,9 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     CrossBlockSelection: {
       toggleBlockSelectedState: vi.fn(),
     } as unknown as BlokModules['CrossBlockSelection'],
+    Tools: {
+      blockTools: new Map(),
+    } as unknown as BlokModules['Tools'],
   };
 
   const mergedState: Partial<BlokModules> = { ...defaults };
@@ -1210,26 +1213,6 @@ describe('BlockEvents', () => {
       expect(replace).not.toHaveBeenCalled();
     });
 
-    it('does nothing when current block is not a default block', () => {
-      const replace = vi.fn();
-      const currentBlock = {
-        tool: {
-          isDefault: false,
-        },
-        currentInput: document.createElement('div'),
-      } as unknown as Block;
-      const blockEvents = createBlockEvents({
-        BlockManager: {
-          currentBlock,
-          replace,
-        } as unknown as BlokModules['BlockManager'],
-      });
-
-      (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
-
-      expect(replace).not.toHaveBeenCalled();
-    });
-
     it('does nothing when list tool is not available', () => {
       const replace = vi.fn();
       const currentBlock = {
@@ -1683,6 +1666,174 @@ describe('BlockEvents', () => {
         checked: false,
       });
       expect(setToBlock).toHaveBeenCalledWith({ id: 'new-block' }, 'start-position');
+    });
+
+    it('converts to ordered list preserving remaining text after "1. " pattern', () => {
+      const replace = vi.fn().mockReturnValue({ id: 'new-block', firstInput: document.createElement('div') });
+      const setToBlock = vi.fn();
+      const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
+
+      currentInput.innerHTML = '1. Shopping list';
+      const currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        currentInput,
+        holder,
+      } as unknown as Block;
+      const listTool = { name: 'list' };
+      const blockTools = new Map([['list', listTool]]);
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          currentBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools,
+        } as unknown as BlokModules['Tools'],
+        Caret: {
+          setToBlock,
+          positions: {
+            START: 'start-position',
+            DEFAULT: 'default-position',
+          },
+        } as unknown as BlokModules['Caret'],
+      });
+
+      (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
+
+      expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: 'Shopping list',
+        style: 'ordered',
+        checked: false,
+      });
+    });
+
+    it('converts to unordered list preserving remaining text after "- " pattern', () => {
+      const replace = vi.fn().mockReturnValue({ id: 'new-block', firstInput: document.createElement('div') });
+      const setToBlock = vi.fn();
+      const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
+
+      currentInput.innerHTML = '- Buy groceries';
+      const currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        currentInput,
+        holder,
+      } as unknown as Block;
+      const listTool = { name: 'list' };
+      const blockTools = new Map([['list', listTool]]);
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          currentBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools,
+        } as unknown as BlokModules['Tools'],
+        Caret: {
+          setToBlock,
+          positions: {
+            START: 'start-position',
+            DEFAULT: 'default-position',
+          },
+        } as unknown as BlokModules['Caret'],
+      });
+
+      (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
+
+      expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: 'Buy groceries',
+        style: 'unordered',
+        checked: false,
+      });
+    });
+
+    it('converts to checklist preserving remaining text after "[] " pattern', () => {
+      const replace = vi.fn().mockReturnValue({ id: 'new-block', firstInput: document.createElement('div') });
+      const setToBlock = vi.fn();
+      const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
+
+      currentInput.innerHTML = '[] Task to do';
+      const currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        currentInput,
+        holder,
+      } as unknown as Block;
+      const listTool = { name: 'list' };
+      const blockTools = new Map([['list', listTool]]);
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          currentBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools,
+        } as unknown as BlokModules['Tools'],
+        Caret: {
+          setToBlock,
+          positions: {
+            START: 'start-position',
+            DEFAULT: 'default-position',
+          },
+        } as unknown as BlokModules['Caret'],
+      });
+
+      (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
+
+      expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: 'Task to do',
+        style: 'checklist',
+        checked: false,
+      });
+    });
+
+    it('preserves HTML formatting when converting to list', () => {
+      const replace = vi.fn().mockReturnValue({ id: 'new-block', firstInput: document.createElement('div') });
+      const setToBlock = vi.fn();
+      const currentInput = document.createElement('div');
+      const holder = document.createElement('div');
+
+      currentInput.innerHTML = '- <b>Bold</b> and <i>italic</i>';
+      const currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        currentInput,
+        holder,
+      } as unknown as Block;
+      const listTool = { name: 'list' };
+      const blockTools = new Map([['list', listTool]]);
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          currentBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools,
+        } as unknown as BlokModules['Tools'],
+        Caret: {
+          setToBlock,
+          positions: {
+            START: 'start-position',
+            DEFAULT: 'default-position',
+          },
+        } as unknown as BlokModules['Caret'],
+      });
+
+      (blockEvents as unknown as { handleListShortcut: () => void }).handleListShortcut();
+
+      expect(replace).toHaveBeenCalledWith(currentBlock, 'list', {
+        text: '<b>Bold</b> and <i>italic</i>',
+        style: 'unordered',
+        checked: false,
+      });
     });
   });
 });

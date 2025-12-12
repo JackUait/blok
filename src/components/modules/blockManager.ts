@@ -592,7 +592,16 @@ export default class BlockManager extends Module {
      */
     if (targetBlock.mergeable && isBlockConvertable(blockToMerge, 'export') && isBlockConvertable(targetBlock, 'import')) {
       const blockToMergeDataStringified = await blockToMerge.exportDataAsString();
-      const cleanData = clean(blockToMergeDataStringified, targetBlock.tool.sanitizeConfig);
+
+      /**
+       * Extract the field-specific sanitize rules for the field that will receive the imported content.
+       */
+      const importProp = targetBlock.tool.conversionConfig?.import;
+      const fieldSanitizeConfig = _.isString(importProp) && _.isObject(targetBlock.tool.sanitizeConfig[importProp])
+        ? targetBlock.tool.sanitizeConfig[importProp] as SanitizerConfig
+        : targetBlock.tool.sanitizeConfig;
+
+      const cleanData = clean(blockToMergeDataStringified, fieldSanitizeConfig);
       const blockToMergeData = convertStringToBlockData(cleanData, targetBlock.tool.conversionConfig);
 
       await completeMerge(blockToMergeData);
@@ -1023,11 +1032,18 @@ export default class BlockManager extends Module {
     const exportedData = await blockToConvert.exportDataAsString();
 
     /**
-     * Clean exported data with replacing sanitizer config
+     * Clean exported data with replacing sanitizer config.
+     * We need to extract the field-specific sanitize rules for the field that will receive the imported content.
+     * The tool's sanitizeConfig has the format { fieldName: { tagRules } }, but clean() expects just { tagRules }.
      */
+    const importProp = replacingTool.conversionConfig?.import;
+    const fieldSanitizeConfig = _.isString(importProp) && _.isObject(replacingTool.sanitizeConfig[importProp])
+      ? replacingTool.sanitizeConfig[importProp] as SanitizerConfig
+      : replacingTool.sanitizeConfig;
+
     const cleanData: string = clean(
       exportedData,
-      composeSanitizerConfig(this.config.sanitizer as SanitizerConfig, replacingTool.sanitizeConfig)
+      composeSanitizerConfig(this.config.sanitizer as SanitizerConfig, fieldSanitizeConfig)
     );
 
     /**

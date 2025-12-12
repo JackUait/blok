@@ -335,7 +335,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
     });
 
     it('has correct sanitize config', () => {
-      expect(Paragraph.sanitize).toEqual({ text: { br: true } });
+      expect(Paragraph.sanitize).toEqual({ text: { br: true, a: true, b: true, i: true, mark: true } });
     });
   });
 });

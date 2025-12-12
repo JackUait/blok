@@ -1189,7 +1189,7 @@ test.describe('list tool (ListItem)', () => {
       await expect(listContent).toHaveText('Task to complete');
 
       // Verify it's a checklist (checkbox present)
-      const checkbox = page.locator(`${LIST_BLOCK_SELECTOR} input[type="checkbox"]`);
+      const checkbox = page.locator(LIST_BLOCK_SELECTOR).getByRole('checkbox');
       await expect(checkbox).toHaveCount(1);
       await expect(checkbox).not.toBeChecked();
     });

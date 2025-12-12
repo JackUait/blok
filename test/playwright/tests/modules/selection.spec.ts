@@ -16,6 +16,7 @@ const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
+const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const FAKE_BACKGROUND_SELECTOR = '[data-blok-testid="fake-background"]';
 
 declare global {
@@ -708,9 +709,7 @@ test.describe('modules/selection', () => {
     await expect(page.locator(headerSelector)).toHaveCount(1);
 
     // Undo the conversion
-    const modifierKey = process.platform === 'darwin' ? 'Meta' : 'Control';
-
-    await page.keyboard.press(`${modifierKey}+z`);
+    await page.keyboard.press(UNDO_SHORTCUT);
 
     // Wait for undo to complete
     await waitForDelay(STATE_CHANGE_WAIT);

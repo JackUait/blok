@@ -1173,11 +1173,6 @@ export default class ListItem implements BlockTool {
   }
 
   /**
-   * Maximum allowed nesting depth
-   */
-  private static readonly MAX_DEPTH = 8;
-
-  /**
    * Sync the current DOM content to the data model
    */
   private syncContentFromDOM(): void {
@@ -1197,6 +1192,38 @@ export default class ListItem implements BlockTool {
     }
   }
 
+  /**
+   * Get the depth of the parent list item by walking backwards through preceding items.
+   * A parent is the first preceding list item with a depth less than the current item.
+   * @param blockIndex - The index of the current block
+   * @returns The parent's depth, or -1 if no parent exists (at root level)
+   */
+  private getParentDepth(blockIndex: number): number {
+    const currentDepth = this.getDepth();
+
+    const findParentDepth = (index: number): number => {
+      if (index < 0) {
+        return -1;
+      }
+
+      const block = this.api.blocks.getBlockByIndex(index);
+      if (!block || block.name !== ListItem.TOOL_NAME) {
+        // Hit a non-list block, no parent in this list
+        return -1;
+      }
+
+      const blockDepth = this.getBlockDepth(block);
+      if (blockDepth < currentDepth) {
+        // Found a parent (shallower depth)
+        return blockDepth;
+      }
+
+      return findParentDepth(index - 1);
+    };
+
+    return findParentDepth(blockIndex - 1);
+  }
+
   private async handleIndent(): Promise<void> {
     const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     if (currentBlockIndex === 0) return;
@@ -1205,9 +1232,11 @@ export default class ListItem implements BlockTool {
     if (!previousBlock || previousBlock.name !== ListItem.TOOL_NAME) return;
 
     const currentDepth = this.getDepth();
+    const previousBlockDepth = this.getBlockDepth(previousBlock);
 
-    // Prevent indenting beyond max depth
-    if (currentDepth >= ListItem.MAX_DEPTH) return;
+    // Can only indent to at most one level deeper than the previous item
+    // This ensures proper parent-child hierarchy
+    if (currentDepth > previousBlockDepth) return;
 
     // Sync current content before updating
     this.syncContentFromDOM();

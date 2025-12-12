@@ -430,6 +430,106 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks).toHaveLength(2);
       expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
     });
+
+    test('tab does not indent beyond parent depth + 1', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item', depth: 1 },
+          { text: 'Third item', depth: 1 },
+        ]),
+      });
+
+      // Click on third item (depth 1)
+      const thirdItem = page.locator(LIST_BLOCK_SELECTOR).nth(2).locator('[contenteditable="true"]');
+
+      await thirdItem.click();
+
+      // Press Tab - should not indent because previous item is at depth 1
+      // and we can only go to parent depth + 1 (which would be depth 2 only if previous was depth 1)
+      // But since third item is already at depth 1 and previous is at depth 1,
+      // it can indent to depth 2
+      await page.keyboard.press('Tab');
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[2].data.depth).toBe(2);
+
+      // Now try to indent again - should NOT work because previous item is at depth 1
+      // and current is now at depth 2 (already deeper than previous)
+      await page.keyboard.press('Tab');
+
+      const savedData2 = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      // Should still be at depth 2
+      expect(savedData2?.blocks[2].data.depth).toBe(2);
+    });
+
+    test('tab cannot skip depth levels', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+        ]),
+      });
+
+      // Click on second item (depth 0)
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+
+      await secondItem.click();
+
+      // Press Tab once - should indent to depth 1
+      await page.keyboard.press('Tab');
+
+      let savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[1].data.depth).toBe(1);
+
+      // Press Tab again - should NOT indent further because first item is at depth 0
+      // and we're already at depth 1 (which is parent depth 0 + 1)
+      await page.keyboard.press('Tab');
+
+      savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      // Should still be at depth 1
+      expect(savedData?.blocks[1].data.depth).toBe(1);
+    });
+
+    test('deeply nested indentation works with valid parent chain', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'Level 0' },
+          { text: 'Level 1', depth: 1 },
+          { text: 'Level 2', depth: 2 },
+          { text: 'New item', depth: 2 },
+        ]),
+      });
+
+      // Click on fourth item (depth 2)
+      const fourthItem = page.locator(LIST_BLOCK_SELECTOR).nth(3).locator('[contenteditable="true"]');
+
+      await fourthItem.click();
+
+      // Press Tab - should indent to depth 3 because previous item is at depth 2
+      await page.keyboard.press('Tab');
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[3].data.depth).toBe(3);
+    });
   });
 
   test.describe('data saving', () => {

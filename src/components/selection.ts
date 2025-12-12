@@ -439,12 +439,22 @@ export default class SelectionUtils {
    * This handles cleanup after undo/redo operations that may restore fake background elements
    * Also provides backwards compatibility with old fake background approach
    */
-  private removeOrphanedFakeBackgroundElements(): void {
+  public removeOrphanedFakeBackgroundElements(): void {
     const orphanedElements = document.querySelectorAll('[data-blok-fake-background="true"]');
 
     orphanedElements.forEach((element) => {
       this.unwrapFakeBackground(element as HTMLElement);
     });
+  }
+
+  /**
+   * Clears all fake background state - both DOM elements and internal flags
+   * This is useful for cleanup after undo/redo operations or when the selection context has been lost
+   */
+  public clearFakeBackground(): void {
+    this.removeOrphanedFakeBackgroundElements();
+    this.isFakeBackgroundEnabled = false;
+    this.selectionContainer = null;
   }
 
   /**

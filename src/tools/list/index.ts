@@ -4,7 +4,7 @@
  *
  * @license MIT
  */
-import { IconListUnordered, IconListOrdered, IconListChecklist } from '../../components/icons';
+import { IconListBulleted, IconListNumbered, IconListChecklist } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { BLOK_TOOL_ATTR } from '../../components/constants';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
@@ -130,8 +130,8 @@ export default class ListItem implements BlockTool {
   private static readonly CHECKBOX_STYLES = 'mt-1 w-4 mr-2 h-4 cursor-pointer accent-current';
 
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
-    { style: 'unordered', name: 'Bulleted list', icon: IconListUnordered },
-    { style: 'ordered', name: 'Numbered list', icon: IconListOrdered },
+    { style: 'unordered', name: 'Bulleted list', icon: IconListBulleted },
+    { style: 'ordered', name: 'Numbered list', icon: IconListNumbered },
     { style: 'checklist', name: 'Checklist', icon: IconListChecklist },
   ];
 
@@ -1650,13 +1650,13 @@ export default class ListItem implements BlockTool {
   public static get toolbox(): ToolboxConfig {
     return [
       {
-        icon: IconListUnordered,
+        icon: IconListBulleted,
         title: 'Bulleted list',
         data: { style: 'unordered' },
         name: 'bulleted-list',
       },
       {
-        icon: IconListOrdered,
+        icon: IconListNumbered,
         title: 'Numbered list',
         data: { style: 'ordered' },
         name: 'numbered-list',

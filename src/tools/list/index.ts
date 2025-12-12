@@ -1543,6 +1543,36 @@ export default class ListItem implements BlockTool {
     return true;
   }
 
+  /**
+   * Returns the horizontal offset of the content at the hovered element.
+   * Used by the toolbar to position itself closer to nested list items.
+   *
+   * @param hoveredElement - The element that is currently being hovered
+   * @returns Object with left offset in pixels based on the list item's depth
+   */
+  public getContentOffset(hoveredElement: Element): { left: number } | undefined {
+    // Find the closest list item element from the hovered element
+    const listItemEl = hoveredElement.closest('[role="listitem"]');
+    if (!listItemEl) {
+      return undefined;
+    }
+
+    // Get the padding-left which represents the indentation
+    const style = listItemEl.getAttribute('style') || '';
+    const paddingMatch = style.match(/padding-left:\s*(\d+)px/);
+
+    if (!paddingMatch) {
+      return undefined;
+    }
+
+    const paddingLeft = parseInt(paddingMatch[1], 10);
+    if (paddingLeft <= 0) {
+      return undefined;
+    }
+
+    return { left: paddingLeft };
+  }
+
   public static get toolbox(): ToolboxConfig {
     return [
       {

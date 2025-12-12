@@ -104,6 +104,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private hoveredBlock: Block | null = null;
 
   /**
+   * The actual element being hovered (could be a nested element like a list item)
+   */
+  private hoveredTarget: Element | null = null;
+
+  /**
    * Toolbox class instance
    * It will be created in requestIdleCallback so it can be null in some period of time
    */
@@ -344,8 +349,9 @@ export default class Toolbar extends Module<ToolbarNodes> {
   /**
    * Move Toolbar to the passed (or current) Block
    * @param block - block to move Toolbar near it
+   * @param target - optional target element that was hovered (for content offset calculation)
    */
-  public moveAndOpen(block?: Block | null): void {
+  public moveAndOpen(block?: Block | null, target?: Element | null): void {
     /**
      * Some UI elements creates inside requestIdleCallback, so the can be not ready yet
      */
@@ -376,6 +382,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.hoveredBlock = targetBlock;
+    this.hoveredTarget = target ?? null;
     this.lastToolbarY = null; // Reset cached position when moving to a new block
 
     const { wrapper, plusButton } = this.nodes;
@@ -398,6 +405,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.lastToolbarY = newToolbarY;
     wrapper.style.top = `${newToolbarY}px`;
     targetBlockHolder.appendChild(wrapper);
+
+    /**
+     * Apply content offset for nested elements (e.g., nested list items)
+     */
+    this.applyContentOffset(targetBlock);
 
     /**
      * Do not show Block Tunes Toggler near single and empty block
@@ -452,6 +464,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     const targetBlock = block ?? selectedBlocks[0];
 
     this.hoveredBlock = targetBlock;
+    this.hoveredTarget = null; // No target for multi-block selection
     this.lastToolbarY = null; // Reset cached position when moving to a new block
 
     const { wrapper, plusButton } = this.nodes;
@@ -467,6 +480,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.lastToolbarY = newToolbarY;
     wrapper.style.top = `${newToolbarY}px`;
     targetBlockHolder.appendChild(wrapper);
+
+    /**
+     * Reset content offset for multi-block selection
+     */
+    this.applyContentOffset(targetBlock);
 
     /**
      * Always show the settings toggler for multi-block selection
@@ -501,6 +519,14 @@ export default class Toolbar extends Module<ToolbarNodes> {
     if (this.nodes.plusButton) {
       this.nodes.plusButton.style.display = '';
     }
+
+    /**
+     * Reset the content offset transform
+     */
+    if (this.nodes.actions) {
+      this.nodes.actions.style.transform = '';
+    }
+    this.hoveredTarget = null;
 
     this.reset();
   }
@@ -958,7 +984,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
        * Subscribe to the 'block-hovered' event
        */
       this.eventsDispatcher.on(BlockHovered, (data) => {
-        const hoveredBlock = (data as { block?: Block }).block;
+        const hoveredBlock = (data as { block?: Block; target?: Element }).block;
+        const hoveredTarget = (data as { block?: Block; target?: Element }).target;
 
         if (!(hoveredBlock instanceof Block)) {
           return;
@@ -994,7 +1021,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
           return;
         }
 
-        this.moveAndOpen(hoveredBlock);
+        this.moveAndOpen(hoveredBlock, hoveredTarget);
       });
     }
 
@@ -1127,6 +1154,30 @@ export default class Toolbar extends Module<ToolbarNodes> {
       this.lastToolbarY = newToolbarY;
       wrapper.style.top = `${newToolbarY}px`;
     }
+  }
+
+  /**
+   * Applies the content offset transform to the actions element based on the hovered target.
+   * This positions the toolbar closer to nested content like list items.
+   * @param targetBlock - the block to get the content offset from
+   */
+  private applyContentOffset(targetBlock: Block): void {
+    const { actions } = this.nodes;
+
+    if (!actions) {
+      return;
+    }
+
+    if (!this.hoveredTarget) {
+      actions.style.transform = '';
+
+      return;
+    }
+
+    const contentOffset = targetBlock.getContentOffset(this.hoveredTarget);
+    const hasValidOffset = contentOffset && contentOffset.left > 0;
+
+    actions.style.transform = hasValidOffset ? `translateX(${contentOffset.left}px)` : '';
   }
 
   /**

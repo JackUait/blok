@@ -78,6 +78,15 @@ export interface BlockTool extends BaseTool {
    * Called after block was moved
    */
   moved?(event: MoveEvent): void;
+
+  /**
+   * Returns the horizontal offset of the content at the hovered element.
+   * Used by the toolbar to position itself closer to nested content (e.g., nested list items).
+   *
+   * @param hoveredElement - The element that is currently being hovered
+   * @returns Object with left offset in pixels, or undefined if no offset should be applied
+   */
+  getContentOffset?(hoveredElement: Element): { left: number } | undefined;
 }
 
 /**

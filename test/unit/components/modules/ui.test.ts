@@ -815,7 +815,7 @@ describe('UI module', () => {
       Object.defineProperty(event, 'target', { value: blockElement });
       redactor.dispatchEvent(event);
 
-      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, { block: blockStub });
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, { block: blockStub, target: blockElement });
       eventsDispatcher.emit.mockClear();
 
       redactor.dispatchEvent(event);

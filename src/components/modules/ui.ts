@@ -487,6 +487,7 @@ export default class UI extends Module<UINodes> {
 
       this.eventsDispatcher.emit(BlockHovered, {
         block,
+        target: event.target as Element,
       });
     };
 
@@ -951,7 +952,7 @@ export default class UI extends Module<UINodes> {
      * (used for showing Block Settings toggler after opening and closing Inline Toolbar)
      */
     if (!this.Blok.ReadOnly.isEnabled && !this.Blok.Toolbar.contains(initialTarget)) {
-      this.Blok.Toolbar.moveAndOpen();
+      this.Blok.Toolbar.moveAndOpen(undefined, clickedNode);
     }
   }
 

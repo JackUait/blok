@@ -1354,5 +1354,66 @@ test.describe('list tool (ListItem)', () => {
       // Depth should remain 1 since it's still valid
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
+
+    test('moved block shows selection highlight after depth adjustment', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'Level 0' },
+          { text: 'Level 1', depth: 1 },
+          { text: 'Level 2', depth: 2 },
+        ]),
+      });
+
+      // Simulate the drag-drop flow:
+      // 1. BlockManager.move() triggers the moved() hook which adjusts depth
+      // 2. After move returns, DragManager selects the moved block
+      // The bug was that adjustDepthTo() called api.blocks.update() asynchronously,
+      // which would replace the block instance AFTER selection was applied,
+      // causing the selection to be lost.
+      const result = await page.evaluate(async () => {
+        // Move depth-2 item to first position (triggers depth adjustment)
+        window.blokInstance?.blocks.move(0, 2);
+
+        // Get the block at the new position (what DragManager does)
+        const movedBlock = window.blokInstance?.blocks.getBlockByIndex(0);
+
+        if (!movedBlock) {
+          return { error: 'Block not found' };
+        }
+
+        // Get the block's holder element and set selection attribute directly
+        // (simulating what BlockSelection.selectBlock does)
+        const blockHolder = document.querySelector(
+          `[data-blok-interface=blok] [data-blok-tool="list"]:first-child`
+        )?.closest('[data-blok-testid="block-wrapper"]');
+
+        if (blockHolder) {
+          blockHolder.setAttribute('data-blok-selected', 'true');
+        }
+
+        // Wait a tick to allow any async operations to complete
+        // (this would have caused the bug before the fix)
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Check if selection is still present after async operations
+        const isStillSelected = blockHolder?.getAttribute('data-blok-selected') === 'true';
+
+        return {
+          isStillSelected,
+          blockId: movedBlock.id,
+        };
+      });
+
+      expect(result).not.toHaveProperty('error');
+      expect(result.isStillSelected).toBe(true);
+
+      // Verify depth was also adjusted correctly
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+    });
   });
 });

@@ -318,12 +318,6 @@ export default class ListItem implements BlockTool {
         ? `${newDepth * ListItem.INDENT_PER_LEVEL}px`
         : '';
     }
-
-    // Persist the change via API
-    void this.api.blocks.update(this.blockId || '', {
-      ...this._data,
-      depth: newDepth,
-    });
   }
 
   /**

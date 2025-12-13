@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
 import type { OutputData, ToolSettings } from '@/types';
-import { createEditorContainer, simulateClick, waitForToolbar, triggerSelectAll } from './helpers';
+import { createEditorContainer, simulateClick, waitForToolbar, triggerSelectAll, type EditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
 import Blok from '../blok';
 import type { ListConfig } from '../../types/tools/list';
@@ -380,6 +380,132 @@ export const AllListTypesWithNestedItems: Story = {
           },
           TIMEOUT_ACTION
         );
+      }
+    });
+  },
+};
+
+/**
+ * Data for testing drag-drop selection on nested lists
+ */
+const nestedListForDragDrop: OutputData = {
+  time: Date.now(),
+  version: '1.0.0',
+  blocks: [
+    { id: 'drag-1', type: 'list', data: { text: 'Root item (depth 0)', style: 'unordered', depth: 0 } },
+    { id: 'drag-2', type: 'list', data: { text: 'Nested item (depth 1)', style: 'unordered', depth: 1 } },
+    { id: 'drag-3', type: 'list', data: { text: 'Deeply nested item (depth 2)', style: 'unordered', depth: 2 } },
+    { id: 'drag-4', type: 'list', data: { text: 'Another root item (depth 0)', style: 'unordered', depth: 0 } },
+  ],
+};
+
+/**
+ * Demonstrates that selection highlight persists after dragging a nested list item
+ * to a higher (less nested) level.
+ *
+ * This story tests a bug fix where dragging a deeply nested list item to become
+ * the first item (requiring depth adjustment from 2 to 0) would lose its selection
+ * highlight due to an async race condition.
+ *
+ * The fix removed an unnecessary `api.blocks.update()` call in the `adjustDepthTo()`
+ * method that was creating a new block instance and clearing the selection state.
+ */
+export const DragDropSelectionHighlight: Story = {
+  args: {
+    data: nestedListForDragDrop,
+    minHeight: 300,
+    readOnly: false,
+  },
+  play: async ({ canvasElement, step }) => {
+    await step('Wait for editor to initialize with nested list', async () => {
+      await waitFor(
+        () => {
+          const listBlocks = canvasElement.querySelectorAll('[data-blok-component="list"]');
+
+          expect(listBlocks.length).toBe(4);
+        },
+        TIMEOUT_INIT
+      );
+    });
+
+    await step('Verify initial nesting structure', async () => {
+      // Check that the deeply nested item has correct depth attribute
+      const deeplyNestedItem = canvasElement.querySelector('[data-list-depth="2"]');
+
+      expect(deeplyNestedItem).toBeInTheDocument();
+    });
+
+    await step('Simulate drag-drop: move deeply nested item to first position', async () => {
+      // Wait for the editor instance to be stored on the container
+      const container = canvasElement.querySelector('[data-story-container]') as EditorContainer | null;
+
+      await waitFor(
+        () => {
+          expect(container?.__blokEditor).toBeDefined();
+        },
+        TIMEOUT_INIT
+      );
+
+      const editor = container?.__blokEditor;
+
+      if (!editor) {
+        throw new Error('Editor not found');
+      }
+
+      // Simulate what DragManager.handleDrop does:
+      // 1. Move the block (triggers depth adjustment via moved() hook)
+      // 2. Select the moved block
+
+      // Move deeply nested item (index 2) to first position (index 0)
+      editor.blocks.move(0, 2);
+
+      // Wait for DOM to update
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Get the moved block and select it (like DragManager does)
+      const movedBlock = editor.blocks.getBlockByIndex(0);
+
+      expect(movedBlock).toBeDefined();
+
+      // Find the block's wrapper element and set selection
+      const blockWrapper = canvasElement.querySelector(
+        '[data-blok-component="list"]:first-child'
+      )?.closest('[data-blok-testid="block-wrapper"]');
+
+      if (blockWrapper) {
+        blockWrapper.setAttribute('data-blok-selected', 'true');
+      }
+
+      // Wait for any async operations (the bug was caused by async api.blocks.update)
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    await step('Verify selection highlight persists after depth adjustment', async () => {
+      // The moved block (now at first position) should still have selection
+      const firstBlock = canvasElement.querySelector(
+        '[data-blok-component="list"]'
+      )?.closest('[data-blok-testid="block-wrapper"]');
+
+      expect(firstBlock).toHaveAttribute('data-blok-selected', 'true');
+    });
+
+    await step('Verify block content was preserved and depth adjusted', async () => {
+      // The deeply nested item content should now be at first position
+      const firstItemText = canvasElement.querySelector(
+        '[data-blok-component="list"] [contenteditable="true"]'
+      );
+
+      expect(firstItemText?.textContent).toBe('Deeply nested item (depth 2)');
+
+      // Verify depth was adjusted by checking saved data
+      const container = canvasElement.querySelector('[data-story-container]') as EditorContainer | null;
+      const editor = container?.__blokEditor;
+
+      if (editor) {
+        const savedData = await editor.save();
+        // First block should have depth 0 (adjusted from 2)
+
+        expect(savedData.blocks[0].data.depth ?? 0).toBe(0);
       }
     });
   },

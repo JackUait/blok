@@ -133,6 +133,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private lastToolbarY: number | null = null;
 
   /**
+   * Flag to ignore the next mouseup on settings toggler after a block drop
+   * Prevents the settings menu from opening when the cursor is over the toggler after drop
+   */
+  private ignoreNextSettingsMouseUp = false;
+
+  /**
    * @class
    * @param moduleConfiguration - Module Configuration
    * @param moduleConfiguration.config - Blok's config
@@ -381,11 +387,16 @@ export default class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
+    /** Clean up draggable on previous block if any */
+    if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
+      this.hoveredBlock.cleanupDraggable();
+    }
+
     this.hoveredBlock = targetBlock;
     this.hoveredTarget = target ?? null;
     this.lastToolbarY = null; // Reset cached position when moving to a new block
 
-    const { wrapper, plusButton } = this.nodes;
+    const { wrapper, plusButton, settingsToggler } = this.nodes;
 
     if (!wrapper || !plusButton) {
       return;
@@ -405,6 +416,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.lastToolbarY = newToolbarY;
     wrapper.style.top = `${newToolbarY}px`;
     targetBlockHolder.appendChild(wrapper);
+
+    /** Set up draggable on the target block using the settings toggler as drag handle */
+    if (settingsToggler && !this.Blok.ReadOnly.isEnabled) {
+      targetBlock.setupDraggable(settingsToggler, this.Blok.DragManager);
+    }
 
     /**
      * Apply content offset for nested elements (e.g., nested list items)
@@ -529,6 +545,14 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.hoveredTarget = null;
 
     this.reset();
+  }
+
+  /**
+   * Prevents the settings menu from opening on the next mouseup event
+   * Used after block drop to avoid accidental menu opening
+   */
+  public skipNextSettingsToggle(): void {
+    this.ignoreNextSettingsMouseUp = true;
   }
 
   /**
@@ -912,7 +936,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
        * Stores the initial mouse position to distinguish between click and drag
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
-        e.stopPropagation();
         tooltip.hide(true);
 
         const mouseEvent = e as MouseEvent;
@@ -939,6 +962,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mouseup', (e) => {
         e.stopPropagation();
+
+        /**
+         * Ignore mouseup after a block drop to prevent settings menu from opening
+         */
+        if (this.ignoreNextSettingsMouseUp) {
+          this.ignoreNextSettingsMouseUp = false;
+
+          return;
+        }
 
         const mouseEvent = e as MouseEvent;
 
@@ -1196,6 +1228,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Clicks on the Block Settings toggler
    */
   private settingsTogglerClicked(): void {
+    /**
+     * Cancel any pending drag tracking since we're opening the settings menu
+     * This prevents the drag from starting when the user moves their mouse to the menu
+     */
+    this.Blok.DragManager.cancelTracking();
+
     /**
      * Prefer the hovered block (desktop), fall back to the current block (mobile) so tapping the toggler still works
      */

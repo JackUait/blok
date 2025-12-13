@@ -15,12 +15,10 @@ const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 
 /**
- * Helper function to perform drag and drop with SortableJS.
- * Uses manual mouse events with small delays to ensure proper handling.
- * Note: waitForTimeout is intentionally used here because SortableJS's internal
- * drag initialization and drop zone detection timing cannot be observed externally.
- * @param page Playwright page instance used to perform mouse actions.
- * @param sourceLocator Locator for the element that will be dragged.
+ * Helper function to perform drag and drop using pointer-based mouse events.
+ * This uses mousedown/mousemove/mouseup events which is how our custom DragManager works.
+ * @param page Playwright page instance used to perform drag actions.
+ * @param sourceLocator Locator for the element that will be dragged (the drag handle).
  * @param targetLocator Locator for the target element where the source will be dropped.
  * @param targetVerticalPosition Vertical position within the target element to drop onto.
  */
@@ -40,27 +38,37 @@ const performDragDrop = async (
   const sourceX = sourceBox.x + sourceBox.width / 2;
   const sourceY = sourceBox.y + sourceBox.height / 2;
   const targetX = targetBox.x + targetBox.width / 2;
+  /**
+   * For edge detection:
+   * For 'top', we position just 1px from the top edge to ensure unambiguous edge detection.
+   * For 'bottom', we position just 1px from the bottom edge.
+   */
   const targetY = targetVerticalPosition === 'top'
-    ? targetBox.y + 5
-    : targetBox.y + targetBox.height - 5;
+    ? targetBox.y + 1 // Very close to the top edge
+    : targetBox.y + targetBox.height - 1; // Very close to the bottom edge
 
-  // Move to source and start drag
+  /**
+   * Perform pointer-based drag using Playwright's mouse API.
+   * This matches how our custom DragManager handles drag operations.
+   */
+  // Move to source and press down
   await page.mouse.move(sourceX, sourceY);
   await page.mouse.down();
 
-  // eslint-disable-next-line playwright/no-wait-for-timeout -- Required for SortableJS drag initialization
-  await page.waitForTimeout(100);
-
-  // Move to target with multiple steps for reliable event detection
-  await page.mouse.move(targetX, targetY, { steps: 30 });
-
-  // eslint-disable-next-line playwright/no-wait-for-timeout -- Required for SortableJS drop zone detection
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
   await page.waitForTimeout(50);
 
+  // Move to target position with steps to trigger drag threshold
+  await page.mouse.move(targetX, targetY, { steps: 15 });
+
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drop target detection
+  await page.waitForTimeout(50);
+
+  // Release to complete the drop
   await page.mouse.up();
 
-  // eslint-disable-next-line playwright/no-wait-for-timeout -- Required for SortableJS animation completion
-  await page.waitForTimeout(200);
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for state updates
+  await page.waitForTimeout(100);
 };
 
 type CreateBlokOptions = {
@@ -114,12 +122,6 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 };
 
 test.describe('drag and drop', () => {
-  // Skip on Webkit: SortableJS's forceFallback mode uses synthetic DOM events
-  // that Playwright's mouse simulation cannot properly trigger in Webkit.
-  // The drag-drop functionality works correctly in real Webkit browsers.
-  // eslint-disable-next-line playwright/no-skipped-test
-  test.skip(({ browserName }) => browserName === 'webkit', 'Webkit mouse simulation incompatible with SortableJS');
-
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });

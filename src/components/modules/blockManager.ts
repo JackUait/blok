@@ -8,9 +8,7 @@ import Block, { BlockToolAPI } from '../block';
 import Module from '../__module';
 import $ from '../dom';
 import * as _ from '../utils';
-import * as tooltip from '../utils/tooltip';
 import Blocks from '../blocks';
-import Sortable from 'sortablejs';
 import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import BlockAPI from '../block/api';
@@ -23,7 +21,7 @@ import { BlockChanged } from '../events';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
 import PromiseQueue from '../utils/promise-queue';
-import { BLOK_DRAGGING_ATTR, BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR, BLOK_DRAG_HANDLE_SELECTOR } from '../constants';
+import { BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
 
 type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
@@ -171,11 +169,6 @@ export default class BlockManager extends Module {
   private _blocks: BlocksStore | null = null;
 
   /**
-   * Sortable instance
-   */
-  private sortable: Sortable | null = null;
-
-  /**
    * Should be called after Blok.UI preparation
    * Define this._blocks property
    */
@@ -205,36 +198,6 @@ export default class BlockManager extends Module {
         this.Blok.BlockEvents.handleCommandC(event as ClipboardEvent);
       }
     );
-
-    this.sortable = new Sortable(this.Blok.UI.nodes.redactor, {
-      animation: 150,
-      forceFallback: true,
-
-      handle: BLOK_DRAG_HANDLE_SELECTOR,
-      onStart: () => {
-        this.Blok.UI.nodes.wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
-
-        /** Unselect all blocks */
-        this.Blok.BlockSelection.allBlocksSelected = false;
-
-        tooltip.hide(true);
-      },
-      onEnd: (evt) => {
-        this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_DRAGGING_ATTR);
-        if (evt.newIndex === undefined || evt.oldIndex === undefined) {
-          return;
-        }
-
-        this.move(evt.newIndex, evt.oldIndex, true);
-
-        /** Select the moved block to provide visual feedback */
-        const movedBlock = this.getBlockByIndex(evt.newIndex);
-
-        if (movedBlock) {
-          this.Blok.BlockSelection.selectBlock(movedBlock);
-        }
-      },
-    });
   }
 
   /**
@@ -1114,11 +1077,6 @@ export default class BlockManager extends Module {
    * This is called when blok is destroyed
    */
   public async destroy(): Promise<void> {
-    if (this.sortable) {
-      this.sortable.destroy();
-      this.sortable = null;
-    }
-
     await Promise.all(this.blocks.map((block) => {
       return block.destroy();
     }));

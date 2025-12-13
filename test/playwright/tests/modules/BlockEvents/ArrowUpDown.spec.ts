@@ -697,9 +697,9 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
         { text: 'Third' },
       ]));
 
-      const firstItem = page.locator(LIST_BLOCK_SELECTOR).nth(0).locator('[contenteditable="true"]');
-      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
-      const thirdItem = page.locator(LIST_BLOCK_SELECTOR).nth(2).locator('[contenteditable="true"]');
+      const firstItem = page.locator(`:nth-match(${LIST_BLOCK_SELECTOR}, 1) [contenteditable="true"]`);
+      const secondItem = page.locator(`:nth-match(${LIST_BLOCK_SELECTOR}, 2) [contenteditable="true"]`);
+      const thirdItem = page.locator(`:nth-match(${LIST_BLOCK_SELECTOR}, 3) [contenteditable="true"]`);
 
       // Click on the first list item and set caret at position 0 (before "F")
       await firstItem.click();
@@ -743,9 +743,9 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
         { text: 'Third' },
       ]));
 
-      const firstItem = page.locator(LIST_BLOCK_SELECTOR).nth(0).locator('[contenteditable="true"]');
-      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
-      const thirdItem = page.locator(LIST_BLOCK_SELECTOR).nth(2).locator('[contenteditable="true"]');
+      const firstItem = page.locator(`:nth-match(${LIST_BLOCK_SELECTOR}, 1) [contenteditable="true"]`);
+      const secondItem = page.locator(`:nth-match(${LIST_BLOCK_SELECTOR}, 2) [contenteditable="true"]`);
+      const thirdItem = page.locator(`:nth-match(${LIST_BLOCK_SELECTOR}, 3) [contenteditable="true"]`);
 
       // Click on the third list item and set caret at position 0
       await thirdItem.click();
@@ -784,8 +784,8 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
         { text: 'Third one' },
       ]));
 
-      const firstItem = page.locator(LIST_BLOCK_SELECTOR).nth(0).locator('[contenteditable="true"]');
-      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      const firstItem = page.locator(`:nth-match(${LIST_BLOCK_SELECTOR}, 1) [contenteditable="true"]`);
+      const secondItem = page.locator(`:nth-match(${LIST_BLOCK_SELECTOR}, 2) [contenteditable="true"]`);
 
       // Click on the first list item and set caret in the middle
       await firstItem.click();

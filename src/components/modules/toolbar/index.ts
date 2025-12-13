@@ -133,6 +133,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private lastToolbarY: number | null = null;
 
   /**
+   * Flag to ignore the next mouseup on settings toggler after a block drop
+   * Prevents the settings menu from opening when the cursor is over the toggler after drop
+   */
+  private ignoreNextSettingsMouseUp = false;
+
+  /**
    * @class
    * @param moduleConfiguration - Module Configuration
    * @param moduleConfiguration.config - Blok's config
@@ -539,6 +545,14 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.hoveredTarget = null;
 
     this.reset();
+  }
+
+  /**
+   * Prevents the settings menu from opening on the next mouseup event
+   * Used after block drop to avoid accidental menu opening
+   */
+  public skipNextSettingsToggle(): void {
+    this.ignoreNextSettingsMouseUp = true;
   }
 
   /**
@@ -949,6 +963,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mouseup', (e) => {
         e.stopPropagation();
+
+        /**
+         * Ignore mouseup after a block drop to prevent settings menu from opening
+         */
+        if (this.ignoreNextSettingsMouseUp) {
+          this.ignoreNextSettingsMouseUp = false;
+
+          return;
+        }
 
         const mouseEvent = e as MouseEvent;
 

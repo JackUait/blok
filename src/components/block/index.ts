@@ -37,6 +37,8 @@ import {
   BLOK_STRETCHED_ATTR,
 } from '../constants';
 import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
+import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview';
+import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/element/pointer-outside-of-preview';
 import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 
@@ -437,6 +439,30 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       getInitialData: () => ({
         blockId: this.id,
       }),
+      onGenerateDragPreview: ({ nativeSetDragImage }) => {
+        if (this.contentElement === null) {
+          return;
+        }
+
+        const contentElement = this.contentElement;
+        const isStretched = this.stretched;
+
+        /**
+         * Use the block content element as drag image, positioned 20px to the right of cursor
+         */
+        setCustomNativeDragPreview({
+          nativeSetDragImage,
+          getOffset: pointerOutsideOfPreview({ x: '20px', y: '0px' }),
+          render({ container }) {
+            const clone = contentElement.cloneNode(true) as HTMLElement;
+
+            /** Remove selection styling from the clone */
+            clone.className = twMerge(Block.styles.content, isStretched ? Block.styles.contentStretched : '');
+
+            container.appendChild(clone);
+          },
+        });
+      },
     });
   }
 

@@ -232,7 +232,9 @@ export default class BlockManager extends Module {
       },
       onDragStart: () => {
         this.Blok.UI.nodes.wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
+        this.Blok.BlockSelection.clearSelection();
         tooltip.hide(true);
+        this.Blok.Toolbar.close();
       },
       onDrop: ({ source, location }) => {
         this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_DRAGGING_ATTR);
@@ -249,6 +251,14 @@ export default class BlockManager extends Module {
         const edge = (extractedEdge === 'top' || extractedEdge === 'bottom') ? extractedEdge : undefined;
 
         this.handleBlockDrop(sourceBlockId, targetBlockId, edge);
+
+        /** Re-open toolbar on the dropped block */
+        const droppedBlock = this.getBlockById(sourceBlockId);
+
+        if (droppedBlock) {
+          this.Blok.Toolbar.skipNextSettingsToggle();
+          this.Blok.Toolbar.moveAndOpen(droppedBlock);
+        }
       },
     });
 

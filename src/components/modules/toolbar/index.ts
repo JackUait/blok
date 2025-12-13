@@ -1229,6 +1229,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
    */
   private settingsTogglerClicked(): void {
     /**
+     * Cancel any pending drag tracking since we're opening the settings menu
+     * This prevents the drag from starting when the user moves their mouse to the menu
+     */
+    this.Blok.DragManager.cancelTracking();
+
+    /**
      * Prefer the hovered block (desktop), fall back to the current block (mobile) so tapping the toggler still works
      */
     const targetBlock = this.hoveredBlock ?? this.Blok.BlockManager.currentBlock;

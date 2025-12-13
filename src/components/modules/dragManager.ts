@@ -69,6 +69,16 @@ export default class DragManager extends Module {
   }
 
   /**
+   * Cancels any pending drag tracking without performing a drop
+   * Call this when something else (like opening a menu) should take precedence
+   */
+  public cancelTracking(): void {
+    if (this.dragState && !this.dragState.isDragging) {
+      this.cleanup();
+    }
+  }
+
+  /**
    * Bound event handlers for cleanup
    */
   private boundHandlers: {
@@ -98,7 +108,6 @@ export default class DragManager extends Module {
         return;
       }
 
-      e.preventDefault();
       this.startDragTracking(e, block);
     };
 

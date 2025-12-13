@@ -228,7 +228,14 @@ export default class CrossBlockSelection extends Module {
    */
   private onMouseOver = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
-    const { BlockManager, BlockSelection } = this.Blok;
+    const { BlockManager, BlockSelection, DragManager } = this.Blok;
+
+    /**
+     * Skip cross-block selection when a drag operation is in progress
+     */
+    if (DragManager.isDragging) {
+      return;
+    }
 
     /**
      * Probably, blok is not initialized yet

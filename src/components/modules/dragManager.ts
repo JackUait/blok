@@ -62,6 +62,13 @@ export default class DragManager extends Module {
   private dragState: DragState | null = null;
 
   /**
+   * Returns true if a drag operation is currently in progress
+   */
+  public get isDragging(): boolean {
+    return this.dragState?.isDragging ?? false;
+  }
+
+  /**
    * Bound event handlers for cleanup
    */
   private boundHandlers: {
@@ -172,17 +179,13 @@ export default class DragManager extends Module {
 
     const { startX, startY, isDragging, previewElement } = this.dragState;
 
-    // Check if we've passed the drag threshold
-    if (!isDragging) {
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+    // Check if we've passed the drag threshold and start actual drag
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const shouldStartDrag = !isDragging && distance >= DRAG_CONFIG.dragThreshold;
 
-      if (distance < DRAG_CONFIG.dragThreshold) {
-        return;
-      }
-
-      // Start actual drag
+    if (shouldStartDrag) {
       this.startDrag();
     }
 
@@ -321,7 +324,7 @@ export default class DragManager extends Module {
    * Handles mouse up to complete or cancel drag
    * @param e - Mouse event
    */
-  private onMouseUp(e: MouseEvent): void {
+  private onMouseUp(_e: MouseEvent): void {
     if (!this.dragState) {
       return;
     }
@@ -363,15 +366,17 @@ export default class DragManager extends Module {
     const toIndex = fromIndex < baseIndex ? baseIndex - 1 : baseIndex;
 
     // Only move if position actually changed
-    if (fromIndex !== toIndex) {
-      this.Blok.BlockManager.move(toIndex, fromIndex, false);
+    if (fromIndex === toIndex) {
+      return;
+    }
 
-      // Select the moved block to provide visual feedback
-      const movedBlock = this.Blok.BlockManager.getBlockByIndex(toIndex);
+    this.Blok.BlockManager.move(toIndex, fromIndex, false);
 
-      if (movedBlock) {
-        this.Blok.BlockSelection.selectBlock(movedBlock);
-      }
+    // Select the moved block to provide visual feedback
+    const movedBlock = this.Blok.BlockManager.getBlockByIndex(toIndex);
+
+    if (movedBlock) {
+      this.Blok.BlockSelection.selectBlock(movedBlock);
     }
 
     // Re-open toolbar on the dropped block

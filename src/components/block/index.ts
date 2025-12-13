@@ -35,7 +35,6 @@ import {
   BLOK_ELEMENT_CONTENT_SELECTOR,
   BLOK_SELECTED_ATTR,
   BLOK_STRETCHED_ATTR,
-  BLOK_DRAG_HANDLE_SELECTOR,
 } from '../constants';
 import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
@@ -358,7 +357,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   private setupDragAndDrop(): void {
     /** Find the drag handle element (settings toggler button) */
-    const dragHandle = this.holder.closest('[data-blok-interface]')?.querySelector(BLOK_DRAG_HANDLE_SELECTOR);
 
     /**
      * Drag handle might not be available immediately if the toolbar moves to a different block.

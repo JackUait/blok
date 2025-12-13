@@ -276,31 +276,23 @@ export default class BlockManager extends Module {
     const targetIndex = this.getBlockIndex(targetBlock);
 
     /** Calculate the new index based on drop position */
-    let toIndex: number;
-
-    if (edge === 'top') {
-      /** Drop before the target block */
-      toIndex = targetIndex;
-    } else {
-      /** Drop after the target block (default for 'bottom' or undefined) */
-      toIndex = targetIndex + 1;
-    }
+    const baseIndex = edge === 'top' ? targetIndex : targetIndex + 1;
 
     /** Adjust index if moving from before the target */
-    if (fromIndex < toIndex) {
-      toIndex -= 1;
-    }
+    const toIndex = fromIndex < baseIndex ? baseIndex - 1 : baseIndex;
 
     /** Only move if position actually changed */
-    if (fromIndex !== toIndex) {
-      this.move(toIndex, fromIndex, false);
+    if (fromIndex === toIndex) {
+      return;
+    }
 
-      /** Select the moved block to provide visual feedback */
-      const movedBlock = this.getBlockByIndex(toIndex);
+    this.move(toIndex, fromIndex, false);
 
-      if (movedBlock) {
-        this.Blok.BlockSelection.selectBlock(movedBlock);
-      }
+    /** Select the moved block to provide visual feedback */
+    const movedBlock = this.getBlockByIndex(toIndex);
+
+    if (movedBlock) {
+      this.Blok.BlockSelection.selectBlock(movedBlock);
     }
   }
 

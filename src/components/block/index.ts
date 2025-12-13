@@ -129,7 +129,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * Tailwind styles for the Block elements
    */
   private static readonly styles = {
-    wrapper: 'relative opacity-100 animate-fade-in first:mt-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
+    wrapper: 'relative opacity-100 animate-fade-in my-[-0.5em] py-[0.5em] first:mt-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
     content: 'relative mx-auto transition-colors duration-150 ease-out max-w-content',
     contentSelected: 'bg-selection rounded-[4px] [&_[contenteditable]]:select-none [&_img]:opacity-55 [&_[data-blok-tool=stub]]:opacity-55',
     contentStretched: 'max-w-none',
@@ -375,7 +375,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
           {
             input,
             element,
-            allowedEdges: ['top', 'bottom'],
+            allowedEdges: ['bottom'],
           }
         );
 

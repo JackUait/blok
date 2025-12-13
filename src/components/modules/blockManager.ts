@@ -8,11 +8,7 @@ import Block, { BlockToolAPI } from '../block';
 import Module from '../__module';
 import $ from '../dom';
 import * as _ from '../utils';
-import * as tooltip from '../utils/tooltip';
 import Blocks from '../blocks';
-import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element';
-import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import BlockAPI from '../block/api';
@@ -25,7 +21,7 @@ import { BlockChanged } from '../events';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
 import PromiseQueue from '../utils/promise-queue';
-import { BLOK_DRAGGING_ATTR, BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
+import { BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
 
 type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
@@ -173,16 +169,6 @@ export default class BlockManager extends Module {
   private _blocks: BlocksStore | null = null;
 
   /**
-   * Cleanup function for Pragmatic Drag and Drop monitor
-   */
-  private dragMonitorCleanup: (() => void) | null = null;
-
-  /**
-   * Cleanup function for auto-scroll
-   */
-  private autoScrollCleanup: (() => void) | null = null;
-
-  /**
    * Should be called after Blok.UI preparation
    * Define this._blocks property
    */
@@ -212,98 +198,6 @@ export default class BlockManager extends Module {
         this.Blok.BlockEvents.handleCommandC(event as ClipboardEvent);
       }
     );
-
-    this.setupDragAndDrop();
-  }
-
-  /**
-   * Sets up Pragmatic Drag and Drop for block reordering
-   */
-  private setupDragAndDrop(): void {
-    const redactor = this.Blok.UI.nodes.redactor;
-
-    /** Global drag monitor to track all drag operations */
-    this.dragMonitorCleanup = monitorForElements({
-      canMonitor: ({ source }) => {
-        /** Only monitor drags that originate from blocks in this editor */
-        const blockId = source.data.blockId;
-
-        return typeof blockId === 'string' && this.getBlockById(blockId) !== undefined;
-      },
-      onDragStart: () => {
-        this.Blok.UI.nodes.wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
-        this.Blok.BlockSelection.clearSelection();
-        tooltip.hide(true);
-        this.Blok.Toolbar.close();
-      },
-      onDrop: ({ source, location }) => {
-        this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_DRAGGING_ATTR);
-
-        const dropTarget = location.current.dropTargets[0];
-
-        if (!dropTarget) {
-          return;
-        }
-
-        const sourceBlockId = source.data.blockId as string;
-        const targetBlockId = dropTarget.data.blockId as string;
-        const extractedEdge = extractClosestEdge(dropTarget.data);
-        const edge = (extractedEdge === 'top' || extractedEdge === 'bottom') ? extractedEdge : undefined;
-
-        this.handleBlockDrop(sourceBlockId, targetBlockId, edge);
-
-        /** Re-open toolbar on the dropped block */
-        const droppedBlock = this.getBlockById(sourceBlockId);
-
-        if (droppedBlock) {
-          this.Blok.Toolbar.skipNextSettingsToggle();
-          this.Blok.Toolbar.moveAndOpen(droppedBlock);
-        }
-      },
-    });
-
-    /** Auto-scroll when dragging near edges */
-    this.autoScrollCleanup = autoScrollForElements({
-      element: redactor,
-    });
-  }
-
-  /**
-   * Handles the drop of a block onto another block
-   * @param sourceBlockId - ID of the block being dragged
-   * @param targetBlockId - ID of the block being dropped onto
-   * @param edge - Which edge of the target block ('top' or 'bottom')
-   */
-  private handleBlockDrop(sourceBlockId: string, targetBlockId: string, edge: 'top' | 'bottom' | undefined): void {
-    const sourceBlock = this.getBlockById(sourceBlockId);
-    const targetBlock = this.getBlockById(targetBlockId);
-
-    if (!sourceBlock || !targetBlock) {
-      return;
-    }
-
-    const fromIndex = this.getBlockIndex(sourceBlock);
-    const targetIndex = this.getBlockIndex(targetBlock);
-
-    /** Calculate the new index based on drop position */
-    const baseIndex = edge === 'top' ? targetIndex : targetIndex + 1;
-
-    /** Adjust index if moving from before the target */
-    const toIndex = fromIndex < baseIndex ? baseIndex - 1 : baseIndex;
-
-    /** Only move if position actually changed */
-    if (fromIndex === toIndex) {
-      return;
-    }
-
-    this.move(toIndex, fromIndex, false);
-
-    /** Select the moved block to provide visual feedback */
-    const movedBlock = this.getBlockByIndex(toIndex);
-
-    if (movedBlock) {
-      this.Blok.BlockSelection.selectBlock(movedBlock);
-    }
   }
 
   /**
@@ -1183,16 +1077,6 @@ export default class BlockManager extends Module {
    * This is called when blok is destroyed
    */
   public async destroy(): Promise<void> {
-    if (this.dragMonitorCleanup) {
-      this.dragMonitorCleanup();
-      this.dragMonitorCleanup = null;
-    }
-
-    if (this.autoScrollCleanup) {
-      this.autoScrollCleanup();
-      this.autoScrollCleanup = null;
-    }
-
     await Promise.all(this.blocks.map((block) => {
       return block.destroy();
     }));

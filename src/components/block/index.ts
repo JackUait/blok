@@ -36,11 +36,7 @@ import {
   BLOK_SELECTED_ATTR,
   BLOK_STRETCHED_ATTR,
 } from '../constants';
-import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview';
-import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/element/pointer-outside-of-preview';
-import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
-import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
+import type DragManager from '../modules/dragManager';
 
 /**
  * Interface describes Block class constructor argument
@@ -259,15 +255,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   private draggableCleanup: (() => void) | null = null;
 
-  /**
-   * Cleanup function for drop target behavior
-   */
-  private dropTargetCleanup: (() => void) | null = null;
-
-  /**
-   * Current closest edge during drag hover
-   */
-  private currentClosestEdge: Edge | null = null;
 
   /**
    * @param options - block constructor options
@@ -344,132 +331,22 @@ export default class Block extends EventsDispatcher<BlockEvents> {
        */
       this.toggleInputsEmptyMark();
 
-      /**
-       * Set up drag and drop behavior for this block
-       */
-      if (!readOnly) {
-        this.setupDragAndDrop();
-      }
     });
-  }
-
-  /**
-   * Sets up Pragmatic Drag and Drop for this block
-   * Makes the block draggable (via drag handle) and a drop target
-   */
-  private setupDragAndDrop(): void {
-    /** Find the drag handle element (settings toggler button) */
-
-    /**
-     * Drag handle might not be available immediately if the toolbar moves to a different block.
-     * The draggable will be set up when the toolbar moves to this block.
-     * For now, we only set up the drop target.
-     */
-
-    /** Set up drop target on the block holder */
-    this.dropTargetCleanup = dropTargetForElements({
-      element: this.holder,
-      getData: ({ input, element }) => {
-        const data = attachClosestEdge(
-          { blockId: this.id },
-          {
-            input,
-            element,
-            allowedEdges: ['bottom'],
-          }
-        );
-
-        return data;
-      },
-      onDragEnter: ({ self }) => {
-        const edge = extractClosestEdge(self.data);
-
-        this.currentClosestEdge = edge;
-        this.updateDropIndicator(edge);
-      },
-      onDrag: ({ self }) => {
-        const edge = extractClosestEdge(self.data);
-
-        if (edge !== this.currentClosestEdge) {
-          this.currentClosestEdge = edge;
-          this.updateDropIndicator(edge);
-        }
-      },
-      onDragLeave: () => {
-        this.currentClosestEdge = null;
-        this.updateDropIndicator(null);
-      },
-      onDrop: () => {
-        this.currentClosestEdge = null;
-        this.updateDropIndicator(null);
-      },
-    });
-  }
-
-  /**
-   * Updates the drop indicator visual feedback
-   * @param edge - The edge to show indicator on, or null to hide
-   */
-  private updateDropIndicator(edge: Edge | null): void {
-    /** Remove any existing indicators */
-    this.holder.removeAttribute('data-drop-indicator');
-
-    if (edge) {
-      this.holder.setAttribute('data-drop-indicator', edge);
-    }
   }
 
   /**
    * Makes this block draggable using the provided drag handle element
    * Called by the toolbar when it moves to this block
    * @param dragHandle - The element to use as the drag handle
+   * @param dragManager - DragManager instance to handle drag operations
    */
-  public setupDraggable(dragHandle: HTMLElement): void {
+  public setupDraggable(dragHandle: HTMLElement, dragManager: DragManager): void {
     /** Clean up any existing draggable */
     this.cleanupDraggable();
 
-    /** Store reference for cleanup */
-    this.currentDragHandle = dragHandle;
-
-    /** Set the draggable attribute - required for native HTML5 drag and drop */
-    dragHandle.setAttribute('draggable', 'true');
-
-    this.draggableCleanup = draggable({
-      element: dragHandle,
-      getInitialData: () => ({
-        blockId: this.id,
-      }),
-      onGenerateDragPreview: ({ nativeSetDragImage }) => {
-        if (this.contentElement === null) {
-          return;
-        }
-
-        const contentElement = this.contentElement;
-        const isStretched = this.stretched;
-
-        /**
-         * Use the block content element as drag image, positioned 20px to the right of cursor
-         */
-        setCustomNativeDragPreview({
-          nativeSetDragImage,
-          getOffset: pointerOutsideOfPreview({ x: '20px', y: '0px' }),
-          render({ container }) {
-            const clone = contentElement.cloneNode(true) as HTMLElement;
-
-            /** Remove selection styling from the clone */
-            clone.className = twMerge(Block.styles.content, isStretched ? Block.styles.contentStretched : '');
-
-            container.appendChild(clone);
-          },
-        });
-      },
-    });
+    /** Set up drag handling via DragManager (pointer-based, not native HTML5 drag) */
+    this.draggableCleanup = dragManager.setupDragHandle(dragHandle, this);
   }
-
-  /**
-   * Reference to the current drag handle element
-   */
-  private currentDragHandle: HTMLElement | null = null;
 
   /**
    * Cleans up the draggable behavior
@@ -479,10 +356,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     if (this.draggableCleanup) {
       this.draggableCleanup();
       this.draggableCleanup = null;
-    }
-    if (this.currentDragHandle) {
-      this.currentDragHandle.removeAttribute('draggable');
-      this.currentDragHandle = null;
     }
   }
 
@@ -837,10 +710,6 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     if (this.draggableCleanup) {
       this.draggableCleanup();
       this.draggableCleanup = null;
-    }
-    if (this.dropTargetCleanup) {
-      this.dropTargetCleanup();
-      this.dropTargetCleanup = null;
     }
 
     super.destroy();

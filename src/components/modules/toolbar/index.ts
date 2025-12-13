@@ -419,7 +419,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
 
     /** Set up draggable on the target block using the settings toggler as drag handle */
     if (settingsToggler && !this.Blok.ReadOnly.isEnabled) {
-      targetBlock.setupDraggable(settingsToggler);
+      targetBlock.setupDraggable(settingsToggler, this.Blok.DragManager);
     }
 
     /**
@@ -936,7 +936,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
        * Stores the initial mouse position to distinguish between click and drag
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
-        e.stopPropagation();
         tooltip.hide(true);
 
         const mouseEvent = e as MouseEvent;

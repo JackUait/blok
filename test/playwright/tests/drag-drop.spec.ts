@@ -15,9 +15,8 @@ const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 
 /**
- * Helper function to perform drag and drop using native HTML5 Drag and Drop API events.
- * This is required because Pragmatic Drag and Drop uses native HTML5 DnD events,
- * which Playwright's mouse-based drag simulation doesn't properly trigger.
+ * Helper function to perform drag and drop using pointer-based mouse events.
+ * This uses mousedown/mousemove/mouseup events which is how our custom DragManager works.
  * @param page Playwright page instance used to perform drag actions.
  * @param sourceLocator Locator for the element that will be dragged (the drag handle).
  * @param targetLocator Locator for the target element where the source will be dropped.
@@ -40,8 +39,7 @@ const performDragDrop = async (
   const sourceY = sourceBox.y + sourceBox.height / 2;
   const targetX = targetBox.x + targetBox.width / 2;
   /**
-   * For edge detection with Pragmatic DnD's closest-edge algorithm:
-   * The algorithm determines which edge (top or bottom) is closest to the cursor.
+   * For edge detection:
    * For 'top', we position just 1px from the top edge to ensure unambiguous edge detection.
    * For 'bottom', we position just 1px from the bottom edge.
    */
@@ -50,108 +48,24 @@ const performDragDrop = async (
     : targetBox.y + targetBox.height - 1; // Very close to the bottom edge
 
   /**
-   * Dispatch native HTML5 drag events in the browser context.
-   * This is the recommended way to test Pragmatic Drag and Drop.
+   * Perform pointer-based drag using Playwright's mouse API.
+   * This matches how our custom DragManager handles drag operations.
    */
-  await page.evaluate(
-    async ({ sourceX, sourceY, targetX, targetY }) => {
-      const sleep = (ms: number): Promise<void> =>
-        new Promise(resolve => setTimeout(resolve, ms));
+  // Move to source and press down
+  await page.mouse.move(sourceX, sourceY);
+  await page.mouse.down();
 
-      // Get the source element (drag handle with draggable="true")
-      let sourceElement = document.elementFromPoint(sourceX, sourceY) as HTMLElement;
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+  await page.waitForTimeout(50);
 
-      // Find the actual draggable element (it should have draggable="true")
-      while (sourceElement && sourceElement.getAttribute('draggable') !== 'true') {
-        sourceElement = sourceElement.parentElement as HTMLElement;
-      }
+  // Move to target position with steps to trigger drag threshold
+  await page.mouse.move(targetX, targetY, { steps: 15 });
 
-      if (!sourceElement) {
-        throw new Error('Could not find draggable element');
-      }
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drop target detection
+  await page.waitForTimeout(50);
 
-      // Get the target element (need to find the block holder with data-blok-element)
-      let targetElement = document.elementFromPoint(targetX, targetY) as HTMLElement;
-
-      if (!targetElement) {
-        throw new Error('Could not find target element');
-      }
-
-      // Find the block holder (the drop target) by looking for the data-blok-element attribute
-      while (targetElement && !targetElement.hasAttribute('data-blok-element')) {
-        targetElement = targetElement.parentElement as HTMLElement;
-      }
-
-      if (!targetElement) {
-        throw new Error('Could not find block holder element');
-      }
-
-      // Create DataTransfer - this is crucial for native HTML5 DnD
-      const dataTransfer = new DataTransfer();
-
-      dataTransfer.effectAllowed = 'move';
-
-      // Create and dispatch dragstart on source
-      const dragStartEvent = new DragEvent('dragstart', {
-        bubbles: true,
-        cancelable: true,
-        dataTransfer,
-        clientX: sourceX,
-        clientY: sourceY,
-      });
-
-      sourceElement.dispatchEvent(dragStartEvent);
-      await sleep(50);
-
-      // Create and dispatch dragenter on target
-      const dragEnterEvent = new DragEvent('dragenter', {
-        bubbles: true,
-        cancelable: true,
-        dataTransfer,
-        clientX: targetX,
-        clientY: targetY,
-      });
-
-      targetElement.dispatchEvent(dragEnterEvent);
-      await sleep(10);
-
-      // Create and dispatch dragover on target (required for drop to work)
-      const dragOverEvent = new DragEvent('dragover', {
-        bubbles: true,
-        cancelable: true,
-        dataTransfer,
-        clientX: targetX,
-        clientY: targetY,
-      });
-
-      targetElement.dispatchEvent(dragOverEvent);
-      await sleep(10);
-
-      // Create and dispatch drop on target
-      const dropEvent = new DragEvent('drop', {
-        bubbles: true,
-        cancelable: true,
-        dataTransfer,
-        clientX: targetX,
-        clientY: targetY,
-      });
-
-      targetElement.dispatchEvent(dropEvent);
-      await sleep(10);
-
-      // Create and dispatch dragend on source
-      const dragEndEvent = new DragEvent('dragend', {
-        bubbles: true,
-        cancelable: false,
-        dataTransfer,
-        clientX: targetX,
-        clientY: targetY,
-      });
-
-      sourceElement.dispatchEvent(dragEndEvent);
-    },
-    { sourceX, sourceY, targetX, targetY }
-  );
+  // Release to complete the drop
+  await page.mouse.up();
 
   // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for state updates
   await page.waitForTimeout(100);

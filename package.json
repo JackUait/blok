@@ -81,7 +81,6 @@
     "@storybook/html-vite": "10.1.1",
     "@types/eslint-plugin-tailwindcss": "3",
     "@types/node": "22.19.0",
-    "@types/sortablejs": "1.15.9",
     "@vitest/browser-playwright": "4.0.14",
     "@vitest/coverage-v8": "4.0.14",
     "@vitest/ui": "4.0.14",
@@ -114,9 +113,11 @@
     "yaml": "2.8.1"
   },
   "dependencies": {
+    "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
+    "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "^2.1.2",
+    "@atlaskit/pragmatic-drag-and-drop-hitbox": "^1.1.0",
     "@types/lodash": "4.17.21",
     "lodash": "4.17.21",
-    "sortablejs": "1.15.6",
     "tailwind-merge": "3.4.0"
   }
 }

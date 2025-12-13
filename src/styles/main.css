@@ -73,3 +73,23 @@
     @apply text-item-confirm-bg transition-colors;
   }
 }
+
+/**
+ * Drop indicator styles for drag and drop
+ * Shows a visual line at the top or bottom of a block during drag
+ */
+[data-drop-indicator] {
+  @apply relative;
+}
+
+[data-drop-indicator]::before {
+  @apply content-[''] absolute left-0 right-0 h-0.5 bg-active-icon pointer-events-none z-10;
+}
+
+[data-drop-indicator="top"]::before {
+  @apply top-0 -translate-y-1/2;
+}
+
+[data-drop-indicator="bottom"]::before {
+  @apply bottom-0 translate-y-1/2;
+}

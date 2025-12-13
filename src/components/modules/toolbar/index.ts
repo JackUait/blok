@@ -381,11 +381,16 @@ export default class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
+    /** Clean up draggable on previous block if any */
+    if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
+      this.hoveredBlock.cleanupDraggable();
+    }
+
     this.hoveredBlock = targetBlock;
     this.hoveredTarget = target ?? null;
     this.lastToolbarY = null; // Reset cached position when moving to a new block
 
-    const { wrapper, plusButton } = this.nodes;
+    const { wrapper, plusButton, settingsToggler } = this.nodes;
 
     if (!wrapper || !plusButton) {
       return;
@@ -405,6 +410,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.lastToolbarY = newToolbarY;
     wrapper.style.top = `${newToolbarY}px`;
     targetBlockHolder.appendChild(wrapper);
+
+    /** Set up draggable on the target block using the settings toggler as drag handle */
+    if (settingsToggler && !this.Blok.ReadOnly.isEnabled) {
+      targetBlock.setupDraggable(settingsToggler);
+    }
 
     /**
      * Apply content offset for nested elements (e.g., nested list items)

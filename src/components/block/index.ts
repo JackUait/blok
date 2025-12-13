@@ -35,7 +35,11 @@ import {
   BLOK_ELEMENT_CONTENT_SELECTOR,
   BLOK_SELECTED_ATTR,
   BLOK_STRETCHED_ATTR,
+  BLOK_DRAG_HANDLE_SELECTOR,
 } from '../constants';
+import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
+import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
+import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 
 /**
  * Interface describes Block class constructor argument
@@ -250,6 +254,21 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private readonly blockAPI: BlockAPIInterface;
 
   /**
+   * Cleanup function for draggable behavior
+   */
+  private draggableCleanup: (() => void) | null = null;
+
+  /**
+   * Cleanup function for drop target behavior
+   */
+  private dropTargetCleanup: (() => void) | null = null;
+
+  /**
+   * Current closest edge during drag hover
+   */
+  private currentClosestEdge: Edge | null = null;
+
+  /**
    * @param options - block constructor options
    * @param [options.id] - block's id. Will be generated if omitted.
    * @param options.data - Tool's initial data
@@ -323,7 +342,124 @@ export default class Block extends EventsDispatcher<BlockEvents> {
        * It can be useful for developers, for example for correct placeholder behavior
        */
       this.toggleInputsEmptyMark();
+
+      /**
+       * Set up drag and drop behavior for this block
+       */
+      if (!readOnly) {
+        this.setupDragAndDrop();
+      }
     });
+  }
+
+  /**
+   * Sets up Pragmatic Drag and Drop for this block
+   * Makes the block draggable (via drag handle) and a drop target
+   */
+  private setupDragAndDrop(): void {
+    /** Find the drag handle element (settings toggler button) */
+    const dragHandle = this.holder.closest('[data-blok-interface]')?.querySelector(BLOK_DRAG_HANDLE_SELECTOR);
+
+    /**
+     * Drag handle might not be available immediately if the toolbar moves to a different block.
+     * The draggable will be set up when the toolbar moves to this block.
+     * For now, we only set up the drop target.
+     */
+
+    /** Set up drop target on the block holder */
+    this.dropTargetCleanup = dropTargetForElements({
+      element: this.holder,
+      getData: ({ input, element }) => {
+        const data = attachClosestEdge(
+          { blockId: this.id },
+          {
+            input,
+            element,
+            allowedEdges: ['top', 'bottom'],
+          }
+        );
+
+        return data;
+      },
+      onDragEnter: ({ self }) => {
+        const edge = extractClosestEdge(self.data);
+
+        this.currentClosestEdge = edge;
+        this.updateDropIndicator(edge);
+      },
+      onDrag: ({ self }) => {
+        const edge = extractClosestEdge(self.data);
+
+        if (edge !== this.currentClosestEdge) {
+          this.currentClosestEdge = edge;
+          this.updateDropIndicator(edge);
+        }
+      },
+      onDragLeave: () => {
+        this.currentClosestEdge = null;
+        this.updateDropIndicator(null);
+      },
+      onDrop: () => {
+        this.currentClosestEdge = null;
+        this.updateDropIndicator(null);
+      },
+    });
+  }
+
+  /**
+   * Updates the drop indicator visual feedback
+   * @param edge - The edge to show indicator on, or null to hide
+   */
+  private updateDropIndicator(edge: Edge | null): void {
+    /** Remove any existing indicators */
+    this.holder.removeAttribute('data-drop-indicator');
+
+    if (edge) {
+      this.holder.setAttribute('data-drop-indicator', edge);
+    }
+  }
+
+  /**
+   * Makes this block draggable using the provided drag handle element
+   * Called by the toolbar when it moves to this block
+   * @param dragHandle - The element to use as the drag handle
+   */
+  public setupDraggable(dragHandle: HTMLElement): void {
+    /** Clean up any existing draggable */
+    this.cleanupDraggable();
+
+    /** Store reference for cleanup */
+    this.currentDragHandle = dragHandle;
+
+    /** Set the draggable attribute - required for native HTML5 drag and drop */
+    dragHandle.setAttribute('draggable', 'true');
+
+    this.draggableCleanup = draggable({
+      element: dragHandle,
+      getInitialData: () => ({
+        blockId: this.id,
+      }),
+    });
+  }
+
+  /**
+   * Reference to the current drag handle element
+   */
+  private currentDragHandle: HTMLElement | null = null;
+
+  /**
+   * Cleans up the draggable behavior
+   * Called when the toolbar moves away from this block
+   */
+  public cleanupDraggable(): void {
+    if (this.draggableCleanup) {
+      this.draggableCleanup();
+      this.draggableCleanup = null;
+    }
+    if (this.currentDragHandle) {
+      this.currentDragHandle.removeAttribute('draggable');
+      this.currentDragHandle = null;
+    }
   }
 
   /**
@@ -672,6 +808,16 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   public destroy(): void {
     this.unwatchBlockMutations();
     this.removeInputEvents();
+
+    /** Clean up drag and drop */
+    if (this.draggableCleanup) {
+      this.draggableCleanup();
+      this.draggableCleanup = null;
+    }
+    if (this.dropTargetCleanup) {
+      this.dropTargetCleanup();
+      this.dropTargetCleanup = null;
+    }
 
     super.destroy();
 

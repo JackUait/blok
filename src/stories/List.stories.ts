@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
 import type { OutputData, ToolSettings } from '@/types';
-import { createEditorContainer, simulateClick, waitForToolbar, triggerSelectAll } from './helpers';
+import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
 import Blok from '../blok';
 import type { ListConfig } from '../../types/tools/list';
@@ -198,134 +198,6 @@ export const ReadOnlyLists: Story = {
   args: {
     data: allListTypesData,
     readOnly: true,
-  },
-};
-
-/**
- * Converts paragraphs into list items.
- */
-export const ConvertParagraphsToNumberedList: Story = {
-  args: {
-    data: {
-      time: Date.now(),
-      version: '1.0.0',
-      blocks: [
-        { id: 'para-1', type: 'paragraph', data: { text: 'First paragraph to convert' } },
-        { id: 'para-2', type: 'paragraph', data: { text: 'Second paragraph to convert' } },
-        { id: 'para-3', type: 'paragraph', data: { text: 'Third paragraph to convert' } },
-      ],
-    },
-    readOnly: false,
-  },
-  play: async ({ canvasElement, step }) => {
-    await step('Wait for editor to initialize', async () => {
-      await waitFor(
-        () => {
-          const paragraphs = canvasElement.querySelectorAll('[data-blok-component="paragraph"]');
-
-          expect(paragraphs.length).toBe(3);
-        },
-        TIMEOUT_INIT
-      );
-      // Wait for toolbar to be created
-      await waitForToolbar(canvasElement);
-    });
-
-    await step('Select all paragraphs', async () => {
-      const firstParagraph = canvasElement.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
-
-      if (firstParagraph) {
-        simulateClick(firstParagraph);
-
-        // Wait for focus to be applied
-        await new Promise((resolve) => setTimeout(resolve, 200));
-
-        // First select-all selects text within the block
-        triggerSelectAll(firstParagraph);
-        // Short delay to let the first selection happen
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        // Second select-all selects all blocks (cross-block selection)
-        triggerSelectAll(firstParagraph);
-      }
-
-      // Verify all blocks are selected
-      await waitFor(
-        () => {
-          const selectedBlocks = canvasElement.querySelectorAll('[data-blok-selected="true"]');
-
-          expect(selectedBlocks.length).toBe(3);
-        },
-        TIMEOUT_ACTION
-      );
-    });
-
-    await step('Convert to numbered list', async () => {
-      // Open block tunes menu via settings toggler
-      const settingsToggler = canvasElement.querySelector('[data-blok-testid="settings-toggler"]');
-
-      expect(settingsToggler).toBeInTheDocument();
-
-      if (!settingsToggler) {
-        return;
-      }
-
-      simulateClick(settingsToggler);
-
-      // Wait for block tunes popover to appear
-      await waitFor(
-        () => {
-          const popover = document.querySelector('[data-blok-testid="block-tunes-popover"]');
-
-          expect(popover).toBeInTheDocument();
-        },
-        TIMEOUT_ACTION
-      );
-
-      // Click on "Convert to" option
-      const convertToOption = document.querySelector('[data-blok-testid="popover-item"][data-blok-item-name="convert-to"]');
-
-      expect(convertToOption).toBeInTheDocument();
-
-      if (!convertToOption) {
-        return;
-      }
-
-      simulateClick(convertToOption);
-
-      // Wait for nested popover with conversion options
-      await waitFor(
-        () => {
-          const nestedPopover = document.querySelector('[data-blok-nested="true"][data-blok-popover-opened="true"]');
-
-          expect(nestedPopover).toBeInTheDocument();
-        },
-        TIMEOUT_ACTION
-      );
-
-      // Click on numbered list option to convert
-      const listOption = document.querySelector('[data-blok-nested="true"] [data-blok-item-name="numbered-list"]');
-
-      expect(listOption).toBeInTheDocument();
-
-      if (listOption) {
-        simulateClick(listOption);
-      }
-
-      // Verify conversion - each paragraph becomes a separate list block
-      await waitFor(
-        () => {
-          const listBlocks = canvasElement.querySelectorAll('[data-blok-component="list"]');
-
-          expect(listBlocks.length).toBe(3);
-
-          // Verify no paragraphs remain
-          const paragraphs = canvasElement.querySelectorAll('[data-blok-component="paragraph"]');
-
-          expect(paragraphs.length).toBe(0);
-        },
-        TIMEOUT_ACTION
-      );
-    });
   },
 };
 

@@ -34,12 +34,6 @@ export interface Selection {
   clearFakeBackground(): void;
 
   /**
-   * Checks if fake background is currently active
-   * @returns {boolean} true if fake background is enabled and has a saved selection range
-   */
-  isFakeBackgroundActive(): boolean;
-
-  /**
    * Save selection range.
    * Allows to save selection to be able to temporally move focus away.
    * Might be useful for inline tools

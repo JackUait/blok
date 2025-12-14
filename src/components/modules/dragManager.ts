@@ -25,7 +25,7 @@ const PREVIEW_STYLES = {
  */
 const DRAG_CONFIG = {
   /** Offset from cursor to preview element */
-  previewOffsetX: 20,
+  previewOffsetX: 10,
   previewOffsetY: 0,
   /** Minimum distance to start drag (prevents accidental drags) */
   dragThreshold: 5,
@@ -187,6 +187,13 @@ export default class DragManager extends Module {
     // Reset styles on clone
     clone.className = twMerge(PREVIEW_STYLES.content, isStretched ? 'max-w-none' : '');
 
+    // Reset margin on the tool's rendered element (first child) to prevent offset
+    const toolElement = clone.firstElementChild as HTMLElement | null;
+
+    if (toolElement) {
+      toolElement.className = twMerge(toolElement.className, '!m-0');
+    }
+
     preview.appendChild(clone);
 
     return preview;
@@ -251,6 +258,13 @@ export default class DragManager extends Module {
       const clone = info.element.cloneNode(true) as HTMLElement;
 
       clone.className = twMerge(PREVIEW_STYLES.content, block.stretched ? 'max-w-none' : '');
+
+      // Reset margin on the tool's rendered element (first child) to prevent offset
+      const toolElement = clone.firstElementChild as HTMLElement | null;
+
+      if (toolElement) {
+        toolElement.className = twMerge(toolElement.className, '!m-0');
+      }
 
       // Position with cumulative offset
       clone.style.position = 'absolute';

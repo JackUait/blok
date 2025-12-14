@@ -357,7 +357,7 @@ describe('RectangleSelection', () => {
 
     internal.processMouseDown(primaryEvent);
 
-    expect(startSelectionSpy).toHaveBeenCalledWith(150, 200);
+    expect(startSelectionSpy).toHaveBeenCalledWith(150, 200, primaryEvent.target);
 
     startSelectionSpy.mockClear();
 

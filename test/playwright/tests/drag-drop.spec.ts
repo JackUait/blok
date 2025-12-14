@@ -15,6 +15,23 @@ const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 
 /**
+ * Helper function to get bounding box and throw if it doesn't exist.
+ * @param locator Locator for the element.
+ * @returns Bounding box of the element.
+ */
+const getBoundingBox = async (
+  locator: ReturnType<Page['locator']>
+): Promise<{ x: number; y: number; width: number; height: number }> => {
+  const box = await locator.boundingBox();
+
+  if (!box) {
+    throw new Error('Could not get bounding box for element');
+  }
+
+  return box;
+};
+
+/**
  * Helper function to perform drag and drop using pointer-based mouse events.
  * This uses mousedown/mousemove/mouseup events which is how our custom DragManager works.
  * @param page Playwright page instance used to perform drag actions.
@@ -28,12 +45,8 @@ const performDragDrop = async (
   targetLocator: ReturnType<Page['locator']>,
   targetVerticalPosition: 'top' | 'bottom'
 ): Promise<void> => {
-  const sourceBox = await sourceLocator.boundingBox();
-  const targetBox = await targetLocator.boundingBox();
-
-  if (!sourceBox || !targetBox) {
-    throw new Error('Could not get bounding boxes for drag and drop');
-  }
+  const sourceBox = await getBoundingBox(sourceLocator);
+  const targetBox = await getBoundingBox(targetLocator);
 
   const sourceX = sourceBox.x + sourceBox.width / 2;
   const sourceY = sourceBox.y + sourceBox.height / 2;
@@ -309,5 +322,351 @@ test.describe('drag and drop', () => {
       'First block',
       'Second block',
     ]);
+  });
+
+  test('should drag multiple contiguous selected blocks together', async ({ page }) => {
+
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'Block 0' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 1' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 2' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 3' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 4' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Select blocks 1, 2, 3 using the BlockSelection API
+    await page.evaluate(() => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+      // Access blockSelection module via the module property
+      const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+      blockSelection.selectBlockByIndex(1);
+      blockSelection.selectBlockByIndex(2);
+      blockSelection.selectBlockByIndex(3);
+    });
+
+    // Hover over block 2 to show settings button
+    const block2 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 2' });
+
+    await block2.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Drag to the bottom of block 4
+    const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Block 4' });
+
+    await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+    // Verify the new order: blocks 1, 2, 3 moved to the end
+    await expect(page.getByTestId('block-wrapper')).toHaveText([
+      'Block 0',
+      'Block 4',
+      'Block 1',
+      'Block 2',
+      'Block 3',
+    ]);
+
+    // Verify data
+    const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+    expect(savedData?.blocks[0].data.text).toBe('Block 0');
+    expect(savedData?.blocks[1].data.text).toBe('Block 4');
+    expect(savedData?.blocks[2].data.text).toBe('Block 1');
+    expect(savedData?.blocks[3].data.text).toBe('Block 2');
+    expect(savedData?.blocks[4].data.text).toBe('Block 3');
+  });
+
+  test('should drag multiple non-contiguous selected blocks together', async ({ page }) => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'Block 0' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 1' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 2' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 3' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 4' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Select blocks 1, 3 using the BlockSelection API
+    await page.evaluate(() => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+      const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+      blockSelection.selectBlockByIndex(1);
+      blockSelection.selectBlockByIndex(3);
+    });
+
+    // Hover over block 3 to show settings button
+    const block3 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 3' });
+
+    await block3.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Drag to the top of block 0
+    const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Block 0' });
+
+    await performDragDrop(page, settingsButton, targetBlock, 'top');
+
+    // Verify the new order: blocks 1, 3 moved to the beginning (preserving their relative order)
+    await expect(page.getByTestId('block-wrapper')).toHaveText([
+      'Block 1',
+      'Block 3',
+      'Block 0',
+      'Block 2',
+      'Block 4',
+    ]);
+
+    // Verify data
+    const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+    expect(savedData?.blocks[0].data.text).toBe('Block 1');
+    expect(savedData?.blocks[1].data.text).toBe('Block 3');
+    expect(savedData?.blocks[2].data.text).toBe('Block 0');
+    expect(savedData?.blocks[3].data.text).toBe('Block 2');
+    expect(savedData?.blocks[4].data.text).toBe('Block 4');
+  });
+
+  test('should prevent dropping into the middle of a selection', async ({ page }) => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'Block 0' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 1' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 2' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 3' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Select blocks 1, 2, 3 using the BlockSelection API
+    await page.evaluate(() => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+      const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+      blockSelection.selectBlockByIndex(1);
+      blockSelection.selectBlockByIndex(2);
+      blockSelection.selectBlockByIndex(3);
+    });
+
+    // Hover over block 2 to show settings button
+    const block2 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 2' });
+
+    await block2.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Try to drag to block 2 (middle of selection) - should be prevented
+    await performDragDrop(page, settingsButton, block2, 'bottom');
+
+    // Verify the order did NOT change (drop was prevented)
+    await expect(page.getByTestId('block-wrapper')).toHaveText([
+      'Block 0',
+      'Block 1',
+      'Block 2',
+      'Block 3',
+    ]);
+
+    // Verify data
+    const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+    expect(savedData?.blocks[0].data.text).toBe('Block 0');
+    expect(savedData?.blocks[1].data.text).toBe('Block 1');
+    expect(savedData?.blocks[2].data.text).toBe('Block 2');
+    expect(savedData?.blocks[3].data.text).toBe('Block 3');
+  });
+
+  test('should show count badge in multi-block drag preview', async ({ page }) => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'Block 0' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 1' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 2' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 3' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 4' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Select blocks 1, 2, 3 using the BlockSelection API
+    await page.evaluate(() => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+      const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+      blockSelection.selectBlockByIndex(1);
+      blockSelection.selectBlockByIndex(2);
+      blockSelection.selectBlockByIndex(3);
+    });
+
+    // Hover over block 2
+    const block2 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 2' });
+
+    await block2.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Get source position
+    const settingsBox = await getBoundingBox(settingsButton);
+
+    // Start drag
+    await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+    await page.mouse.down();
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+    await page.waitForTimeout(50);
+
+    // Move a bit to trigger drag
+    await page.mouse.move(settingsBox.x + 50, settingsBox.y + 50, { steps: 10 });
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for preview to appear
+    await page.waitForTimeout(100);
+
+    // Verify count badge appears in the preview
+    const badge = page.getByText('3 blocks');
+
+    await expect(badge).toBeVisible();
+
+    // Clean up - release mouse
+    await page.mouse.up();
+  });
+
+  test('should drag single selected block using multi-block path', async ({ page }) => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'Block 0' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 1' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 2' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Select just block 1
+    const block1 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 1' });
+
+    await block1.click();
+
+    // Hover to show settings button
+    await block1.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Drag to the top of block 0
+    const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Block 0' });
+
+    await performDragDrop(page, settingsButton, targetBlock, 'top');
+
+    // Verify block 1 moved to the beginning
+    await expect(page.getByTestId('block-wrapper')).toHaveText([
+      'Block 1',
+      'Block 0',
+      'Block 2',
+    ]);
+
+    // Verify data
+    const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+    expect(savedData?.blocks[0].data.text).toBe('Block 1');
+    expect(savedData?.blocks[1].data.text).toBe('Block 0');
+    expect(savedData?.blocks[2].data.text).toBe('Block 2');
   });
 });

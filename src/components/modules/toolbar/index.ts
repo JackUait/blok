@@ -479,6 +479,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     const targetBlock = block ?? selectedBlocks[0];
 
+    /** Clean up draggable on previous block if any */
+    if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
+      this.hoveredBlock.cleanupDraggable();
+    }
+
     this.hoveredBlock = targetBlock;
     this.hoveredTarget = null; // No target for multi-block selection
     this.lastToolbarY = null; // Reset cached position when moving to a new block
@@ -496,6 +501,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.lastToolbarY = newToolbarY;
     wrapper.style.top = `${newToolbarY}px`;
     targetBlockHolder.appendChild(wrapper);
+
+    /** Set up draggable on the target block using the settings toggler as drag handle */
+    const { settingsToggler } = this.nodes;
+
+    if (settingsToggler && !this.Blok.ReadOnly.isEnabled) {
+      targetBlock.setupDraggable(settingsToggler, this.Blok.DragManager);
+    }
 
     /**
      * Reset content offset for multi-block selection

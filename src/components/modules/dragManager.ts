@@ -9,7 +9,7 @@ import Module from '../__module';
 import type Block from '../block';
 import $ from '../dom';
 import * as tooltip from '../utils/tooltip';
-import { BLOK_DRAGGING_ATTR, BLOK_ELEMENT_SELECTOR } from '../constants';
+import { BLOK_DRAGGING_ATTR, BLOK_DRAGGING_MULTI_ATTR, BLOK_ELEMENT_SELECTOR } from '../constants';
 import { twMerge } from '../utils/tw';
 
 /**
@@ -38,8 +38,12 @@ const DRAG_CONFIG = {
  * State of the current drag operation
  */
 interface DragState {
-  /** Block being dragged */
+  /** Primary block being dragged (the one with the drag handle) */
   sourceBlock: Block;
+  /** All blocks being dragged (single block or multiple selected blocks) */
+  sourceBlocks: Block[];
+  /** Whether this is a multi-block drag operation */
+  isMultiBlockDrag: boolean;
   /** Current drop target block */
   targetBlock: Block | null;
   /** Edge of target block ('top' or 'bottom') */
@@ -130,14 +134,25 @@ export default class DragManager extends Module {
       return;
     }
 
-    // Create preview element (hidden until drag threshold is passed)
-    const preview = this.createPreview(contentElement, block.stretched);
+    // Determine if this is a multi-block drag
+    const isBlockSelected = block.selected;
+    const selectedBlocks = isBlockSelected
+      ? this.Blok.BlockSelection.selectedBlocks
+      : [block];
+    const isMultiBlock = selectedBlocks.length > 1;
+
+    // Create appropriate preview (single or multi-block)
+    const preview = isMultiBlock
+      ? this.createMultiBlockPreview(selectedBlocks)
+      : this.createPreview(contentElement, block.stretched);
 
     preview.style.display = 'none';
     document.body.appendChild(preview);
 
     this.dragState = {
       sourceBlock: block,
+      sourceBlocks: selectedBlocks,
+      isMultiBlockDrag: isMultiBlock,
       targetBlock: null,
       targetEdge: null,
       previewElement: preview,
@@ -173,6 +188,91 @@ export default class DragManager extends Module {
     clone.className = twMerge(PREVIEW_STYLES.content, isStretched ? 'max-w-none' : '');
 
     preview.appendChild(clone);
+
+    return preview;
+  }
+
+  /**
+   * Creates a stacked preview element for multiple blocks
+   * @param blocks - Array of blocks to preview
+   * @returns Preview element with stacked blocks and count badge
+   */
+  private createMultiBlockPreview(blocks: Block[]): HTMLElement {
+    const preview = $.make('div', PREVIEW_STYLES.base);
+
+    // Get block holder dimensions to capture actual spacing
+    const blockInfo = blocks.map((block) => {
+      const holderRect = block.holder.getBoundingClientRect();
+      const contentElement = block.holder.querySelector('[data-blok-element-content]') as HTMLElement | null;
+
+      if (!contentElement) {
+        return { width: 0, height: 0, element: null, holderHeight: 0 };
+      }
+
+      const contentRect = contentElement.getBoundingClientRect();
+
+      return {
+        width: contentRect.width,
+        height: contentRect.height,
+        element: contentElement,
+        holderHeight: holderRect.height, // Includes margins/padding
+      };
+    });
+
+    // Calculate cumulative top positions using actual block holder heights
+    const positions = blockInfo.reduce<number[]>((acc, _, index) => {
+      if (index === 0) {
+        acc.push(0);
+      } else {
+        const previousTop = acc[index - 1];
+        const previousHolderHeight = blockInfo[index - 1].holderHeight;
+
+        acc.push(previousTop + previousHolderHeight);
+      }
+
+      return acc;
+    }, []);
+
+    // Calculate total dimensions
+    const maxWidth = Math.max(...blockInfo.map(info => info.width), 0);
+    const lastIndex = blockInfo.length - 1;
+    const totalHeight = lastIndex >= 0
+      ? positions[lastIndex] + blockInfo[lastIndex].height
+      : 0;
+
+    // Create stacked blocks
+    blocks.forEach((block, index) => {
+      const info = blockInfo[index];
+
+      if (!info.element) {
+        return;
+      }
+
+      const clone = info.element.cloneNode(true) as HTMLElement;
+
+      clone.className = twMerge(PREVIEW_STYLES.content, block.stretched ? 'max-w-none' : '');
+
+      // Position with cumulative offset
+      clone.style.position = 'absolute';
+      clone.style.top = `${positions[index]}px`;
+      clone.style.left = '0';
+      clone.style.zIndex = `${blocks.length - index}`;
+
+      preview.appendChild(clone);
+    });
+
+    // Set explicit dimensions on the preview container
+    // This is necessary because absolutely positioned children don't contribute to parent size
+    preview.style.width = `${maxWidth}px`;
+    preview.style.height = `${totalHeight}px`;
+
+    // Add count badge if more than 1 block
+    if (blocks.length > 1) {
+      const badge = $.make('div', 'absolute -top-2 -right-2 bg-[--color-primary] text-white rounded-xl px-2 py-0.5 text-xs font-bold pointer-events-none');
+
+      badge.textContent = `${blocks.length} blocks`;
+      preview.appendChild(badge);
+    }
 
     return preview;
   }
@@ -221,10 +321,21 @@ export default class DragManager extends Module {
     this.dragState.previewElement.style.display = 'block';
 
     // Set global dragging state
-    this.Blok.UI.nodes.wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
+    const wrapper = this.Blok.UI.nodes.wrapper;
 
-    // Clear selection and hide tooltips
-    this.Blok.BlockSelection.clearSelection();
+    wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
+
+    // Add multi-block dragging attribute if applicable
+    if (this.dragState.isMultiBlockDrag) {
+      wrapper.setAttribute(BLOK_DRAGGING_MULTI_ATTR, 'true');
+    }
+
+    // Clear selection for single-block drags only
+    // For multi-block drags, keep selection visible for visual feedback
+    if (!this.dragState.isMultiBlockDrag) {
+      this.Blok.BlockSelection.clearSelection();
+    }
+
     tooltip.hide(true);
     this.Blok.Toolbar.close();
   }
@@ -271,6 +382,14 @@ export default class DragManager extends Module {
     const targetBlock = this.Blok.BlockManager.blocks.find(b => b.holder === blockHolder);
 
     if (!targetBlock || targetBlock === this.dragState.sourceBlock) {
+      this.dragState.targetBlock = null;
+      this.dragState.targetEdge = null;
+
+      return;
+    }
+
+    // Prevent dropping into the middle of a multi-block selection
+    if (this.dragState.isMultiBlockDrag && this.dragState.sourceBlocks.includes(targetBlock)) {
       this.dragState.targetBlock = null;
       this.dragState.targetEdge = null;
 
@@ -365,6 +484,26 @@ export default class DragManager extends Module {
    * @param edge - Edge of target ('top' or 'bottom')
    */
   private handleDrop(sourceBlock: Block, targetBlock: Block, edge: 'top' | 'bottom'): void {
+    const { isMultiBlockDrag, sourceBlocks } = this.dragState!;
+
+    if (isMultiBlockDrag) {
+      this.handleMultiBlockDrop(sourceBlocks, targetBlock, edge);
+    } else {
+      this.handleSingleBlockDrop(sourceBlock, targetBlock, edge);
+    }
+
+    // Re-open toolbar on the dropped block
+    this.Blok.Toolbar.skipNextSettingsToggle();
+    this.Blok.Toolbar.moveAndOpen(sourceBlock);
+  }
+
+  /**
+   * Handles dropping a single block
+   * @param sourceBlock - Block being dragged
+   * @param targetBlock - Block dropped onto
+   * @param edge - Edge of target ('top' or 'bottom')
+   */
+  private handleSingleBlockDrop(sourceBlock: Block, targetBlock: Block, edge: 'top' | 'bottom'): void {
     const fromIndex = this.Blok.BlockManager.getBlockIndex(sourceBlock);
     const targetIndex = this.Blok.BlockManager.getBlockIndex(targetBlock);
 
@@ -384,13 +523,92 @@ export default class DragManager extends Module {
     // Select the moved block to provide visual feedback
     const movedBlock = this.Blok.BlockManager.getBlockByIndex(toIndex);
 
-    if (movedBlock) {
-      this.Blok.BlockSelection.selectBlock(movedBlock);
+    if (!movedBlock) {
+      return;
     }
 
-    // Re-open toolbar on the dropped block
-    this.Blok.Toolbar.skipNextSettingsToggle();
-    this.Blok.Toolbar.moveAndOpen(sourceBlock);
+    this.Blok.BlockSelection.selectBlock(movedBlock);
+  }
+
+  /**
+   * Handles dropping multiple selected blocks
+   * @param sourceBlocks - Array of blocks being dragged
+   * @param targetBlock - Block dropped onto
+   * @param edge - Edge of target ('top' or 'bottom')
+   */
+  private handleMultiBlockDrop(
+    sourceBlocks: Block[],
+    targetBlock: Block,
+    edge: 'top' | 'bottom'
+  ): void {
+    const manager = this.Blok.BlockManager;
+
+    // Sort blocks by current index
+    const sortedBlocks = [...sourceBlocks].sort((a, b) =>
+      manager.getBlockIndex(a) - manager.getBlockIndex(b)
+    );
+
+    // Calculate target insertion point
+    const targetIndex = manager.getBlockIndex(targetBlock);
+    const insertIndex = edge === 'top' ? targetIndex : targetIndex + 1;
+
+    // Determine if we're moving blocks up or down
+    const firstBlockIndex = manager.getBlockIndex(sortedBlocks[0]);
+    const movingDown = insertIndex > firstBlockIndex;
+
+    // Execute the move based on direction
+    if (movingDown) {
+      this.moveBlocksDown(sortedBlocks, insertIndex);
+    } else {
+      this.moveBlocksUp(sortedBlocks, insertIndex);
+    }
+
+    // Clear selection first, then re-select all moved blocks
+    this.Blok.BlockSelection.clearSelection();
+    sortedBlocks.forEach(block => {
+      this.Blok.BlockSelection.selectBlock(block);
+    });
+  }
+
+  /**
+   * Moves blocks down (to a higher index)
+   * @param sortedBlocks - Blocks sorted by current index
+   * @param insertIndex - Target insertion index
+   */
+  private moveBlocksDown(sortedBlocks: Block[], insertIndex: number): void {
+    const manager = this.Blok.BlockManager;
+
+    // When moving down, start with insertIndex - 1 and decrement for each block
+    // This ensures blocks maintain their relative order
+    const reversedBlocks = [...sortedBlocks].reverse();
+
+    reversedBlocks.forEach((block, index) => {
+      const currentIndex = manager.getBlockIndex(block);
+      const targetPosition = insertIndex - 1 - index;
+
+      manager.move(targetPosition, currentIndex, false);
+    });
+  }
+
+  /**
+   * Moves blocks up (to a lower index)
+   * @param sortedBlocks - Blocks sorted by current index
+   * @param baseInsertIndex - Base target insertion index
+   */
+  private moveBlocksUp(sortedBlocks: Block[], baseInsertIndex: number): void {
+    const manager = this.Blok.BlockManager;
+
+    // Track how many blocks we've inserted to adjust the target index
+    sortedBlocks.forEach((block, index) => {
+      const currentIndex = manager.getBlockIndex(block);
+      const targetIndex = baseInsertIndex + index;
+
+      if (currentIndex === targetIndex) {
+        return;
+      }
+
+      manager.move(targetIndex, currentIndex, false);
+    });
   }
 
   /**
@@ -417,7 +635,10 @@ export default class DragManager extends Module {
     }
 
     // Remove global dragging state
-    this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_DRAGGING_ATTR);
+    const wrapper = this.Blok.UI.nodes.wrapper;
+
+    wrapper.removeAttribute(BLOK_DRAGGING_ATTR);
+    wrapper.removeAttribute(BLOK_DRAGGING_MULTI_ATTR);
 
     // Remove event listeners
     if (this.boundHandlers) {

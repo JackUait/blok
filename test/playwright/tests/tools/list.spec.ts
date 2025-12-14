@@ -630,6 +630,12 @@ test.describe('list tool (ListItem)', () => {
       // Wait for the nested item to be outdented (depth attribute changes to 0)
       await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-list-depth', '0');
 
+      // Wait for focus to be restored after requestAnimationFrame in setCaretToBlockContent
+      await page.waitForFunction(() => {
+        const active = document.activeElement;
+        return active?.getAttribute('contenteditable') === 'true';
+      }, { timeout: 2000 });
+
       // Verify focus is on a contenteditable element
       const activeElement = await page.evaluate(() => {
         const active = document.activeElement;
@@ -1100,12 +1106,21 @@ test.describe('list tool (ListItem)', () => {
         },
       });
 
-      // Click at the start of the paragraph
+      // Click at the start of the paragraph and set cursor position programmatically
+      // (Home key doesn't work reliably in Firefox/WebKit with contenteditable)
       const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
-
-      // Move cursor to start
-      await page.keyboard.press('Home');
+      await page.evaluate(() => {
+        const para = document.querySelector('[data-blok-tool="paragraph"]');
+        if (para) {
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.setStart(para, 0);
+          range.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      });
 
       // Type the ordered list shortcut
       await page.keyboard.type('1. ');
@@ -1141,7 +1156,17 @@ test.describe('list tool (ListItem)', () => {
 
       const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
-      await page.keyboard.press('Home');
+      await page.evaluate(() => {
+        const para = document.querySelector('[data-blok-tool="paragraph"]');
+        if (para) {
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.setStart(para, 0);
+          range.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      });
 
       await page.keyboard.type('- ');
 
@@ -1174,7 +1199,17 @@ test.describe('list tool (ListItem)', () => {
 
       const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
-      await page.keyboard.press('Home');
+      await page.evaluate(() => {
+        const para = document.querySelector('[data-blok-tool="paragraph"]');
+        if (para) {
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.setStart(para, 0);
+          range.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      });
 
       await page.keyboard.type('[] ');
 
@@ -1209,7 +1244,17 @@ test.describe('list tool (ListItem)', () => {
 
       const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
-      await page.keyboard.press('Home');
+      await page.evaluate(() => {
+        const para = document.querySelector('[data-blok-tool="paragraph"]');
+        if (para) {
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.setStart(para, 0);
+          range.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      });
 
       await page.keyboard.type('- ');
 

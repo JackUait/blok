@@ -1715,14 +1715,32 @@ export default class ListItem implements BlockTool {
    * @returns Object with left offset in pixels based on the list item's depth
    */
   public getContentOffset(hoveredElement: Element): { left: number } | undefined {
-    // Find the closest list item element from the hovered element
-    const listItemEl = hoveredElement.closest('[role="listitem"]');
-    if (!listItemEl) {
+    // First try: find listitem in ancestors (when hovering content)
+    // Second try: find listitem in descendants (when hovering wrapper)
+    const listItemEl = hoveredElement.closest('[role="listitem"]')
+      ?? hoveredElement.querySelector('[role="listitem"]');
+
+    const marginLeftOffset = this.getMarginLeftFromElement(listItemEl);
+
+    if (marginLeftOffset !== undefined) {
+      return marginLeftOffset;
+    }
+
+    // Fallback: use data-list-depth from wrapper
+    return this.getOffsetFromDepthAttribute(hoveredElement);
+  }
+
+  /**
+   * Extracts the margin-left value from an element's inline style
+   * @param element - The element to extract margin-left from
+   * @returns Object with left offset if valid margin-left found, undefined otherwise
+   */
+  private getMarginLeftFromElement(element: Element | null): { left: number } | undefined {
+    if (!element) {
       return undefined;
     }
 
-    // Get the margin-left which represents the indentation
-    const style = listItemEl.getAttribute('style') || '';
+    const style = element.getAttribute('style') || '';
     const marginMatch = style.match(/margin-left:\s*(\d+)px/);
 
     if (!marginMatch) {
@@ -1730,11 +1748,31 @@ export default class ListItem implements BlockTool {
     }
 
     const marginLeft = parseInt(marginMatch[1], 10);
-    if (marginLeft <= 0) {
+
+    return marginLeft > 0 ? { left: marginLeft } : undefined;
+  }
+
+  /**
+   * Gets the offset from the data-list-depth attribute
+   * @param hoveredElement - The element to start searching from
+   * @returns Object with left offset based on depth, undefined if depth is 0 or not found
+   */
+  private getOffsetFromDepthAttribute(hoveredElement: Element): { left: number } | undefined {
+    const wrapper = hoveredElement.closest('[data-list-depth]');
+
+    if (!wrapper) {
       return undefined;
     }
 
-    return { left: marginLeft };
+    const depthAttr = wrapper.getAttribute('data-list-depth');
+
+    if (depthAttr === null) {
+      return undefined;
+    }
+
+    const depth = parseInt(depthAttr, 10);
+
+    return depth > 0 ? { left: depth * ListItem.INDENT_PER_LEVEL } : undefined;
   }
 
   public static get toolbox(): ToolboxConfig {

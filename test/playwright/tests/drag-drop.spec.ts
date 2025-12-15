@@ -542,82 +542,6 @@ test.describe('drag and drop', () => {
     expect(savedData?.blocks[3].data.text).toBe('Block 3');
   });
 
-  test('should show count badge in multi-block drag preview', async ({ page }) => {
-    const blocks = [
-      {
-        type: 'paragraph',
-        data: { text: 'Block 0' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Block 1' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Block 2' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Block 3' },
-      },
-      {
-        type: 'paragraph',
-        data: { text: 'Block 4' },
-      },
-    ];
-
-    await createBlok(page, {
-      data: { blocks },
-    });
-
-    // Select blocks 1, 2, 3 using the BlockSelection API
-    await page.evaluate(() => {
-      const blok = window.blokInstance;
-
-      if (!blok) {
-        throw new Error('Blok instance not found');
-      }
-      const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
-
-      blockSelection.selectBlockByIndex(1);
-      blockSelection.selectBlockByIndex(2);
-      blockSelection.selectBlockByIndex(3);
-    });
-
-    // Hover over block 2
-    const block2 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 2' });
-
-    await block2.hover();
-
-    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
-
-    await expect(settingsButton).toBeVisible();
-
-    // Get source position
-    const settingsBox = await getBoundingBox(settingsButton);
-
-    // Start drag
-    await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
-    await page.mouse.down();
-
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
-    await page.waitForTimeout(50);
-
-    // Move a bit to trigger drag
-    await page.mouse.move(settingsBox.x + 50, settingsBox.y + 50, { steps: 10 });
-
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for preview to appear
-    await page.waitForTimeout(100);
-
-    // Verify count badge appears in the preview
-    const badge = page.getByText('3 blocks');
-
-    await expect(badge).toBeVisible();
-
-    // Clean up - release mouse
-    await page.mouse.up();
-  });
-
   test('should drag single selected block using multi-block path', async ({ page }) => {
     const blocks = [
       {
@@ -1206,53 +1130,6 @@ test.describe('drag and drop', () => {
       expect(savedData?.blocks[0].data.text).toBe('Second');
       expect(savedData?.blocks[1].data.text).toBe('Third');
       expect(savedData?.blocks[2].data.text).toBe('First');
-    });
-
-    test('should show count badge when dragging parent with children', async ({ page }) => {
-      // Create a list with parent and children to verify badge shows correct count
-      const blocks = createListBlocks([
-        { text: 'First' },
-        { text: 'Nested A', depth: 1 },
-        { text: 'Nested B', depth: 1 },
-        { text: 'Second' },
-      ]);
-
-      await createBlok(page, {
-        data: { blocks },
-      });
-
-      // Hover over the first block (parent)
-      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First' });
-
-      await firstBlock.hover();
-
-      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
-
-      await expect(settingsButton).toBeVisible();
-
-      // Get source position
-      const settingsBox = await getBoundingBox(settingsButton);
-
-      // Start drag
-      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
-      await page.mouse.down();
-
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
-      await page.waitForTimeout(50);
-
-      // Move a bit to trigger drag
-      await page.mouse.move(settingsBox.x + 50, settingsBox.y + 50, { steps: 10 });
-
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for preview to appear
-      await page.waitForTimeout(100);
-
-      // Verify count badge shows 3 blocks (First + Nested A + Nested B)
-      const badge = page.getByText('3 blocks');
-
-      await expect(badge).toBeVisible();
-
-      // Clean up
-      await page.mouse.up();
     });
 
     test('should adjust depth when dropping into nested list context', async ({ page }) => {

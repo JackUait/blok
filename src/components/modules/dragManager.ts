@@ -138,14 +138,23 @@ export default class DragManager extends Module {
 
     // Determine if this is a multi-block drag
     const isBlockSelected = block.selected;
-    const selectedBlocks = isBlockSelected
+    const initialBlocks = isBlockSelected
       ? this.Blok.BlockSelection.selectedBlocks
       : [block];
-    const isMultiBlock = selectedBlocks.length > 1;
+
+    // For single-block list item drags, include all descendants
+    const descendants = !isBlockSelected
+      ? this.getListItemDescendants(block)
+      : [];
+    const blocksToMove = descendants.length > 0
+      ? [block, ...descendants]
+      : initialBlocks;
+
+    const isMultiBlock = blocksToMove.length > 1;
 
     // Create appropriate preview (single or multi-block)
     const preview = isMultiBlock
-      ? this.createMultiBlockPreview(selectedBlocks)
+      ? this.createMultiBlockPreview(blocksToMove)
       : this.createPreview(contentElement, block.stretched);
 
     preview.style.display = 'none';
@@ -153,7 +162,7 @@ export default class DragManager extends Module {
 
     this.dragState = {
       sourceBlock: block,
-      sourceBlocks: selectedBlocks,
+      sourceBlocks: blocksToMove,
       isMultiBlockDrag: isMultiBlock,
       targetBlock: null,
       targetEdge: null,
@@ -724,6 +733,67 @@ export default class DragManager extends Module {
     }
 
     this.dragState = null;
+  }
+
+  /**
+   * Gets the depth of a list item block from its DOM.
+   * Returns null if the block is not a list item.
+   * @param block - Block to check
+   * @returns Depth number or null if not a list item
+   */
+  private getListItemDepth(block: Block): number | null {
+    const listWrapper = block.holder.querySelector('[data-list-depth]');
+
+    if (!listWrapper) {
+      return null;
+    }
+
+    const depthAttr = listWrapper.getAttribute('data-list-depth');
+
+    return depthAttr ? parseInt(depthAttr, 10) : 0;
+  }
+
+  /**
+   * Gets all descendant list items of a block (direct children and their descendants).
+   * Only includes items that are strictly deeper than the dragged item.
+   * Stops when encountering a sibling (same depth) or parent (shallower depth).
+   * @param block - Parent block to find descendants for
+   * @returns Array of descendant blocks (empty if block is not a list item or has no descendants)
+   */
+  private getListItemDescendants(block: Block): Block[] {
+    const parentDepth = this.getListItemDepth(block);
+
+    if (parentDepth === null) {
+      return [];
+    }
+
+    const blockIndex = this.Blok.BlockManager.getBlockIndex(block);
+    const totalBlocks = this.Blok.BlockManager.blocks.length;
+
+    const collectDescendants = (index: number, acc: Block[]): Block[] => {
+      if (index >= totalBlocks) {
+        return acc;
+      }
+
+      const nextBlock = this.Blok.BlockManager.getBlockByIndex(index);
+
+      if (!nextBlock) {
+        return acc;
+      }
+
+      const nextDepth = this.getListItemDepth(nextBlock);
+
+      // Stop if not a list item or depth <= parent depth (sibling or shallower level)
+      // A sibling is an item at the same depth - it's not a child of the dragged item
+      if (nextDepth === null || nextDepth <= parentDepth) {
+        return acc;
+      }
+
+      // Only include items strictly deeper than the parent (children, grandchildren, etc.)
+      return collectDescendants(index + 1, [...acc, nextBlock]);
+    };
+
+    return collectDescendants(blockIndex + 1, []);
   }
 
   /**

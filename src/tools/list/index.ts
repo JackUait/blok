@@ -259,16 +259,68 @@ export default class ListItem implements BlockTool {
    * Ensures the depth follows list formation rules:
    * 1. First item (index 0) must be at depth 0
    * 2. Item depth cannot exceed previousItem.depth + 1
+   * 3. When dropped between nested items, adopt the sibling's depth
    *
    * @param newIndex - The new index where the block was moved to
    */
   private validateAndAdjustDepthAfterMove(newIndex: number): void {
     const currentDepth = this.getDepth();
     const maxAllowedDepth = this.calculateMaxAllowedDepth(newIndex);
+    const targetDepth = this.calculateTargetDepthForPosition(newIndex, maxAllowedDepth);
 
-    if (currentDepth > maxAllowedDepth) {
-      this.adjustDepthTo(maxAllowedDepth);
+    if (currentDepth !== targetDepth) {
+      this.adjustDepthTo(targetDepth);
     }
+  }
+
+  /**
+   * Calculates the target depth for a list item dropped at the given index.
+   * When dropping into a nested context, the item should match the sibling's depth.
+   *
+   * @param blockIndex - The index where the block was dropped
+   * @param maxAllowedDepth - The maximum allowed depth at this position
+   * @returns The target depth for the dropped item
+   */
+  private calculateTargetDepthForPosition(blockIndex: number, maxAllowedDepth: number): number {
+    const currentDepth = this.getDepth();
+
+    // If current depth exceeds max, cap it
+    if (currentDepth > maxAllowedDepth) {
+      return maxAllowedDepth;
+    }
+
+    // Check if we're inserting before a list item (next block)
+    const nextBlock = this.api.blocks.getBlockByIndex(blockIndex + 1);
+    const nextIsListItem = nextBlock && nextBlock.name === ListItem.TOOL_NAME;
+    const nextBlockDepth = nextIsListItem ? this.getBlockDepth(nextBlock) : 0;
+
+    // If next block is a deeper list item, match its depth (become a sibling)
+    // This prevents breaking list structure by inserting a shallower item
+    const shouldMatchNextDepth = nextIsListItem
+      && nextBlockDepth > currentDepth
+      && nextBlockDepth <= maxAllowedDepth;
+
+    if (shouldMatchNextDepth) {
+      return nextBlockDepth;
+    }
+
+    // Check if previous block is a list item at a deeper level
+    const previousBlock = blockIndex > 0 ? this.api.blocks.getBlockByIndex(blockIndex - 1) : null;
+    const previousIsListItem = previousBlock && previousBlock.name === ListItem.TOOL_NAME;
+    const previousBlockDepth = previousIsListItem ? this.getBlockDepth(previousBlock) : 0;
+
+    // If previous block is deeper and there's no next list item to guide us,
+    // match the previous block's depth (append as sibling in the nested list)
+    const shouldMatchPreviousDepth = previousIsListItem
+      && !nextIsListItem
+      && previousBlockDepth > currentDepth
+      && previousBlockDepth <= maxAllowedDepth;
+
+    if (shouldMatchPreviousDepth) {
+      return previousBlockDepth;
+    }
+
+    return currentDepth;
   }
 
   /**
@@ -309,6 +361,11 @@ export default class ListItem implements BlockTool {
    */
   private adjustDepthTo(newDepth: number): void {
     this._data.depth = newDepth;
+
+    // Update the data-list-depth attribute on the wrapper
+    if (this._element) {
+      this._element.setAttribute('data-list-depth', String(newDepth));
+    }
 
     // Update DOM element's indentation
     const listItemEl = this._element?.querySelector('[role="listitem"]');

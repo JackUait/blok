@@ -1035,4 +1035,397 @@ test.describe('drag and drop', () => {
     // Clean up - release mouse
     await page.mouse.up();
   });
+
+  test.describe('nested list items drag behavior', () => {
+    /**
+     * Helper to create list item blocks with depth support.
+     */
+    const createListBlocks = (
+      items: Array<{ text: string; depth?: number }>
+    ): OutputData['blocks'] => items.map((item, index) => ({
+      id: `list-${index}`,
+      type: 'list',
+      data: {
+        text: item.text,
+        style: 'unordered',
+        ...(item.depth !== undefined && item.depth > 0 ? { depth: item.depth } : {}),
+      },
+    }));
+
+    test('should drag parent list item with all nested children', async ({ page }) => {
+      // Create a list with parent and nested children:
+      // - First (depth 0) <- parent
+      //   - Nested A (depth 1) <- child
+      //   - Nested B (depth 1) <- child
+      // - Second (depth 0)
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Nested A', depth: 1 },
+        { text: 'Nested B', depth: 1 },
+        { text: 'Second' },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the first block (parent) to show settings button
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the bottom of the last block
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify the new order: parent and children moved together after "Second"
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks[0].data.text).toBe('Second');
+      expect(savedData?.blocks[1].data.text).toBe('First');
+      expect(savedData?.blocks[2].data.text).toBe('Nested A');
+      expect(savedData?.blocks[3].data.text).toBe('Nested B');
+    });
+
+    test('should drag nested item with its own children', async ({ page }) => {
+      // Create a deeply nested list:
+      // - First (depth 0)
+      //   - Nested A (depth 1) <- drag this
+      //     - Deep A1 (depth 2) <- should come along
+      //   - Nested B (depth 1)
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Nested A', depth: 1 },
+        { text: 'Deep A1', depth: 2 },
+        { text: 'Nested B', depth: 1 },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over "Nested A" to show settings button
+      const nestedABlock = page.getByTestId('block-wrapper').filter({ hasText: 'Nested A' });
+
+      await nestedABlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the bottom of "Nested B"
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Nested B' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify: Nested A and Deep A1 moved together after Nested B
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks[0].data.text).toBe('First');
+      expect(savedData?.blocks[1].data.text).toBe('Nested B');
+      expect(savedData?.blocks[2].data.text).toBe('Nested A');
+      expect(savedData?.blocks[3].data.text).toBe('Deep A1');
+    });
+
+    test('should drag deepest nested item alone (no children)', async ({ page }) => {
+      // Create a nested list where the dragged item has no children:
+      // - First (depth 0)
+      //   - Nested A (depth 1)
+      //     - Deep A1 (depth 2) <- drag this (no children)
+      //   - Nested B (depth 1)
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Nested A', depth: 1 },
+        { text: 'Deep A1', depth: 2 },
+        { text: 'Nested B', depth: 1 },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over "Deep A1" to show settings button
+      const deepBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Deep A1' });
+
+      await deepBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the bottom of "Nested B"
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Nested B' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify: Only Deep A1 moved, rest unchanged
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks[0].data.text).toBe('First');
+      expect(savedData?.blocks[1].data.text).toBe('Nested A');
+      expect(savedData?.blocks[2].data.text).toBe('Nested B');
+      expect(savedData?.blocks[3].data.text).toBe('Deep A1');
+    });
+
+    test('should not include sibling list items at the same depth', async ({ page }) => {
+      // Create a list where siblings at same depth should NOT be dragged:
+      // - First (depth 0) <- drag this
+      // - Second (depth 0) <- sibling, should NOT come along
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Second' },
+        { text: 'Third' },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over "First" to show settings button
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the bottom of "Third"
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify: Only "First" moved, siblings stay in place
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks[0].data.text).toBe('Second');
+      expect(savedData?.blocks[1].data.text).toBe('Third');
+      expect(savedData?.blocks[2].data.text).toBe('First');
+    });
+
+    test('should show count badge when dragging parent with children', async ({ page }) => {
+      // Create a list with parent and children to verify badge shows correct count
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Nested A', depth: 1 },
+        { text: 'Nested B', depth: 1 },
+        { text: 'Second' },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the first block (parent)
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Get source position
+      const settingsBox = await getBoundingBox(settingsButton);
+
+      // Start drag
+      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+      await page.mouse.down();
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+      await page.waitForTimeout(50);
+
+      // Move a bit to trigger drag
+      await page.mouse.move(settingsBox.x + 50, settingsBox.y + 50, { steps: 10 });
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for preview to appear
+      await page.waitForTimeout(100);
+
+      // Verify count badge shows 3 blocks (First + Nested A + Nested B)
+      const badge = page.getByText('3 blocks');
+
+      await expect(badge).toBeVisible();
+
+      // Clean up
+      await page.mouse.up();
+    });
+
+    test('should adjust depth when dropping into nested list context', async ({ page }) => {
+      // Test the depth adjustment when dropping a root item between nested items:
+      // Before:
+      // - First (depth 0)
+      //   - Second (depth 1)
+      //   - Third (depth 1)
+      // - Fourth (depth 0) <- drag this between Second and Third
+      //
+      // After: Fourth should become depth 1 to not break the list structure
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Second', depth: 1 },
+        { text: 'Third', depth: 1 },
+        { text: 'Fourth' },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over "Fourth" to show settings button
+      const fourthBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Fourth' });
+
+      await fourthBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the top of "Third" (between Second and Third)
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'top');
+
+      // Verify: Fourth is now between Second and Third with depth 1
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks[0].data.text).toBe('First');
+      expect(savedData?.blocks[1].data.text).toBe('Second');
+      expect(savedData?.blocks[2].data.text).toBe('Fourth');
+      expect(savedData?.blocks[3].data.text).toBe('Third');
+
+      // Fourth should have been adjusted to depth 1
+      expect(savedData?.blocks[2].data.depth).toBe(1);
+    });
+
+    test('should preserve ordering when dragging list subtree', async ({ page }) => {
+      // Ensure the order of children is preserved after moving
+      const blocks = createListBlocks([
+        { text: 'Target' },
+        { text: 'Parent' },
+        { text: 'Child 1', depth: 1 },
+        { text: 'Child 2', depth: 1 },
+        { text: 'Child 3', depth: 1 },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over "Parent" to show settings button
+      const parentBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Parent' });
+
+      await parentBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the top of "Target"
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Target' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'top');
+
+      // Verify: Parent and children moved before Target, preserving order
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks[0].data.text).toBe('Parent');
+      expect(savedData?.blocks[1].data.text).toBe('Child 1');
+      expect(savedData?.blocks[2].data.text).toBe('Child 2');
+      expect(savedData?.blocks[3].data.text).toBe('Child 3');
+      expect(savedData?.blocks[4].data.text).toBe('Target');
+    });
+
+    test('should handle multi-level nesting when dragging', async ({ page }) => {
+      // Test dragging with grandchildren:
+      // - First (depth 0) <- drag this
+      //   - Child (depth 1)
+      //     - Grandchild (depth 2)
+      // - Second (depth 0)
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Child', depth: 1 },
+        { text: 'Grandchild', depth: 2 },
+        { text: 'Second' },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over "First" to show settings button
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the bottom of "Second"
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify: Entire subtree moved
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks[0].data.text).toBe('Second');
+      expect(savedData?.blocks[1].data.text).toBe('First');
+      expect(savedData?.blocks[2].data.text).toBe('Child');
+      expect(savedData?.blocks[3].data.text).toBe('Grandchild');
+    });
+
+    test('should use explicit selection when blocks are selected (not auto-include children)', async ({ page }) => {
+      // When user explicitly selects blocks, those should be dragged, not auto-detected children
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Child A', depth: 1 },
+        { text: 'Child B', depth: 1 },
+        { text: 'Second' },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Explicitly select only "First" and "Child A" (not Child B)
+      await page.evaluate(() => {
+        const blok = window.blokInstance;
+
+        if (!blok) {
+          throw new Error('Blok instance not found');
+        }
+        const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+        blockSelection.selectBlockByIndex(0);
+        blockSelection.selectBlockByIndex(1);
+      });
+
+      // Hover over "First" to show settings button
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the bottom of "Second"
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify: Only explicitly selected blocks (First, Child A) moved, Child B stays
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks[0].data.text).toBe('Child B');
+      expect(savedData?.blocks[1].data.text).toBe('Second');
+      expect(savedData?.blocks[2].data.text).toBe('First');
+      expect(savedData?.blocks[3].data.text).toBe('Child A');
+    });
+  });
 });

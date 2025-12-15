@@ -379,6 +379,7 @@ export default class DragManager extends Module {
     // Clear previous indicator
     if (this.dragState.targetBlock) {
       this.dragState.targetBlock.holder.removeAttribute('data-drop-indicator');
+      this.dragState.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
     }
 
     // Find element under cursor (temporarily hide preview)
@@ -439,6 +440,10 @@ export default class DragManager extends Module {
       this.dragState.targetEdge = 'bottom';
       previousBlock.holder.setAttribute('data-drop-indicator', 'bottom');
 
+      const targetDepth = this.calculateTargetDepth(previousBlock, 'bottom');
+
+      previousBlock.holder.style.setProperty('--drop-indicator-depth', String(targetDepth));
+
       return;
     }
 
@@ -456,6 +461,10 @@ export default class DragManager extends Module {
     this.dragState.targetBlock = targetBlock;
     this.dragState.targetEdge = edge;
     blockHolder.setAttribute('data-drop-indicator', edge);
+
+    const targetDepth = this.calculateTargetDepth(targetBlock, edge);
+
+    blockHolder.style.setProperty('--drop-indicator-depth', String(targetDepth));
   }
 
   /**
@@ -711,6 +720,7 @@ export default class DragManager extends Module {
     // Clear drop indicator
     if (this.dragState.targetBlock) {
       this.dragState.targetBlock.holder.removeAttribute('data-drop-indicator');
+      this.dragState.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
     }
 
     // Remove preview
@@ -751,6 +761,48 @@ export default class DragManager extends Module {
     const depthAttr = listWrapper.getAttribute('data-list-depth');
 
     return depthAttr ? parseInt(depthAttr, 10) : 0;
+  }
+
+  /**
+   * Calculates the target depth for a block dropped at the given position.
+   * This determines what nesting level the block will have after being dropped.
+   * @param targetBlock - Block being dropped onto
+   * @param targetEdge - Edge of target ('top' or 'bottom')
+   * @returns The target depth (0 for root level, 1+ for nested)
+   */
+  private calculateTargetDepth(targetBlock: Block, targetEdge: 'top' | 'bottom'): number {
+    const targetIndex = this.Blok.BlockManager.getBlockIndex(targetBlock);
+    const dropIndex = targetEdge === 'top' ? targetIndex : targetIndex + 1;
+
+    // First position always has depth 0
+    if (dropIndex === 0) {
+      return 0;
+    }
+
+    // Get the block that will be immediately before the drop position
+    const previousBlock = this.Blok.BlockManager.getBlockByIndex(dropIndex - 1);
+
+    if (!previousBlock) {
+      return 0;
+    }
+
+    const previousDepth = this.getListItemDepth(previousBlock) ?? 0;
+
+    // Get the block that will be immediately after the drop position
+    const nextBlock = this.Blok.BlockManager.getBlockByIndex(dropIndex);
+    const nextDepth = nextBlock ? (this.getListItemDepth(nextBlock) ?? 0) : 0;
+
+    // If next item is nested, match its depth (become sibling)
+    if (nextDepth > 0 && nextDepth <= previousDepth + 1) {
+      return nextDepth;
+    }
+
+    // If previous item is nested, match its depth
+    if (previousDepth > 0) {
+      return previousDepth;
+    }
+
+    return 0;
   }
 
   /**

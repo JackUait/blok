@@ -125,8 +125,8 @@ export default class ListItem implements BlockTool {
   private contentIds?: string[];
 
   private static readonly BASE_STYLES = 'outline-none';
-  private static readonly ITEM_STYLES = 'outline-none py-0.5 leading-[1.6em]';
-  private static readonly CHECKLIST_ITEM_STYLES = 'flex items-start py-0.5';
+  private static readonly ITEM_STYLES = 'outline-none py-0.5 pl-0.5 leading-[1.6em]';
+  private static readonly CHECKLIST_ITEM_STYLES = 'flex items-start py-0.5 pl-0.5';
   private static readonly CHECKBOX_STYLES = 'mt-1 w-4 mr-2 h-4 cursor-pointer accent-current';
 
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
@@ -407,7 +407,7 @@ export default class ListItem implements BlockTool {
     const listItemEl = this._element?.querySelector('[role="listitem"]');
 
     if (listItemEl instanceof HTMLElement) {
-      listItemEl.style.paddingLeft = newDepth > 0
+      listItemEl.style.marginLeft = newDepth > 0
         ? `${newDepth * ListItem.INDENT_PER_LEVEL}px`
         : '';
     }
@@ -608,8 +608,8 @@ export default class ListItem implements BlockTool {
     const listItemEl = blockHolder?.querySelector('[role="listitem"]');
     const styleAttr = listItemEl?.getAttribute('style');
 
-    const paddingMatch = styleAttr?.match(/padding-left:\s*(\d+)px/);
-    return paddingMatch ? Math.round(parseInt(paddingMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
+    const marginMatch = styleAttr?.match(/margin-left:\s*(\d+)px/);
+    return marginMatch ? Math.round(parseInt(marginMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
   }
 
   /**
@@ -835,7 +835,7 @@ export default class ListItem implements BlockTool {
     // Apply indentation based on depth
     const depth = this.getDepth();
     if (depth > 0) {
-      item.style.paddingLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
+      item.style.marginLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
     }
 
     // Create marker element (will be updated in rendered() with correct index)
@@ -863,7 +863,7 @@ export default class ListItem implements BlockTool {
     // Apply indentation based on depth
     const depth = this.getDepth();
     if (depth > 0) {
-      wrapper.style.paddingLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
+      wrapper.style.marginLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
     }
 
     const checkbox = document.createElement('input');
@@ -979,9 +979,9 @@ export default class ListItem implements BlockTool {
 
     const depthAttr = listItemEl?.querySelector('[role="listitem"]')?.getAttribute('style');
 
-    // Calculate depth from padding (paddingLeft = depth * 24px)
-    const paddingMatch = depthAttr?.match(/padding-left:\s*(\d+)px/);
-    const blockDepth = paddingMatch ? Math.round(parseInt(paddingMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
+    // Calculate depth from margin (marginLeft = depth * 24px)
+    const marginMatch = depthAttr?.match(/margin-left:\s*(\d+)px/);
+    const blockDepth = marginMatch ? Math.round(parseInt(marginMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
 
     // If this block is at a shallower depth, it's a "parent" - stop counting
     if (blockDepth < targetDepth) {
@@ -1093,8 +1093,8 @@ export default class ListItem implements BlockTool {
 
     const depthAttr = listItemEl?.querySelector('[role="listitem"]')?.getAttribute('style');
 
-    const paddingMatch = depthAttr?.match(/padding-left:\s*(\d+)px/);
-    const blockDepth = paddingMatch ? Math.round(parseInt(paddingMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
+    const marginMatch = depthAttr?.match(/margin-left:\s*(\d+)px/);
+    const blockDepth = marginMatch ? Math.round(parseInt(marginMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
 
     // If this block is at a shallower depth, we've reached the boundary
     if (blockDepth < targetDepth) {
@@ -1721,20 +1721,20 @@ export default class ListItem implements BlockTool {
       return undefined;
     }
 
-    // Get the padding-left which represents the indentation
+    // Get the margin-left which represents the indentation
     const style = listItemEl.getAttribute('style') || '';
-    const paddingMatch = style.match(/padding-left:\s*(\d+)px/);
+    const marginMatch = style.match(/margin-left:\s*(\d+)px/);
 
-    if (!paddingMatch) {
+    if (!marginMatch) {
       return undefined;
     }
 
-    const paddingLeft = parseInt(paddingMatch[1], 10);
-    if (paddingLeft <= 0) {
+    const marginLeft = parseInt(marginMatch[1], 10);
+    if (marginLeft <= 0) {
       return undefined;
     }
 
-    return { left: paddingLeft };
+    return { left: marginLeft };
   }
 
   public static get toolbox(): ToolboxConfig {

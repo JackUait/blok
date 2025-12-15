@@ -733,6 +733,246 @@ test.describe('drag and drop', () => {
     await page.mouse.up();
   });
 
+  test('should show top drop indicator when hovering over top half of first block', async ({ page }) => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'First block' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Second block' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Third block' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Hover over the last block to show the settings button
+    const lastBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third block' });
+
+    await lastBlock.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Get positions
+    const settingsBox = await getBoundingBox(settingsButton);
+    const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+    const firstBlockBox = await getBoundingBox(firstBlock);
+
+    // Start drag
+    await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+    await page.mouse.down();
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+    await page.waitForTimeout(50);
+
+    // Move to the top half of the first block
+    await page.mouse.move(
+      firstBlockBox.x + firstBlockBox.width / 2,
+      firstBlockBox.y + 1, // Very close to top edge
+      { steps: 15 }
+    );
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for indicator to appear
+    await page.waitForTimeout(50);
+
+    // Verify top indicator is shown on the first block
+    await expect(firstBlock).toHaveAttribute('data-drop-indicator', 'top');
+
+    // Verify no bottom indicator exists anywhere
+    const bottomIndicators = page.locator('[data-drop-indicator="bottom"]');
+
+    await expect(bottomIndicators).toHaveCount(0);
+
+    // Clean up
+    await page.mouse.up();
+  });
+
+  test('should show bottom indicator on previous block when hovering over top half of non-first block', async ({ page }) => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'First block' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Second block' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Third block' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Hover over the last block to show the settings button
+    const lastBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third block' });
+
+    await lastBlock.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Get positions
+    const settingsBox = await getBoundingBox(settingsButton);
+    const secondBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second block' });
+    const secondBlockBox = await getBoundingBox(secondBlock);
+
+    // Start drag
+    await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+    await page.mouse.down();
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+    await page.waitForTimeout(50);
+
+    // Move to the top half of the second block
+    await page.mouse.move(
+      secondBlockBox.x + secondBlockBox.width / 2,
+      secondBlockBox.y + 1, // Very close to top edge
+      { steps: 15 }
+    );
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for indicator to appear
+    await page.waitForTimeout(50);
+
+    // Verify bottom indicator is shown on the FIRST block (not the second)
+    const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+    await expect(firstBlock).toHaveAttribute('data-drop-indicator', 'bottom');
+
+    // Verify no top indicator exists anywhere
+    const topIndicators = page.locator('[data-drop-indicator="top"]');
+
+    await expect(topIndicators).toHaveCount(0);
+
+    // Verify only one indicator total
+    const allIndicators = page.locator('[data-drop-indicator]');
+
+    await expect(allIndicators).toHaveCount(1);
+
+    // Clean up
+    await page.mouse.up();
+  });
+
+  test('should show exactly one drop indicator at any position', async ({ page }) => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        data: { text: 'Block 0' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 1' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 2' },
+      },
+      {
+        type: 'paragraph',
+        data: { text: 'Block 3' },
+      },
+    ];
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Hover over block 3 to show the settings button
+    const block3 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 3' });
+
+    await block3.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Get positions for all blocks
+    const block0 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 0' });
+    const block1 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 1' });
+    const block2 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 2' });
+
+    const settingsBox = await getBoundingBox(settingsButton);
+    const block0Box = await getBoundingBox(block0);
+    const block1Box = await getBoundingBox(block1);
+    const block2Box = await getBoundingBox(block2);
+
+    // Start drag
+    await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+    await page.mouse.down();
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+    await page.waitForTimeout(50);
+
+    // Move over bottom half of block 0
+    await page.mouse.move(
+      block0Box.x + block0Box.width / 2,
+      block0Box.y + block0Box.height - 1,
+      { steps: 10 }
+    );
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow indicator to update
+    await page.waitForTimeout(50);
+
+    let allIndicators = page.locator('[data-drop-indicator]');
+
+    await expect(allIndicators).toHaveCount(1);
+
+    // Move over top half of block 1 (should show indicator on block 0)
+    await page.mouse.move(
+      block1Box.x + block1Box.width / 2,
+      block1Box.y + 1,
+      { steps: 10 }
+    );
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow indicator to update
+    await page.waitForTimeout(50);
+
+    allIndicators = page.locator('[data-drop-indicator]');
+    await expect(allIndicators).toHaveCount(1);
+
+    // Move over bottom half of block 1
+    await page.mouse.move(
+      block1Box.x + block1Box.width / 2,
+      block1Box.y + block1Box.height - 1,
+      { steps: 10 }
+    );
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow indicator to update
+    await page.waitForTimeout(50);
+
+    allIndicators = page.locator('[data-drop-indicator]');
+    await expect(allIndicators).toHaveCount(1);
+
+    // Move over top half of block 2 (should show indicator on block 1)
+    await page.mouse.move(
+      block2Box.x + block2Box.width / 2,
+      block2Box.y + 1,
+      { steps: 10 }
+    );
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow indicator to update
+    await page.waitForTimeout(50);
+
+    allIndicators = page.locator('[data-drop-indicator]');
+    await expect(allIndicators).toHaveCount(1);
+
+    // Clean up
+    await page.mouse.up();
+  });
+
   test('should auto-scroll viewport up when dragging near top edge', async ({ page }) => {
     // Create many blocks to ensure the page is scrollable
     const blocks = Array.from({ length: 20 }, (_, i) => ({

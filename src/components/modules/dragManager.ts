@@ -415,15 +415,38 @@ export default class DragManager extends Module {
 
     // Determine edge (top or bottom half of block)
     const rect = blockHolder.getBoundingClientRect();
-    const edge: 'top' | 'bottom' = clientY < rect.top + rect.height / 2 ? 'top' : 'bottom';
+    const isTopHalf = clientY < rect.top + rect.height / 2;
+    const targetIndex = this.Blok.BlockManager.getBlockIndex(targetBlock);
+
+    // Normalize: convert "top of block N" to "bottom of block N-1" (except for the first block)
+    // This ensures we only ever show one indicator per drop position
+    const previousBlock = targetIndex > 0
+      ? this.Blok.BlockManager.getBlockByIndex(targetIndex - 1)
+      : null;
+    const canUsePreviousBlock = previousBlock && !this.dragState.sourceBlocks.includes(previousBlock);
+
+    if (isTopHalf && targetIndex > 0 && canUsePreviousBlock) {
+      this.dragState.targetBlock = previousBlock;
+      this.dragState.targetEdge = 'bottom';
+      previousBlock.holder.setAttribute('data-drop-indicator', 'bottom');
+
+      return;
+    }
+
+    if (isTopHalf && targetIndex > 0) {
+      // Previous block is part of selection, can't drop here
+      this.dragState.targetBlock = null;
+      this.dragState.targetEdge = null;
+
+      return;
+    }
+
+    // First block top half, or any block bottom half
+    const edge: 'top' | 'bottom' = isTopHalf ? 'top' : 'bottom';
 
     this.dragState.targetBlock = targetBlock;
     this.dragState.targetEdge = edge;
-
-    // Show drop indicator (only bottom edge supported in current implementation)
-    if (edge === 'bottom') {
-      blockHolder.setAttribute('data-drop-indicator', 'bottom');
-    }
+    blockHolder.setAttribute('data-drop-indicator', edge);
   }
 
   /**

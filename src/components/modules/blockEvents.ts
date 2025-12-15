@@ -24,6 +24,20 @@ const PRINTABLE_SPECIAL_KEYS = new Set(['Enter', 'Process', 'Spacebar', 'Space',
 const EDITABLE_INPUT_SELECTOR = '[contenteditable="true"], textarea, input';
 
 /**
+ * Checks if the keyboard event is a block movement shortcut (Cmd/Ctrl+Shift+Arrow)
+ * @param event - keyboard event
+ * @param direction - 'up' or 'down'
+ * @returns true if this is a block movement shortcut
+ */
+const isBlockMovementShortcut = (event: KeyboardEvent, direction: 'up' | 'down'): boolean => {
+  const targetKey = direction === 'up' ? 'ArrowUp' : 'ArrowDown';
+
+  return event.key === targetKey &&
+    event.shiftKey &&
+    (event.ctrlKey || event.metaKey);
+};
+
+/**
  *
  */
 export default class BlockEvents extends Module {
@@ -1007,6 +1021,14 @@ export default class BlockEvents extends Module {
       return;
     }
 
+    /**
+     * Skip handling if this is a block movement shortcut (Cmd/Ctrl+Shift+Down)
+     * Let the shortcut system handle it instead
+     */
+    if (isBlockMovementShortcut(event, 'down')) {
+      return;
+    }
+
     const isFlipperCombination = Flipper.usedKeys.includes(keyCode) &&
       (!event.shiftKey || keyCode === _.keyCodes.TAB);
 
@@ -1141,6 +1163,14 @@ export default class BlockEvents extends Module {
     const keyCode = this.getKeyCode(event);
 
     if (keyCode === null) {
+      return;
+    }
+
+    /**
+     * Skip handling if this is a block movement shortcut (Cmd/Ctrl+Shift+Up)
+     * Let the shortcut system handle it instead
+     */
+    if (isBlockMovementShortcut(event, 'up')) {
       return;
     }
 

@@ -22,6 +22,7 @@ import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitize
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
 import PromiseQueue from '../utils/promise-queue';
 import { BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
+import Shortcuts from '../utils/shortcuts';
 
 type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
@@ -169,6 +170,11 @@ export default class BlockManager extends Module {
   private _blocks: BlocksStore | null = null;
 
   /**
+   * Registered keyboard shortcut names for cleanup
+   */
+  private registeredShortcuts: string[] = [];
+
+  /**
    * Should be called after Blok.UI preparation
    * Define this._blocks property
    */
@@ -198,6 +204,8 @@ export default class BlockManager extends Module {
         this.Blok.BlockEvents.handleCommandC(event as ClipboardEvent);
       }
     );
+
+    this.setupKeyboardShortcuts();
   }
 
   /**
@@ -1073,10 +1081,114 @@ export default class BlockManager extends Module {
   }
 
   /**
+   * Moves the current block up by one position
+   * Does nothing if the block is already at the top
+   */
+  public moveCurrentBlockUp(): void {
+    const currentIndex = this.currentBlockIndex;
+
+    if (currentIndex <= 0) {
+      return;
+    }
+
+    this.move(currentIndex - 1, currentIndex);
+    this.refocusCurrentBlock();
+  }
+
+  /**
+   * Moves the current block down by one position
+   * Does nothing if the block is already at the bottom
+   */
+  public moveCurrentBlockDown(): void {
+    const currentIndex = this.currentBlockIndex;
+
+    if (currentIndex < 0 || currentIndex >= this.blocksStore.length - 1) {
+      return;
+    }
+
+    this.move(currentIndex + 1, currentIndex);
+    this.refocusCurrentBlock();
+  }
+
+  /**
+   * Refocuses the current block at the end position
+   * Used after block movement to allow consecutive moves
+   */
+  private refocusCurrentBlock(): void {
+    const block = this.currentBlock;
+
+    if (block !== undefined) {
+      this.Blok.Caret.setToBlock(block, this.Blok.Caret.positions.END);
+    }
+  }
+
+  /**
+   * Sets up keyboard shortcuts for block movement
+   * CMD+SHIFT+UP: Move current block up
+   * CMD+SHIFT+DOWN: Move current block down
+   */
+  private setupKeyboardShortcuts(): void {
+    // Wait for UI to be ready (same pattern as History module)
+    setTimeout(() => {
+      const shortcutNames = ['CMD+SHIFT+UP', 'CMD+SHIFT+DOWN'];
+
+      // Clear any existing shortcuts to avoid duplicate registration errors
+      shortcutNames.forEach(name => Shortcuts.remove(document, name));
+
+      // Move block up: Cmd+Shift+ArrowUp (Mac) / Ctrl+Shift+ArrowUp (Windows/Linux)
+      Shortcuts.add({
+        name: 'CMD+SHIFT+UP',
+        on: document,
+        handler: (event: KeyboardEvent) => {
+          if (!this.shouldHandleShortcut(event)) {
+            return;
+          }
+          event.preventDefault();
+          this.moveCurrentBlockUp();
+        },
+      });
+      this.registeredShortcuts.push('CMD+SHIFT+UP');
+
+      // Move block down: Cmd+Shift+ArrowDown (Mac) / Ctrl+Shift+ArrowDown (Windows/Linux)
+      Shortcuts.add({
+        name: 'CMD+SHIFT+DOWN',
+        on: document,
+        handler: (event: KeyboardEvent) => {
+          if (!this.shouldHandleShortcut(event)) {
+            return;
+          }
+          event.preventDefault();
+          this.moveCurrentBlockDown();
+        },
+      });
+      this.registeredShortcuts.push('CMD+SHIFT+DOWN');
+    }, 0);
+  }
+
+  /**
+   * Determines whether the block movement shortcut should be handled
+   * Only handles shortcuts when focus is inside the editor
+   * @param event - the keyboard event
+   * @returns true if the shortcut should be handled
+   */
+  private shouldHandleShortcut(event: KeyboardEvent): boolean {
+    const target = event.target;
+
+    return target instanceof HTMLElement &&
+      this.Blok.UI?.nodes?.wrapper?.contains(target) === true;
+  }
+
+  /**
    * Cleans up all the block tools' resources
    * This is called when blok is destroyed
    */
   public async destroy(): Promise<void> {
+    // Remove registered keyboard shortcuts
+    for (const name of this.registeredShortcuts) {
+      Shortcuts.remove(document, name);
+    }
+    this.registeredShortcuts = [];
+
     await Promise.all(this.blocks.map((block) => {
       return block.destroy();
     }));

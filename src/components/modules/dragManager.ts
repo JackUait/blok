@@ -292,14 +292,6 @@ export default class DragManager extends Module {
     preview.style.width = `${maxWidth}px`;
     preview.style.height = `${totalHeight}px`;
 
-    // Add count badge if more than 1 block
-    if (blocks.length > 1) {
-      const badge = $.make('div', 'absolute -top-2 -right-2 bg-[--color-primary] text-white rounded-xl px-2 py-0.5 text-xs font-bold pointer-events-none');
-
-      badge.textContent = `${blocks.length} blocks`;
-      preview.appendChild(badge);
-    }
-
     return preview;
   }
 

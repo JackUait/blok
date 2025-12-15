@@ -669,4 +669,130 @@ test.describe('drag and drop', () => {
     expect(savedData?.blocks[1].data.text).toBe('Block 0');
     expect(savedData?.blocks[2].data.text).toBe('Block 2');
   });
+
+  test('should auto-scroll viewport down when dragging near bottom edge', async ({ page }) => {
+    // Create many blocks to ensure the page is scrollable
+    const blocks = Array.from({ length: 20 }, (_, i) => ({
+      type: 'paragraph',
+      data: { text: `Block ${i}` },
+    }));
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Get viewport height from browser
+    const viewportHeight = await page.evaluate(() => window.innerHeight);
+
+    // Scroll to top to ensure we start at the beginning
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    // Get initial scroll position
+    const initialScrollY = await page.evaluate(() => window.scrollY);
+
+    expect(initialScrollY).toBe(0);
+
+    // Hover over the first block to show the settings button
+    const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Block 0' });
+
+    await firstBlock.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Get source position
+    const settingsBox = await getBoundingBox(settingsButton);
+
+    // Start drag
+    await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+    await page.mouse.down();
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+    await page.waitForTimeout(50);
+
+    // Move to trigger drag threshold
+    await page.mouse.move(settingsBox.x + 20, settingsBox.y + 20, { steps: 5 });
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag to start
+    await page.waitForTimeout(50);
+
+    // Move cursor to near the bottom edge of the viewport (within 50px auto-scroll zone)
+    await page.mouse.move(settingsBox.x, viewportHeight - 25, { steps: 10 });
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for auto-scroll to run
+    await page.waitForTimeout(500);
+
+    // Get new scroll position
+    const scrolledY = await page.evaluate(() => window.scrollY);
+
+    // Verify the page has scrolled down
+    expect(scrolledY).toBeGreaterThan(initialScrollY);
+
+    // Clean up - release mouse
+    await page.mouse.up();
+  });
+
+  test('should auto-scroll viewport up when dragging near top edge', async ({ page }) => {
+    // Create many blocks to ensure the page is scrollable
+    const blocks = Array.from({ length: 20 }, (_, i) => ({
+      type: 'paragraph',
+      data: { text: `Block ${i}` },
+    }));
+
+    await createBlok(page, {
+      data: { blocks },
+    });
+
+    // Scroll down first so we have room to scroll up
+    await page.evaluate(() => window.scrollTo(0, 300));
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow scroll to complete
+    await page.waitForTimeout(100);
+
+    // Get initial scroll position (should be 300)
+    const initialScrollY = await page.evaluate(() => window.scrollY);
+
+    expect(initialScrollY).toBeGreaterThan(0);
+
+    // Hover over a visible block to show the settings button
+    const visibleBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Block 5' });
+
+    await visibleBlock.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Get source position
+    const settingsBox = await getBoundingBox(settingsButton);
+
+    // Start drag
+    await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+    await page.mouse.down();
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+    await page.waitForTimeout(50);
+
+    // Move to trigger drag threshold
+    await page.mouse.move(settingsBox.x + 20, settingsBox.y - 20, { steps: 5 });
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag to start
+    await page.waitForTimeout(50);
+
+    // Move cursor to near the top edge of the viewport (within 50px auto-scroll zone)
+    await page.mouse.move(settingsBox.x, 25, { steps: 10 });
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for auto-scroll to run
+    await page.waitForTimeout(500);
+
+    // Get new scroll position
+    const scrolledY = await page.evaluate(() => window.scrollY);
+
+    // Verify the page has scrolled up
+    expect(scrolledY).toBeLessThan(initialScrollY);
+
+    // Clean up - release mouse
+    await page.mouse.up();
+  });
 });

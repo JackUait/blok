@@ -57,6 +57,8 @@ interface DragState {
   isDragging: boolean;
   /** Auto-scroll interval */
   autoScrollInterval: number | null;
+  /** Scrollable container for auto-scroll (null means use window) */
+  scrollContainer: HTMLElement | null;
 }
 
 export default class DragManager extends Module {
@@ -160,6 +162,7 @@ export default class DragManager extends Module {
       startY: e.clientY,
       isDragging: false,
       autoScrollInterval: null,
+      scrollContainer: this.findScrollableAncestor(this.Blok.UI.nodes.wrapper),
     };
 
     // Bind handlers
@@ -424,7 +427,35 @@ export default class DragManager extends Module {
   }
 
   /**
-   * Handles auto-scrolling when cursor is near edges
+   * Finds the scrollable ancestor of an element
+   * @param element - Starting element
+   * @returns The scrollable element or null if window should be used
+   */
+  private findScrollableAncestor(element: HTMLElement | null): HTMLElement | null {
+    if (!element || element === document.body) {
+      return null;
+    }
+
+    const parent = element.parentElement;
+
+    if (!parent || parent === document.body) {
+      return null;
+    }
+
+    const style = window.getComputedStyle(parent);
+    const overflowY = style.overflowY;
+    const isScrollable = overflowY === 'auto' || overflowY === 'scroll';
+    const canScroll = parent.scrollHeight > parent.clientHeight;
+
+    if (isScrollable && canScroll) {
+      return parent;
+    }
+
+    return this.findScrollableAncestor(parent);
+  }
+
+  /**
+   * Handles auto-scrolling when cursor is near viewport edges
    * @param clientY - Cursor Y position
    */
   private handleAutoScroll(clientY: number): void {
@@ -432,21 +463,22 @@ export default class DragManager extends Module {
       return;
     }
 
-    const redactor = this.Blok.UI.nodes.redactor;
-    const rect = redactor.getBoundingClientRect();
-
     // Clear existing auto-scroll
     if (this.dragState.autoScrollInterval !== null) {
       cancelAnimationFrame(this.dragState.autoScrollInterval);
       this.dragState.autoScrollInterval = null;
     }
 
-    const scrollUp = clientY < rect.top + DRAG_CONFIG.autoScrollZone;
-    const scrollDown = clientY > rect.bottom - DRAG_CONFIG.autoScrollZone;
+    // Determine scroll zones based on viewport
+    const viewportHeight = window.innerHeight;
+    const scrollUp = clientY < DRAG_CONFIG.autoScrollZone;
+    const scrollDown = clientY > viewportHeight - DRAG_CONFIG.autoScrollZone;
 
     if (!scrollUp && !scrollDown) {
       return;
     }
+
+    const { scrollContainer } = this.dragState;
 
     const scroll = (): void => {
       if (!this.dragState || !this.dragState.isDragging) {
@@ -454,8 +486,14 @@ export default class DragManager extends Module {
       }
 
       const direction = scrollUp ? -1 : 1;
+      const scrollAmount = direction * DRAG_CONFIG.autoScrollSpeed;
 
-      redactor.scrollTop += direction * DRAG_CONFIG.autoScrollSpeed;
+      if (scrollContainer) {
+        scrollContainer.scrollTop += scrollAmount;
+      } else {
+        window.scrollBy(0, scrollAmount);
+      }
+
       this.dragState.autoScrollInterval = requestAnimationFrame(scroll);
     };
 

@@ -939,6 +939,180 @@ test.describe('list tool (ListItem)', () => {
       await expect(remainingMarkers.nth(1)).toHaveText('2.');
     });
 
+    test('converting middle list item to paragraph creates separate lists', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+          { text: 'Third' },
+        ], 'ordered'),
+      });
+
+      // Click on the second item and set cursor to the start
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      await secondItem.click();
+      await page.evaluate(() => {
+        const selection = window.getSelection();
+        const listBlocks = document.querySelectorAll('[data-blok-tool="list"]');
+        const secondBlock = listBlocks[1];
+        const contentEl = secondBlock?.querySelector('[contenteditable="true"]');
+        if (contentEl && selection) {
+          const range = document.createRange();
+          range.setStart(contentEl, 0);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      });
+
+      // Press Backspace at the start - this converts the list item to a paragraph
+      await page.keyboard.press('Backspace');
+
+      // Wait for the second item to become a paragraph
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(1);
+
+      // The paragraph breaks the list, so we now have TWO separate lists:
+      // List 1: 1. First
+      // Paragraph: Second
+      // List 2: 1. Third (starts new numbering because it's a new list)
+      const remainingMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(remainingMarkers).toHaveCount(2);
+      await expect(remainingMarkers.nth(0)).toHaveText('1.');
+      await expect(remainingMarkers.nth(1)).toHaveText('1.'); // New list starts at 1
+    });
+
+    test('renumbers when paragraph between list items is deleted via backspace', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+          { text: 'Third' },
+        ], 'ordered'),
+      });
+
+      // Step 1: Convert the second list item to a paragraph by pressing backspace at the start
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      await secondItem.click();
+      await page.evaluate(() => {
+        const selection = window.getSelection();
+        const listBlocks = document.querySelectorAll('[data-blok-tool="list"]');
+        const secondBlock = listBlocks[1];
+        const contentEl = secondBlock?.querySelector('[contenteditable="true"]');
+        if (contentEl && selection) {
+          const range = document.createRange();
+          range.setStart(contentEl, 0);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      });
+
+      await page.keyboard.press('Backspace');
+
+      // Now we have: 1. First, <p>Second</p>, 1. Third (two separate lists)
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(1);
+
+      // Step 2: Focus is already on the paragraph from the backspace action
+      // Select all text and delete it
+      await page.keyboard.press('Meta+a'); // Select all
+      await page.keyboard.press('Backspace'); // Delete selected text
+
+      // Now the paragraph is empty, press backspace again to delete it
+      await page.keyboard.press('Backspace');
+
+      // Wait for the paragraph to be deleted, lists should merge
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
+
+      // Now should have 2 list items, renumbered to 1. and 2.
+      const remainingMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(remainingMarkers).toHaveCount(2);
+      await expect(remainingMarkers.nth(0)).toHaveText('1.');
+      await expect(remainingMarkers.nth(1)).toHaveText('2.');
+    });
+
+    test('renumbers when middle item is deleted via block settings delete button', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+          { text: 'Third' },
+        ], 'ordered'),
+      });
+
+      // Click on the second item to make it the current block
+      const secondItem = page.locator(LIST_BLOCK_SELECTOR).nth(1).locator('[contenteditable="true"]');
+      await secondItem.click();
+
+      // Delete the current block via API (simulating block settings delete button)
+      await page.evaluate(() => {
+        // This is equivalent to clicking the delete button in block settings
+        window.blokInstance?.blocks.delete();
+      });
+
+      // Wait for the block to be deleted
+      await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
+
+      // Now should only have 2 items, renumbered to 1. and 2.
+      const remainingMarkers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+      await expect(remainingMarkers).toHaveCount(2);
+      await expect(remainingMarkers.nth(0)).toHaveText('1.');
+      await expect(remainingMarkers.nth(1)).toHaveText('2.');
+    });
+
+    test('renumbers immediately after deletion (no race condition)', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First' },
+          { text: 'Second' },
+          { text: 'Third' },
+        ], 'ordered'),
+      });
+
+      // Delete the middle item and immediately check markers
+      const result = await page.evaluate(async () => {
+        // Delete middle item
+        window.blokInstance?.blocks.delete(1);
+
+        // Immediately check markers before any requestAnimationFrame
+        const markers = document.querySelectorAll('[data-blok-tool="list"] [data-list-marker]');
+        const immediateMarkers = Array.from(markers).map(m => m.textContent);
+
+        // Wait for requestAnimationFrame
+        await new Promise(resolve => requestAnimationFrame(resolve));
+
+        // Check markers after animation frame
+        const markersAfterRaf = document.querySelectorAll('[data-blok-tool="list"] [data-list-marker]');
+        const rafMarkers = Array.from(markersAfterRaf).map(m => m.textContent);
+
+        // Wait another tick
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Check markers after timeout
+        const markersAfterTimeout = document.querySelectorAll('[data-blok-tool="list"] [data-list-marker]');
+        const timeoutMarkers = Array.from(markersAfterTimeout).map(m => m.textContent);
+
+        return {
+          immediateMarkers,
+          rafMarkers,
+          timeoutMarkers,
+        };
+      });
+
+      console.log('Immediate markers:', result.immediateMarkers);
+      console.log('After RAF markers:', result.rafMarkers);
+      console.log('After timeout markers:', result.timeoutMarkers);
+
+      // The final markers should be 1. and 2.
+      expect(result.timeoutMarkers).toEqual(['1.', '2.']);
+    });
+
     test('numbers new items correctly when created via Enter', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,

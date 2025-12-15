@@ -146,7 +146,43 @@ export default class ListItem implements BlockTool {
       this.blockId = block.id;
       // Note: parent and content are available on the block
     }
+
+    // Only ordered lists need to listen for block removals to renumber
+    if (this._data.style === 'ordered') {
+      this.api.events.on('block changed', this.handleBlockChanged);
+    }
   }
+
+  /**
+   * Handler for block change events.
+   * When any block is removed, trigger renumbering of ordered list items.
+   * Uses a static flag to deduplicate multiple calls in the same frame.
+   */
+  private handleBlockChanged = (data: unknown): void => {
+    const payload = data as { event?: { type?: string } } | undefined;
+
+    if (payload?.event?.type !== 'block-removed') {
+      return;
+    }
+
+    // Deduplicate: only schedule one update per frame across all instances
+    if (ListItem.pendingMarkerUpdate) {
+      return;
+    }
+
+    ListItem.pendingMarkerUpdate = true;
+    requestAnimationFrame(() => {
+      ListItem.pendingMarkerUpdate = false;
+      this.updateAllOrderedListMarkers();
+    });
+  };
+
+  /**
+   * Static flag to deduplicate marker updates across all ListItem instances.
+   * Prevents redundant updates when multiple list items respond to the same event.
+   */
+  private static pendingMarkerUpdate = false;
+
   sanitize?: SanitizerConfig | undefined;
 
   private normalizeData(data: ListItemData | Record<string, never>): ListItemData {
@@ -386,7 +422,12 @@ export default class ListItem implements BlockTool {
       return;
     }
 
+    // Unsubscribe from block change events to prevent memory leaks
+    this.api.events.off('block changed', this.handleBlockChanged);
+
     // Schedule marker update for next frame, after DOM has been updated
+    // Note: This is still needed because when THIS list item is removed,
+    // handleBlockChanged won't be called on this instance (it's being destroyed)
     requestAnimationFrame(() => {
       this.updateAllOrderedListMarkers();
     });
@@ -1222,13 +1263,11 @@ export default class ListItem implements BlockTool {
 
     event.preventDefault();
 
-    const isEmptyContent = !currentContent || currentContent === '' || currentContent === '<br>';
-
     // Convert to paragraph (preserving indentation for nested items)
     this.api.blocks.delete(currentBlockIndex);
     const newBlock = this.api.blocks.insert(
       'paragraph',
-      { text: isEmptyContent ? '' : currentContent },
+      { text: currentContent },
       undefined,
       currentBlockIndex,
       true

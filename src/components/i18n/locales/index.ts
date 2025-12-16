@@ -2,11 +2,14 @@ import type { I18nDictionary } from '../../../../types/configs';
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';
 import arMessages from './ar/messages.json';
 import azMessages from './az/messages.json';
+import bnMessages from './bn/messages.json';
 import deMessages from './de/messages.json';
 import enMessages from './en/messages.json';
 import esMessages from './es/messages.json';
 import frMessages from './fr/messages.json';
+import hiMessages from './hi/messages.json';
 import hyMessages from './hy/messages.json';
+import idMessages from './id/messages.json';
 import itMessages from './it/messages.json';
 import jaMessages from './ja/messages.json';
 import koMessages from './ko/messages.json';
@@ -16,6 +19,7 @@ import ptMessages from './pt/messages.json';
 import ruMessages from './ru/messages.json';
 import svMessages from './sv/messages.json';
 import trMessages from './tr/messages.json';
+import viMessages from './vi/messages.json';
 import zhMessages from './zh/messages.json';
 
 /**
@@ -38,6 +42,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: azMessages,
     direction: 'ltr',
   },
+  bn: {
+    dictionary: bnMessages,
+    direction: 'ltr',
+  },
   de: {
     dictionary: deMessages,
     direction: 'ltr',
@@ -54,8 +62,16 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: frMessages,
     direction: 'ltr',
   },
+  hi: {
+    dictionary: hiMessages,
+    direction: 'ltr',
+  },
   hy: {
     dictionary: hyMessages,
+    direction: 'ltr',
+  },
+  id: {
+    dictionary: idMessages,
     direction: 'ltr',
   },
   it: {
@@ -92,6 +108,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   },
   tr: {
     dictionary: trMessages,
+    direction: 'ltr',
+  },
+  vi: {
+    dictionary: viMessages,
     direction: 'ltr',
   },
   zh: {

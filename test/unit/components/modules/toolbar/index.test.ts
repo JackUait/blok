@@ -92,12 +92,16 @@ describe('Toolbar module interactions', () => {
       },
       BlockSelection: {
         clearSelection: vi.fn(),
+        selectedBlocks: [],
       },
       InlineToolbar: {
         opened: false,
       },
       ReadOnly: {
         isEnabled: false,
+      },
+      DragManager: {
+        isDragging: false,
       },
     } as unknown as Toolbar['Blok'];
 

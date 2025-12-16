@@ -1,5 +1,6 @@
 import type { I18nDictionary } from '../../../../types/configs';
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';
+import deMessages from './de/messages.json';
 import enMessages from './en/messages.json';
 import esMessages from './es/messages.json';
 import frMessages from './fr/messages.json';
@@ -19,6 +20,10 @@ interface LocaleConfig {
  * Registry of all available locales with their configurations
  */
 export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
+  de: {
+    dictionary: deMessages,
+    direction: 'ltr',
+  },
   en: {
     dictionary: enMessages,
     direction: 'ltr',

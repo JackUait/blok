@@ -156,8 +156,8 @@ describe('I18n', () => {
     it('falls back to default for unsupported languages', () => {
       Object.defineProperty(globalThis, 'navigator', {
         value: {
-          languages: ['fr', 'de', 'es'],
-          language: 'fr',
+          languages: ['ja', 'ko', 'ar'],
+          language: 'ja',
         },
         writable: true,
         configurable: true,
@@ -169,8 +169,8 @@ describe('I18n', () => {
     it('finds first supported language in preferences list', () => {
       Object.defineProperty(globalThis, 'navigator', {
         value: {
-          languages: ['fr', 'de', 'ru', 'en'],
-          language: 'fr',
+          languages: ['ja', 'ko', 'ru', 'en'],
+          language: 'ja',
         },
         writable: true,
         configurable: true,
@@ -258,11 +258,14 @@ describe('I18n', () => {
     it('returns array of all supported locales', () => {
       const locales = I18n.getSupportedLocales();
 
+      expect(locales).toContain('de');
       expect(locales).toContain('en');
+      expect(locales).toContain('es');
+      expect(locales).toContain('fr');
+      expect(locales).toContain('hy');
       expect(locales).toContain('ru');
       expect(locales).toContain('zh');
-      expect(locales).toContain('hy');
-      expect(locales.length).toBe(4);
+      expect(locales.length).toBe(7);
     });
   });
 });

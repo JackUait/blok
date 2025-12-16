@@ -68,7 +68,7 @@ describe('List Tool - i18n', () => {
 
       expect(dictionary).toHaveProperty('toolNames.Bulleted list');
       expect(dictionary).toHaveProperty('toolNames.Numbered list');
-      expect(dictionary).toHaveProperty('toolNames.Checklist');
+      expect(dictionary).toHaveProperty('toolNames.To-do list');
     });
 
     it('has tools.list.List key for List placeholder', () => {
@@ -83,7 +83,7 @@ describe('List Tool - i18n', () => {
       const frenchDictionary: I18nDictionary = {
         'toolNames.Bulleted list': 'Liste à puces',
         'toolNames.Numbered list': 'Liste numérotée',
-        'toolNames.Checklist': 'Liste de contrôle',
+        'toolNames.To-do list': 'Liste de contrôle',
       };
 
       I18n.setDictionary(frenchDictionary);
@@ -109,14 +109,14 @@ describe('List Tool - i18n', () => {
 
       expect(settings[0].label).toBe('Bulleted list');
       expect(settings[1].label).toBe('Numbered list');
-      expect(settings[2].label).toBe('Checklist');
+      expect(settings[2].label).toBe('To-do list');
     });
 
     it('respects configured styles when translating', () => {
       const germanDictionary: I18nDictionary = {
         'toolNames.Bulleted list': 'Aufzählung',
         'toolNames.Numbered list': 'Nummerierung',
-        'toolNames.Checklist': 'Checkliste',
+        'toolNames.To-do list': 'Aufgabenliste',
       };
 
       I18n.setDictionary(germanDictionary);
@@ -127,7 +127,7 @@ describe('List Tool - i18n', () => {
 
       expect(settings).toHaveLength(2);
       expect(settings[0].label).toBe('Aufzählung');
-      expect(settings[1].label).toBe('Checkliste');
+      expect(settings[1].label).toBe('Aufgabenliste');
     });
   });
 
@@ -142,7 +142,7 @@ describe('List Tool - i18n', () => {
       expect(toolboxArray).toHaveLength(3);
       expect(toolboxArray[0].title).toBe('Bulleted list');
       expect(toolboxArray[1].title).toBe('Numbered list');
-      expect(toolboxArray[2].title).toBe('Checklist');
+      expect(toolboxArray[2].title).toBe('To-do list');
     });
 
     it('toolbox titles exist in toolNames dictionary', () => {
@@ -160,28 +160,28 @@ describe('List Tool - i18n', () => {
       const spanishDictionary: I18nDictionary = {
         'tools.list.Bulleted list': 'Lista con viñetas',
         'tools.list.Numbered list': 'Lista numerada',
-        'tools.list.Checklist': 'Lista de verificación',
+        'tools.list.To-do list': 'Lista de verificación',
       };
 
       I18n.setDictionary(spanishDictionary);
 
       expect(I18n.t('tools.list.Bulleted list')).toBe('Lista con viñetas');
       expect(I18n.t('tools.list.Numbered list')).toBe('Lista numerada');
-      expect(I18n.t('tools.list.Checklist')).toBe('Lista de verificación');
+      expect(I18n.t('tools.list.To-do list')).toBe('Lista de verificación');
     });
 
     it('translates toolbox titles via toolNames namespace', () => {
       const japaneseDictionary: I18nDictionary = {
         'toolNames.Bulleted list': '箇条書きリスト',
         'toolNames.Numbered list': '番号付きリスト',
-        'toolNames.Checklist': 'チェックリスト',
+        'toolNames.To-do list': 'ToDoリスト',
       };
 
       I18n.setDictionary(japaneseDictionary);
 
       expect(I18n.t('toolNames.Bulleted list')).toBe('箇条書きリスト');
       expect(I18n.t('toolNames.Numbered list')).toBe('番号付きリスト');
-      expect(I18n.t('toolNames.Checklist')).toBe('チェックリスト');
+      expect(I18n.t('toolNames.To-do list')).toBe('ToDoリスト');
     });
   });
 });

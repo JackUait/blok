@@ -7,7 +7,7 @@ import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../types';
 import type Block from '../../../../src/components/block';
-import { BLOK_DRAGGING_ATTR, BLOK_DRAGGING_MULTI_ATTR } from '../../../../src/components/constants';
+import { BLOK_DRAGGING_ATTR, BLOK_DRAGGING_MULTI_ATTR, BLOK_DUPLICATING_ATTR } from '../../../../src/components/constants';
 import * as tooltip from '../../../../src/components/utils/tooltip';
 import * as announcer from '../../../../src/components/utils/announcer';
 
@@ -122,6 +122,7 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
     getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
     getBlockByIndex: vi.fn((index: number) => blocks[index]),
     move: vi.fn(),
+    insert: vi.fn(),
   };
 
   const blockSelection = {
@@ -1140,6 +1141,193 @@ describe('DragManager', () => {
       const { dragManager } = createDragManager();
 
       await expect(dragManager.prepare()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('duplication mode', () => {
+    it('sets duplicating attribute when Alt key is pressed during drag', () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(blocks[0].holder);
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+
+      // Start drag
+      const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
+
+      dragHandle.dispatchEvent(mouseDownEvent);
+
+      // Move past threshold
+      const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
+
+      document.dispatchEvent(mouseMoveEvent);
+
+      expect(dragManager.isDragging).toBe(true);
+
+      // Press Alt key
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
+
+      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBe('true');
+
+      // Clean up
+      document.dispatchEvent(createMouseEvent('mouseup'));
+    });
+
+    it('removes duplicating attribute when Alt key is released', () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(blocks[0].holder);
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+
+      // Start drag
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
+
+      // Press Alt key
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
+      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBe('true');
+
+      // Release Alt key
+      document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Alt', bubbles: true }));
+      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBeNull();
+
+      // Clean up
+      document.dispatchEvent(createMouseEvent('mouseup'));
+    });
+
+    it('does not set duplicating attribute if drag has not started', () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(blocks[0].holder);
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+
+      // Start tracking but don't pass threshold
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+
+      expect(dragManager.isDragging).toBe(false);
+
+      // Press Alt key - should not set attribute since not dragging
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
+
+      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBeNull();
+
+      // Clean up
+      document.dispatchEvent(createMouseEvent('mouseup'));
+    });
+
+    it('removes duplicating attribute on cleanup', () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(blocks[0].holder);
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+
+      // Start drag
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
+
+      // Press Alt key
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
+      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBe('true');
+
+      // Clean up via mouseup
+      document.dispatchEvent(createMouseEvent('mouseup'));
+
+      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBeNull();
+    });
+
+    it('calls insert instead of move when Alt key is held during drop', async () => {
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      // Add mock for block.save()
+      const mockSaveResult = {
+        data: { text: 'Block content' },
+        tunes: {},
+      };
+
+      (blocks[0] as unknown as { save: () => Promise<typeof mockSaveResult>; name: string }).save =
+        vi.fn().mockResolvedValue(mockSaveResult);
+      (blocks[0] as unknown as { name: string }).name = 'paragraph';
+
+      // Add mock for insert
+      (modules.BlockManager.insert as Mock).mockReturnValue(blocks[0]);
+
+      document.body.appendChild(wrapper);
+      blocks.forEach(block => wrapper.appendChild(block.holder));
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+
+      // Start drag
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
+
+      // Set up target
+      vi.mocked(document.elementFromPoint).mockReturnValue(blocks[2].holder);
+      (blocks[2].holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+
+      // Move over target
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 50, clientY: 130 }));
+
+      // Drop with Alt key held
+      document.dispatchEvent(createMouseEvent('mouseup', { altKey: true } as MouseEventInit));
+
+      // Wait for async duplication
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should have called insert instead of move
+      expect(modules.BlockManager.insert).toHaveBeenCalled();
+      expect(modules.BlockManager.move).not.toHaveBeenCalled();
+    });
+
+    it('does not duplicate when drop target is not set', async () => {
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(blocks[0].holder);
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+
+      // Start drag
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
+
+      // Drop with Alt key held but no target
+      document.dispatchEvent(createMouseEvent('mouseup', { altKey: true } as MouseEventInit));
+
+      // Wait for async duplication
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should not have called insert or move
+      expect(modules.BlockManager.insert).not.toHaveBeenCalled();
+      expect(modules.BlockManager.move).not.toHaveBeenCalled();
     });
   });
 });

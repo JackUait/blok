@@ -9,7 +9,7 @@ import Module from '../__module';
 import type Block from '../block';
 import $ from '../dom';
 import * as tooltip from '../utils/tooltip';
-import { BLOK_DRAGGING_ATTR, BLOK_DRAGGING_MULTI_ATTR, BLOK_ELEMENT_SELECTOR } from '../constants';
+import { BLOK_DRAGGING_ATTR, BLOK_DRAGGING_MULTI_ATTR, BLOK_DUPLICATING_ATTR, BLOK_ELEMENT_SELECTOR } from '../constants';
 import { twMerge } from '../utils/tw';
 import { announce } from '../utils/announcer';
 import I18n from '../i18n';
@@ -102,6 +102,7 @@ export default class DragManager extends Module {
     onMouseMove: (e: MouseEvent) => void;
     onMouseUp: (e: MouseEvent) => void;
     onKeyDown: (e: KeyboardEvent) => void;
+    onKeyUp: (e: KeyboardEvent) => void;
   } | null = null;
 
   /**
@@ -193,11 +194,13 @@ export default class DragManager extends Module {
       onMouseMove: this.onMouseMove.bind(this),
       onMouseUp: this.onMouseUp.bind(this),
       onKeyDown: this.onKeyDown.bind(this),
+      onKeyUp: this.onKeyUp.bind(this),
     };
 
     document.addEventListener('mousemove', this.boundHandlers.onMouseMove);
     document.addEventListener('mouseup', this.boundHandlers.onMouseUp);
     document.addEventListener('keydown', this.boundHandlers.onKeyDown);
+    document.addEventListener('keyup', this.boundHandlers.onKeyUp);
   }
 
   /**
@@ -636,15 +639,24 @@ export default class DragManager extends Module {
    * Handles mouse up to complete or cancel drag
    * @param e - Mouse event
    */
-  private onMouseUp(_e: MouseEvent): void {
+  private onMouseUp(e: MouseEvent): void {
     if (!this.dragState) {
       return;
     }
 
-    const { isDragging, sourceBlock, targetBlock, targetEdge } = this.dragState;
+    const { isDragging, sourceBlock, sourceBlocks, targetBlock, targetEdge } = this.dragState;
+    const canDrop = isDragging && targetBlock !== null && targetEdge !== null;
 
-    if (isDragging && targetBlock && targetEdge) {
-      // Perform the drop
+    if (!canDrop) {
+      this.cleanup();
+
+      return;
+    }
+
+    // Check Alt key state at drop time to determine operation
+    if (e.altKey) {
+      void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge);
+    } else {
       this.handleDrop(sourceBlock, targetBlock, targetEdge);
     }
 
@@ -652,12 +664,49 @@ export default class DragManager extends Module {
   }
 
   /**
-   * Handles escape key to cancel drag
+   * Handles escape key to cancel drag and Alt key to toggle duplication mode
    * @param e - Keyboard event
    */
   private onKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
       this.cleanup(true);
+
+      return;
+    }
+
+    // Toggle duplication mode on Alt/Option key press
+    if (e.key === 'Alt' && this.dragState?.isDragging) {
+      this.setDuplicationMode(true);
+    }
+  }
+
+  /**
+   * Handles Alt key release to toggle off duplication mode
+   * @param e - Keyboard event
+   */
+  private onKeyUp(e: KeyboardEvent): void {
+    if (e.key === 'Alt' && this.dragState?.isDragging) {
+      this.setDuplicationMode(false);
+    }
+  }
+
+  /**
+   * Sets duplication mode visual feedback on or off.
+   * The actual duplication decision is made by checking e.altKey at drop time,
+   * this method only controls the visual indicator for user feedback.
+   * @param isDuplicating - Whether duplication mode should be visually indicated
+   */
+  private setDuplicationMode(isDuplicating: boolean): void {
+    if (!this.dragState) {
+      return;
+    }
+
+    const wrapper = this.Blok.UI.nodes.wrapper;
+
+    if (isDuplicating) {
+      wrapper.setAttribute(BLOK_DUPLICATING_ATTR, 'true');
+    } else {
+      wrapper.removeAttribute(BLOK_DUPLICATING_ATTR);
     }
   }
 
@@ -682,6 +731,115 @@ export default class DragManager extends Module {
     // Re-open toolbar on the dropped block
     this.Blok.Toolbar.skipNextSettingsToggle();
     this.Blok.Toolbar.moveAndOpen(sourceBlock);
+  }
+
+  /**
+   * Handles block duplication instead of move
+   * @param sourceBlocks - Blocks to duplicate
+   * @param targetBlock - Block to insert duplicates near
+   * @param edge - Edge of target ('top' or 'bottom')
+   */
+  private async handleDuplicate(
+    sourceBlocks: Block[],
+    targetBlock: Block,
+    edge: 'top' | 'bottom'
+  ): Promise<void> {
+    const manager = this.Blok.BlockManager;
+
+    // Sort blocks by current index to preserve order
+    const sortedBlocks = [...sourceBlocks].sort((a, b) =>
+      manager.getBlockIndex(a) - manager.getBlockIndex(b)
+    );
+
+    // Calculate target insertion point
+    const targetIndex = manager.getBlockIndex(targetBlock);
+    const baseInsertIndex = edge === 'top' ? targetIndex : targetIndex + 1;
+
+    // Save all blocks concurrently and filter out failures
+    const saveResults = await Promise.all(
+      sortedBlocks.map(async (block) => {
+        const saved = await block.save();
+
+        if (!saved) {
+          return null;
+        }
+
+        return {
+          saved,
+          toolName: block.name,
+        };
+      })
+    );
+
+    const validResults = saveResults.filter(
+      (result): result is NonNullable<typeof result> => result !== null
+    );
+
+    if (validResults.length === 0) {
+      return;
+    }
+
+    // Insert duplicated blocks
+    const duplicatedBlocks = validResults.map(({ saved, toolName }, index) =>
+      manager.insert({
+        tool: toolName,
+        data: saved.data,
+        tunes: saved.tunes,
+        index: baseInsertIndex + index,
+        needToFocus: false,
+      })
+    );
+
+    // Announce duplication to screen readers
+    this.announceDuplicateComplete(duplicatedBlocks);
+
+    // Select all duplicated blocks
+    this.Blok.BlockSelection.clearSelection();
+    duplicatedBlocks.forEach(block => {
+      this.Blok.BlockSelection.selectBlock(block);
+    });
+
+    // Re-open toolbar on the first duplicated block
+    if (duplicatedBlocks.length > 0) {
+      this.Blok.Toolbar.skipNextSettingsToggle();
+      this.Blok.Toolbar.moveAndOpen(duplicatedBlocks[0]);
+    }
+  }
+
+  /**
+   * Announces that a duplication operation has completed
+   * @param duplicatedBlocks - The blocks that were duplicated
+   */
+  private announceDuplicateComplete(duplicatedBlocks: Block[]): void {
+    const firstBlock = duplicatedBlocks[0];
+
+    if (!firstBlock) {
+      return;
+    }
+
+    const newIndex = this.Blok.BlockManager.getBlockIndex(firstBlock);
+    const count = duplicatedBlocks.length;
+
+    if (count > 1) {
+      const message = I18n.ui(
+        I18nInternalNS.accessibility.dragAnnouncements,
+        'blocksDuplicated'
+      )
+        .replace('{count}', String(count))
+        .replace('{position}', String(newIndex + 1));
+
+      announce(message, { politeness: 'assertive' });
+    } else {
+      const total = this.Blok.BlockManager.blocks.length;
+      const message = I18n.ui(
+        I18nInternalNS.accessibility.dragAnnouncements,
+        'blockDuplicated'
+      )
+        .replace('{position}', String(newIndex + 1))
+        .replace('{total}', String(total));
+
+      announce(message, { politeness: 'assertive' });
+    }
   }
 
   /**
@@ -872,12 +1030,14 @@ export default class DragManager extends Module {
 
     wrapper.removeAttribute(BLOK_DRAGGING_ATTR);
     wrapper.removeAttribute(BLOK_DRAGGING_MULTI_ATTR);
+    wrapper.removeAttribute(BLOK_DUPLICATING_ATTR);
 
     // Remove event listeners
     if (this.boundHandlers) {
       document.removeEventListener('mousemove', this.boundHandlers.onMouseMove);
       document.removeEventListener('mouseup', this.boundHandlers.onMouseUp);
       document.removeEventListener('keydown', this.boundHandlers.onKeyDown);
+      document.removeEventListener('keyup', this.boundHandlers.onKeyUp);
       this.boundHandlers = null;
     }
 

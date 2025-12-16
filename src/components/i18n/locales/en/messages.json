@@ -68,7 +68,9 @@
       "dropPosition": "Will drop at position {position} of {total}",
       "dropCancelled": "Drag cancelled",
       "blockMoved": "Block moved to position {position} of {total}",
-      "blocksMoved": "{count} blocks moved to position {position}"
+      "blocksMoved": "{count} blocks moved to position {position}",
+      "blockDuplicated": "Block duplicated at position {position} of {total}",
+      "blocksDuplicated": "{count} blocks duplicated starting at position {position}"
     },
     "keyboardMove": {
       "movedUp": "Block moved up to position {position} of {total}",

@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import type Blok from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
-import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
+import { BLOK_INTERFACE_SELECTOR, BLOK_DUPLICATING_SELECTOR } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
@@ -82,6 +82,56 @@ const performDragDrop = async (
 
   // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for state updates
   await page.waitForTimeout(100);
+};
+
+/**
+ * Helper function to perform drag and drop with Alt/Option key held (for duplication).
+ * @param page Playwright page instance used to perform drag actions.
+ * @param sourceLocator Locator for the element that will be dragged (the drag handle).
+ * @param targetLocator Locator for the target element where the source will be dropped.
+ * @param targetVerticalPosition Vertical position within the target element to drop onto.
+ */
+const performAltDragDrop = async (
+  page: Page,
+  sourceLocator: ReturnType<Page['locator']>,
+  targetLocator: ReturnType<Page['locator']>,
+  targetVerticalPosition: 'top' | 'bottom'
+): Promise<void> => {
+  const sourceBox = await getBoundingBox(sourceLocator);
+  const targetBox = await getBoundingBox(targetLocator);
+
+  const sourceX = sourceBox.x + sourceBox.width / 2;
+  const sourceY = sourceBox.y + sourceBox.height / 2;
+  const targetX = targetBox.x + targetBox.width / 2;
+  const targetY = targetVerticalPosition === 'top'
+    ? targetBox.y + 1
+    : targetBox.y + targetBox.height - 1;
+
+  // Move to source and press down
+  await page.mouse.move(sourceX, sourceY);
+  await page.mouse.down();
+
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+  await page.waitForTimeout(50);
+
+  // Move to target position with steps to trigger drag threshold
+  await page.mouse.move(targetX, targetY, { steps: 15 });
+
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drop target detection
+  await page.waitForTimeout(50);
+
+  // Hold Alt key and release mouse to duplicate instead of move
+  await page.keyboard.down('Alt');
+
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for alt key registration
+  await page.waitForTimeout(50);
+
+  await page.mouse.up();
+
+  await page.keyboard.up('Alt');
+
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for async duplication to complete
+  await page.waitForTimeout(150);
 };
 
 type CreateBlokOptions = {
@@ -1303,6 +1353,503 @@ test.describe('drag and drop', () => {
       expect(savedData?.blocks[1].data.text).toBe('Second');
       expect(savedData?.blocks[2].data.text).toBe('First');
       expect(savedData?.blocks[3].data.text).toBe('Child A');
+    });
+  });
+
+  test.describe('alt+drag duplication', () => {
+    test('should duplicate a single block when Alt key is held during drop', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Third block' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the first block to show the settings button
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third block' });
+
+      // Perform Alt+drag to duplicate
+      await performAltDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify: Original block still exists AND a duplicate was created at the end
+      await expect(page.getByTestId('block-wrapper')).toHaveCount(4);
+      await expect(page.getByTestId('block-wrapper')).toHaveText([
+        'First block',
+        'Second block',
+        'Third block',
+        'First block', // Duplicate
+      ]);
+
+      // Verify data - original preserved, duplicate added
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks).toHaveLength(4);
+      expect(savedData?.blocks[0].data.text).toBe('First block');
+      expect(savedData?.blocks[1].data.text).toBe('Second block');
+      expect(savedData?.blocks[2].data.text).toBe('Third block');
+      expect(savedData?.blocks[3].data.text).toBe('First block');
+
+      // Verify duplicate has a different ID than original
+      expect(savedData?.blocks[3].id).not.toBe(savedData?.blocks[0].id);
+    });
+
+    test('should duplicate block to top position when dropping at top edge', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second block' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the second block
+      const secondBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second block' });
+
+      await secondBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+      // Duplicate to top of first block
+      await performAltDragDrop(page, settingsButton, targetBlock, 'top');
+
+      // Verify: Duplicate inserted at position 0
+      await expect(page.getByTestId('block-wrapper')).toHaveCount(3);
+      await expect(page.getByTestId('block-wrapper')).toHaveText([
+        'Second block', // Duplicate at top
+        'First block',
+        'Second block', // Original
+      ]);
+    });
+
+    test('should duplicate multiple selected blocks together', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'Block 0' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Block 1' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Block 2' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Block 3' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Select blocks 1 and 2
+      await page.evaluate(() => {
+        const blok = window.blokInstance;
+
+        if (!blok) {
+          throw new Error('Blok instance not found');
+        }
+        const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+        blockSelection.selectBlockByIndex(1);
+        blockSelection.selectBlockByIndex(2);
+      });
+
+      // Hover over block 1 to show settings button
+      const block1 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 1' });
+
+      await block1.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Duplicate to bottom of block 3
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Block 3' });
+
+      await performAltDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify: Originals preserved, duplicates added at the end
+      await expect(page.getByTestId('block-wrapper')).toHaveCount(6);
+      await expect(page.getByTestId('block-wrapper')).toHaveText([
+        'Block 0',
+        'Block 1', // Original
+        'Block 2', // Original
+        'Block 3',
+        'Block 1', // Duplicate
+        'Block 2', // Duplicate
+      ]);
+
+      // Verify data
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks).toHaveLength(6);
+      expect(savedData?.blocks[4].data.text).toBe('Block 1');
+      expect(savedData?.blocks[5].data.text).toBe('Block 2');
+    });
+
+    test('should show duplicating visual feedback when Alt key is pressed during drag', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second block' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the first block
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Get positions
+      const settingsBox = await getBoundingBox(settingsButton);
+      const secondBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second block' });
+      const secondBlockBox = await getBoundingBox(secondBlock);
+
+      // Start drag
+      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+      await page.mouse.down();
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow drag init
+      await page.waitForTimeout(50);
+
+      // Move to trigger drag
+      await page.mouse.move(
+        secondBlockBox.x + secondBlockBox.width / 2,
+        secondBlockBox.y + secondBlockBox.height - 1,
+        { steps: 15 }
+      );
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow drag start
+      await page.waitForTimeout(50);
+
+      // Verify duplicating attribute is NOT set yet
+      const blokWrapper = page.locator(BLOK_DUPLICATING_SELECTOR);
+
+      await expect(blokWrapper).toHaveCount(0);
+
+      // Press Alt key
+      await page.keyboard.down('Alt');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow key registration
+      await page.waitForTimeout(50);
+
+      // Verify duplicating attribute IS set
+      await expect(blokWrapper).toHaveCount(1);
+
+      // Release Alt key
+      await page.keyboard.up('Alt');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow key unregistration
+      await page.waitForTimeout(50);
+
+      // Verify duplicating attribute is removed
+      await expect(blokWrapper).toHaveCount(0);
+
+      // Clean up
+      await page.mouse.up();
+    });
+
+    test('should preserve original block positions when duplicating', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'Alpha' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Beta' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Gamma' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Get IDs before duplication
+      const idsBefore = await page.evaluate(() =>
+        window.blokInstance?.save().then(data => data.blocks.map(b => b.id))
+      );
+
+      // Hover over the second block
+      const betaBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Beta' });
+
+      await betaBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Duplicate to after Gamma (bottom of Gamma)
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Gamma' });
+
+      await performAltDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify original blocks preserved their IDs
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      // Original blocks should have same IDs
+      expect(savedData?.blocks[0].id).toBe(idsBefore?.[0]); // Alpha
+      expect(savedData?.blocks[1].id).toBe(idsBefore?.[1]); // Beta
+      expect(savedData?.blocks[2].id).toBe(idsBefore?.[2]); // Gamma
+
+      // Duplicate should have new ID
+      expect(savedData?.blocks[3].id).not.toBe(idsBefore?.[1]);
+      expect(savedData?.blocks[3].data.text).toBe('Beta');
+    });
+
+    test('should not duplicate when dropping without Alt key', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'First' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over first block
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second' });
+
+      // Normal drag (no Alt) - should move, not duplicate
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify: Only 2 blocks (moved, not duplicated)
+      await expect(page.getByTestId('block-wrapper')).toHaveCount(2);
+      await expect(page.getByTestId('block-wrapper')).toHaveText([
+        'Second',
+        'First', // Moved to end
+      ]);
+    });
+
+    test('should select all duplicated blocks after duplication', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'Block A' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Block B' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Block C' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Select blocks A and B
+      await page.evaluate(() => {
+        const blok = window.blokInstance;
+
+        if (!blok) {
+          throw new Error('Blok instance not found');
+        }
+        const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+        blockSelection.selectBlockByIndex(0);
+        blockSelection.selectBlockByIndex(1);
+      });
+
+      // Hover over the first block A (original, not duplicate)
+      const blockA = page.getByTestId('block-wrapper').filter({ hasText: 'Block A' });
+
+      await blockA.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Duplicate to bottom of block C
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Block C' });
+
+      await performAltDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify duplicated blocks are selected (have selected attribute)
+      const selectedBlocks = page.locator('[data-blok-selected="true"]');
+
+      await expect(selectedBlocks).toHaveCount(2);
+
+      // The selected blocks should be the duplicates - verify by checking their text
+      await expect(selectedBlocks).toHaveText([
+        'Block A',
+        'Block B',
+      ]);
+
+      // Verify the originals are NOT selected
+      const originalBlockA = page.getByTestId('block-wrapper').filter({ hasText: 'Block A' }).and(page.locator(':not([data-blok-selected="true"])'));
+      const originalBlockB = page.getByTestId('block-wrapper').filter({ hasText: 'Block B' }).and(page.locator(':not([data-blok-selected="true"])'));
+
+      await expect(originalBlockA).toHaveCount(1);
+      await expect(originalBlockB).toHaveCount(1);
+    });
+
+    test('should duplicate list items with their nested children', async ({ page }) => {
+      // Create a nested list:
+      // - Parent (depth 0) <- duplicate this
+      //   - Child (depth 1)
+      // - Sibling (depth 0)
+      const blocks = [
+        {
+          type: 'list',
+          data: { text: 'Parent', style: 'unordered' },
+        },
+        {
+          type: 'list',
+          data: { text: 'Child', style: 'unordered', depth: 1 },
+        },
+        {
+          type: 'list',
+          data: { text: 'Sibling', style: 'unordered' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the parent block
+      const parentBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Parent' });
+
+      await parentBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Duplicate to bottom of sibling
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Sibling' });
+
+      await performAltDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Verify: Parent and Child duplicated together
+      await expect(page.getByTestId('block-wrapper')).toHaveCount(5);
+
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData?.blocks).toHaveLength(5);
+      expect(savedData?.blocks[0].data.text).toBe('Parent');
+      expect(savedData?.blocks[1].data.text).toBe('Child');
+      expect(savedData?.blocks[2].data.text).toBe('Sibling');
+      expect(savedData?.blocks[3].data.text).toBe('Parent'); // Duplicate
+      expect(savedData?.blocks[4].data.text).toBe('Child'); // Duplicate child
+    });
+
+    test('should cancel duplication if drop target is invalid', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'Only block' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the block
+      const block = page.getByTestId('block-wrapper').filter({ hasText: 'Only block' });
+
+      await block.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Get positions
+      const settingsBox = await getBoundingBox(settingsButton);
+
+      // Start drag
+      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+      await page.mouse.down();
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow drag init
+      await page.waitForTimeout(50);
+
+      // Move to trigger drag threshold but stay on same block (invalid target)
+      await page.mouse.move(settingsBox.x + 20, settingsBox.y + 20, { steps: 10 });
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow drag
+      await page.waitForTimeout(50);
+
+      // Release with Alt held - but no valid target
+      await page.keyboard.down('Alt');
+      await page.mouse.up();
+      await page.keyboard.up('Alt');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow state updates
+      await page.waitForTimeout(100);
+
+      // Verify: No duplication occurred (still just 1 block)
+      await expect(page.getByTestId('block-wrapper')).toHaveCount(1);
     });
   });
 });

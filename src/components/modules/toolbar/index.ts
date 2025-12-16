@@ -1039,6 +1039,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
        * Subscribe to the 'block-hovered' event
        */
       this.eventsDispatcher.on(BlockHovered, (data) => {
+        /**
+         * Do not move toolbar during drag operations
+         */
+        if (this.Blok.DragManager.isDragging) {
+          return;
+        }
+
         const hoveredBlock = (data as { block?: Block; target?: Element }).block;
         const hoveredTarget = (data as { block?: Block; target?: Element }).target;
 

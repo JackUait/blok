@@ -1356,6 +1356,305 @@ test.describe('drag and drop', () => {
     });
   });
 
+  test.describe('toolbar visibility during drag', () => {
+    test('should not show toolbar when hovering over blocks during drag', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Third block' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the first block to show the settings button
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Get positions
+      const settingsBox = await getBoundingBox(settingsButton);
+      const secondBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second block' });
+      const secondBlockBox = await getBoundingBox(secondBlock);
+
+      // Start drag
+      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+      await page.mouse.down();
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+      await page.waitForTimeout(50);
+
+      // Move to trigger drag threshold
+      await page.mouse.move(
+        secondBlockBox.x + secondBlockBox.width / 2,
+        secondBlockBox.y + secondBlockBox.height / 2,
+        { steps: 15 }
+      );
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag to start
+      await page.waitForTimeout(100);
+
+      // Verify dragging state is active
+      const blokWrapper = page.locator('[data-blok-dragging="true"]');
+
+      await expect(blokWrapper).toHaveCount(1);
+
+      // Now hover over the third block during drag
+      const thirdBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third block' });
+      const thirdBlockBox = await getBoundingBox(thirdBlock);
+
+      await page.mouse.move(
+        thirdBlockBox.x + thirdBlockBox.width / 2,
+        thirdBlockBox.y + thirdBlockBox.height / 2,
+        { steps: 5 }
+      );
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for hover events
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is NOT visible on third block during drag
+      // The toolbar should be closed/hidden during drag operations
+      const toolbar = page.locator('[data-blok-testid="toolbar"][data-blok-opened="true"]');
+
+      await expect(toolbar).toHaveCount(0);
+
+      // Clean up
+      await page.mouse.up();
+    });
+
+    test('should not open toolbox when hovering over blocks during drag', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Third block' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the first block to show the settings button
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Get positions
+      const settingsBox = await getBoundingBox(settingsButton);
+      const secondBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second block' });
+      const thirdBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third block' });
+      const secondBlockBox = await getBoundingBox(secondBlock);
+      const thirdBlockBox = await getBoundingBox(thirdBlock);
+
+      // Start drag
+      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+      await page.mouse.down();
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+      await page.waitForTimeout(50);
+
+      // Move to trigger drag threshold
+      await page.mouse.move(
+        secondBlockBox.x + secondBlockBox.width / 2,
+        secondBlockBox.y + secondBlockBox.height / 2,
+        { steps: 15 }
+      );
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag to start
+      await page.waitForTimeout(100);
+
+      // Verify dragging state is active
+      const blokWrapper = page.locator('[data-blok-dragging="true"]');
+
+      await expect(blokWrapper).toHaveCount(1);
+
+      // Move over multiple blocks during drag to simulate user hovering
+      await page.mouse.move(
+        thirdBlockBox.x + thirdBlockBox.width / 2,
+        thirdBlockBox.y + thirdBlockBox.height / 2,
+        { steps: 5 }
+      );
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for hover events
+      await page.waitForTimeout(100);
+
+      // Back to second block
+      await page.mouse.move(
+        secondBlockBox.x + secondBlockBox.width / 2,
+        secondBlockBox.y + secondBlockBox.height / 2,
+        { steps: 5 }
+      );
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for hover events
+      await page.waitForTimeout(100);
+
+      // Verify toolbox is NOT visible during drag
+      const toolbox = page.locator('[data-blok-testid="toolbox"]');
+
+      await expect(toolbox).toBeHidden();
+
+      // Clean up
+      await page.mouse.up();
+    });
+
+    test('should show toolbar again after drag completes', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Third block' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the first block to show the settings button
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third block' });
+
+      // Perform drag and drop
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // After drag completes, hover over a block
+      const secondBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second block' });
+
+      await secondBlock.hover();
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for toolbar to appear
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is visible again
+      const toolbar = page.locator('[data-blok-testid="toolbar"][data-blok-opened="true"]');
+
+      await expect(toolbar).toHaveCount(1);
+    });
+
+    test('should show toolbar again after drag is cancelled', async ({ page }) => {
+      const blocks = [
+        {
+          type: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second block' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Third block' },
+        },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Hover over the first block to show the settings button
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First block' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Get positions
+      const settingsBox = await getBoundingBox(settingsButton);
+      const secondBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second block' });
+      const secondBlockBox = await getBoundingBox(secondBlock);
+
+      // Start drag
+      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+      await page.mouse.down();
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag initialization
+      await page.waitForTimeout(50);
+
+      // Move to second block to trigger drag threshold
+      await page.mouse.move(
+        secondBlockBox.x + secondBlockBox.width / 2,
+        secondBlockBox.y + secondBlockBox.height / 2,
+        { steps: 15 }
+      );
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for drag to start
+      await page.waitForTimeout(100);
+
+      // Verify dragging state is active
+      const blokWrapper = page.locator('[data-blok-dragging="true"]');
+
+      await expect(blokWrapper).toHaveCount(1);
+
+      // Cancel drag with Escape
+      await page.keyboard.press('Escape');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for cleanup
+      await page.waitForTimeout(100);
+
+      // Verify dragging state is cleared
+      await expect(blokWrapper).toHaveCount(0);
+
+      // Move mouse outside the editor first, then hover over a different block
+      // This ensures a fresh BlockHovered event is triggered
+      await page.mouse.move(0, 0);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow time for mouse move
+      await page.waitForTimeout(50);
+
+      // Now hover over the third block (different from where we were)
+      const thirdBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third block' });
+
+      await thirdBlock.hover();
+
+      // Verify toolbar is visible again
+      const toolbar = page.locator('[data-blok-testid="toolbar"][data-blok-opened="true"]');
+
+      await expect(toolbar).toHaveCount(1);
+    });
+  });
+
   test.describe('alt+drag duplication', () => {
     test('should duplicate a single block when Alt key is held during drop', async ({ page }) => {
       const blocks = [

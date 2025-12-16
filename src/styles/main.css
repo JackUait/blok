@@ -84,7 +84,7 @@
 }
 
 [data-drop-indicator]::before {
-  @apply content-[''] absolute -translate-x-1/2 w-full max-w-content h-2 rounded-sm bg-[#d4e3fc] pointer-events-none z-10;
+  @apply content-[''] absolute -translate-x-1/2 w-full max-w-content h-1.5 rounded-sm bg-[#d4e3fc] pointer-events-none z-10;
   left: calc(50% + var(--drop-indicator-depth, 0) * 12px);
   max-width: calc(650px - var(--drop-indicator-depth, 0) * 24px);
 }

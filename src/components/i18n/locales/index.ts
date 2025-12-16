@@ -7,6 +7,7 @@ import frMessages from './fr/messages.json';
 import hyMessages from './hy/messages.json';
 import itMessages from './it/messages.json';
 import jaMessages from './ja/messages.json';
+import koMessages from './ko/messages.json';
 import ptMessages from './pt/messages.json';
 import ruMessages from './ru/messages.json';
 import zhMessages from './zh/messages.json';
@@ -49,6 +50,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   },
   ja: {
     dictionary: jaMessages,
+    direction: 'ltr',
+  },
+  ko: {
+    dictionary: koMessages,
     direction: 'ltr',
   },
   pt: {

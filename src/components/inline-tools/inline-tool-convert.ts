@@ -5,7 +5,6 @@ import type { Blocks, Selection, Tools, Caret, I18n } from '../../../types/api';
 import SelectionUtils from '../selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
 import I18nInternal from '../i18n';
-import { I18nInternalNS } from '../i18n/namespace-internal';
 import type BlockToolAdapter from '../tools/block';
 
 /**
@@ -84,7 +83,7 @@ export default class ConvertInlineTool implements InlineTool {
 
         result.push({
           icon: toolboxItem.icon,
-          title: I18nInternal.t(I18nInternalNS.toolNames, toolboxItem.title),
+          title: I18nInternal.t(`toolNames.${toolboxItem.title}`),
           name: tool.name,
           closeOnActivate: true,
           onActivate: async () => {
@@ -104,9 +103,9 @@ export default class ConvertInlineTool implements InlineTool {
 
     return {
       name: 'convert-to',
-      title: I18nInternal.t(I18nInternalNS.toolNames, currentBlockTitle),
+      title: I18nInternal.t(`toolNames.${currentBlockTitle}`),
        hint: {
-        title: I18nInternal.ui(I18nInternalNS.ui.popover, 'Convert to'),
+        title: I18nInternal.ui('ui.popover.Convert to'),
       },
       children: {
         items: convertToItems,

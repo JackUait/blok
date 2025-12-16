@@ -5,7 +5,6 @@ import SelectionUtils from '../../../../src/components/selection';
 import * as Utils from '../../../../src/components/utils';
 import * as BlocksUtils from '../../../../src/components/utils/blocks';
 import I18nInternal from '../../../../src/components/i18n';
-import { I18nInternalNS } from '../../../../src/components/i18n/namespace-internal';
 import type { API } from '../../../../types';
 import type BlockToolAdapter from '../../../../src/components/tools/block';
 
@@ -171,7 +170,7 @@ describe('ConvertInlineTool', () => {
     const firstItem = items[0];
 
     expect(firstItem?.title).toBe('Heading translated');
-    expect(translateSpy).toHaveBeenCalledWith(I18nInternalNS.toolNames, 'Heading');
+    expect(translateSpy).toHaveBeenCalledWith('toolNames.Heading');
 
     children?.onOpen?.();
     expect(selectionAPI.setFakeBackground).toHaveBeenCalled();

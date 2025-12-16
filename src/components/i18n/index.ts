@@ -1,18 +1,12 @@
 import defaultDictionary from './locales/en/messages.json';
-import type { I18nDictionary, Dictionary } from '../../../types/configs';
+import type { I18nDictionary } from '../../../types/configs';
 import type { SupportedLocale } from '../../../types/configs/i18n-config';
-import type { LeavesDictKeys } from '../../types-internal/i18n-internal-namespace';
 import {
   localeRegistry,
   DEFAULT_LOCALE,
   isLocaleSupported,
   getLocaleConfig,
 } from './locales';
-
-/**
- * Type for all available internal dictionary strings
- */
-type DictKeys = LeavesDictKeys<typeof defaultDictionary>;
 
 /**
  * Result of locale detection containing the resolved locale and direction
@@ -38,24 +32,21 @@ export default class I18n {
   private static currentLocale: SupportedLocale = DEFAULT_LOCALE;
 
   /**
-   * Type-safe translation for internal UI texts:
-   * Perform translation of the string by namespace and a key
-   * @example I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Drag to move')
-   * @param internalNamespace - path to translated string in dictionary
-   * @param dictKey - dictionary key. Better to use default locale original text
+   * Type-safe translation for internal UI texts
+   * @example I18n.ui('ui.blockTunes.toggler.Drag to move')
+   * @param key - full dot-notation key to the translation
    */
-  public static ui(internalNamespace: string, dictKey: DictKeys): string {
-    return I18n._t(internalNamespace, dictKey);
+  public static ui(key: string): string {
+    return I18n._t(key);
   }
 
   /**
    * Translate for external strings that is not presented in default dictionary.
    * For example, for user-specified tool names
-   * @param namespace - path to translated string in dictionary
-   * @param dictKey - dictionary key. Better to use default locale original text
+   * @param key - full dot-notation key to the translation
    */
-  public static t(namespace: string, dictKey: string): string {
-    return I18n._t(namespace, dictKey);
+  public static t(key: string): string {
+    return I18n._t(key);
   }
 
   /**
@@ -174,43 +165,23 @@ export default class I18n {
   }
 
   /**
-   * Perform translation both for internal and external namespaces
-   * If there is no translation found, returns passed key as a translated message
-   * @param namespace - path to translated string in dictionary
-   * @param dictKey - dictionary key. Better to use default locale original text
+   * Perform translation using flat key lookup
+   * If there is no translation found, returns the last segment of the key as fallback
+   * @param key - full dot-notation key to the translation
    */
-  private static _t(namespace: string, dictKey: string): string {
-    const section = I18n.getNamespace(namespace);
+  private static _t(key: string): string {
+    const translation = I18n.currentDictionary[key];
 
-    /**
-     * For Console Message to Check Section is defined or not
-     * if (section === undefined) {
-     *  _.logLabeled('I18n: section %o was not found in current dictionary', 'log', namespace);
-     * }
-     */
-
-    if (!section || !section[dictKey]) {
-      return dictKey;
+    if (translation) {
+      return translation;
     }
 
-    return section[dictKey] as string;
-  }
+    /**
+     * Fallback: return the last segment of the key (the actual text)
+     * For example, "ui.popover.Search" returns "Search"
+     */
+    const lastDot = key.lastIndexOf('.');
 
-  /**
-   * Find messages section by namespace path
-   * @param namespace - path to section
-   */
-  private static getNamespace(namespace: string): Dictionary {
-    const parts = namespace.split('.');
-
-    return parts.reduce((section, part) => {
-      if (!section || !Object.keys(section).length) {
-        return {};
-      }
-
-      const value = section[part];
-
-      return typeof value === 'string' ? {} : (value as Dictionary);
-    }, I18n.currentDictionary as Dictionary);
+    return lastDot === -1 ? key : key.slice(lastDot + 1);
   }
 }

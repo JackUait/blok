@@ -285,9 +285,7 @@ describe('Core', () => {
         i18n: {
           direction: 'rtl',
           messages: {
-            toolNames: {
-              paragraph: 'Paragraph',
-            },
+            'toolNames.paragraph': 'Paragraph',
           },
         },
       };

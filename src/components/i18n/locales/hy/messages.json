@@ -1,80 +1,44 @@
 {
-  "ui": {
-    "blockTunes": {
-      "toggler": {
-        "Drag to move": "Քաշեք տեղափոխելու",
-        "Click to open the menu": "Սեղմեք մենյու համար"
-      }
-    },
-    "toolbar": {
-      "toolbox": {
-        "Click to add below": "Ավելացնել բլոկ",
-        "Option-click to add above": "⌥ — ավելացնել վերևում",
-        "Ctrl-click to add above": "Ctrl — ավելացնել վերևում"
-      }
-    },
-    "popover": {
-      "Search": "Որոնել",
-      "Nothing found": "Ոչինչ չի գտնվել",
-      "Convert to": "Փոխարկել"
-    }
-  },
-  "toolNames": {
-    "Text": "Տեքստ",
-    "Heading": "Վերնագիր",
-    "Link": "Հղում",
-    "Bold": "Թավ",
-    "Italic": "Շեղ",
-    "Bulleted list": "Նշանավոր ցուցակ",
-    "Numbered list": "Համարակալ ցուցակ",
-    "Checklist": "Ստուգումների ցուցակ"
-  },
-  "tools": {
-    "link": {
-      "Add a link": "Ավելացնել հղում",
-      "Invalid link": "Սխալ հղում"
-    },
-    "stub": {
-      "Error": "Սխալ",
-      "This block cannot be displayed": "Այս բլոկը հնարավոր չէ ցուցադրել"
-    },
-    "header": {
-      "Heading 1": "Վերնագիր 1",
-      "Heading 2": "Վերնագիր 2",
-      "Heading 3": "Վերնագիր 3",
-      "Heading 4": "Վերնագիր 4",
-      "Heading 5": "Վերնագիր 5",
-      "Heading 6": "Վերնագիր 6"
-    },
-    "list": {
-      "List": "Ցուցակ"
-    }
-  },
-  "blockTunes": {
-    "delete": {
-      "Delete": "Ջնջել"
-    }
-  },
-  "accessibility": {
-    "dragHandle": {
-      "aria-label": "Քաշեք տեղափոխելու կամ սեղմեք մենյուի համար",
-      "aria-roledescription": "քաշման կոճակ"
-    },
-    "dragAnnouncements": {
-      "dragStarted": "Բլոկի քաշում",
-      "dragStartedMultiple": "{count} բլոկի քաշում",
-      "dropPosition": "Կտեղադրվի դիրքում {position} {total}-ից",
-      "dropCancelled": "Քաշումը չեղարկվեց",
-      "blockMoved": "Բլոկը տեղափոխվեց դիրք {position} {total}-ից",
-      "blocksMoved": "{count} բլոկ տեղափոխվեց դիրք {position}",
-      "blockDuplicated": "Բլոկը կրկնօրինակվեց դիրք {position} {total}-ից",
-      "blocksDuplicated": "{count} բլոկ կրկնօրինակվեց դիրքից {position}"
-    },
-    "keyboardMove": {
-      "movedUp": "Բլոկը տեղափոխվեց վերև, դիրք {position} {total}-ից",
-      "movedDown": "Բլոկը տեղափոխվեց ներքև, դիրք {position} {total}-ից",
-      "atTop": "Բլոկը արդեն վերևում է",
-      "atBottom": "Բլոկը արդեն ներքևում է"
-    }
-  }
+  "ui.blockTunes.toggler.Drag to move": "Քաշեք տեղափոխելու",
+  "ui.blockTunes.toggler.Click to open the menu": "Սեղմեք մենյու համար",
+  "ui.toolbar.toolbox.Click to add below": "Ավելացնել բլոկ",
+  "ui.toolbar.toolbox.Option-click to add above": "⌥ — ավելացնել վերևում",
+  "ui.toolbar.toolbox.Ctrl-click to add above": "Ctrl — ավելացնել վերևում",
+  "ui.popover.Search": "Որոնել",
+  "ui.popover.Nothing found": "Ոչինչ չի գտնվել",
+  "ui.popover.Convert to": "Փոխարկել",
+  "toolNames.Text": "Տեքստ",
+  "toolNames.Heading": "Վերնագիր",
+  "toolNames.Link": "Հղում",
+  "toolNames.Bold": "Թավ",
+  "toolNames.Italic": "Շեղ",
+  "toolNames.Bulleted list": "Նշանավոր ցուցակ",
+  "toolNames.Numbered list": "Համարակալ ցուցակ",
+  "toolNames.Checklist": "Ստուգումների ցուցակ",
+  "tools.link.Add a link": "Ավելացնել հղում",
+  "tools.link.Invalid link": "Սխալ հղում",
+  "tools.stub.Error": "Սխալ",
+  "tools.stub.This block cannot be displayed": "Այս բլոկը հնարավոր չէ ցուցադրել",
+  "tools.header.Heading 1": "Վերնագիր 1",
+  "tools.header.Heading 2": "Վերնագիր 2",
+  "tools.header.Heading 3": "Վերնագիր 3",
+  "tools.header.Heading 4": "Վերնագիր 4",
+  "tools.header.Heading 5": "Վերնագիր 5",
+  "tools.header.Heading 6": "Վերնագիր 6",
+  "tools.list.List": "Ցուցակ",
+  "blockTunes.delete.Delete": "Ջնջել",
+  "accessibility.dragHandle.aria-label": "Քաշեք տեղափոխելու կամ սեղմեք մենյուի համար",
+  "accessibility.dragHandle.aria-roledescription": "քաշման կոճակ",
+  "accessibility.dragAnnouncements.dragStarted": "Բլոկի քաշում",
+  "accessibility.dragAnnouncements.dragStartedMultiple": "{count} բլոկի քաշում",
+  "accessibility.dragAnnouncements.dropPosition": "Կտեղադրվի դիրքում {position} {total}-ից",
+  "accessibility.dragAnnouncements.dropCancelled": "Քաշումը չեղարկվեց",
+  "accessibility.dragAnnouncements.blockMoved": "Բլոկը տեղափոխվեց դիրք {position} {total}-ից",
+  "accessibility.dragAnnouncements.blocksMoved": "{count} բլոկ տեղափոխվեց դիրք {position}",
+  "accessibility.dragAnnouncements.blockDuplicated": "Բլոկը կրկնօրինակվեց դիրք {position} {total}-ից",
+  "accessibility.dragAnnouncements.blocksDuplicated": "{count} բլոկ կրկնօրինակվեց դիրքից {position}",
+  "accessibility.keyboardMove.movedUp": "Բլոկը տեղափոխվեց վերև, դիրք {position} {total}-ից",
+  "accessibility.keyboardMove.movedDown": "Բլոկը տեղափոխվեց ներքև, դիրք {position} {total}-ից",
+  "accessibility.keyboardMove.atTop": "Բլոկը արդեն վերևում է",
+  "accessibility.keyboardMove.atBottom": "Բլոկը արդեն ներքևում է"
 }

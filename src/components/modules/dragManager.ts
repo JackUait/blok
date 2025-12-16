@@ -13,7 +13,6 @@ import { BLOK_DRAGGING_ATTR, BLOK_DRAGGING_MULTI_ATTR, BLOK_DUPLICATING_ATTR, BL
 import { twMerge } from '../utils/tw';
 import { announce } from '../utils/announcer';
 import I18n from '../i18n';
-import { I18nInternalNS } from '../i18n/namespace-internal';
 
 /**
  * Styles for the drag preview element
@@ -386,15 +385,13 @@ export default class DragManager extends Module {
     const blockCount = this.dragState!.sourceBlocks.length;
 
     if (blockCount > 1) {
-      const message = I18n.ui(
-        I18nInternalNS.accessibility.dragAnnouncements,
-        'dragStartedMultiple'
-      ).replace('{count}', String(blockCount));
+      const message = I18n.ui('accessibility.dragAnnouncements.dragStartedMultiple')
+        .replace('{count}', String(blockCount));
 
       announce(message, { politeness: 'assertive' });
     } else {
       announce(
-        I18n.ui(I18nInternalNS.accessibility.dragAnnouncements, 'dragStarted'),
+        I18n.ui('accessibility.dragAnnouncements.dragStarted'),
         { politeness: 'assertive' }
       );
     }
@@ -550,10 +547,7 @@ export default class DragManager extends Module {
       this.dragState.lastAnnouncedDropIndex = pendingIndex;
 
       const total = this.Blok.BlockManager.blocks.length;
-      const message = I18n.ui(
-        I18nInternalNS.accessibility.dragAnnouncements,
-        'dropPosition'
-      )
+      const message = I18n.ui('accessibility.dragAnnouncements.dropPosition')
         .replace('{position}', String(pendingIndex + 1))
         .replace('{total}', String(total));
 
@@ -821,20 +815,14 @@ export default class DragManager extends Module {
     const count = duplicatedBlocks.length;
 
     if (count > 1) {
-      const message = I18n.ui(
-        I18nInternalNS.accessibility.dragAnnouncements,
-        'blocksDuplicated'
-      )
+      const message = I18n.ui('accessibility.dragAnnouncements.blocksDuplicated')
         .replace('{count}', String(count))
         .replace('{position}', String(newIndex + 1));
 
       announce(message, { politeness: 'assertive' });
     } else {
       const total = this.Blok.BlockManager.blocks.length;
-      const message = I18n.ui(
-        I18nInternalNS.accessibility.dragAnnouncements,
-        'blockDuplicated'
-      )
+      const message = I18n.ui('accessibility.dragAnnouncements.blockDuplicated')
         .replace('{position}', String(newIndex + 1))
         .replace('{total}', String(total));
 
@@ -853,19 +841,13 @@ export default class DragManager extends Module {
     const total = this.Blok.BlockManager.blocks.length;
 
     if (isMultiBlockDrag) {
-      const message = I18n.ui(
-        I18nInternalNS.accessibility.dragAnnouncements,
-        'blocksMoved'
-      )
+      const message = I18n.ui('accessibility.dragAnnouncements.blocksMoved')
         .replace('{count}', String(sourceBlocks.length))
         .replace('{position}', String(newIndex + 1));
 
       announce(message, { politeness: 'assertive' });
     } else {
-      const message = I18n.ui(
-        I18nInternalNS.accessibility.dragAnnouncements,
-        'blockMoved'
-      )
+      const message = I18n.ui('accessibility.dragAnnouncements.blockMoved')
         .replace('{position}', String(newIndex + 1))
         .replace('{total}', String(total));
 
@@ -999,7 +981,7 @@ export default class DragManager extends Module {
     // Announce cancellation to screen readers if drag was in progress and cancelled
     if (wasCancelled && this.dragState.isDragging) {
       announce(
-        I18n.ui(I18nInternalNS.accessibility.dragAnnouncements, 'dropCancelled'),
+        I18n.ui('accessibility.dragAnnouncements.dropCancelled'),
         { politeness: 'polite' }
       );
     }

@@ -5,27 +5,13 @@ import defaultDictionary from '../../../../src/components/i18n/locales/en/messag
 import type { I18nDictionary } from '../../../../types/configs';
 
 const createDictionary = (): I18nDictionary => ({
-  ui: {
-    toolbar: {
-      toolbox: {
-        'Click to add below': 'Cliquez pour ajouter ci-dessous',
-        'Option-click to add above': 'Option-clic pour ajouter ci-dessus',
-      },
-    },
-  },
-  tools: {
-    link: {
-      'Add a link': 'Ajouter un lien',
-    },
-  },
+  'ui.toolbar.toolbox.Click to add below': 'Cliquez pour ajouter ci-dessous',
+  'ui.toolbar.toolbox.Option-click to add above': 'Option-clic pour ajouter ci-dessus',
+  'tools.link.Add a link': 'Ajouter un lien',
 });
 
 const alternativeDictionary: I18nDictionary = {
-  tools: {
-    link: {
-      'Add a link': 'Lien secondaire',
-    },
-  },
+  'tools.link.Add a link': 'Lien secondaire',
 };
 
 describe('I18n', () => {
@@ -42,7 +28,7 @@ describe('I18n', () => {
 
     I18n.setDictionary(dictionary);
 
-    expect(I18n.ui('ui.toolbar.toolbox', 'Click to add below')).toBe('Cliquez pour ajouter ci-dessous');
+    expect(I18n.ui('ui.toolbar.toolbox.Click to add below')).toBe('Cliquez pour ajouter ci-dessous');
   });
 
   it('translates external namespaces via t()', () => {
@@ -50,33 +36,33 @@ describe('I18n', () => {
 
     I18n.setDictionary(dictionary);
 
-    expect(I18n.t('tools.link', 'Add a link')).toBe('Ajouter un lien');
+    expect(I18n.t('tools.link.Add a link')).toBe('Ajouter un lien');
   });
 
-  it('returns the original key when namespace is missing', () => {
+  it('returns the last segment of key when translation is missing', () => {
     const dictionary = createDictionary();
 
     I18n.setDictionary(dictionary);
 
-    expect(I18n.t('missing.namespace', 'Fallback text')).toBe('Fallback text');
+    expect(I18n.t('missing.namespace.Fallback text')).toBe('Fallback text');
   });
 
-  it('returns the original key when translation is missing inside namespace', () => {
+  it('returns the last segment when translation is missing for existing namespace prefix', () => {
     const dictionary = createDictionary();
 
     I18n.setDictionary(dictionary);
 
-    expect(I18n.t('tools.link', 'Missing label')).toBe('Missing label');
+    expect(I18n.t('tools.link.Missing label')).toBe('Missing label');
   });
 
   it('allows overriding dictionary via setDictionary()', () => {
     const firstDictionary = createDictionary();
 
     I18n.setDictionary(firstDictionary);
-    expect(I18n.t('tools.link', 'Add a link')).toBe('Ajouter un lien');
+    expect(I18n.t('tools.link.Add a link')).toBe('Ajouter un lien');
 
     I18n.setDictionary(alternativeDictionary);
-    expect(I18n.t('tools.link', 'Add a link')).toBe('Lien secondaire');
+    expect(I18n.t('tools.link.Add a link')).toBe('Lien secondaire');
   });
 
   describe('setLocale', () => {
@@ -86,7 +72,7 @@ describe('I18n', () => {
       expect(result.locale).toBe('ru');
       expect(result.direction).toBe('ltr');
       expect(I18n.getLocale()).toBe('ru');
-      expect(I18n.ui('ui.blockTunes.toggler', 'Drag to move')).toBe('Тяните, чтобы переместить');
+      expect(I18n.ui('ui.blockTunes.toggler.Drag to move')).toBe('Тяните, чтобы переместить');
     });
 
     it('sets locale to Chinese and loads Chinese dictionary', () => {
@@ -95,7 +81,7 @@ describe('I18n', () => {
       expect(result.locale).toBe('zh');
       expect(result.direction).toBe('ltr');
       expect(I18n.getLocale()).toBe('zh');
-      expect(I18n.ui('ui.blockTunes.toggler', 'Drag to move')).toBe('拖动以移动');
+      expect(I18n.ui('ui.blockTunes.toggler.Drag to move')).toBe('拖动以移动');
     });
 
     it('sets locale to English and loads English dictionary', () => {

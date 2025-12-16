@@ -1,80 +1,44 @@
 {
-  "ui": {
-    "blockTunes": {
-      "toggler": {
-        "Drag to move": "",
-        "Click to open the menu": ""
-      }
-    },
-    "toolbar": {
-      "toolbox": {
-        "Click to add below": "",
-        "Option-click to add above": "",
-        "Ctrl-click to add above": ""
-      }
-    },
-    "popover": {
-      "Search": "",
-      "Nothing found": "",
-      "Convert to": ""
-    }
-  },
-  "toolNames": {
-    "Text": "",
-    "Heading": "",
-    "Link": "",
-    "Bold": "",
-    "Italic": "",
-    "Bulleted list": "",
-    "Numbered list": "",
-    "Checklist": ""
-  },
-  "tools": {
-    "link": {
-      "Add a link": "",
-      "Invalid link": ""
-    },
-    "stub": {
-      "Error": "",
-      "This block cannot be displayed": ""
-    },
-    "header": {
-      "Heading 1": "",
-      "Heading 2": "",
-      "Heading 3": "",
-      "Heading 4": "",
-      "Heading 5": "",
-      "Heading 6": ""
-    },
-    "list": {
-      "List": ""
-    }
-  },
-  "blockTunes": {
-    "delete": {
-      "Delete": ""
-    }
-  },
-  "accessibility": {
-    "dragHandle": {
-      "aria-label": "Drag to move block or click for menu",
-      "aria-roledescription": "drag handle"
-    },
-    "dragAnnouncements": {
-      "dragStarted": "Dragging block",
-      "dragStartedMultiple": "Dragging {count} blocks",
-      "dropPosition": "Will drop at position {position} of {total}",
-      "dropCancelled": "Drag cancelled",
-      "blockMoved": "Block moved to position {position} of {total}",
-      "blocksMoved": "{count} blocks moved to position {position}",
-      "blockDuplicated": "Block duplicated at position {position} of {total}",
-      "blocksDuplicated": "{count} blocks duplicated starting at position {position}"
-    },
-    "keyboardMove": {
-      "movedUp": "Block moved up to position {position} of {total}",
-      "movedDown": "Block moved down to position {position} of {total}",
-      "atTop": "Block is at the top, cannot move up",
-      "atBottom": "Block is at the bottom, cannot move down"
-    }
-  }
+  "ui.blockTunes.toggler.Drag to move": "",
+  "ui.blockTunes.toggler.Click to open the menu": "",
+  "ui.toolbar.toolbox.Click to add below": "",
+  "ui.toolbar.toolbox.Option-click to add above": "",
+  "ui.toolbar.toolbox.Ctrl-click to add above": "",
+  "ui.popover.Search": "",
+  "ui.popover.Nothing found": "",
+  "ui.popover.Convert to": "",
+  "toolNames.Text": "",
+  "toolNames.Heading": "",
+  "toolNames.Link": "",
+  "toolNames.Bold": "",
+  "toolNames.Italic": "",
+  "toolNames.Bulleted list": "",
+  "toolNames.Numbered list": "",
+  "toolNames.Checklist": "",
+  "tools.link.Add a link": "",
+  "tools.link.Invalid link": "",
+  "tools.stub.Error": "",
+  "tools.stub.This block cannot be displayed": "",
+  "tools.header.Heading 1": "",
+  "tools.header.Heading 2": "",
+  "tools.header.Heading 3": "",
+  "tools.header.Heading 4": "",
+  "tools.header.Heading 5": "",
+  "tools.header.Heading 6": "",
+  "tools.list.List": "",
+  "blockTunes.delete.Delete": "",
+  "accessibility.dragHandle.aria-label": "Drag to move block or click for menu",
+  "accessibility.dragHandle.aria-roledescription": "drag handle",
+  "accessibility.dragAnnouncements.dragStarted": "Dragging block",
+  "accessibility.dragAnnouncements.dragStartedMultiple": "Dragging {count} blocks",
+  "accessibility.dragAnnouncements.dropPosition": "Will drop at position {position} of {total}",
+  "accessibility.dragAnnouncements.dropCancelled": "Drag cancelled",
+  "accessibility.dragAnnouncements.blockMoved": "Block moved to position {position} of {total}",
+  "accessibility.dragAnnouncements.blocksMoved": "{count} blocks moved to position {position}",
+  "accessibility.dragAnnouncements.blockDuplicated": "Block duplicated at position {position} of {total}",
+  "accessibility.dragAnnouncements.blocksDuplicated": "{count} blocks duplicated starting at position {position}",
+  "accessibility.keyboardMove.movedUp": "Block moved up to position {position} of {total}",
+  "accessibility.keyboardMove.movedDown": "Block moved down to position {position} of {total}",
+  "accessibility.keyboardMove.atTop": "Block is at the top, cannot move up",
+  "accessibility.keyboardMove.atBottom": "Block is at the bottom, cannot move down"
 }

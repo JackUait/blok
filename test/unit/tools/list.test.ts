@@ -23,7 +23,7 @@ const createMockAPI = (): API =>
       settingsButtonActive: 'blok-settings-button--active',
     },
     i18n: {
-      t: (key: string) => I18n.t('tools.list', key),
+      t: (key: string) => I18n.t(`tools.list.${key}`),
     },
     blocks: {
       getCurrentBlockIndex: () => 0,
@@ -66,27 +66,24 @@ describe('List Tool - i18n', () => {
     it('has toolNames entries for list styles', () => {
       const dictionary = defaultDictionary as I18nDictionary;
 
-      expect(dictionary.toolNames).toHaveProperty('Bulleted list');
-      expect(dictionary.toolNames).toHaveProperty('Numbered list');
-      expect(dictionary.toolNames).toHaveProperty('Checklist');
+      expect(dictionary).toHaveProperty('toolNames.Bulleted list');
+      expect(dictionary).toHaveProperty('toolNames.Numbered list');
+      expect(dictionary).toHaveProperty('toolNames.Checklist');
     });
 
-    it('has tools.list namespace for List placeholder', () => {
+    it('has tools.list.List key for List placeholder', () => {
       const dictionary = defaultDictionary as I18nDictionary;
 
-      expect(dictionary.tools).toHaveProperty('list');
-      expect(dictionary.tools!.list).toHaveProperty('List');
+      expect(dictionary).toHaveProperty('tools.list.List');
     });
   });
 
   describe('renderSettings uses i18n', () => {
     it('translates style labels in settings menu', () => {
       const frenchDictionary: I18nDictionary = {
-        toolNames: {
-          'Bulleted list': 'Liste à puces',
-          'Numbered list': 'Liste numérotée',
-          Checklist: 'Liste de contrôle',
-        },
+        'toolNames.Bulleted list': 'Liste à puces',
+        'toolNames.Numbered list': 'Liste numérotée',
+        'toolNames.Checklist': 'Liste de contrôle',
       };
 
       I18n.setDictionary(frenchDictionary);
@@ -117,11 +114,9 @@ describe('List Tool - i18n', () => {
 
     it('respects configured styles when translating', () => {
       const germanDictionary: I18nDictionary = {
-        toolNames: {
-          'Bulleted list': 'Aufzählung',
-          'Numbered list': 'Nummerierung',
-          Checklist: 'Checkliste',
-        },
+        'toolNames.Bulleted list': 'Aufzählung',
+        'toolNames.Numbered list': 'Nummerierung',
+        'toolNames.Checklist': 'Checkliste',
       };
 
       I18n.setDictionary(germanDictionary);
@@ -155,7 +150,7 @@ describe('List Tool - i18n', () => {
       const dictionary = defaultDictionary as I18nDictionary;
 
       toolbox.forEach((item) => {
-        expect(dictionary.toolNames).toHaveProperty(item.title);
+        expect(dictionary).toHaveProperty(`toolNames.${item.title}`);
       });
     });
   });
@@ -163,36 +158,30 @@ describe('List Tool - i18n', () => {
   describe('i18n integration with I18n class', () => {
     it('translates list style names via I18n.t()', () => {
       const spanishDictionary: I18nDictionary = {
-        tools: {
-          list: {
-            'Bulleted list': 'Lista con viñetas',
-            'Numbered list': 'Lista numerada',
-            Checklist: 'Lista de verificación',
-          },
-        },
+        'tools.list.Bulleted list': 'Lista con viñetas',
+        'tools.list.Numbered list': 'Lista numerada',
+        'tools.list.Checklist': 'Lista de verificación',
       };
 
       I18n.setDictionary(spanishDictionary);
 
-      expect(I18n.t('tools.list', 'Bulleted list')).toBe('Lista con viñetas');
-      expect(I18n.t('tools.list', 'Numbered list')).toBe('Lista numerada');
-      expect(I18n.t('tools.list', 'Checklist')).toBe('Lista de verificación');
+      expect(I18n.t('tools.list.Bulleted list')).toBe('Lista con viñetas');
+      expect(I18n.t('tools.list.Numbered list')).toBe('Lista numerada');
+      expect(I18n.t('tools.list.Checklist')).toBe('Lista de verificación');
     });
 
     it('translates toolbox titles via toolNames namespace', () => {
       const japaneseDictionary: I18nDictionary = {
-        toolNames: {
-          'Bulleted list': '箇条書きリスト',
-          'Numbered list': '番号付きリスト',
-          Checklist: 'チェックリスト',
-        },
+        'toolNames.Bulleted list': '箇条書きリスト',
+        'toolNames.Numbered list': '番号付きリスト',
+        'toolNames.Checklist': 'チェックリスト',
       };
 
       I18n.setDictionary(japaneseDictionary);
 
-      expect(I18n.t('toolNames', 'Bulleted list')).toBe('箇条書きリスト');
-      expect(I18n.t('toolNames', 'Numbered list')).toBe('番号付きリスト');
-      expect(I18n.t('toolNames', 'Checklist')).toBe('チェックリスト');
+      expect(I18n.t('toolNames.Bulleted list')).toBe('箇条書きリスト');
+      expect(I18n.t('toolNames.Numbered list')).toBe('番号付きリスト');
+      expect(I18n.t('toolNames.Checklist')).toBe('チェックリスト');
     });
   });
 });

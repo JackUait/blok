@@ -8,16 +8,15 @@ import Module from '../../__module';
  */
 export default class I18nAPI extends Module {
   /**
-   * Return namespace section for tool or block tune
+   * Build flat translation key for tool or block tune
    * @param toolName - tool name
    * @param isTune - is tool a block tune
+   * @param dictKey - the translation key
    */
-  private static getNamespace(toolName: string, isTune: boolean): string {
-    if (isTune) {
-      return `blockTunes.${toolName}`;
-    }
+  private static buildKey(toolName: string, isTune: boolean, dictKey: string): string {
+    const namespace = isTune ? 'blockTunes' : 'tools';
 
-    return `tools.${toolName}`;
+    return `${namespace}.${toolName}.${dictKey}`;
   }
 
   /**
@@ -43,7 +42,7 @@ export default class I18nAPI extends Module {
       this.methods,
       {
         t: (dictKey: string): string => {
-          return I18nInternal.t(I18nAPI.getNamespace(toolName, isTune), dictKey);
+          return I18nInternal.t(I18nAPI.buildKey(toolName, isTune, dictKey));
         },
       });
   }

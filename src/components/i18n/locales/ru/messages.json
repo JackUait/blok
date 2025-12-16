@@ -1,80 +1,44 @@
 {
-  "ui": {
-    "blockTunes": {
-      "toggler": {
-        "Drag to move": "Тяните, чтобы переместить",
-        "Click to open the menu": "Нажмите для меню"
-      }
-    },
-    "toolbar": {
-      "toolbox": {
-        "Click to add below": "Добавить блок",
-        "Option-click to add above": "⌥ — добавить выше",
-        "Ctrl-click to add above": "Ctrl — добавить выше"
-      }
-    },
-    "popover": {
-      "Search": "Поиск",
-      "Nothing found": "Ничего не найдено",
-      "Convert to": "Преобразовать в"
-    }
-  },
-  "toolNames": {
-    "Text": "Текст",
-    "Heading": "Заголовок",
-    "Link": "Ссылка",
-    "Bold": "Жирный",
-    "Italic": "Курсив",
-    "Bulleted list": "Маркированный список",
-    "Numbered list": "Нумерованный список",
-    "Checklist": "Список задач"
-  },
-  "tools": {
-    "link": {
-      "Add a link": "Добавить ссылку",
-      "Invalid link": "Некорректная ссылка"
-    },
-    "stub": {
-      "Error": "Ошибка",
-      "This block cannot be displayed": "Не удалось отобразить блок"
-    },
-    "header": {
-      "Heading 1": "Заголовок 1",
-      "Heading 2": "Заголовок 2",
-      "Heading 3": "Заголовок 3",
-      "Heading 4": "Заголовок 4",
-      "Heading 5": "Заголовок 5",
-      "Heading 6": "Заголовок 6"
-    },
-    "list": {
-      "List": "Список"
-    }
-  },
-  "blockTunes": {
-    "delete": {
-      "Delete": "Удалить"
-    }
-  },
-  "accessibility": {
-    "dragHandle": {
-      "aria-label": "Перетащите или нажмите для меню",
-      "aria-roledescription": "управление блоком"
-    },
-    "dragAnnouncements": {
-      "dragStarted": "Перетаскивание блока",
-      "dragStartedMultiple": "Перетаскивание блоков: {count}",
-      "dropPosition": "Будет перемещён на позицию {position} из {total}",
-      "dropCancelled": "Перетаскивание отменено",
-      "blockMoved": "Блок перемещён на позицию {position} из {total}",
-      "blocksMoved": "Блоков перемещено: {count}, позиция {position}",
-      "blockDuplicated": "Блок скопирован на позицию {position} из {total}",
-      "blocksDuplicated": "Скопировано блоков: {count}, начиная с позиции {position}"
-    },
-    "keyboardMove": {
-      "movedUp": "Блок перемещён вверх, позиция {position} из {total}",
-      "movedDown": "Блок перемещён вниз, позиция {position} из {total}",
-      "atTop": "Блок уже вверху",
-      "atBottom": "Блок уже внизу"
-    }
-  }
+  "ui.blockTunes.toggler.Drag to move": "Тяните, чтобы переместить",
+  "ui.blockTunes.toggler.Click to open the menu": "Нажмите для меню",
+  "ui.toolbar.toolbox.Click to add below": "Добавить блок",
+  "ui.toolbar.toolbox.Option-click to add above": "⌥ — добавить выше",
+  "ui.toolbar.toolbox.Ctrl-click to add above": "Ctrl — добавить выше",
+  "ui.popover.Search": "Поиск",
+  "ui.popover.Nothing found": "Ничего не найдено",
+  "ui.popover.Convert to": "Преобразовать в",
+  "toolNames.Text": "Текст",
+  "toolNames.Heading": "Заголовок",
+  "toolNames.Link": "Ссылка",
+  "toolNames.Bold": "Жирный",
+  "toolNames.Italic": "Курсив",
+  "toolNames.Bulleted list": "Маркированный список",
+  "toolNames.Numbered list": "Нумерованный список",
+  "toolNames.Checklist": "Список задач",
+  "tools.link.Add a link": "Добавить ссылку",
+  "tools.link.Invalid link": "Некорректная ссылка",
+  "tools.stub.Error": "Ошибка",
+  "tools.stub.This block cannot be displayed": "Не удалось отобразить блок",
+  "tools.header.Heading 1": "Заголовок 1",
+  "tools.header.Heading 2": "Заголовок 2",
+  "tools.header.Heading 3": "Заголовок 3",
+  "tools.header.Heading 4": "Заголовок 4",
+  "tools.header.Heading 5": "Заголовок 5",
+  "tools.header.Heading 6": "Заголовок 6",
+  "tools.list.List": "Список",
+  "blockTunes.delete.Delete": "Удалить",
+  "accessibility.dragHandle.aria-label": "Перетащите или нажмите для меню",
+  "accessibility.dragHandle.aria-roledescription": "управление блоком",
+  "accessibility.dragAnnouncements.dragStarted": "Перетаскивание блока",
+  "accessibility.dragAnnouncements.dragStartedMultiple": "Перетаскивание блоков: {count}",
+  "accessibility.dragAnnouncements.dropPosition": "Будет перемещён на позицию {position} из {total}",
+  "accessibility.dragAnnouncements.dropCancelled": "Перетаскивание отменено",
+  "accessibility.dragAnnouncements.blockMoved": "Блок перемещён на позицию {position} из {total}",
+  "accessibility.dragAnnouncements.blocksMoved": "Блоков перемещено: {count}, позиция {position}",
+  "accessibility.dragAnnouncements.blockDuplicated": "Блок скопирован на позицию {position} из {total}",
+  "accessibility.dragAnnouncements.blocksDuplicated": "Скопировано блоков: {count}, начиная с позиции {position}",
+  "accessibility.keyboardMove.movedUp": "Блок перемещён вверх, позиция {position} из {total}",
+  "accessibility.keyboardMove.movedDown": "Блок перемещён вниз, позиция {position} из {total}",
+  "accessibility.keyboardMove.atTop": "Блок уже вверху",
+  "accessibility.keyboardMove.atBottom": "Блок уже внизу"
 }

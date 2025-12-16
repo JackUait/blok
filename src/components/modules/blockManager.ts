@@ -25,7 +25,6 @@ import { BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
 import Shortcuts from '../utils/shortcuts';
 import { announce } from '../utils/announcer';
 import I18n from '../i18n';
-import { I18nInternalNS } from '../i18n/namespace-internal';
 
 type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
@@ -1093,7 +1092,7 @@ export default class BlockManager extends Module {
     if (currentIndex <= 0) {
       // Announce boundary condition
       announce(
-        I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'atTop'),
+        I18n.ui('accessibility.keyboardMove.atTop'),
         { politeness: 'polite' }
       );
 
@@ -1106,7 +1105,7 @@ export default class BlockManager extends Module {
     // Announce successful move (currentBlockIndex is now updated to new position)
     const newPosition = this.currentBlockIndex + 1; // Convert to 1-indexed for user
     const total = this.blocksStore.length;
-    const message = I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'movedUp')
+    const message = I18n.ui('accessibility.keyboardMove.movedUp')
       .replace('{position}', String(newPosition))
       .replace('{total}', String(total));
 
@@ -1123,7 +1122,7 @@ export default class BlockManager extends Module {
     if (currentIndex < 0 || currentIndex >= this.blocksStore.length - 1) {
       // Announce boundary condition
       announce(
-        I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'atBottom'),
+        I18n.ui('accessibility.keyboardMove.atBottom'),
         { politeness: 'polite' }
       );
 
@@ -1136,7 +1135,7 @@ export default class BlockManager extends Module {
     // Announce successful move (currentBlockIndex is now updated to new position)
     const newPosition = this.currentBlockIndex + 1; // Convert to 1-indexed for user
     const total = this.blocksStore.length;
-    const message = I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'movedDown')
+    const message = I18n.ui('accessibility.keyboardMove.movedDown')
       .replace('{position}', String(newPosition))
       .replace('{total}', String(total));
 

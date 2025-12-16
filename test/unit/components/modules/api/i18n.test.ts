@@ -80,7 +80,7 @@ describe('I18nAPI', () => {
 
     methods.t('label');
 
-    expect(translateMock).toHaveBeenCalledWith('tools.paragraph', 'label');
+    expect(translateMock).toHaveBeenCalledWith('tools.paragraph.label');
   });
 
   it('translates using blockTunes namespace for block tune', () => {
@@ -89,7 +89,7 @@ describe('I18nAPI', () => {
 
     methods.t('title');
 
-    expect(translateMock).toHaveBeenCalledWith('blockTunes.settings', 'title');
+    expect(translateMock).toHaveBeenCalledWith('blockTunes.settings.title');
   });
 });
 

@@ -6,7 +6,6 @@
  */
 import { IconListBulleted, IconListNumbered, IconListChecklist } from '../../components/icons';
 import I18n from '../../components/i18n';
-import { I18nInternalNS } from '../../components/i18n/namespace-internal';
 import { twMerge } from '../../components/utils/tw';
 import { BLOK_TOOL_ATTR } from '../../components/constants';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
@@ -1550,7 +1549,7 @@ export default class ListItem implements BlockTool {
   public renderSettings(): MenuConfig {
     return this.availableStyles.map(styleConfig => ({
       icon: styleConfig.icon,
-      label: I18n.t(I18nInternalNS.toolNames, styleConfig.name),
+      label: I18n.t(`toolNames.${styleConfig.name}`),
       onActivate: (): void => this.setStyle(styleConfig.style),
       closeOnActivate: true,
       isActive: this._data.style === styleConfig.style,

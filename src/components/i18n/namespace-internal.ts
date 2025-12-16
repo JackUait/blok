@@ -1,52 +1,21 @@
 import defaultDictionary from './locales/en/messages.json';
-import type { DictNamespaces } from '../../types-internal/i18n-internal-namespace';
-import { isObject, isString } from '../utils';
 
 /**
- * Evaluate messages dictionary and return object for namespace chaining
- * @param dict - Messages dictionary
- * @param [keyPath] - subsection path (used in recursive call)
+ * Type for the flat namespace object containing all translation keys
  */
-const getNamespaces = (dict: object, keyPath?: string): DictNamespaces<typeof defaultDictionary> => {
-  const result: Record<string, string | Record<string, unknown>> = {};
-
-  Object.entries(dict).forEach(([key, section]) => {
-    if (!isObject(section)) {
-      result[key] = section;
-
-      return;
-    }
-
-    const newPath = keyPath ? `${keyPath}.${key}` : key;
-
-    /**
-     * Check current section values, if all of them are strings, so there is the last section
-     */
-    const isLastSection = Object.values(section).every((sectionValue) => {
-      return isString(sectionValue);
-    });
-
-    /**
-     * In last section, we substitute namespace path instead of object with translates
-     *
-     * ui.toolbar.toolbox – "ui.toolbar.toolbox"
-     * instead of
-     * ui.toolbar.toolbox – {"Click to add below": "", "Option-click to add above": ""}
-     */
-    if (!isLastSection) {
-      result[key] = getNamespaces(section, newPath);
-
-      return;
-    }
-
-    result[key] = newPath;
-  });
-
-  return result as DictNamespaces<typeof defaultDictionary>;
-};
+export type I18nKeys = keyof typeof defaultDictionary;
 
 /**
- * Type safe access to the internal messages dictionary sections
- * @example I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Drag to move');
+ * Object containing all translation keys for type-safe access
+ * Each key maps to itself for use with I18n.ui() and I18n.t()
+ * @example I18n.ui(I18nInternalNS['ui.blockTunes.toggler.Drag to move']);
  */
-export const I18nInternalNS = getNamespaces(defaultDictionary);
+export const I18nInternalNS = Object.keys(defaultDictionary).reduce<Record<I18nKeys, string>>(
+  (result, key) => {
+    return {
+      ...result,
+      [key as I18nKeys]: key,
+    };
+  },
+  {} as Record<I18nKeys, string>
+);

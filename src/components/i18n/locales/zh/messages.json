@@ -1,80 +1,44 @@
 {
-  "ui": {
-    "blockTunes": {
-      "toggler": {
-        "Drag to move": "拖动以移动",
-        "Click to open the menu": "点击打开菜单"
-      }
-    },
-    "toolbar": {
-      "toolbox": {
-        "Click to add below": "添加内容块",
-        "Option-click to add above": "⌥ 在上方添加",
-        "Ctrl-click to add above": "Ctrl 在上方添加"
-      }
-    },
-    "popover": {
-      "Search": "搜索",
-      "Nothing found": "未找到结果",
-      "Convert to": "转换为"
-    }
-  },
-  "toolNames": {
-    "Text": "文本",
-    "Heading": "标题",
-    "Link": "链接",
-    "Bold": "加粗",
-    "Italic": "斜体",
-    "Bulleted list": "无序列表",
-    "Numbered list": "有序列表",
-    "Checklist": "清单"
-  },
-  "tools": {
-    "link": {
-      "Add a link": "添加链接",
-      "Invalid link": "链接无效"
-    },
-    "stub": {
-      "Error": "错误",
-      "This block cannot be displayed": "无法显示此内容块"
-    },
-    "header": {
-      "Heading 1": "一级标题",
-      "Heading 2": "二级标题",
-      "Heading 3": "三级标题",
-      "Heading 4": "四级标题",
-      "Heading 5": "五级标题",
-      "Heading 6": "六级标题"
-    },
-    "list": {
-      "List": "列表"
-    }
-  },
-  "blockTunes": {
-    "delete": {
-      "Delete": "删除"
-    }
-  },
-  "accessibility": {
-    "dragHandle": {
-      "aria-label": "拖动移动或点击打开菜单",
-      "aria-roledescription": "拖动控件"
-    },
-    "dragAnnouncements": {
-      "dragStarted": "正在拖动内容块",
-      "dragStartedMultiple": "正在拖动 {count} 个内容块",
-      "dropPosition": "将移动至第 {position} 位，共 {total} 个",
-      "dropCancelled": "已取消拖动",
-      "blockMoved": "内容块已移动至第 {position} 位，共 {total} 个",
-      "blocksMoved": "已移动 {count} 个内容块至第 {position} 位",
-      "blockDuplicated": "内容块已复制至第 {position} 位，共 {total} 个",
-      "blocksDuplicated": "已复制 {count} 个内容块，起始位置第 {position} 位"
-    },
-    "keyboardMove": {
-      "movedUp": "内容块已上移至第 {position} 位，共 {total} 个",
-      "movedDown": "内容块已下移至第 {position} 位，共 {total} 个",
-      "atTop": "内容块已在顶部，无法上移",
-      "atBottom": "内容块已在底部，无法下移"
-    }
-  }
+  "ui.blockTunes.toggler.Drag to move": "拖动以移动",
+  "ui.blockTunes.toggler.Click to open the menu": "点击打开菜单",
+  "ui.toolbar.toolbox.Click to add below": "添加内容块",
+  "ui.toolbar.toolbox.Option-click to add above": "⌥ 在上方添加",
+  "ui.toolbar.toolbox.Ctrl-click to add above": "Ctrl 在上方添加",
+  "ui.popover.Search": "搜索",
+  "ui.popover.Nothing found": "未找到结果",
+  "ui.popover.Convert to": "转换为",
+  "toolNames.Text": "文本",
+  "toolNames.Heading": "标题",
+  "toolNames.Link": "链接",
+  "toolNames.Bold": "加粗",
+  "toolNames.Italic": "斜体",
+  "toolNames.Bulleted list": "无序列表",
+  "toolNames.Numbered list": "有序列表",
+  "toolNames.Checklist": "清单",
+  "tools.link.Add a link": "添加链接",
+  "tools.link.Invalid link": "链接无效",
+  "tools.stub.Error": "错误",
+  "tools.stub.This block cannot be displayed": "无法显示此内容块",
+  "tools.header.Heading 1": "一级标题",
+  "tools.header.Heading 2": "二级标题",
+  "tools.header.Heading 3": "三级标题",
+  "tools.header.Heading 4": "四级标题",
+  "tools.header.Heading 5": "五级标题",
+  "tools.header.Heading 6": "六级标题",
+  "tools.list.List": "列表",
+  "blockTunes.delete.Delete": "删除",
+  "accessibility.dragHandle.aria-label": "拖动移动或点击打开菜单",
+  "accessibility.dragHandle.aria-roledescription": "拖动控件",
+  "accessibility.dragAnnouncements.dragStarted": "正在拖动内容块",
+  "accessibility.dragAnnouncements.dragStartedMultiple": "正在拖动 {count} 个内容块",
+  "accessibility.dragAnnouncements.dropPosition": "将移动至第 {position} 位，共 {total} 个",
+  "accessibility.dragAnnouncements.dropCancelled": "已取消拖动",
+  "accessibility.dragAnnouncements.blockMoved": "内容块已移动至第 {position} 位，共 {total} 个",
+  "accessibility.dragAnnouncements.blocksMoved": "已移动 {count} 个内容块至第 {position} 位",
+  "accessibility.dragAnnouncements.blockDuplicated": "内容块已复制至第 {position} 位，共 {total} 个",
+  "accessibility.dragAnnouncements.blocksDuplicated": "已复制 {count} 个内容块，起始位置第 {position} 位",
+  "accessibility.keyboardMove.movedUp": "内容块已上移至第 {position} 位，共 {total} 个",
+  "accessibility.keyboardMove.movedDown": "内容块已下移至第 {position} 位，共 {total} 个",
+  "accessibility.keyboardMove.atTop": "内容块已在顶部，无法上移",
+  "accessibility.keyboardMove.atBottom": "内容块已在底部，无法下移"
 }

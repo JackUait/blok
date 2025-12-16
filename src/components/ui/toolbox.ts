@@ -5,7 +5,6 @@ import type ToolsCollection from '../tools/collection';
 import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
 import EventsDispatcher from '../utils/events';
 import I18n from '../i18n';
-import { I18nInternalNS } from '../i18n/namespace-internal';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import Listeners from '../utils/listeners';
 import Dom from '../dom';
@@ -349,7 +348,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemParams => {
       return {
         icon: toolboxItem.icon,
-        title: I18n.t(I18nInternalNS.toolNames, toolboxItem.title || _.capitalize(tool.name)),
+        title: I18n.t(`toolNames.${toolboxItem.title || _.capitalize(tool.name)}`),
         name: toolboxItem.name ?? tool.name,
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);

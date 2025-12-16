@@ -2,6 +2,7 @@ import type { I18nDictionary } from '../../../../types/configs';
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';
 import enMessages from './en/messages.json';
 import esMessages from './es/messages.json';
+import frMessages from './fr/messages.json';
 import hyMessages from './hy/messages.json';
 import ruMessages from './ru/messages.json';
 import zhMessages from './zh/messages.json';
@@ -24,6 +25,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   },
   es: {
     dictionary: esMessages,
+    direction: 'ltr',
+  },
+  fr: {
+    dictionary: frMessages,
     direction: 'ltr',
   },
   hy: {

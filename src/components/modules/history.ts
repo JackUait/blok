@@ -471,9 +471,16 @@ export default class History extends Module {
       return;
     }
 
-    // Clean up any fake background elements before capturing state
-    // This ensures fake background spans are never persisted to history
-    this.Blok.SelectionAPI.methods.clearFakeBackground();
+    // Clean up any fake background elements before capturing state,
+    // UNLESS they are actively being used (e.g., by inline link tool).
+    // This ensures fake background spans are never persisted to history,
+    // but also preserves the visual selection when inline tools are active.
+    const inlineToolInputFocused = document.activeElement?.hasAttribute('data-blok-testid') &&
+      document.activeElement?.getAttribute('data-blok-testid') === 'inline-tool-input';
+
+    if (!inlineToolInputFocused) {
+      this.Blok.SelectionAPI.methods.clearFakeBackground();
+    }
 
     const state = await this.getCurrentState();
 

@@ -133,6 +133,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
   private lastToolbarY: number | null = null;
 
   /**
+   * Flag to ignore the next mouseup on settings toggler after a block drop
+   * Prevents the settings menu from opening when the cursor is over the toggler after drop
+   */
+  private ignoreNextSettingsMouseUp = false;
+
+  /**
    * @class
    * @param moduleConfiguration - Module Configuration
    * @param moduleConfiguration.config - Blok's config
@@ -381,11 +387,16 @@ export default class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
+    /** Clean up draggable on previous block if any */
+    if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
+      this.hoveredBlock.cleanupDraggable();
+    }
+
     this.hoveredBlock = targetBlock;
     this.hoveredTarget = target ?? null;
     this.lastToolbarY = null; // Reset cached position when moving to a new block
 
-    const { wrapper, plusButton } = this.nodes;
+    const { wrapper, plusButton, settingsToggler } = this.nodes;
 
     if (!wrapper || !plusButton) {
       return;
@@ -405,6 +416,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.lastToolbarY = newToolbarY;
     wrapper.style.top = `${newToolbarY}px`;
     targetBlockHolder.appendChild(wrapper);
+
+    /** Set up draggable on the target block using the settings toggler as drag handle */
+    if (settingsToggler && !this.Blok.ReadOnly.isEnabled) {
+      targetBlock.setupDraggable(settingsToggler, this.Blok.DragManager);
+    }
 
     /**
      * Apply content offset for nested elements (e.g., nested list items)
@@ -463,6 +479,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     const targetBlock = block ?? selectedBlocks[0];
 
+    /** Clean up draggable on previous block if any */
+    if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
+      this.hoveredBlock.cleanupDraggable();
+    }
+
     this.hoveredBlock = targetBlock;
     this.hoveredTarget = null; // No target for multi-block selection
     this.lastToolbarY = null; // Reset cached position when moving to a new block
@@ -480,6 +501,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.lastToolbarY = newToolbarY;
     wrapper.style.top = `${newToolbarY}px`;
     targetBlockHolder.appendChild(wrapper);
+
+    /** Set up draggable on the target block using the settings toggler as drag handle */
+    const { settingsToggler } = this.nodes;
+
+    if (settingsToggler && !this.Blok.ReadOnly.isEnabled) {
+      targetBlock.setupDraggable(settingsToggler, this.Blok.DragManager);
+    }
 
     /**
      * Reset content offset for multi-block selection
@@ -529,6 +557,14 @@ export default class Toolbar extends Module<ToolbarNodes> {
     this.hoveredTarget = null;
 
     this.reset();
+  }
+
+  /**
+   * Prevents the settings menu from opening on the next mouseup event
+   * Used after block drop to avoid accidental menu opening
+   */
+  public skipNextSettingsToggle(): void {
+    this.ignoreNextSettingsMouseUp = true;
   }
 
   /**
@@ -741,6 +777,17 @@ export default class Toolbar extends Module<ToolbarNodes> {
     settingsToggler.setAttribute(BLOK_DRAG_HANDLE_ATTR, '');
     settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
 
+    // Accessibility: make the drag handle accessible to screen readers
+    // Using tabindex="-1" keeps it accessible but removes from tab order
+    // Users can move blocks with keyboard shortcuts (Cmd/Ctrl+Shift+Arrow)
+    settingsToggler.setAttribute('role', 'button');
+    settingsToggler.setAttribute('tabindex', '-1');
+    settingsToggler.setAttribute(
+      'aria-label',
+      I18n.ui(I18nInternalNS.accessibility.dragHandle, 'aria-label')
+    );
+    settingsToggler.setAttribute('aria-roledescription', 'drag handle');
+
     this.nodes.settingsToggler = settingsToggler;
 
     $.append(actions, settingsToggler);
@@ -912,7 +959,6 @@ export default class Toolbar extends Module<ToolbarNodes> {
        * Stores the initial mouse position to distinguish between click and drag
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
-        e.stopPropagation();
         tooltip.hide(true);
 
         const mouseEvent = e as MouseEvent;
@@ -939,6 +985,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mouseup', (e) => {
         e.stopPropagation();
+
+        /**
+         * Ignore mouseup after a block drop to prevent settings menu from opening
+         */
+        if (this.ignoreNextSettingsMouseUp) {
+          this.ignoreNextSettingsMouseUp = false;
+
+          return;
+        }
 
         const mouseEvent = e as MouseEvent;
 
@@ -984,6 +1039,13 @@ export default class Toolbar extends Module<ToolbarNodes> {
        * Subscribe to the 'block-hovered' event
        */
       this.eventsDispatcher.on(BlockHovered, (data) => {
+        /**
+         * Do not move toolbar during drag operations
+         */
+        if (this.Blok.DragManager.isDragging) {
+          return;
+        }
+
         const hoveredBlock = (data as { block?: Block; target?: Element }).block;
         const hoveredTarget = (data as { block?: Block; target?: Element }).target;
 
@@ -1196,6 +1258,12 @@ export default class Toolbar extends Module<ToolbarNodes> {
    * Clicks on the Block Settings toggler
    */
   private settingsTogglerClicked(): void {
+    /**
+     * Cancel any pending drag tracking since we're opening the settings menu
+     * This prevents the drag from starting when the user moves their mouse to the menu
+     */
+    this.Blok.DragManager.cancelTracking();
+
     /**
      * Prefer the hovered block (desktop), fall back to the current block (mobile) so tapping the toggler still works
      */

@@ -222,6 +222,18 @@ export const BLOK_DRAGGING_ATTR = 'data-blok-dragging';
 export const BLOK_DRAGGING_SELECTOR = '[data-blok-dragging="true"]';
 
 /**
+ * Multi-block dragging state attribute
+ */
+export const BLOK_DRAGGING_MULTI_ATTR = 'data-blok-dragging-multi';
+export const BLOK_DRAGGING_MULTI_SELECTOR = '[data-blok-dragging-multi="true"]';
+
+/**
+ * Duplicating state attribute (Alt+drag)
+ */
+export const BLOK_DUPLICATING_ATTR = 'data-blok-duplicating';
+export const BLOK_DUPLICATING_SELECTOR = '[data-blok-duplicating="true"]';
+
+/**
  * Toolbox opened state attribute
  */
 export const BLOK_TOOLBOX_OPENED_ATTR = 'data-blok-toolbox-opened';

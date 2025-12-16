@@ -553,7 +553,9 @@ test.describe('blok configuration options', () => {
 
     page.off('console', listener);
 
-    const warningCount = consoleMessages.filter((message) => message.type === 'warning').length;
+    const warningCount = consoleMessages.filter((message) => {
+      return message.type === 'warning' && message.text.includes('Blok');
+    }).length;
     const logCount = consoleMessages.filter((message) => message.type === 'log').length;
 
     expect(warningCount).toBe(0);

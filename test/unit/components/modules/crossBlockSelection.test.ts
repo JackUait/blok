@@ -125,6 +125,12 @@ describe('CrossBlockSelection', () => {
           redactor,
         },
       },
+      DragManager: {
+        isDragging: false,
+      },
+      BlockSettings: {
+        opened: false,
+      },
     } as unknown as CrossBlockSelection['Blok'];
 
     setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);

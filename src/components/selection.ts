@@ -540,8 +540,14 @@ export default class SelectionUtils {
     // Save the range for later restoration
     this.savedSelectionRange = visualRange.cloneRange();
 
-    selection.removeAllRanges();
-    selection.addRange(visualRange);
+    // Update the browser selection to span the fake background elements
+    // Re-get selection in case it was cleared earlier
+    const currentSelection = window.getSelection();
+
+    if (currentSelection) {
+      currentSelection.removeAllRanges();
+      currentSelection.addRange(visualRange);
+    }
 
     this.isFakeBackgroundEnabled = true;
   }

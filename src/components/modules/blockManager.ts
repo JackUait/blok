@@ -8,9 +8,7 @@ import Block, { BlockToolAPI } from '../block';
 import Module from '../__module';
 import $ from '../dom';
 import * as _ from '../utils';
-import * as tooltip from '../utils/tooltip';
 import Blocks from '../blocks';
-import Sortable from 'sortablejs';
 import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import BlockAPI from '../block/api';
@@ -23,7 +21,11 @@ import { BlockChanged } from '../events';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
 import PromiseQueue from '../utils/promise-queue';
-import { BLOK_DRAGGING_ATTR, BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR, BLOK_DRAG_HANDLE_SELECTOR } from '../constants';
+import { BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
+import Shortcuts from '../utils/shortcuts';
+import { announce } from '../utils/announcer';
+import I18n from '../i18n';
+import { I18nInternalNS } from '../i18n/namespace-internal';
 
 type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
@@ -171,9 +173,9 @@ export default class BlockManager extends Module {
   private _blocks: BlocksStore | null = null;
 
   /**
-   * Sortable instance
+   * Registered keyboard shortcut names for cleanup
    */
-  private sortable: Sortable | null = null;
+  private registeredShortcuts: string[] = [];
 
   /**
    * Should be called after Blok.UI preparation
@@ -206,35 +208,7 @@ export default class BlockManager extends Module {
       }
     );
 
-    this.sortable = new Sortable(this.Blok.UI.nodes.redactor, {
-      animation: 150,
-      forceFallback: true,
-
-      handle: BLOK_DRAG_HANDLE_SELECTOR,
-      onStart: () => {
-        this.Blok.UI.nodes.wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
-
-        /** Unselect all blocks */
-        this.Blok.BlockSelection.allBlocksSelected = false;
-
-        tooltip.hide(true);
-      },
-      onEnd: (evt) => {
-        this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_DRAGGING_ATTR);
-        if (evt.newIndex === undefined || evt.oldIndex === undefined) {
-          return;
-        }
-
-        this.move(evt.newIndex, evt.oldIndex, true);
-
-        /** Select the moved block to provide visual feedback */
-        const movedBlock = this.getBlockByIndex(evt.newIndex);
-
-        if (movedBlock) {
-          this.Blok.BlockSelection.selectBlock(movedBlock);
-        }
-      },
-    });
+    this.setupKeyboardShortcuts();
   }
 
   /**
@@ -1110,14 +1084,143 @@ export default class BlockManager extends Module {
   }
 
   /**
+   * Moves the current block up by one position
+   * Does nothing if the block is already at the top
+   */
+  public moveCurrentBlockUp(): void {
+    const currentIndex = this.currentBlockIndex;
+
+    if (currentIndex <= 0) {
+      // Announce boundary condition
+      announce(
+        I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'atTop'),
+        { politeness: 'polite' }
+      );
+
+      return;
+    }
+
+    this.move(currentIndex - 1, currentIndex);
+    this.refocusCurrentBlock();
+
+    // Announce successful move (currentBlockIndex is now updated to new position)
+    const newPosition = this.currentBlockIndex + 1; // Convert to 1-indexed for user
+    const total = this.blocksStore.length;
+    const message = I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'movedUp')
+      .replace('{position}', String(newPosition))
+      .replace('{total}', String(total));
+
+    announce(message, { politeness: 'assertive' });
+  }
+
+  /**
+   * Moves the current block down by one position
+   * Does nothing if the block is already at the bottom
+   */
+  public moveCurrentBlockDown(): void {
+    const currentIndex = this.currentBlockIndex;
+
+    if (currentIndex < 0 || currentIndex >= this.blocksStore.length - 1) {
+      // Announce boundary condition
+      announce(
+        I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'atBottom'),
+        { politeness: 'polite' }
+      );
+
+      return;
+    }
+
+    this.move(currentIndex + 1, currentIndex);
+    this.refocusCurrentBlock();
+
+    // Announce successful move (currentBlockIndex is now updated to new position)
+    const newPosition = this.currentBlockIndex + 1; // Convert to 1-indexed for user
+    const total = this.blocksStore.length;
+    const message = I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'movedDown')
+      .replace('{position}', String(newPosition))
+      .replace('{total}', String(total));
+
+    announce(message, { politeness: 'assertive' });
+  }
+
+  /**
+   * Refocuses the current block at the end position
+   * Used after block movement to allow consecutive moves
+   */
+  private refocusCurrentBlock(): void {
+    const block = this.currentBlock;
+
+    if (block !== undefined) {
+      this.Blok.Caret.setToBlock(block, this.Blok.Caret.positions.END);
+    }
+  }
+
+  /**
+   * Sets up keyboard shortcuts for block movement
+   * CMD+SHIFT+UP: Move current block up
+   * CMD+SHIFT+DOWN: Move current block down
+   */
+  private setupKeyboardShortcuts(): void {
+    // Wait for UI to be ready (same pattern as History module)
+    setTimeout(() => {
+      const shortcutNames = ['CMD+SHIFT+UP', 'CMD+SHIFT+DOWN'];
+
+      // Clear any existing shortcuts to avoid duplicate registration errors
+      shortcutNames.forEach(name => Shortcuts.remove(document, name));
+
+      // Move block up: Cmd+Shift+ArrowUp (Mac) / Ctrl+Shift+ArrowUp (Windows/Linux)
+      Shortcuts.add({
+        name: 'CMD+SHIFT+UP',
+        on: document,
+        handler: (event: KeyboardEvent) => {
+          if (!this.shouldHandleShortcut(event)) {
+            return;
+          }
+          event.preventDefault();
+          this.moveCurrentBlockUp();
+        },
+      });
+      this.registeredShortcuts.push('CMD+SHIFT+UP');
+
+      // Move block down: Cmd+Shift+ArrowDown (Mac) / Ctrl+Shift+ArrowDown (Windows/Linux)
+      Shortcuts.add({
+        name: 'CMD+SHIFT+DOWN',
+        on: document,
+        handler: (event: KeyboardEvent) => {
+          if (!this.shouldHandleShortcut(event)) {
+            return;
+          }
+          event.preventDefault();
+          this.moveCurrentBlockDown();
+        },
+      });
+      this.registeredShortcuts.push('CMD+SHIFT+DOWN');
+    }, 0);
+  }
+
+  /**
+   * Determines whether the block movement shortcut should be handled
+   * Only handles shortcuts when focus is inside the editor
+   * @param event - the keyboard event
+   * @returns true if the shortcut should be handled
+   */
+  private shouldHandleShortcut(event: KeyboardEvent): boolean {
+    const target = event.target;
+
+    return target instanceof HTMLElement &&
+      this.Blok.UI?.nodes?.wrapper?.contains(target) === true;
+  }
+
+  /**
    * Cleans up all the block tools' resources
    * This is called when blok is destroyed
    */
   public async destroy(): Promise<void> {
-    if (this.sortable) {
-      this.sortable.destroy();
-      this.sortable = null;
+    // Remove registered keyboard shortcuts
+    for (const name of this.registeredShortcuts) {
+      Shortcuts.remove(document, name);
     }
+    this.registeredShortcuts = [];
 
     await Promise.all(this.blocks.map((block) => {
       return block.destroy();

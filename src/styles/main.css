@@ -73,3 +73,51 @@
     @apply text-item-confirm-bg transition-colors;
   }
 }
+
+/**
+ * Drop indicator styles for drag and drop
+ * Shows a visual line at the top or bottom of a block during drag
+ * The --drop-indicator-depth CSS variable controls indentation based on target nesting level
+ */
+[data-drop-indicator] {
+  @apply relative;
+}
+
+[data-drop-indicator]::before {
+  @apply content-[''] absolute -translate-x-1/2 w-full max-w-content h-1.5 rounded-sm bg-[#d4e3fc] pointer-events-none z-10;
+  left: calc(50% + var(--drop-indicator-depth, 0) * 12px);
+  max-width: calc(650px - var(--drop-indicator-depth, 0) * 24px);
+}
+
+[data-drop-indicator="bottom"]::before {
+  @apply translate-y-1/2 bottom-0;
+}
+
+[data-drop-indicator="top"]::before {
+  @apply -translate-y-1/2 top-0;
+}
+
+/**
+ * Multi-block drag visual feedback
+ * Makes selected blocks semi-transparent during multi-block drag operation
+ */
+[data-blok-dragging-multi="true"] [data-blok-selected="true"] {
+  @apply opacity-40 transition-opacity duration-200;
+}
+
+/**
+ * List item selection styles
+ * Applies selection background to the list item itself (not the content wrapper)
+ * so that margin-left indentation is respected
+ */
+[data-blok-selected="true"] [data-blok-element-content]:has([data-list-style]) {
+  @apply bg-transparent;
+}
+
+[data-blok-selected="true"] [data-list-style] [role="listitem"] {
+  @apply bg-selection rounded-[4px];
+}
+
+[data-blok-selected="true"] [data-list-style] [role="listitem"] [contenteditable] {
+  @apply select-none;
+}

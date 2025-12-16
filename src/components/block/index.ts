@@ -36,6 +36,7 @@ import {
   BLOK_SELECTED_ATTR,
   BLOK_STRETCHED_ATTR,
 } from '../constants';
+import type DragManager from '../modules/dragManager';
 
 /**
  * Interface describes Block class constructor argument
@@ -124,7 +125,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * Tailwind styles for the Block elements
    */
   private static readonly styles = {
-    wrapper: 'relative opacity-100 animate-fade-in first:mt-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
+    wrapper: 'relative opacity-100 animate-fade-in my-[-0.5em] py-[0.5em] first:mt-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
     content: 'relative mx-auto transition-colors duration-150 ease-out max-w-content',
     contentSelected: 'bg-selection rounded-[4px] [&_[contenteditable]]:select-none [&_img]:opacity-55 [&_[data-blok-tool=stub]]:opacity-55',
     contentStretched: 'max-w-none',
@@ -250,6 +251,12 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   private readonly blockAPI: BlockAPIInterface;
 
   /**
+   * Cleanup function for draggable behavior
+   */
+  private draggableCleanup: (() => void) | null = null;
+
+
+  /**
    * @param options - block constructor options
    * @param [options.id] - block's id. Will be generated if omitted.
    * @param options.data - Tool's initial data
@@ -323,7 +330,33 @@ export default class Block extends EventsDispatcher<BlockEvents> {
        * It can be useful for developers, for example for correct placeholder behavior
        */
       this.toggleInputsEmptyMark();
+
     });
+  }
+
+  /**
+   * Makes this block draggable using the provided drag handle element
+   * Called by the toolbar when it moves to this block
+   * @param dragHandle - The element to use as the drag handle
+   * @param dragManager - DragManager instance to handle drag operations
+   */
+  public setupDraggable(dragHandle: HTMLElement, dragManager: DragManager): void {
+    /** Clean up any existing draggable */
+    this.cleanupDraggable();
+
+    /** Set up drag handling via DragManager (pointer-based, not native HTML5 drag) */
+    this.draggableCleanup = dragManager.setupDragHandle(dragHandle, this);
+  }
+
+  /**
+   * Cleans up the draggable behavior
+   * Called when the toolbar moves away from this block
+   */
+  public cleanupDraggable(): void {
+    if (this.draggableCleanup) {
+      this.draggableCleanup();
+      this.draggableCleanup = null;
+    }
   }
 
   /**
@@ -672,6 +705,12 @@ export default class Block extends EventsDispatcher<BlockEvents> {
   public destroy(): void {
     this.unwatchBlockMutations();
     this.removeInputEvents();
+
+    /** Clean up drag and drop */
+    if (this.draggableCleanup) {
+      this.draggableCleanup();
+      this.draggableCleanup = null;
+    }
 
     super.destroy();
 

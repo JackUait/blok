@@ -125,8 +125,8 @@ export default class ListItem implements BlockTool {
   private contentIds?: string[];
 
   private static readonly BASE_STYLES = 'outline-none';
-  private static readonly ITEM_STYLES = 'outline-none py-0.5 leading-[1.6em]';
-  private static readonly CHECKLIST_ITEM_STYLES = 'flex items-start py-0.5';
+  private static readonly ITEM_STYLES = 'outline-none py-0.5 pl-0.5 leading-[1.6em]';
+  private static readonly CHECKLIST_ITEM_STYLES = 'flex items-start py-0.5 pl-0.5';
   private static readonly CHECKBOX_STYLES = 'mt-1 w-4 mr-2 h-4 cursor-pointer accent-current';
 
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
@@ -146,7 +146,43 @@ export default class ListItem implements BlockTool {
       this.blockId = block.id;
       // Note: parent and content are available on the block
     }
+
+    // Only ordered lists need to listen for block removals to renumber
+    if (this._data.style === 'ordered') {
+      this.api.events.on('block changed', this.handleBlockChanged);
+    }
   }
+
+  /**
+   * Handler for block change events.
+   * When any block is removed, trigger renumbering of ordered list items.
+   * Uses a static flag to deduplicate multiple calls in the same frame.
+   */
+  private handleBlockChanged = (data: unknown): void => {
+    const payload = data as { event?: { type?: string } } | undefined;
+
+    if (payload?.event?.type !== 'block-removed') {
+      return;
+    }
+
+    // Deduplicate: only schedule one update per frame across all instances
+    if (ListItem.pendingMarkerUpdate) {
+      return;
+    }
+
+    ListItem.pendingMarkerUpdate = true;
+    requestAnimationFrame(() => {
+      ListItem.pendingMarkerUpdate = false;
+      this.updateAllOrderedListMarkers();
+    });
+  };
+
+  /**
+   * Static flag to deduplicate marker updates across all ListItem instances.
+   * Prevents redundant updates when multiple list items respond to the same event.
+   */
+  private static pendingMarkerUpdate = false;
+
   sanitize?: SanitizerConfig | undefined;
 
   private normalizeData(data: ListItemData | Record<string, never>): ListItemData {
@@ -259,16 +295,68 @@ export default class ListItem implements BlockTool {
    * Ensures the depth follows list formation rules:
    * 1. First item (index 0) must be at depth 0
    * 2. Item depth cannot exceed previousItem.depth + 1
+   * 3. When dropped between nested items, adopt the sibling's depth
    *
    * @param newIndex - The new index where the block was moved to
    */
   private validateAndAdjustDepthAfterMove(newIndex: number): void {
     const currentDepth = this.getDepth();
     const maxAllowedDepth = this.calculateMaxAllowedDepth(newIndex);
+    const targetDepth = this.calculateTargetDepthForPosition(newIndex, maxAllowedDepth);
 
-    if (currentDepth > maxAllowedDepth) {
-      this.adjustDepthTo(maxAllowedDepth);
+    if (currentDepth !== targetDepth) {
+      this.adjustDepthTo(targetDepth);
     }
+  }
+
+  /**
+   * Calculates the target depth for a list item dropped at the given index.
+   * When dropping into a nested context, the item should match the sibling's depth.
+   *
+   * @param blockIndex - The index where the block was dropped
+   * @param maxAllowedDepth - The maximum allowed depth at this position
+   * @returns The target depth for the dropped item
+   */
+  private calculateTargetDepthForPosition(blockIndex: number, maxAllowedDepth: number): number {
+    const currentDepth = this.getDepth();
+
+    // If current depth exceeds max, cap it
+    if (currentDepth > maxAllowedDepth) {
+      return maxAllowedDepth;
+    }
+
+    // Check if we're inserting before a list item (next block)
+    const nextBlock = this.api.blocks.getBlockByIndex(blockIndex + 1);
+    const nextIsListItem = nextBlock && nextBlock.name === ListItem.TOOL_NAME;
+    const nextBlockDepth = nextIsListItem ? this.getBlockDepth(nextBlock) : 0;
+
+    // If next block is a deeper list item, match its depth (become a sibling)
+    // This prevents breaking list structure by inserting a shallower item
+    const shouldMatchNextDepth = nextIsListItem
+      && nextBlockDepth > currentDepth
+      && nextBlockDepth <= maxAllowedDepth;
+
+    if (shouldMatchNextDepth) {
+      return nextBlockDepth;
+    }
+
+    // Check if previous block is a list item at a deeper level
+    const previousBlock = blockIndex > 0 ? this.api.blocks.getBlockByIndex(blockIndex - 1) : null;
+    const previousIsListItem = previousBlock && previousBlock.name === ListItem.TOOL_NAME;
+    const previousBlockDepth = previousIsListItem ? this.getBlockDepth(previousBlock) : 0;
+
+    // If previous block is deeper and there's no next list item to guide us,
+    // match the previous block's depth (append as sibling in the nested list)
+    const shouldMatchPreviousDepth = previousIsListItem
+      && !nextIsListItem
+      && previousBlockDepth > currentDepth
+      && previousBlockDepth <= maxAllowedDepth;
+
+    if (shouldMatchPreviousDepth) {
+      return previousBlockDepth;
+    }
+
+    return currentDepth;
   }
 
   /**
@@ -310,20 +398,19 @@ export default class ListItem implements BlockTool {
   private adjustDepthTo(newDepth: number): void {
     this._data.depth = newDepth;
 
+    // Update the data-list-depth attribute on the wrapper
+    if (this._element) {
+      this._element.setAttribute('data-list-depth', String(newDepth));
+    }
+
     // Update DOM element's indentation
     const listItemEl = this._element?.querySelector('[role="listitem"]');
 
     if (listItemEl instanceof HTMLElement) {
-      listItemEl.style.paddingLeft = newDepth > 0
+      listItemEl.style.marginLeft = newDepth > 0
         ? `${newDepth * ListItem.INDENT_PER_LEVEL}px`
         : '';
     }
-
-    // Persist the change via API
-    void this.api.blocks.update(this.blockId || '', {
-      ...this._data,
-      depth: newDepth,
-    });
   }
 
   /**
@@ -335,7 +422,12 @@ export default class ListItem implements BlockTool {
       return;
     }
 
+    // Unsubscribe from block change events to prevent memory leaks
+    this.api.events.off('block changed', this.handleBlockChanged);
+
     // Schedule marker update for next frame, after DOM has been updated
+    // Note: This is still needed because when THIS list item is removed,
+    // handleBlockChanged won't be called on this instance (it's being destroyed)
     requestAnimationFrame(() => {
       this.updateAllOrderedListMarkers();
     });
@@ -516,8 +608,8 @@ export default class ListItem implements BlockTool {
     const listItemEl = blockHolder?.querySelector('[role="listitem"]');
     const styleAttr = listItemEl?.getAttribute('style');
 
-    const paddingMatch = styleAttr?.match(/padding-left:\s*(\d+)px/);
-    return paddingMatch ? Math.round(parseInt(paddingMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
+    const marginMatch = styleAttr?.match(/margin-left:\s*(\d+)px/);
+    return marginMatch ? Math.round(parseInt(marginMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
   }
 
   /**
@@ -743,7 +835,7 @@ export default class ListItem implements BlockTool {
     // Apply indentation based on depth
     const depth = this.getDepth();
     if (depth > 0) {
-      item.style.paddingLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
+      item.style.marginLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
     }
 
     // Create marker element (will be updated in rendered() with correct index)
@@ -771,7 +863,7 @@ export default class ListItem implements BlockTool {
     // Apply indentation based on depth
     const depth = this.getDepth();
     if (depth > 0) {
-      wrapper.style.paddingLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
+      wrapper.style.marginLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
     }
 
     const checkbox = document.createElement('input');
@@ -887,9 +979,9 @@ export default class ListItem implements BlockTool {
 
     const depthAttr = listItemEl?.querySelector('[role="listitem"]')?.getAttribute('style');
 
-    // Calculate depth from padding (paddingLeft = depth * 24px)
-    const paddingMatch = depthAttr?.match(/padding-left:\s*(\d+)px/);
-    const blockDepth = paddingMatch ? Math.round(parseInt(paddingMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
+    // Calculate depth from margin (marginLeft = depth * 24px)
+    const marginMatch = depthAttr?.match(/margin-left:\s*(\d+)px/);
+    const blockDepth = marginMatch ? Math.round(parseInt(marginMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
 
     // If this block is at a shallower depth, it's a "parent" - stop counting
     if (blockDepth < targetDepth) {
@@ -1001,8 +1093,8 @@ export default class ListItem implements BlockTool {
 
     const depthAttr = listItemEl?.querySelector('[role="listitem"]')?.getAttribute('style');
 
-    const paddingMatch = depthAttr?.match(/padding-left:\s*(\d+)px/);
-    const blockDepth = paddingMatch ? Math.round(parseInt(paddingMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
+    const marginMatch = depthAttr?.match(/margin-left:\s*(\d+)px/);
+    const blockDepth = marginMatch ? Math.round(parseInt(marginMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
 
     // If this block is at a shallower depth, we've reached the boundary
     if (blockDepth < targetDepth) {
@@ -1171,13 +1263,11 @@ export default class ListItem implements BlockTool {
 
     event.preventDefault();
 
-    const isEmptyContent = !currentContent || currentContent === '' || currentContent === '<br>';
-
     // Convert to paragraph (preserving indentation for nested items)
     this.api.blocks.delete(currentBlockIndex);
     const newBlock = this.api.blocks.insert(
       'paragraph',
-      { text: isEmptyContent ? '' : currentContent },
+      { text: currentContent },
       undefined,
       currentBlockIndex,
       true
@@ -1625,26 +1715,64 @@ export default class ListItem implements BlockTool {
    * @returns Object with left offset in pixels based on the list item's depth
    */
   public getContentOffset(hoveredElement: Element): { left: number } | undefined {
-    // Find the closest list item element from the hovered element
-    const listItemEl = hoveredElement.closest('[role="listitem"]');
-    if (!listItemEl) {
+    // First try: find listitem in ancestors (when hovering content)
+    // Second try: find listitem in descendants (when hovering wrapper)
+    const listItemEl = hoveredElement.closest('[role="listitem"]')
+      ?? hoveredElement.querySelector('[role="listitem"]');
+
+    const marginLeftOffset = this.getMarginLeftFromElement(listItemEl);
+
+    if (marginLeftOffset !== undefined) {
+      return marginLeftOffset;
+    }
+
+    // Fallback: use data-list-depth from wrapper
+    return this.getOffsetFromDepthAttribute(hoveredElement);
+  }
+
+  /**
+   * Extracts the margin-left value from an element's inline style
+   * @param element - The element to extract margin-left from
+   * @returns Object with left offset if valid margin-left found, undefined otherwise
+   */
+  private getMarginLeftFromElement(element: Element | null): { left: number } | undefined {
+    if (!element) {
       return undefined;
     }
 
-    // Get the padding-left which represents the indentation
-    const style = listItemEl.getAttribute('style') || '';
-    const paddingMatch = style.match(/padding-left:\s*(\d+)px/);
+    const style = element.getAttribute('style') || '';
+    const marginMatch = style.match(/margin-left:\s*(\d+)px/);
 
-    if (!paddingMatch) {
+    if (!marginMatch) {
       return undefined;
     }
 
-    const paddingLeft = parseInt(paddingMatch[1], 10);
-    if (paddingLeft <= 0) {
+    const marginLeft = parseInt(marginMatch[1], 10);
+
+    return marginLeft > 0 ? { left: marginLeft } : undefined;
+  }
+
+  /**
+   * Gets the offset from the data-list-depth attribute
+   * @param hoveredElement - The element to start searching from
+   * @returns Object with left offset based on depth, undefined if depth is 0 or not found
+   */
+  private getOffsetFromDepthAttribute(hoveredElement: Element): { left: number } | undefined {
+    const wrapper = hoveredElement.closest('[data-list-depth]');
+
+    if (!wrapper) {
       return undefined;
     }
 
-    return { left: paddingLeft };
+    const depthAttr = wrapper.getAttribute('data-list-depth');
+
+    if (depthAttr === null) {
+      return undefined;
+    }
+
+    const depth = parseInt(depthAttr, 10);
+
+    return depth > 0 ? { left: depth * ListItem.INDENT_PER_LEVEL } : undefined;
   }
 
   public static get toolbox(): ToolboxConfig {

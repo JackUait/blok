@@ -57,5 +57,26 @@
     "moveDown": {
       "Move down": ""
     }
+  },
+  "accessibility": {
+    "dragHandle": {
+      "aria-label": "Drag to move block or click for menu"
+    },
+    "dragAnnouncements": {
+      "dragStarted": "Dragging block",
+      "dragStartedMultiple": "Dragging {count} blocks",
+      "dropPosition": "Will drop at position {position} of {total}",
+      "dropCancelled": "Drag cancelled",
+      "blockMoved": "Block moved to position {position} of {total}",
+      "blocksMoved": "{count} blocks moved to position {position}",
+      "blockDuplicated": "Block duplicated at position {position} of {total}",
+      "blocksDuplicated": "{count} blocks duplicated starting at position {position}"
+    },
+    "keyboardMove": {
+      "movedUp": "Block moved up to position {position} of {total}",
+      "movedDown": "Block moved down to position {position} of {total}",
+      "atTop": "Block is at the top, cannot move up",
+      "atBottom": "Block is at the bottom, cannot move down"
+    }
   }
 }

@@ -1021,10 +1021,20 @@ test.describe('inline toolbar', () => {
 
     await expect(paragraph).toHaveCount(1);
 
+    // Click paragraph first to ensure it has focus
+    await paragraph.click();
+
     await selectText(paragraph, 'Some text');
 
     await page.locator('[data-blok-item-name="convert-to"]').click();
-    await page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-item"][data-blok-item-name="header"]`).click();
+
+    // Wait for nested popover to be visible
+    const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);
+
+    await expect(nestedPopover).toBeVisible();
+
+    // Click header option in the nested popover
+    await page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"] [data-blok-item-name="header"]`).click();
 
     await expect(page.locator(HEADER_SELECTOR)).toHaveText('Some text');
 

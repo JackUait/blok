@@ -81,7 +81,6 @@
     "@storybook/html-vite": "10.1.1",
     "@types/eslint-plugin-tailwindcss": "3",
     "@types/node": "22.19.0",
-    "@types/sortablejs": "1.15.9",
     "@vitest/browser-playwright": "4.0.14",
     "@vitest/coverage-v8": "4.0.14",
     "@vitest/ui": "4.0.14",
@@ -116,7 +115,6 @@
   "dependencies": {
     "@types/lodash": "4.17.21",
     "lodash": "4.17.21",
-    "sortablejs": "1.15.6",
     "tailwind-merge": "3.4.0"
   }
 }

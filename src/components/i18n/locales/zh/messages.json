@@ -6,11 +6,6 @@
         "Click to open the menu": "点击打开菜单"
       }
     },
-    "inlineToolbar": {
-      "converter": {
-        "Convert to": "转换为"
-      }
-    },
     "toolbar": {
       "toolbox": {
         "Click to add below": "添加内容块",
@@ -52,9 +47,6 @@
       "Heading 6": "六级标题"
     },
     "list": {
-      "Bulleted list": "无序列表",
-      "Numbered list": "有序列表",
-      "Checklist": "清单",
       "List": "列表"
     }
   },

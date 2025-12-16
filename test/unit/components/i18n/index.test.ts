@@ -275,7 +275,8 @@ describe('I18n', () => {
       expect(locales).toContain('en');
       expect(locales).toContain('ru');
       expect(locales).toContain('zh');
-      expect(locales.length).toBe(3);
+      expect(locales).toContain('hy');
+      expect(locales.length).toBe(4);
     });
   });
 });

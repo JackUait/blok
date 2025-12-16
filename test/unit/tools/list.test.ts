@@ -71,25 +71,21 @@ describe('List Tool - i18n', () => {
       expect(dictionary.toolNames).toHaveProperty('Checklist');
     });
 
-    it('has tools.list namespace for settings translations', () => {
+    it('has tools.list namespace for List placeholder', () => {
       const dictionary = defaultDictionary as I18nDictionary;
 
       expect(dictionary.tools).toHaveProperty('list');
-      expect(dictionary.tools!.list).toHaveProperty('Bulleted list');
-      expect(dictionary.tools!.list).toHaveProperty('Numbered list');
-      expect(dictionary.tools!.list).toHaveProperty('Checklist');
+      expect(dictionary.tools!.list).toHaveProperty('List');
     });
   });
 
   describe('renderSettings uses i18n', () => {
     it('translates style labels in settings menu', () => {
       const frenchDictionary: I18nDictionary = {
-        tools: {
-          list: {
-            'Bulleted list': 'Liste à puces',
-            'Numbered list': 'Liste numérotée',
-            Checklist: 'Liste de contrôle',
-          },
+        toolNames: {
+          'Bulleted list': 'Liste à puces',
+          'Numbered list': 'Liste numérotée',
+          Checklist: 'Liste de contrôle',
         },
       };
 
@@ -121,12 +117,10 @@ describe('List Tool - i18n', () => {
 
     it('respects configured styles when translating', () => {
       const germanDictionary: I18nDictionary = {
-        tools: {
-          list: {
-            'Bulleted list': 'Aufzählung',
-            'Numbered list': 'Nummerierung',
-            Checklist: 'Checkliste',
-          },
+        toolNames: {
+          'Bulleted list': 'Aufzählung',
+          'Numbered list': 'Nummerierung',
+          Checklist: 'Checkliste',
         },
       };
 

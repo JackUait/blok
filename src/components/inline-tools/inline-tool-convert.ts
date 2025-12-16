@@ -106,7 +106,7 @@ export default class ConvertInlineTool implements InlineTool {
       name: 'convert-to',
       title: I18nInternal.t(I18nInternalNS.toolNames, currentBlockTitle),
        hint: {
-        title: I18nInternal.ui(I18nInternalNS.ui.inlineToolbar.converter, 'Convert to'),
+        title: I18nInternal.ui(I18nInternalNS.ui.popover, 'Convert to'),
       },
       children: {
         items: convertToItems,

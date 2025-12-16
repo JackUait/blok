@@ -6,11 +6,6 @@
         "Click to open the menu": "Нажмите для меню"
       }
     },
-    "inlineToolbar": {
-      "converter": {
-        "Convert to": "Преобразовать в"
-      }
-    },
     "toolbar": {
       "toolbox": {
         "Click to add below": "Добавить блок",
@@ -52,9 +47,6 @@
       "Heading 6": "Заголовок 6"
     },
     "list": {
-      "Bulleted list": "Список",
-      "Numbered list": "Нумерованный список",
-      "Checklist": "Список задач",
       "List": "Список"
     }
   },

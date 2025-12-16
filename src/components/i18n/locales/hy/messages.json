@@ -6,11 +6,6 @@
         "Click to open the menu": "Սեղմեք մենյու համար"
       }
     },
-    "inlineToolbar": {
-      "converter": {
-        "Convert to": "Փոխարկել"
-      }
-    },
     "toolbar": {
       "toolbox": {
         "Click to add below": "Ավելացնել բլոկ",
@@ -52,9 +47,6 @@
       "Heading 6": "Վերնագիր 6"
     },
     "list": {
-      "Bulleted list": "Նշանավոր ցուցակ",
-      "Numbered list": "Համարակալ ցուցակ",
-      "Checklist": "Ստուգումների ցուցակ",
       "List": "Ցուցակ"
     }
   },

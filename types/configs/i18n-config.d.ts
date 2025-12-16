@@ -6,7 +6,7 @@ import { I18nDictionary } from './i18n-dictionary';
 /**
  * Supported locale codes that have built-in translations
  */
-export type SupportedLocale = 'de' | 'en' | 'es' | 'fr' | 'hy' | 'it' | 'ja' | 'ko' | 'nl' | 'pl' | 'pt' | 'ru' | 'sv' | 'zh';
+export type SupportedLocale = 'ar' | 'de' | 'en' | 'es' | 'fr' | 'hy' | 'it' | 'ja' | 'ko' | 'nl' | 'pl' | 'pt' | 'ru' | 'sv' | 'zh';
 
 export interface I18nConfig {
   /**

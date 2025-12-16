@@ -8,8 +8,11 @@ import hyMessages from './hy/messages.json';
 import itMessages from './it/messages.json';
 import jaMessages from './ja/messages.json';
 import koMessages from './ko/messages.json';
+import nlMessages from './nl/messages.json';
+import plMessages from './pl/messages.json';
 import ptMessages from './pt/messages.json';
 import ruMessages from './ru/messages.json';
+import svMessages from './sv/messages.json';
 import zhMessages from './zh/messages.json';
 
 /**
@@ -56,12 +59,24 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: koMessages,
     direction: 'ltr',
   },
+  nl: {
+    dictionary: nlMessages,
+    direction: 'ltr',
+  },
+  pl: {
+    dictionary: plMessages,
+    direction: 'ltr',
+  },
   pt: {
     dictionary: ptMessages,
     direction: 'ltr',
   },
   ru: {
     dictionary: ruMessages,
+    direction: 'ltr',
+  },
+  sv: {
+    dictionary: svMessages,
     direction: 'ltr',
   },
   zh: {

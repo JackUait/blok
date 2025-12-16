@@ -111,8 +111,11 @@ test.describe('drag and drop accessibility', () => {
       const settingsToggler = page.locator(SETTINGS_BUTTON_SELECTOR);
 
       // Verify ARIA attributes
+      // Note: tabindex="-1" keeps the element accessible to screen readers
+      // while removing it from the natural tab order. Users can move blocks
+      // using keyboard shortcuts (Cmd/Ctrl+Shift+Arrow) instead.
       await expect(settingsToggler).toHaveAttribute('role', 'button');
-      await expect(settingsToggler).toHaveAttribute('tabindex', '0');
+      await expect(settingsToggler).toHaveAttribute('tabindex', '-1');
       await expect(settingsToggler).toHaveAttribute('aria-label');
       await expect(settingsToggler).toHaveAttribute('aria-roledescription', 'drag handle');
 

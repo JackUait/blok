@@ -778,8 +778,10 @@ export default class Toolbar extends Module<ToolbarNodes> {
     settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
 
     // Accessibility: make the drag handle accessible to screen readers
+    // Using tabindex="-1" keeps it accessible but removes from tab order
+    // Users can move blocks with keyboard shortcuts (Cmd/Ctrl+Shift+Arrow)
     settingsToggler.setAttribute('role', 'button');
-    settingsToggler.setAttribute('tabindex', '0');
+    settingsToggler.setAttribute('tabindex', '-1');
     settingsToggler.setAttribute(
       'aria-label',
       I18n.ui(I18nInternalNS.accessibility.dragHandle, 'aria-label')

@@ -5,8 +5,10 @@
 const {
   applyTransforms,
   ensureBlokImport,
+  normalizeKey,
   flattenI18nDictionary,
   transformI18nConfig,
+  removeI18nMessages,
   I18N_KEY_MAPPINGS,
   BUNDLED_TOOLS,
   IMPORT_TRANSFORMS,
@@ -525,8 +527,8 @@ test('flattenI18nDictionary flattens simple nested object', () => {
     }
   };
   const result = flattenI18nDictionary(input);
-  // 'ui.toolbar.toolbox.Add' is mapped to 'ui.toolbar.toolbox.Click to add below' by I18N_KEY_MAPPINGS
-  assertEqual(result['ui.toolbar.toolbox.Click to add below'], 'Добавить');
+  // 'ui.toolbar.toolbox.Add' is mapped to 'ui.toolbar.toolbox.clickToAddBelow' by I18N_KEY_MAPPINGS
+  assertEqual(result['ui.toolbar.toolbox.clickToAddBelow'], 'Добавить');
 });
 
 test('flattenI18nDictionary flattens deeply nested object', () => {
@@ -540,7 +542,8 @@ test('flattenI18nDictionary flattens deeply nested object', () => {
     }
   };
   const result = flattenI18nDictionary(input);
-  assertEqual(result['ui.blockTunes.toggler.Drag to move'], 'Перетащите');
+  // Keys are normalized to camelCase
+  assertEqual(result['ui.blockTunes.toggler.dragToMove'], 'Перетащите');
 });
 
 test('flattenI18nDictionary handles multiple namespaces', () => {
@@ -556,9 +559,10 @@ test('flattenI18nDictionary handles multiple namespaces', () => {
     }
   };
   const result = flattenI18nDictionary(input);
-  assertEqual(result['toolNames.Text'], 'Текст');
-  assertEqual(result['toolNames.Bold'], 'Жирный');
-  assertEqual(result['tools.link.Add a link'], 'Добавить ссылку');
+  // Keys are normalized to camelCase
+  assertEqual(result['toolNames.text'], 'Текст');
+  assertEqual(result['toolNames.bold'], 'Жирный');
+  assertEqual(result['tools.link.addALink'], 'Добавить ссылку');
 });
 
 test('flattenI18nDictionary applies key mappings', () => {
@@ -572,8 +576,8 @@ test('flattenI18nDictionary applies key mappings', () => {
     }
   };
   const result = flattenI18nDictionary(input);
-  // 'Click to tune' should be mapped to 'Click to open the menu'
-  assertEqual(result['ui.blockTunes.toggler.Click to open the menu'], 'Нажмите для настройки');
+  // 'Click to tune' should be mapped to 'clickToOpenMenu' (camelCase)
+  assertEqual(result['ui.blockTunes.toggler.clickToOpenMenu'], 'Нажмите для настройки');
   assertEqual(result['ui.blockTunes.toggler.Click to tune'], undefined);
 });
 
@@ -595,8 +599,9 @@ test('transformI18nConfig transforms nested i18n config in JS', () => {
 });`;
   const { result, changed } = transformI18nConfig(input);
   assertEqual(changed, true, 'Should indicate change');
-  assertEqual(result.includes('"toolNames.Text": "Текст"'), true, 'Should have flattened toolNames.Text');
-  assertEqual(result.includes('"toolNames.Bold": "Жирный"'), true, 'Should have flattened toolNames.Bold');
+  // Keys are normalized to camelCase
+  assertEqual(result.includes('"toolNames.text": "Текст"'), true, 'Should have flattened toolNames.text');
+  assertEqual(result.includes('"toolNames.bold": "Жирный"'), true, 'Should have flattened toolNames.bold');
 });
 
 test('transformI18nConfig transforms deeply nested messages', () => {
@@ -614,8 +619,9 @@ test('transformI18nConfig transforms deeply nested messages', () => {
 };`;
   const { result, changed } = transformI18nConfig(input);
   assertEqual(changed, true, 'Should indicate change');
-  assertEqual(result.includes('"ui.popover.Search": "Поиск"'), true, 'Should have flattened ui.popover.Search');
-  assertEqual(result.includes('"ui.popover.Nothing found": "Ничего не найдено"'), true, 'Should have flattened ui.popover.Nothing found');
+  // Keys are normalized to camelCase
+  assertEqual(result.includes('"ui.popover.search": "Поиск"'), true, 'Should have flattened ui.popover.search');
+  assertEqual(result.includes('"ui.popover.nothingFound": "Ничего не найдено"'), true, 'Should have flattened ui.popover.nothingFound');
 });
 
 test('transformI18nConfig does not change content without i18n config', () => {
@@ -655,23 +661,24 @@ test('transformI18nConfig handles single quotes', () => {
 });`;
   const { result, changed } = transformI18nConfig(input);
   assertEqual(changed, true, 'Should indicate change');
-  assertEqual(result.includes('"toolNames.Text": "Текст"'), true, 'Should have flattened key with value');
+  // Keys are normalized to camelCase
+  assertEqual(result.includes('"toolNames.text": "Текст"'), true, 'Should have flattened key with value');
 });
 
 test('I18N_KEY_MAPPINGS contains expected mappings', () => {
-  // UI key mappings
-  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.Click to tune'], 'ui.blockTunes.toggler.Click to open the menu');
-  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.or drag to move'], 'ui.blockTunes.toggler.Drag to move');
-  assertEqual(I18N_KEY_MAPPINGS['ui.toolbar.toolbox.Add'], 'ui.toolbar.toolbox.Click to add below');
-  assertEqual(I18N_KEY_MAPPINGS['ui.inlineToolbar.converter.Convert to'], 'ui.popover.Convert to');
-  assertEqual(I18N_KEY_MAPPINGS['ui.popover.Filter'], 'ui.popover.Search');
+  // UI key mappings (values are now camelCase)
+  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.Click to tune'], 'ui.blockTunes.toggler.clickToOpenMenu');
+  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.or drag to move'], 'ui.blockTunes.toggler.dragToMove');
+  assertEqual(I18N_KEY_MAPPINGS['ui.toolbar.toolbox.Add'], 'ui.toolbar.toolbox.clickToAddBelow');
+  assertEqual(I18N_KEY_MAPPINGS['ui.inlineToolbar.converter.Convert to'], 'ui.popover.convertTo');
+  assertEqual(I18N_KEY_MAPPINGS['ui.popover.Filter'], 'ui.popover.search');
 
-  // Tool names mappings
-  assertEqual(I18N_KEY_MAPPINGS['toolNames.Ordered List'], 'toolNames.Numbered list');
-  assertEqual(I18N_KEY_MAPPINGS['toolNames.Unordered List'], 'toolNames.Bulleted list');
+  // Tool names mappings (values are now camelCase)
+  assertEqual(I18N_KEY_MAPPINGS['toolNames.Ordered List'], 'toolNames.numberedList');
+  assertEqual(I18N_KEY_MAPPINGS['toolNames.Unordered List'], 'toolNames.bulletedList');
 
-  // Tools messages mappings
-  assertEqual(I18N_KEY_MAPPINGS['tools.stub.The block can not be displayed correctly'], 'tools.stub.This block cannot be displayed');
+  // Tools messages mappings (values are now camelCase)
+  assertEqual(I18N_KEY_MAPPINGS['tools.stub.The block can not be displayed correctly'], 'tools.stub.blockCannotBeDisplayed');
 
   // Removed keys (mapped to null)
   assertEqual(I18N_KEY_MAPPINGS['blockTunes.moveUp.Move up'], null);
@@ -686,8 +693,9 @@ test('flattenI18nDictionary applies tool name mappings', () => {
     },
   };
   const result = flattenI18nDictionary(input);
-  assertEqual(result['toolNames.Numbered list'], 'Нумерованный список');
-  assertEqual(result['toolNames.Bulleted list'], 'Маркированный список');
+  // Keys are mapped and normalized to camelCase
+  assertEqual(result['toolNames.numberedList'], 'Нумерованный список');
+  assertEqual(result['toolNames.bulletedList'], 'Маркированный список');
   assertEqual(result['toolNames.Ordered List'], undefined);
   assertEqual(result['toolNames.Unordered List'], undefined);
 });
@@ -702,8 +710,9 @@ test('flattenI18nDictionary applies Filter to Search mapping', () => {
     },
   };
   const result = flattenI18nDictionary(input);
-  assertEqual(result['ui.popover.Search'], 'Фильтр');
-  assertEqual(result['ui.popover.Nothing found'], 'Ничего не найдено');
+  // Keys are mapped and normalized to camelCase
+  assertEqual(result['ui.popover.search'], 'Фильтр');
+  assertEqual(result['ui.popover.nothingFound'], 'Ничего не найдено');
   assertEqual(result['ui.popover.Filter'], undefined);
 });
 
@@ -722,7 +731,8 @@ test('flattenI18nDictionary removes moveUp/moveDown keys', () => {
     },
   };
   const result = flattenI18nDictionary(input);
-  assertEqual(result['blockTunes.delete.Delete'], 'Удалить');
+  // Keys are normalized to camelCase, moveUp/moveDown are removed
+  assertEqual(result['blockTunes.delete.delete'], 'Удалить');
   assertEqual(result['blockTunes.moveUp.Move up'], undefined);
   assertEqual(result['blockTunes.moveDown.Move down'], undefined);
 });
@@ -736,8 +746,98 @@ test('flattenI18nDictionary applies stub message mapping', () => {
     },
   };
   const result = flattenI18nDictionary(input);
-  assertEqual(result['tools.stub.This block cannot be displayed'], 'Блок не может быть отображен');
+  // Key is mapped and normalized to camelCase
+  assertEqual(result['tools.stub.blockCannotBeDisplayed'], 'Блок не может быть отображен');
   assertEqual(result['tools.stub.The block can not be displayed correctly'], undefined);
+});
+
+console.log('\n🔤 normalizeKey\n');
+
+test('normalizeKey converts single word to lowercase', () => {
+  assertEqual(normalizeKey('toolNames.Text'), 'toolNames.text');
+  assertEqual(normalizeKey('toolNames.Bold'), 'toolNames.bold');
+});
+
+test('normalizeKey converts multi-word keys to camelCase', () => {
+  assertEqual(normalizeKey('ui.popover.Nothing found'), 'ui.popover.nothingFound');
+  assertEqual(normalizeKey('ui.toolbar.toolbox.Click to add below'), 'ui.toolbar.toolbox.clickToAddBelow');
+});
+
+test('normalizeKey handles keys with multiple spaces', () => {
+  assertEqual(normalizeKey('tools.stub.The block can not be displayed'), 'tools.stub.theBlockCanNotBeDisplayed');
+});
+
+test('normalizeKey preserves namespace segments', () => {
+  assertEqual(normalizeKey('ui.blockTunes.toggler.Drag to move'), 'ui.blockTunes.toggler.dragToMove');
+});
+
+console.log('\n🗑️  removeI18nMessages (--use-library-i18n)\n');
+
+test('removeI18nMessages removes messages property from i18n config', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: {
+        Text: "Текст"
+      }
+    }
+  }
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('messages'), false, 'Should not contain messages property');
+  assertEqual(result.includes('i18n: {}'), true, 'Should have empty i18n config');
+});
+
+test('removeI18nMessages preserves locale property', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: { Text: "Текст" }
+    },
+    locale: 'ru'
+  }
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('messages'), false, 'Should not contain messages property');
+  assertEqual(result.includes("locale: 'ru'"), true, 'Should preserve locale property');
+});
+
+test('removeI18nMessages preserves direction property', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    direction: 'rtl',
+    messages: {
+      toolNames: { Text: "نص" }
+    }
+  }
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('messages'), false, 'Should not contain messages property');
+  assertEqual(result.includes("direction: 'rtl'"), true, 'Should preserve direction property');
+});
+
+test('removeI18nMessages does not change content without messages', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    locale: 'ru'
+  }
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, false, 'Should not indicate change');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('removeI18nMessages does not change content without i18n', () => {
+  const input = `const editor = new Blok({
+  holder: 'blok',
+  tools: {}
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, false, 'Should not indicate change');
+  assertEqual(result, input, 'Content should be unchanged');
 });
 
 // ============================================================================

@@ -42,25 +42,54 @@ const FILE_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.html
  */
 const I18N_KEY_MAPPINGS = {
   // UI keys that changed
-  'ui.blockTunes.toggler.Click to tune': 'ui.blockTunes.toggler.Click to open the menu',
-  'ui.blockTunes.toggler.or drag to move': 'ui.blockTunes.toggler.Drag to move',
-  'ui.toolbar.toolbox.Add': 'ui.toolbar.toolbox.Click to add below',
-  'ui.inlineToolbar.converter.Convert to': 'ui.popover.Convert to',
-  'ui.popover.Filter': 'ui.popover.Search',
+  'ui.blockTunes.toggler.Click to tune': 'ui.blockTunes.toggler.clickToOpenMenu',
+  'ui.blockTunes.toggler.or drag to move': 'ui.blockTunes.toggler.dragToMove',
+  'ui.toolbar.toolbox.Add': 'ui.toolbar.toolbox.clickToAddBelow',
+  'ui.inlineToolbar.converter.Convert to': 'ui.popover.convertTo',
+  'ui.popover.Filter': 'ui.popover.search',
 
   // Tool names that changed (EditorJS uses different casing/wording)
-  'toolNames.Ordered List': 'toolNames.Numbered list',
-  'toolNames.Unordered List': 'toolNames.Bulleted list',
+  'toolNames.Ordered List': 'toolNames.numberedList',
+  'toolNames.Unordered List': 'toolNames.bulletedList',
 
   // Tools messages that changed
-  'tools.stub.The block can not be displayed correctly': 'tools.stub.This block cannot be displayed',
-  'tools.stub.The block can not be displayed correctly.': 'tools.stub.This block cannot be displayed',
+  'tools.stub.The block can not be displayed correctly': 'tools.stub.blockCannotBeDisplayed',
+  'tools.stub.The block can not be displayed correctly.': 'tools.stub.blockCannotBeDisplayed',
 
   // Block tunes that are removed in Blok (moveUp/moveDown replaced with drag)
   // These are mapped to null to indicate they should be removed
   'blockTunes.moveUp.Move up': null,
   'blockTunes.moveDown.Move down': null,
 };
+
+/**
+ * Converts an EditorJS-style key (with English text) to Blok-style (camelCase).
+ * Blok uses camelCase for the final segment of translation keys.
+ * Example: 'ui.popover.Nothing found' → 'ui.popover.nothingFound'
+ * Example: 'toolNames.Text' → 'toolNames.text'
+ * @param {string} key - The dot-notation key with English text
+ * @returns {string} The normalized key with camelCase final segment
+ */
+function normalizeKey(key) {
+  const parts = key.split('.');
+  const lastPart = parts[parts.length - 1];
+
+  // Convert "Nothing found" → "nothingFound", "Text" → "text"
+  const words = lastPart.split(/\s+/);
+  const camelCase = words
+    .map((word, i) => {
+      if (i === 0) {
+        // First word is lowercase
+        return word.toLowerCase();
+      }
+      // Subsequent words have first letter capitalized
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join('');
+
+  parts[parts.length - 1] = camelCase;
+  return parts.join('.');
+}
 
 /**
  * Flattens a nested i18n dictionary object to Blok's flat dot-notation format.
@@ -77,15 +106,20 @@ function flattenI18nDictionary(obj, prefix = '') {
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       Object.assign(result, flattenI18nDictionary(value, newKey));
     } else {
-      // Apply key mappings if applicable
-      const mappedKey = newKey in I18N_KEY_MAPPINGS ? I18N_KEY_MAPPINGS[newKey] : newKey;
+      // Check explicit mappings first, otherwise normalize to camelCase
+      let finalKey;
+      if (newKey in I18N_KEY_MAPPINGS) {
+        finalKey = I18N_KEY_MAPPINGS[newKey];
+      } else {
+        finalKey = normalizeKey(newKey);
+      }
 
       // Skip keys that are mapped to null (removed in Blok)
-      if (mappedKey === null) {
+      if (finalKey === null) {
         continue;
       }
 
-      result[mappedKey] = value;
+      result[finalKey] = value;
     }
   }
 
@@ -229,6 +263,97 @@ function transformI18nConfig(content) {
 
     // Update offset for next iteration
     offset += flattenedStr.length - (messagesEnd + 1 - messagesStart);
+    changed = true;
+  }
+
+  return { result, changed };
+}
+
+/**
+ * Removes i18n messages from config to use Blok's built-in library translations.
+ * Preserves other i18n properties like locale and direction.
+ * @param {string} content - The file content
+ * @returns {{result: string, changed: boolean}} Transformed content and change flag
+ */
+function removeI18nMessages(content) {
+  // Pattern to find i18n config with messages property
+  const i18nStartPattern = /i18n\s*:\s*\{/g;
+  let match;
+  let result = content;
+  let changed = false;
+  let offset = 0;
+
+  // Reset lastIndex for the regex
+  i18nStartPattern.lastIndex = 0;
+
+  while ((match = i18nStartPattern.exec(content)) !== null) {
+    const i18nStart = match.index + match[0].length - 1; // Position of opening brace
+    const i18nEnd = findMatchingBrace(content, i18nStart);
+
+    if (i18nEnd === -1) continue;
+
+    const i18nContent = content.substring(i18nStart, i18nEnd + 1);
+
+    // Check if this i18n config has a messages property
+    if (!i18nContent.includes('messages')) {
+      continue;
+    }
+
+    // Find the messages property and remove it
+    // Handle: messages: { ... }, or messages: { ... } (with or without trailing comma)
+    const messagesPattern = /,?\s*messages\s*:\s*\{/;
+    const messagesMatch = i18nContent.match(messagesPattern);
+
+    if (!messagesMatch) continue;
+
+    const messagesStartInContent = i18nContent.indexOf(messagesMatch[0]);
+    const messagesObjStart = i18nContent.indexOf('{', messagesStartInContent);
+    const messagesObjEnd = findMatchingBrace(i18nContent, messagesObjStart);
+
+    if (messagesObjEnd === -1) continue;
+
+    // Determine what to remove (including trailing comma if present)
+    let removeStart = messagesStartInContent;
+    let removeEnd = messagesObjEnd + 1;
+
+    // Check for trailing comma after messages object
+    const afterMessages = i18nContent.substring(removeEnd);
+    const trailingCommaMatch = afterMessages.match(/^\s*,/);
+    if (trailingCommaMatch) {
+      removeEnd += trailingCommaMatch[0].length;
+    }
+
+    // If messages started with a comma (not first property), include it in removal
+    // Otherwise, we need to handle the case where it's the first property
+    const beforeMessages = i18nContent.substring(0, messagesStartInContent);
+    if (!messagesMatch[0].startsWith(',') && beforeMessages.trim() === '{') {
+      // messages is first property, remove trailing comma if any
+    }
+
+    // Build the new i18n content without messages
+    let newI18nContent = i18nContent.substring(0, removeStart) + i18nContent.substring(removeEnd);
+
+    // Clean up: remove leading comma if messages was removed and left one
+    newI18nContent = newI18nContent.replace(/\{\s*,/, '{');
+
+    // Clean up: remove trailing comma before closing brace
+    newI18nContent = newI18nContent.replace(/,\s*\}/, ' }');
+
+    // Clean up empty i18n config: { } -> remove or simplify
+    const isEmptyI18n = newI18nContent.replace(/\s/g, '') === '{}';
+
+    if (isEmptyI18n) {
+      // Replace with empty object or keep minimal
+      newI18nContent = '{}';
+    }
+
+    // Replace in result (accounting for previous replacements)
+    const adjustedI18nStart = i18nStart + offset;
+    const adjustedI18nEnd = i18nEnd + 1 + offset;
+    result = result.substring(0, adjustedI18nStart) + newI18nContent + result.substring(adjustedI18nEnd);
+
+    // Update offset for next iteration
+    offset += newI18nContent.length - (i18nEnd + 1 - i18nStart);
     changed = true;
   }
 
@@ -637,7 +762,7 @@ function ensureBlokImport(content) {
   return { result, changed: true };
 }
 
-function transformFile(filePath, dryRun = false) {
+function transformFile(filePath, dryRun = false, useLibraryI18n = false) {
   const content = fs.readFileSync(filePath, 'utf8');
   let transformed = content;
   const allChanges = [];
@@ -719,12 +844,22 @@ function transformFile(filePath, dryRun = false) {
     allChanges.push(...changes.map((c) => ({ ...c, category: 'text' })));
   }
 
-  // Apply i18n transforms (JS/TS only) - flatten nested messages to dot-notation
+  // Apply i18n transforms (JS/TS only)
   if (isJsFile) {
-    const { result, changed } = transformI18nConfig(transformed);
-    if (changed) {
-      transformed = result;
-      allChanges.push({ category: 'i18n', pattern: 'flattenI18nMessages', count: 1, note: 'Flattened nested i18n messages to dot-notation' });
+    if (useLibraryI18n) {
+      // Remove custom messages to use Blok's built-in translations
+      const { result, changed } = removeI18nMessages(transformed);
+      if (changed) {
+        transformed = result;
+        allChanges.push({ category: 'i18n', pattern: 'removeI18nMessages', count: 1, note: 'Removed custom i18n messages to use library translations' });
+      }
+    } else {
+      // Flatten nested messages to dot-notation
+      const { result, changed } = transformI18nConfig(transformed);
+      if (changed) {
+        transformed = result;
+        allChanges.push({ category: 'i18n', pattern: 'flattenI18nMessages', count: 1, note: 'Flattened nested i18n messages to dot-notation' });
+      }
     }
   }
 
@@ -804,9 +939,10 @@ Arguments:
   path          Directory or file to transform (default: current directory)
 
 Options:
-  --dry-run     Show changes without modifying files
-  --verbose     Show detailed output for each file
-  --help        Show this help message
+  --dry-run           Show changes without modifying files
+  --verbose           Show detailed output for each file
+  --use-library-i18n  Remove custom i18n messages and use Blok's built-in translations
+  --help              Show this help message
 
 Examples:
   npx -p @jackuait/blok migrate-from-editorjs ./src
@@ -834,15 +970,16 @@ What this codemod does:
   • Updates package.json dependencies
   • Converts bundled tool imports (Header, Paragraph)
   • Ensures Blok is imported when using bundled tools (Blok.Header, etc.)
-  • Transforms nested i18n messages to flat dot-notation format:
-    - { ui: { toolbar: { Add: "..." } } } → { "ui.toolbar.Add": "..." }
-  • Maps changed i18n keys to their Blok equivalents:
-    - "Click to tune" → "Click to open the menu"
-    - "or drag to move" → "Drag to move"
-    - "Add" (toolbar) → "Click to add below"
-    - "Filter" (popover) → "Search"
-    - "Ordered List" → "Numbered list"
-    - "Unordered List" → "Bulleted list"
+  • Transforms nested i18n messages to flat dot-notation format with camelCase keys:
+    - { ui: { toolbar: { Add: "..." } } } → { "ui.toolbar.add": "..." }
+    - { toolNames: { "Nothing found": "..." } } → { "toolNames.nothingFound": "..." }
+  • Maps changed i18n keys to their Blok equivalents (camelCase):
+    - "Click to tune" → "clickToOpenMenu"
+    - "or drag to move" → "dragToMove"
+    - "Add" (toolbar) → "clickToAddBelow"
+    - "Filter" (popover) → "search"
+    - "Ordered List" → "numberedList"
+    - "Unordered List" → "bulletedList"
   • Removes obsolete keys (moveUp/moveDown replaced with drag)
 
 Note: After running, you may need to manually:
@@ -858,6 +995,7 @@ function main() {
   // Parse arguments
   const dryRun = args.includes('--dry-run');
   const verbose = args.includes('--verbose');
+  const useLibraryI18n = args.includes('--use-library-i18n');
   const help = args.includes('--help') || args.includes('-h');
 
   global.isVerbose = verbose;
@@ -900,7 +1038,7 @@ function main() {
 
   // Process each file
   files.forEach((filePath) => {
-    const result = transformFile(filePath, dryRun);
+    const result = transformFile(filePath, dryRun, useLibraryI18n);
 
     if (result.hasChanges) {
       stats.filesModified++;
@@ -966,8 +1104,10 @@ module.exports = {
   updatePackageJson,
   applyTransforms,
   ensureBlokImport,
+  normalizeKey,
   flattenI18nDictionary,
   transformI18nConfig,
+  removeI18nMessages,
   parseObjectLiteral,
   findMatchingBrace,
   objectToString,

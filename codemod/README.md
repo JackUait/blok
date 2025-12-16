@@ -124,7 +124,18 @@ tools: {
 |--------|-------------|
 | `--dry-run` | Preview changes without modifying files |
 | `--verbose` | Show detailed output for each file |
+| `--use-library-i18n` | Remove custom i18n messages and use Blok's built-in translations |
 | `--help` | Show help message |
+
+### Using `--use-library-i18n`
+
+If your EditorJS project had custom translations, the codemod will by default convert them to Blok's flat format. However, Blok now ships with built-in translations for 27 languages. If you prefer to use these library translations instead of maintaining your own, use the `--use-library-i18n` flag:
+
+```bash
+npx -p @jackuait/blok migrate-from-editorjs ./src --use-library-i18n
+```
+
+This will remove the `messages` property from your i18n config, allowing Blok to auto-detect the user's locale from the browser and use the appropriate built-in translations.
 
 ## Supported File Types
 

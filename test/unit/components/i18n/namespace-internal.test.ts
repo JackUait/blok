@@ -71,8 +71,8 @@ describe('namespace-internal', () => {
     const namespaces = await loadNamespaces();
 
     // Verify some keys from the default dictionary exist and map to themselves
-    expect(namespaces['ui.blockTunes.toggler.Drag to move']).toBe('ui.blockTunes.toggler.Drag to move');
-    expect(namespaces['toolNames.Text']).toBe('toolNames.Text');
-    expect(namespaces['ui.popover.Search']).toBe('ui.popover.Search');
+    expect(namespaces['ui.blockTunes.toggler.dragToMove']).toBe('ui.blockTunes.toggler.dragToMove');
+    expect(namespaces['toolNames.text']).toBe('toolNames.text');
+    expect(namespaces['ui.popover.search']).toBe('ui.popover.search');
   });
 });

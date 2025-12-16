@@ -72,7 +72,7 @@ describe('I18n', () => {
       expect(result.locale).toBe('ru');
       expect(result.direction).toBe('ltr');
       expect(I18n.getLocale()).toBe('ru');
-      expect(I18n.ui('ui.blockTunes.toggler.Drag to move')).toBe('Тяните, чтобы переместить');
+      expect(I18n.ui('ui.blockTunes.toggler.dragToMove')).toBe('Тяните, чтобы переместить');
     });
 
     it('sets locale to Chinese and loads Chinese dictionary', () => {
@@ -81,7 +81,7 @@ describe('I18n', () => {
       expect(result.locale).toBe('zh');
       expect(result.direction).toBe('ltr');
       expect(I18n.getLocale()).toBe('zh');
-      expect(I18n.ui('ui.blockTunes.toggler.Drag to move')).toBe('拖动以移动');
+      expect(I18n.ui('ui.blockTunes.toggler.dragToMove')).toBe('拖动以移动');
     });
 
     it('sets locale to English and loads English dictionary', () => {
@@ -273,7 +273,7 @@ describe('I18n', () => {
       expect(locales).toContain('ru');
       expect(locales).toContain('sv');
       expect(locales).toContain('zh');
-      expect(locales.length).toBe(15);
+      expect(locales.length).toBe(27);
     });
   });
 });

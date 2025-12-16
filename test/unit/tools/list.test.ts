@@ -66,15 +66,15 @@ describe('List Tool - i18n', () => {
     it('has toolNames entries for list styles', () => {
       const dictionary = defaultDictionary as I18nDictionary;
 
-      expect(dictionary).toHaveProperty('toolNames.Bulleted list');
-      expect(dictionary).toHaveProperty('toolNames.Numbered list');
-      expect(dictionary).toHaveProperty('toolNames.To-do list');
+      expect(dictionary).toHaveProperty('toolNames.bulletedList');
+      expect(dictionary).toHaveProperty('toolNames.numberedList');
+      expect(dictionary).toHaveProperty('toolNames.todoList');
     });
 
-    it('has tools.list.List key for List placeholder', () => {
+    it('has tools.list.list key for List placeholder', () => {
       const dictionary = defaultDictionary as I18nDictionary;
 
-      expect(dictionary).toHaveProperty('tools.list.List');
+      expect(dictionary).toHaveProperty('tools.list.list');
     });
   });
 
@@ -145,12 +145,21 @@ describe('List Tool - i18n', () => {
       expect(toolboxArray[2].title).toBe('To-do list');
     });
 
-    it('toolbox titles exist in toolNames dictionary', () => {
+    it('toolbox titles have corresponding dictionary entries', () => {
       const toolbox = List.toolbox as Array<{ title: string }>;
       const dictionary = defaultDictionary as I18nDictionary;
 
+      // Map toolbox titles to their dictionary key equivalents
+      const titleToDictKey: Record<string, string> = {
+        'Bulleted list': 'bulletedList',
+        'Numbered list': 'numberedList',
+        'To-do list': 'todoList',
+      };
+
       toolbox.forEach((item) => {
-        expect(dictionary).toHaveProperty(`toolNames.${item.title}`);
+        const dictKey = titleToDictKey[item.title];
+        expect(dictKey).toBeDefined();
+        expect(dictionary).toHaveProperty(`toolNames.${dictKey}`);
       });
     });
   });

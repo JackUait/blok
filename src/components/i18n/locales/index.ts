@@ -5,6 +5,7 @@ import enMessages from './en/messages.json';
 import esMessages from './es/messages.json';
 import frMessages from './fr/messages.json';
 import hyMessages from './hy/messages.json';
+import ptMessages from './pt/messages.json';
 import ruMessages from './ru/messages.json';
 import zhMessages from './zh/messages.json';
 
@@ -38,6 +39,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   },
   hy: {
     dictionary: hyMessages,
+    direction: 'ltr',
+  },
+  pt: {
+    dictionary: ptMessages,
     direction: 'ltr',
   },
   ru: {

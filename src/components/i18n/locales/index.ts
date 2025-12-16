@@ -1,9 +1,11 @@
 import type { I18nDictionary } from '../../../../types/configs';
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';
+import amMessages from './am/messages.json';
 import arMessages from './ar/messages.json';
 import azMessages from './az/messages.json';
 import bgMessages from './bg/messages.json';
 import bnMessages from './bn/messages.json';
+import bsMessages from './bs/messages.json';
 import csMessages from './cs/messages.json';
 import daMessages from './da/messages.json';
 import deMessages from './de/messages.json';
@@ -25,14 +27,20 @@ import hyMessages from './hy/messages.json';
 import idMessages from './id/messages.json';
 import itMessages from './it/messages.json';
 import jaMessages from './ja/messages.json';
+import kaMessages from './ka/messages.json';
+import kmMessages from './km/messages.json';
 import knMessages from './kn/messages.json';
 import koMessages from './ko/messages.json';
 import kuMessages from './ku/messages.json';
+import loMessages from './lo/messages.json';
 import ltMessages from './lt/messages.json';
 import lvMessages from './lv/messages.json';
+import mkMessages from './mk/messages.json';
 import mlMessages from './ml/messages.json';
+import mnMessages from './mn/messages.json';
 import mrMessages from './mr/messages.json';
 import msMessages from './ms/messages.json';
+import myMessages from './my/messages.json';
 import nlMessages from './nl/messages.json';
 import noMessages from './no/messages.json';
 import paMessages from './pa/messages.json';
@@ -41,11 +49,15 @@ import psMessages from './ps/messages.json';
 import ptMessages from './pt/messages.json';
 import roMessages from './ro/messages.json';
 import ruMessages from './ru/messages.json';
+import neMessages from './ne/messages.json';
 import sdMessages from './sd/messages.json';
+import siMessages from './si/messages.json';
 import skMessages from './sk/messages.json';
 import slMessages from './sl/messages.json';
+import sqMessages from './sq/messages.json';
 import srMessages from './sr/messages.json';
 import svMessages from './sv/messages.json';
+import swMessages from './sw/messages.json';
 import taMessages from './ta/messages.json';
 import teMessages from './te/messages.json';
 import thMessages from './th/messages.json';
@@ -69,6 +81,10 @@ interface LocaleConfig {
  * Registry of all available locales with their configurations
  */
 export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
+  am: {
+    dictionary: amMessages,
+    direction: 'ltr',
+  },
   ar: {
     dictionary: arMessages,
     direction: 'rtl',
@@ -83,6 +99,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   },
   bn: {
     dictionary: bnMessages,
+    direction: 'ltr',
+  },
+  bs: {
+    dictionary: bsMessages,
     direction: 'ltr',
   },
   cs: {
@@ -169,6 +189,14 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: jaMessages,
     direction: 'ltr',
   },
+  ka: {
+    dictionary: kaMessages,
+    direction: 'ltr',
+  },
+  km: {
+    dictionary: kmMessages,
+    direction: 'ltr',
+  },
   kn: {
     dictionary: knMessages,
     direction: 'ltr',
@@ -181,6 +209,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: kuMessages,
     direction: 'rtl',
   },
+  lo: {
+    dictionary: loMessages,
+    direction: 'ltr',
+  },
   lt: {
     dictionary: ltMessages,
     direction: 'ltr',
@@ -189,8 +221,16 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: lvMessages,
     direction: 'ltr',
   },
+  mk: {
+    dictionary: mkMessages,
+    direction: 'ltr',
+  },
   ml: {
     dictionary: mlMessages,
+    direction: 'ltr',
+  },
+  mn: {
+    dictionary: mnMessages,
     direction: 'ltr',
   },
   mr: {
@@ -199,6 +239,14 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   },
   ms: {
     dictionary: msMessages,
+    direction: 'ltr',
+  },
+  my: {
+    dictionary: myMessages,
+    direction: 'ltr',
+  },
+  ne: {
+    dictionary: neMessages,
     direction: 'ltr',
   },
   nl: {
@@ -237,6 +285,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: sdMessages,
     direction: 'rtl',
   },
+  si: {
+    dictionary: siMessages,
+    direction: 'ltr',
+  },
   sk: {
     dictionary: skMessages,
     direction: 'ltr',
@@ -245,12 +297,20 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: slMessages,
     direction: 'ltr',
   },
+  sq: {
+    dictionary: sqMessages,
+    direction: 'ltr',
+  },
   sr: {
     dictionary: srMessages,
     direction: 'ltr',
   },
   sv: {
     dictionary: svMessages,
+    direction: 'ltr',
+  },
+  sw: {
+    dictionary: swMessages,
     direction: 'ltr',
   },
   ta: {

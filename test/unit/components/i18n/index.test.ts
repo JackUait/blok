@@ -266,7 +266,7 @@ describe('I18n', () => {
       expect(locales).toContain('ru');
       expect(locales).toContain('sv');
       expect(locales).toContain('zh');
-      expect(locales.length).toBe(36);
+      expect(locales.length).toBe(68);
     });
   });
 });

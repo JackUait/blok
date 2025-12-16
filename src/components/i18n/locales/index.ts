@@ -1,6 +1,7 @@
 import type { I18nDictionary } from '../../../../types/configs';
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';
 import enMessages from './en/messages.json';
+import hyMessages from './hy/messages.json';
 import ruMessages from './ru/messages.json';
 import zhMessages from './zh/messages.json';
 
@@ -18,6 +19,10 @@ interface LocaleConfig {
 export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   en: {
     dictionary: enMessages,
+    direction: 'ltr',
+  },
+  hy: {
+    dictionary: hyMessages,
     direction: 'ltr',
   },
   ru: {

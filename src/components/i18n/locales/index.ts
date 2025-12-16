@@ -1,6 +1,7 @@
 import type { I18nDictionary } from '../../../../types/configs';
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';
 import arMessages from './ar/messages.json';
+import azMessages from './az/messages.json';
 import deMessages from './de/messages.json';
 import enMessages from './en/messages.json';
 import esMessages from './es/messages.json';
@@ -14,6 +15,7 @@ import plMessages from './pl/messages.json';
 import ptMessages from './pt/messages.json';
 import ruMessages from './ru/messages.json';
 import svMessages from './sv/messages.json';
+import trMessages from './tr/messages.json';
 import zhMessages from './zh/messages.json';
 
 /**
@@ -31,6 +33,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   ar: {
     dictionary: arMessages,
     direction: 'rtl',
+  },
+  az: {
+    dictionary: azMessages,
+    direction: 'ltr',
   },
   de: {
     dictionary: deMessages,
@@ -82,6 +88,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   },
   sv: {
     dictionary: svMessages,
+    direction: 'ltr',
+  },
+  tr: {
+    dictionary: trMessages,
     direction: 'ltr',
   },
   zh: {

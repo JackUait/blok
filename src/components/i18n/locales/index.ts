@@ -1,5 +1,4 @@
-import type { I18nDictionary } from '../../../../types/configs';
-import type { SupportedLocale } from '../../../../types/configs/i18n-config';
+import type { LocaleConfig, SupportedLocale } from '../../../../types/configs/i18n-config';
 import amMessages from './am/messages.json';
 import arMessages from './ar/messages.json';
 import azMessages from './az/messages.json';
@@ -68,14 +67,6 @@ import urMessages from './ur/messages.json';
 import viMessages from './vi/messages.json';
 import yiMessages from './yi/messages.json';
 import zhMessages from './zh/messages.json';
-
-/**
- * Configuration for a locale including its dictionary and text direction
- */
-interface LocaleConfig {
-  dictionary: I18nDictionary;
-  direction: 'ltr' | 'rtl';
-}
 
 /**
  * Registry of all available locales with their configurations

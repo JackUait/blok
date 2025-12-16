@@ -5,12 +5,25 @@
   "main": "dist/blok.umd.js",
   "module": "dist/blok.mjs",
   "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/blok.mjs",
+      "require": "./dist/blok.umd.js"
+    },
+    "./locales": {
+      "types": "./types/locales.d.ts",
+      "import": "./dist/locales.mjs",
+      "require": "./dist/locales.umd.js"
+    }
+  },
   "bin": {
     "migrate-from-editorjs": "./codemod/migrate-editorjs-to-blok.js"
   },
   "files": [
     "dist",
     "types",
+    "src",
     "codemod"
   ],
   "publishConfig": {

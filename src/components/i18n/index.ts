@@ -1,5 +1,5 @@
 import defaultDictionary from './locales/en/messages.json';
-import type { I18nDictionary } from '../../../types/configs';
+import type { I18nDictionary, LocaleConfig, LocaleRegistry } from '../../../types/configs';
 import type { SupportedLocale } from '../../../types/configs/i18n-config';
 import {
   localeRegistry,
@@ -18,6 +18,41 @@ export interface LocaleDetectionResult {
 }
 
 /**
+ * Options for initializing the I18n system
+ */
+export interface I18nInitOptions {
+  /**
+   * Default locale to use when detection fails or locale is not available.
+   * Must be present in `locales` if `locales` is specified.
+   *
+   * @default 'en' or first locale in `locales`
+   */
+  defaultLocale?: SupportedLocale;
+
+  /**
+   * Custom locale registry for tree-shaking and locale restriction.
+   * When provided:
+   * - Only these locales will be available at runtime
+   * - Bundle size is reduced (tree-shaking removes unused locales)
+   * - detectLocale() will only return locales from this registry
+   * - setLocale() will reject locales not in this registry
+   *
+   * @example
+   * ```typescript
+   * import { enLocale, frLocale, deLocale } from '@jackuait/blok/locales';
+   *
+   * new Blok({
+   *   i18n: {
+   *     locales: { en: enLocale, fr: frLocale, de: deLocale },
+   *     locale: 'auto',
+   *   }
+   * });
+   * ```
+   */
+  locales?: LocaleRegistry;
+}
+
+/**
  * This class will responsible for the translation through the language dictionary
  */
 export default class I18n {
@@ -30,6 +65,101 @@ export default class I18n {
    * Current active locale
    */
   private static currentLocale: SupportedLocale = DEFAULT_LOCALE;
+
+  /**
+   * Custom locale registry for tree-shaking support.
+   * When set, only locales in this registry are available.
+   */
+  private static customRegistry: LocaleRegistry | null = null;
+
+  /**
+   * Configured default locale
+   */
+  private static configuredDefaultLocale: SupportedLocale = DEFAULT_LOCALE;
+
+  /**
+   * Initialize I18n with configuration options.
+   * Call before any locale operations when using custom locales for tree-shaking.
+   *
+   * @param options - Configuration options
+   * @throws Error if defaultLocale is not in the locales registry
+   */
+  public static init(options: I18nInitOptions): void {
+    // Set custom registry if provided
+    I18n.customRegistry = options.locales ?? null;
+
+    // Determine available locales
+    const availableLocales = I18n.customRegistry !== null
+      ? Object.keys(I18n.customRegistry) as SupportedLocale[]
+      : null;
+
+    // Determine default locale
+    const candidateDefault = options.defaultLocale ??
+      availableLocales?.[0] ??
+      DEFAULT_LOCALE;
+
+    // Validate default locale is available
+    if (availableLocales !== null && !availableLocales.includes(candidateDefault)) {
+      throw new Error(
+        `defaultLocale "${candidateDefault}" is not in locales. ` +
+        `Available: ${availableLocales.join(', ')}`
+      );
+    }
+
+    I18n.configuredDefaultLocale = candidateDefault;
+  }
+
+  /**
+   * Reset I18n to default state.
+   * Useful for testing or reinitializing the system.
+   */
+  public static reset(): void {
+    I18n.customRegistry = null;
+    I18n.configuredDefaultLocale = DEFAULT_LOCALE;
+    I18n.currentLocale = DEFAULT_LOCALE;
+    I18n.currentDictionary = defaultDictionary;
+  }
+
+  /**
+   * Check if a locale is available based on current configuration
+   *
+   * @param locale - Locale code to check
+   * @returns True if the locale is available
+   */
+  private static isLocaleAvailable(locale: string): locale is SupportedLocale {
+    // First check if it's a valid SupportedLocale
+    if (!isLocaleSupported(locale)) {
+      return false;
+    }
+
+    // If custom registry is set, locale must be in it
+    if (I18n.customRegistry !== null) {
+      return locale in I18n.customRegistry;
+    }
+
+    // No restrictions - all supported locales are available
+    return true;
+  }
+
+  /**
+   * Get locale config from appropriate registry
+   *
+   * @param locale - Locale code
+   * @returns Locale config
+   */
+  private static getLocaleConfigInternal(locale: SupportedLocale): LocaleConfig {
+    if (I18n.customRegistry === null) {
+      return getLocaleConfig(locale);
+    }
+
+    const config = I18n.customRegistry[locale];
+
+    if (config === undefined) {
+      throw new Error(`Locale "${locale}" not found in custom registry`);
+    }
+
+    return config;
+  }
 
   /**
    * Translate a key using the current dictionary.
@@ -58,18 +188,49 @@ export default class I18n {
   }
 
   /**
-   * Set locale by code and update the dictionary
+   * Set locale by code and update the dictionary.
+   * Rejects unavailable locales, falling back to defaultLocale with a warning.
+   *
    * @param locale - Locale code to set
    * @returns The locale config that was set
    */
   public static setLocale(locale: SupportedLocale): LocaleDetectionResult {
-    const config = getLocaleConfig(locale);
+    if (I18n.isLocaleAvailable(locale)) {
+      const config = I18n.getLocaleConfigInternal(locale);
 
-    I18n.currentLocale = locale;
+      I18n.currentLocale = locale;
+      I18n.currentDictionary = config.dictionary;
+
+      return {
+        locale,
+        dictionary: config.dictionary,
+        direction: config.direction,
+      };
+    }
+
+    // Guard against infinite recursion if default locale is misconfigured
+    if (locale === I18n.configuredDefaultLocale) {
+      throw new Error(
+        `Default locale "${locale}" is not available. ` +
+        `This indicates a configuration error.`
+      );
+    }
+
+    const available = I18n.getSupportedLocales();
+
+    console.warn(
+      `Locale "${locale}" is not available. Falling back to "${I18n.configuredDefaultLocale}". ` +
+      `Available locales: ${available.join(', ')}`
+    );
+
+    const fallbackLocale = I18n.configuredDefaultLocale;
+    const config = I18n.getLocaleConfigInternal(fallbackLocale);
+
+    I18n.currentLocale = fallbackLocale;
     I18n.currentDictionary = config.dictionary;
 
     return {
-      locale,
+      locale: fallbackLocale,
       dictionary: config.dictionary,
       direction: config.direction,
     };
@@ -84,7 +245,16 @@ export default class I18n {
   }
 
   /**
-   * Detect the best matching locale from browser settings
+   * Get the configured default locale
+   * @returns Default locale code
+   */
+  public static getDefaultLocale(): SupportedLocale {
+    return I18n.configuredDefaultLocale;
+  }
+
+  /**
+   * Detect the best matching locale from browser settings.
+   * Only returns locales from the custom registry if one is configured.
    * Uses navigator.languages with fallback chain:
    * 1. Exact match (e.g., 'ru' matches 'ru')
    * 2. Base language match (e.g., 'en-US' matches 'en')
@@ -95,7 +265,7 @@ export default class I18n {
   public static detectLocale(): SupportedLocale {
     // Check if we're in a browser environment
     if (typeof navigator === 'undefined') {
-      return DEFAULT_LOCALE;
+      return I18n.configuredDefaultLocale;
     }
 
     // Get user's preferred languages (ordered by preference)
@@ -108,12 +278,13 @@ export default class I18n {
 
       const matched = I18n.matchLanguageTag(lang);
 
-      if (matched !== null) {
+      // Only return if the matched locale is available
+      if (matched !== null && I18n.isLocaleAvailable(matched)) {
         return matched;
       }
     }
 
-    return DEFAULT_LOCALE;
+    return I18n.configuredDefaultLocale;
   }
 
   /**
@@ -150,17 +321,21 @@ export default class I18n {
       return I18n.setLocale(I18n.detectLocale());
     }
 
-    // Use specified locale if supported, otherwise fallback to default
-    const resolvedLocale = isLocaleSupported(locale) ? locale : DEFAULT_LOCALE;
+    // Use specified locale if available, otherwise fallback to default
+    const resolvedLocale = I18n.isLocaleAvailable(locale) ? locale : I18n.configuredDefaultLocale;
 
     return I18n.setLocale(resolvedLocale);
   }
 
   /**
-   * Get list of all supported locales
+   * Get list of available locales
    * @returns Array of supported locale codes
    */
   public static getSupportedLocales(): SupportedLocale[] {
+    if (I18n.customRegistry !== null) {
+      return Object.keys(I18n.customRegistry) as SupportedLocale[];
+    }
+
     return Object.keys(localeRegistry) as SupportedLocale[];
   }
 
@@ -174,5 +349,4 @@ export default class I18n {
 
     return typeof translation === 'string' && translation.length > 0;
   }
-
 }

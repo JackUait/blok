@@ -195,6 +195,12 @@ export default class Core {
      * Adjust i18n
      * Priority: messages (custom dictionary) > locale > auto-detect
      */
+    // Initialize I18n with configuration options (defaultLocale, locales)
+    I18n.init({
+      defaultLocale: this.config.i18n?.defaultLocale,
+      locales: this.config.i18n?.locales,
+    });
+
     if (this.config.i18n?.messages) {
       // Custom dictionary takes precedence
       I18n.setDictionary(this.config.i18n.messages);

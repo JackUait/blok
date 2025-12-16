@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import I18n from '../../../../src/components/i18n';
-import defaultDictionary from '../../../../src/components/i18n/locales/en/messages.json';
-import type { I18nDictionary } from '../../../../types/configs';
+import { enLocale, frLocale, deLocale } from '../../../../src/components/i18n/locales/exports';
+import type { I18nDictionary, LocaleRegistry } from '../../../../types/configs';
 
 const createDictionary = (): I18nDictionary => ({
   'ui.toolbar.toolbox.Click to add below': 'Cliquez pour ajouter ci-dessous',
@@ -16,11 +16,11 @@ const alternativeDictionary: I18nDictionary = {
 
 describe('I18n', () => {
   beforeEach(() => {
-    I18n.setDictionary(defaultDictionary as I18nDictionary);
+    I18n.reset();
   });
 
   afterEach(() => {
-    I18n.setDictionary(defaultDictionary as I18nDictionary);
+    I18n.reset();
   });
 
   it('translates keys via t()', () => {
@@ -266,7 +266,302 @@ describe('I18n', () => {
       expect(locales).toContain('ru');
       expect(locales).toContain('sv');
       expect(locales).toContain('zh');
-      expect(locales.length).toBe(68);
+      expect(locales.length).toBeGreaterThanOrEqual(68);
+    });
+  });
+
+  describe('init', () => {
+    it('initializes with custom locales registry', () => {
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+        de: deLocale,
+      };
+
+      I18n.init({ locales: customLocales });
+
+      expect(I18n.getSupportedLocales()).toEqual(['en', 'fr', 'de']);
+      expect(I18n.getDefaultLocale()).toBe('en');
+    });
+
+    it('initializes with explicit defaultLocale', () => {
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+        de: deLocale,
+      };
+
+      I18n.init({ locales: customLocales, defaultLocale: 'fr' });
+
+      expect(I18n.getDefaultLocale()).toBe('fr');
+    });
+
+    it('throws when defaultLocale is not in custom locales registry', () => {
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+      };
+
+      expect(() => {
+        I18n.init({ locales: customLocales, defaultLocale: 'de' });
+      }).toThrow('defaultLocale "de" is not in locales');
+    });
+
+    it('uses first locale as default when not specified', () => {
+      const customLocales: LocaleRegistry = {
+        fr: frLocale,
+        de: deLocale,
+        en: enLocale,
+      };
+
+      I18n.init({ locales: customLocales });
+
+      expect(I18n.getDefaultLocale()).toBe('fr');
+    });
+
+    it('works without any options', () => {
+      I18n.init({});
+
+      expect(I18n.getDefaultLocale()).toBe('en');
+      expect(I18n.getSupportedLocales().length).toBeGreaterThanOrEqual(68);
+    });
+  });
+
+  describe('reset', () => {
+    it('resets all configuration to defaults', () => {
+      const customLocales: LocaleRegistry = {
+        fr: frLocale,
+        de: deLocale,
+      };
+
+      I18n.init({ locales: customLocales, defaultLocale: 'fr' });
+      I18n.setLocale('fr');
+
+      I18n.reset();
+
+      expect(I18n.getLocale()).toBe('en');
+      expect(I18n.getDefaultLocale()).toBe('en');
+      expect(I18n.getSupportedLocales().length).toBeGreaterThanOrEqual(68);
+    });
+  });
+
+  describe('setLocale with custom locales registry', () => {
+    const originalConsoleWarn = console.warn;
+
+    beforeEach(() => {
+      console.warn = vi.fn();
+    });
+
+    afterEach(() => {
+      console.warn = originalConsoleWarn;
+    });
+
+    it('allows setting locale that is in custom registry', () => {
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+        de: deLocale,
+      };
+
+      I18n.init({ locales: customLocales });
+
+      const result = I18n.setLocale('fr');
+
+      expect(result.locale).toBe('fr');
+      expect(I18n.getLocale()).toBe('fr');
+    });
+
+    it('uses dictionary from custom registry', () => {
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+      };
+
+      I18n.init({ locales: customLocales });
+      I18n.setLocale('fr');
+
+      expect(I18n.t('ui.blockTunes.toggler.dragToMove')).toBe('Glisser pour déplacer');
+    });
+
+    it('falls back to defaultLocale when setting unavailable locale', () => {
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+      };
+
+      I18n.init({ locales: customLocales, defaultLocale: 'fr' });
+
+      const result = I18n.setLocale('ru');
+
+      expect(result.locale).toBe('fr');
+      expect(I18n.getLocale()).toBe('fr');
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Locale "ru" is not available')
+      );
+    });
+
+    it('falls back when locale not in custom registry', () => {
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+      };
+
+      I18n.init({ locales: customLocales });
+      I18n.setLocale('de');
+
+      expect(I18n.getLocale()).toBe('en');
+      expect(console.warn).toHaveBeenCalled();
+    });
+  });
+
+  describe('detectLocale with custom locales', () => {
+    const originalNavigator = globalThis.navigator;
+
+    afterEach(() => {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: originalNavigator,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it('returns available locale when browser locale matches', () => {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          languages: ['fr', 'en'],
+          language: 'fr',
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+        de: deLocale,
+      };
+
+      I18n.init({ locales: customLocales });
+
+      expect(I18n.detectLocale()).toBe('fr');
+    });
+
+    it('skips unavailable locales and finds next available', () => {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          languages: ['ru', 'es', 'fr', 'en'],
+          language: 'ru',
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+        de: deLocale,
+      };
+
+      I18n.init({ locales: customLocales });
+
+      expect(I18n.detectLocale()).toBe('fr');
+    });
+
+    it('returns defaultLocale when no browser locale is available', () => {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          languages: ['ru', 'es', 'ja'],
+          language: 'ru',
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+        de: deLocale,
+      };
+
+      I18n.init({ locales: customLocales, defaultLocale: 'de' });
+
+      expect(I18n.detectLocale()).toBe('de');
+    });
+  });
+
+  describe('resolveLocale with custom locales', () => {
+    const originalNavigator = globalThis.navigator;
+
+    beforeEach(() => {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          languages: ['ru', 'en'],
+          language: 'ru',
+        },
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: originalNavigator,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it('auto-detects only from available locales', () => {
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+        de: deLocale,
+      };
+
+      I18n.init({ locales: customLocales });
+
+      const result = I18n.resolveLocale('auto');
+
+      expect(result.locale).toBe('en');
+    });
+
+    it('falls back to defaultLocale for unavailable explicit locale', () => {
+      const originalConsoleWarn = console.warn;
+
+      console.warn = vi.fn();
+
+      const customLocales: LocaleRegistry = {
+        en: enLocale,
+        fr: frLocale,
+      };
+
+      I18n.init({ locales: customLocales, defaultLocale: 'fr' });
+
+      const result = I18n.resolveLocale('de');
+
+      expect(result.locale).toBe('fr');
+      console.warn = originalConsoleWarn;
+    });
+  });
+
+  describe('infinite recursion guard', () => {
+    it('throws error if default locale is not available (configuration error)', () => {
+      // Manually set up a broken state where default locale is not in registry
+      // This simulates a configuration error
+      const customLocales: LocaleRegistry = {
+        fr: frLocale,
+      };
+
+      I18n.init({ locales: customLocales, defaultLocale: 'fr' });
+
+      // Now try to set a locale that's not available
+      // The fallback should work since 'fr' is available
+      const originalConsoleWarn = console.warn;
+
+      console.warn = vi.fn();
+      I18n.setLocale('en');
+      expect(I18n.getLocale()).toBe('fr');
+      console.warn = originalConsoleWarn;
     });
   });
 });

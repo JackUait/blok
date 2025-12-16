@@ -5,10 +5,13 @@ import azMessages from './az/messages.json';
 import bnMessages from './bn/messages.json';
 import csMessages from './cs/messages.json';
 import deMessages from './de/messages.json';
+import dvMessages from './dv/messages.json';
 import elMessages from './el/messages.json';
 import enMessages from './en/messages.json';
 import esMessages from './es/messages.json';
+import faMessages from './fa/messages.json';
 import frMessages from './fr/messages.json';
+import heMessages from './he/messages.json';
 import hiMessages from './hi/messages.json';
 import huMessages from './hu/messages.json';
 import hyMessages from './hy/messages.json';
@@ -16,16 +19,22 @@ import idMessages from './id/messages.json';
 import itMessages from './it/messages.json';
 import jaMessages from './ja/messages.json';
 import koMessages from './ko/messages.json';
+import kuMessages from './ku/messages.json';
 import nlMessages from './nl/messages.json';
 import plMessages from './pl/messages.json';
+import psMessages from './ps/messages.json';
 import ptMessages from './pt/messages.json';
 import roMessages from './ro/messages.json';
 import ruMessages from './ru/messages.json';
+import sdMessages from './sd/messages.json';
 import svMessages from './sv/messages.json';
 import thMessages from './th/messages.json';
 import trMessages from './tr/messages.json';
+import ugMessages from './ug/messages.json';
 import ukMessages from './uk/messages.json';
+import urMessages from './ur/messages.json';
 import viMessages from './vi/messages.json';
+import yiMessages from './yi/messages.json';
 import zhMessages from './zh/messages.json';
 
 /**
@@ -60,6 +69,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: deMessages,
     direction: 'ltr',
   },
+  dv: {
+    dictionary: dvMessages,
+    direction: 'rtl',
+  },
   el: {
     dictionary: elMessages,
     direction: 'ltr',
@@ -72,9 +85,17 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: esMessages,
     direction: 'ltr',
   },
+  fa: {
+    dictionary: faMessages,
+    direction: 'rtl',
+  },
   fr: {
     dictionary: frMessages,
     direction: 'ltr',
+  },
+  he: {
+    dictionary: heMessages,
+    direction: 'rtl',
   },
   hi: {
     dictionary: hiMessages,
@@ -104,6 +125,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: koMessages,
     direction: 'ltr',
   },
+  ku: {
+    dictionary: kuMessages,
+    direction: 'rtl',
+  },
   nl: {
     dictionary: nlMessages,
     direction: 'ltr',
@@ -111,6 +136,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   pl: {
     dictionary: plMessages,
     direction: 'ltr',
+  },
+  ps: {
+    dictionary: psMessages,
+    direction: 'rtl',
   },
   pt: {
     dictionary: ptMessages,
@@ -124,6 +153,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: ruMessages,
     direction: 'ltr',
   },
+  sd: {
+    dictionary: sdMessages,
+    direction: 'rtl',
+  },
   sv: {
     dictionary: svMessages,
     direction: 'ltr',
@@ -136,13 +169,25 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
     dictionary: trMessages,
     direction: 'ltr',
   },
+  ug: {
+    dictionary: ugMessages,
+    direction: 'rtl',
+  },
   uk: {
     dictionary: ukMessages,
     direction: 'ltr',
   },
+  ur: {
+    dictionary: urMessages,
+    direction: 'rtl',
+  },
   vi: {
     dictionary: viMessages,
     direction: 'ltr',
+  },
+  yi: {
+    dictionary: yiMessages,
+    direction: 'rtl',
   },
   zh: {
     dictionary: zhMessages,

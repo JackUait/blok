@@ -24,6 +24,7 @@ import {
   BLOK_EMPTY_ATTR,
 } from '../constants';
 import { BlokMobileLayoutToggled } from '../events';
+import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 /**
  * HTML Elements used for UI
  */
@@ -125,6 +126,12 @@ export default class UI extends Module<UINodes> {
      * Load and append CSS
      */
     this.loadStyles();
+
+    /**
+     * Register this Blok instance with the accessibility announcer
+     * for proper multi-instance cleanup
+     */
+    registerAnnouncer();
   }
 
   /**
@@ -227,6 +234,9 @@ export default class UI extends Module<UINodes> {
     this.nodes.holder.innerHTML = '';
 
     this.unbindReadOnlyInsensitiveListeners();
+
+    // Clean up accessibility announcer
+    destroyAnnouncer();
   }
 
   /**

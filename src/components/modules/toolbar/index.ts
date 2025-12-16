@@ -777,6 +777,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
     settingsToggler.setAttribute(BLOK_DRAG_HANDLE_ATTR, '');
     settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
 
+    // Accessibility: make the drag handle accessible to screen readers
+    settingsToggler.setAttribute('role', 'button');
+    settingsToggler.setAttribute('tabindex', '0');
+    settingsToggler.setAttribute(
+      'aria-label',
+      I18n.ui(I18nInternalNS.accessibility.dragHandle, 'aria-label')
+    );
+    settingsToggler.setAttribute('aria-roledescription', 'drag handle');
+
     this.nodes.settingsToggler = settingsToggler;
 
     $.append(actions, settingsToggler);

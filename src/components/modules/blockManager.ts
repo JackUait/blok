@@ -23,6 +23,9 @@ import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
 import PromiseQueue from '../utils/promise-queue';
 import { BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
 import Shortcuts from '../utils/shortcuts';
+import { announce } from '../utils/announcer';
+import I18n from '../i18n';
+import { I18nInternalNS } from '../i18n/namespace-internal';
 
 type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
@@ -1088,11 +1091,26 @@ export default class BlockManager extends Module {
     const currentIndex = this.currentBlockIndex;
 
     if (currentIndex <= 0) {
+      // Announce boundary condition
+      announce(
+        I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'atTop'),
+        { politeness: 'polite' }
+      );
+
       return;
     }
 
     this.move(currentIndex - 1, currentIndex);
     this.refocusCurrentBlock();
+
+    // Announce successful move (currentBlockIndex is now updated to new position)
+    const newPosition = this.currentBlockIndex + 1; // Convert to 1-indexed for user
+    const total = this.blocksStore.length;
+    const message = I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'movedUp')
+      .replace('{position}', String(newPosition))
+      .replace('{total}', String(total));
+
+    announce(message, { politeness: 'assertive' });
   }
 
   /**
@@ -1103,11 +1121,26 @@ export default class BlockManager extends Module {
     const currentIndex = this.currentBlockIndex;
 
     if (currentIndex < 0 || currentIndex >= this.blocksStore.length - 1) {
+      // Announce boundary condition
+      announce(
+        I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'atBottom'),
+        { politeness: 'polite' }
+      );
+
       return;
     }
 
     this.move(currentIndex + 1, currentIndex);
     this.refocusCurrentBlock();
+
+    // Announce successful move (currentBlockIndex is now updated to new position)
+    const newPosition = this.currentBlockIndex + 1; // Convert to 1-indexed for user
+    const total = this.blocksStore.length;
+    const message = I18n.ui(I18nInternalNS.accessibility.keyboardMove, 'movedDown')
+      .replace('{position}', String(newPosition))
+      .replace('{total}', String(total));
+
+    announce(message, { politeness: 'assertive' });
   }
 
   /**

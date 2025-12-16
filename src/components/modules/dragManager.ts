@@ -11,6 +11,9 @@ import $ from '../dom';
 import * as tooltip from '../utils/tooltip';
 import { BLOK_DRAGGING_ATTR, BLOK_DRAGGING_MULTI_ATTR, BLOK_ELEMENT_SELECTOR } from '../constants';
 import { twMerge } from '../utils/tw';
+import { announce } from '../utils/announcer';
+import I18n from '../i18n';
+import { I18nInternalNS } from '../i18n/namespace-internal';
 
 /**
  * Styles for the drag preview element
@@ -32,6 +35,8 @@ const DRAG_CONFIG = {
   /** Auto-scroll configuration */
   autoScrollZone: 50,
   autoScrollSpeed: 10,
+  /** Throttle delay for drop position announcements (ms) */
+  announcementThrottleMs: 300,
 };
 
 /**
@@ -48,6 +53,12 @@ interface DragState {
   targetBlock: Block | null;
   /** Edge of target block ('top' or 'bottom') */
   targetEdge: 'top' | 'bottom' | null;
+  /** Last announced drop position (to avoid duplicate announcements) */
+  lastAnnouncedDropIndex: number | null;
+  /** Pending drop position to announce (for throttling) */
+  pendingAnnouncementIndex: number | null;
+  /** Timeout ID for throttled announcement */
+  announcementTimeoutId: ReturnType<typeof setTimeout> | null;
   /** Drag preview element */
   previewElement: HTMLElement;
   /** Starting mouse position */
@@ -166,6 +177,9 @@ export default class DragManager extends Module {
       isMultiBlockDrag: isMultiBlock,
       targetBlock: null,
       targetEdge: null,
+      lastAnnouncedDropIndex: null,
+      pendingAnnouncementIndex: null,
+      announcementTimeoutId: null,
       previewElement: preview,
       startX: e.clientX,
       startY: e.clientY,
@@ -356,6 +370,31 @@ export default class DragManager extends Module {
 
     tooltip.hide(true);
     this.Blok.Toolbar.close();
+
+    // Announce drag started to screen readers
+    this.announceDragStarted();
+  }
+
+  /**
+   * Announces that a drag operation has started
+   * Note: This is only called from startDrag() which guarantees dragState exists
+   */
+  private announceDragStarted(): void {
+    const blockCount = this.dragState!.sourceBlocks.length;
+
+    if (blockCount > 1) {
+      const message = I18n.ui(
+        I18nInternalNS.accessibility.dragAnnouncements,
+        'dragStartedMultiple'
+      ).replace('{count}', String(blockCount));
+
+      announce(message, { politeness: 'assertive' });
+    } else {
+      announce(
+        I18n.ui(I18nInternalNS.accessibility.dragAnnouncements, 'dragStarted'),
+        { politeness: 'assertive' }
+      );
+    }
   }
 
   /**
@@ -457,6 +496,66 @@ export default class DragManager extends Module {
     const targetDepth = this.calculateTargetDepth(targetBlock, edge);
 
     blockHolder.style.setProperty('--drop-indicator-depth', String(targetDepth));
+
+    // Announce drop position change to screen readers
+    this.announceDropPosition();
+  }
+
+  /**
+   * Announces the current drop position to screen readers
+   * Throttled to avoid overwhelming screen readers with rapid announcements
+   * Only announces if the position has changed since the last announcement
+   */
+  private announceDropPosition(): void {
+    if (!this.dragState?.targetBlock || !this.dragState.targetEdge) {
+      return;
+    }
+
+    const targetIndex = this.Blok.BlockManager.getBlockIndex(this.dragState.targetBlock);
+    const dropIndex = this.dragState.targetEdge === 'top' ? targetIndex : targetIndex + 1;
+
+    // Don't announce if position hasn't changed
+    if (this.dragState.lastAnnouncedDropIndex === dropIndex) {
+      return;
+    }
+
+    // Store the pending announcement
+    this.dragState.pendingAnnouncementIndex = dropIndex;
+
+    // If there's already a pending timeout, let it handle the announcement
+    if (this.dragState.announcementTimeoutId !== null) {
+      return;
+    }
+
+    // Schedule the announcement with throttling
+    this.dragState.announcementTimeoutId = setTimeout(() => {
+      if (!this.dragState || this.dragState.pendingAnnouncementIndex === null) {
+        return;
+      }
+
+      const pendingIndex = this.dragState.pendingAnnouncementIndex;
+
+      // Clear the timeout state
+      this.dragState.announcementTimeoutId = null;
+      this.dragState.pendingAnnouncementIndex = null;
+
+      // Don't announce if it's the same as what we already announced
+      if (this.dragState.lastAnnouncedDropIndex === pendingIndex) {
+        return;
+      }
+
+      this.dragState.lastAnnouncedDropIndex = pendingIndex;
+
+      const total = this.Blok.BlockManager.blocks.length;
+      const message = I18n.ui(
+        I18nInternalNS.accessibility.dragAnnouncements,
+        'dropPosition'
+      )
+        .replace('{position}', String(pendingIndex + 1))
+        .replace('{total}', String(total));
+
+      announce(message, { politeness: 'polite' });
+    }, DRAG_CONFIG.announcementThrottleMs);
   }
 
   /**
@@ -558,7 +657,7 @@ export default class DragManager extends Module {
    */
   private onKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
-      this.cleanup();
+      this.cleanup(true);
     }
   }
 
@@ -577,9 +676,43 @@ export default class DragManager extends Module {
       this.handleSingleBlockDrop(sourceBlock, targetBlock, edge);
     }
 
+    // Announce successful drop to screen readers
+    this.announceDropComplete(sourceBlock, sourceBlocks, isMultiBlockDrag);
+
     // Re-open toolbar on the dropped block
     this.Blok.Toolbar.skipNextSettingsToggle();
     this.Blok.Toolbar.moveAndOpen(sourceBlock);
+  }
+
+  /**
+   * Announces that a drop operation has completed
+   * @param sourceBlock - The primary block that was dropped
+   * @param sourceBlocks - All blocks that were dropped
+   * @param isMultiBlockDrag - Whether this was a multi-block drag
+   */
+  private announceDropComplete(sourceBlock: Block, sourceBlocks: Block[], isMultiBlockDrag: boolean): void {
+    const newIndex = this.Blok.BlockManager.getBlockIndex(sourceBlock);
+    const total = this.Blok.BlockManager.blocks.length;
+
+    if (isMultiBlockDrag) {
+      const message = I18n.ui(
+        I18nInternalNS.accessibility.dragAnnouncements,
+        'blocksMoved'
+      )
+        .replace('{count}', String(sourceBlocks.length))
+        .replace('{position}', String(newIndex + 1));
+
+      announce(message, { politeness: 'assertive' });
+    } else {
+      const message = I18n.ui(
+        I18nInternalNS.accessibility.dragAnnouncements,
+        'blockMoved'
+      )
+        .replace('{position}', String(newIndex + 1))
+        .replace('{total}', String(total));
+
+      announce(message, { politeness: 'assertive' });
+    }
   }
 
   /**
@@ -698,15 +831,29 @@ export default class DragManager extends Module {
 
   /**
    * Cleans up drag state and event listeners
+   * @param wasCancelled - Whether the drag was cancelled (not dropped)
    */
-  private cleanup(): void {
+  private cleanup(wasCancelled = false): void {
     if (!this.dragState) {
       return;
+    }
+
+    // Announce cancellation to screen readers if drag was in progress and cancelled
+    if (wasCancelled && this.dragState.isDragging) {
+      announce(
+        I18n.ui(I18nInternalNS.accessibility.dragAnnouncements, 'dropCancelled'),
+        { politeness: 'polite' }
+      );
     }
 
     // Clear auto-scroll
     if (this.dragState.autoScrollInterval !== null) {
       cancelAnimationFrame(this.dragState.autoScrollInterval);
+    }
+
+    // Clear pending announcement timeout
+    if (this.dragState.announcementTimeoutId !== null) {
+      clearTimeout(this.dragState.announcementTimeoutId);
     }
 
     // Clear drop indicator

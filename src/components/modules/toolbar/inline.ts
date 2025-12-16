@@ -452,7 +452,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       scopeElement,
       messages: {
         nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
-        search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
+        search: I18n.ui(I18nInternalNS.ui.popover, 'Search'),
       },
     });
 

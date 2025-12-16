@@ -193,15 +193,21 @@ export default class Core {
 
     /**
      * Adjust i18n
+     * Priority: messages (custom dictionary) > locale > auto-detect
      */
     if (this.config.i18n?.messages) {
+      // Custom dictionary takes precedence
       I18n.setDictionary(this.config.i18n.messages);
-    }
 
-    /**
-     * Text direction. If not set, uses ltr
-     */
-    this.config.i18n.direction = this.config.i18n?.direction || 'ltr';
+      // Use provided direction or default to 'ltr'
+      this.config.i18n.direction = this.config.i18n.direction ?? 'ltr';
+    } else {
+      // Resolve locale (auto-detect if not specified or set to 'auto')
+      const localeResult = I18n.resolveLocale(this.config.i18n?.locale);
+
+      // Use provided direction, or direction from detected locale
+      this.config.i18n.direction = this.config.i18n?.direction ?? localeResult.direction;
+    }
   }
 
   /**

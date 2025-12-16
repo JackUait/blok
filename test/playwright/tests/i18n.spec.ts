@@ -628,10 +628,10 @@ test.describe('blok i18n', () => {
   });
 
   test.describe('ui popover', () => {
-    test('should translate "Filter" and "Nothing found" in block settings popover', async ({ page }) => {
+    test('should translate "Search" and "Nothing found" in block settings popover', async ({ page }) => {
       const uiDictionary = {
         popover: {
-          Filter: 'Поиск',
+          Search: 'Поиск',
 
           'Nothing found': 'Ничего не найдено',
         },
@@ -724,19 +724,19 @@ test.describe('blok i18n', () => {
 
       const popoverContainer = page
         .locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-testid="popover-container"]`)
-        .filter({ has: page.getByRole('searchbox', { name: uiDictionary.popover.Filter }) });
+        .filter({ has: page.getByRole('searchbox', { name: uiDictionary.popover.Search }) });
 
       await expect(popoverContainer).toHaveCount(1);
       await expect(popoverContainer).toBeVisible();
 
-      const searchInput = popoverContainer.getByRole('searchbox', { name: uiDictionary.popover.Filter });
+      const searchInput = popoverContainer.getByRole('searchbox', { name: uiDictionary.popover.Search });
 
       await expect(searchInput).toHaveCount(1);
       await expect(searchInput).toBeVisible();
 
       const placeholder = await searchInput.getAttribute('placeholder');
 
-      expect(placeholder).toContain(uiDictionary.popover.Filter);
+      expect(placeholder).toContain(uiDictionary.popover.Search);
 
       await searchInput.fill('nonexistent12345');
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for search results
@@ -1022,7 +1022,7 @@ test.describe('blok i18n', () => {
       const toolsDictionary = {
         stub: {
 
-          'The block can not be displayed correctly.': 'Блок не может быть отображен корректно.',
+          'This block cannot be displayed': 'Блок не может быть отображен корректно.',
         },
       };
 
@@ -1043,7 +1043,7 @@ test.describe('blok i18n', () => {
       });
 
       // Stub block should be rendered with translated message
-      const stubMessage = page.locator(`text=${toolsDictionary.stub['The block can not be displayed correctly.']}`);
+      const stubMessage = page.locator(`text=${toolsDictionary.stub['This block cannot be displayed']}`);
 
       await expect(stubMessage).toBeVisible();
     });

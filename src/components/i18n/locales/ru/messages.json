@@ -1,0 +1,88 @@
+{
+  "ui": {
+    "blockTunes": {
+      "toggler": {
+        "Drag to move": "Тяните, чтобы переместить",
+        "Click to open the menu": "Нажмите для меню"
+      }
+    },
+    "inlineToolbar": {
+      "converter": {
+        "Convert to": "Преобразовать в"
+      }
+    },
+    "toolbar": {
+      "toolbox": {
+        "Click to add below": "Добавить блок",
+        "Option-click to add above": "⌥ — добавить выше",
+        "Ctrl-click to add above": "Ctrl — добавить выше"
+      }
+    },
+    "popover": {
+      "Search": "Поиск",
+      "Nothing found": "Ничего не найдено",
+      "Convert to": "Преобразовать в"
+    }
+  },
+  "toolNames": {
+    "Text": "Текст",
+    "Heading": "Заголовок",
+    "Link": "Ссылка",
+    "Bold": "Жирный",
+    "Italic": "Курсив",
+    "Bulleted list": "Список",
+    "Numbered list": "Нумерованный список",
+    "Checklist": "Список задач"
+  },
+  "tools": {
+    "link": {
+      "Add a link": "Добавить ссылку",
+      "Invalid link": "Некорректная ссылка"
+    },
+    "stub": {
+      "Error": "Ошибка",
+      "This block cannot be displayed": "Не удалось отобразить блок"
+    },
+    "header": {
+      "Heading 1": "Заголовок 1",
+      "Heading 2": "Заголовок 2",
+      "Heading 3": "Заголовок 3",
+      "Heading 4": "Заголовок 4",
+      "Heading 5": "Заголовок 5",
+      "Heading 6": "Заголовок 6"
+    },
+    "list": {
+      "Bulleted list": "Список",
+      "Numbered list": "Нумерованный список",
+      "Checklist": "Список задач",
+      "List": "Список"
+    }
+  },
+  "blockTunes": {
+    "delete": {
+      "Delete": "Удалить"
+    }
+  },
+  "accessibility": {
+    "dragHandle": {
+      "aria-label": "Перетащите или нажмите для меню",
+      "aria-roledescription": "управление блоком"
+    },
+    "dragAnnouncements": {
+      "dragStarted": "Перетаскивание блока",
+      "dragStartedMultiple": "Перетаскивание блоков: {count}",
+      "dropPosition": "Будет перемещён на позицию {position} из {total}",
+      "dropCancelled": "Перетаскивание отменено",
+      "blockMoved": "Блок перемещён на позицию {position} из {total}",
+      "blocksMoved": "Блоков перемещено: {count}, позиция {position}",
+      "blockDuplicated": "Блок скопирован на позицию {position} из {total}",
+      "blocksDuplicated": "Скопировано блоков: {count}, начиная с позиции {position}"
+    },
+    "keyboardMove": {
+      "movedUp": "Блок перемещён вверх, позиция {position} из {total}",
+      "movedDown": "Блок перемещён вниз, позиция {position} из {total}",
+      "atTop": "Блок уже вверху",
+      "atBottom": "Блок уже внизу"
+    }
+  }
+}

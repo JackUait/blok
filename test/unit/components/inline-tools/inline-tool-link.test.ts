@@ -238,7 +238,7 @@ describe('LinkInlineTool', () => {
     (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
 
     expect(notifier.show).toHaveBeenCalledWith({
-      message: 'Pasted link is not valid.',
+      message: 'Invalid link',
       style: 'error',
     });
     expect(insertLinkSpy).not.toHaveBeenCalled();

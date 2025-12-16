@@ -176,7 +176,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       scopeElement: this.Blok.API.methods.ui.nodes.redactor,
       messages: {
         nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
-        search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
+        search: I18n.ui(I18nInternalNS.ui.popover, 'Search'),
       },
     };
 

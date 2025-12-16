@@ -17,6 +17,7 @@ const mockRegistry = vi.hoisted(() => ({
   },
   i18n: {
     setDictionary: vi.fn(),
+    resolveLocale: vi.fn(() => ({ locale: 'en', dictionary: {}, direction: 'ltr' })),
   },
   modules: {
     toolsPrepare: vi.fn(),
@@ -64,6 +65,7 @@ vi.mock('../../../src/components/i18n', () => ({
   __esModule: true,
   default: {
     setDictionary: mockRegistry.i18n.setDictionary,
+    resolveLocale: mockRegistry.i18n.resolveLocale,
   },
 }));
 

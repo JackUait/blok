@@ -205,7 +205,7 @@ test.describe('inline tool link - edge cases', () => {
     await linkInput.press('Enter');
 
     // Expect error notification
-    await expect(page.locator(NOTIFIER_SELECTOR)).toContainText('Pasted link is not valid');
+    await expect(page.locator(NOTIFIER_SELECTOR)).toContainText('Invalid link');
     // Link should not be created
     await expect(paragraph.getByRole('link')).toHaveCount(0);
   });

@@ -723,37 +723,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
     /**
      * Add events to show/hide tooltip for plus button
      */
-    const tooltipContent = $.make('div');
-
-    const createTooltipLine = (text: string): DocumentFragment => {
-      const fragment = document.createDocumentFragment();
-      const spaceIndex = text.indexOf(' ');
-
-      if (spaceIndex > 0) {
-        const firstWord = text.substring(0, spaceIndex);
-        const rest = text.substring(spaceIndex);
-
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        fragment.appendChild($.make('span', this.CSS.plusButtonShortcutKey, {
-          textContent: firstWord,
-        }));
-        fragment.appendChild(document.createTextNode(rest));
-      } else {
-        fragment.appendChild(document.createTextNode(text));
-      }
-
-      return fragment;
-    };
-
-    tooltipContent.appendChild(createTooltipLine(I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Click to add below')));
-    tooltipContent.appendChild($.make('br'));
-
     const userOS = _.getUserOS();
     const modifierClickText = userOS.win
       ? I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Ctrl-click to add above')
       : I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Option-click to add above');
 
-    tooltipContent.appendChild(createTooltipLine(modifierClickText));
+    const tooltipContent = this.createTooltipContent([
+      I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Click to add below'),
+      modifierClickText,
+    ]);
 
     tooltip.onHover(plusButton, tooltipContent, {
       hidingDelay: 400,
@@ -786,33 +764,19 @@ export default class Toolbar extends Module<ToolbarNodes> {
       'aria-label',
       I18n.ui(I18nInternalNS.accessibility.dragHandle, 'aria-label')
     );
-    settingsToggler.setAttribute('aria-roledescription', 'drag handle');
+    settingsToggler.setAttribute(
+      'aria-roledescription',
+      I18n.ui(I18nInternalNS.accessibility.dragHandle, 'aria-roledescription')
+    );
 
     this.nodes.settingsToggler = settingsToggler;
 
     $.append(actions, settingsToggler);
 
-    const blockTunesTooltip = $.make('div');
-
-    const createStyledLine = (text: string): HTMLElement => {
-      const line = $.make('div');
-      const [firstWord, ...rest] = text.split(' ');
-      const styledWord = $.make('span', null, { textContent: firstWord });
-
-      styledWord.style.color = 'white';
-      line.appendChild(styledWord);
-      if (rest.length > 0) {
-        line.appendChild($.text(' ' + rest.join(' ')));
-      }
-
-      return line;
-    };
-
-    const dragToMoveText = I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Drag to move');
-    const clickToOpenText = I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to open the menu');
-
-    blockTunesTooltip.appendChild(createStyledLine(dragToMoveText));
-    blockTunesTooltip.appendChild(createStyledLine(clickToOpenText));
+    const blockTunesTooltip = this.createTooltipContent([
+      I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Drag to move'),
+      I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to open the menu'),
+    ]);
 
     tooltip.onHover(settingsToggler, blockTunesTooltip, {
       hidingDelay: 400,
@@ -848,7 +812,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
       api: this.Blok.API.methods,
       tools: this.Blok.Tools.blockTools,
       i18nLabels: {
-        filter: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
+        filter: I18n.ui(I18nInternalNS.ui.popover, 'Search'),
         nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
       },
       triggerElement: this.nodes.plusButton,
@@ -1304,6 +1268,40 @@ export default class Toolbar extends Module<ToolbarNodes> {
      * Make Toolbar
      */
     await this.make();
+  }
+
+  /**
+   * Creates a tooltip content element with multiple lines and consistent styling
+   * @param lines - array of text strings, each will be displayed on its own line
+   * @returns the tooltip container element
+   */
+  private createTooltipContent(lines: string[]): HTMLElement {
+    const container = $.make('div');
+
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.gap = '4px';
+
+    lines.forEach((text) => {
+      const line = $.make('div');
+      const spaceIndex = text.indexOf(' ');
+
+      if (spaceIndex > 0) {
+        const firstWord = text.substring(0, spaceIndex);
+        const rest = text.substring(spaceIndex);
+        const styledWord = $.make('span', null, { textContent: firstWord });
+
+        styledWord.style.color = 'white';
+        line.appendChild(styledWord);
+        line.appendChild(document.createTextNode(rest));
+      } else {
+        line.appendChild(document.createTextNode(text));
+      }
+
+      container.appendChild(line);
+    });
+
+    return container;
   }
 
   /**

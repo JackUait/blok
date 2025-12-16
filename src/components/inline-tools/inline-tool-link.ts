@@ -379,7 +379,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
     if (!this.validateURL(value)) {
       this.notifier.show({
-        message: 'Pasted link is not valid.',
+        message: this.i18n.t('Invalid link'),
         style: 'error',
       });
 

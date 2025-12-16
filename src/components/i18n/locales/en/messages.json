@@ -19,13 +19,14 @@
       }
     },
     "popover": {
-      "Filter": "",
+      "Search": "",
       "Nothing found": "",
       "Convert to": ""
     }
   },
   "toolNames": {
     "Text": "",
+    "Heading": "",
     "Link": "",
     "Bold": "",
     "Italic": "",
@@ -35,10 +36,20 @@
   },
   "tools": {
     "link": {
-      "Add a link": ""
+      "Add a link": "",
+      "Invalid link": ""
     },
     "stub": {
-      "The block can not be displayed correctly.": ""
+      "Error": "",
+      "This block cannot be displayed": ""
+    },
+    "header": {
+      "Heading 1": "",
+      "Heading 2": "",
+      "Heading 3": "",
+      "Heading 4": "",
+      "Heading 5": "",
+      "Heading 6": ""
     },
     "list": {
       "Bulleted list": "",
@@ -50,17 +61,12 @@
   "blockTunes": {
     "delete": {
       "Delete": ""
-    },
-    "moveUp": {
-      "Move up": ""
-    },
-    "moveDown": {
-      "Move down": ""
     }
   },
   "accessibility": {
     "dragHandle": {
-      "aria-label": "Drag to move block or click for menu"
+      "aria-label": "Drag to move block or click for menu",
+      "aria-roledescription": "drag handle"
     },
     "dragAnnouncements": {
       "dragStarted": "Dragging block",

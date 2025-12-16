@@ -36,33 +36,50 @@ yarn add @jackuait/blok
 
 ## Migrating from EditorJS
 
-If you're migrating from EditorJS, Blok provides a seamless transition path:
+Blok is designed as a drop-in replacement for EditorJS. The included codemod automatically transforms your imports, selectors, and configuration—so you can switch over in minutes, not hours.
 
-### Automated Migration
-
-Run the codemod to automatically update your codebase:
+### Quick Start
 
 ```bash
-# Preview changes (recommended first)
+# 1. Preview what will change (recommended first)
 npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run
 
-# Apply changes
+# 2. Apply the changes
 npx -p @jackuait/blok migrate-from-editorjs ./src
-
-# Process the entire project
-npx -p @jackuait/blok migrate-from-editorjs .
 ```
 
-The codemod handles:
-- Import updates (`@editorjs/editorjs` → `@jackuait/blok`)
-- Type renames (`EditorConfig` → `BlokConfig`)
-- CSS selector updates (`.ce-*` → `[data-blok-*]`)
-- Data attribute updates (`data-id` → `data-blok-id`)
-- Bundled tool migrations (Header & Paragraph are now included)
+### Options
 
-### Migration Guide
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Preview changes without modifying files |
+| `--verbose` | Show detailed output for each file processed |
+| `--use-library-i18n` | Use Blok's built-in translations (36 languages) instead of custom i18n |
 
-For a complete list of breaking changes and manual migration steps, see [MIGRATION.md](./MIGRATION.md).
+### Supported Files
+
+The codemod processes: `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, `.html`, `.css`, `.scss`, `.less`
+
+### What Gets Transformed
+
+- **Imports** — `@editorjs/editorjs` → `@jackuait/blok`
+- **Types** — `EditorConfig` → `BlokConfig`
+- **CSS selectors** — `.ce-block`, `.ce-toolbar` → `[data-blok-*]` attributes
+- **Data attributes** — `data-id` → `data-blok-id`
+- **Bundled tools** — Header & Paragraph imports removed (now included in Blok)
+- **Default holder** — `#editorjs` → `#blok`
+
+### Limitations
+
+Some patterns require manual attention:
+- Dynamic imports with variable paths
+- Complex nested CSS selectors
+- Custom EditorJS plugins (need API adaptation)
+
+### Learn More
+
+- [MIGRATION.md](./MIGRATION.md) — Full list of breaking changes and manual steps
+- [codemod/README.md](./codemod/README.md) — Programmatic usage and detailed examples
 
 ## Documentation
 

@@ -151,9 +151,10 @@ describe('ConvertInlineTool', () => {
     toolsAPI.getBlockTools.mockReturnValue([ convertibleTool ]);
     vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([ convertibleTool ]);
     vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
-    const translateSpy = vi.spyOn(I18nInternal, 't').mockImplementation(() => 'Heading translated');
-
-    vi.spyOn(I18nInternal, 'ui').mockImplementation(() => 'Convert to');
+    const translateSpy = vi.spyOn(I18nInternal, 't').mockImplementation((key) => {
+      if (key.includes('Convert to')) return 'Convert to';
+      return 'Heading translated';
+    });
     blocksAPI.convert.mockResolvedValue(convertedBlock);
 
     const config = await tool.render();
@@ -208,7 +209,6 @@ describe('ConvertInlineTool', () => {
     vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([ convertibleTool ]);
     vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(true);
     vi.spyOn(I18nInternal, 't').mockImplementation(() => 'Paragraph');
-    vi.spyOn(I18nInternal, 'ui').mockImplementation(() => 'Convert to');
 
     const config = await tool.render();
 
@@ -251,7 +251,6 @@ describe('ConvertInlineTool', () => {
     vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([convertibleTool]);
     vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
     vi.spyOn(I18nInternal, 't').mockImplementation(() => 'Heading');
-    vi.spyOn(I18nInternal, 'ui').mockImplementation(() => 'Convert to');
 
     const config = await tool.render();
     const menuConfig = config as MenuConfigWithChildren;

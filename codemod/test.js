@@ -69,6 +69,12 @@ test('transforms @editorjs/paragraph import', () => {
   assertEqual(result, `// Paragraph is now bundled with Blok: use Blok.Paragraph\n`);
 });
 
+test('transforms @editorjs/list import', () => {
+  const input = `import List from '@editorjs/list';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `// List is now bundled with Blok: use Blok.List\n`);
+});
+
 // ============================================================================
 // Type Tests
 // ============================================================================
@@ -315,6 +321,24 @@ test('transforms standalone paragraph: Paragraph reference', () => {
   assertEqual(result, `tools: { paragraph: Blok.Paragraph, header: Blok.Header }`);
 });
 
+test('transforms class: List to class: Blok.List', () => {
+  const input = `{ class: List, config: {} }`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `{ class: Blok.List, config: {} }`);
+});
+
+test('transforms standalone list: List reference', () => {
+  const input = `tools: { list: List }`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `tools: { list: Blok.List }`);
+});
+
+test('does not transform ListConfig or ListItem', () => {
+  const input = `import { ListConfig, ListItem } from './types';`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `import { ListConfig, ListItem } from './types';`);
+});
+
 // ============================================================================
 // Integration Tests
 // ============================================================================
@@ -464,6 +488,15 @@ test('detects Blok.Paragraph usage', () => {
 });`;
   const { result, changed } = ensureBlokImport(input);
   assertEqual(changed, true, 'Should detect Blok.Paragraph');
+  assertEqual(result.includes("import Blok from '@jackuait/blok';"), true, 'Should add Blok import');
+});
+
+test('detects Blok.List usage', () => {
+  const input = `const editor = new Blok({
+  tools: { list: Blok.List }
+});`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, true, 'Should detect Blok.List');
   assertEqual(result.includes("import Blok from '@jackuait/blok';"), true, 'Should add Blok import');
 });
 

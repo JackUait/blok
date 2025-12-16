@@ -392,6 +392,12 @@ const IMPORT_TRANSFORMS = [
     replacement: '// Paragraph is now bundled with Blok: use Blok.Paragraph\n',
     note: 'Paragraph tool is now bundled',
   },
+  // List tool (now bundled)
+  {
+    pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/list['"];?\n?/g,
+    replacement: '// List is now bundled with Blok: use Blok.List\n',
+    note: 'List tool is now bundled',
+  },
 ];
 
 // Type import transformations (order matters - more specific patterns first)
@@ -581,16 +587,18 @@ const HOLDER_TRANSFORMS = [
 ];
 
 // Bundled tools - add new tools here as they are bundled with Blok
-const BUNDLED_TOOLS = ['Header', 'Paragraph'];
+const BUNDLED_TOOLS = ['Header', 'Paragraph', 'List'];
 
 // Tool configuration transformations
 const TOOL_CONFIG_TRANSFORMS = [
   // Handle class property syntax
   { pattern: /class:\s*Header(?!Config)/g, replacement: 'class: Blok.Header' },
   { pattern: /class:\s*Paragraph(?!Config)/g, replacement: 'class: Blok.Paragraph' },
+  { pattern: /class:\s*List(?!Config|Item)/g, replacement: 'class: Blok.List' },
   // Handle standalone tool references in tools config (e.g., `paragraph: Paragraph`)
   { pattern: /(\bheader\s*:\s*)Header(?!Config)(?=\s*[,}\n])/g, replacement: '$1Blok.Header' },
   { pattern: /(\bparagraph\s*:\s*)Paragraph(?!Config)(?=\s*[,}\n])/g, replacement: '$1Blok.Paragraph' },
+  { pattern: /(\blist\s*:\s*)List(?!Config|Item)(?=\s*[,}\n])/g, replacement: '$1Blok.List' },
 ];
 
 // Text transformations for "EditorJS" string references
@@ -886,7 +894,7 @@ function updatePackageJson(packageJsonPath, dryRun = false) {
   const changes = [];
 
   // Track dependencies to remove
-  const depsToRemove = ['@editorjs/editorjs', '@editorjs/header', '@editorjs/paragraph'];
+  const depsToRemove = ['@editorjs/editorjs', '@editorjs/header', '@editorjs/paragraph', '@editorjs/list'];
   const devDepsToRemove = [...depsToRemove];
 
   // Check and update dependencies
@@ -968,7 +976,7 @@ What this codemod does:
   • Updates data attributes (data-id → data-blok-id)
   • Changes default holder from 'editorjs' to 'blok'
   • Updates package.json dependencies
-  • Converts bundled tool imports (Header, Paragraph)
+  • Converts bundled tool imports (Header, Paragraph, List)
   • Ensures Blok is imported when using bundled tools (Blok.Header, etc.)
   • Transforms nested i18n messages to flat dot-notation format with camelCase keys:
     - { ui: { toolbar: { Add: "..." } } } → { "ui.toolbar.add": "..." }

@@ -174,8 +174,8 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       items: await this.getTunesItems(block, commonTunes, toolTunes),
       scopeElement: this.Blok.API.methods.ui.nodes.redactor,
       messages: {
-        nothingFound: I18n.ui('ui.popover.Nothing found'),
-        search: I18n.ui('ui.popover.Search'),
+        nothingFound: I18n.t('ui.popover.Nothing found'),
+        search: I18n.t('ui.popover.Search'),
       },
     };
 
@@ -332,7 +332,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       items.push({
         icon: IconReplace,
         name: 'convert-to',
-        title: I18n.ui('ui.popover.Convert to'),
+        title: I18n.t('ui.popover.Convert to'),
         children: {
           items: convertToItems,
         },

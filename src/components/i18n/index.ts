@@ -32,21 +32,21 @@ export default class I18n {
   private static currentLocale: SupportedLocale = DEFAULT_LOCALE;
 
   /**
-   * Type-safe translation for internal UI texts
-   * @example I18n.ui('ui.blockTunes.toggler.Drag to move')
-   * @param key - full dot-notation key to the translation
-   */
-  public static ui(key: string): string {
-    return I18n._t(key);
-  }
-
-  /**
-   * Translate for external strings that is not presented in default dictionary.
-   * For example, for user-specified tool names
+   * Translate a key using the current dictionary.
+   * If no translation exists, returns the last segment of the key as fallback.
+   * For example, "ui.popover.Search" returns "Search" if not found.
    * @param key - full dot-notation key to the translation
    */
   public static t(key: string): string {
-    return I18n._t(key);
+    const translation = I18n.currentDictionary[key];
+
+    if (translation) {
+      return translation;
+    }
+
+    const lastDot = key.lastIndexOf('.');
+
+    return lastDot === -1 ? key : key.slice(lastDot + 1);
   }
 
   /**
@@ -175,24 +175,4 @@ export default class I18n {
     return typeof translation === 'string' && translation.length > 0;
   }
 
-  /**
-   * Perform translation using flat key lookup
-   * If there is no translation found, returns the last segment of the key as fallback
-   * @param key - full dot-notation key to the translation
-   */
-  private static _t(key: string): string {
-    const translation = I18n.currentDictionary[key];
-
-    if (translation) {
-      return translation;
-    }
-
-    /**
-     * Fallback: return the last segment of the key (the actual text)
-     * For example, "ui.popover.Search" returns "Search"
-     */
-    const lastDot = key.lastIndexOf('.');
-
-    return lastDot === -1 ? key : key.slice(lastDot + 1);
-  }
 }

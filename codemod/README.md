@@ -40,8 +40,10 @@ npx migrate-from-editorjs ./src --dry-run
 
 - import Header from '@editorjs/header';
 - import Paragraph from '@editorjs/paragraph';
+- import List from '@editorjs/list';
 + // Header is now bundled with Blok: use Blok.Header
 + // Paragraph is now bundled with Blok: use Blok.Paragraph
++ // List is now bundled with Blok: use Blok.List
 ```
 
 ### Type Transformations
@@ -100,8 +102,10 @@ npx migrate-from-editorjs ./src --dry-run
 tools: {
 -   header: Header,
 -   paragraph: Paragraph,
+-   list: List,
 +   header: Blok.Header,
 +   paragraph: Blok.Paragraph,
++   list: Blok.List,
 }
 ```
 
@@ -113,6 +117,7 @@ tools: {
 -   "@editorjs/editorjs": "^2.28.0",
 -   "@editorjs/header": "^2.8.0",
 -   "@editorjs/paragraph": "^2.11.0",
+-   "@editorjs/list": "^1.9.0",
 +   "@jackuait/blok": "latest"
   }
 }
@@ -129,7 +134,7 @@ tools: {
 
 ### Using `--use-library-i18n`
 
-If your EditorJS project had custom translations, the codemod will by default convert them to Blok's flat format. However, Blok now ships with built-in translations for 27 languages. If you prefer to use these library translations instead of maintaining your own, use the `--use-library-i18n` flag:
+If your EditorJS project had custom translations, the codemod will by default convert them to Blok's flat format. However, Blok now ships with built-in translations for 36 languages. If you prefer to use these library translations instead of maintaining your own, use the `--use-library-i18n` flag:
 
 ```bash
 npx -p @jackuait/blok migrate-from-editorjs ./src --use-library-i18n

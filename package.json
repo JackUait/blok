@@ -33,6 +33,7 @@
     "lint:fix": "eslint . --fix",
     "lint:tests": "eslint test/",
     "lint:types": "tsc --noEmit",
+    "i18n:check": "node scripts/i18n/check-translations.mjs",
     "e2e": "playwright test",
     "e2e:chrome": "playwright test --project=chromium",
     "e2e:firefox": "playwright test --project=firefox",

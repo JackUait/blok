@@ -11,6 +11,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  i18n:
+    name: i18n Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Check translations
+        run: node scripts/i18n/check-translations.mjs
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

@@ -2,6 +2,7 @@ import type { I18nDictionary } from '../../../../types/configs';
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';
 import enMessages from './en/messages.json';
 import ruMessages from './ru/messages.json';
+import zhMessages from './zh/messages.json';
 
 /**
  * Configuration for a locale including its dictionary and text direction
@@ -21,6 +22,10 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
   },
   ru: {
     dictionary: ruMessages,
+    direction: 'ltr',
+  },
+  zh: {
+    dictionary: zhMessages,
     direction: 'ltr',
   },
 };

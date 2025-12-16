@@ -89,12 +89,13 @@ describe('I18n', () => {
       expect(I18n.ui('ui.blockTunes.toggler', 'Drag to move')).toBe('Тяните, чтобы переместить');
     });
 
-    it('sets locale to Armenian and loads Armenian dictionary', () => {
-      const result = I18n.setLocale('hy');
+    it('sets locale to Chinese and loads Chinese dictionary', () => {
+      const result = I18n.setLocale('zh');
 
-      expect(result.locale).toBe('hy');
+      expect(result.locale).toBe('zh');
       expect(result.direction).toBe('ltr');
-      expect(I18n.getLocale()).toBe('hy');
+      expect(I18n.getLocale()).toBe('zh');
+      expect(I18n.ui('ui.blockTunes.toggler', 'Drag to move')).toBe('拖动以移动');
     });
 
     it('sets locale to English and loads English dictionary', () => {
@@ -209,13 +210,13 @@ describe('I18n', () => {
       Object.defineProperty(globalThis, 'navigator', {
         value: {
           languages: undefined,
-          language: 'hy',
+          language: 'zh',
         },
         writable: true,
         configurable: true,
       });
 
-      expect(I18n.detectLocale()).toBe('hy');
+      expect(I18n.detectLocale()).toBe('zh');
     });
   });
 
@@ -254,9 +255,9 @@ describe('I18n', () => {
     });
 
     it('uses specified locale when provided', () => {
-      const result = I18n.resolveLocale('hy');
+      const result = I18n.resolveLocale('zh');
 
-      expect(result.locale).toBe('hy');
+      expect(result.locale).toBe('zh');
       expect(result.direction).toBe('ltr');
     });
 
@@ -273,7 +274,7 @@ describe('I18n', () => {
 
       expect(locales).toContain('en');
       expect(locales).toContain('ru');
-      expect(locales).toContain('hy');
+      expect(locales).toContain('zh');
       expect(locales.length).toBe(3);
     });
   });

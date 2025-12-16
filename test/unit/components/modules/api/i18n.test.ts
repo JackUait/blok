@@ -25,10 +25,11 @@ const withEsModuleFlag: WithEsModuleFlag = vi.hoisted(() => {
   });
 });
 
-const { logLabeledMock, translateMock } = vi.hoisted(() => {
+const { logLabeledMock, translateMock, hasTranslationMock } = vi.hoisted(() => {
   return {
     logLabeledMock: vi.fn(),
     translateMock: vi.fn(),
+    hasTranslationMock: vi.fn(),
   };
 });
 
@@ -42,6 +43,7 @@ vi.mock('../../../../../src/components/i18n', () =>
   withEsModuleFlag({
     default: {
       t: translateMock,
+      hasTranslation: hasTranslationMock,
     },
   })
 );
@@ -60,6 +62,9 @@ describe('I18nAPI', () => {
   beforeEach(() => {
     logLabeledMock.mockReset();
     translateMock.mockReset();
+    hasTranslationMock.mockReset();
+    // By default, simulate that translations exist (return true)
+    hasTranslationMock.mockReturnValue(true);
   });
 
   it('warns and returns an empty string when calling global t()', () => {

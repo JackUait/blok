@@ -165,6 +165,17 @@ export default class I18n {
   }
 
   /**
+   * Check if a translation exists for the given key
+   * @param key - full dot-notation key to check
+   * @returns true if a translation exists (non-empty string)
+   */
+  public static hasTranslation(key: string): boolean {
+    const translation = I18n.currentDictionary[key];
+
+    return typeof translation === 'string' && translation.length > 0;
+  }
+
+  /**
    * Perform translation using flat key lookup
    * If there is no translation found, returns the last segment of the key as fallback
    * @param key - full dot-notation key to the translation

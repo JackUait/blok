@@ -42,7 +42,29 @@ export default class I18nAPI extends Module {
       this.methods,
       {
         t: (dictKey: string): string => {
-          return I18nInternal.t(I18nAPI.buildKey(toolName, isTune, dictKey));
+          const fullKey = I18nAPI.buildKey(toolName, isTune, dictKey);
+          const translation = I18nInternal.t(fullKey);
+
+          /**
+           * If the translation lookup returned a fallback (extracted from the key),
+           * prefer the original dictKey. This handles cases where dictKey contains
+           * dots (e.g., "Start typing here...") which would break the fallback parsing.
+           */
+          if (translation === dictKey) {
+            return dictKey;
+          }
+
+          /**
+           * Check if I18n.t() returned a parsed fallback rather than an actual translation.
+           * The internal _t() extracts text after the last dot when no translation exists.
+           * If that extraction doesn't match dictKey, it means parsing was corrupted
+           * (e.g., dictKey had internal dots), so use dictKey directly.
+           */
+          if (!I18nInternal.hasTranslation(fullKey)) {
+            return dictKey;
+          }
+
+          return translation;
         },
       });
   }

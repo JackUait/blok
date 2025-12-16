@@ -5,6 +5,9 @@
 const {
   applyTransforms,
   ensureBlokImport,
+  flattenI18nDictionary,
+  transformI18nConfig,
+  I18N_KEY_MAPPINGS,
   BUNDLED_TOOLS,
   IMPORT_TRANSFORMS,
   TYPE_TRANSFORMS,
@@ -503,6 +506,238 @@ const editor = new EditorJS({
   assertEqual(result.includes("from '@jackuait/blok'"), true, 'Should have @jackuait/blok import');
   assertEqual(result.includes('class: Blok.Header'), true, 'Should use Blok.Header');
   assertEqual(result.includes('class: Blok.Paragraph'), true, 'Should use Blok.Paragraph');
+});
+
+// ============================================================================
+// i18n Transformation Tests
+// ============================================================================
+
+console.log('\n🌐 i18n Transformations\n');
+
+test('flattenI18nDictionary flattens simple nested object', () => {
+  const input = {
+    ui: {
+      toolbar: {
+        toolbox: {
+          Add: 'Добавить'
+        }
+      }
+    }
+  };
+  const result = flattenI18nDictionary(input);
+  // 'ui.toolbar.toolbox.Add' is mapped to 'ui.toolbar.toolbox.Click to add below' by I18N_KEY_MAPPINGS
+  assertEqual(result['ui.toolbar.toolbox.Click to add below'], 'Добавить');
+});
+
+test('flattenI18nDictionary flattens deeply nested object', () => {
+  const input = {
+    ui: {
+      blockTunes: {
+        toggler: {
+          'Drag to move': 'Перетащите'
+        }
+      }
+    }
+  };
+  const result = flattenI18nDictionary(input);
+  assertEqual(result['ui.blockTunes.toggler.Drag to move'], 'Перетащите');
+});
+
+test('flattenI18nDictionary handles multiple namespaces', () => {
+  const input = {
+    toolNames: {
+      Text: 'Текст',
+      Bold: 'Жирный'
+    },
+    tools: {
+      link: {
+        'Add a link': 'Добавить ссылку'
+      }
+    }
+  };
+  const result = flattenI18nDictionary(input);
+  assertEqual(result['toolNames.Text'], 'Текст');
+  assertEqual(result['toolNames.Bold'], 'Жирный');
+  assertEqual(result['tools.link.Add a link'], 'Добавить ссылку');
+});
+
+test('flattenI18nDictionary applies key mappings', () => {
+  const input = {
+    ui: {
+      blockTunes: {
+        toggler: {
+          'Click to tune': 'Нажмите для настройки'
+        }
+      }
+    }
+  };
+  const result = flattenI18nDictionary(input);
+  // 'Click to tune' should be mapped to 'Click to open the menu'
+  assertEqual(result['ui.blockTunes.toggler.Click to open the menu'], 'Нажмите для настройки');
+  assertEqual(result['ui.blockTunes.toggler.Click to tune'], undefined);
+});
+
+test('flattenI18nDictionary handles empty object', () => {
+  const result = flattenI18nDictionary({});
+  assertEqual(Object.keys(result).length, 0);
+});
+
+test('transformI18nConfig transforms nested i18n config in JS', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: {
+        Text: "Текст",
+        Bold: "Жирный"
+      }
+    }
+  }
+});`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('"toolNames.Text": "Текст"'), true, 'Should have flattened toolNames.Text');
+  assertEqual(result.includes('"toolNames.Bold": "Жирный"'), true, 'Should have flattened toolNames.Bold');
+});
+
+test('transformI18nConfig transforms deeply nested messages', () => {
+  const input = `const config = {
+  i18n: {
+    messages: {
+      ui: {
+        popover: {
+          Search: "Поиск",
+          "Nothing found": "Ничего не найдено"
+        }
+      }
+    }
+  }
+};`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('"ui.popover.Search": "Поиск"'), true, 'Should have flattened ui.popover.Search');
+  assertEqual(result.includes('"ui.popover.Nothing found": "Ничего не найдено"'), true, 'Should have flattened ui.popover.Nothing found');
+});
+
+test('transformI18nConfig does not change content without i18n config', () => {
+  const input = `const editor = new Blok({
+  holder: 'blok',
+  tools: {}
+});`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, false, 'Should not indicate change');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('transformI18nConfig skips dynamic content with functions', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: {
+        Text: () => getTranslation('text')
+      }
+    }
+  }
+});`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, false, 'Should not transform dynamic content');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('transformI18nConfig handles single quotes', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: {
+        Text: 'Текст'
+      }
+    }
+  }
+});`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('"toolNames.Text": "Текст"'), true, 'Should have flattened key with value');
+});
+
+test('I18N_KEY_MAPPINGS contains expected mappings', () => {
+  // UI key mappings
+  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.Click to tune'], 'ui.blockTunes.toggler.Click to open the menu');
+  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.or drag to move'], 'ui.blockTunes.toggler.Drag to move');
+  assertEqual(I18N_KEY_MAPPINGS['ui.toolbar.toolbox.Add'], 'ui.toolbar.toolbox.Click to add below');
+  assertEqual(I18N_KEY_MAPPINGS['ui.inlineToolbar.converter.Convert to'], 'ui.popover.Convert to');
+  assertEqual(I18N_KEY_MAPPINGS['ui.popover.Filter'], 'ui.popover.Search');
+
+  // Tool names mappings
+  assertEqual(I18N_KEY_MAPPINGS['toolNames.Ordered List'], 'toolNames.Numbered list');
+  assertEqual(I18N_KEY_MAPPINGS['toolNames.Unordered List'], 'toolNames.Bulleted list');
+
+  // Tools messages mappings
+  assertEqual(I18N_KEY_MAPPINGS['tools.stub.The block can not be displayed correctly'], 'tools.stub.This block cannot be displayed');
+
+  // Removed keys (mapped to null)
+  assertEqual(I18N_KEY_MAPPINGS['blockTunes.moveUp.Move up'], null);
+  assertEqual(I18N_KEY_MAPPINGS['blockTunes.moveDown.Move down'], null);
+});
+
+test('flattenI18nDictionary applies tool name mappings', () => {
+  const input = {
+    toolNames: {
+      'Ordered List': 'Нумерованный список',
+      'Unordered List': 'Маркированный список',
+    },
+  };
+  const result = flattenI18nDictionary(input);
+  assertEqual(result['toolNames.Numbered list'], 'Нумерованный список');
+  assertEqual(result['toolNames.Bulleted list'], 'Маркированный список');
+  assertEqual(result['toolNames.Ordered List'], undefined);
+  assertEqual(result['toolNames.Unordered List'], undefined);
+});
+
+test('flattenI18nDictionary applies Filter to Search mapping', () => {
+  const input = {
+    ui: {
+      popover: {
+        Filter: 'Фильтр',
+        'Nothing found': 'Ничего не найдено',
+      },
+    },
+  };
+  const result = flattenI18nDictionary(input);
+  assertEqual(result['ui.popover.Search'], 'Фильтр');
+  assertEqual(result['ui.popover.Nothing found'], 'Ничего не найдено');
+  assertEqual(result['ui.popover.Filter'], undefined);
+});
+
+test('flattenI18nDictionary removes moveUp/moveDown keys', () => {
+  const input = {
+    blockTunes: {
+      delete: {
+        Delete: 'Удалить',
+      },
+      moveUp: {
+        'Move up': 'Переместить вверх',
+      },
+      moveDown: {
+        'Move down': 'Переместить вниз',
+      },
+    },
+  };
+  const result = flattenI18nDictionary(input);
+  assertEqual(result['blockTunes.delete.Delete'], 'Удалить');
+  assertEqual(result['blockTunes.moveUp.Move up'], undefined);
+  assertEqual(result['blockTunes.moveDown.Move down'], undefined);
+});
+
+test('flattenI18nDictionary applies stub message mapping', () => {
+  const input = {
+    tools: {
+      stub: {
+        'The block can not be displayed correctly': 'Блок не может быть отображен',
+      },
+    },
+  };
+  const result = flattenI18nDictionary(input);
+  assertEqual(result['tools.stub.This block cannot be displayed'], 'Блок не может быть отображен');
+  assertEqual(result['tools.stub.The block can not be displayed correctly'], undefined);
 });
 
 // ============================================================================

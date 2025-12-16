@@ -29,6 +29,212 @@ const path = require('path');
 
 const FILE_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.html', '.css', '.scss', '.less'];
 
+// ============================================================================
+// i18n Transformation Utilities
+// ============================================================================
+
+/**
+ * EditorJS to Blok key mappings for keys that changed.
+ * These are applied after flattening to convert EditorJS keys to Blok equivalents.
+ *
+ * EditorJS keys reference: https://editorjs.io/i18n/
+ * Blok keys reference: src/components/i18n/locales/en/messages.json
+ */
+const I18N_KEY_MAPPINGS = {
+  // UI keys that changed
+  'ui.blockTunes.toggler.Click to tune': 'ui.blockTunes.toggler.Click to open the menu',
+  'ui.blockTunes.toggler.or drag to move': 'ui.blockTunes.toggler.Drag to move',
+  'ui.toolbar.toolbox.Add': 'ui.toolbar.toolbox.Click to add below',
+  'ui.inlineToolbar.converter.Convert to': 'ui.popover.Convert to',
+  'ui.popover.Filter': 'ui.popover.Search',
+
+  // Tool names that changed (EditorJS uses different casing/wording)
+  'toolNames.Ordered List': 'toolNames.Numbered list',
+  'toolNames.Unordered List': 'toolNames.Bulleted list',
+
+  // Tools messages that changed
+  'tools.stub.The block can not be displayed correctly': 'tools.stub.This block cannot be displayed',
+  'tools.stub.The block can not be displayed correctly.': 'tools.stub.This block cannot be displayed',
+
+  // Block tunes that are removed in Blok (moveUp/moveDown replaced with drag)
+  // These are mapped to null to indicate they should be removed
+  'blockTunes.moveUp.Move up': null,
+  'blockTunes.moveDown.Move down': null,
+};
+
+/**
+ * Flattens a nested i18n dictionary object to Blok's flat dot-notation format.
+ * @param {Object} obj - The nested dictionary object
+ * @param {string} prefix - Current key prefix (for recursion)
+ * @returns {Object} Flattened dictionary with dot-notation keys
+ */
+function flattenI18nDictionary(obj, prefix = '') {
+  const result = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    const newKey = prefix ? `${prefix}.${key}` : key;
+
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      Object.assign(result, flattenI18nDictionary(value, newKey));
+    } else {
+      // Apply key mappings if applicable
+      const mappedKey = newKey in I18N_KEY_MAPPINGS ? I18N_KEY_MAPPINGS[newKey] : newKey;
+
+      // Skip keys that are mapped to null (removed in Blok)
+      if (mappedKey === null) {
+        continue;
+      }
+
+      result[mappedKey] = value;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Parses a JavaScript object literal string into an actual object.
+ * Handles simple object literals with string values.
+ * @param {string} str - The object literal string
+ * @returns {Object|null} Parsed object or null if parsing fails
+ */
+function parseObjectLiteral(str) {
+  try {
+    // Convert single quotes to double quotes for JSON compatibility
+    // Handle unquoted keys by quoting them
+    let jsonStr = str
+      // Replace single quotes with double quotes
+      .replace(/'/g, '"')
+      // Handle unquoted keys (identifier followed by colon)
+      .replace(/(\s*)(\w+)(\s*:\s*)/g, '$1"$2"$3')
+      // Remove trailing commas before closing braces/brackets
+      .replace(/,(\s*[}\]])/g, '$1');
+
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Converts a flattened dictionary object to a formatted JavaScript object string.
+ * @param {Object} obj - The flattened dictionary
+ * @param {string} indent - The indentation string
+ * @returns {string} Formatted object string
+ */
+function objectToString(obj, indent = '      ') {
+  const entries = Object.entries(obj);
+  if (entries.length === 0) {
+    return '{}';
+  }
+
+  const lines = entries.map(([key, value]) => {
+    const escapedValue = typeof value === 'string' ? value.replace(/"/g, '\\"') : value;
+    return `${indent}"${key}": "${escapedValue}"`;
+  });
+
+  return '{\n' + lines.join(',\n') + '\n' + indent.slice(2) + '}';
+}
+
+/**
+ * Finds matching brace for nested object parsing.
+ * @param {string} str - The string to search
+ * @param {number} startIndex - Starting position (should be at opening brace)
+ * @returns {number} Index of matching closing brace, or -1 if not found
+ */
+function findMatchingBrace(str, startIndex) {
+  let depth = 0;
+  let inString = false;
+  let stringChar = '';
+
+  for (let i = startIndex; i < str.length; i++) {
+    const char = str[i];
+    const prevChar = i > 0 ? str[i - 1] : '';
+
+    // Handle string detection
+    if ((char === '"' || char === "'" || char === '`') && prevChar !== '\\') {
+      if (!inString) {
+        inString = true;
+        stringChar = char;
+      } else if (char === stringChar) {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (char === '{') {
+      depth++;
+    } else if (char === '}') {
+      depth--;
+      if (depth === 0) {
+        return i;
+      }
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Transforms EditorJS nested i18n messages to Blok flat format.
+ * @param {string} content - The file content
+ * @returns {{result: string, changed: boolean}} Transformed content and change flag
+ */
+function transformI18nConfig(content) {
+  // Pattern to find i18n: { messages: { ... } } or i18n: { messages: { ... }, ... }
+  const i18nStartPattern = /i18n\s*:\s*\{\s*messages\s*:\s*\{/g;
+  let match;
+  let result = content;
+  let changed = false;
+  let offset = 0;
+
+  // Reset lastIndex for the regex
+  i18nStartPattern.lastIndex = 0;
+
+  while ((match = i18nStartPattern.exec(content)) !== null) {
+    const messagesStart = match.index + match[0].length - 1; // Position of opening brace of messages
+    const messagesEnd = findMatchingBrace(content, messagesStart);
+
+    if (messagesEnd === -1) continue;
+
+    const messagesStr = content.substring(messagesStart, messagesEnd + 1);
+
+    // Skip if it contains functions or arrow functions (dynamic content)
+    if (messagesStr.includes('function') || messagesStr.includes('=>')) {
+      continue;
+    }
+
+    // Try to parse the messages object
+    const messagesObj = parseObjectLiteral(messagesStr);
+    if (!messagesObj) continue;
+
+    // Flatten the dictionary
+    const flattened = flattenI18nDictionary(messagesObj);
+
+    // Detect indentation from the original content
+    const lineStart = content.lastIndexOf('\n', match.index) + 1;
+    const lineContent = content.substring(lineStart, match.index);
+    const baseIndent = lineContent.match(/^\s*/)?.[0] || '';
+    const messagesIndent = baseIndent + '    ';
+
+    // Convert to string with proper formatting
+    const flattenedStr = objectToString(flattened, messagesIndent + '  ');
+
+    // Replace in result (accounting for previous replacements)
+    const adjustedStart = messagesStart + offset;
+    const adjustedEnd = messagesEnd + 1 + offset;
+    result = result.substring(0, adjustedStart) + flattenedStr + result.substring(adjustedEnd);
+
+    // Update offset for next iteration
+    offset += flattenedStr.length - (messagesEnd + 1 - messagesStart);
+    changed = true;
+  }
+
+  return { result, changed };
+}
+
 // Import transformations
 const IMPORT_TRANSFORMS = [
   // EditorJS subpath imports (e.g., @editorjs/editorjs/types -> @jackuait/blok/types)
@@ -513,6 +719,15 @@ function transformFile(filePath, dryRun = false) {
     allChanges.push(...changes.map((c) => ({ ...c, category: 'text' })));
   }
 
+  // Apply i18n transforms (JS/TS only) - flatten nested messages to dot-notation
+  if (isJsFile) {
+    const { result, changed } = transformI18nConfig(transformed);
+    if (changed) {
+      transformed = result;
+      allChanges.push({ category: 'i18n', pattern: 'flattenI18nMessages', count: 1, note: 'Flattened nested i18n messages to dot-notation' });
+    }
+  }
+
   const hasChanges = transformed !== content;
 
   if (hasChanges && !dryRun) {
@@ -619,6 +834,16 @@ What this codemod does:
   • Updates package.json dependencies
   • Converts bundled tool imports (Header, Paragraph)
   • Ensures Blok is imported when using bundled tools (Blok.Header, etc.)
+  • Transforms nested i18n messages to flat dot-notation format:
+    - { ui: { toolbar: { Add: "..." } } } → { "ui.toolbar.Add": "..." }
+  • Maps changed i18n keys to their Blok equivalents:
+    - "Click to tune" → "Click to open the menu"
+    - "or drag to move" → "Drag to move"
+    - "Add" (toolbar) → "Click to add below"
+    - "Filter" (popover) → "Search"
+    - "Ordered List" → "Numbered list"
+    - "Unordered List" → "Bulleted list"
+  • Removes obsolete keys (moveUp/moveDown replaced with drag)
 
 Note: After running, you may need to manually:
   • Update any custom tool implementations
@@ -741,6 +966,12 @@ module.exports = {
   updatePackageJson,
   applyTransforms,
   ensureBlokImport,
+  flattenI18nDictionary,
+  transformI18nConfig,
+  parseObjectLiteral,
+  findMatchingBrace,
+  objectToString,
+  I18N_KEY_MAPPINGS,
   BUNDLED_TOOLS,
   IMPORT_TRANSFORMS,
   TYPE_TRANSFORMS,

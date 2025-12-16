@@ -133,7 +133,7 @@ export default class ListItem implements BlockTool {
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
     { style: 'unordered', name: 'Bulleted list', icon: IconListBulleted },
     { style: 'ordered', name: 'Numbered list', icon: IconListNumbered },
-    { style: 'checklist', name: 'Checklist', icon: IconListChecklist },
+    { style: 'checklist', name: 'To-do list', icon: IconListChecklist },
   ];
 
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<ListItemData, ListItemConfig>) {
@@ -1792,7 +1792,7 @@ export default class ListItem implements BlockTool {
       },
       {
         icon: IconListChecklist,
-        title: 'Checklist',
+        title: 'To-do list',
         data: { style: 'checklist' },
         name: 'check-list',
       },

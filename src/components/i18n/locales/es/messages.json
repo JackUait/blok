@@ -14,7 +14,7 @@
   "toolNames.Italic": "Cursiva",
   "toolNames.Bulleted list": "Lista con viñetas",
   "toolNames.Numbered list": "Lista numerada",
-  "toolNames.Checklist": "Lista de tareas",
+  "toolNames.To-do list": "Lista de tareas",
   "tools.link.Add a link": "Añadir enlace",
   "tools.link.Invalid link": "Enlace inválido",
   "tools.stub.Error": "Error",
@@ -28,7 +28,7 @@
   "tools.list.List": "Lista",
   "blockTunes.delete.Delete": "Eliminar",
   "accessibility.dragHandle.aria-label": "Arrastra para mover o haz clic para el menú",
-  "accessibility.dragHandle.aria-roledescription": "control de bloque",
+  "accessibility.dragHandle.aria-roledescription": "control de arrastre",
   "accessibility.dragAnnouncements.dragStarted": "Arrastrando bloque",
   "accessibility.dragAnnouncements.dragStartedMultiple": "Arrastrando {count} bloques",
   "accessibility.dragAnnouncements.dropPosition": "Se colocará en la posición {position} de {total}",
@@ -39,6 +39,6 @@
   "accessibility.dragAnnouncements.blocksDuplicated": "{count} bloques duplicados a partir de la posición {position}",
   "accessibility.keyboardMove.movedUp": "Bloque movido arriba, posición {position} de {total}",
   "accessibility.keyboardMove.movedDown": "Bloque movido abajo, posición {position} de {total}",
-  "accessibility.keyboardMove.atTop": "El bloque ya está arriba",
-  "accessibility.keyboardMove.atBottom": "El bloque ya está abajo"
+  "accessibility.keyboardMove.atTop": "No se puede subir más",
+  "accessibility.keyboardMove.atBottom": "No se puede bajar más"
 }

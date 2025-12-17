@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import I18nAPI from '../../../../../src/components/modules/api/i18n';
 import EventsDispatcher from '../../../../../src/components/utils/events';
@@ -6,90 +6,62 @@ import EventsDispatcher from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokConfig } from '../../../../../types';
 import type { BlokEventMap } from '../../../../../src/components/events';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
-type EsModuleKey = '__esModule';
-type EsModule<T extends object> = T & { [K in EsModuleKey]: true };
-type WithEsModuleFlag = <T extends object>(moduleMock: T) => EsModule<T>;
-
-/**
- *
- * @param moduleMock - The module object to add the ES module flag to
- */
-const withEsModuleFlag: WithEsModuleFlag = vi.hoisted(() => {
-  return (<T extends object>(moduleMock: T): EsModule<T> => {
-    return Object.defineProperty(moduleMock, '__esModule', {
-      configurable: true,
-      enumerable: true,
-      value: true,
-    }) as EsModule<T>;
-  });
-});
-
-const { logLabeledMock, translateMock } = vi.hoisted(() => {
-  return {
-    logLabeledMock: vi.fn(),
-    translateMock: vi.fn(),
-  };
-});
-
-vi.mock('../../../../../src/components/utils', () =>
-  withEsModuleFlag({
-    logLabeled: logLabeledMock,
-  })
-);
-
-vi.mock('../../../../../src/components/i18n', () =>
-  withEsModuleFlag({
-    default: {
-      t: translateMock,
-    },
-  })
-);
-
-const createI18nApi = (): I18nAPI => {
+const createI18nApi = (): { api: I18nAPI; i18nMock: { t: ReturnType<typeof vi.fn>; has: ReturnType<typeof vi.fn> } } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
     config: {} as BlokConfig,
     eventsDispatcher,
   };
 
-  return new I18nAPI(moduleConfig);
+  const api = new I18nAPI(moduleConfig);
+
+  // Create mock I18n module
+  const i18nMock = {
+    t: vi.fn((key: string) => key),
+    has: vi.fn(() => true),
+  };
+
+  // Set up state with mocked I18n
+  api.state = {
+    I18n: i18nMock,
+  } as unknown as BlokModules;
+
+  return { api, i18nMock };
 };
 
 describe('I18nAPI', () => {
-  beforeEach(() => {
-    logLabeledMock.mockReset();
-    translateMock.mockReset();
-  });
+  describe('methods getter', () => {
+    it('translates using global dictionary access', () => {
+      const { api, i18nMock } = createI18nApi();
 
-  it('warns and returns an empty string when calling global t()', () => {
-    const api = createI18nApi();
+      i18nMock.t.mockReturnValue('Translated');
+      const result = api.methods.t('popover.search');
 
-    const result = api.methods.t('global');
+      // i18next is called directly - it returns key if missing
+      expect(i18nMock.t).toHaveBeenCalledWith('popover.search');
+      expect(result).toBe('Translated');
+    });
 
-    expect(result).toBe('');
-    expect(logLabeledMock).toHaveBeenCalledWith(
-      'I18n.t() method can be accessed only from Tools',
-      'warn'
-    );
-  });
+    it('returns key when translation does not exist', () => {
+      const { api, i18nMock } = createI18nApi();
 
-  it('translates using tools namespace for regular tool', () => {
-    const api = createI18nApi();
-    const methods = api.getMethodsForTool('paragraph', false);
+      // i18next returns key when translation is missing
+      i18nMock.t.mockReturnValue('missing.key');
+      const result = api.methods.t('missing.key');
 
-    methods.t('label');
+      expect(i18nMock.t).toHaveBeenCalledWith('missing.key');
+      expect(result).toBe('missing.key');
+    });
 
-    expect(translateMock).toHaveBeenCalledWith('tools.paragraph', 'label');
-  });
+    it('returns memoized object on subsequent accesses', () => {
+      const { api } = createI18nApi();
 
-  it('translates using blockTunes namespace for block tune', () => {
-    const api = createI18nApi();
-    const methods = api.getMethodsForTool('settings', true);
+      const firstAccess = api.methods;
+      const secondAccess = api.methods;
 
-    methods.t('title');
-
-    expect(translateMock).toHaveBeenCalledWith('blockTunes.settings', 'title');
+      expect(firstAccess).toBe(secondAccess);
+    });
   });
 });
-

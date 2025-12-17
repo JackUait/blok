@@ -1,13 +1,7 @@
 import $ from '../../components/dom';
 import type { API, BlockTool, BlockToolConstructorOptions, BlockToolData } from '../../../types';
 import { IconWarning } from '../../components/icons';
-import {
-  BLOK_TOOL_ATTR,
-  BLOK_STUB_ATTR,
-  BLOK_STUB_INFO_ATTR,
-  BLOK_STUB_TITLE_ATTR,
-  BLOK_STUB_SUBTITLE_ATTR,
-} from '../../components/constants';
+import { DATA_ATTR } from '../../components/constants';
 
 export interface StubData extends BlockToolData {
   title: string;
@@ -56,8 +50,8 @@ export default class Stub implements BlockTool {
    */
   constructor({ data, api }: BlockToolConstructorOptions<StubData>) {
     this.api = api;
-    this.title = data.title || this.api.i18n.t('Error');
-    this.subtitle = this.api.i18n.t('The block can not be displayed correctly.');
+    this.title = data.title || this.api.i18n.t('tools.stub.error');
+    this.subtitle = this.api.i18n.t('tools.stub.blockCannotBeDisplayed');
     this.savedData = data.savedData;
 
     this.wrapper = this.make();
@@ -95,11 +89,11 @@ export default class Stub implements BlockTool {
       textContent: this.subtitle,
     });
 
-    wrapper.setAttribute(BLOK_TOOL_ATTR, 'stub');
-    wrapper.setAttribute(BLOK_STUB_ATTR, '');
-    infoContainer.setAttribute(BLOK_STUB_INFO_ATTR, '');
-    title.setAttribute(BLOK_STUB_TITLE_ATTR, '');
-    subtitle.setAttribute(BLOK_STUB_SUBTITLE_ATTR, '');
+    wrapper.setAttribute(DATA_ATTR.tool, 'stub');
+    wrapper.setAttribute(DATA_ATTR.stub, '');
+    infoContainer.setAttribute(DATA_ATTR.stubInfo, '');
+    title.setAttribute(DATA_ATTR.stubTitle, '');
+    subtitle.setAttribute(DATA_ATTR.stubSubtitle, '');
 
     wrapper.innerHTML = icon;
 

@@ -170,8 +170,8 @@ describe('Header Tool - Custom Configurations', () => {
       const header = new Header(options);
       const settings = toMenuArray(header.renderSettings());
 
-      expect(settings[0].label).toBe('Title');
-      expect(settings[1].label).toBe('Subtitle');
+      expect(settings[0].title).toBe('Title');
+      expect(settings[1].title).toBe('Subtitle');
     });
 
     it('applies custom font size via inline styles', () => {
@@ -255,8 +255,8 @@ describe('Header Tool - Custom Configurations', () => {
       const settings = toMenuArray(header.renderSettings());
 
       expect(settings).toHaveLength(2);
-      expect(settings[0].label).toBe('Main Title');
-      expect(settings[1].label).toBe('Section Title');
+      expect(settings[0].title).toBe('Main Title');
+      expect(settings[1].title).toBe('Section Title');
     });
 
     it('works with defaultLevel and levelOverrides together', () => {

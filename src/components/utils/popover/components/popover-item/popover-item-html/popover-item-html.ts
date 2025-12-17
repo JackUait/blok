@@ -1,7 +1,8 @@
 import { PopoverItem } from '../popover-item';
 import type { PopoverItemHtmlParams, PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
 import Dom from '../../../../../dom';
-import { css, cssInline, DATA_ATTR } from './popover-item-html.const';
+import { css, cssInline } from './popover-item-html.const';
+import { DATA_ATTR } from '../../../../../constants/data-attributes';
 import { twMerge } from '../../../../tw';
 
 /**
@@ -111,7 +112,7 @@ export class PopoverItemHtml extends PopoverItem {
     );
 
     // Set data attributes
-    root.setAttribute(DATA_ATTR.root, '');
+    root.setAttribute(DATA_ATTR.popoverItemHtml, '');
     root.setAttribute('data-blok-testid', 'popover-item-html');
 
     if (params.name) {

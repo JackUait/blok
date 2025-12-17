@@ -6,7 +6,7 @@
  */
 import { IconListBulleted, IconListNumbered, IconListChecklist } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
-import { BLOK_TOOL_ATTR } from '../../components/constants';
+import { DATA_ATTR } from '../../components/constants';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { stripFakeBackgroundElements } from '../../components/utils';
 import type {
@@ -130,9 +130,9 @@ export default class ListItem implements BlockTool {
   private static readonly CHECKBOX_STYLES = 'mt-1 w-4 mr-2 h-4 cursor-pointer accent-current';
 
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
-    { style: 'unordered', name: 'Bulleted list', icon: IconListBulleted },
-    { style: 'ordered', name: 'Numbered list', icon: IconListNumbered },
-    { style: 'checklist', name: 'Checklist', icon: IconListChecklist },
+    { style: 'unordered', name: 'bulletedList', icon: IconListBulleted },
+    { style: 'ordered', name: 'numberedList', icon: IconListNumbered },
+    { style: 'checklist', name: 'todoList', icon: IconListChecklist },
   ];
 
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<ListItemData, ListItemConfig>) {
@@ -799,7 +799,7 @@ export default class ListItem implements BlockTool {
 
     const wrapper = document.createElement('div');
     wrapper.className = ListItem.BASE_STYLES;
-    wrapper.setAttribute(BLOK_TOOL_ATTR, ListItem.TOOL_NAME);
+    wrapper.setAttribute(DATA_ATTR.tool, ListItem.TOOL_NAME);
     wrapper.setAttribute('data-list-style', style);
     wrapper.setAttribute('data-list-depth', String(this.getDepth()));
 
@@ -1147,12 +1147,12 @@ export default class ListItem implements BlockTool {
   private handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      this.handleEnter();
+      void this.handleEnter();
       return;
     }
 
     if (event.key === 'Backspace') {
-      this.handleBackspace(event);
+      void this.handleBackspace(event);
       return;
     }
 
@@ -1168,7 +1168,7 @@ export default class ListItem implements BlockTool {
     }
   }
 
-  private handleEnter(): void {
+  private async handleEnter(): Promise<void> {
     const selection = window.getSelection();
     if (!selection || !this._element) return;
 
@@ -1179,7 +1179,7 @@ export default class ListItem implements BlockTool {
 
     // If current item is empty, handle based on depth
     if (currentContent === '' || currentContent === '<br>') {
-      this.exitListOrOutdent();
+      await this.exitListOrOutdent();
       return;
     }
 
@@ -1204,23 +1204,23 @@ export default class ListItem implements BlockTool {
     this.setCaretToBlockContent(newBlock, 'start');
   }
 
-  private exitListOrOutdent(): void {
+  private async exitListOrOutdent(): Promise<void> {
     const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     const currentDepth = this.getDepth();
 
     // If nested, outdent instead of exiting
     if (currentDepth > 0) {
-      void this.handleOutdent();
+      await this.handleOutdent();
       return;
     }
 
     // At root level, convert to paragraph
-    this.api.blocks.delete(currentBlockIndex);
+    await this.api.blocks.delete(currentBlockIndex);
     const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex, true);
     this.setCaretToBlockContent(newBlock, 'start');
   }
 
-  private handleBackspace(event: KeyboardEvent): void {
+  private async handleBackspace(event: KeyboardEvent): Promise<void> {
     const selection = window.getSelection();
     if (!selection || !this._element) return;
 
@@ -1264,7 +1264,7 @@ export default class ListItem implements BlockTool {
     event.preventDefault();
 
     // Convert to paragraph (preserving indentation for nested items)
-    this.api.blocks.delete(currentBlockIndex);
+    await this.api.blocks.delete(currentBlockIndex);
     const newBlock = this.api.blocks.insert(
       'paragraph',
       { text: currentContent },
@@ -1548,7 +1548,7 @@ export default class ListItem implements BlockTool {
   public renderSettings(): MenuConfig {
     return this.availableStyles.map(styleConfig => ({
       icon: styleConfig.icon,
-      label: this.api.i18n.t(styleConfig.name),
+      label: this.api.i18n.t(`toolNames.${styleConfig.name}`),
       onActivate: (): void => this.setStyle(styleConfig.style),
       closeOnActivate: true,
       isActive: this._data.style === styleConfig.style,
@@ -1780,18 +1780,21 @@ export default class ListItem implements BlockTool {
       {
         icon: IconListBulleted,
         title: 'Bulleted list',
+        titleKey: 'bulletedList',
         data: { style: 'unordered' },
         name: 'bulleted-list',
       },
       {
         icon: IconListNumbered,
         title: 'Numbered list',
+        titleKey: 'numberedList',
         data: { style: 'ordered' },
         name: 'numbered-list',
       },
       {
         icon: IconListChecklist,
-        title: 'Checklist',
+        title: 'To-do list',
+        titleKey: 'todoList',
         data: { style: 'checklist' },
         name: 'check-list',
       },

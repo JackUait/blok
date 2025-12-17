@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DATA_INTERFACE_ATTRIBUTE, TOOLTIP_INTERFACE_VALUE } from '../../../../src/components/constants';
+import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../src/components/constants';
 import { destroy, hide, onHover, show } from '../../../../src/components/utils/tooltip';
 import type { TooltipContent } from '../../../../src/components/utils/tooltip';
 
-const tooltipSelector = `[${DATA_INTERFACE_ATTRIBUTE}="${TOOLTIP_INTERFACE_VALUE}"]`;
+const tooltipSelector = `[${DATA_ATTR.interface}="${TOOLTIP_INTERFACE_VALUE}"]`;
 
 const getTooltipWrapper = (): HTMLElement | null => {
   return document.querySelector(tooltipSelector);
@@ -109,7 +109,7 @@ describe('Tooltip utility', () => {
     expect(wrapper).not.toBeNull();
     expect(wrapper?.textContent).toBe('Tooltip text');
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-    expect(wrapper?.getAttribute(DATA_INTERFACE_ATTRIBUTE)).toBe(TOOLTIP_INTERFACE_VALUE);
+    expect(wrapper?.getAttribute(DATA_ATTR.interface)).toBe(TOOLTIP_INTERFACE_VALUE);
     expect(wrapper?.getAttribute('role')).toBe('tooltip');
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
     expect(wrapper?.style.visibility).toBe('visible');

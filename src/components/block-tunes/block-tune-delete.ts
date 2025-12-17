@@ -36,7 +36,7 @@ export default class DeleteTune implements BlockTune {
   public render(): MenuConfig {
     return {
       icon: IconCross,
-      title: this.api.i18n.t('Delete'),
+      title: this.api.i18n.t('blockSettings.delete'),
       name: 'delete',
       onActivate: (): void => this.handleClick(),
     };
@@ -46,6 +46,6 @@ export default class DeleteTune implements BlockTune {
    * Delete block conditions passed
    */
   public handleClick(): void {
-    this.api.blocks.delete();
+    void this.api.blocks.delete();
   }
 }

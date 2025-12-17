@@ -4,8 +4,7 @@ import type BlockToolAdapter from '../tools/block';
 import type ToolsCollection from '../tools/collection';
 import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
 import EventsDispatcher from '../utils/events';
-import I18n from '../i18n';
-import { I18nInternalNS } from '../i18n/namespace-internal';
+import { translateToolTitle, type I18nInstance } from '../utils/tools';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import Listeners from '../utils/listeners';
 import Dom from '../dom';
@@ -113,6 +112,11 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private i18nLabels: Record<ToolboxTextLabelsKeys, string>;
 
   /**
+   * I18n instance for translations
+   */
+  private i18n: I18nInstance;
+
+  /**
    * Current module HTML Elements
    */
   private nodes: {
@@ -141,12 +145,14 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * @param options - available parameters
    * @param options.api - Blok API methods
    * @param options.tools - Tools available to check whether some of them should be displayed at the Toolbox or not
+   * @param options.i18n - I18n instance for translations
    * @param options.triggerElement - Element relative to which the popover should be positioned
    */
-  constructor({ api, tools, i18nLabels, triggerElement }: {
+  constructor({ api, tools, i18nLabels, i18n, triggerElement }: {
     api: API;
     tools: ToolsCollection<BlockToolAdapter>;
     i18nLabels: Record<ToolboxTextLabelsKeys, string>;
+    i18n: I18nInstance;
     triggerElement?: HTMLElement;
   }) {
     super();
@@ -154,6 +160,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.api = api;
     this.tools = tools;
     this.i18nLabels = i18nLabels;
+    this.i18n = i18n;
     this.triggerElement = triggerElement;
 
     this.enableShortcuts();
@@ -349,7 +356,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemParams => {
       return {
         icon: toolboxItem.icon,
-        title: I18n.t(I18nInternalNS.toolNames, toolboxItem.title || _.capitalize(tool.name)),
+        title: translateToolTitle(this.i18n, toolboxItem, _.capitalize(tool.name)),
         name: toolboxItem.name ?? tool.name,
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);

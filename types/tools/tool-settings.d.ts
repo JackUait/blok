@@ -12,9 +12,16 @@ export type ToolboxConfig = ToolboxConfigEntry | ToolboxConfigEntry[];
  */
 export interface ToolboxConfigEntry {
   /**
-   * Tool title for Toolbox
+   * Tool title for Toolbox (human-readable fallback)
    */
   title?: string;
+
+  /**
+   * Translation key for the title (e.g., 'text', 'heading', 'bulletedList').
+   * Used to look up translations in the toolNames.* namespace.
+   * If provided, the translated value is used; otherwise falls back to title.
+   */
+  titleKey?: string;
 
   /**
    * HTML string with an icon for Toolbox

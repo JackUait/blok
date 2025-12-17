@@ -5,6 +5,11 @@
 const {
   applyTransforms,
   ensureBlokImport,
+  normalizeKey,
+  flattenI18nDictionary,
+  transformI18nConfig,
+  removeI18nMessages,
+  I18N_KEY_MAPPINGS,
   BUNDLED_TOOLS,
   IMPORT_TRANSFORMS,
   TYPE_TRANSFORMS,
@@ -62,6 +67,12 @@ test('transforms @editorjs/paragraph import', () => {
   const input = `import Paragraph from '@editorjs/paragraph';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
   assertEqual(result, `// Paragraph is now bundled with Blok: use Blok.Paragraph\n`);
+});
+
+test('transforms @editorjs/list import', () => {
+  const input = `import List from '@editorjs/list';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `// List is now bundled with Blok: use Blok.List\n`);
 });
 
 // ============================================================================
@@ -193,7 +204,7 @@ test('transforms .ce-popover class', () => {
 test('transforms .ce-popover--opened class', () => {
   const input = `.ce-popover--opened { display: block; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `[data-blok-popover][data-blok-opened="true"] { display: block; }`);
+  assertEqual(result, `[data-blok-popover-opened="true"] { display: block; }`);
 });
 
 test('transforms .ce-popover__container class', () => {
@@ -308,6 +319,24 @@ test('transforms standalone paragraph: Paragraph reference', () => {
   const input = `tools: { paragraph: Paragraph, header: Header }`;
   const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
   assertEqual(result, `tools: { paragraph: Blok.Paragraph, header: Blok.Header }`);
+});
+
+test('transforms class: List to class: Blok.List', () => {
+  const input = `{ class: List, config: {} }`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `{ class: Blok.List, config: {} }`);
+});
+
+test('transforms standalone list: List reference', () => {
+  const input = `tools: { list: List }`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `tools: { list: Blok.List }`);
+});
+
+test('does not transform ListConfig or ListItem', () => {
+  const input = `import { ListConfig, ListItem } from './types';`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `import { ListConfig, ListItem } from './types';`);
 });
 
 // ============================================================================
@@ -462,6 +491,15 @@ test('detects Blok.Paragraph usage', () => {
   assertEqual(result.includes("import Blok from '@jackuait/blok';"), true, 'Should add Blok import');
 });
 
+test('detects Blok.List usage', () => {
+  const input = `const editor = new Blok({
+  tools: { list: Blok.List }
+});`;
+  const { result, changed } = ensureBlokImport(input);
+  assertEqual(changed, true, 'Should detect Blok.List');
+  assertEqual(result.includes("import Blok from '@jackuait/blok';"), true, 'Should add Blok import');
+});
+
 test('handles multiple Blok tools usage', () => {
   const input = `const editor = new Blok({
   tools: {
@@ -503,6 +541,339 @@ const editor = new EditorJS({
   assertEqual(result.includes("from '@jackuait/blok'"), true, 'Should have @jackuait/blok import');
   assertEqual(result.includes('class: Blok.Header'), true, 'Should use Blok.Header');
   assertEqual(result.includes('class: Blok.Paragraph'), true, 'Should use Blok.Paragraph');
+});
+
+// ============================================================================
+// i18n Transformation Tests
+// ============================================================================
+
+console.log('\n🌐 i18n Transformations\n');
+
+test('flattenI18nDictionary flattens simple nested object', () => {
+  const input = {
+    ui: {
+      toolbar: {
+        toolbox: {
+          Add: 'Добавить'
+        }
+      }
+    }
+  };
+  const result = flattenI18nDictionary(input);
+  // 'ui.toolbar.toolbox.Add' is mapped to 'toolbox.addBelow' by I18N_KEY_MAPPINGS
+  assertEqual(result['toolbox.addBelow'], 'Добавить');
+});
+
+test('flattenI18nDictionary flattens deeply nested object', () => {
+  const input = {
+    ui: {
+      blockTunes: {
+        toggler: {
+          'Drag to move': 'Перетащите'
+        }
+      }
+    }
+  };
+  const result = flattenI18nDictionary(input);
+  // Keys are normalized to camelCase and mapped to simplified keys
+  assertEqual(result['blockSettings.dragToMove'], 'Перетащите');
+});
+
+test('flattenI18nDictionary handles multiple namespaces', () => {
+  const input = {
+    toolNames: {
+      Text: 'Текст',
+      Bold: 'Жирный'
+    },
+    tools: {
+      link: {
+        'Add a link': 'Добавить ссылку'
+      }
+    }
+  };
+  const result = flattenI18nDictionary(input);
+  // Keys are normalized to camelCase
+  assertEqual(result['toolNames.text'], 'Текст');
+  assertEqual(result['toolNames.bold'], 'Жирный');
+  assertEqual(result['tools.link.addALink'], 'Добавить ссылку');
+});
+
+test('flattenI18nDictionary applies key mappings', () => {
+  const input = {
+    ui: {
+      blockTunes: {
+        toggler: {
+          'Click to tune': 'Нажмите для настройки'
+        }
+      }
+    }
+  };
+  const result = flattenI18nDictionary(input);
+  // 'Click to tune' should be mapped to 'blockSettings.clickToOpenMenu'
+  assertEqual(result['blockSettings.clickToOpenMenu'], 'Нажмите для настройки');
+  assertEqual(result['ui.blockTunes.toggler.Click to tune'], undefined);
+});
+
+test('flattenI18nDictionary handles empty object', () => {
+  const result = flattenI18nDictionary({});
+  assertEqual(Object.keys(result).length, 0);
+});
+
+test('transformI18nConfig transforms nested i18n config in JS', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: {
+        Text: "Текст",
+        Bold: "Жирный"
+      }
+    }
+  }
+});`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, true, 'Should indicate change');
+  // Keys are normalized to camelCase
+  assertEqual(result.includes('"toolNames.text": "Текст"'), true, 'Should have flattened toolNames.text');
+  assertEqual(result.includes('"toolNames.bold": "Жирный"'), true, 'Should have flattened toolNames.bold');
+});
+
+test('transformI18nConfig transforms deeply nested messages', () => {
+  const input = `const config = {
+  i18n: {
+    messages: {
+      ui: {
+        popover: {
+          Search: "Поиск",
+          "Nothing found": "Ничего не найдено"
+        }
+      }
+    }
+  }
+};`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, true, 'Should indicate change');
+  // Keys are normalized to camelCase and mapped to simplified keys
+  assertEqual(result.includes('"popover.search": "Поиск"'), true, 'Should have flattened popover.search');
+  assertEqual(result.includes('"popover.nothingFound": "Ничего не найдено"'), true, 'Should have flattened popover.nothingFound');
+});
+
+test('transformI18nConfig does not change content without i18n config', () => {
+  const input = `const editor = new Blok({
+  holder: 'blok',
+  tools: {}
+});`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, false, 'Should not indicate change');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('transformI18nConfig skips dynamic content with functions', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: {
+        Text: () => getTranslation('text')
+      }
+    }
+  }
+});`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, false, 'Should not transform dynamic content');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('transformI18nConfig handles single quotes', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: {
+        Text: 'Текст'
+      }
+    }
+  }
+});`;
+  const { result, changed } = transformI18nConfig(input);
+  assertEqual(changed, true, 'Should indicate change');
+  // Keys are normalized to camelCase
+  assertEqual(result.includes('"toolNames.text": "Текст"'), true, 'Should have flattened key with value');
+});
+
+test('I18N_KEY_MAPPINGS contains expected mappings', () => {
+  // UI key mappings (values use simplified key format)
+  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.Click to tune'], 'blockSettings.clickToOpenMenu');
+  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.or drag to move'], 'blockSettings.dragToMove');
+  assertEqual(I18N_KEY_MAPPINGS['ui.toolbar.toolbox.Add'], 'toolbox.addBelow');
+  assertEqual(I18N_KEY_MAPPINGS['ui.inlineToolbar.converter.Convert to'], 'popover.convertTo');
+  assertEqual(I18N_KEY_MAPPINGS['ui.popover.Filter'], 'popover.search');
+
+  // Tool names mappings (values are now camelCase)
+  assertEqual(I18N_KEY_MAPPINGS['toolNames.Ordered List'], 'toolNames.numberedList');
+  assertEqual(I18N_KEY_MAPPINGS['toolNames.Unordered List'], 'toolNames.bulletedList');
+
+  // Tools messages mappings (values are now camelCase)
+  assertEqual(I18N_KEY_MAPPINGS['tools.stub.The block can not be displayed correctly'], 'tools.stub.blockCannotBeDisplayed');
+
+  // Block tunes mappings
+  assertEqual(I18N_KEY_MAPPINGS['blockTunes.delete.Delete'], 'blockSettings.delete');
+
+  // Removed keys (mapped to null)
+  assertEqual(I18N_KEY_MAPPINGS['blockTunes.moveUp.Move up'], null);
+  assertEqual(I18N_KEY_MAPPINGS['blockTunes.moveDown.Move down'], null);
+});
+
+test('flattenI18nDictionary applies tool name mappings', () => {
+  const input = {
+    toolNames: {
+      'Ordered List': 'Нумерованный список',
+      'Unordered List': 'Маркированный список',
+    },
+  };
+  const result = flattenI18nDictionary(input);
+  // Keys are mapped and normalized to camelCase
+  assertEqual(result['toolNames.numberedList'], 'Нумерованный список');
+  assertEqual(result['toolNames.bulletedList'], 'Маркированный список');
+  assertEqual(result['toolNames.Ordered List'], undefined);
+  assertEqual(result['toolNames.Unordered List'], undefined);
+});
+
+test('flattenI18nDictionary applies Filter to Search mapping', () => {
+  const input = {
+    ui: {
+      popover: {
+        Filter: 'Фильтр',
+        'Nothing found': 'Ничего не найдено',
+      },
+    },
+  };
+  const result = flattenI18nDictionary(input);
+  // Keys are mapped to simplified keys
+  assertEqual(result['popover.search'], 'Фильтр');
+  assertEqual(result['popover.nothingFound'], 'Ничего не найдено');
+  assertEqual(result['ui.popover.Filter'], undefined);
+});
+
+test('flattenI18nDictionary removes moveUp/moveDown keys', () => {
+  const input = {
+    blockTunes: {
+      delete: {
+        Delete: 'Удалить',
+      },
+      moveUp: {
+        'Move up': 'Переместить вверх',
+      },
+      moveDown: {
+        'Move down': 'Переместить вниз',
+      },
+    },
+  };
+  const result = flattenI18nDictionary(input);
+  // Keys are mapped to simplified keys, moveUp/moveDown are removed
+  assertEqual(result['blockSettings.delete'], 'Удалить');
+  assertEqual(result['blockTunes.moveUp.Move up'], undefined);
+  assertEqual(result['blockTunes.moveDown.Move down'], undefined);
+});
+
+test('flattenI18nDictionary applies stub message mapping', () => {
+  const input = {
+    tools: {
+      stub: {
+        'The block can not be displayed correctly': 'Блок не может быть отображен',
+      },
+    },
+  };
+  const result = flattenI18nDictionary(input);
+  // Key is mapped and normalized to camelCase
+  assertEqual(result['tools.stub.blockCannotBeDisplayed'], 'Блок не может быть отображен');
+  assertEqual(result['tools.stub.The block can not be displayed correctly'], undefined);
+});
+
+console.log('\n🔤 normalizeKey\n');
+
+test('normalizeKey converts single word to lowercase', () => {
+  assertEqual(normalizeKey('toolNames.Text'), 'toolNames.text');
+  assertEqual(normalizeKey('toolNames.Bold'), 'toolNames.bold');
+});
+
+test('normalizeKey converts multi-word keys to camelCase', () => {
+  assertEqual(normalizeKey('popover.Nothing found'), 'popover.nothingFound');
+  assertEqual(normalizeKey('toolbox.Click to add below'), 'toolbox.clickToAddBelow');
+});
+
+test('normalizeKey handles keys with multiple spaces', () => {
+  assertEqual(normalizeKey('tools.stub.The block can not be displayed'), 'tools.stub.theBlockCanNotBeDisplayed');
+});
+
+test('normalizeKey preserves namespace segments', () => {
+  assertEqual(normalizeKey('blockSettings.Drag to move'), 'blockSettings.dragToMove');
+});
+
+console.log('\n🗑️  removeI18nMessages (--use-library-i18n)\n');
+
+test('removeI18nMessages removes messages property from i18n config', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: {
+        Text: "Текст"
+      }
+    }
+  }
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('messages'), false, 'Should not contain messages property');
+  assertEqual(result.includes('i18n: {}'), true, 'Should have empty i18n config');
+});
+
+test('removeI18nMessages preserves locale property', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: { Text: "Текст" }
+    },
+    locale: 'ru'
+  }
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('messages'), false, 'Should not contain messages property');
+  assertEqual(result.includes("locale: 'ru'"), true, 'Should preserve locale property');
+});
+
+test('removeI18nMessages preserves direction property', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    direction: 'rtl',
+    messages: {
+      toolNames: { Text: "نص" }
+    }
+  }
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('messages'), false, 'Should not contain messages property');
+  assertEqual(result.includes("direction: 'rtl'"), true, 'Should preserve direction property');
+});
+
+test('removeI18nMessages does not change content without messages', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    locale: 'ru'
+  }
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, false, 'Should not indicate change');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('removeI18nMessages does not change content without i18n', () => {
+  const input = `const editor = new Blok({
+  holder: 'blok',
+  tools: {}
+});`;
+  const { result, changed } = removeI18nMessages(input);
+  assertEqual(changed, false, 'Should not indicate change');
+  assertEqual(result, input, 'Content should be unchanged');
 });
 
 // ============================================================================

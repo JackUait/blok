@@ -32,61 +32,6 @@ export const cssInline = {
 };
 
 /**
- * Data attributes for popover component
- *
- * Used for:
- * 1. CSS selectors in stylesheets (e.g., [data-blok-popover])
- * 2. State management via setAttribute/removeAttribute
- * 3. Test selectors via data-blok-testid
- */
-export const DATA_ATTR = {
-  // Core popover elements
-  popover: 'data-blok-popover',
-  popoverContainer: 'data-blok-popover-container',
-  popoverItems: 'data-blok-popover-items',
-  popoverOverlay: 'data-blok-popover-overlay',
-  popoverCustomContent: 'data-blok-popover-custom-content',
-
-  // Popover variants
-  popoverInline: 'data-blok-popover-inline',
-  nested: 'data-blok-nested',
-  nestedLevel: 'data-blok-nested-level',
-
-  // Popover state
-  opened: 'data-blok-popover-opened',
-  openTop: 'data-blok-popover-open-top',
-  openLeft: 'data-blok-popover-open-left',
-  overlayHidden: 'data-blok-overlay-hidden',
-  nothingFoundDisplayed: 'data-blok-nothing-found-displayed',
-  hidden: 'data-blok-hidden',
-} as const;
-
-/**
- * @deprecated Use DATA_ATTR.opened instead
- */
-export const DATA_ATTRIBUTE_OPENED = DATA_ATTR.opened;
-
-/**
- * @deprecated Use DATA_ATTR.nested instead
- */
-export const DATA_ATTRIBUTE_NESTED = DATA_ATTR.nested;
-
-/**
- * @deprecated Use DATA_ATTR.openTop instead
- */
-export const DATA_ATTRIBUTE_OPEN_TOP = DATA_ATTR.openTop;
-
-/**
- * @deprecated Use DATA_ATTR.openLeft instead
- */
-export const DATA_ATTRIBUTE_OPEN_LEFT = DATA_ATTR.openLeft;
-
-/**
- * @deprecated Use DATA_ATTR.nothingFoundDisplayed instead
- */
-export const DATA_ATTRIBUTE_NOTHING_FOUND_DISPLAYED = DATA_ATTR.nothingFoundDisplayed;
-
-/**
  * Helper to get nested level attribute value
  * @param level - nesting level
  */

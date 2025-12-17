@@ -3,7 +3,7 @@
  */
 import * as _ from './utils';
 import $ from './dom';
-import { BLOK_FAKE_CURSOR_ATTR, BLOK_FAKE_CURSOR_SELECTOR, BLOK_REDACTOR_SELECTOR } from './constants';
+import { DATA_ATTR, createSelector } from './constants';
 
 interface TextRange {
   boundingTop: number;
@@ -141,7 +141,7 @@ export default class SelectionUtils {
       : initialNode;
 
     const blokZone = selectedNode && selectedNode instanceof Element
-      ? selectedNode.closest(BLOK_REDACTOR_SELECTOR)
+      ? selectedNode.closest(createSelector(DATA_ATTR.redactor))
       : null;
 
     /**
@@ -166,7 +166,7 @@ export default class SelectionUtils {
 
     const blokZone =
       selectedNode && selectedNode instanceof Element
-        ? selectedNode.closest(BLOK_REDACTOR_SELECTOR)
+        ? selectedNode.closest(createSelector(DATA_ATTR.redactor))
         : null;
 
     /**
@@ -355,7 +355,7 @@ export default class SelectionUtils {
 
     const fakeCursor = $.make('span');
 
-    fakeCursor.setAttribute(BLOK_FAKE_CURSOR_ATTR, '');
+    fakeCursor.setAttribute(DATA_ATTR.fakeCursor, '');
     fakeCursor.setAttribute('data-blok-mutation-free', 'true');
 
     range.collapse();
@@ -367,7 +367,7 @@ export default class SelectionUtils {
    * @param el - where to check
    */
   public static isFakeCursorInsideContainer(el: HTMLElement): boolean {
-    return $.find(el, BLOK_FAKE_CURSOR_SELECTOR) !== null;
+    return $.find(el, createSelector(DATA_ATTR.fakeCursor)) !== null;
   }
 
   /**
@@ -375,7 +375,7 @@ export default class SelectionUtils {
    * @param container - container to look for
    */
   public static removeFakeCursor(container: HTMLElement = document.body): void {
-    const fakeCursor = $.find(container, BLOK_FAKE_CURSOR_SELECTOR);
+    const fakeCursor = $.find(container, createSelector(DATA_ATTR.fakeCursor));
 
     if (!fakeCursor) {
       return;

@@ -2,8 +2,6 @@ import Module from '../../__module';
 import $ from '../../dom';
 import SelectionUtils from '../../selection';
 import type Block from '../../block';
-import I18n from '../../i18n';
-import { I18nInternalNS } from '../../i18n/namespace-internal';
 import Flipper from '../../flipper';
 import type { MenuConfigItem } from '../../../../types/tools';
 import type { PopoverItemParams } from '../../utils/popover';
@@ -15,6 +13,7 @@ import { css as popoverItemCls } from '../../utils/popover/components/popover-it
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { IconReplace, IconCross } from '../../icons';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
+import { translateToolTitle } from '../../utils/tools';
 import BlockAPI from '../../block/api';
 import type BlockToolAdapter from '../../tools/block';
 
@@ -175,8 +174,8 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       items: await this.getTunesItems(block, commonTunes, toolTunes),
       scopeElement: this.Blok.API.methods.ui.nodes.redactor,
       messages: {
-        nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
-        search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
+        nothingFound: this.Blok.I18n.t('popover.nothingFound'),
+        search: this.Blok.I18n.t('popover.search'),
       },
     };
 
@@ -299,11 +298,9 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       }
 
       tool.toolbox.forEach((toolboxItem) => {
-        const titleKey = toolboxItem.title ?? tool.name;
-
         result.push({
           icon: toolboxItem.icon,
-          title: I18n.t(I18nInternalNS.toolNames, titleKey),
+          title: translateToolTitle(this.Blok.I18n, toolboxItem, tool.name),
           name: toolboxItem.name ?? tool.name,
           closeOnActivate: true,
           onActivate: async () => {
@@ -333,7 +330,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       items.push({
         icon: IconReplace,
         name: 'convert-to',
-        title: I18n.ui(I18nInternalNS.ui.popover, 'Convert to'),
+        title: this.Blok.I18n.t('popover.convertTo'),
         children: {
           items: convertToItems,
         },
@@ -352,7 +349,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     } else {
       items.push({
         icon: IconCross,
-        title: I18n.t(I18nInternalNS.blockTunes.delete, 'Delete'),
+        title: this.Blok.I18n.t('blockSettings.delete'),
         name: 'delete',
         closeOnActivate: true,
         onActivate: () => {

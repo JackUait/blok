@@ -15,10 +15,9 @@ const mockRegistry = vi.hoisted(() => ({
     setLogLevel: vi.fn(),
     log: vi.fn(),
   },
-  i18n: {
-    setDictionary: vi.fn(),
-  },
   modules: {
+    i18nSetDictionary: vi.fn(),
+    i18nPrepare: vi.fn(() => Promise.resolve()),
     toolsPrepare: vi.fn(),
     uiPrepare: vi.fn(),
     uiCheckEmptiness: vi.fn(),
@@ -60,14 +59,20 @@ vi.mock('../../../src/components/utils', () => ({
   },
 }));
 
-vi.mock('../../../src/components/i18n', () => ({
-  __esModule: true,
-  default: {
-    setDictionary: mockRegistry.i18n.setDictionary,
-  },
-}));
+// I18n is now an instance-based module registered in modules list, not a static class
 
 vi.mock('../../../src/components/modules', () => {
+  /**
+   * Minimal I18n module stub used in Core tests.
+   */
+  class MockI18n {
+    public state?: BlokModules;
+    public prepare = mockRegistry.modules.i18nPrepare;
+    public setDictionary = mockRegistry.modules.i18nSetDictionary;
+    public t = vi.fn((key: string) => key);
+    public has = vi.fn(() => false);
+  }
+
   /**
    * Minimal Tools module stub used in Core tests.
    */
@@ -182,6 +187,7 @@ vi.mock('../../../src/components/modules', () => {
   return {
     __esModule: true,
     default: {
+      I18n: MockI18n,
       Tools: MockTools,
       UI: MockUI,
       BlockManager: MockBlockManager,
@@ -198,7 +204,7 @@ vi.mock('../../../src/components/modules', () => {
   };
 });
 
-const { dom, utils, i18n, modules: moduleMocks } = mockRegistry;
+const { dom, utils, modules: moduleMocks } = mockRegistry;
 const { get: mockDomGet, isElement: mockDomIsElement } = dom;
 const {
   isObject: mockIsObject,
@@ -206,7 +212,6 @@ const {
   isEmpty: mockIsEmpty,
   log: mockLog,
 } = utils;
-const { setDictionary: mockSetDictionary } = i18n;
 const {
   toolsPrepare: mockToolsPrepare,
   uiPrepare: mockUIPrepare,
@@ -267,7 +272,7 @@ describe('Core', () => {
   });
 
   describe('configuration', () => {
-    it('retains provided data and applies i18n dictionary', async () => {
+    it('retains provided data and i18n configuration', async () => {
       const config: BlokConfig = {
         holder: 'holder',
         defaultBlock: 'header',
@@ -283,9 +288,7 @@ describe('Core', () => {
         i18n: {
           direction: 'rtl',
           messages: {
-            toolNames: {
-              paragraph: 'Paragraph',
-            },
+            'toolNames.text': 'Paragraph',
           },
         },
       };
@@ -295,7 +298,7 @@ describe('Core', () => {
       expect(core.configuration.defaultBlock).toBe('header');
       expect(core.configuration.data).toEqual(config.data);
       expect(core.configuration.i18n?.direction).toBe('rtl');
-      expect(mockSetDictionary).toHaveBeenCalledWith(config.i18n?.messages);
+      expect(core.configuration.i18n?.messages).toEqual({ 'toolNames.text': 'Paragraph' });
     });
   });
 

@@ -119,6 +119,7 @@ vi.mock('../../../../../src/components/i18n', () => ({
   default: {
     ui: vi.fn((_ns: string, key: string) => key),
     t: vi.fn((_ns: string, key: string) => key),
+    hasTranslation: vi.fn(() => false),
   },
 }));
 
@@ -204,6 +205,10 @@ type BlokMock = {
   Toolbar: {
     close: Mock<() => void>;
   };
+  I18n: {
+    t: Mock<(key: string) => string>;
+    has: Mock<(key: string) => boolean>;
+  };
 };
 
 const createBlokMock = (): BlokMock => {
@@ -241,6 +246,10 @@ const createBlokMock = (): BlokMock => {
   const toolbar = {
     close: vi.fn(),
   };
+  const i18n = {
+    t: vi.fn((key: string) => key),
+    has: vi.fn(() => false),
+  };
 
   return {
     BlockSelection: blockSelection,
@@ -258,6 +267,7 @@ const createBlokMock = (): BlokMock => {
     Tools: tools,
     Caret: caret,
     Toolbar: toolbar,
+    I18n: i18n,
   } satisfies BlokMock;
 };
 

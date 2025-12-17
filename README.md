@@ -36,34 +36,113 @@ yarn add @jackuait/blok
 
 ## Migrating from EditorJS
 
-If you're migrating from EditorJS, Blok provides a seamless transition path:
+Blok is designed as a drop-in replacement for EditorJS. The included codemod automatically transforms your imports, selectors, and configuration—so you can switch over in minutes, not hours.
 
-### Automated Migration
-
-Run the codemod to automatically update your codebase:
+### Quick Start
 
 ```bash
-# Preview changes (recommended first)
+# 1. Preview what will change (recommended first)
 npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run
 
-# Apply changes
+# 2. Apply the changes
 npx -p @jackuait/blok migrate-from-editorjs ./src
-
-# Process the entire project
-npx -p @jackuait/blok migrate-from-editorjs .
 ```
 
-The codemod handles:
-- Import updates (`@editorjs/editorjs` → `@jackuait/blok`)
-- Type renames (`EditorConfig` → `BlokConfig`)
-- CSS selector updates (`.ce-*` → `[data-blok-*]`)
-- Data attribute updates (`data-id` → `data-blok-id`)
-- Bundled tool migrations (Header & Paragraph are now included)
+### Options
 
-### Migration Guide
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Preview changes without modifying files |
+| `--verbose` | Show detailed output for each file processed |
+| `--use-library-i18n` | Use Blok's built-in translations (36 languages) instead of custom i18n |
 
-For a complete list of breaking changes and manual migration steps, see [MIGRATION.md](./MIGRATION.md).
+### Supported Files
+
+The codemod processes: `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, `.html`, `.css`, `.scss`, `.less`
+
+### What Gets Transformed
+
+- **Imports** — `@editorjs/editorjs` → `@jackuait/blok`
+- **Types** — `EditorConfig` → `BlokConfig`
+- **CSS selectors** — `.ce-block`, `.ce-toolbar` → `[data-blok-*]` attributes
+- **Data attributes** — `data-id` → `data-blok-id`
+- **Bundled tools** — Header & Paragraph imports removed (now included in Blok)
+- **Default holder** — `#editorjs` → `#blok`
+
+### Limitations
+
+Some patterns require manual attention:
+- Dynamic imports with variable paths
+- Complex nested CSS selectors
+- Custom EditorJS plugins (need API adaptation)
+
+### Learn More
+
+- [MIGRATION.md](./MIGRATION.md) — Full list of breaking changes and manual steps
+- [codemod/README.md](./codemod/README.md) — Programmatic usage and detailed examples
+
+## Localization
+
+Blok supports 68 languages with lazy loading—only English is bundled by default (~3KB). Additional locales are loaded on-demand, keeping your initial bundle small.
+
+### Default Behavior
+
+Out of the box, Blok uses English and auto-detects the user's browser language:
+
+```typescript
+import Blok from '@jackuait/blok';
+
+new Blok({
+  holder: 'editor',
+  // Uses English by default, auto-detects browser language
+});
+```
+
+
+### Preloading Locales
+
+By default, locales are loaded on-demand. If you need to ensure locales are available before initializing the editor—for example, to avoid any loading delay or to support offline usage—you can preload them:
+
+```typescript
+import Blok from '@jackuait/blok';
+import { preloadLocales, buildRegistry } from '@jackuait/blok/locales';
+
+// Preload during app startup (triggers network requests and caches the locales)
+await preloadLocales(['en', 'fr', 'de']);
+
+// Build registry from preloaded locales (instant, no network request)
+const locales = await buildRegistry(['en', 'fr', 'de']);
+
+new Blok({
+  holder: 'editor',
+  i18n: {
+    locales,
+    locale: 'auto',
+  }
+});
+```
+
+**When to preload:**
+- Offline support (preload all needed locales before going offline)
+- Eliminating any loading delay during editor initialization
+- Progressive web apps that cache resources upfront
+
+**When not to preload:**
+- Most apps—just use `buildRegistry()` directly and accept the ~50-100ms loading time
+- The on-demand loading is usually imperceptible
+
+### Setting a Specific Locale
+
+```typescript
+new Blok({
+  holder: 'editor',
+  i18n: {
+    locale: 'fr',         // Use French
+    defaultLocale: 'en',  // Fallback if 'fr' unavailable
+  }
+});
+```
 
 ## Documentation
 
-📚 **Documentation is coming soon!** We're working hard to provide comprehensive guides, API references, and examples. Stay tuned for updates.
+📚 **Complete Documentation is coming soon!** We're working hard to provide comprehensive guides, API references, and examples. Stay tuned for updates.

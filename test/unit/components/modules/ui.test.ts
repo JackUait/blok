@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import UI from '../../../../src/components/modules/ui';
 import SelectionUtils from '../../../../src/components/selection';
 import Flipper from '../../../../src/components/flipper';
-import { DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE } from '../../../../src/components/constants';
+import { DATA_ATTR, BLOK_INTERFACE_VALUE } from '../../../../src/components/constants';
 import { BlockHovered } from '../../../../src/components/events/BlockHovered';
 import { BlokMobileLayoutToggled } from '../../../../src/components/events';
 import * as Dom from '../../../../src/components/dom';
@@ -242,7 +242,7 @@ describe('UI module', () => {
       expect(nodes.wrapper).toBeInstanceOf(HTMLElement);
       expect(nodes.wrapper?.getAttribute('data-blok-testid')).toBe('blok-editor');
       expect(nodes.wrapper?.dataset.blokNarrow).toBe('true');
-      expect(nodes.wrapper?.getAttribute(DATA_INTERFACE_ATTRIBUTE)).toBe(BLOK_INTERFACE_VALUE);
+      expect(nodes.wrapper?.getAttribute(DATA_ATTR.interface)).toBe(BLOK_INTERFACE_VALUE);
 
       expect(nodes.redactor).toBeInstanceOf(HTMLElement);
       expect(nodes.redactor?.getAttribute('data-blok-testid')).toBe('redactor');

@@ -10,7 +10,7 @@ import { PopoverItemType } from '../utils/popover';
 import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { IconLink } from '../icons';
-import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../constants';
+import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
 import { twMerge } from '../utils/tw';
 
 /**
@@ -31,6 +31,11 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
    * Title for the Inline Tool
    */
   public static title = 'Link';
+
+  /**
+   * Translation key for i18n
+   */
+  public static titleKey = 'link';
 
   /**
    * Sanitizer Rule
@@ -125,6 +130,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   public render(): MenuConfig {
     return {
       icon: IconLink,
+      name: 'link',
       isActive: () => !!this.selection.findParentTag('A'),
       children: {
         hideChevron: true,
@@ -150,7 +156,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   private createInput(): HTMLInputElement {
     const input = document.createElement('input') as HTMLInputElement;
 
-    input.placeholder = this.i18n.t('Add a link');
+    input.placeholder = this.i18n.t('tools.link.addLink');
     input.enterKeyHint = 'done';
     input.className = this.INPUT_BASE_CLASSES;
     input.setAttribute('data-blok-testid', 'inline-tool-input');
@@ -236,21 +242,18 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
    * Resolve the current inline toolbar button element
    */
   private getButtonElement(): HTMLButtonElement | null {
-    if (this.nodes.button && document.contains(this.nodes.button)) {
-      return this.nodes.button;
-    }
-
+    // Always query fresh to ensure we have the latest DOM element
     const button = document.querySelector<HTMLButtonElement>(
-      `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-item-name="link"]`
+      `${createSelector(DATA_ATTR.interface, INLINE_TOOLBAR_INTERFACE_VALUE)} [data-blok-item-name="link"]`
     );
 
-    if (button) {
+    // Only add click listener if this is a new button element
+    if (button && button !== this.nodes.button) {
       button.addEventListener('click', this.handleButtonClick, true);
+      this.nodes.button = button;
     }
 
-    this.nodes.button = button ?? null;
-
-    return this.nodes.button;
+    return button;
   }
 
   /**
@@ -379,7 +382,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
     if (!this.validateURL(value)) {
       this.notifier.show({
-        message: 'Pasted link is not valid.',
+        message: this.i18n.t('tools.link.invalidLink'),
         style: 'error',
       });
 

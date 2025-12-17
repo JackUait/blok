@@ -900,8 +900,8 @@ test.describe('list tool (ListItem)', () => {
       await expect(markers.nth(2)).toHaveText('3.');
 
       // Delete the first item via the API (same approach as 'renumbers when middle item is deleted')
-      await page.evaluate(() => {
-        window.blokInstance?.blocks.delete(0);
+      await page.evaluate(async () => {
+        await window.blokInstance?.blocks.delete(0);
       });
 
       // Wait for items to reduce to 2
@@ -925,8 +925,8 @@ test.describe('list tool (ListItem)', () => {
       });
 
       // Delete the second item via the API
-      await page.evaluate(() => {
-        window.blokInstance?.blocks.delete(1);
+      await page.evaluate(async () => {
+        await window.blokInstance?.blocks.delete(1);
       });
 
       // Wait for items to reduce to 2
@@ -1050,9 +1050,9 @@ test.describe('list tool (ListItem)', () => {
       await secondItem.click();
 
       // Delete the current block via API (simulating block settings delete button)
-      await page.evaluate(() => {
+      await page.evaluate(async () => {
         // This is equivalent to clicking the delete button in block settings
-        window.blokInstance?.blocks.delete();
+        await window.blokInstance?.blocks.delete();
       });
 
       // Wait for the block to be deleted
@@ -1078,7 +1078,7 @@ test.describe('list tool (ListItem)', () => {
       // Delete the middle item and immediately check markers
       const result = await page.evaluate(async () => {
         // Delete middle item
-        window.blokInstance?.blocks.delete(1);
+        await window.blokInstance?.blocks.delete(1);
 
         // Immediately check markers before any requestAnimationFrame
         const markers = document.querySelectorAll('[data-blok-tool="list"] [data-list-marker]');
@@ -1110,7 +1110,7 @@ test.describe('list tool (ListItem)', () => {
       console.log('After timeout markers:', result.timeoutMarkers);
 
       // The final markers should be 1. and 2.
-      expect(result.timeoutMarkers).toEqual(['1.', '2.']);
+      expect(result.timeoutMarkers).toStrictEqual(['1.', '2.']);
     });
 
     test('numbers new items correctly when created via Enter', async ({ page }) => {

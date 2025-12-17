@@ -29,6 +29,363 @@ const path = require('path');
 
 const FILE_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.html', '.css', '.scss', '.less'];
 
+// ============================================================================
+// i18n Transformation Utilities
+// ============================================================================
+
+/**
+ * EditorJS to Blok key mappings for keys that changed.
+ * These are applied after flattening to convert EditorJS keys to Blok equivalents.
+ *
+ * EditorJS keys reference: https://editorjs.io/i18n/
+ * Blok keys reference: src/components/i18n/locales/en/messages.json
+ */
+const I18N_KEY_MAPPINGS = {
+  // UI keys that changed
+  'ui.blockTunes.toggler.Click to tune': 'blockSettings.clickToOpenMenu',
+  'ui.blockTunes.toggler.or drag to move': 'blockSettings.dragToMove',
+  'ui.toolbar.toolbox.Add': 'toolbox.addBelow',
+  'ui.inlineToolbar.converter.Convert to': 'popover.convertTo',
+  'ui.popover.Filter': 'popover.search',
+
+  // Tool names that changed (EditorJS uses different casing/wording)
+  'toolNames.Ordered List': 'toolNames.numberedList',
+  'toolNames.Unordered List': 'toolNames.bulletedList',
+
+  // Tools messages that changed
+  'tools.stub.The block can not be displayed correctly': 'tools.stub.blockCannotBeDisplayed',
+  'tools.stub.The block can not be displayed correctly.': 'tools.stub.blockCannotBeDisplayed',
+
+  // Block tunes that changed in Blok
+  'blockTunes.delete.Delete': 'blockSettings.delete',
+
+  // Block tunes that are removed in Blok (moveUp/moveDown replaced with drag)
+  // These are mapped to null to indicate they should be removed
+  'blockTunes.moveUp.Move up': null,
+  'blockTunes.moveDown.Move down': null,
+};
+
+/**
+ * Namespace mappings from old verbose prefixes to new simplified prefixes.
+ * Applied after camelCase normalization.
+ */
+const NAMESPACE_MAPPINGS = {
+  'ui.blockTunes.toggler': 'blockSettings',
+  'ui.toolbar.toolbox': 'toolbox',
+  'ui.popover': 'popover',
+  'blockTunes': 'blockSettings',
+};
+
+/**
+ * Converts an EditorJS-style key (with English text) to Blok-style (camelCase).
+ * Blok uses camelCase for the final segment of translation keys.
+ * Also applies namespace simplification for known verbose prefixes.
+ * Example: 'ui.popover.Nothing found' → 'popover.nothingFound'
+ * Example: 'toolNames.Text' → 'toolNames.text'
+ * @param {string} key - The dot-notation key with English text
+ * @returns {string} The normalized key with camelCase final segment
+ */
+function normalizeKey(key) {
+  const parts = key.split('.');
+  const lastPart = parts[parts.length - 1];
+
+  // Convert "Nothing found" → "nothingFound", "Text" → "text"
+  const words = lastPart.split(/\s+/);
+  const camelCase = words
+    .map((word, i) => {
+      if (i === 0) {
+        // First word is lowercase
+        return word.toLowerCase();
+      }
+      // Subsequent words have first letter capitalized
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join('');
+
+  parts[parts.length - 1] = camelCase;
+  let normalizedKey = parts.join('.');
+
+  // Apply namespace mappings (longest prefix first for correct matching)
+  const sortedPrefixes = Object.keys(NAMESPACE_MAPPINGS).sort((a, b) => b.length - a.length);
+  for (const oldPrefix of sortedPrefixes) {
+    if (normalizedKey.startsWith(oldPrefix + '.')) {
+      normalizedKey = NAMESPACE_MAPPINGS[oldPrefix] + normalizedKey.slice(oldPrefix.length);
+      break;
+    }
+  }
+
+  return normalizedKey;
+}
+
+/**
+ * Flattens a nested i18n dictionary object to Blok's flat dot-notation format.
+ * @param {Object} obj - The nested dictionary object
+ * @param {string} prefix - Current key prefix (for recursion)
+ * @returns {Object} Flattened dictionary with dot-notation keys
+ */
+function flattenI18nDictionary(obj, prefix = '') {
+  const result = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    const newKey = prefix ? `${prefix}.${key}` : key;
+
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      Object.assign(result, flattenI18nDictionary(value, newKey));
+    } else {
+      // Check explicit mappings first, otherwise normalize to camelCase
+      let finalKey;
+      if (newKey in I18N_KEY_MAPPINGS) {
+        finalKey = I18N_KEY_MAPPINGS[newKey];
+      } else {
+        finalKey = normalizeKey(newKey);
+      }
+
+      // Skip keys that are mapped to null (removed in Blok)
+      if (finalKey === null) {
+        continue;
+      }
+
+      result[finalKey] = value;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Parses a JavaScript object literal string into an actual object.
+ * Handles simple object literals with string values.
+ * @param {string} str - The object literal string
+ * @returns {Object|null} Parsed object or null if parsing fails
+ */
+function parseObjectLiteral(str) {
+  try {
+    // Convert single quotes to double quotes for JSON compatibility
+    // Handle unquoted keys by quoting them
+    let jsonStr = str
+      // Replace single quotes with double quotes
+      .replace(/'/g, '"')
+      // Handle unquoted keys (identifier followed by colon)
+      .replace(/(\s*)(\w+)(\s*:\s*)/g, '$1"$2"$3')
+      // Remove trailing commas before closing braces/brackets
+      .replace(/,(\s*[}\]])/g, '$1');
+
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Converts a flattened dictionary object to a formatted JavaScript object string.
+ * @param {Object} obj - The flattened dictionary
+ * @param {string} indent - The indentation string
+ * @returns {string} Formatted object string
+ */
+function objectToString(obj, indent = '      ') {
+  const entries = Object.entries(obj);
+  if (entries.length === 0) {
+    return '{}';
+  }
+
+  const lines = entries.map(([key, value]) => {
+    const escapedValue = typeof value === 'string' ? value.replace(/"/g, '\\"') : value;
+    return `${indent}"${key}": "${escapedValue}"`;
+  });
+
+  return '{\n' + lines.join(',\n') + '\n' + indent.slice(2) + '}';
+}
+
+/**
+ * Finds matching brace for nested object parsing.
+ * @param {string} str - The string to search
+ * @param {number} startIndex - Starting position (should be at opening brace)
+ * @returns {number} Index of matching closing brace, or -1 if not found
+ */
+function findMatchingBrace(str, startIndex) {
+  let depth = 0;
+  let inString = false;
+  let stringChar = '';
+
+  for (let i = startIndex; i < str.length; i++) {
+    const char = str[i];
+    const prevChar = i > 0 ? str[i - 1] : '';
+
+    // Handle string detection
+    if ((char === '"' || char === "'" || char === '`') && prevChar !== '\\') {
+      if (!inString) {
+        inString = true;
+        stringChar = char;
+      } else if (char === stringChar) {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (char === '{') {
+      depth++;
+    } else if (char === '}') {
+      depth--;
+      if (depth === 0) {
+        return i;
+      }
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Transforms EditorJS nested i18n messages to Blok flat format.
+ * @param {string} content - The file content
+ * @returns {{result: string, changed: boolean}} Transformed content and change flag
+ */
+function transformI18nConfig(content) {
+  // Pattern to find i18n: { messages: { ... } } or i18n: { messages: { ... }, ... }
+  const i18nStartPattern = /i18n\s*:\s*\{\s*messages\s*:\s*\{/g;
+  let match;
+  let result = content;
+  let changed = false;
+  let offset = 0;
+
+  // Reset lastIndex for the regex
+  i18nStartPattern.lastIndex = 0;
+
+  while ((match = i18nStartPattern.exec(content)) !== null) {
+    const messagesStart = match.index + match[0].length - 1; // Position of opening brace of messages
+    const messagesEnd = findMatchingBrace(content, messagesStart);
+
+    if (messagesEnd === -1) continue;
+
+    const messagesStr = content.substring(messagesStart, messagesEnd + 1);
+
+    // Skip if it contains functions or arrow functions (dynamic content)
+    if (messagesStr.includes('function') || messagesStr.includes('=>')) {
+      continue;
+    }
+
+    // Try to parse the messages object
+    const messagesObj = parseObjectLiteral(messagesStr);
+    if (!messagesObj) continue;
+
+    // Flatten the dictionary
+    const flattened = flattenI18nDictionary(messagesObj);
+
+    // Detect indentation from the original content
+    const lineStart = content.lastIndexOf('\n', match.index) + 1;
+    const lineContent = content.substring(lineStart, match.index);
+    const baseIndent = lineContent.match(/^\s*/)?.[0] || '';
+    const messagesIndent = baseIndent + '    ';
+
+    // Convert to string with proper formatting
+    const flattenedStr = objectToString(flattened, messagesIndent + '  ');
+
+    // Replace in result (accounting for previous replacements)
+    const adjustedStart = messagesStart + offset;
+    const adjustedEnd = messagesEnd + 1 + offset;
+    result = result.substring(0, adjustedStart) + flattenedStr + result.substring(adjustedEnd);
+
+    // Update offset for next iteration
+    offset += flattenedStr.length - (messagesEnd + 1 - messagesStart);
+    changed = true;
+  }
+
+  return { result, changed };
+}
+
+/**
+ * Removes i18n messages from config to use Blok's built-in library translations.
+ * Preserves other i18n properties like locale and direction.
+ * @param {string} content - The file content
+ * @returns {{result: string, changed: boolean}} Transformed content and change flag
+ */
+function removeI18nMessages(content) {
+  // Pattern to find i18n config with messages property
+  const i18nStartPattern = /i18n\s*:\s*\{/g;
+  let match;
+  let result = content;
+  let changed = false;
+  let offset = 0;
+
+  // Reset lastIndex for the regex
+  i18nStartPattern.lastIndex = 0;
+
+  while ((match = i18nStartPattern.exec(content)) !== null) {
+    const i18nStart = match.index + match[0].length - 1; // Position of opening brace
+    const i18nEnd = findMatchingBrace(content, i18nStart);
+
+    if (i18nEnd === -1) continue;
+
+    const i18nContent = content.substring(i18nStart, i18nEnd + 1);
+
+    // Check if this i18n config has a messages property
+    if (!i18nContent.includes('messages')) {
+      continue;
+    }
+
+    // Find the messages property and remove it
+    // Handle: messages: { ... }, or messages: { ... } (with or without trailing comma)
+    const messagesPattern = /,?\s*messages\s*:\s*\{/;
+    const messagesMatch = i18nContent.match(messagesPattern);
+
+    if (!messagesMatch) continue;
+
+    const messagesStartInContent = i18nContent.indexOf(messagesMatch[0]);
+    const messagesObjStart = i18nContent.indexOf('{', messagesStartInContent);
+    const messagesObjEnd = findMatchingBrace(i18nContent, messagesObjStart);
+
+    if (messagesObjEnd === -1) continue;
+
+    // Determine what to remove (including trailing comma if present)
+    let removeStart = messagesStartInContent;
+    let removeEnd = messagesObjEnd + 1;
+
+    // Check for trailing comma after messages object
+    const afterMessages = i18nContent.substring(removeEnd);
+    const trailingCommaMatch = afterMessages.match(/^\s*,/);
+    if (trailingCommaMatch) {
+      removeEnd += trailingCommaMatch[0].length;
+    }
+
+    // If messages started with a comma (not first property), include it in removal
+    // Otherwise, we need to handle the case where it's the first property
+    const beforeMessages = i18nContent.substring(0, messagesStartInContent);
+    if (!messagesMatch[0].startsWith(',') && beforeMessages.trim() === '{') {
+      // messages is first property, remove trailing comma if any
+    }
+
+    // Build the new i18n content without messages
+    let newI18nContent = i18nContent.substring(0, removeStart) + i18nContent.substring(removeEnd);
+
+    // Clean up: remove leading comma if messages was removed and left one
+    newI18nContent = newI18nContent.replace(/\{\s*,/, '{');
+
+    // Clean up: remove trailing comma before closing brace
+    newI18nContent = newI18nContent.replace(/,\s*\}/, ' }');
+
+    // Clean up empty i18n config: { } -> remove or simplify
+    const isEmptyI18n = newI18nContent.replace(/\s/g, '') === '{}';
+
+    if (isEmptyI18n) {
+      // Replace with empty object or keep minimal
+      newI18nContent = '{}';
+    }
+
+    // Replace in result (accounting for previous replacements)
+    const adjustedI18nStart = i18nStart + offset;
+    const adjustedI18nEnd = i18nEnd + 1 + offset;
+    result = result.substring(0, adjustedI18nStart) + newI18nContent + result.substring(adjustedI18nEnd);
+
+    // Update offset for next iteration
+    offset += newI18nContent.length - (i18nEnd + 1 - i18nStart);
+    changed = true;
+  }
+
+  return { result, changed };
+}
+
 // Import transformations
 const IMPORT_TRANSFORMS = [
   // EditorJS subpath imports (e.g., @editorjs/editorjs/types -> @jackuait/blok/types)
@@ -60,6 +417,12 @@ const IMPORT_TRANSFORMS = [
     pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/paragraph['"];?\n?/g,
     replacement: '// Paragraph is now bundled with Blok: use Blok.Paragraph\n',
     note: 'Paragraph tool is now bundled',
+  },
+  // List tool (now bundled)
+  {
+    pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/list['"];?\n?/g,
+    replacement: '// List is now bundled with Blok: use Blok.List\n',
+    note: 'List tool is now bundled',
   },
 ];
 
@@ -131,13 +494,13 @@ const CSS_CLASS_TRANSFORMS = [
   { pattern: /(['"`])ce-inline-toolbar(['"`])/g, replacement: '$1data-blok-testid="inline-toolbar"$2' },
 
   // Popover classes (ce-popover)
-  { pattern: /\.ce-popover--opened(?![\w-])/g, replacement: '[data-blok-popover][data-blok-opened="true"]' },
+  { pattern: /\.ce-popover--opened(?![\w-])/g, replacement: '[data-blok-popover-opened="true"]' },
   { pattern: /\.ce-popover__container(?![\w-])/g, replacement: '[data-blok-popover-container]' },
   { pattern: /\.ce-popover-item--focused(?![\w-])/g, replacement: '[data-blok-focused="true"]' },
   { pattern: /\.ce-popover-item(?![\w-])/g, replacement: '[data-blok-testid="popover-item"]' },
   { pattern: /\.ce-popover(?![\w-])/g, replacement: '[data-blok-popover]' },
   // Without dot prefix
-  { pattern: /(['"`])ce-popover--opened(['"`])/g, replacement: '$1data-blok-popover$2' },
+  { pattern: /(['"`])ce-popover--opened(['"`])/g, replacement: '$1data-blok-popover-opened$2' },
   { pattern: /(['"`])ce-popover__container(['"`])/g, replacement: '$1data-blok-popover-container$2' },
   { pattern: /(['"`])ce-popover-item--focused(['"`])/g, replacement: '$1data-blok-focused$2' },
   { pattern: /(['"`])ce-popover-item(['"`])/g, replacement: '$1data-blok-testid="popover-item"$2' },
@@ -175,17 +538,17 @@ const CSS_CLASS_TRANSFORMS = [
   { pattern: /(['"`])ce-ragged-right(['"`])/g, replacement: '$1data-blok-ragged-right$2' },
 
   // Popover item states and icons
-  { pattern: /\.ce-popover-item--confirmation(?![\w-])/g, replacement: '[data-blok-confirmation="true"]' },
+  { pattern: /\.ce-popover-item--confirmation(?![\w-])/g, replacement: '[data-blok-popover-item-confirmation="true"]' },
   { pattern: /\.ce-popover-item__icon(?![\w-])/g, replacement: '[data-blok-testid="popover-item-icon"]' },
   { pattern: /\.ce-popover-item__icon--tool(?![\w-])/g, replacement: '[data-blok-testid="popover-item-icon-tool"]' },
-  { pattern: /(['"`])ce-popover-item--confirmation(['"`])/g, replacement: '$1data-blok-confirmation$2' },
+  { pattern: /(['"`])ce-popover-item--confirmation(['"`])/g, replacement: '$1data-blok-popover-item-confirmation$2' },
   { pattern: /(['"`])ce-popover-item__icon(['"`])/g, replacement: '$1data-blok-testid="popover-item-icon"$2' },
   { pattern: /(['"`])ce-popover-item__icon--tool(['"`])/g, replacement: '$1data-blok-testid="popover-item-icon-tool"$2' },
 
   // Toolbox classes (ce-toolbox)
-  { pattern: /\.ce-toolbox--opened(?![\w-])/g, replacement: '[data-blok-toolbox][data-blok-opened="true"]' },
+  { pattern: /\.ce-toolbox--opened(?![\w-])/g, replacement: '[data-blok-toolbox-opened="true"]' },
   { pattern: /\.ce-toolbox(?![\w-])/g, replacement: '[data-blok-toolbox]' },
-  { pattern: /(['"`])ce-toolbox--opened(['"`])/g, replacement: '$1data-blok-toolbox$2' },
+  { pattern: /(['"`])ce-toolbox--opened(['"`])/g, replacement: '$1data-blok-toolbox-opened$2' },
   { pattern: /(['"`])ce-toolbox(['"`])/g, replacement: '$1data-blok-toolbox$2' },
 
   // CDX list classes (cdx-list)
@@ -250,16 +613,18 @@ const HOLDER_TRANSFORMS = [
 ];
 
 // Bundled tools - add new tools here as they are bundled with Blok
-const BUNDLED_TOOLS = ['Header', 'Paragraph'];
+const BUNDLED_TOOLS = ['Header', 'Paragraph', 'List'];
 
 // Tool configuration transformations
 const TOOL_CONFIG_TRANSFORMS = [
   // Handle class property syntax
   { pattern: /class:\s*Header(?!Config)/g, replacement: 'class: Blok.Header' },
   { pattern: /class:\s*Paragraph(?!Config)/g, replacement: 'class: Blok.Paragraph' },
+  { pattern: /class:\s*List(?!Config|Item)/g, replacement: 'class: Blok.List' },
   // Handle standalone tool references in tools config (e.g., `paragraph: Paragraph`)
   { pattern: /(\bheader\s*:\s*)Header(?!Config)(?=\s*[,}\n])/g, replacement: '$1Blok.Header' },
   { pattern: /(\bparagraph\s*:\s*)Paragraph(?!Config)(?=\s*[,}\n])/g, replacement: '$1Blok.Paragraph' },
+  { pattern: /(\blist\s*:\s*)List(?!Config|Item)(?=\s*[,}\n])/g, replacement: '$1Blok.List' },
 ];
 
 // Text transformations for "EditorJS" string references
@@ -431,7 +796,7 @@ function ensureBlokImport(content) {
   return { result, changed: true };
 }
 
-function transformFile(filePath, dryRun = false) {
+function transformFile(filePath, dryRun = false, useLibraryI18n = false) {
   const content = fs.readFileSync(filePath, 'utf8');
   let transformed = content;
   const allChanges = [];
@@ -513,6 +878,25 @@ function transformFile(filePath, dryRun = false) {
     allChanges.push(...changes.map((c) => ({ ...c, category: 'text' })));
   }
 
+  // Apply i18n transforms (JS/TS only)
+  if (isJsFile) {
+    if (useLibraryI18n) {
+      // Remove custom messages to use Blok's built-in translations
+      const { result, changed } = removeI18nMessages(transformed);
+      if (changed) {
+        transformed = result;
+        allChanges.push({ category: 'i18n', pattern: 'removeI18nMessages', count: 1, note: 'Removed custom i18n messages to use library translations' });
+      }
+    } else {
+      // Flatten nested messages to dot-notation
+      const { result, changed } = transformI18nConfig(transformed);
+      if (changed) {
+        transformed = result;
+        allChanges.push({ category: 'i18n', pattern: 'flattenI18nMessages', count: 1, note: 'Flattened nested i18n messages to dot-notation' });
+      }
+    }
+  }
+
   const hasChanges = transformed !== content;
 
   if (hasChanges && !dryRun) {
@@ -536,7 +920,7 @@ function updatePackageJson(packageJsonPath, dryRun = false) {
   const changes = [];
 
   // Track dependencies to remove
-  const depsToRemove = ['@editorjs/editorjs', '@editorjs/header', '@editorjs/paragraph'];
+  const depsToRemove = ['@editorjs/editorjs', '@editorjs/header', '@editorjs/paragraph', '@editorjs/list'];
   const devDepsToRemove = [...depsToRemove];
 
   // Check and update dependencies
@@ -589,9 +973,10 @@ Arguments:
   path          Directory or file to transform (default: current directory)
 
 Options:
-  --dry-run     Show changes without modifying files
-  --verbose     Show detailed output for each file
-  --help        Show this help message
+  --dry-run           Show changes without modifying files
+  --verbose           Show detailed output for each file
+  --use-library-i18n  Remove custom i18n messages and use Blok's built-in translations
+  --help              Show this help message
 
 Examples:
   npx -p @jackuait/blok migrate-from-editorjs ./src
@@ -606,10 +991,10 @@ What this codemod does:
     - .codex-editor* → [data-blok-editor], [data-blok-redactor], etc.
     - .ce-block* → [data-blok-element], [data-blok-selected], etc.
     - .ce-toolbar* → [data-blok-toolbar], [data-blok-settings-toggler], etc.
-    - .ce-toolbox* → [data-blok-toolbox], etc.
+    - .ce-toolbox* → [data-blok-toolbox], [data-blok-toolbox-opened], etc.
     - .ce-inline-toolbar, .ce-inline-tool* → [data-blok-testid="inline-*"]
-    - .ce-popover* → [data-blok-popover], [data-blok-popover-container], etc.
-    - .ce-popover-item* → [data-blok-testid="popover-item*"], [data-blok-confirmation], etc.
+    - .ce-popover* → [data-blok-popover], [data-blok-popover-opened], [data-blok-popover-container], etc.
+    - .ce-popover-item* → [data-blok-testid="popover-item*"], [data-blok-popover-item-confirmation], etc.
     - .ce-paragraph, .ce-header → [data-blok-tool="paragraph|header"]
     - .cdx-list* → [data-blok-list], [data-blok-list-item], etc.
     - .cdx-button, .cdx-input, .cdx-loader → [data-blok-button], etc.
@@ -617,8 +1002,19 @@ What this codemod does:
   • Updates data attributes (data-id → data-blok-id)
   • Changes default holder from 'editorjs' to 'blok'
   • Updates package.json dependencies
-  • Converts bundled tool imports (Header, Paragraph)
+  • Converts bundled tool imports (Header, Paragraph, List)
   • Ensures Blok is imported when using bundled tools (Blok.Header, etc.)
+  • Transforms nested i18n messages to flat dot-notation format with camelCase keys:
+    - { ui: { toolbar: { Add: "..." } } } → { "ui.toolbar.add": "..." }
+    - { toolNames: { "Nothing found": "..." } } → { "toolNames.nothingFound": "..." }
+  • Maps changed i18n keys to their Blok equivalents (camelCase):
+    - "Click to tune" → "clickToOpenMenu"
+    - "or drag to move" → "dragToMove"
+    - "Add" (toolbar) → "clickToAddBelow"
+    - "Filter" (popover) → "search"
+    - "Ordered List" → "numberedList"
+    - "Unordered List" → "bulletedList"
+  • Removes obsolete keys (moveUp/moveDown replaced with drag)
 
 Note: After running, you may need to manually:
   • Update any custom tool implementations
@@ -633,6 +1029,7 @@ function main() {
   // Parse arguments
   const dryRun = args.includes('--dry-run');
   const verbose = args.includes('--verbose');
+  const useLibraryI18n = args.includes('--use-library-i18n');
   const help = args.includes('--help') || args.includes('-h');
 
   global.isVerbose = verbose;
@@ -675,7 +1072,7 @@ function main() {
 
   // Process each file
   files.forEach((filePath) => {
-    const result = transformFile(filePath, dryRun);
+    const result = transformFile(filePath, dryRun, useLibraryI18n);
 
     if (result.hasChanges) {
       stats.filesModified++;
@@ -741,6 +1138,14 @@ module.exports = {
   updatePackageJson,
   applyTransforms,
   ensureBlokImport,
+  normalizeKey,
+  flattenI18nDictionary,
+  transformI18nConfig,
+  removeI18nMessages,
+  parseObjectLiteral,
+  findMatchingBrace,
+  objectToString,
+  I18N_KEY_MAPPINGS,
   BUNDLED_TOOLS,
   IMPORT_TRANSFORMS,
   TYPE_TRANSFORMS,

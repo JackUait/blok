@@ -21,7 +21,7 @@ export default class BlocksAPI extends Module {
       clear: (): Promise<void> => this.clear(),
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),
-      delete: (index?: number): void => this.delete(index),
+      delete: (index?: number): Promise<void> => this.delete(index),
       move: (toIndex: number, fromIndex?: number): void => this.move(toIndex, fromIndex),
       getBlockByIndex: (index: number): BlockAPIInterface | undefined => this.getBlockByIndex(index),
       getById: (id: string): BlockAPIInterface | null => this.getById(id),
@@ -34,9 +34,6 @@ export default class BlocksAPI extends Module {
       update: this.update,
       composeBlockData: this.composeBlockData,
       convert: this.convert,
-      // @ts-expect-error stretchBlock is deprecated
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      stretchBlock: (index: number, status = true): void => this.stretchBlock(index, status),
     };
   }
 
@@ -133,7 +130,7 @@ export default class BlocksAPI extends Module {
    * Deletes Block
    * @param {number} blockIndex - index of Block to delete
    */
-  public delete(blockIndex: number = this.Blok.BlockManager.currentBlockIndex): void {
+  public async delete(blockIndex: number = this.Blok.BlockManager.currentBlockIndex): Promise<void> {
     const block = this.Blok.BlockManager.getBlockByIndex(blockIndex);
 
     if (block === undefined) {
@@ -143,7 +140,7 @@ export default class BlocksAPI extends Module {
     }
 
     try {
-      void this.Blok.BlockManager.removeBlock(block);
+      await this.Blok.BlockManager.removeBlock(block);
     } catch (error: unknown) {
       _.logLabeled(error as unknown as string, 'warn');
 
@@ -281,22 +278,6 @@ export default class BlocksAPI extends Module {
 
     return new BlockAPI(updatedBlock);
   };
-
-  /**
-   * Stretch Block by index
-   * @param index - index of Block to stretch
-   * @param status - true to stretch, false to unstretch
-   * @deprecated
-   */
-  public stretchBlock(index: number, status = true): void {
-    const block = this.Blok.BlockManager.getBlockByIndex(index);
-
-    if (!block) {
-      return;
-    }
-
-    block.setStretchState(status);
-  }
 
   /**
    * Converts block to another type. Both blocks should provide the conversionConfig.

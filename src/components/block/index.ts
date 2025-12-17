@@ -29,13 +29,7 @@ import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged }
 import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
-import {
-  BLOK_ELEMENT_ATTR,
-  BLOK_ELEMENT_CONTENT_ATTR,
-  BLOK_ELEMENT_CONTENT_SELECTOR,
-  BLOK_SELECTED_ATTR,
-  BLOK_STRETCHED_ATTR,
-} from '../constants';
+import { DATA_ATTR, createSelector } from '../constants';
 import type DragManager from '../modules/dragManager';
 
 /**
@@ -954,9 +948,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   public set selected(state: boolean) {
     if (state) {
-      this.holder.setAttribute(BLOK_SELECTED_ATTR, 'true');
+      this.holder.setAttribute(DATA_ATTR.selected, 'true');
     } else {
-      this.holder.removeAttribute(BLOK_SELECTED_ATTR);
+      this.holder.removeAttribute(DATA_ATTR.selected);
     }
 
     if (this.contentElement) {
@@ -992,7 +986,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get selected(): boolean {
-    return this.holder.getAttribute(BLOK_SELECTED_ATTR) === 'true';
+    return this.holder.getAttribute(DATA_ATTR.selected) === 'true';
   }
 
   /**
@@ -1001,9 +995,9 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   public setStretchState(state: boolean): void {
     if (state) {
-      this.holder.setAttribute(BLOK_STRETCHED_ATTR, 'true');
+      this.holder.setAttribute(DATA_ATTR.stretched, 'true');
     } else {
-      this.holder.removeAttribute(BLOK_STRETCHED_ATTR);
+      this.holder.removeAttribute(DATA_ATTR.stretched);
     }
 
     if (this.contentElement && !this.selected) {
@@ -1026,7 +1020,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get stretched(): boolean {
-    return this.holder.getAttribute(BLOK_STRETCHED_ATTR) === 'true';
+    return this.holder.getAttribute(DATA_ATTR.stretched) === 'true';
   }
 
 
@@ -1053,8 +1047,8 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     this.contentElement = contentNode;
 
     // Set data attributes for block element and content
-    wrapper.setAttribute(BLOK_ELEMENT_ATTR, '');
-    contentNode.setAttribute(BLOK_ELEMENT_CONTENT_ATTR, '');
+    wrapper.setAttribute(DATA_ATTR.element, '');
+    contentNode.setAttribute(DATA_ATTR.elementContent, '');
     contentNode.setAttribute('data-blok-testid', 'block-content');
     const pluginsContent = this.toolInstance.render();
 
@@ -1380,7 +1374,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * especially when mutation observers haven't been set up yet.
    */
   public refreshToolRootElement(): void {
-    const contentNode = this.holder.querySelector(BLOK_ELEMENT_CONTENT_SELECTOR);
+    const contentNode = this.holder.querySelector(createSelector(DATA_ATTR.elementContent));
 
     if (!contentNode) {
       return;

@@ -32,7 +32,7 @@ export interface Blocks {
    * Removes current Block
    * @param {number} index - index of a block to delete
    */
-  delete(index?: number): void;
+  delete(index?: number): Promise<void>;
 
   /**
    * Moves a block to a new index

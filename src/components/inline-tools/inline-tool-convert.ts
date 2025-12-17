@@ -4,8 +4,7 @@ import * as _ from '../utils';
 import type { Blocks, Selection, Tools, Caret, I18n } from '../../../types/api';
 import SelectionUtils from '../selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
-import I18nInternal from '../i18n';
-import { I18nInternalNS } from '../i18n/namespace-internal';
+import { translateToolTitle, translateToolName, type I18nInstance } from '../utils/tools';
 import type BlockToolAdapter from '../tools/block';
 
 /**
@@ -38,6 +37,11 @@ export default class ConvertInlineTool implements InlineTool {
   private readonly i18nAPI: I18n;
 
   /**
+   * I18n instance wrapper for tool utilities
+   */
+  private readonly i18nInstance: I18nInstance;
+
+  /**
    * API for working with Caret
    */
   private readonly caretAPI: Caret;
@@ -51,6 +55,13 @@ export default class ConvertInlineTool implements InlineTool {
     this.selectionAPI = api.selection;
     this.toolsAPI = api.tools;
     this.caretAPI = api.caret;
+
+    // Create wrapper that provides has() method for tool utilities
+    // Public API's t() returns the key itself when translation doesn't exist
+    this.i18nInstance = {
+      t: (key, _vars) => this.i18nAPI.t(key),
+      has: (key) => this.i18nAPI.t(key) !== key,
+    };
   }
 
   /**
@@ -84,7 +95,7 @@ export default class ConvertInlineTool implements InlineTool {
 
         result.push({
           icon: toolboxItem.icon,
-          title: I18nInternal.t(I18nInternalNS.toolNames, toolboxItem.title),
+          title: translateToolTitle(this.i18nInstance, toolboxItem, tool.name),
           name: tool.name,
           closeOnActivate: true,
           onActivate: async () => {
@@ -99,14 +110,16 @@ export default class ConvertInlineTool implements InlineTool {
     }, []);
 
     const currentBlockToolboxItem = await currentBlock.getActiveToolboxEntry();
-    const currentBlockTitle = currentBlockToolboxItem?.title ?? currentBlock.name;
+    const currentBlockTitle = currentBlockToolboxItem
+      ? translateToolTitle(this.i18nInstance, currentBlockToolboxItem, currentBlock.name)
+      : translateToolName(this.i18nInstance, currentBlock.name, _.capitalize(currentBlock.name));
     const isDesktop =  !_.isMobileScreen();
 
     return {
       name: 'convert-to',
-      title: I18nInternal.t(I18nInternalNS.toolNames, currentBlockTitle),
+      title: currentBlockTitle,
        hint: {
-        title: I18nInternal.ui(I18nInternalNS.ui.inlineToolbar.converter, 'Convert to'),
+        title: this.i18nAPI.t('popover.convertTo'),
       },
       children: {
         items: convertToItems,

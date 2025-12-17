@@ -2,7 +2,6 @@ import $ from './dom';
 import * as _ from './utils';
 import type { BlokConfig, SanitizerConfig } from '../../types';
 import type { BlokModules } from '../types-internal/blok-modules';
-import I18n from './i18n';
 import { CriticalError } from './errors/critical';
 import EventsDispatcher from './utils/events';
 import Modules from './modules';
@@ -190,18 +189,6 @@ export default class Core {
     }
 
     this.config.readOnly = this.config.readOnly as boolean || false;
-
-    /**
-     * Adjust i18n
-     */
-    if (this.config.i18n?.messages) {
-      I18n.setDictionary(this.config.i18n.messages);
-    }
-
-    /**
-     * Text direction. If not set, uses ltr
-     */
-    this.config.i18n.direction = this.config.i18n?.direction || 'ltr';
   }
 
   /**
@@ -255,6 +242,7 @@ export default class Core {
    */
   public async start(): Promise<void> {
     const modulesToPrepare = [
+      'I18n',
       'Tools',
       'UI',
       'BlockManager',

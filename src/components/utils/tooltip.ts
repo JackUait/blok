@@ -1,4 +1,4 @@
-import { DATA_INTERFACE_ATTRIBUTE, TOOLTIP_INTERFACE_VALUE } from '../constants';
+import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../constants';
 import { twJoin } from './tw';
 
 /**
@@ -376,7 +376,7 @@ class Tooltip {
    */
   private prepare(): void {
     this.nodes.wrapper = this.make('div', this.CSS.tooltip);
-    this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, TOOLTIP_INTERFACE_VALUE);
+    this.nodes.wrapper.setAttribute(DATA_ATTR.interface, TOOLTIP_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'tooltip');
     this.nodes.content = this.make('div', this.CSS.tooltipContent);
     this.nodes.content.setAttribute('data-blok-testid', 'tooltip-content');
@@ -434,8 +434,8 @@ class Tooltip {
       return;
     }
 
-    if (!this.nodes.wrapper.hasAttribute(DATA_INTERFACE_ATTRIBUTE) || this.nodes.wrapper.getAttribute(DATA_INTERFACE_ATTRIBUTE) !== TOOLTIP_INTERFACE_VALUE) {
-      this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, TOOLTIP_INTERFACE_VALUE);
+    if (!this.nodes.wrapper.hasAttribute(DATA_ATTR.interface) || this.nodes.wrapper.getAttribute(DATA_ATTR.interface) !== TOOLTIP_INTERFACE_VALUE) {
+      this.nodes.wrapper.setAttribute(DATA_ATTR.interface, TOOLTIP_INTERFACE_VALUE);
     }
 
     this.nodes.wrapper.setAttribute('role', TOOLTIP_ROLE);

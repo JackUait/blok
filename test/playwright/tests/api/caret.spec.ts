@@ -607,7 +607,7 @@ test.describe('caret API', () => {
           throw new Error('Block not found');
         }
 
-        window.blokInstance.blocks.delete(0);
+        void window.blokInstance.blocks.delete(0);
         window.getSelection()?.removeAllRanges();
 
         const returnedValue = window.blokInstance.caret.setToBlock(block);

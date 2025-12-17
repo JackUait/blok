@@ -152,8 +152,8 @@ import { PopoverDesktop } from '../../../src/components/utils/popover/popover-de
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { CSSVariables, DATA_ATTRIBUTE_NESTED, DATA_ATTRIBUTE_OPEN_TOP, DATA_ATTRIBUTE_OPEN_LEFT, DATA_ATTRIBUTE_NOTHING_FOUND_DISPLAYED } from '../../../src/components/utils/popover/popover.const';
-import { DATA_ATTRIBUTE_HIDDEN } from '../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
+import { CSSVariables } from '../../../src/components/utils/popover/popover.const';
+import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import { PopoverItemDefault, PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item';
 import Flipper from '../../../src/components/flipper';
 import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
@@ -251,7 +251,7 @@ describe('PopoverDesktop', () => {
       const popover = createPopover({ nestingLevel: 1 });
 
       expect(popover.nestingLevel).toBe(1);
-      expect(popover.getElement().hasAttribute(DATA_ATTRIBUTE_NESTED)).toBe(true);
+      expect(popover.getElement().hasAttribute(DATA_ATTR.nested)).toBe(true);
     });
 
     it('reuses provided flipper instance and attaches flip handler', () => {
@@ -535,8 +535,8 @@ describe('PopoverDesktop', () => {
       expect(openBottomSpy).toHaveBeenCalled();
       expect(openRightSpy).toHaveBeenCalled();
       expect(popoverElement.hasAttribute('data-blok-popover-opened')).toBe(true);
-      expect(popoverElement.hasAttribute(DATA_ATTRIBUTE_OPEN_TOP)).toBe(true);
-      expect(popoverElement.hasAttribute(DATA_ATTRIBUTE_OPEN_LEFT)).toBe(true);
+      expect(popoverElement.hasAttribute(DATA_ATTR.popoverOpenTop)).toBe(true);
+      expect(popoverElement.hasAttribute(DATA_ATTR.popoverOpenLeft)).toBe(true);
       expect(popoverElement.style.getPropertyValue(CSSVariables.PopoverHeight)).toBe('120px');
       expect(flipper.activate).toHaveBeenCalledWith(instance.flippableElements);
     });
@@ -571,7 +571,7 @@ describe('PopoverDesktop', () => {
       instance.showNestedPopoverForItem(parentItem!);
 
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
-      expect(instance.nestedPopover?.getElement().hasAttribute(DATA_ATTRIBUTE_NESTED)).toBe(true);
+      expect(instance.nestedPopover?.getElement().hasAttribute(DATA_ATTR.nested)).toBe(true);
 
       popover.hide();
 
@@ -681,21 +681,21 @@ describe('PopoverDesktop', () => {
       expect(flipper.activate).toHaveBeenCalledTimes(2);
       expect(flipper.activate).toHaveBeenNthCalledWith(2, [ defaultItems[1].getElement() ]);
 
-      expect(defaultItems[0].getElement()?.hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(true);
-      expect(defaultItems[1].getElement()?.hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(false);
-      expect(separator?.getElement().hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(true);
-      expect(instance.nodes.nothingFoundMessage.hasAttribute(DATA_ATTRIBUTE_NOTHING_FOUND_DISPLAYED)).toBe(false);
+      expect(defaultItems[0].getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
+      expect(defaultItems[1].getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(false);
+      expect(separator?.getElement().hasAttribute(DATA_ATTR.hidden)).toBe(true);
+      expect(instance.nodes.nothingFoundMessage.hasAttribute(DATA_ATTR.nothingFoundDisplayed)).toBe(false);
 
       searchInput.emitSearch({
         query: 'Zeta',
         items: [],
       });
 
-      expect(instance.nodes.nothingFoundMessage.hasAttribute(DATA_ATTRIBUTE_NOTHING_FOUND_DISPLAYED)).toBe(true);
+      expect(instance.nodes.nothingFoundMessage.hasAttribute(DATA_ATTR.nothingFoundDisplayed)).toBe(true);
       defaultItems.forEach((item: PopoverItemDefault) => {
-        expect(item.getElement()?.hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(true);
+        expect(item.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
       });
-      expect(separator?.getElement().hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(true);
+      expect(separator?.getElement().hasAttribute(DATA_ATTR.hidden)).toBe(true);
     });
   });
 

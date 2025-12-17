@@ -60,7 +60,7 @@ const createBlokWithI18n = async (
       const resolveFromWindow = (value: unknown): unknown => {
         if (typeof value === 'string') {
           return value.split('.').reduce<unknown>((acc, key) => {
-            if (acc && typeof acc === 'object') {
+            if (acc && (typeof acc === 'object' || typeof acc === 'function')) {
               return (acc as Record<string, unknown>)[key];
             }
 
@@ -271,9 +271,7 @@ test.describe('blok i18n', () => {
 
   test.describe('toolbox', () => {
     test('should translate tool title in a toolbox', async ({ page }) => {
-      const toolNamesDictionary = {
-        Heading: 'Заголовок',
-      };
+      const translatedHeading = 'Заголовок';
 
       // Create a simple header tool in the browser context
       await page.evaluate(() => {
@@ -330,7 +328,7 @@ test.describe('blok i18n', () => {
         },
         i18n: {
           messages: {
-            toolNames: toolNamesDictionary,
+            'toolNames.Heading': translatedHeading,
           },
         },
       });
@@ -344,14 +342,12 @@ test.describe('blok i18n', () => {
       const headerItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="header"]`);
 
       await expect(headerItem).toBeVisible();
-      await expect(headerItem).toContainText(toolNamesDictionary.Heading);
+      await expect(headerItem).toContainText(translatedHeading);
     });
 
     test('should translate titles of toolbox entries', async ({ page }) => {
-      const toolNamesDictionary = {
-        Title1: 'Название 1',
-        Title2: 'Название 2',
-      };
+      const translatedTitle1 = 'Название 1';
+      const translatedTitle2 = 'Название 2';
 
       // Create a test tool with multiple toolbox entries
       await page.evaluate(() => {
@@ -400,7 +396,8 @@ test.describe('blok i18n', () => {
         },
         i18n: {
           messages: {
-            toolNames: toolNamesDictionary,
+            'toolNames.Title1': translatedTitle1,
+            'toolNames.Title2': translatedTitle2,
           },
         },
       });
@@ -415,15 +412,13 @@ test.describe('blok i18n', () => {
 
       await expect(testToolItems).toHaveCount(2);
       await expect(testToolItems).toContainText([
-        toolNamesDictionary.Title1,
-        toolNamesDictionary.Title2,
+        translatedTitle1,
+        translatedTitle2,
       ]);
     });
 
     test('should use capitalized tool name as translation key if toolbox title is missing', async ({ page }) => {
-      const toolNamesDictionary = {
-        TestTool: 'ТестТул',
-      };
+      const translatedTestTool = 'ТестТул';
 
       // Create a test tool without title
       await page.evaluate(() => {
@@ -466,7 +461,7 @@ test.describe('blok i18n', () => {
         },
         i18n: {
           messages: {
-            toolNames: toolNamesDictionary,
+            'toolNames.TestTool': translatedTestTool,
           },
         },
       });
@@ -480,22 +475,18 @@ test.describe('blok i18n', () => {
       const testToolItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="testTool"]`);
 
       await expect(testToolItem).toBeVisible();
-      await expect(testToolItem).toContainText(toolNamesDictionary.TestTool);
+      await expect(testToolItem).toContainText(translatedTestTool);
     });
   });
 
   test.describe('block tunes', () => {
     test('should translate Delete button title', async ({ page }) => {
-      const blockTunesDictionary = {
-        delete: {
-          Delete: 'Удалить',
-        },
-      };
+      const translatedDelete = 'Удалить';
 
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            blockTunes: blockTunesDictionary,
+            'blockSettings.delete': translatedDelete,
           },
         },
         data: {
@@ -519,13 +510,11 @@ test.describe('blok i18n', () => {
       const deleteButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="delete"]`);
 
       await expect(deleteButton).toBeVisible();
-      await expect(deleteButton).toContainText(blockTunesDictionary.delete.Delete);
+      await expect(deleteButton).toContainText(translatedDelete);
     });
 
     test('should translate tool name in Convert To', async ({ page }) => {
-      const toolNamesDictionary = {
-        Heading: 'Заголовок',
-      };
+      const translatedHeading = 'Заголовок';
 
       // Create a simple header tool in the browser context
       await page.evaluate(() => {
@@ -592,7 +581,7 @@ test.describe('blok i18n', () => {
         },
         i18n: {
           messages: {
-            toolNames: toolNamesDictionary,
+            'toolNames.Heading': translatedHeading,
           },
         },
         data: {
@@ -623,19 +612,14 @@ test.describe('blok i18n', () => {
       const headerItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-nested="true"] [data-blok-item-name="header"]`);
 
       await expect(headerItem).toBeVisible();
-      await expect(headerItem).toContainText(toolNamesDictionary.Heading);
+      await expect(headerItem).toContainText(translatedHeading);
     });
   });
 
   test.describe('ui popover', () => {
-    test('should translate "Filter" and "Nothing found" in block settings popover', async ({ page }) => {
-      const uiDictionary = {
-        popover: {
-          Filter: 'Поиск',
-
-          'Nothing found': 'Ничего не найдено',
-        },
-      };
+    test('should translate "Search" and "Nothing found" in block settings popover', async ({ page }) => {
+      const translatedSearch = 'Поиск';
+      const translatedNothingFound = 'Ничего не найдено';
 
       await page.evaluate(() => {
         // @ts-expect-error - Define SimpleHeader in window for blok creation
@@ -698,7 +682,8 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            ui: uiDictionary,
+            'popover.search': translatedSearch,
+            'popover.nothingFound': translatedNothingFound,
           },
         },
         tools: {
@@ -724,25 +709,25 @@ test.describe('blok i18n', () => {
 
       const popoverContainer = page
         .locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-testid="popover-container"]`)
-        .filter({ has: page.getByRole('searchbox', { name: uiDictionary.popover.Filter }) });
+        .filter({ has: page.getByRole('searchbox', { name: translatedSearch }) });
 
       await expect(popoverContainer).toHaveCount(1);
       await expect(popoverContainer).toBeVisible();
 
-      const searchInput = popoverContainer.getByRole('searchbox', { name: uiDictionary.popover.Filter });
+      const searchInput = popoverContainer.getByRole('searchbox', { name: translatedSearch });
 
       await expect(searchInput).toHaveCount(1);
       await expect(searchInput).toBeVisible();
 
       const placeholder = await searchInput.getAttribute('placeholder');
 
-      expect(placeholder).toContain(uiDictionary.popover.Filter);
+      expect(placeholder).toContain(translatedSearch);
 
       await searchInput.fill('nonexistent12345');
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Waiting for search results
       await page.waitForTimeout(300);
 
-      const nothingFoundMessage = popoverContainer.getByText(uiDictionary.popover['Nothing found']);
+      const nothingFoundMessage = popoverContainer.getByText(translatedNothingFound);
 
       await expect(nothingFoundMessage).toBeVisible();
     });
@@ -750,19 +735,14 @@ test.describe('blok i18n', () => {
 
   test.describe('ui toolbar toolbox', () => {
     test('should translate plus button tooltip', async ({ page }) => {
-      const uiDictionary = {
-        toolbar: {
-          toolbox: {
-            'Click to add below': 'Нажмите, чтобы добавить блок снизу',
-            'Option-click to add above': 'Option + клик чтобы добавить блок сверху',
-          },
-        },
-      };
+      const translatedClickToAddBelow = 'Нажмите, чтобы добавить блок снизу';
+      const translatedOptionClickToAddAbove = 'Option + клик чтобы добавить блок сверху';
 
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            ui: uiDictionary,
+            'toolbox.addBelow': translatedClickToAddBelow,
+            'toolbox.optionAddAbove': translatedOptionClickToAddAbove,
           },
         },
       });
@@ -778,26 +758,21 @@ test.describe('blok i18n', () => {
 
       const tooltipText = await getTooltipText(page, plusButton);
 
-      expect(tooltipText).toContain(uiDictionary.toolbar.toolbox['Click to add below']);
-      expect(tooltipText).toContain(uiDictionary.toolbar.toolbox['Option-click to add above']);
+      expect(tooltipText).toContain(translatedClickToAddBelow);
+      expect(tooltipText).toContain(translatedOptionClickToAddAbove);
     });
   });
 
   test.describe('ui block tunes toggler', () => {
     test('should translate "Drag to move" tooltip', async ({ page }) => {
-      const uiDictionary = {
-        blockTunes: {
-          toggler: {
-            'Drag to move': 'Перетащите для перемещения',
-            'Click to open the menu': 'Нажмите, чтобы открыть меню',
-          },
-        },
-      };
+      const translatedDragToMove = 'Перетащите для перемещения';
+      const translatedClickToOpenMenu = 'Нажмите, чтобы открыть меню';
 
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            ui: uiDictionary,
+            'blockSettings.dragToMove': translatedDragToMove,
+            'blockSettings.clickToOpenMenu': translatedClickToOpenMenu,
           },
         },
         data: {
@@ -829,14 +804,7 @@ test.describe('blok i18n', () => {
 
   test.describe('ui inline toolbar converter', () => {
     test('should translate "Convert to" label in inline toolbar', async ({ page }) => {
-      const uiDictionary = {
-        inlineToolbar: {
-          converter: {
-
-            'Convert to': 'Конвертировать в',
-          },
-        },
-      };
+      const translatedConvertTo = 'Конвертировать в';
 
       // Create a simple header tool in the browser context
       await page.evaluate(() => {
@@ -900,7 +868,7 @@ test.describe('blok i18n', () => {
       // Create blok with header tool
       await resetBlok(page);
       await page.evaluate(
-        async ({ holder, uiDict }) => {
+        async ({ holder, convertTo }) => {
           // @ts-expect-error - Get SimpleHeader from window
           const SimpleHeader = window.SimpleHeader;
 
@@ -911,7 +879,7 @@ test.describe('blok i18n', () => {
             },
             i18n: {
               messages: {
-                ui: uiDict,
+                'popover.convertTo': convertTo,
               },
             },
             data: {
@@ -930,7 +898,7 @@ test.describe('blok i18n', () => {
           await blok.isReady;
         },
         { holder: HOLDER_ID,
-          uiDict: uiDictionary }
+          convertTo: translatedConvertTo }
       );
 
       const paragraph = await getParagraphLocatorByBlockIndex(page);
@@ -970,17 +938,12 @@ test.describe('blok i18n', () => {
 
   test.describe('tools translations', () => {
     test('should translate "Add a link" placeholder for link tool', async ({ page }) => {
-      const toolsDictionary = {
-        link: {
-
-          'Add a link': 'Вставьте ссылку',
-        },
-      };
+      const translatedAddALink = 'Вставьте ссылку';
 
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            tools: toolsDictionary,
+            'tools.link.addLink': translatedAddALink,
           },
         },
         data: {
@@ -1015,21 +978,16 @@ test.describe('blok i18n', () => {
 
       const placeholder = await linkInput.getAttribute('placeholder');
 
-      expect(placeholder).toContain(toolsDictionary.link['Add a link']);
+      expect(placeholder).toContain(translatedAddALink);
     });
 
     test('should translate stub tool message', async ({ page }) => {
-      const toolsDictionary = {
-        stub: {
-
-          'The block can not be displayed correctly.': 'Блок не может быть отображен корректно.',
-        },
-      };
+      const translatedStubMessage = 'Блок не может быть отображен корректно.';
 
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            tools: toolsDictionary,
+            'tools.stub.blockCannotBeDisplayed': translatedStubMessage,
           },
         },
         data: {
@@ -1043,7 +1001,7 @@ test.describe('blok i18n', () => {
       });
 
       // Stub block should be rendered with translated message
-      const stubMessage = page.locator(`text=${toolsDictionary.stub['The block can not be displayed correctly.']}`);
+      const stubMessage = page.locator(`text=${translatedStubMessage}`);
 
       await expect(stubMessage).toBeVisible();
     });
@@ -1051,9 +1009,7 @@ test.describe('blok i18n', () => {
 
   test.describe('inline toolbar', () => {
     test('should translate tool name in Convert To', async ({ page }) => {
-      const toolNamesDictionary = {
-        Heading: 'Заголовок',
-      };
+      const translatedHeading = 'Заголовок';
 
       // Create a simple header tool in the browser context
       await page.evaluate(() => {
@@ -1120,7 +1076,7 @@ test.describe('blok i18n', () => {
         },
         i18n: {
           messages: {
-            toolNames: toolNamesDictionary,
+            'toolNames.Heading': translatedHeading,
           },
         },
         data: {
@@ -1163,7 +1119,343 @@ test.describe('blok i18n', () => {
 
       await expect(headerItem).toHaveCount(1);
       await expect(headerItem).toBeVisible();
-      await expect(headerItem).toContainText(toolNamesDictionary.Heading);
+      await expect(headerItem).toContainText(translatedHeading);
+    });
+  });
+
+  test.describe('translation key consistency', () => {
+    test('should use lowercase translation key for delete button', async ({ page }) => {
+      // This test verifies that the translation key 'blockSettings.delete' (lowercase)
+      // is correctly used by the code after fixing the key mismatch bug.
+      const translatedDelete = 'Удалить';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          // Using lowercase 'delete' key to match the fixed code
+          messages: {
+            'blockSettings.delete': translatedDelete,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Test' },
+            },
+          ],
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+
+      // Open the settings menu
+      await page.locator(SETTINGS_BUTTON_SELECTOR).click();
+
+      // Check for Russian text - should use the lowercase key now
+      const deleteItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="delete"]`);
+
+      await expect(deleteItem).toBeVisible();
+      await expect(deleteItem).toContainText(translatedDelete);
+    });
+  });
+
+  test.describe('inline tools translations', () => {
+    test('should translate bold tool hint in inline toolbar', async ({ page }) => {
+      const translatedBold = 'Жирный';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.bold': translatedBold,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Some text to select' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
+
+      await expect(paragraph).toHaveCount(1);
+      await selectText(paragraph, 'Some text');
+
+      const inlinePopover = await openInlineToolbarPopover(page);
+      const boldButton = inlinePopover.locator('[data-blok-item-name="bold"]');
+
+      await expect(boldButton).toBeVisible();
+
+      // Inline tools show title in hint tooltip, not as text content
+      const tooltipText = await getTooltipText(page, boldButton);
+
+      expect(tooltipText).toContain(translatedBold);
+    });
+
+    test('should translate italic tool hint in inline toolbar', async ({ page }) => {
+      const translatedItalic = 'Курсив';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.italic': translatedItalic,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Some text to select' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
+
+      await expect(paragraph).toHaveCount(1);
+      await selectText(paragraph, 'Some text');
+
+      const inlinePopover = await openInlineToolbarPopover(page);
+      const italicButton = inlinePopover.locator('[data-blok-item-name="italic"]');
+
+      await expect(italicButton).toBeVisible();
+
+      // Inline tools show title in hint tooltip, not as text content
+      const tooltipText = await getTooltipText(page, italicButton);
+
+      expect(tooltipText).toContain(translatedItalic);
+    });
+
+    test('should translate link tool hint in inline toolbar', async ({ page }) => {
+      const translatedLink = 'Ссылка';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.link': translatedLink,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Some text to select' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
+
+      await expect(paragraph).toHaveCount(1);
+      await selectText(paragraph, 'Some text');
+
+      const inlinePopover = await openInlineToolbarPopover(page);
+      const linkButton = inlinePopover.locator('[data-blok-item-name="link"]');
+
+      await expect(linkButton).toBeVisible();
+
+      // Inline tools show title in hint tooltip, not as text content
+      const tooltipText = await getTooltipText(page, linkButton);
+
+      expect(tooltipText).toContain(translatedLink);
+    });
+  });
+
+  test.describe('toolbox translations', () => {
+    test('should translate Text tool name in toolbox', async ({ page }) => {
+      const translatedText = 'Текст';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.text': translatedText,
+          },
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      const textItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);
+
+      await expect(textItem).toBeVisible();
+      await expect(textItem).toContainText(translatedText);
+    });
+  });
+
+  test.describe('header tool translations', () => {
+    test('should translate heading level names in header settings', async ({ page }) => {
+      const translations = {
+        'tools.header.heading1': 'Заголовок 1',
+        'tools.header.heading2': 'Заголовок 2',
+        'tools.header.heading3': 'Заголовок 3',
+      };
+
+      await createBlokWithI18n(page, {
+        tools: {
+          header: 'Blok.Header',
+        },
+        i18n: {
+          messages: translations,
+        },
+        data: {
+          blocks: [
+            {
+              type: 'header',
+              data: { text: 'Test header', level: 2 },
+            },
+          ],
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+
+      // Open block settings
+      await page.locator(SETTINGS_BUTTON_SELECTOR).click();
+
+      // Check heading level options are translated - use popover-item testid and filter by text
+      const popoverItems = page.getByTestId('popover-item');
+
+      const heading1Option = popoverItems.filter({ hasText: translations['tools.header.heading1'] });
+      const heading2Option = popoverItems.filter({ hasText: translations['tools.header.heading2'] });
+      const heading3Option = popoverItems.filter({ hasText: translations['tools.header.heading3'] });
+
+      await expect(heading1Option).toBeVisible();
+      await expect(heading2Option).toBeVisible();
+      await expect(heading3Option).toBeVisible();
+    });
+  });
+
+  test.describe('link tool translations', () => {
+    test('should translate invalid link message', async ({ page }) => {
+      const translatedInvalidLink = 'Некорректная ссылка';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'tools.link.invalidLink': translatedInvalidLink,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Some text to link' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
+
+      await expect(paragraph).toHaveCount(1);
+      await selectText(paragraph, 'Some text');
+
+      const inlinePopover = await openInlineToolbarPopover(page);
+      const linkButton = inlinePopover.locator('[data-blok-item-name="link"]');
+
+      await expect(linkButton).toBeVisible();
+      await linkButton.click();
+
+      // Type an invalid URL
+      const linkInput = page.locator('[data-blok-link-tool-input-opened="true"]');
+
+      await expect(linkInput).toBeVisible();
+      await linkInput.fill('not a valid url');
+      await linkInput.press('Enter');
+
+      // Check for invalid link message
+      const errorMessage = page.locator(`text=${translatedInvalidLink}`);
+
+      await expect(errorMessage).toBeVisible();
+    });
+  });
+
+  test.describe('list tool translations', () => {
+    test('should translate bulleted list tool name in toolbox', async ({ page }) => {
+      const translatedBulletedList = 'Маркированный список';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.bulletedList': translatedBulletedList,
+          },
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      // Find the bulleted list by translated text
+      const popoverItems = page.getByTestId('popover-item');
+      const bulletedListItem = popoverItems.filter({ hasText: translatedBulletedList });
+
+      await expect(bulletedListItem).toBeVisible();
+    });
+
+    test('should translate numbered list tool name in toolbox', async ({ page }) => {
+      const translatedNumberedList = 'Нумерованный список';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.numberedList': translatedNumberedList,
+          },
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      // Find the numbered list by translated text
+      const popoverItems = page.getByTestId('popover-item');
+      const numberedListItem = popoverItems.filter({ hasText: translatedNumberedList });
+
+      await expect(numberedListItem).toBeVisible();
+    });
+
+    test('should translate todo list tool name in toolbox', async ({ page }) => {
+      const translatedTodoList = 'Список задач';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.todoList': translatedTodoList,
+          },
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      // Find the todo list by translated text
+      const popoverItems = page.getByTestId('popover-item');
+      const todoListItem = popoverItems.filter({ hasText: translatedTodoList });
+
+      await expect(todoListItem).toBeVisible();
     });
   });
 });

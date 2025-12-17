@@ -11,9 +11,8 @@ import type { Popover, PopoverItemParams } from '../../utils/popover';
 import { PopoverItemType } from '../../utils/popover';
 import { PopoverInline } from '../../utils/popover/popover-inline';
 import type InlineToolAdapter from 'src/components/tools/inline';
-import I18n from '../../i18n';
-import { I18nInternalNS } from '../../i18n/namespace-internal';
-import { DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../constants';
+import { translateToolName } from '../../utils/tools';
+import { DATA_ATTR, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../constants';
 import { twMerge } from '../../utils/tw';
 
 /**
@@ -408,7 +407,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       'will-change-[opacity,left,top]',
       '[&_[hidden]]:!hidden'
     ));
-    this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE);
+    this.nodes.wrapper.setAttribute(DATA_ATTR.interface, INLINE_TOOLBAR_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'inline-toolbar');
 
     $.append(this.Blok.UI.nodes.wrapper, this.nodes.wrapper);
@@ -451,8 +450,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       items: popoverItems,
       scopeElement,
       messages: {
-        nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
-        search: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
+        nothingFound: this.Blok.I18n.t('popover.nothingFound'),
+        search: this.Blok.I18n.t('popover.search'),
       },
     });
 
@@ -485,10 +484,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       const shortcut = this.getToolShortcut(tool.name);
       const shortcutBeautified = shortcut !== undefined ? _.beautifyShortcut(shortcut) : undefined;
 
-      const toolTitle = I18n.t(
-        I18nInternalNS.toolNames,
-        tool.title || _.capitalize(tool.name)
-      );
+      const toolTitle = translateToolName(this.Blok.I18n, tool.titleKey, tool.title || _.capitalize(tool.name));
 
       const items = Array.isArray(renderedTool) ? renderedTool : [renderedTool];
       const isFirstItem = index === 0;

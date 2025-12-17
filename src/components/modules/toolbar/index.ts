@@ -1,8 +1,6 @@
 import Module from '../../__module';
 import $ from '../../dom';
 import * as _ from '../../utils';
-import I18n from '../../i18n';
-import { I18nInternalNS } from '../../i18n/namespace-internal';
 import * as tooltip from '../../utils/tooltip';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import Block from '../../block';
@@ -14,12 +12,7 @@ import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
 import type { BlockChangedPayload } from '../../events/BlockChanged';
 import { BlockChanged } from '../../events/BlockChanged';
 import { twJoin } from '../../utils/tw';
-import {
-  BLOK_TOOLBAR_ATTR,
-  BLOK_SETTINGS_TOGGLER_ATTR,
-  BLOK_TOOLBOX_OPENED_ATTR,
-  BLOK_DRAG_HANDLE_ATTR,
-} from '../../constants';
+import { DATA_ATTR } from '../../constants';
 import SelectionUtils from '../../selection';
 
 /**
@@ -615,7 +608,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     ]);
 
     this.nodes.wrapper = wrapper;
-    wrapper.setAttribute(BLOK_TOOLBAR_ATTR, '');
+    wrapper.setAttribute(DATA_ATTR.toolbar, '');
     wrapper.setAttribute('data-blok-testid', 'toolbar');
 
     /**
@@ -723,37 +716,15 @@ export default class Toolbar extends Module<ToolbarNodes> {
     /**
      * Add events to show/hide tooltip for plus button
      */
-    const tooltipContent = $.make('div');
-
-    const createTooltipLine = (text: string): DocumentFragment => {
-      const fragment = document.createDocumentFragment();
-      const spaceIndex = text.indexOf(' ');
-
-      if (spaceIndex > 0) {
-        const firstWord = text.substring(0, spaceIndex);
-        const rest = text.substring(spaceIndex);
-
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        fragment.appendChild($.make('span', this.CSS.plusButtonShortcutKey, {
-          textContent: firstWord,
-        }));
-        fragment.appendChild(document.createTextNode(rest));
-      } else {
-        fragment.appendChild(document.createTextNode(text));
-      }
-
-      return fragment;
-    };
-
-    tooltipContent.appendChild(createTooltipLine(I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Click to add below')));
-    tooltipContent.appendChild($.make('br'));
-
     const userOS = _.getUserOS();
     const modifierClickText = userOS.win
-      ? I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Ctrl-click to add above')
-      : I18n.ui(I18nInternalNS.ui.toolbar.toolbox, 'Option-click to add above');
+      ? this.Blok.I18n.t('toolbox.ctrlAddAbove')
+      : this.Blok.I18n.t('toolbox.optionAddAbove');
 
-    tooltipContent.appendChild(createTooltipLine(modifierClickText));
+    const tooltipContent = this.createTooltipContent([
+      this.Blok.I18n.t('toolbox.addBelow'),
+      modifierClickText,
+    ]);
 
     tooltip.onHover(plusButton, tooltipContent, {
       hidingDelay: 400,
@@ -773,8 +744,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
       innerHTML: IconMenu,
     });
 
-    settingsToggler.setAttribute(BLOK_SETTINGS_TOGGLER_ATTR, '');
-    settingsToggler.setAttribute(BLOK_DRAG_HANDLE_ATTR, '');
+    settingsToggler.setAttribute(DATA_ATTR.settingsToggler, '');
+    settingsToggler.setAttribute(DATA_ATTR.dragHandle, '');
     settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
 
     // Accessibility: make the drag handle accessible to screen readers
@@ -784,35 +755,21 @@ export default class Toolbar extends Module<ToolbarNodes> {
     settingsToggler.setAttribute('tabindex', '-1');
     settingsToggler.setAttribute(
       'aria-label',
-      I18n.ui(I18nInternalNS.accessibility.dragHandle, 'aria-label')
+      this.Blok.I18n.t('a11y.dragHandle')
     );
-    settingsToggler.setAttribute('aria-roledescription', 'drag handle');
+    settingsToggler.setAttribute(
+      'aria-roledescription',
+      this.Blok.I18n.t('a11y.dragHandleRole')
+    );
 
     this.nodes.settingsToggler = settingsToggler;
 
     $.append(actions, settingsToggler);
 
-    const blockTunesTooltip = $.make('div');
-
-    const createStyledLine = (text: string): HTMLElement => {
-      const line = $.make('div');
-      const [firstWord, ...rest] = text.split(' ');
-      const styledWord = $.make('span', null, { textContent: firstWord });
-
-      styledWord.style.color = 'white';
-      line.appendChild(styledWord);
-      if (rest.length > 0) {
-        line.appendChild($.text(' ' + rest.join(' ')));
-      }
-
-      return line;
-    };
-
-    const dragToMoveText = I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Drag to move');
-    const clickToOpenText = I18n.ui(I18nInternalNS.ui.blockTunes.toggler, 'Click to open the menu');
-
-    blockTunesTooltip.appendChild(createStyledLine(dragToMoveText));
-    blockTunesTooltip.appendChild(createStyledLine(clickToOpenText));
+    const blockTunesTooltip = this.createTooltipContent([
+      this.Blok.I18n.t('blockSettings.dragToMove'),
+      this.Blok.I18n.t('blockSettings.clickToOpenMenu'),
+    ]);
 
     tooltip.onHover(settingsToggler, blockTunesTooltip, {
       hidingDelay: 400,
@@ -848,22 +805,23 @@ export default class Toolbar extends Module<ToolbarNodes> {
       api: this.Blok.API.methods,
       tools: this.Blok.Tools.blockTools,
       i18nLabels: {
-        filter: I18n.ui(I18nInternalNS.ui.popover, 'Filter'),
-        nothingFound: I18n.ui(I18nInternalNS.ui.popover, 'Nothing found'),
+        filter: this.Blok.I18n.t('popover.search'),
+        nothingFound: this.Blok.I18n.t('popover.nothingFound'),
       },
+      i18n: this.Blok.I18n,
       triggerElement: this.nodes.plusButton,
     });
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
-      this.Blok.UI.nodes.wrapper.setAttribute(BLOK_TOOLBOX_OPENED_ATTR, 'true');
+      this.Blok.UI.nodes.wrapper.setAttribute(DATA_ATTR.toolboxOpened, 'true');
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
-      this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_TOOLBOX_OPENED_ATTR);
+      this.Blok.UI.nodes.wrapper.removeAttribute(DATA_ATTR.toolboxOpened);
     });
 
     this.toolboxInstance.on(ToolboxEvent.BlockAdded, ({ block }) => {
@@ -1304,6 +1262,40 @@ export default class Toolbar extends Module<ToolbarNodes> {
      * Make Toolbar
      */
     await this.make();
+  }
+
+  /**
+   * Creates a tooltip content element with multiple lines and consistent styling
+   * @param lines - array of text strings, each will be displayed on its own line
+   * @returns the tooltip container element
+   */
+  private createTooltipContent(lines: string[]): HTMLElement {
+    const container = $.make('div');
+
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.gap = '4px';
+
+    lines.forEach((text) => {
+      const line = $.make('div');
+      const spaceIndex = text.indexOf(' ');
+
+      if (spaceIndex > 0) {
+        const firstWord = text.substring(0, spaceIndex);
+        const rest = text.substring(spaceIndex);
+        const styledWord = $.make('span', null, { textContent: firstWord });
+
+        styledWord.style.color = 'white';
+        line.appendChild(styledWord);
+        line.appendChild(document.createTextNode(rest));
+      } else {
+        line.appendChild(document.createTextNode(text));
+      }
+
+      container.appendChild(line);
+    });
+
+    return container;
   }
 
   /**

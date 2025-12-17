@@ -14,14 +14,9 @@ import { mobileScreenBreakpoint } from '../utils';
 import styles from '../../styles/main.css?inline';
 import { BlockHovered } from '../events/BlockHovered';
 import {
-  DATA_INTERFACE_ATTRIBUTE,
+  DATA_ATTR,
   BLOK_INTERFACE_VALUE,
   selectionChangeDebounceTimeout,
-  BLOK_EDITOR_ATTR,
-  BLOK_REDACTOR_ATTR,
-  BLOK_NARROW_ATTR,
-  BLOK_RTL_ATTR,
-  BLOK_EMPTY_ATTR,
 } from '../constants';
 import { BlokMobileLayoutToggled } from '../events';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
@@ -190,7 +185,7 @@ export default class UI extends Module<UINodes> {
   public checkEmptiness(): void {
     const { BlockManager } = this.Blok;
 
-    this.nodes.wrapper.setAttribute(BLOK_EMPTY_ATTR, BlockManager.isBlokEmpty ? 'true' : 'false');
+    this.nodes.wrapper.setAttribute(DATA_ATTR.empty, BlockManager.isBlokEmpty ? 'true' : 'false');
   }
 
   /**
@@ -310,11 +305,11 @@ export default class UI extends Module<UINodes> {
       '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder]:focus]:before:!opacity-0',
       ...(this.isRtl ? [ '[direction:rtl]' ] : []),
     ]);
-    this.nodes.wrapper.setAttribute(DATA_INTERFACE_ATTRIBUTE, BLOK_INTERFACE_VALUE);
-    this.nodes.wrapper.setAttribute(BLOK_EDITOR_ATTR, '');
+    this.nodes.wrapper.setAttribute(DATA_ATTR.interface, BLOK_INTERFACE_VALUE);
+    this.nodes.wrapper.setAttribute(DATA_ATTR.editor, '');
     this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');
     if (this.isRtl) {
-      this.nodes.wrapper.setAttribute(BLOK_RTL_ATTR, 'true');
+      this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');
     }
     this.nodes.redactor = $.make('div', [
       // Narrow mode: add right margin on non-mobile screens
@@ -325,7 +320,7 @@ export default class UI extends Module<UINodes> {
       // Firefox empty contenteditable fix
       '[&_[contenteditable]:empty]:after:content-["\\feff_"]',
     ]);
-    this.nodes.redactor.setAttribute(BLOK_REDACTOR_ATTR, '');
+    this.nodes.redactor.setAttribute(DATA_ATTR.redactor, '');
     this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
 
     /**
@@ -333,7 +328,7 @@ export default class UI extends Module<UINodes> {
      * @todo Forced layout. Get rid of this feature
      */
     if (this.nodes.holder.offsetWidth < this.contentRect.width) {
-      this.nodes.wrapper.setAttribute(BLOK_NARROW_ATTR, 'true');
+      this.nodes.wrapper.setAttribute(DATA_ATTR.narrow, 'true');
     }
 
     /**

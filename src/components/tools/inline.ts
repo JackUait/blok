@@ -59,4 +59,13 @@ export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, 
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- Backward compatibility: title is deprecated but still needs to be supported
     return constructable['title'] || '';
   }
+
+  /**
+   * Returns the translation key for the tool title
+   */
+  public get titleKey(): string | undefined {
+    const constructable = this.constructable as InlineToolConstructable;
+
+    return constructable['titleKey'];
+  }
 }

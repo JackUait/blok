@@ -1,7 +1,8 @@
 import { twMerge } from '../../../../tw';
 import { PopoverItem } from '../popover-item';
 import type { PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
-import { css, cssInline, DATA_ATTR } from './popover-item-separator.const';
+import { css, cssInline } from './popover-item-separator.const';
+import { DATA_ATTR } from '../../../../../constants/data-attributes';
 
 /**
  * Represents popover separator node
@@ -100,13 +101,13 @@ export class PopoverItemSeparator extends PopoverItem {
     const container = document.createElement('div');
 
     container.className = this.getContainerClass(false);
-    container.setAttribute(DATA_ATTR.root, '');
+    container.setAttribute(DATA_ATTR.popoverItemSeparator, '');
     container.setAttribute('data-blok-testid', 'popover-item-separator');
 
     const line = document.createElement('div');
 
     line.className = this.getLineClass();
-    line.setAttribute(DATA_ATTR.line, '');
+    line.setAttribute(DATA_ATTR.popoverItemSeparatorLine, '');
 
     container.appendChild(line);
     this.nodes.line = line;

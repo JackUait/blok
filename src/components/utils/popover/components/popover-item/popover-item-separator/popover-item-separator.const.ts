@@ -18,12 +18,3 @@ export const cssInline = {
   nestedContainer: 'py-1 px-[3px]',
   nestedLine: 'w-full h-px',
 };
-
-/**
- * Data attributes for popover separator
- */
-export const DATA_ATTR = {
-  root: 'data-blok-popover-item-separator',
-  line: 'data-blok-popover-item-separator-line',
-  hidden: 'data-blok-hidden',
-} as const;

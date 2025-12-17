@@ -1,7 +1,7 @@
 import type { InlineTool, SanitizerConfig } from '../../../types';
 import { IconBold } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
-import { BLOK_INTERFACE_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
+import { DATA_ATTR, createSelector } from '../constants';
 
 /**
  * Bold Tool
@@ -23,6 +23,11 @@ export default class BoldInlineTool implements InlineTool {
   public static title = 'Bold';
 
   /**
+   * Translation key for i18n
+   */
+  public static titleKey = 'bold';
+
+  /**
    * Sanitizer Rule
    * Leave <strong> tags
    * @returns {object}
@@ -42,7 +47,7 @@ export default class BoldInlineTool implements InlineTool {
       return;
     }
 
-    const selector = `${BLOK_INTERFACE_SELECTOR} b, ${BLOK_EDITOR_SELECTOR} b`;
+    const selector = `${createSelector(DATA_ATTR.interface)} b, ${createSelector(DATA_ATTR.editor)} b`;
 
     document.querySelectorAll(selector).forEach((boldNode) => {
       BoldInlineTool.ensureStrongElement(boldNode as HTMLElement);
@@ -62,7 +67,7 @@ export default class BoldInlineTool implements InlineTool {
       return;
     }
 
-    const blokRoot = element.closest(`${BLOK_INTERFACE_SELECTOR}, ${BLOK_EDITOR_SELECTOR}`);
+    const blokRoot = element.closest(`${createSelector(DATA_ATTR.interface)}, ${createSelector(DATA_ATTR.editor)}`);
 
     if (!blokRoot) {
       return;
@@ -1037,7 +1042,7 @@ export default class BoldInlineTool implements InlineTool {
 
     const anchor = selection.anchorNode;
     const anchorElement = anchor?.nodeType === Node.ELEMENT_NODE ? anchor as Element : anchor?.parentElement;
-    const blokWrapper = anchorElement?.closest(BLOK_EDITOR_SELECTOR);
+    const blokWrapper = anchorElement?.closest(createSelector(DATA_ATTR.editor));
 
     if (!blokWrapper) {
       return;
@@ -1177,7 +1182,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const root = element?.closest(BLOK_EDITOR_SELECTOR);
+    const root = element?.closest(createSelector(DATA_ATTR.editor));
 
     if (!root) {
       return;
@@ -1259,7 +1264,7 @@ export default class BoldInlineTool implements InlineTool {
   private static synchronizeCollapsedBold(selection: Selection | null): void {
     const node = selection?.anchorNode ?? selection?.focusNode;
     const element = node && node.nodeType === Node.ELEMENT_NODE ? node as Element : node?.parentElement;
-    const root = element?.closest(BLOK_EDITOR_SELECTOR) ?? element?.ownerDocument;
+    const root = element?.closest(createSelector(DATA_ATTR.editor)) ?? element?.ownerDocument;
 
     if (!root) {
       return;
@@ -1684,7 +1689,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const root = element?.closest(BLOK_EDITOR_SELECTOR);
+    const root = element?.closest(createSelector(DATA_ATTR.editor));
 
     if (!root) {
       return;
@@ -2102,7 +2107,7 @@ export default class BoldInlineTool implements InlineTool {
 
     const element = anchor.nodeType === Node.ELEMENT_NODE ? anchor as Element : anchor.parentElement;
 
-    return Boolean(element?.closest(BLOK_EDITOR_SELECTOR));
+    return Boolean(element?.closest(createSelector(DATA_ATTR.editor)));
   }
 
   /**
@@ -2115,11 +2120,11 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     if (target instanceof Element) {
-      return Boolean(target.closest(BLOK_EDITOR_SELECTOR));
+      return Boolean(target.closest(createSelector(DATA_ATTR.editor)));
     }
 
     if (target instanceof Text) {
-      return Boolean(target.parentElement?.closest(BLOK_EDITOR_SELECTOR));
+      return Boolean(target.parentElement?.closest(createSelector(DATA_ATTR.editor)));
     }
 
     if (typeof ShadowRoot !== 'undefined' && target instanceof ShadowRoot) {
@@ -2137,7 +2142,7 @@ export default class BoldInlineTool implements InlineTool {
     }
 
     if (parentNode instanceof Element) {
-      return Boolean(parentNode.closest(BLOK_EDITOR_SELECTOR));
+      return Boolean(parentNode.closest(createSelector(DATA_ATTR.editor)));
     }
 
     return BoldInlineTool.isEventTargetInsideBlok(parentNode);

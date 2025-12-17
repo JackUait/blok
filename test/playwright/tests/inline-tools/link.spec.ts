@@ -285,7 +285,7 @@ test.describe('inline tool link', () => {
     await page.waitForFunction(({ notifierSelector }) => {
       const notifier = document.querySelector(notifierSelector);
 
-      return Boolean(notifier && notifier.textContent && notifier.textContent.includes('Pasted link is not valid.'));
+      return Boolean(notifier && notifier.textContent && notifier.textContent.includes('Invalid link'));
     }, { notifierSelector: NOTIFIER_SELECTOR });
   });
 

@@ -1147,12 +1147,12 @@ export default class ListItem implements BlockTool {
   private handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      this.handleEnter();
+      void this.handleEnter();
       return;
     }
 
     if (event.key === 'Backspace') {
-      this.handleBackspace(event);
+      void this.handleBackspace(event);
       return;
     }
 
@@ -1168,7 +1168,7 @@ export default class ListItem implements BlockTool {
     }
   }
 
-  private handleEnter(): void {
+  private async handleEnter(): Promise<void> {
     const selection = window.getSelection();
     if (!selection || !this._element) return;
 
@@ -1179,7 +1179,7 @@ export default class ListItem implements BlockTool {
 
     // If current item is empty, handle based on depth
     if (currentContent === '' || currentContent === '<br>') {
-      this.exitListOrOutdent();
+      await this.exitListOrOutdent();
       return;
     }
 
@@ -1204,23 +1204,23 @@ export default class ListItem implements BlockTool {
     this.setCaretToBlockContent(newBlock, 'start');
   }
 
-  private exitListOrOutdent(): void {
+  private async exitListOrOutdent(): Promise<void> {
     const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     const currentDepth = this.getDepth();
 
     // If nested, outdent instead of exiting
     if (currentDepth > 0) {
-      void this.handleOutdent();
+      await this.handleOutdent();
       return;
     }
 
     // At root level, convert to paragraph
-    this.api.blocks.delete(currentBlockIndex);
+    await this.api.blocks.delete(currentBlockIndex);
     const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex, true);
     this.setCaretToBlockContent(newBlock, 'start');
   }
 
-  private handleBackspace(event: KeyboardEvent): void {
+  private async handleBackspace(event: KeyboardEvent): Promise<void> {
     const selection = window.getSelection();
     if (!selection || !this._element) return;
 
@@ -1264,7 +1264,7 @@ export default class ListItem implements BlockTool {
     event.preventDefault();
 
     // Convert to paragraph (preserving indentation for nested items)
-    this.api.blocks.delete(currentBlockIndex);
+    await this.api.blocks.delete(currentBlockIndex);
     const newBlock = this.api.blocks.insert(
       'paragraph',
       { text: currentContent },

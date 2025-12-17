@@ -451,13 +451,13 @@ describe('BlocksAPI', () => {
   });
 
   describe('block deletion', () => {
-    it('removes block and re-focuses current block', () => {
+    it('removes block and re-focuses current block', async () => {
       const blocks = [createBlockStub({ id: 'a' }), createBlockStub({ id: 'b' })];
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks });
 
       blockManager.currentBlockIndex = 0;
 
-      blocksApi.delete(0);
+      await blocksApi.delete(0);
 
       expect(blockManager.getBlockByIndex).toHaveBeenCalledWith(0);
       expect(blockManager.removeBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
@@ -468,7 +468,7 @@ describe('BlocksAPI', () => {
       expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
-    it('inserts default block when last block is removed', () => {
+    it('inserts default block when last block is removed', async () => {
       const block = createBlockStub({ id: 'only' });
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 
@@ -477,14 +477,14 @@ describe('BlocksAPI', () => {
         blockManager.currentBlock = null;
       });
 
-      blocksApi.delete(0);
+      await blocksApi.delete(0);
 
       expect(blockManager.insert).toHaveBeenCalledTimes(1);
       expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
       expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
-    it('logs warning when block removal throws', () => {
+    it('logs warning when block removal throws', async () => {
       const block = createBlockStub({ id: 'faulty' });
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
       const error = new Error('remove failed');
@@ -494,7 +494,7 @@ describe('BlocksAPI', () => {
         throw error;
       });
 
-      blocksApi.delete(0);
+      await blocksApi.delete(0);
 
       expect(logSpy).toHaveBeenCalledWith(error, 'warn');
       expect(blockManager.insert).not.toHaveBeenCalled();

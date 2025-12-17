@@ -197,11 +197,11 @@ export default class Header implements BlockTool {
   public renderSettings(): MenuConfig {
     return this.levels.map(level => {
       const translated = this.api.i18n.t(level.nameKey);
-      const label = translated !== level.nameKey ? translated : level.name;
+      const title = translated !== level.nameKey ? translated : level.name;
 
       return {
         icon: level.icon,
-        label,
+        title,
         onActivate: (): void => this.setLevel(level.number),
         closeOnActivate: true,
         isActive: this.currentLevel.number === level.number,

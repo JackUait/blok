@@ -46,6 +46,6 @@ export default class DeleteTune implements BlockTune {
    * Delete block conditions passed
    */
   public handleClick(): void {
-    this.api.blocks.delete();
+    void this.api.blocks.delete();
   }
 }

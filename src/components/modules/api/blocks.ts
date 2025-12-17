@@ -21,7 +21,7 @@ export default class BlocksAPI extends Module {
       clear: (): Promise<void> => this.clear(),
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),
-      delete: (index?: number): void => this.delete(index),
+      delete: (index?: number): Promise<void> => this.delete(index),
       move: (toIndex: number, fromIndex?: number): void => this.move(toIndex, fromIndex),
       getBlockByIndex: (index: number): BlockAPIInterface | undefined => this.getBlockByIndex(index),
       getById: (id: string): BlockAPIInterface | null => this.getById(id),
@@ -130,7 +130,7 @@ export default class BlocksAPI extends Module {
    * Deletes Block
    * @param {number} blockIndex - index of Block to delete
    */
-  public delete(blockIndex: number = this.Blok.BlockManager.currentBlockIndex): void {
+  public async delete(blockIndex: number = this.Blok.BlockManager.currentBlockIndex): Promise<void> {
     const block = this.Blok.BlockManager.getBlockByIndex(blockIndex);
 
     if (block === undefined) {
@@ -140,7 +140,7 @@ export default class BlocksAPI extends Module {
     }
 
     try {
-      void this.Blok.BlockManager.removeBlock(block);
+      await this.Blok.BlockManager.removeBlock(block);
     } catch (error: unknown) {
       _.logLabeled(error as unknown as string, 'warn');
 

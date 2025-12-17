@@ -204,7 +204,7 @@ test('transforms .ce-popover class', () => {
 test('transforms .ce-popover--opened class', () => {
   const input = `.ce-popover--opened { display: block; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `[data-blok-popover][data-blok-opened="true"] { display: block; }`);
+  assertEqual(result, `[data-blok-popover-opened="true"] { display: block; }`);
 });
 
 test('transforms .ce-popover__container class', () => {

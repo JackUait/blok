@@ -128,7 +128,10 @@ export default class Module<T extends ModuleNodes = Record<string, HTMLElement>>
   }
 
   /**
-   * Returns true if current direction is RTL (Right-To-Left)
+   * Returns true if current direction is RTL (Right-To-Left).
+   *
+   * This reads from config.i18n.direction which is set by the I18n module during prepare().
+   * Should only be accessed after modules have been initialized.
    */
   protected get isRtl(): boolean {
     return this.config.i18n?.direction === 'rtl';

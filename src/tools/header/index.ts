@@ -7,7 +7,7 @@
  */
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
-import { BLOK_TOOL_ATTR } from '../../components/constants';
+import { DATA_ATTR } from '../../components/constants';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import type {
   API,
@@ -70,7 +70,7 @@ interface Level {
   number: number;
   /** HTML tag corresponding with level number */
   tag: string;
-  /** Translation key for this level (e.g., 'heading1') */
+  /** Translation key for this level (e.g., 'tools.header.heading1') */
   nameKey: string;
   /** Display name for this level (user override or fallback) */
   name: string;
@@ -141,7 +141,7 @@ export default class Header implements BlockTool {
 
   /**
    * Styles
-   * @deprecated Use data-blok-tool attribute instead (BLOK_TOOL_ATTR)
+   * @deprecated Use data-blok-tool attribute instead (DATA_ATTR.tool)
    */
   private get _CSS(): { block: string; wrapper: string } {
     return {
@@ -377,7 +377,7 @@ export default class Header implements BlockTool {
     /**
      * Set data attribute for tool identification
      */
-    tag.setAttribute(BLOK_TOOL_ATTR, 'header');
+    tag.setAttribute(DATA_ATTR.tool, 'header');
 
     /**
      * Make tag editable
@@ -447,12 +447,12 @@ export default class Header implements BlockTool {
     icon: string;
     styles: string;
   }> = [
-    { number: 1, tag: 'H1', nameKey: 'heading1', name: 'Heading 1', icon: IconH1, styles: 'text-4xl font-bold mt-8 mb-1' },
-    { number: 2, tag: 'H2', nameKey: 'heading2', name: 'Heading 2', icon: IconH2, styles: 'text-3xl font-semibold mt-6 mb-px' },
-    { number: 3, tag: 'H3', nameKey: 'heading3', name: 'Heading 3', icon: IconH3, styles: 'text-2xl font-semibold mt-4 mb-px' },
-    { number: 4, tag: 'H4', nameKey: 'heading4', name: 'Heading 4', icon: IconH4, styles: 'text-xl font-semibold mt-3 mb-px' },
-    { number: 5, tag: 'H5', nameKey: 'heading5', name: 'Heading 5', icon: IconH5, styles: 'text-base font-semibold mt-3 mb-px' },
-    { number: 6, tag: 'H6', nameKey: 'heading6', name: 'Heading 6', icon: IconH6, styles: 'text-sm font-semibold mt-3 mb-px' },
+    { number: 1, tag: 'H1', nameKey: 'tools.header.heading1', name: 'Heading 1', icon: IconH1, styles: 'text-4xl font-bold mt-8 mb-1' },
+    { number: 2, tag: 'H2', nameKey: 'tools.header.heading2', name: 'Heading 2', icon: IconH2, styles: 'text-3xl font-semibold mt-6 mb-px' },
+    { number: 3, tag: 'H3', nameKey: 'tools.header.heading3', name: 'Heading 3', icon: IconH3, styles: 'text-2xl font-semibold mt-4 mb-px' },
+    { number: 4, tag: 'H4', nameKey: 'tools.header.heading4', name: 'Heading 4', icon: IconH4, styles: 'text-xl font-semibold mt-3 mb-px' },
+    { number: 5, tag: 'H5', nameKey: 'tools.header.heading5', name: 'Heading 5', icon: IconH5, styles: 'text-base font-semibold mt-3 mb-px' },
+    { number: 6, tag: 'H6', nameKey: 'tools.header.heading6', name: 'Heading 6', icon: IconH6, styles: 'text-sm font-semibold mt-3 mb-px' },
   ];
 
   /**

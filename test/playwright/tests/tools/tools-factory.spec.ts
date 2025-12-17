@@ -33,7 +33,7 @@ const blokConfig: BlokConfig = {
   defaultBlock: 'paragraph',
 };
 
-type ToolApiMethods = ReturnType<ApiModule['getMethodsForTool']>;
+type ToolApiMethods = ApiModule['methods'];
 
 const apiMethodsStub: ToolApiMethods = {
   blocks: {} as ToolApiMethods['blocks'],
@@ -55,8 +55,8 @@ const apiMethodsStub: ToolApiMethods = {
   ui: {} as ToolApiMethods['ui'],
 };
 
-const apiMock: Pick<ApiModule, 'getMethodsForTool'> = {
-  getMethodsForTool() {
+const apiMock: Pick<ApiModule, 'methods'> = {
+  get methods() {
     return apiMethodsStub;
   },
 };

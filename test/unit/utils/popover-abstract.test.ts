@@ -19,8 +19,7 @@ import type {
 } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { SearchInput } from '../../../src/components/utils/popover/components/search-input';
-import { DATA_ATTRIBUTE_OPENED, DATA_ATTRIBUTE_OPEN_TOP } from '../../../src/components/utils/popover/popover.const';
-import { DATA_ATTRIBUTE_ACTIVE } from '../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
+import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 
 /**
  * Test implementation of PopoverAbstract for unit testing
@@ -243,8 +242,7 @@ describe('PopoverAbstract', () => {
 
       popover.show();
 
-      expect(nodes.popover.getAttribute(DATA_ATTRIBUTE_OPENED)).toBe('true');
-      expect(nodes.popover.getAttribute('data-blok-popover-opened')).toBe('true');
+      expect(nodes.popover.getAttribute(DATA_ATTR.popoverOpened)).toBe('true');
       expect(focus).toHaveBeenCalledTimes(1);
     });
 
@@ -274,9 +272,8 @@ describe('PopoverAbstract', () => {
       popover.show();
       popover.hide();
 
-      expect(nodes.popover.getAttribute(DATA_ATTRIBUTE_OPENED)).toBeNull();
-      expect(nodes.popover.getAttribute(DATA_ATTRIBUTE_OPEN_TOP)).toBeNull();
-      expect(nodes.popover.getAttribute('data-blok-popover-opened')).toBeNull();
+      expect(nodes.popover.getAttribute(DATA_ATTR.popoverOpened)).toBeNull();
+      expect(nodes.popover.getAttribute(DATA_ATTR.popoverOpenTop)).toBeNull();
       expect(resetSpy).toHaveBeenCalled();
       expect(searchMock.clear).toHaveBeenCalledTimes(1);
       expect(closedHandler).toHaveBeenCalledTimes(1);
@@ -387,10 +384,10 @@ describe('PopoverAbstract', () => {
       }
 
       popover.invokeHandleItemClick(toggleItem);
-      expect(element?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe('true');
+      expect(element?.getAttribute(DATA_ATTR.popoverItemActive)).toBe('true');
 
       popover.invokeHandleItemClick(toggleItem);
-      expect(element?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBeNull();
+      expect(element?.getAttribute(DATA_ATTR.popoverItemActive)).toBeNull();
     });
 
     it('applies radio-like behaviour when toggle is a string key', () => {
@@ -419,12 +416,12 @@ describe('PopoverAbstract', () => {
       }
 
       popover.invokeHandleItemClick(first);
-      expect(firstEl?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe('true');
-      expect(secondEl?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBeNull();
+      expect(firstEl?.getAttribute(DATA_ATTR.popoverItemActive)).toBe('true');
+      expect(secondEl?.getAttribute(DATA_ATTR.popoverItemActive)).toBeNull();
 
       popover.invokeHandleItemClick(second);
-      expect(secondEl?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe('true');
-      expect(firstEl?.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBeNull();
+      expect(secondEl?.getAttribute(DATA_ATTR.popoverItemActive)).toBe('true');
+      expect(firstEl?.getAttribute(DATA_ATTR.popoverItemActive)).toBeNull();
     });
 
     it('hides popover and emits ClosedOnActivate when item requires closing', () => {
@@ -446,7 +443,7 @@ describe('PopoverAbstract', () => {
       popover.show();
       popover.invokeHandleItemClick(item);
 
-      expect(nodes.popover.getAttribute(DATA_ATTRIBUTE_OPENED)).toBeNull();
+      expect(nodes.popover.getAttribute(DATA_ATTR.popoverOpened)).toBeNull();
       expect(closedOnActivateHandler).toHaveBeenCalledTimes(1);
     });
   });

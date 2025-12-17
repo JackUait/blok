@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import I18nAPI from '../../../../../src/components/modules/api/i18n';
 import EventsDispatcher from '../../../../../src/components/utils/events';
@@ -6,106 +6,62 @@ import EventsDispatcher from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokConfig } from '../../../../../types';
 import type { BlokEventMap } from '../../../../../src/components/events';
+import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
-const { translateMock, hasTranslationMock } = vi.hoisted(() => {
-  return {
-    translateMock: vi.fn(),
-    hasTranslationMock: vi.fn(),
-  };
-});
-
-vi.mock('../../../../../src/components/i18n', () => ({
-  default: {
-    t: translateMock,
-    hasTranslation: hasTranslationMock,
-  },
-}));
-
-const createI18nApi = (): I18nAPI => {
+const createI18nApi = (): { api: I18nAPI; i18nMock: { t: ReturnType<typeof vi.fn>; has: ReturnType<typeof vi.fn> } } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
     config: {} as BlokConfig,
     eventsDispatcher,
   };
 
-  return new I18nAPI(moduleConfig);
+  const api = new I18nAPI(moduleConfig);
+
+  // Create mock I18n module
+  const i18nMock = {
+    t: vi.fn((key: string) => key),
+    has: vi.fn(() => true),
+  };
+
+  // Set up state with mocked I18n
+  api.state = {
+    I18n: i18nMock,
+  } as unknown as BlokModules;
+
+  return { api, i18nMock };
 };
 
 describe('I18nAPI', () => {
-  beforeEach(() => {
-    translateMock.mockReset();
-    hasTranslationMock.mockReset();
-    hasTranslationMock.mockReturnValue(true);
-  });
-
   describe('methods getter', () => {
     it('translates using global dictionary access', () => {
-      const api = createI18nApi();
+      const { api, i18nMock } = createI18nApi();
 
-      translateMock.mockReturnValue('Translated');
+      i18nMock.t.mockReturnValue('Translated');
       const result = api.methods.t('popover.search');
 
-      expect(hasTranslationMock).toHaveBeenCalledWith('popover.search');
-      expect(translateMock).toHaveBeenCalledWith('popover.search');
+      // i18next is called directly - it returns key if missing
+      expect(i18nMock.t).toHaveBeenCalledWith('popover.search');
       expect(result).toBe('Translated');
     });
 
     it('returns key when translation does not exist', () => {
-      const api = createI18nApi();
+      const { api, i18nMock } = createI18nApi();
 
-      hasTranslationMock.mockReturnValue(false);
+      // i18next returns key when translation is missing
+      i18nMock.t.mockReturnValue('missing.key');
       const result = api.methods.t('missing.key');
 
-      expect(hasTranslationMock).toHaveBeenCalledWith('missing.key');
-      expect(translateMock).not.toHaveBeenCalled();
+      expect(i18nMock.t).toHaveBeenCalledWith('missing.key');
       expect(result).toBe('missing.key');
     });
 
     it('returns memoized object on subsequent accesses', () => {
-      const api = createI18nApi();
+      const { api } = createI18nApi();
 
       const firstAccess = api.methods;
       const secondAccess = api.methods;
 
       expect(firstAccess).toBe(secondAccess);
-    });
-  });
-
-  describe('getMethodsForTool', () => {
-    it('translates using tools namespace for regular tool', () => {
-      const api = createI18nApi();
-      const methods = api.getMethodsForTool('paragraph', false);
-
-      translateMock.mockReturnValue('Label');
-      const result = methods.t('label');
-
-      expect(hasTranslationMock).toHaveBeenCalledWith('tools.paragraph.label');
-      expect(translateMock).toHaveBeenCalledWith('tools.paragraph.label');
-      expect(result).toBe('Label');
-    });
-
-    it('translates using blockTunes namespace for block tune', () => {
-      const api = createI18nApi();
-      const methods = api.getMethodsForTool('settings', true);
-
-      translateMock.mockReturnValue('Title');
-      const result = methods.t('title');
-
-      expect(hasTranslationMock).toHaveBeenCalledWith('blockSettings.settings.title');
-      expect(translateMock).toHaveBeenCalledWith('blockSettings.settings.title');
-      expect(result).toBe('Title');
-    });
-
-    it('returns original dictKey when translation does not exist', () => {
-      const api = createI18nApi();
-      const methods = api.getMethodsForTool('paragraph', false);
-
-      hasTranslationMock.mockReturnValue(false);
-      const result = methods.t('missing key');
-
-      expect(hasTranslationMock).toHaveBeenCalledWith('tools.paragraph.missing key');
-      expect(translateMock).not.toHaveBeenCalled();
-      expect(result).toBe('missing key');
     });
   });
 });

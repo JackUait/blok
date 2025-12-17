@@ -24,6 +24,7 @@ import Toolbar from './toolbar/index';
 import InlineToolbar from './toolbar/inline';
 
 /** . */
+import I18n from './i18n';
 import BlockEvents from './blockEvents';
 import BlockManager from './blockManager';
 import BlockSelection from './blockSelection';
@@ -67,6 +68,7 @@ export default {
   InlineToolbar,
 
   // Modules
+  I18n,
   BlockEvents,
   BlockManager,
   BlockSelection,

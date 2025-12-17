@@ -128,6 +128,7 @@
   },
   "dependencies": {
     "@types/lodash": "4.17.21",
+    "i18next": "^25.7.3",
     "lodash": "4.17.21",
     "tailwind-merge": "3.4.0"
   }

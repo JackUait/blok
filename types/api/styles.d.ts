@@ -94,8 +94,3 @@ export interface Styles {
    */
   button: string;
 }
-
-/**
- * @deprecated Use Styles instead
- */
-export type StyleClasses = Styles;

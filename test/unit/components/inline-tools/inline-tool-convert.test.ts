@@ -62,7 +62,9 @@ const createTool = (): {
     selection: selectionAPI,
     tools: toolsAPI,
     caret: caretAPI,
-    i18n: {},
+    i18n: {
+      t: vi.fn((key: string) => key),
+    },
   } as unknown as API;
 
   return {
@@ -151,7 +153,7 @@ describe('ConvertInlineTool', () => {
     toolsAPI.getBlockTools.mockReturnValue([ convertibleTool ]);
     vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([ convertibleTool ]);
     vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
-    const translateToolTitleSpy = vi.spyOn(ToolsUtils, 'translateToolTitle').mockImplementation((entry) => {
+    const translateToolTitleSpy = vi.spyOn(ToolsUtils, 'translateToolTitle').mockImplementation((_i18n, entry) => {
       return `${entry.title} translated`;
     });
     blocksAPI.convert.mockResolvedValue(convertedBlock);
@@ -170,7 +172,7 @@ describe('ConvertInlineTool', () => {
     const firstItem = items[0];
 
     expect(firstItem?.title).toBe('Heading translated');
-    expect(translateToolTitleSpy).toHaveBeenCalledWith(toolboxItem, 'header');
+    expect(translateToolTitleSpy).toHaveBeenCalledWith(expect.anything(), toolboxItem, 'header');
 
     children?.onOpen?.();
     expect(selectionAPI.setFakeBackground).toHaveBeenCalled();

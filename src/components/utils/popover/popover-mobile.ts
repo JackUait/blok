@@ -5,7 +5,8 @@ import { PopoverStatesHistory } from './utils/popover-states-history';
 import type { PopoverMobileNodes, PopoverParams } from '@/types/utils/popover/popover';
 import type { PopoverItemDefault, PopoverItemParams } from './components/popover-item';
 import { PopoverItemType } from './components/popover-item';
-import { css, DATA_ATTR } from './popover.const';
+import { css } from './popover.const';
+import { DATA_ATTR } from '../../constants/data-attributes';
 import Dom from '../../dom';
 import { twMerge } from '../tw';
 

@@ -7,7 +7,7 @@
  */
 import { IconText } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
-import { BLOK_TOOL_ATTR } from '../../components/constants';
+import { DATA_ATTR } from '../../components/constants';
 import { PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { stripFakeBackgroundElements } from '../../components/utils';
 import type {
@@ -239,7 +239,7 @@ export default class Paragraph implements BlockTool {
       Paragraph.WRAPPER_CLASSES,
       PLACEHOLDER_FOCUS_ONLY_CLASSES
     );
-    div.setAttribute(BLOK_TOOL_ATTR, 'paragraph');
+    div.setAttribute(DATA_ATTR.tool, 'paragraph');
     div.contentEditable = 'false';
 
     /**

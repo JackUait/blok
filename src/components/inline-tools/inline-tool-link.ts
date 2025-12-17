@@ -10,7 +10,7 @@ import { PopoverItemType } from '../utils/popover';
 import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { IconLink } from '../icons';
-import { INLINE_TOOLBAR_INTERFACE_SELECTOR } from '../constants';
+import { DATA_ATTR, createSelector } from '../constants';
 import { twMerge } from '../utils/tw';
 
 /**
@@ -155,7 +155,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   private createInput(): HTMLInputElement {
     const input = document.createElement('input') as HTMLInputElement;
 
-    input.placeholder = this.i18n.t('addLink');
+    input.placeholder = this.i18n.t('tools.link.addLink');
     input.enterKeyHint = 'done';
     input.className = this.INPUT_BASE_CLASSES;
     input.setAttribute('data-blok-testid', 'inline-tool-input');
@@ -246,7 +246,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
     }
 
     const button = document.querySelector<HTMLButtonElement>(
-      `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-item-name="link"]`
+      `${createSelector(DATA_ATTR.interface, 'inlineToolbar')} [data-blok-item-name="link"]`
     );
 
     if (button) {
@@ -384,7 +384,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
     if (!this.validateURL(value)) {
       this.notifier.show({
-        message: this.i18n.t('invalidLink'),
+        message: this.i18n.t('tools.link.invalidLink'),
         style: 'error',
       });
 

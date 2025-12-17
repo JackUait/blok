@@ -34,9 +34,6 @@ export default class BlocksAPI extends Module {
       update: this.update,
       composeBlockData: this.composeBlockData,
       convert: this.convert,
-      // @ts-expect-error stretchBlock is deprecated
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      stretchBlock: (index: number, status = true): void => this.stretchBlock(index, status),
     };
   }
 
@@ -281,22 +278,6 @@ export default class BlocksAPI extends Module {
 
     return new BlockAPI(updatedBlock);
   };
-
-  /**
-   * Stretch Block by index
-   * @param index - index of Block to stretch
-   * @param status - true to stretch, false to unstretch
-   * @deprecated
-   */
-  public stretchBlock(index: number, status = true): void {
-    const block = this.Blok.BlockManager.getBlockByIndex(index);
-
-    if (!block) {
-      return;
-    }
-
-    block.setStretchState(status);
-  }
 
   /**
    * Converts block to another type. Both blocks should provide the conversionConfig.

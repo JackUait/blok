@@ -7,7 +7,8 @@ import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } fr
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { PopoverItemParams } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
-import { css, DATA_ATTR } from './popover.const';
+import { css } from './popover.const';
+import { DATA_ATTR } from '../../constants/data-attributes';
 import { twMerge } from '../tw';
 
 /**
@@ -108,7 +109,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     // Update DOM state
-    this.nodes.popover.setAttribute(DATA_ATTR.opened, 'true');
+    this.nodes.popover.setAttribute(DATA_ATTR.popoverOpened, 'true');
     this.nodes.popoverContainer.classList.add(...css.popoverContainerOpened.split(' '));
 
     /**
@@ -127,9 +128,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public hide(): void {
     // Update DOM state
-    this.nodes.popover.removeAttribute(DATA_ATTR.opened);
-    this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
-    this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
+    this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpened);
+    this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
+    this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenLeft);
     this.nodes.popoverContainer.classList.remove(...css.popoverContainerOpened.split(' '));
 
     this.itemsDefault.forEach(item => item.reset());
@@ -345,9 +346,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   protected setOpenTop(openTop: boolean): void {
     if (openTop) {
-      this.nodes.popover.setAttribute(DATA_ATTR.openTop, 'true');
+      this.nodes.popover.setAttribute(DATA_ATTR.popoverOpenTop, 'true');
     } else {
-      this.nodes.popover.removeAttribute(DATA_ATTR.openTop);
+      this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
     }
   }
 
@@ -357,9 +358,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   protected setOpenLeft(openLeft: boolean): void {
     if (openLeft) {
-      this.nodes.popover.setAttribute(DATA_ATTR.openLeft, 'true');
+      this.nodes.popover.setAttribute(DATA_ATTR.popoverOpenLeft, 'true');
     } else {
-      this.nodes.popover.removeAttribute(DATA_ATTR.openLeft);
+      this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenLeft);
     }
   }
 

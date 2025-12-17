@@ -15,6 +15,7 @@ import { destroy as destroyTooltip } from './components/utils/tooltip';
 import Header from './tools/header';
 import Paragraph from './tools/paragraph';
 import List from './tools/list';
+import { DATA_ATTR } from './components/constants/data-attributes';
 
 /**
  * Blok
@@ -56,6 +57,19 @@ export default class Blok {
    * List tool bundled with Blok
    */
   public static List = List;
+
+  /**
+   * Data attributes used by the editor.
+   * Single source of truth for all data-blok-* attributes.
+   *
+   * @example
+   * // Query editor elements
+   * document.querySelectorAll(`[${Blok.DATA_ATTR.element}]`);
+   *
+   * // Check if block is selected
+   * block.getAttribute(Blok.DATA_ATTR.selected) === 'true';
+   */
+  public static DATA_ATTR = DATA_ATTR;
 
   /**
    * @param {BlokConfig|string|undefined} [configuration] - user configuration

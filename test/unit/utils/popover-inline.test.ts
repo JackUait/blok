@@ -3,7 +3,8 @@ import { PopoverInline } from '../../../src/components/utils/popover/popover-inl
 import { PopoverDesktop } from '../../../src/components/utils/popover/popover-desktop';
 import { PopoverItemDefault, PopoverItemType } from '../../../src/components/utils/popover/components/popover-item';
 import type { PopoverItemHtml } from '../../../src/components/utils/popover/components/popover-item/popover-item-html/popover-item-html';
-import { CSSVariables, DATA_ATTR, getNestedLevelAttrValue } from '../../../src/components/utils/popover/popover.const';
+import { CSSVariables, getNestedLevelAttrValue } from '../../../src/components/utils/popover/popover.const';
+import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import Flipper from '../../../src/components/flipper';
 

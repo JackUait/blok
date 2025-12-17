@@ -1,12 +1,3 @@
-import type EnglishMessages from '../../src/components/i18n/locales/en/messages.json';
-
-/**
- * All valid translation keys in the i18n system.
- * This type is derived from the English messages JSON and ensures
- * compile-time checking for translation key validity.
- */
-export type TranslationKey = keyof typeof EnglishMessages;
-
 /**
  * Structure of the i18n dictionary - flat key-value pairs
  *

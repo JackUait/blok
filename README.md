@@ -113,7 +113,7 @@ new Blok({
   holder: 'editor',
   i18n: {
     locales,
-    activeLocale: 'auto',
+    locale: 'auto',
   }
 });
 ```
@@ -143,7 +143,7 @@ new Blok({
   holder: 'editor',
   i18n: {
     locales,
-    activeLocale: 'auto',
+    locale: 'auto',
   }
 });
 ```
@@ -178,7 +178,7 @@ I18n.setLocale('fr'); // Instant, no network request
 new Blok({
   holder: 'editor',
   i18n: {
-    activeLocale: 'fr',   // Use French
+    locale: 'fr',         // Use French
     defaultLocale: 'en',  // Fallback if 'fr' unavailable
   }
 });

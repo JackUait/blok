@@ -139,7 +139,6 @@ type ToolConfigEntry = ToolSettings & { isInternal?: boolean };
 
 type ApiStub = {
   api: ApiModule;
-  getMethodsForTool: ReturnType<typeof vi.fn>;
   methods: object;
 };
 
@@ -151,11 +150,9 @@ const baseBlokConfig: BlokConfig = {
 
 const createApiStub = (): ApiStub => {
   const methods = { name: 'methods' };
-  const getMethodsForTool = vi.fn().mockReturnValue(methods);
 
   return {
-    api: { getMethodsForTool } as unknown as ApiModule,
-    getMethodsForTool,
+    api: { methods } as unknown as ApiModule,
     methods,
   };
 };
@@ -248,10 +245,9 @@ describe('ToolsFactory', () => {
         class: tuneConstructable,
       }),
     };
-    const { factory, apiStub } = createFactory(toolsConfig);
+    const { factory } = createFactory(toolsConfig);
 
     factory.get(toolName);
-    expect(apiStub.getMethodsForTool).toHaveBeenCalledWith(toolName, true);
     expect(tuneAdapterMockControl.instances).toHaveLength(1);
   });
 
@@ -260,10 +256,9 @@ describe('ToolsFactory', () => {
     const toolsConfig = {
       [toolName]: createToolConfig(),
     };
-    const { factory, apiStub } = createFactory(toolsConfig);
+    const { factory } = createFactory(toolsConfig);
 
     factory.get(toolName);
-    expect(apiStub.getMethodsForTool).toHaveBeenCalledWith(toolName, false);
     expect(blockAdapterMockControl.instances).toHaveLength(1);
   });
 

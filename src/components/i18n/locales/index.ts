@@ -7,8 +7,9 @@ import enMessages from './en/messages.json';
 /**
  * RTL (right-to-left) locale codes.
  * Single source of truth for text direction.
+ * @internal
  */
-export const RTL_LOCALES: ReadonlySet<SupportedLocale> = new Set([
+const RTL_LOCALES: ReadonlySet<SupportedLocale> = new Set([
   'ar', 'dv', 'fa', 'he', 'ku', 'ps', 'sd', 'ug', 'ur', 'yi',
 ]);
 
@@ -21,8 +22,9 @@ export const getDirection = (code: SupportedLocale): 'ltr' | 'rtl' =>
 /**
  * Build a locale config from a dictionary.
  * Direction is determined automatically from RTL_LOCALES.
+ * @internal
  */
-export const buildConfig = (code: SupportedLocale, dictionary: I18nDictionary): LocaleConfig => ({
+const buildConfig = (code: SupportedLocale, dictionary: I18nDictionary): LocaleConfig => ({
   dictionary,
   direction: getDirection(code),
 });
@@ -38,8 +40,9 @@ export const BASIC_LOCALE_CODES: readonly SupportedLocale[] = [
 /**
  * Additional locale codes for the Extended preset (12 languages).
  * Regional European and Asian language coverage.
+ * @internal
  */
-export const EXTENDED_LOCALE_ADDITIONS: readonly SupportedLocale[] = [
+const EXTENDED_LOCALE_ADDITIONS: readonly SupportedLocale[] = [
   'tr', 'vi', 'pl', 'nl', 'th', 'ms', 'sv', 'no', 'da', 'fi', 'el', 'cs',
 ] as const;
 
@@ -53,6 +56,10 @@ export const EXTENDED_LOCALE_CODES: readonly SupportedLocale[] = [
 
 /**
  * All supported locale codes.
+ *
+ * IMPORTANT: This array must match the SupportedLocale type in types/configs/i18n-config.d.ts.
+ * The localeImporters object below will fail to compile if they don't match since it's typed
+ * as Record<SupportedLocale, ...>.
  */
 export const ALL_LOCALE_CODES: readonly SupportedLocale[] = [
   'am', 'ar', 'az', 'bg', 'bn', 'bs', 'cs', 'da', 'de', 'dv', 'el', 'en', 'es', 'et',
@@ -74,9 +81,27 @@ export const enLocale: LocaleConfig = buildConfig('en', enMessages);
 
 /**
  * Cache for loaded locales.
+ *
+ * Note: This is intentionally a module-level cache shared across all Blok instances.
+ * Locale dictionaries are immutable and expensive to load, so sharing is beneficial.
+ * Use clearLocaleCache() in tests to reset state between test runs.
  */
 const localeCache = new Map<SupportedLocale, LocaleConfig>();
 localeCache.set('en', enLocale);
+
+/**
+ * Clear the locale cache.
+ *
+ * This is primarily useful for testing to ensure test isolation.
+ * In production, the cache should persist for the lifetime of the application.
+ *
+ * @internal
+ */
+export const clearLocaleCache = (): void => {
+  localeCache.clear();
+  // Always keep English available since it's statically imported
+  localeCache.set('en', enLocale);
+};
 
 /**
  * Dynamic import map for locale dictionaries.
@@ -187,15 +212,6 @@ export const loadLocale = async (code: SupportedLocale): Promise<LocaleConfig> =
  */
 export const getLocaleSync = (code: SupportedLocale): LocaleConfig | undefined =>
   localeCache.get(code);
-
-/**
- * Check if a locale is already loaded in the cache.
- *
- * @param code - Locale code to check
- * @returns True if locale is loaded
- */
-export const isLocaleLoaded = (code: SupportedLocale): boolean =>
-  localeCache.has(code);
 
 /**
  * Preload multiple locales.

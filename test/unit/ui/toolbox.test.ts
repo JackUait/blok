@@ -71,13 +71,6 @@ vi.mock('../../../src/components/utils', async () => {
   };
 });
 
-vi.mock('../../../src/components/i18n', () => ({
-  default: {
-    t: vi.fn((namespace: string, key: string) => key),
-    hasTranslation: vi.fn(() => false),
-  },
-}));
-
 /**
  * Unit tests for toolbox.ts
  *
@@ -87,6 +80,12 @@ describe('Toolbox', () => {
   const i18nLabels: Record<'filter' | 'nothingFound', string> = {
     filter: 'Filter',
     nothingFound: 'Nothing found',
+  };
+
+  // Mock i18n instance for Toolbox
+  const mockI18n = {
+    t: vi.fn((key: string) => key),
+    has: vi.fn(() => false),
   };
 
   const mocks = {
@@ -162,6 +161,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const element = toolbox.getElement();
@@ -175,6 +175,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const element = toolbox.getElement();
@@ -187,6 +188,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       expect(toolbox.opened).toBe(false);
@@ -197,6 +199,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       expect(mocks.api.events.on).toHaveBeenCalledWith(
@@ -216,6 +219,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: emptyTools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       expect(toolbox.isEmpty).toBe(true);
@@ -226,6 +230,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       expect(toolbox.isEmpty).toBe(false);
@@ -246,6 +251,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       expect(toolbox.isEmpty).toBe(true);
@@ -258,6 +264,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const element = toolbox.getElement();
@@ -273,6 +280,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       // Access private popover and set to null
@@ -286,6 +294,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       mockPopoverInstance.hasFocus.mockReturnValue(true);
@@ -300,6 +309,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const emitSpy = vi.spyOn(toolbox, 'emit');
@@ -320,6 +330,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: emptyTools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const emitSpy = vi.spyOn(toolbox, 'emit');
@@ -338,6 +349,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       toolbox.opened = true;
@@ -357,6 +369,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       toolbox.opened = false;
@@ -372,6 +385,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       toolbox.opened = true;
@@ -393,6 +407,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const blockDataOverrides: BlockToolData = { test: 'data' };
@@ -411,6 +426,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const blockDataOverrides: BlockToolData = { customProp: 'value' };
@@ -427,6 +443,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       toolbox.handleMobileLayoutToggle();
@@ -442,6 +459,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const element = toolbox.getElement();
@@ -460,6 +478,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       toolbox.destroy();
@@ -475,6 +494,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       toolbox.destroy();
@@ -490,6 +510,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const superDestroySpy = vi.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(toolbox)), 'destroy');
@@ -506,6 +527,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       toolbox.opened = true;
@@ -550,6 +572,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       expect(toolbox.isEmpty).toBe(false);
@@ -562,6 +585,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       expect(Shortcuts.add).toHaveBeenCalled();
@@ -588,6 +612,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       // Should not be called for tools without shortcuts
@@ -609,6 +634,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       await toolbox.toolButtonActivated('testTool', {});
@@ -636,6 +662,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       await toolbox.toolButtonActivated('testTool', {});
@@ -658,6 +685,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const emitSpy = vi.spyOn(toolbox, 'emit');
@@ -677,6 +705,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       await toolbox.toolButtonActivated('testTool', {});
@@ -692,6 +721,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       await toolbox.toolButtonActivated('testTool', {});
@@ -706,6 +736,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       const convertedBlock = { id: 'converted-block' } as BlockAPI;
@@ -731,6 +762,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       vi.mocked(mocks.api.blocks.convert).mockRejectedValue(new Error('Conversion failed'));
@@ -752,6 +784,7 @@ describe('Toolbox', () => {
         api: mocks.api,
         tools: mocks.tools,
         i18nLabels,
+        i18n: mockI18n,
       });
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);

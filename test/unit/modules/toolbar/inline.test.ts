@@ -64,13 +64,7 @@ vi.mock('../../../../src/components/selection', async () => {
   return actual;
 });
 
-vi.mock('../../../../src/components/i18n', () => ({
-  default: {
-    ui: vi.fn((namespace: string, key: string) => key),
-    t: vi.fn((key: string) => key),
-    hasTranslation: vi.fn(() => false),
-  },
-}));
+// I18n is now an instance-based module, no longer a static class to mock
 
 vi.mock('../../../../src/components/dom', () => ({
   default: {
@@ -136,6 +130,10 @@ describe('InlineToolbar', () => {
     };
     Toolbar: {
       close: ReturnType<typeof vi.fn>;
+    };
+    I18n: {
+      t: ReturnType<typeof vi.fn>;
+      has: ReturnType<typeof vi.fn>;
     };
   };
 
@@ -278,6 +276,10 @@ describe('InlineToolbar', () => {
       },
       Toolbar: {
         close: vi.fn(),
+      },
+      I18n: {
+        t: vi.fn((key: string) => key),
+        has: vi.fn(() => false),
       },
     };
 

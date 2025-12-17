@@ -494,13 +494,13 @@ const CSS_CLASS_TRANSFORMS = [
   { pattern: /(['"`])ce-inline-toolbar(['"`])/g, replacement: '$1data-blok-testid="inline-toolbar"$2' },
 
   // Popover classes (ce-popover)
-  { pattern: /\.ce-popover--opened(?![\w-])/g, replacement: '[data-blok-popover][data-blok-opened="true"]' },
+  { pattern: /\.ce-popover--opened(?![\w-])/g, replacement: '[data-blok-popover-opened="true"]' },
   { pattern: /\.ce-popover__container(?![\w-])/g, replacement: '[data-blok-popover-container]' },
   { pattern: /\.ce-popover-item--focused(?![\w-])/g, replacement: '[data-blok-focused="true"]' },
   { pattern: /\.ce-popover-item(?![\w-])/g, replacement: '[data-blok-testid="popover-item"]' },
   { pattern: /\.ce-popover(?![\w-])/g, replacement: '[data-blok-popover]' },
   // Without dot prefix
-  { pattern: /(['"`])ce-popover--opened(['"`])/g, replacement: '$1data-blok-popover$2' },
+  { pattern: /(['"`])ce-popover--opened(['"`])/g, replacement: '$1data-blok-popover-opened$2' },
   { pattern: /(['"`])ce-popover__container(['"`])/g, replacement: '$1data-blok-popover-container$2' },
   { pattern: /(['"`])ce-popover-item--focused(['"`])/g, replacement: '$1data-blok-focused$2' },
   { pattern: /(['"`])ce-popover-item(['"`])/g, replacement: '$1data-blok-testid="popover-item"$2' },
@@ -538,17 +538,17 @@ const CSS_CLASS_TRANSFORMS = [
   { pattern: /(['"`])ce-ragged-right(['"`])/g, replacement: '$1data-blok-ragged-right$2' },
 
   // Popover item states and icons
-  { pattern: /\.ce-popover-item--confirmation(?![\w-])/g, replacement: '[data-blok-confirmation="true"]' },
+  { pattern: /\.ce-popover-item--confirmation(?![\w-])/g, replacement: '[data-blok-popover-item-confirmation="true"]' },
   { pattern: /\.ce-popover-item__icon(?![\w-])/g, replacement: '[data-blok-testid="popover-item-icon"]' },
   { pattern: /\.ce-popover-item__icon--tool(?![\w-])/g, replacement: '[data-blok-testid="popover-item-icon-tool"]' },
-  { pattern: /(['"`])ce-popover-item--confirmation(['"`])/g, replacement: '$1data-blok-confirmation$2' },
+  { pattern: /(['"`])ce-popover-item--confirmation(['"`])/g, replacement: '$1data-blok-popover-item-confirmation$2' },
   { pattern: /(['"`])ce-popover-item__icon(['"`])/g, replacement: '$1data-blok-testid="popover-item-icon"$2' },
   { pattern: /(['"`])ce-popover-item__icon--tool(['"`])/g, replacement: '$1data-blok-testid="popover-item-icon-tool"$2' },
 
   // Toolbox classes (ce-toolbox)
-  { pattern: /\.ce-toolbox--opened(?![\w-])/g, replacement: '[data-blok-toolbox][data-blok-opened="true"]' },
+  { pattern: /\.ce-toolbox--opened(?![\w-])/g, replacement: '[data-blok-toolbox-opened="true"]' },
   { pattern: /\.ce-toolbox(?![\w-])/g, replacement: '[data-blok-toolbox]' },
-  { pattern: /(['"`])ce-toolbox--opened(['"`])/g, replacement: '$1data-blok-toolbox$2' },
+  { pattern: /(['"`])ce-toolbox--opened(['"`])/g, replacement: '$1data-blok-toolbox-opened$2' },
   { pattern: /(['"`])ce-toolbox(['"`])/g, replacement: '$1data-blok-toolbox$2' },
 
   // CDX list classes (cdx-list)
@@ -991,10 +991,10 @@ What this codemod does:
     - .codex-editor* → [data-blok-editor], [data-blok-redactor], etc.
     - .ce-block* → [data-blok-element], [data-blok-selected], etc.
     - .ce-toolbar* → [data-blok-toolbar], [data-blok-settings-toggler], etc.
-    - .ce-toolbox* → [data-blok-toolbox], etc.
+    - .ce-toolbox* → [data-blok-toolbox], [data-blok-toolbox-opened], etc.
     - .ce-inline-toolbar, .ce-inline-tool* → [data-blok-testid="inline-*"]
-    - .ce-popover* → [data-blok-popover], [data-blok-popover-container], etc.
-    - .ce-popover-item* → [data-blok-testid="popover-item*"], [data-blok-confirmation], etc.
+    - .ce-popover* → [data-blok-popover], [data-blok-popover-opened], [data-blok-popover-container], etc.
+    - .ce-popover-item* → [data-blok-testid="popover-item*"], [data-blok-popover-item-confirmation], etc.
     - .ce-paragraph, .ce-header → [data-blok-tool="paragraph|header"]
     - .cdx-list* → [data-blok-list], [data-blok-list-item], etc.
     - .cdx-button, .cdx-input, .cdx-loader → [data-blok-button], etc.

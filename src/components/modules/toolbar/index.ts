@@ -1,7 +1,6 @@
 import Module from '../../__module';
 import $ from '../../dom';
 import * as _ from '../../utils';
-import I18n from '../../i18n';
 import * as tooltip from '../../utils/tooltip';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import Block from '../../block';
@@ -13,12 +12,7 @@ import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
 import type { BlockChangedPayload } from '../../events/BlockChanged';
 import { BlockChanged } from '../../events/BlockChanged';
 import { twJoin } from '../../utils/tw';
-import {
-  BLOK_TOOLBAR_ATTR,
-  BLOK_SETTINGS_TOGGLER_ATTR,
-  BLOK_TOOLBOX_OPENED_ATTR,
-  BLOK_DRAG_HANDLE_ATTR,
-} from '../../constants';
+import { DATA_ATTR } from '../../constants';
 import SelectionUtils from '../../selection';
 
 /**
@@ -614,7 +608,7 @@ export default class Toolbar extends Module<ToolbarNodes> {
     ]);
 
     this.nodes.wrapper = wrapper;
-    wrapper.setAttribute(BLOK_TOOLBAR_ATTR, '');
+    wrapper.setAttribute(DATA_ATTR.toolbar, '');
     wrapper.setAttribute('data-blok-testid', 'toolbar');
 
     /**
@@ -724,11 +718,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     const userOS = _.getUserOS();
     const modifierClickText = userOS.win
-      ? I18n.t('toolbox.ctrlAddAbove')
-      : I18n.t('toolbox.optionAddAbove');
+      ? this.Blok.I18n.t('toolbox.ctrlAddAbove')
+      : this.Blok.I18n.t('toolbox.optionAddAbove');
 
     const tooltipContent = this.createTooltipContent([
-      I18n.t('toolbox.addBelow'),
+      this.Blok.I18n.t('toolbox.addBelow'),
       modifierClickText,
     ]);
 
@@ -750,8 +744,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
       innerHTML: IconMenu,
     });
 
-    settingsToggler.setAttribute(BLOK_SETTINGS_TOGGLER_ATTR, '');
-    settingsToggler.setAttribute(BLOK_DRAG_HANDLE_ATTR, '');
+    settingsToggler.setAttribute(DATA_ATTR.settingsToggler, '');
+    settingsToggler.setAttribute(DATA_ATTR.dragHandle, '');
     settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
 
     // Accessibility: make the drag handle accessible to screen readers
@@ -761,11 +755,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     settingsToggler.setAttribute('tabindex', '-1');
     settingsToggler.setAttribute(
       'aria-label',
-      I18n.t('a11y.dragHandle')
+      this.Blok.I18n.t('a11y.dragHandle')
     );
     settingsToggler.setAttribute(
       'aria-roledescription',
-      I18n.t('a11y.dragHandleRole')
+      this.Blok.I18n.t('a11y.dragHandleRole')
     );
 
     this.nodes.settingsToggler = settingsToggler;
@@ -773,8 +767,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
     $.append(actions, settingsToggler);
 
     const blockTunesTooltip = this.createTooltipContent([
-      I18n.t('blockSettings.dragToMove'),
-      I18n.t('blockSettings.clickToOpenMenu'),
+      this.Blok.I18n.t('blockSettings.dragToMove'),
+      this.Blok.I18n.t('blockSettings.clickToOpenMenu'),
     ]);
 
     tooltip.onHover(settingsToggler, blockTunesTooltip, {
@@ -811,22 +805,23 @@ export default class Toolbar extends Module<ToolbarNodes> {
       api: this.Blok.API.methods,
       tools: this.Blok.Tools.blockTools,
       i18nLabels: {
-        filter: I18n.t('popover.search'),
-        nothingFound: I18n.t('popover.nothingFound'),
+        filter: this.Blok.I18n.t('popover.search'),
+        nothingFound: this.Blok.I18n.t('popover.nothingFound'),
       },
+      i18n: this.Blok.I18n,
       triggerElement: this.nodes.plusButton,
     });
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
-      this.Blok.UI.nodes.wrapper.setAttribute(BLOK_TOOLBOX_OPENED_ATTR, 'true');
+      this.Blok.UI.nodes.wrapper.setAttribute(DATA_ATTR.toolboxOpened, 'true');
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
-      this.Blok.UI.nodes.wrapper.removeAttribute(BLOK_TOOLBOX_OPENED_ATTR);
+      this.Blok.UI.nodes.wrapper.removeAttribute(DATA_ATTR.toolboxOpened);
     });
 
     this.toolboxInstance.on(ToolboxEvent.BlockAdded, ({ block }) => {

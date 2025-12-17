@@ -1,15 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import List, { type ListItemConfig, type ListItemData } from '../../../src/tools/list';
-import I18n from '../../../src/components/i18n';
 import defaultDictionary from '../../../src/components/i18n/locales/en/messages.json';
 import type { API, BlockToolConstructorOptions } from '../../../types';
-import type { I18nDictionary, TranslationKey } from '../../../types/configs';
+import type { I18nDictionary } from '../../../types/configs';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 
 /**
- * Creates a mock API object for testing
+ * Creates a mock API object for testing with custom dictionary
  */
-const createMockAPI = (): API =>
+const createMockAPI = (dictionary: Record<string, string> = defaultDictionary as Record<string, string>): API =>
   ({
     styles: {
       block: 'blok-block',
@@ -23,7 +22,7 @@ const createMockAPI = (): API =>
       settingsButtonActive: 'blok-settings-button--active',
     },
     i18n: {
-      t: (key: string) => I18n.t(`tools.list.${key}` as TranslationKey),
+      t: (key: string) => dictionary[key] ?? key,
     },
     blocks: {
       getCurrentBlockIndex: () => 0,
@@ -33,15 +32,16 @@ const createMockAPI = (): API =>
   }) as unknown as API;
 
 /**
- * Creates list tool constructor options
+ * Creates list tool constructor options with optional custom dictionary
  */
 const createListOptions = (
   data: Partial<ListItemData> = {},
-  config: ListItemConfig = {}
+  config: ListItemConfig = {},
+  dictionary?: Record<string, string>
 ): BlockToolConstructorOptions<ListItemData, ListItemConfig> => ({
   data: { text: '', style: 'unordered', ...data } as ListItemData,
   config,
-  api: createMockAPI(),
+  api: createMockAPI(dictionary),
   readOnly: false,
   block: {} as never,
 });
@@ -54,14 +54,6 @@ const toMenuArray = (config: MenuConfig): Array<Record<string, unknown>> => {
 };
 
 describe('List Tool - i18n', () => {
-  beforeEach(() => {
-    I18n.setDictionary(defaultDictionary as I18nDictionary);
-  });
-
-  afterEach(() => {
-    I18n.setDictionary(defaultDictionary as I18nDictionary);
-  });
-
   describe('default dictionary contains list translations', () => {
     it('has toolNames entries for list styles', () => {
       const dictionary = defaultDictionary as I18nDictionary;
@@ -78,17 +70,15 @@ describe('List Tool - i18n', () => {
     });
   });
 
-  describe('renderSettings uses i18n', () => {
+  describe('renderSettings uses i18n via API', () => {
     it('translates style labels in settings menu', () => {
-      const frenchDictionary: I18nDictionary = {
+      const frenchDictionary: Record<string, string> = {
         'toolNames.bulletedList': 'Liste à puces',
         'toolNames.numberedList': 'Liste numérotée',
         'toolNames.todoList': 'Liste de contrôle',
       };
 
-      I18n.setDictionary(frenchDictionary);
-
-      const options = createListOptions();
+      const options = createListOptions({}, {}, frenchDictionary);
       const list = new List(options);
       const settings = toMenuArray(list.renderSettings());
 
@@ -99,30 +89,26 @@ describe('List Tool - i18n', () => {
     });
 
     it('falls back to original key when translation is missing', () => {
-      const emptyDictionary: I18nDictionary = {};
+      const emptyDictionary: Record<string, string> = {};
 
-      I18n.setDictionary(emptyDictionary);
-
-      const options = createListOptions();
+      const options = createListOptions({}, {}, emptyDictionary);
       const list = new List(options);
       const settings = toMenuArray(list.renderSettings());
 
-      // Falls back to the last segment of the translation key
-      expect(settings[0].label).toBe('bulletedList');
-      expect(settings[1].label).toBe('numberedList');
-      expect(settings[2].label).toBe('todoList');
+      // Falls back to the full key when translation is missing
+      expect(settings[0].label).toBe('toolNames.bulletedList');
+      expect(settings[1].label).toBe('toolNames.numberedList');
+      expect(settings[2].label).toBe('toolNames.todoList');
     });
 
     it('respects configured styles when translating', () => {
-      const germanDictionary: I18nDictionary = {
+      const germanDictionary: Record<string, string> = {
         'toolNames.bulletedList': 'Aufzählung',
         'toolNames.numberedList': 'Nummerierung',
         'toolNames.todoList': 'Aufgabenliste',
       };
 
-      I18n.setDictionary(germanDictionary);
-
-      const options = createListOptions({}, { styles: ['unordered', 'checklist'] });
+      const options = createListOptions({}, { styles: ['unordered', 'checklist'] }, germanDictionary);
       const list = new List(options);
       const settings = toMenuArray(list.renderSettings());
 
@@ -165,33 +151,33 @@ describe('List Tool - i18n', () => {
     });
   });
 
-  describe('i18n integration with I18n class', () => {
-    it('translates list style names via I18n.t()', () => {
-      const spanishDictionary: I18nDictionary = {
+  describe('i18n integration via mock API', () => {
+    it('translates list style names via api.i18n.t()', () => {
+      const spanishDictionary: Record<string, string> = {
         'toolNames.bulletedList': 'Lista con viñetas',
         'toolNames.numberedList': 'Lista numerada',
         'toolNames.todoList': 'Lista de verificación',
       };
 
-      I18n.setDictionary(spanishDictionary);
+      const api = createMockAPI(spanishDictionary);
 
-      expect(I18n.t('toolNames.bulletedList')).toBe('Lista con viñetas');
-      expect(I18n.t('toolNames.numberedList')).toBe('Lista numerada');
-      expect(I18n.t('toolNames.todoList')).toBe('Lista de verificación');
+      expect(api.i18n.t('toolNames.bulletedList')).toBe('Lista con viñetas');
+      expect(api.i18n.t('toolNames.numberedList')).toBe('Lista numerada');
+      expect(api.i18n.t('toolNames.todoList')).toBe('Lista de verificación');
     });
 
     it('translates toolbox titles via toolNames namespace', () => {
-      const japaneseDictionary: I18nDictionary = {
+      const japaneseDictionary: Record<string, string> = {
         'toolNames.bulletedList': '箇条書きリスト',
         'toolNames.numberedList': '番号付きリスト',
         'toolNames.todoList': 'ToDoリスト',
       };
 
-      I18n.setDictionary(japaneseDictionary);
+      const api = createMockAPI(japaneseDictionary);
 
-      expect(I18n.t('toolNames.bulletedList')).toBe('箇条書きリスト');
-      expect(I18n.t('toolNames.numberedList')).toBe('番号付きリスト');
-      expect(I18n.t('toolNames.todoList')).toBe('ToDoリスト');
+      expect(api.i18n.t('toolNames.bulletedList')).toBe('箇条書きリスト');
+      expect(api.i18n.t('toolNames.numberedList')).toBe('番号付きリスト');
+      expect(api.i18n.t('toolNames.todoList')).toBe('ToDoリスト');
     });
   });
 });

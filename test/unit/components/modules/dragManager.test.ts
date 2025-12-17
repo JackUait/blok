@@ -7,7 +7,7 @@ import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../types';
 import type Block from '../../../../src/components/block';
-import { BLOK_DRAGGING_ATTR, BLOK_DRAGGING_MULTI_ATTR, BLOK_DUPLICATING_ATTR } from '../../../../src/components/constants';
+import { DATA_ATTR } from '../../../../src/components/constants';
 import * as tooltip from '../../../../src/components/utils/tooltip';
 import * as announcer from '../../../../src/components/utils/announcer';
 
@@ -145,11 +145,27 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
     },
   };
 
+  const i18n = {
+    t: vi.fn((key: string, vars?: Record<string, unknown>) => {
+      let text = key;
+
+      if (vars) {
+        for (const [k, v] of Object.entries(vars)) {
+          text = text.replace(`{${k}}`, String(v));
+        }
+      }
+
+      return text;
+    }),
+    has: vi.fn(() => false),
+  };
+
   const defaults: ModuleOverrides = {
     BlockManager: blockManager as unknown as BlokModules['BlockManager'],
     BlockSelection: blockSelection as unknown as BlokModules['BlockSelection'],
     Toolbar: toolbar as unknown as BlokModules['Toolbar'],
     UI: ui as unknown as BlokModules['UI'],
+    I18n: i18n as unknown as BlokModules['I18n'],
   };
 
   const mergedState = { ...defaults, ...overrides } as BlokModules;
@@ -490,7 +506,7 @@ describe('DragManager', () => {
 
       document.dispatchEvent(mouseMoveEvent);
 
-      expect(wrapper.getAttribute(BLOK_DRAGGING_ATTR)).toBe('true');
+      expect(wrapper.getAttribute(DATA_ATTR.dragging)).toBe('true');
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -621,7 +637,7 @@ describe('DragManager', () => {
 
       document.dispatchEvent(mouseMoveEvent);
 
-      expect(wrapper.getAttribute(BLOK_DRAGGING_MULTI_ATTR)).toBe('true');
+      expect(wrapper.getAttribute(DATA_ATTR.draggingMulti)).toBe('true');
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -739,12 +755,12 @@ describe('DragManager', () => {
 
       document.dispatchEvent(mouseMoveEvent);
 
-      expect(wrapper.getAttribute(BLOK_DRAGGING_ATTR)).toBe('true');
+      expect(wrapper.getAttribute(DATA_ATTR.dragging)).toBe('true');
 
       // Mouse up triggers cleanup
       document.dispatchEvent(createMouseEvent('mouseup'));
 
-      expect(wrapper.getAttribute(BLOK_DRAGGING_ATTR)).toBeNull();
+      expect(wrapper.getAttribute(DATA_ATTR.dragging)).toBeNull();
     });
 
     it('removes preview element from DOM on cleanup', () => {
@@ -1059,7 +1075,7 @@ describe('DragManager', () => {
       document.dispatchEvent(mouseMoveEvent);
 
       // Check that multi-block dragging is set (because descendants are included)
-      expect(wrapper.getAttribute(BLOK_DRAGGING_MULTI_ATTR)).toBe('true');
+      expect(wrapper.getAttribute(DATA_ATTR.draggingMulti)).toBe('true');
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1097,7 +1113,7 @@ describe('DragManager', () => {
       document.dispatchEvent(mouseMoveEvent);
 
       // Should NOT be multi-block drag since sibling is not a descendant
-      expect(wrapper.getAttribute(BLOK_DRAGGING_MULTI_ATTR)).toBeNull();
+      expect(wrapper.getAttribute(DATA_ATTR.draggingMulti)).toBeNull();
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1132,7 +1148,7 @@ describe('DragManager', () => {
       dragManager.destroy();
 
       expect(dragManager.isDragging).toBe(false);
-      expect(wrapper.getAttribute(BLOK_DRAGGING_ATTR)).toBeNull();
+      expect(wrapper.getAttribute(DATA_ATTR.dragging)).toBeNull();
     });
   });
 
@@ -1170,7 +1186,7 @@ describe('DragManager', () => {
       // Press Alt key
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
 
-      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBe('true');
+      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBe('true');
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1192,11 +1208,11 @@ describe('DragManager', () => {
 
       // Press Alt key
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
-      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBe('true');
+      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBe('true');
 
       // Release Alt key
       document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Alt', bubbles: true }));
-      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBeNull();
+      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBeNull();
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1220,7 +1236,7 @@ describe('DragManager', () => {
       // Press Alt key - should not set attribute since not dragging
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
 
-      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBeNull();
+      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBeNull();
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1242,12 +1258,12 @@ describe('DragManager', () => {
 
       // Press Alt key
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
-      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBe('true');
+      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBe('true');
 
       // Clean up via mouseup
       document.dispatchEvent(createMouseEvent('mouseup'));
 
-      expect(wrapper.getAttribute(BLOK_DUPLICATING_ATTR)).toBeNull();
+      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBeNull();
     });
 
     it('calls insert instead of move when Alt key is held during drop', async () => {

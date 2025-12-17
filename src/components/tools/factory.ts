@@ -56,13 +56,12 @@ export default class ToolsFactory {
     }
 
     const Constructor = this.getConstructor(constructable);
-    const isTune = Boolean(Reflect.get(constructable, InternalTuneSettings.IsTune));
 
     return new Constructor({
       name,
       constructable,
       config,
-      api: this.api.getMethodsForTool(name, isTune),
+      api: this.api.methods,
       isDefault: name === this.blokConfig.defaultBlock,
       defaultPlaceholder: this.blokConfig.placeholder,
       isInternal,

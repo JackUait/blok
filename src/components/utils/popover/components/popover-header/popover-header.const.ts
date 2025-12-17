@@ -6,12 +6,3 @@ export const css = {
   text: 'text-lg font-semibold text-text-primary',
   backButton: 'border-0 bg-transparent w-9 h-9 text-text-primary cursor-pointer [&_svg]:block [&_svg]:w-7 [&_svg]:h-7',
 };
-
-/**
- * Data attributes for popover header
- */
-export const DATA_ATTR = {
-  root: 'data-blok-popover-header',
-  text: 'data-blok-popover-header-text',
-  backButton: 'data-blok-popover-header-back-button',
-} as const;

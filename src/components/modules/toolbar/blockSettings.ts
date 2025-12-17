@@ -2,7 +2,6 @@ import Module from '../../__module';
 import $ from '../../dom';
 import SelectionUtils from '../../selection';
 import type Block from '../../block';
-import I18n from '../../i18n';
 import Flipper from '../../flipper';
 import type { MenuConfigItem } from '../../../../types/tools';
 import type { PopoverItemParams } from '../../utils/popover';
@@ -175,8 +174,8 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       items: await this.getTunesItems(block, commonTunes, toolTunes),
       scopeElement: this.Blok.API.methods.ui.nodes.redactor,
       messages: {
-        nothingFound: I18n.t('popover.nothingFound'),
-        search: I18n.t('popover.search'),
+        nothingFound: this.Blok.I18n.t('popover.nothingFound'),
+        search: this.Blok.I18n.t('popover.search'),
       },
     };
 
@@ -301,7 +300,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       tool.toolbox.forEach((toolboxItem) => {
         result.push({
           icon: toolboxItem.icon,
-          title: translateToolTitle(toolboxItem, tool.name),
+          title: translateToolTitle(this.Blok.I18n, toolboxItem, tool.name),
           name: toolboxItem.name ?? tool.name,
           closeOnActivate: true,
           onActivate: async () => {
@@ -331,7 +330,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       items.push({
         icon: IconReplace,
         name: 'convert-to',
-        title: I18n.t('popover.convertTo'),
+        title: this.Blok.I18n.t('popover.convertTo'),
         children: {
           items: convertToItems,
         },
@@ -350,7 +349,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     } else {
       items.push({
         icon: IconCross,
-        title: I18n.t('blockSettings.delete'),
+        title: this.Blok.I18n.t('blockSettings.delete'),
         name: 'delete',
         closeOnActivate: true,
         onActivate: () => {

@@ -36,18 +36,4 @@ export default class API extends Module {
       ui: this.Blok.UiAPI.methods,
     };
   }
-
-  /**
-   * Returns Blok Core API methods for passed tool
-   * @param toolName - tool name
-   * @param isTune - is tool a block tune
-   */
-  public getMethodsForTool(toolName: string, isTune: boolean): APIInterfaces {
-    return Object.assign(
-      this.methods,
-      {
-        i18n: this.Blok.I18nAPI.getMethodsForTool(toolName, isTune),
-      }
-    ) as APIInterfaces;
-  }
 }

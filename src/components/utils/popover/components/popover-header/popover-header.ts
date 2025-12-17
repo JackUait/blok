@@ -1,6 +1,7 @@
 import type { PopoverHeaderParams } from './popover-header.types';
 import Dom from '../../../../dom';
-import { css, DATA_ATTR } from './popover-header.const';
+import { css } from './popover-header.const';
+import { DATA_ATTR } from '../../../../constants/data-attributes';
 import { IconChevronLeft } from '../../../../icons';
 import Listeners from '../../../listeners';
 
@@ -43,15 +44,15 @@ export class PopoverHeader {
     this.nodes = {
       root: Dom.make('div', [ css.root ], {
         'data-blok-testid': 'popover-header',
-        [DATA_ATTR.root]: '',
+        [DATA_ATTR.popoverHeader]: '',
       }),
       backButton: Dom.make('button', [ css.backButton ], {
         'data-blok-testid': 'popover-header-back-button',
-        [DATA_ATTR.backButton]: '',
+        [DATA_ATTR.popoverHeaderBackButton]: '',
       }),
       text: Dom.make('div', [ css.text ], {
         'data-blok-testid': 'popover-header-text',
-        [DATA_ATTR.text]: '',
+        [DATA_ATTR.popoverHeaderText]: '',
       }),
     };
     this.nodes.backButton.innerHTML = IconChevronLeft;

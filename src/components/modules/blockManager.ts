@@ -21,10 +21,9 @@ import { BlockChanged } from '../events';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
 import PromiseQueue from '../utils/promise-queue';
-import { BLOK_ELEMENT_SELECTOR, BLOK_EDITOR_SELECTOR } from '../constants';
+import { DATA_ATTR, createSelector } from '../constants';
 import Shortcuts from '../utils/shortcuts';
 import { announce } from '../utils/announcer';
-import I18n from '../i18n';
 
 type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
@@ -846,7 +845,7 @@ export default class BlockManager extends Module {
     const nodes = this.blocksStore.nodes;
 
 
-    const firstLevelBlock = normalizedElement.closest(BLOK_ELEMENT_SELECTOR);
+    const firstLevelBlock = normalizedElement.closest(createSelector(DATA_ATTR.element));
 
     if (!firstLevelBlock) {
       return undefined;
@@ -877,7 +876,7 @@ export default class BlockManager extends Module {
       return undefined;
     }
 
-    const parentFirstLevelBlock = normalizedChildNode.closest(BLOK_ELEMENT_SELECTOR);
+    const parentFirstLevelBlock = normalizedChildNode.closest(createSelector(DATA_ATTR.element));
 
     if (!parentFirstLevelBlock) {
       return undefined;
@@ -888,7 +887,7 @@ export default class BlockManager extends Module {
      * by checking whether the found block belongs to the current instance
      * @see {@link Ui#documentTouched}
      */
-    const blokWrapper = parentFirstLevelBlock.closest(BLOK_EDITOR_SELECTOR);
+    const blokWrapper = parentFirstLevelBlock.closest(createSelector(DATA_ATTR.editor));
     const isBlockBelongsToCurrentInstance = blokWrapper?.isEqualNode(this.Blok.UI.nodes.wrapper);
 
     if (!isBlockBelongsToCurrentInstance) {
@@ -935,7 +934,7 @@ export default class BlockManager extends Module {
     }
 
 
-    const firstLevelBlock = normalizedChildNode.closest(BLOK_ELEMENT_SELECTOR);
+    const firstLevelBlock = normalizedChildNode.closest(createSelector(DATA_ATTR.element));
 
     if (!firstLevelBlock) {
       return undefined;
@@ -1092,7 +1091,7 @@ export default class BlockManager extends Module {
     if (currentIndex <= 0) {
       // Announce boundary condition
       announce(
-        I18n.t('a11y.atTop'),
+        this.Blok.I18n.t('a11y.atTop'),
         { politeness: 'polite' }
       );
 
@@ -1105,9 +1104,10 @@ export default class BlockManager extends Module {
     // Announce successful move (currentBlockIndex is now updated to new position)
     const newPosition = this.currentBlockIndex + 1; // Convert to 1-indexed for user
     const total = this.blocksStore.length;
-    const message = I18n.t('a11y.movedUp')
-      .replace('{position}', String(newPosition))
-      .replace('{total}', String(total));
+    const message = this.Blok.I18n.t('a11y.movedUp', {
+      position: newPosition,
+      total,
+    });
 
     announce(message, { politeness: 'assertive' });
   }
@@ -1122,7 +1122,7 @@ export default class BlockManager extends Module {
     if (currentIndex < 0 || currentIndex >= this.blocksStore.length - 1) {
       // Announce boundary condition
       announce(
-        I18n.t('a11y.atBottom'),
+        this.Blok.I18n.t('a11y.atBottom'),
         { politeness: 'polite' }
       );
 
@@ -1135,9 +1135,10 @@ export default class BlockManager extends Module {
     // Announce successful move (currentBlockIndex is now updated to new position)
     const newPosition = this.currentBlockIndex + 1; // Convert to 1-indexed for user
     const total = this.blocksStore.length;
-    const message = I18n.t('a11y.movedDown')
-      .replace('{position}', String(newPosition))
-      .replace('{total}', String(total));
+    const message = this.Blok.I18n.t('a11y.movedDown', {
+      position: newPosition,
+      total,
+    });
 
     announce(message, { politeness: 'assertive' });
   }

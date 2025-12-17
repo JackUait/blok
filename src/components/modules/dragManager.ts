@@ -9,10 +9,9 @@ import Module from '../__module';
 import type Block from '../block';
 import $ from '../dom';
 import * as tooltip from '../utils/tooltip';
-import { BLOK_DRAGGING_ATTR, BLOK_DRAGGING_MULTI_ATTR, BLOK_DUPLICATING_ATTR, BLOK_ELEMENT_SELECTOR } from '../constants';
+import { DATA_ATTR, createSelector } from '../constants';
 import { twMerge } from '../utils/tw';
 import { announce } from '../utils/announcer';
-import I18n from '../i18n';
 
 /**
  * Styles for the drag preview element
@@ -357,11 +356,11 @@ export default class DragManager extends Module {
     // Set global dragging state
     const wrapper = this.Blok.UI.nodes.wrapper;
 
-    wrapper.setAttribute(BLOK_DRAGGING_ATTR, 'true');
+    wrapper.setAttribute(DATA_ATTR.dragging, 'true');
 
     // Add multi-block dragging attribute if applicable
     if (this.dragState.isMultiBlockDrag) {
-      wrapper.setAttribute(BLOK_DRAGGING_MULTI_ATTR, 'true');
+      wrapper.setAttribute(DATA_ATTR.draggingMulti, 'true');
     }
 
     // Clear selection for single-block drags only
@@ -385,13 +384,12 @@ export default class DragManager extends Module {
     const blockCount = this.dragState!.sourceBlocks.length;
 
     if (blockCount > 1) {
-      const message = I18n.t('a11y.dragStartedMultiple')
-        .replace('{count}', String(blockCount));
+      const message = this.Blok.I18n.t('a11y.dragStartedMultiple', { count: blockCount });
 
       announce(message, { politeness: 'assertive' });
     } else {
       announce(
-        I18n.t('a11y.dragStarted'),
+        this.Blok.I18n.t('a11y.dragStarted'),
         { politeness: 'assertive' }
       );
     }
@@ -427,7 +425,7 @@ export default class DragManager extends Module {
     }
 
     // Find block holder
-    const blockHolder = elementUnderCursor.closest(BLOK_ELEMENT_SELECTOR) as HTMLElement | null;
+    const blockHolder = elementUnderCursor.closest(createSelector(DATA_ATTR.element)) as HTMLElement | null;
 
     if (!blockHolder) {
       this.dragState.targetBlock = null;
@@ -547,9 +545,10 @@ export default class DragManager extends Module {
       this.dragState.lastAnnouncedDropIndex = pendingIndex;
 
       const total = this.Blok.BlockManager.blocks.length;
-      const message = I18n.t('a11y.dropPosition')
-        .replace('{position}', String(pendingIndex + 1))
-        .replace('{total}', String(total));
+      const message = this.Blok.I18n.t('a11y.dropPosition', {
+        position: pendingIndex + 1,
+        total,
+      });
 
       announce(message, { politeness: 'polite' });
     }, DRAG_CONFIG.announcementThrottleMs);
@@ -698,9 +697,9 @@ export default class DragManager extends Module {
     const wrapper = this.Blok.UI.nodes.wrapper;
 
     if (isDuplicating) {
-      wrapper.setAttribute(BLOK_DUPLICATING_ATTR, 'true');
+      wrapper.setAttribute(DATA_ATTR.duplicating, 'true');
     } else {
-      wrapper.removeAttribute(BLOK_DUPLICATING_ATTR);
+      wrapper.removeAttribute(DATA_ATTR.duplicating);
     }
   }
 
@@ -815,16 +814,18 @@ export default class DragManager extends Module {
     const count = duplicatedBlocks.length;
 
     if (count > 1) {
-      const message = I18n.t('a11y.blocksDuplicated')
-        .replace('{count}', String(count))
-        .replace('{position}', String(newIndex + 1));
+      const message = this.Blok.I18n.t('a11y.blocksDuplicated', {
+        count,
+        position: newIndex + 1,
+      });
 
       announce(message, { politeness: 'assertive' });
     } else {
       const total = this.Blok.BlockManager.blocks.length;
-      const message = I18n.t('a11y.blockDuplicated')
-        .replace('{position}', String(newIndex + 1))
-        .replace('{total}', String(total));
+      const message = this.Blok.I18n.t('a11y.blockDuplicated', {
+        position: newIndex + 1,
+        total,
+      });
 
       announce(message, { politeness: 'assertive' });
     }
@@ -841,15 +842,17 @@ export default class DragManager extends Module {
     const total = this.Blok.BlockManager.blocks.length;
 
     if (isMultiBlockDrag) {
-      const message = I18n.t('a11y.blocksMoved')
-        .replace('{count}', String(sourceBlocks.length))
-        .replace('{position}', String(newIndex + 1));
+      const message = this.Blok.I18n.t('a11y.blocksMoved', {
+        count: sourceBlocks.length,
+        position: newIndex + 1,
+      });
 
       announce(message, { politeness: 'assertive' });
     } else {
-      const message = I18n.t('a11y.blockMoved')
-        .replace('{position}', String(newIndex + 1))
-        .replace('{total}', String(total));
+      const message = this.Blok.I18n.t('a11y.blockMoved', {
+        position: newIndex + 1,
+        total,
+      });
 
       announce(message, { politeness: 'assertive' });
     }
@@ -981,7 +984,7 @@ export default class DragManager extends Module {
     // Announce cancellation to screen readers if drag was in progress and cancelled
     if (wasCancelled && this.dragState.isDragging) {
       announce(
-        I18n.t('a11y.dropCancelled'),
+        this.Blok.I18n.t('a11y.dropCancelled'),
         { politeness: 'polite' }
       );
     }
@@ -1010,9 +1013,9 @@ export default class DragManager extends Module {
     // Remove global dragging state
     const wrapper = this.Blok.UI.nodes.wrapper;
 
-    wrapper.removeAttribute(BLOK_DRAGGING_ATTR);
-    wrapper.removeAttribute(BLOK_DRAGGING_MULTI_ATTR);
-    wrapper.removeAttribute(BLOK_DUPLICATING_ATTR);
+    wrapper.removeAttribute(DATA_ATTR.dragging);
+    wrapper.removeAttribute(DATA_ATTR.draggingMulti);
+    wrapper.removeAttribute(DATA_ATTR.duplicating);
 
     // Remove event listeners
     if (this.boundHandlers) {

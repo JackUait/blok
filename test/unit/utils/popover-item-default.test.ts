@@ -8,15 +8,7 @@ import {
   PopoverItemDefault,
   type PopoverItemDefaultParams
 } from '../../../src/components/utils/popover/components/popover-item';
-import {
-  DATA_ATTRIBUTE_ACTIVE,
-  DATA_ATTRIBUTE_HIDDEN,
-  DATA_ATTRIBUTE_CONFIRMATION,
-  DATA_ATTRIBUTE_NO_HOVER,
-  DATA_ATTRIBUTE_NO_FOCUS,
-  DATA_ATTRIBUTE_FOCUSED,
-  DATA_ATTRIBUTE_WOBBLE
-} from '../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
+import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 
 type ItemSetupResult = {
   item: PopoverItemDefault;
@@ -78,33 +70,33 @@ describe('PopoverItemDefault', () => {
   it('marks item as active when constructed with isActive=true', () => {
     const { element } = createItem({ isActive: true });
 
-    expect(element.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe('true');
+    expect(element.getAttribute(DATA_ATTR.popoverItemActive)).toBe('true');
   });
 
   it('toggles active state via toggleActive()', () => {
     const { item, element } = createItem();
 
     item.toggleActive();
-    expect(element.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe('true');
+    expect(element.getAttribute(DATA_ATTR.popoverItemActive)).toBe('true');
 
     item.toggleActive();
-    expect(element.hasAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.popoverItemActive)).toBe(false);
 
     item.toggleActive(true);
-    expect(element.getAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe('true');
+    expect(element.getAttribute(DATA_ATTR.popoverItemActive)).toBe('true');
 
     item.toggleActive(false);
-    expect(element.hasAttribute(DATA_ATTRIBUTE_ACTIVE)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.popoverItemActive)).toBe(false);
   });
 
   it('toggles hidden state', () => {
     const { item, element } = createItem();
 
     item.toggleHidden(true);
-    expect(element.getAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe('true');
+    expect(element.getAttribute(DATA_ATTR.hidden)).toBe('true');
 
     item.toggleHidden(false);
-    expect(element.hasAttribute(DATA_ATTRIBUTE_HIDDEN)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.hidden)).toBe(false);
   });
 
   it('invokes onActivate when clicked without confirmation', () => {
@@ -115,7 +107,7 @@ describe('PopoverItemDefault', () => {
 
     expect(onActivate).toHaveBeenCalledTimes(1);
     expect(onActivate).toHaveBeenCalledWith(params);
-    expect(element.hasAttribute(DATA_ATTRIBUTE_CONFIRMATION)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.popoverItemConfirmation)).toBe(false);
   });
 
   it('animates error when onActivate throws', () => {
@@ -130,11 +122,11 @@ describe('PopoverItemDefault', () => {
     item.handleClick();
 
     expect(onActivate).toHaveBeenCalledTimes(1);
-    expect(icon?.getAttribute(DATA_ATTRIBUTE_WOBBLE)).toBe('true');
+    expect(icon?.getAttribute(DATA_ATTR.popoverItemWobble)).toBe('true');
 
     icon?.dispatchEvent(new Event('animationend'));
 
-    expect(icon?.hasAttribute(DATA_ATTRIBUTE_WOBBLE)).toBe(false);
+    expect(icon?.hasAttribute(DATA_ATTR.popoverItemWobble)).toBe(false);
   });
 
   it('enters confirmation mode on first click and executes confirmation on second click', () => {
@@ -149,18 +141,18 @@ describe('PopoverItemDefault', () => {
 
     item.handleClick();
     expect(item.isConfirmationStateEnabled).toBe(true);
-    expect(element.getAttribute(DATA_ATTRIBUTE_CONFIRMATION)).toBe('true');
-    expect(element.getAttribute(DATA_ATTRIBUTE_NO_HOVER)).toBe('true');
-    expect(element.getAttribute(DATA_ATTRIBUTE_NO_FOCUS)).toBe('true');
+    expect(element.getAttribute(DATA_ATTR.popoverItemConfirmation)).toBe('true');
+    expect(element.getAttribute(DATA_ATTR.popoverItemNoHover)).toBe('true');
+    expect(element.getAttribute(DATA_ATTR.popoverItemNoFocus)).toBe('true');
 
     item.handleClick();
 
     expect(confirmationActivate).toHaveBeenCalledTimes(1);
     expect(confirmationActivate).toHaveBeenCalledWith(confirmation);
     expect(item.isConfirmationStateEnabled).toBe(false);
-    expect(element.hasAttribute(DATA_ATTRIBUTE_CONFIRMATION)).toBe(false);
-    expect(element.hasAttribute(DATA_ATTRIBUTE_NO_HOVER)).toBe(false);
-    expect(element.hasAttribute(DATA_ATTRIBUTE_NO_FOCUS)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.popoverItemConfirmation)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.popoverItemNoHover)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.popoverItemNoFocus)).toBe(false);
   });
 
   it('resets confirmation state via reset()', () => {
@@ -176,7 +168,7 @@ describe('PopoverItemDefault', () => {
     item.reset();
 
     expect(item.isConfirmationStateEnabled).toBe(false);
-    expect(element.hasAttribute(DATA_ATTRIBUTE_CONFIRMATION)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.popoverItemConfirmation)).toBe(false);
   });
 
   it('removes special hover and focus classes on focus', () => {
@@ -187,13 +179,13 @@ describe('PopoverItemDefault', () => {
     const { item, element } = createItem({ confirmation });
 
     item.handleClick();
-    expect(element.getAttribute(DATA_ATTRIBUTE_NO_HOVER)).toBe('true');
-    expect(element.getAttribute(DATA_ATTRIBUTE_NO_FOCUS)).toBe('true');
+    expect(element.getAttribute(DATA_ATTR.popoverItemNoHover)).toBe('true');
+    expect(element.getAttribute(DATA_ATTR.popoverItemNoFocus)).toBe('true');
 
     item.onFocus();
 
-    expect(element.hasAttribute(DATA_ATTRIBUTE_NO_HOVER)).toBe(false);
-    expect(element.hasAttribute(DATA_ATTRIBUTE_NO_FOCUS)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.popoverItemNoHover)).toBe(false);
+    expect(element.hasAttribute(DATA_ATTR.popoverItemNoFocus)).toBe(false);
   });
 
   it('reflects focus state through isFocused getter', () => {
@@ -201,10 +193,10 @@ describe('PopoverItemDefault', () => {
 
     expect(item.isFocused).toBe(false);
 
-    element.setAttribute(DATA_ATTRIBUTE_FOCUSED, 'true');
+    element.setAttribute(DATA_ATTR.focused, 'true');
     expect(item.isFocused).toBe(true);
 
-    element.removeAttribute(DATA_ATTRIBUTE_FOCUSED);
+    element.removeAttribute(DATA_ATTR.focused);
     expect(item.isFocused).toBe(false);
   });
 

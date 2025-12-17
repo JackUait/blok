@@ -2,7 +2,6 @@ import $ from './dom';
 import * as _ from './utils';
 import type { BlokConfig, SanitizerConfig } from '../../types';
 import type { BlokModules } from '../types-internal/blok-modules';
-import I18n from './i18n';
 import { CriticalError } from './errors/critical';
 import EventsDispatcher from './utils/events';
 import Modules from './modules';
@@ -48,7 +47,6 @@ export default class Core {
       Promise.resolve()
         .then(async () => {
           this.configuration = config;
-          await this.resolveLocaleAsync();
           this.validate();
           this.init();
           await this.start();
@@ -191,19 +189,6 @@ export default class Core {
     }
 
     this.config.readOnly = this.config.readOnly as boolean || false;
-
-    /**
-     * Adjust i18n
-     * Priority: messages (custom dictionary) > locale > auto-detect
-     */
-    // Initialize I18n with configuration options (defaultLocale, locales)
-    I18n.init({
-      defaultLocale: this.config.i18n?.defaultLocale,
-      locales: this.config.i18n?.locales,
-    });
-
-    // Note: Locale resolution is deferred to resolveLocaleAsync() for proper lazy loading
-    // Custom messages will be handled there as well
   }
 
   /**
@@ -233,27 +218,6 @@ export default class Core {
   }
 
   /**
-   * Resolve locale asynchronously for proper lazy loading support.
-   * This must be called after configuration is set but before modules are initialized.
-   */
-  private async resolveLocaleAsync(): Promise<void> {
-    if (this.config.i18n?.messages) {
-      // Custom dictionary takes precedence
-      I18n.setDictionary(this.config.i18n.messages);
-
-      // Use provided direction or default to 'ltr'
-      this.config.i18n.direction = this.config.i18n.direction ?? 'ltr';
-    } else {
-      // Resolve locale asynchronously (auto-detect if not specified or set to 'auto')
-      const localeResult = await I18n.resolveLocaleAsync(this.config.i18n?.activeLocale);
-
-      // Use provided direction, or direction from detected locale
-      this.config.i18n = this.config.i18n ?? {};
-      this.config.i18n.direction = this.config.i18n.direction ?? localeResult.direction;
-    }
-  }
-
-  /**
    * Initializes modules:
    *  - make and save instances
    *  - configure
@@ -278,6 +242,7 @@ export default class Core {
    */
   public async start(): Promise<void> {
     const modulesToPrepare = [
+      'I18n',
       'Tools',
       'UI',
       'BlockManager',

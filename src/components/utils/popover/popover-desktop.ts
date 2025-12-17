@@ -5,7 +5,8 @@ import { PopoverItemSeparator, css as popoverItemCls } from './components/popove
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { keyCodes } from '../../utils';
-import { CSSVariables, DATA_ATTR } from './popover.const';
+import { CSSVariables } from './popover.const';
+import { DATA_ATTR } from '../../constants/data-attributes';
 import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent } from './components/search-input';
 import { PopoverItemDefault } from './components/popover-item';
@@ -443,8 +444,8 @@ export class PopoverDesktop extends PopoverAbstract {
     const actualPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`) as HTMLElement | null ?? nestedPopoverEl;
 
     // Check if parent popover has openTop or openLeft state
-    const isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.openTop);
-    const isParentOpenLeft = this.nodes.popover.hasAttribute(DATA_ATTR.openLeft);
+    const isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenTop);
+    const isParentOpenLeft = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenLeft);
 
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
@@ -530,7 +531,7 @@ export class PopoverDesktop extends PopoverAbstract {
     popoverClone.style.position = 'absolute';
     popoverClone.style.top = '-1000px';
 
-    popoverClone.setAttribute(DATA_ATTR.opened, 'true');
+    popoverClone.setAttribute(DATA_ATTR.popoverOpened, 'true');
     popoverClone.querySelector(`[${DATA_ATTR.nested}]`)?.remove();
     document.body.appendChild(popoverClone);
 

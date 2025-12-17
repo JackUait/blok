@@ -39,6 +39,7 @@ import Tools from '../components/modules/tools';
 import UI from '../components/modules/ui';
 import ToolsAPI from '../components/modules/api/tools';
 import History from '../components/modules/history';
+import I18n from '../components/modules/i18n';
 
 export interface BlokModules {
   // API Modules
@@ -67,6 +68,7 @@ export interface BlokModules {
   InlineToolbar: InlineToolbar,
 
   // Modules
+  I18n: I18n,
   BlockEvents: BlockEvents,
   BlockManager: BlockManager,
   BlockSelection: BlockSelection,

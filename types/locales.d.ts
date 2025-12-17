@@ -13,17 +13,11 @@ import type { LocaleConfig, LocaleRegistry, SupportedLocale } from './configs/i1
 /** Default locale code ('en') */
 export declare const DEFAULT_LOCALE: SupportedLocale;
 
-/** Set of RTL locale codes */
-export declare const RTL_LOCALES: ReadonlySet<SupportedLocale>;
-
 /** Basic preset locale codes (14 languages) */
 export declare const BASIC_LOCALE_CODES: readonly SupportedLocale[];
 
 /** Extended preset locale codes (26 languages) */
 export declare const EXTENDED_LOCALE_CODES: readonly SupportedLocale[];
-
-/** Additional codes in extended preset beyond basic */
-export declare const EXTENDED_LOCALE_ADDITIONS: readonly SupportedLocale[];
 
 /** All supported locale codes (68 languages) */
 export declare const ALL_LOCALE_CODES: readonly SupportedLocale[];
@@ -59,9 +53,6 @@ export declare const buildRegistry: (codes: readonly SupportedLocale[]) => Promi
 /** Get a loaded locale synchronously (returns undefined if not loaded) */
 export declare const getLocaleSync: (code: SupportedLocale) => LocaleConfig | undefined;
 
-/** Check if a locale is loaded */
-export declare const isLocaleLoaded: (code: SupportedLocale) => boolean;
-
 // ============================================================================
 // Utility functions
 // ============================================================================
@@ -69,8 +60,12 @@ export declare const isLocaleLoaded: (code: SupportedLocale) => boolean;
 /** Get text direction for a locale code */
 export declare const getDirection: (code: SupportedLocale) => 'ltr' | 'rtl';
 
-/** Build a locale config from a dictionary */
-export declare const buildConfig: (code: SupportedLocale, dictionary: Record<string, string>) => LocaleConfig;
+/**
+ * Clear the locale cache.
+ * Primarily useful for testing to ensure test isolation.
+ * @internal
+ */
+export declare const clearLocaleCache: () => void;
 
 // ============================================================================
 // Re-export types

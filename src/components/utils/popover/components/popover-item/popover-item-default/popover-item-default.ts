@@ -4,7 +4,8 @@ import type {
   PopoverItemType
 } from '@/types/utils/popover/popover-item';
 import { PopoverItem } from '../popover-item';
-import { css, cssInline, cssNestedInline, DATA_ATTR } from './popover-item-default.const';
+import { css, cssInline, cssNestedInline } from './popover-item-default.const';
+import { DATA_ATTR } from '../../../../../constants/data-attributes';
 import { twMerge } from '../../../../tw';
 import { IconChevronRight } from '../../../../../icons';
 
@@ -33,8 +34,7 @@ export class PopoverItemDefault extends PopoverItem {
    * Item title
    */
   public get title(): string | undefined {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
-    return this.params.title || this.params.label;
+    return this.params.title;
   }
 
   /**
@@ -125,7 +125,7 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    const currentlyActive = this.nodes.root.hasAttribute(DATA_ATTR.active);
+    const currentlyActive = this.nodes.root.hasAttribute(DATA_ATTR.popoverItemActive);
     const shouldBeActive = isActive !== undefined ? isActive : !currentlyActive;
 
     this.setActive(shouldBeActive);
@@ -176,7 +176,7 @@ export class PopoverItemDefault extends PopoverItem {
     root.className = this.getContainerClass();
 
     // Set data attributes
-    root.setAttribute(DATA_ATTR.item, '');
+    root.setAttribute(DATA_ATTR.popoverItem, '');
     root.setAttribute('data-blok-testid', 'popover-item');
 
     if (params.name) {
@@ -191,7 +191,7 @@ export class PopoverItemDefault extends PopoverItem {
       root.setAttribute(DATA_ATTR.disabled, 'true');
     }
     if (this.isActive) {
-      root.setAttribute(DATA_ATTR.active, 'true');
+      root.setAttribute(DATA_ATTR.popoverItemActive, 'true');
     }
     if (this.hasChildren) {
       root.setAttribute(DATA_ATTR.hasChildren, 'true');
@@ -226,8 +226,7 @@ export class PopoverItemDefault extends PopoverItem {
     const isInline = renderParams?.isInline ?? false;
     const isNestedInline = renderParams?.isNestedInline ?? false;
 
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
-    const title = params.title || params.label;
+    const title = params.title;
 
     // Icon
     if (params.icon) {
@@ -240,7 +239,7 @@ export class PopoverItemDefault extends PopoverItem {
       const titleEl = document.createElement('div');
 
       titleEl.className = 'mr-auto truncate text-sm font-medium leading-5';
-      titleEl.setAttribute(DATA_ATTR.title, '');
+      titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
       titleEl.textContent = title;
 
@@ -253,7 +252,7 @@ export class PopoverItemDefault extends PopoverItem {
       const secondaryEl = document.createElement('div');
 
       secondaryEl.className = 'whitespace-nowrap pr-1.5 text-xs -tracking-widest text-text-secondary opacity-60';
-      secondaryEl.setAttribute(DATA_ATTR.secondaryTitle, '');
+      secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.textContent = params.secondaryLabel;
 
@@ -268,8 +267,8 @@ export class PopoverItemDefault extends PopoverItem {
       const chevronEl = document.createElement('div');
 
       chevronEl.className = this.getChevronClass(isInline);
-      chevronEl.setAttribute(DATA_ATTR.icon, '');
-      chevronEl.setAttribute(DATA_ATTR.iconChevronRight, '');
+      chevronEl.setAttribute(DATA_ATTR.popoverItemIcon, '');
+      chevronEl.setAttribute(DATA_ATTR.popoverItemIconChevronRight, '');
       chevronEl.setAttribute('data-blok-testid', 'popover-item-chevron-right');
       chevronEl.innerHTML = IconChevronRight;
 
@@ -286,12 +285,12 @@ export class PopoverItemDefault extends PopoverItem {
     const iconEl = document.createElement('div');
 
     iconEl.className = this.getIconClass(iconWithGap, isInline, isNestedInline, false);
-    iconEl.setAttribute(DATA_ATTR.icon, '');
+    iconEl.setAttribute(DATA_ATTR.popoverItemIcon, '');
     iconEl.setAttribute('data-blok-testid', 'popover-item-icon');
     iconEl.innerHTML = icon;
 
     if (iconWithGap) {
-      iconEl.setAttribute(DATA_ATTR.iconTool, '');
+      iconEl.setAttribute(DATA_ATTR.tool, '');
     }
 
     return iconEl;
@@ -346,9 +345,9 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     if (isActive) {
-      this.nodes.root.setAttribute(DATA_ATTR.active, 'true');
+      this.nodes.root.setAttribute(DATA_ATTR.popoverItemActive, 'true');
     } else {
-      this.nodes.root.removeAttribute(DATA_ATTR.active);
+      this.nodes.root.removeAttribute(DATA_ATTR.popoverItemActive);
     }
   }
 
@@ -396,9 +395,9 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     if (noHover) {
-      this.nodes.root.setAttribute(DATA_ATTR.noHover, 'true');
+      this.nodes.root.setAttribute(DATA_ATTR.popoverItemNoHover, 'true');
     } else {
-      this.nodes.root.removeAttribute(DATA_ATTR.noHover);
+      this.nodes.root.removeAttribute(DATA_ATTR.popoverItemNoHover);
     }
   }
 
@@ -411,9 +410,9 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     if (noFocus) {
-      this.nodes.root.setAttribute(DATA_ATTR.noFocus, 'true');
+      this.nodes.root.setAttribute(DATA_ATTR.popoverItemNoFocus, 'true');
     } else {
-      this.nodes.root.removeAttribute(DATA_ATTR.noFocus);
+      this.nodes.root.removeAttribute(DATA_ATTR.popoverItemNoFocus);
     }
   }
 
@@ -465,7 +464,7 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    this.nodes.root.removeAttribute(DATA_ATTR.confirmation);
+    this.nodes.root.removeAttribute(DATA_ATTR.popoverItemConfirmation);
     this.nodes.root.classList.remove('!bg-item-confirm-bg', '!text-white');
 
     this.restoreOriginalIcon();
@@ -481,7 +480,7 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    this.nodes.root.setAttribute(DATA_ATTR.confirmation, 'true');
+    this.nodes.root.setAttribute(DATA_ATTR.popoverItemConfirmation, 'true');
     this.nodes.root.classList.add('!bg-item-confirm-bg', '!text-white');
 
     this.updateIcon(params.icon);
@@ -504,14 +503,11 @@ export class PopoverItemDefault extends PopoverItem {
    * Restores the original title
    */
   private restoreOriginalTitle(): void {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
-    const originalTitle = this.params.title || this.params.label;
-
-    if (!this.nodes.titleEl || originalTitle === undefined) {
+    if (!this.nodes.titleEl || this.params.title === undefined) {
       return;
     }
 
-    this.nodes.titleEl.textContent = originalTitle;
+    this.nodes.titleEl.textContent = this.params.title;
   }
 
   /**
@@ -541,14 +537,11 @@ export class PopoverItemDefault extends PopoverItem {
    * Updates the title with new content
    */
   private updateTitle(params: PopoverItemDefaultParams): void {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- TODO: remove this once label is removed
-    const newTitle = params.title || params.label;
-
-    if (!this.nodes.titleEl || newTitle === undefined) {
+    if (!this.nodes.titleEl || params.title === undefined) {
       return;
     }
 
-    this.nodes.titleEl.textContent = newTitle;
+    this.nodes.titleEl.textContent = params.title;
   }
 
   /**
@@ -650,13 +643,13 @@ export class PopoverItemDefault extends PopoverItem {
     const iconWithGap = this.renderParams?.iconWithGap ?? true;
 
     // Add wobble class
-    this.nodes.icon.setAttribute(DATA_ATTR.wobble, 'true');
+    this.nodes.icon.setAttribute(DATA_ATTR.popoverItemWobble, 'true');
     this.nodes.icon.className = this.getIconClass(iconWithGap, isInline, isNestedInline, true);
 
     // Remove wobble after animation ends
     const handleAnimationEnd = (): void => {
       if (this.nodes.icon) {
-        this.nodes.icon.removeAttribute(DATA_ATTR.wobble);
+        this.nodes.icon.removeAttribute(DATA_ATTR.popoverItemWobble);
         this.nodes.icon.className = this.getIconClass(iconWithGap, isInline, isNestedInline, false);
       }
     };

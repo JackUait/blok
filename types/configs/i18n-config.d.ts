@@ -4,7 +4,15 @@
 import { I18nDictionary } from './i18n-dictionary';
 
 /**
- * Supported locale codes that have built-in translations
+ * Supported locale codes that have built-in translations.
+ *
+ * When adding a new locale:
+ * 1. Add the code to this union type
+ * 2. Add the code to ALL_LOCALE_CODES in src/components/i18n/locales/index.ts
+ * 3. Add the importer to localeImporters in the same file
+ * 4. Create the messages.json file in src/components/i18n/locales/{code}/
+ *
+ * TypeScript will error if localeImporters is missing any code from this type.
  */
 export type SupportedLocale = 'am' | 'ar' | 'az' | 'bg' | 'bn' | 'bs' | 'cs' | 'da' | 'de' | 'dv' | 'el' | 'en' | 'es' | 'et' | 'fa' | 'fi' | 'fil' | 'fr' | 'gu' | 'he' | 'hi' | 'hr' | 'hu' | 'hy' | 'id' | 'it' | 'ja' | 'ka' | 'km' | 'kn' | 'ko' | 'ku' | 'lo' | 'lt' | 'lv' | 'mk' | 'ml' | 'mn' | 'mr' | 'ms' | 'my' | 'ne' | 'nl' | 'no' | 'pa' | 'pl' | 'ps' | 'pt' | 'ro' | 'ru' | 'sd' | 'si' | 'sk' | 'sl' | 'sq' | 'sr' | 'sv' | 'sw' | 'ta' | 'te' | 'th' | 'tr' | 'ug' | 'uk' | 'ur' | 'vi' | 'yi' | 'zh';
 
@@ -33,7 +41,7 @@ export interface I18nConfig {
    * Active locale code ('en', 'ru', etc.) or 'auto' to detect from browser.
    * @default 'auto'
    */
-  activeLocale?: SupportedLocale | 'auto';
+  locale?: SupportedLocale | 'auto';
 
   /**
    * Custom dictionary that overrides locale-based translations.
@@ -53,8 +61,8 @@ export interface I18nConfig {
   defaultLocale?: SupportedLocale;
 
   /**
-   * Custom locale registry. Use presets (basicLocales, extendedLocales,
-   * completeLocales) or build your own for tree-shaking.
+   * Allowed locale codes for lazy loading.
+   * If not set, defaults to basic locales (en, ru, de, fr, es, it, pt, pl, ja, zh, ko, ar).
    */
-  locales?: LocaleRegistry;
+  allowedLocales?: readonly SupportedLocale[];
 }

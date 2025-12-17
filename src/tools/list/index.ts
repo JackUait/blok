@@ -5,10 +5,8 @@
  * @license MIT
  */
 import { IconListBulleted, IconListNumbered, IconListChecklist } from '../../components/icons';
-import I18n from '../../components/i18n';
-import type { TranslationKey } from '@/types';
 import { twMerge } from '../../components/utils/tw';
-import { BLOK_TOOL_ATTR } from '../../components/constants';
+import { DATA_ATTR } from '../../components/constants';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { stripFakeBackgroundElements } from '../../components/utils';
 import type {
@@ -801,7 +799,7 @@ export default class ListItem implements BlockTool {
 
     const wrapper = document.createElement('div');
     wrapper.className = ListItem.BASE_STYLES;
-    wrapper.setAttribute(BLOK_TOOL_ATTR, ListItem.TOOL_NAME);
+    wrapper.setAttribute(DATA_ATTR.tool, ListItem.TOOL_NAME);
     wrapper.setAttribute('data-list-style', style);
     wrapper.setAttribute('data-list-depth', String(this.getDepth()));
 
@@ -1550,7 +1548,7 @@ export default class ListItem implements BlockTool {
   public renderSettings(): MenuConfig {
     return this.availableStyles.map(styleConfig => ({
       icon: styleConfig.icon,
-      label: I18n.t(`toolNames.${styleConfig.name}` as TranslationKey),
+      label: this.api.i18n.t(`toolNames.${styleConfig.name}`),
       onActivate: (): void => this.setStyle(styleConfig.style),
       closeOnActivate: true,
       isActive: this._data.style === styleConfig.style,

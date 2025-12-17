@@ -5,14 +5,14 @@ import { pathToFileURL } from 'node:url';
 import type Blok from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
-import { BLOK_INTERFACE_SELECTOR, BLOK_DUPLICATING_SELECTOR } from '../../../src/components/constants';
+import { DATA_ATTR, createSelector } from '../../../src/components/constants';
 
 const TEST_PAGE_URL = pathToFileURL(
   path.resolve(__dirname, '../fixtures/test.html')
 ).href;
 
 const HOLDER_ID = 'blok';
-const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+const SETTINGS_BUTTON_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="settings-toggler"]`;
 
 /**
  * Helper function to get bounding box and throw if it doesn't exist.
@@ -1869,7 +1869,7 @@ test.describe('drag and drop', () => {
       await page.waitForTimeout(50);
 
       // Verify duplicating attribute is NOT set yet
-      const blokWrapper = page.locator(BLOK_DUPLICATING_SELECTOR);
+      const blokWrapper = page.locator(createSelector(DATA_ATTR.duplicating));
 
       await expect(blokWrapper).toHaveCount(0);
 

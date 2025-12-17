@@ -3,7 +3,7 @@ import List, { type ListItemConfig, type ListItemData } from '../../../src/tools
 import I18n from '../../../src/components/i18n';
 import defaultDictionary from '../../../src/components/i18n/locales/en/messages.json';
 import type { API, BlockToolConstructorOptions } from '../../../types';
-import type { I18nDictionary } from '../../../types/configs';
+import type { I18nDictionary, TranslationKey } from '../../../types/configs';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 
 /**
@@ -23,7 +23,7 @@ const createMockAPI = (): API =>
       settingsButtonActive: 'blok-settings-button--active',
     },
     i18n: {
-      t: (key: string) => I18n.t(`tools.list.${key}`),
+      t: (key: string) => I18n.t(`tools.list.${key}` as TranslationKey),
     },
     blocks: {
       getCurrentBlockIndex: () => 0,
@@ -81,9 +81,9 @@ describe('List Tool - i18n', () => {
   describe('renderSettings uses i18n', () => {
     it('translates style labels in settings menu', () => {
       const frenchDictionary: I18nDictionary = {
-        'toolNames.Bulleted list': 'Liste à puces',
-        'toolNames.Numbered list': 'Liste numérotée',
-        'toolNames.To-do list': 'Liste de contrôle',
+        'toolNames.bulletedList': 'Liste à puces',
+        'toolNames.numberedList': 'Liste numérotée',
+        'toolNames.todoList': 'Liste de contrôle',
       };
 
       I18n.setDictionary(frenchDictionary);
@@ -107,16 +107,17 @@ describe('List Tool - i18n', () => {
       const list = new List(options);
       const settings = toMenuArray(list.renderSettings());
 
-      expect(settings[0].label).toBe('Bulleted list');
-      expect(settings[1].label).toBe('Numbered list');
-      expect(settings[2].label).toBe('To-do list');
+      // Falls back to the last segment of the translation key
+      expect(settings[0].label).toBe('bulletedList');
+      expect(settings[1].label).toBe('numberedList');
+      expect(settings[2].label).toBe('todoList');
     });
 
     it('respects configured styles when translating', () => {
       const germanDictionary: I18nDictionary = {
-        'toolNames.Bulleted list': 'Aufzählung',
-        'toolNames.Numbered list': 'Nummerierung',
-        'toolNames.To-do list': 'Aufgabenliste',
+        'toolNames.bulletedList': 'Aufzählung',
+        'toolNames.numberedList': 'Nummerierung',
+        'toolNames.todoList': 'Aufgabenliste',
       };
 
       I18n.setDictionary(germanDictionary);
@@ -167,30 +168,30 @@ describe('List Tool - i18n', () => {
   describe('i18n integration with I18n class', () => {
     it('translates list style names via I18n.t()', () => {
       const spanishDictionary: I18nDictionary = {
-        'tools.list.Bulleted list': 'Lista con viñetas',
-        'tools.list.Numbered list': 'Lista numerada',
-        'tools.list.To-do list': 'Lista de verificación',
+        'toolNames.bulletedList': 'Lista con viñetas',
+        'toolNames.numberedList': 'Lista numerada',
+        'toolNames.todoList': 'Lista de verificación',
       };
 
       I18n.setDictionary(spanishDictionary);
 
-      expect(I18n.t('tools.list.Bulleted list')).toBe('Lista con viñetas');
-      expect(I18n.t('tools.list.Numbered list')).toBe('Lista numerada');
-      expect(I18n.t('tools.list.To-do list')).toBe('Lista de verificación');
+      expect(I18n.t('toolNames.bulletedList')).toBe('Lista con viñetas');
+      expect(I18n.t('toolNames.numberedList')).toBe('Lista numerada');
+      expect(I18n.t('toolNames.todoList')).toBe('Lista de verificación');
     });
 
     it('translates toolbox titles via toolNames namespace', () => {
       const japaneseDictionary: I18nDictionary = {
-        'toolNames.Bulleted list': '箇条書きリスト',
-        'toolNames.Numbered list': '番号付きリスト',
-        'toolNames.To-do list': 'ToDoリスト',
+        'toolNames.bulletedList': '箇条書きリスト',
+        'toolNames.numberedList': '番号付きリスト',
+        'toolNames.todoList': 'ToDoリスト',
       };
 
       I18n.setDictionary(japaneseDictionary);
 
-      expect(I18n.t('toolNames.Bulleted list')).toBe('箇条書きリスト');
-      expect(I18n.t('toolNames.Numbered list')).toBe('番号付きリスト');
-      expect(I18n.t('toolNames.To-do list')).toBe('ToDoリスト');
+      expect(I18n.t('toolNames.bulletedList')).toBe('箇条書きリスト');
+      expect(I18n.t('toolNames.numberedList')).toBe('番号付きリスト');
+      expect(I18n.t('toolNames.todoList')).toBe('ToDoリスト');
     });
   });
 });

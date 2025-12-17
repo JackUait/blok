@@ -14,6 +14,7 @@ import { css as popoverItemCls } from '../../utils/popover/components/popover-it
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { IconReplace, IconCross } from '../../icons';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
+import { translateToolTitle } from '../../utils/tools';
 import BlockAPI from '../../block/api';
 import type BlockToolAdapter from '../../tools/block';
 
@@ -174,8 +175,8 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       items: await this.getTunesItems(block, commonTunes, toolTunes),
       scopeElement: this.Blok.API.methods.ui.nodes.redactor,
       messages: {
-        nothingFound: I18n.t('ui.popover.Nothing found'),
-        search: I18n.t('ui.popover.Search'),
+        nothingFound: I18n.t('ui.popover.nothingFound'),
+        search: I18n.t('ui.popover.search'),
       },
     };
 
@@ -298,11 +299,9 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       }
 
       tool.toolbox.forEach((toolboxItem) => {
-        const titleKey = toolboxItem.title ?? tool.name;
-
         result.push({
           icon: toolboxItem.icon,
-          title: I18n.t(`toolNames.${titleKey}`),
+          title: translateToolTitle(toolboxItem, tool.name),
           name: toolboxItem.name ?? tool.name,
           closeOnActivate: true,
           onActivate: async () => {
@@ -332,7 +331,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
       items.push({
         icon: IconReplace,
         name: 'convert-to',
-        title: I18n.t('ui.popover.Convert to'),
+        title: I18n.t('ui.popover.convertTo'),
         children: {
           items: convertToItems,
         },
@@ -351,7 +350,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     } else {
       items.push({
         icon: IconCross,
-        title: I18n.t('blockTunes.delete.Delete'),
+        title: I18n.t('blockTunes.delete.delete'),
         name: 'delete',
         closeOnActivate: true,
         onActivate: () => {

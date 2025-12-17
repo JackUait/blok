@@ -33,6 +33,11 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   public static title = 'Link';
 
   /**
+   * Translation key for i18n
+   */
+  public static titleKey = 'link';
+
+  /**
    * Sanitizer Rule
    * Leave <a> tags
    * @returns {object}
@@ -150,7 +155,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   private createInput(): HTMLInputElement {
     const input = document.createElement('input') as HTMLInputElement;
 
-    input.placeholder = this.i18n.t('Add a link');
+    input.placeholder = this.i18n.t('addLink');
     input.enterKeyHint = 'done';
     input.className = this.INPUT_BASE_CLASSES;
     input.setAttribute('data-blok-testid', 'inline-tool-input');
@@ -379,7 +384,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
 
     if (!this.validateURL(value)) {
       this.notifier.show({
-        message: this.i18n.t('Invalid link'),
+        message: this.i18n.t('invalidLink'),
         style: 'error',
       });
 

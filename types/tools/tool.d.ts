@@ -52,6 +52,12 @@ export interface BaseToolConstructable {
   title?: string;
 
   /**
+   * Translation key for the tool title (e.g., 'bold', 'italic', 'link').
+   * Used to look up translations in the toolNames.* namespace.
+   */
+  titleKey?: string;
+
+  /**
    * Tool`s prepare method. Can be async
    * @param data
    */

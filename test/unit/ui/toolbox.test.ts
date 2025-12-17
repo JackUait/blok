@@ -74,6 +74,7 @@ vi.mock('../../../src/components/utils', async () => {
 vi.mock('../../../src/components/i18n', () => ({
   default: {
     t: vi.fn((namespace: string, key: string) => key),
+    hasTranslation: vi.fn(() => false),
   },
 }));
 

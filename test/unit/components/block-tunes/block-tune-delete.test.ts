@@ -47,9 +47,9 @@ describe('DeleteTune', () => {
 
     const config = tune.render() as MenuConfigWithActivate;
 
-    expect(i18n.t).toHaveBeenCalledWith('Delete');
+    expect(i18n.t).toHaveBeenCalledWith('delete');
     expect(config.icon).toBe(IconCross);
-    expect(config.title).toBe('Delete');
+    expect(config.title).toBe('delete');
     expect(config.name).toBe('delete');
 
     config.onActivate?.(config);

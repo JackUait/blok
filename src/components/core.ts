@@ -48,6 +48,7 @@ export default class Core {
       Promise.resolve()
         .then(async () => {
           this.configuration = config;
+          await this.resolveLocaleAsync();
           this.validate();
           this.init();
           await this.start();
@@ -201,19 +202,8 @@ export default class Core {
       locales: this.config.i18n?.locales,
     });
 
-    if (this.config.i18n?.messages) {
-      // Custom dictionary takes precedence
-      I18n.setDictionary(this.config.i18n.messages);
-
-      // Use provided direction or default to 'ltr'
-      this.config.i18n.direction = this.config.i18n.direction ?? 'ltr';
-    } else {
-      // Resolve locale (auto-detect if not specified or set to 'auto')
-      const localeResult = I18n.resolveLocale(this.config.i18n?.activeLocale);
-
-      // Use provided direction, or direction from detected locale
-      this.config.i18n.direction = this.config.i18n?.direction ?? localeResult.direction;
-    }
+    // Note: Locale resolution is deferred to resolveLocaleAsync() for proper lazy loading
+    // Custom messages will be handled there as well
   }
 
   /**
@@ -239,6 +229,27 @@ export default class Core {
 
     if (Boolean(holder) && _.isObject(holder) && !$.isElement(holder)) {
       throw Error('«holder» value must be an Element node');
+    }
+  }
+
+  /**
+   * Resolve locale asynchronously for proper lazy loading support.
+   * This must be called after configuration is set but before modules are initialized.
+   */
+  private async resolveLocaleAsync(): Promise<void> {
+    if (this.config.i18n?.messages) {
+      // Custom dictionary takes precedence
+      I18n.setDictionary(this.config.i18n.messages);
+
+      // Use provided direction or default to 'ltr'
+      this.config.i18n.direction = this.config.i18n.direction ?? 'ltr';
+    } else {
+      // Resolve locale asynchronously (auto-detect if not specified or set to 'auto')
+      const localeResult = await I18n.resolveLocaleAsync(this.config.i18n?.activeLocale);
+
+      // Use provided direction, or direction from detected locale
+      this.config.i18n = this.config.i18n ?? {};
+      this.config.i18n.direction = this.config.i18n.direction ?? localeResult.direction;
     }
   }
 

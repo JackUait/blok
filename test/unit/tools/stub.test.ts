@@ -67,9 +67,9 @@ describe('Stub tool', () => {
 
     expect(element.getAttribute('data-blok-tool')).toBe('stub');
     expect(titleEl?.textContent).toBe('Broken block');
-    expect(subtitleEl?.textContent).toBe('t:This block cannot be displayed');
+    expect(subtitleEl?.textContent).toBe('t:blockCannotBeDisplayed');
     expect(translator).toHaveBeenCalledTimes(1);
-    expect(translator).toHaveBeenCalledWith('This block cannot be displayed');
+    expect(translator).toHaveBeenCalledWith('blockCannotBeDisplayed');
   });
 
   it('falls back to translated error title when data title is missing', () => {
@@ -84,9 +84,9 @@ describe('Stub tool', () => {
     const element = stub.render();
     const titleEl = element.querySelector('[data-blok-stub-title]');
 
-    expect(translator).toHaveBeenNthCalledWith(1, 'Error');
-    expect(translator).toHaveBeenNthCalledWith(2, 'This block cannot be displayed');
-    expect(titleEl?.textContent).toBe('t:Error');
+    expect(translator).toHaveBeenNthCalledWith(1, 'error');
+    expect(translator).toHaveBeenNthCalledWith(2, 'blockCannotBeDisplayed');
+    expect(titleEl?.textContent).toBe('t:error');
   });
 
   it('returns the original saved data reference', () => {

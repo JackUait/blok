@@ -1,5 +1,5 @@
 import defaultDictionary from './locales/en/messages.json';
-import type { I18nDictionary, LocaleConfig, LocaleRegistry } from '../../../types/configs';
+import type { I18nDictionary, LocaleConfig, LocaleRegistry, TranslationKey } from '../../../types/configs';
 import type { SupportedLocale } from '../../../types/configs/i18n-config';
 import {
   DEFAULT_LOCALE,
@@ -191,14 +191,14 @@ export default class I18n {
 
   /**
    * Translate a key using the current dictionary.
+   * TypeScript will error if the key doesn't exist in TranslationKey.
    * If no translation exists, returns the last segment of the key as fallback.
-   * For example, "ui.popover.Search" returns "Search" if not found.
    * @param key - full dot-notation key to the translation
    */
-  public static t(key: string): string {
+  public static t(key: TranslationKey): string {
     const translation = I18n.currentDictionary[key];
 
-    if (translation) {
+    if (typeof translation === 'string' && translation.length > 0) {
       return translation;
     }
 

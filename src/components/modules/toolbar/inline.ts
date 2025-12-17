@@ -12,6 +12,7 @@ import { PopoverItemType } from '../../utils/popover';
 import { PopoverInline } from '../../utils/popover/popover-inline';
 import type InlineToolAdapter from 'src/components/tools/inline';
 import I18n from '../../i18n';
+import { translateToolName } from '../../utils/tools';
 import { DATA_INTERFACE_ATTRIBUTE, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../constants';
 import { twMerge } from '../../utils/tw';
 
@@ -450,8 +451,8 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       items: popoverItems,
       scopeElement,
       messages: {
-        nothingFound: I18n.t('ui.popover.Nothing found'),
-        search: I18n.t('ui.popover.Search'),
+        nothingFound: I18n.t('ui.popover.nothingFound'),
+        search: I18n.t('ui.popover.search'),
       },
     });
 
@@ -484,9 +485,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       const shortcut = this.getToolShortcut(tool.name);
       const shortcutBeautified = shortcut !== undefined ? _.beautifyShortcut(shortcut) : undefined;
 
-      const toolTitle = I18n.t(
-        `toolNames.${tool.title || _.capitalize(tool.name)}`
-      );
+      const toolTitle = translateToolName(tool.titleKey, tool.title || _.capitalize(tool.name));
 
       const items = Array.isArray(renderedTool) ? renderedTool : [renderedTool];
       const isFirstItem = index === 0;

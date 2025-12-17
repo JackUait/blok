@@ -7,4 +7,14 @@ interface InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, InlineTool>
    * Constructs new InlineTool instance from constructable
    */
   create(): IInlineTool;
+
+  /**
+   * Returns the tool title
+   */
+  title: string;
+
+  /**
+   * Returns the translation key for the tool title
+   */
+  titleKey: string | undefined;
 }

@@ -40,6 +40,7 @@ vi.mock('../../../../../src/components/i18n', () => ({
   default: {
     ui: vi.fn(() => ''),
     t: vi.fn(() => ''),
+    tToolName: vi.fn((title: string) => title),
   },
 }));
 

@@ -6,6 +6,7 @@
  */
 import { IconListBulleted, IconListNumbered, IconListChecklist } from '../../components/icons';
 import I18n from '../../components/i18n';
+import type { TranslationKey } from '@/types';
 import { twMerge } from '../../components/utils/tw';
 import { BLOK_TOOL_ATTR } from '../../components/constants';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
@@ -131,9 +132,9 @@ export default class ListItem implements BlockTool {
   private static readonly CHECKBOX_STYLES = 'mt-1 w-4 mr-2 h-4 cursor-pointer accent-current';
 
   private static readonly STYLE_CONFIGS: StyleConfig[] = [
-    { style: 'unordered', name: 'Bulleted list', icon: IconListBulleted },
-    { style: 'ordered', name: 'Numbered list', icon: IconListNumbered },
-    { style: 'checklist', name: 'To-do list', icon: IconListChecklist },
+    { style: 'unordered', name: 'bulletedList', icon: IconListBulleted },
+    { style: 'ordered', name: 'numberedList', icon: IconListNumbered },
+    { style: 'checklist', name: 'todoList', icon: IconListChecklist },
   ];
 
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<ListItemData, ListItemConfig>) {
@@ -1549,7 +1550,7 @@ export default class ListItem implements BlockTool {
   public renderSettings(): MenuConfig {
     return this.availableStyles.map(styleConfig => ({
       icon: styleConfig.icon,
-      label: I18n.t(`toolNames.${styleConfig.name}`),
+      label: I18n.t(`toolNames.${styleConfig.name}` as TranslationKey),
       onActivate: (): void => this.setStyle(styleConfig.style),
       closeOnActivate: true,
       isActive: this._data.style === styleConfig.style,
@@ -1781,18 +1782,21 @@ export default class ListItem implements BlockTool {
       {
         icon: IconListBulleted,
         title: 'Bulleted list',
+        titleKey: 'bulletedList',
         data: { style: 'unordered' },
         name: 'bulleted-list',
       },
       {
         icon: IconListNumbered,
         title: 'Numbered list',
+        titleKey: 'numberedList',
         data: { style: 'ordered' },
         name: 'numbered-list',
       },
       {
         icon: IconListChecklist,
         title: 'To-do list',
+        titleKey: 'todoList',
         data: { style: 'checklist' },
         name: 'check-list',
       },

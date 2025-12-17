@@ -70,7 +70,9 @@ interface Level {
   number: number;
   /** HTML tag corresponding with level number */
   tag: string;
-  /** Display name for this level */
+  /** Translation key for this level (e.g., 'heading1') */
+  nameKey: string;
+  /** Display name for this level (user override or fallback) */
   name: string;
   /** Icon */
   icon: string;
@@ -194,9 +196,12 @@ export default class Header implements BlockTool {
    */
   public renderSettings(): MenuConfig {
     return this.levels.map(level => {
+      const translated = this.api.i18n.t(level.nameKey);
+      const label = translated !== level.nameKey ? translated : level.name;
+
       return {
         icon: level.icon,
-        label: this.api.i18n.t(level.name),
+        label,
         onActivate: (): void => this.setLevel(level.number),
         closeOnActivate: true,
         isActive: this.currentLevel.number === level.number,
@@ -437,16 +442,17 @@ export default class Header implements BlockTool {
   private static readonly DEFAULT_LEVELS: Array<{
     number: number;
     tag: string;
+    nameKey: string;
     name: string;
     icon: string;
     styles: string;
   }> = [
-    { number: 1, tag: 'H1', name: 'Heading 1', icon: IconH1, styles: 'text-4xl font-bold mt-8 mb-1' },
-    { number: 2, tag: 'H2', name: 'Heading 2', icon: IconH2, styles: 'text-3xl font-semibold mt-6 mb-px' },
-    { number: 3, tag: 'H3', name: 'Heading 3', icon: IconH3, styles: 'text-2xl font-semibold mt-4 mb-px' },
-    { number: 4, tag: 'H4', name: 'Heading 4', icon: IconH4, styles: 'text-xl font-semibold mt-3 mb-px' },
-    { number: 5, tag: 'H5', name: 'Heading 5', icon: IconH5, styles: 'text-base font-semibold mt-3 mb-px' },
-    { number: 6, tag: 'H6', name: 'Heading 6', icon: IconH6, styles: 'text-sm font-semibold mt-3 mb-px' },
+    { number: 1, tag: 'H1', nameKey: 'heading1', name: 'Heading 1', icon: IconH1, styles: 'text-4xl font-bold mt-8 mb-1' },
+    { number: 2, tag: 'H2', nameKey: 'heading2', name: 'Heading 2', icon: IconH2, styles: 'text-3xl font-semibold mt-6 mb-px' },
+    { number: 3, tag: 'H3', nameKey: 'heading3', name: 'Heading 3', icon: IconH3, styles: 'text-2xl font-semibold mt-4 mb-px' },
+    { number: 4, tag: 'H4', nameKey: 'heading4', name: 'Heading 4', icon: IconH4, styles: 'text-xl font-semibold mt-3 mb-px' },
+    { number: 5, tag: 'H5', nameKey: 'heading5', name: 'Heading 5', icon: IconH5, styles: 'text-base font-semibold mt-3 mb-px' },
+    { number: 6, tag: 'H6', nameKey: 'heading6', name: 'Heading 6', icon: IconH6, styles: 'text-sm font-semibold mt-3 mb-px' },
   ];
 
   /**
@@ -476,6 +482,7 @@ export default class Header implements BlockTool {
       return {
         number: defaultLevel.number,
         tag: override.tag?.toUpperCase() || defaultLevel.tag,
+        nameKey: defaultLevel.nameKey,
         name: override.name || defaultLevel.name,
         icon: defaultLevel.icon,
         styles: defaultLevel.styles,
@@ -557,6 +564,7 @@ export default class Header implements BlockTool {
     return {
       icon: IconHeading,
       title: 'Heading',
+      titleKey: 'heading',
     };
   }
 }

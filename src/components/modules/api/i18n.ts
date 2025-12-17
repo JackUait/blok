@@ -31,7 +31,7 @@ export default class I18nAPI extends Module {
       this.cachedMethods = {
         t: (dictKey: string): string => {
           if (I18nInternal.hasTranslation(dictKey)) {
-            return I18nInternal.t(dictKey);
+            return I18nInternal.t(dictKey as Parameters<typeof I18nInternal.t>[0]);
           }
 
           return dictKey;
@@ -55,7 +55,7 @@ export default class I18nAPI extends Module {
         const fullKey = I18nAPI.buildKey(toolName, isTune, dictKey);
 
         if (I18nInternal.hasTranslation(fullKey)) {
-          return I18nInternal.t(fullKey);
+          return I18nInternal.t(fullKey as Parameters<typeof I18nInternal.t>[0]);
         }
 
         return dictKey;

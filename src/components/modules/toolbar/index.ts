@@ -724,11 +724,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     const userOS = _.getUserOS();
     const modifierClickText = userOS.win
-      ? I18n.t('ui.toolbar.toolbox.Ctrl-click to add above')
-      : I18n.t('ui.toolbar.toolbox.Option-click to add above');
+      ? I18n.t('ui.toolbar.toolbox.ctrlClickToAddAbove')
+      : I18n.t('ui.toolbar.toolbox.optionClickToAddAbove');
 
     const tooltipContent = this.createTooltipContent([
-      I18n.t('ui.toolbar.toolbox.Click to add below'),
+      I18n.t('ui.toolbar.toolbox.clickToAddBelow'),
       modifierClickText,
     ]);
 
@@ -773,8 +773,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
     $.append(actions, settingsToggler);
 
     const blockTunesTooltip = this.createTooltipContent([
-      I18n.t('ui.blockTunes.toggler.Drag to move'),
-      I18n.t('ui.blockTunes.toggler.Click to open the menu'),
+      I18n.t('ui.blockTunes.toggler.dragToMove'),
+      I18n.t('ui.blockTunes.toggler.clickToOpenMenu'),
     ]);
 
     tooltip.onHover(settingsToggler, blockTunesTooltip, {
@@ -811,8 +811,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
       api: this.Blok.API.methods,
       tools: this.Blok.Tools.blockTools,
       i18nLabels: {
-        filter: I18n.t('ui.popover.Search'),
-        nothingFound: I18n.t('ui.popover.Nothing found'),
+        filter: I18n.t('ui.popover.search'),
+        nothingFound: I18n.t('ui.popover.nothingFound'),
       },
       triggerElement: this.nodes.plusButton,
     });

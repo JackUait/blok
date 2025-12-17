@@ -22,6 +22,11 @@ export default class ItalicInlineTool implements InlineTool {
   public static title = 'Italic';
 
   /**
+   * Translation key for i18n
+   */
+  public static titleKey = 'italic';
+
+  /**
    * Sanitizer Rule
    * Leave <i> and <em> tags
    * @returns {object}

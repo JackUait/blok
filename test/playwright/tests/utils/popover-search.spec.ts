@@ -1185,8 +1185,8 @@ test.describe('popover Search/Filter', () => {
             tunes: [ 'testTool' ],
             i18n: {
               messages: {
-                'ui.popover.Search': 'Искать',
-                'ui.popover.Nothing found': 'Ничего не найдено',
+                'ui.popover.search': 'Искать',
+                'ui.popover.nothingFound': 'Ничего не найдено',
               },
             },
           });

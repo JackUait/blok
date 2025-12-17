@@ -5,6 +5,7 @@ import type { Blocks, Selection, Tools, Caret, I18n } from '../../../types/api';
 import SelectionUtils from '../selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
 import I18nInternal from '../i18n';
+import { translateToolTitle, translateToolName } from '../utils/tools';
 import type BlockToolAdapter from '../tools/block';
 
 /**
@@ -83,7 +84,7 @@ export default class ConvertInlineTool implements InlineTool {
 
         result.push({
           icon: toolboxItem.icon,
-          title: I18nInternal.t(`toolNames.${toolboxItem.title}`),
+          title: translateToolTitle(toolboxItem, tool.name),
           name: tool.name,
           closeOnActivate: true,
           onActivate: async () => {
@@ -98,14 +99,16 @@ export default class ConvertInlineTool implements InlineTool {
     }, []);
 
     const currentBlockToolboxItem = await currentBlock.getActiveToolboxEntry();
-    const currentBlockTitle = currentBlockToolboxItem?.title ?? currentBlock.name;
+    const currentBlockTitle = currentBlockToolboxItem
+      ? translateToolTitle(currentBlockToolboxItem, currentBlock.name)
+      : translateToolName(currentBlock.name, _.capitalize(currentBlock.name));
     const isDesktop =  !_.isMobileScreen();
 
     return {
       name: 'convert-to',
-      title: I18nInternal.t(`toolNames.${currentBlockTitle}`),
+      title: currentBlockTitle,
        hint: {
-        title: I18nInternal.t('ui.popover.Convert to'),
+        title: I18nInternal.t('ui.popover.convertTo'),
       },
       children: {
         items: convertToItems,

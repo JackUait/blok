@@ -486,7 +486,7 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'blockTunes.delete.Delete': translatedDelete,
+            'blockTunes.delete.delete': translatedDelete,
           },
         },
         data: {
@@ -682,8 +682,8 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'ui.popover.Search': translatedSearch,
-            'ui.popover.Nothing found': translatedNothingFound,
+            'ui.popover.search': translatedSearch,
+            'ui.popover.nothingFound': translatedNothingFound,
           },
         },
         tools: {
@@ -741,8 +741,8 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'ui.toolbar.toolbox.Click to add below': translatedClickToAddBelow,
-            'ui.toolbar.toolbox.Option-click to add above': translatedOptionClickToAddAbove,
+            'ui.toolbar.toolbox.clickToAddBelow': translatedClickToAddBelow,
+            'ui.toolbar.toolbox.optionClickToAddAbove': translatedOptionClickToAddAbove,
           },
         },
       });
@@ -771,8 +771,8 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'ui.blockTunes.toggler.Drag to move': translatedDragToMove,
-            'ui.blockTunes.toggler.Click to open the menu': translatedClickToOpenMenu,
+            'ui.blockTunes.toggler.dragToMove': translatedDragToMove,
+            'ui.blockTunes.toggler.clickToOpenMenu': translatedClickToOpenMenu,
           },
         },
         data: {
@@ -879,7 +879,7 @@ test.describe('blok i18n', () => {
             },
             i18n: {
               messages: {
-                'ui.inlineToolbar.converter.Convert to': convertTo,
+                'ui.popover.convertTo': convertTo,
               },
             },
             data: {
@@ -943,7 +943,7 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'tools.link.Add a link': translatedAddALink,
+            'tools.link.addLink': translatedAddALink,
           },
         },
         data: {
@@ -987,7 +987,7 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'tools.stub.This block cannot be displayed': translatedStubMessage,
+            'tools.stub.blockCannotBeDisplayed': translatedStubMessage,
           },
         },
         data: {
@@ -1120,6 +1120,45 @@ test.describe('blok i18n', () => {
       await expect(headerItem).toHaveCount(1);
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(translatedHeading);
+    });
+  });
+
+  test.describe('translation key consistency', () => {
+    test('should use lowercase translation key for delete button', async ({ page }) => {
+      // This test verifies that the translation key 'blockTunes.delete.delete' (lowercase)
+      // is correctly used by the code after fixing the key mismatch bug.
+      const translatedDelete = 'Удалить';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          // Using lowercase 'delete' key to match the fixed code
+          messages: {
+            'blockTunes.delete.delete': translatedDelete,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Test' },
+            },
+          ],
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+
+      // Open the settings menu
+      await page.locator(SETTINGS_BUTTON_SELECTOR).click();
+
+      // Check for Russian text - should use the lowercase key now
+      const deleteItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="delete"]`);
+
+      await expect(deleteItem).toBeVisible();
+      await expect(deleteItem).toContainText(translatedDelete);
     });
   });
 });

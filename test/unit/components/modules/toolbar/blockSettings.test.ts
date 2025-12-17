@@ -119,6 +119,7 @@ vi.mock('../../../../../src/components/i18n', () => ({
   default: {
     ui: vi.fn((_ns: string, key: string) => key),
     t: vi.fn((_ns: string, key: string) => key),
+    hasTranslation: vi.fn(() => false),
   },
 }));
 

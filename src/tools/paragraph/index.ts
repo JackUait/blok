@@ -405,6 +405,7 @@ export default class Paragraph implements BlockTool {
     return {
       icon: IconText,
       title: 'Text',
+      titleKey: 'text',
     };
   }
 }

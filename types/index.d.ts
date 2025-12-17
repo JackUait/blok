@@ -76,6 +76,7 @@ export {
   LogLevels,
   ConversionConfig,
   I18nDictionary,
+  TranslationKey,
   Dictionary,
   DictValue,
   I18nConfig,

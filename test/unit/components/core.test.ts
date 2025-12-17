@@ -19,6 +19,7 @@ const mockRegistry = vi.hoisted(() => ({
     init: vi.fn(),
     setDictionary: vi.fn(),
     resolveLocale: vi.fn(() => ({ locale: 'en', dictionary: {}, direction: 'ltr' })),
+    resolveLocaleAsync: vi.fn(() => Promise.resolve({ locale: 'en', dictionary: {}, direction: 'ltr' })),
   },
   modules: {
     toolsPrepare: vi.fn(),
@@ -68,6 +69,7 @@ vi.mock('../../../src/components/i18n', () => ({
     init: mockRegistry.i18n.init,
     setDictionary: mockRegistry.i18n.setDictionary,
     resolveLocale: mockRegistry.i18n.resolveLocale,
+    resolveLocaleAsync: mockRegistry.i18n.resolveLocaleAsync,
   },
 }));
 
@@ -287,7 +289,7 @@ describe('Core', () => {
         i18n: {
           direction: 'rtl',
           messages: {
-            'toolNames.paragraph': 'Paragraph',
+            'toolNames.text': 'Paragraph',
           },
         },
       };

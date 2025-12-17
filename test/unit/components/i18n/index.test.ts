@@ -11,7 +11,7 @@ import {
   EXTENDED_LOCALE_CODES,
   ALL_LOCALE_CODES,
 } from '../../../../src/components/i18n/locales/exports';
-import type { I18nDictionary, LocaleRegistry } from '../../../../types/configs';
+import type { I18nDictionary, LocaleRegistry, TranslationKey } from '../../../../types/configs';
 
 /**
  * Expected locales in each preset.
@@ -21,13 +21,13 @@ const EXPECTED_BASIC_LOCALES = ['en', 'zh', 'es', 'fr', 'de', 'pt', 'ja', 'ko', 
 const EXPECTED_EXTENDED_ADDITIONS = ['tr', 'vi', 'pl', 'nl', 'th', 'ms', 'sv', 'no', 'da', 'fi', 'el', 'cs'];
 
 const createDictionary = (): I18nDictionary => ({
-  'ui.toolbar.toolbox.Click to add below': 'Cliquez pour ajouter ci-dessous',
-  'ui.toolbar.toolbox.Option-click to add above': 'Option-clic pour ajouter ci-dessus',
-  'tools.link.Add a link': 'Ajouter un lien',
+  'ui.toolbar.toolbox.clickToAddBelow': 'Cliquez pour ajouter ci-dessous',
+  'ui.toolbar.toolbox.optionClickToAddAbove': 'Option-clic pour ajouter ci-dessus',
+  'tools.link.addLink': 'Ajouter un lien',
 });
 
 const alternativeDictionary: I18nDictionary = {
-  'tools.link.Add a link': 'Lien secondaire',
+  'tools.link.addLink': 'Lien secondaire',
 };
 
 describe('I18n', () => {
@@ -44,8 +44,8 @@ describe('I18n', () => {
 
     I18n.setDictionary(dictionary);
 
-    expect(I18n.t('ui.toolbar.toolbox.Click to add below')).toBe('Cliquez pour ajouter ci-dessous');
-    expect(I18n.t('tools.link.Add a link')).toBe('Ajouter un lien');
+    expect(I18n.t('ui.toolbar.toolbox.clickToAddBelow')).toBe('Cliquez pour ajouter ci-dessous');
+    expect(I18n.t('tools.link.addLink')).toBe('Ajouter un lien');
   });
 
   it('returns the last segment of key when translation is missing', () => {
@@ -53,7 +53,7 @@ describe('I18n', () => {
 
     I18n.setDictionary(dictionary);
 
-    expect(I18n.t('missing.namespace.Fallback text')).toBe('Fallback text');
+    expect(I18n.t('missing.namespace.Fallback text' as TranslationKey)).toBe('Fallback text');
   });
 
   it('returns the last segment when translation is missing for existing namespace prefix', () => {
@@ -61,17 +61,17 @@ describe('I18n', () => {
 
     I18n.setDictionary(dictionary);
 
-    expect(I18n.t('tools.link.Missing label')).toBe('Missing label');
+    expect(I18n.t('tools.link.Missing label' as TranslationKey)).toBe('Missing label');
   });
 
   it('allows overriding dictionary via setDictionary()', () => {
     const firstDictionary = createDictionary();
 
     I18n.setDictionary(firstDictionary);
-    expect(I18n.t('tools.link.Add a link')).toBe('Ajouter un lien');
+    expect(I18n.t('tools.link.addLink')).toBe('Ajouter un lien');
 
     I18n.setDictionary(alternativeDictionary);
-    expect(I18n.t('tools.link.Add a link')).toBe('Lien secondaire');
+    expect(I18n.t('tools.link.addLink')).toBe('Lien secondaire');
   });
 
   describe('setLocaleAsync', () => {

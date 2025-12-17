@@ -154,7 +154,7 @@ describe('LinkInlineTool', () => {
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
     const input = renderResult.children.items[0].element as HTMLInputElement;
 
-    expect(input.placeholder).toBe('Add a link');
+    expect(input.placeholder).toBe('addLink');
     expect(input.getAttribute('data-blok-testid')).toBe('inline-tool-input');
     expect(input.getAttribute('data-blok-link-tool-input-opened')).toBe('false');
 
@@ -238,7 +238,7 @@ describe('LinkInlineTool', () => {
     (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
 
     expect(notifier.show).toHaveBeenCalledWith({
-      message: 'Invalid link',
+      message: 'invalidLink',
       style: 'error',
     });
     expect(insertLinkSpy).not.toHaveBeenCalled();

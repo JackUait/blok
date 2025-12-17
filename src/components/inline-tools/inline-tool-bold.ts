@@ -23,6 +23,11 @@ export default class BoldInlineTool implements InlineTool {
   public static title = 'Bold';
 
   /**
+   * Translation key for i18n
+   */
+  public static titleKey = 'bold';
+
+  /**
    * Sanitizer Rule
    * Leave <strong> tags
    * @returns {object}

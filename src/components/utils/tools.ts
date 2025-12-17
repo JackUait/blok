@@ -1,5 +1,7 @@
 import type BlockToolAdapter from '../tools/block';
+import type { ToolboxConfigEntry, TranslationKey } from '@/types';
 import { isFunction, isString } from '../utils';
+import I18n from '../i18n';
 
 /**
  * Check if tool has valid conversion config for export or import.
@@ -14,4 +16,90 @@ export const isToolConvertable = (tool: BlockToolAdapter, direction: 'export' | 
   const conversionProp = tool.conversionConfig[direction];
 
   return isFunction(conversionProp) || isString(conversionProp);
+};
+
+/**
+ * Try to translate a key in the toolNames namespace.
+ *
+ * @param key - The key to look up (without the toolNames prefix)
+ * @returns The translated string or undefined if not found
+ */
+const tryTranslate = (key: string): string | undefined => {
+  const fullKey = `toolNames.${key}` as TranslationKey;
+
+  return I18n.hasTranslation(fullKey) ? I18n.t(fullKey) : undefined;
+};
+
+/**
+ * Translate a toolbox entry title using the i18n system.
+ *
+ * Priority:
+ * 1. If titleKey is set, look up toolNames.{titleKey}
+ * 2. If title is set, look up toolNames.{title} (for external tools without titleKey)
+ * 3. If fallback is set, look up toolNames.{fallback} (for tools without title)
+ * 4. Return the first available string: title or fallback
+ *
+ * @param entry - Toolbox config entry with title and optional titleKey
+ * @param fallback - Fallback string if no translation or title exists
+ * @returns Translated title string
+ */
+export const translateToolTitle = (entry: ToolboxConfigEntry, fallback = ''): string => {
+  // Try titleKey first (explicit translation key)
+  if (entry.titleKey) {
+    const translated = tryTranslate(entry.titleKey);
+
+    if (translated !== undefined) {
+      return translated;
+    }
+  }
+
+  // Try title as translation key (for external tools without titleKey)
+  if (entry.title) {
+    const translated = tryTranslate(entry.title);
+
+    if (translated !== undefined) {
+      return translated;
+    }
+
+    return entry.title;
+  }
+
+  // Try fallback as translation key (for tools without title)
+  if (fallback) {
+    const translated = tryTranslate(fallback);
+
+    if (translated !== undefined) {
+      return translated;
+    }
+  }
+
+  return fallback;
+};
+
+/**
+ * Translate a tool name using the toolNames namespace.
+ *
+ * Priority:
+ * 1. If titleKey is set, look up toolNames.{titleKey}
+ * 2. If title is set, look up toolNames.{title} (for external tools without titleKey)
+ * 3. Return the title as-is
+ *
+ * @param titleKey - Translation key (e.g., 'bold', 'link', 'text')
+ * @param title - Fallback title string (e.g., 'Bold', 'Link', 'Text')
+ * @returns Translated tool name, or the title as fallback
+ */
+export const translateToolName = (titleKey: string | undefined, title: string): string => {
+  // Try explicit titleKey first
+  if (titleKey) {
+    const translated = tryTranslate(titleKey);
+
+    if (translated !== undefined) {
+      return translated;
+    }
+  }
+
+  // Try title as translation key (for external tools without titleKey)
+  const translated = tryTranslate(title);
+
+  return translated ?? title;
 };

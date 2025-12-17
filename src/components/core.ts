@@ -209,7 +209,7 @@ export default class Core {
       this.config.i18n.direction = this.config.i18n.direction ?? 'ltr';
     } else {
       // Resolve locale (auto-detect if not specified or set to 'auto')
-      const localeResult = I18n.resolveLocale(this.config.i18n?.locale);
+      const localeResult = I18n.resolveLocale(this.config.i18n?.activeLocale);
 
       // Use provided direction, or direction from detected locale
       this.config.i18n.direction = this.config.i18n?.direction ?? localeResult.direction;

@@ -1,8 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import I18n from '../../../../src/components/i18n';
-import { enLocale, frLocale, deLocale } from '../../../../src/components/i18n/locales/exports';
+import {
+  enLocale,
+  frLocale,
+  deLocale,
+  basicLocales,
+  extendedLocales,
+} from '../../../../src/components/i18n/locales/exports';
+import { completeLocales } from '../../../../src/locales';
 import type { I18nDictionary, LocaleRegistry } from '../../../../types/configs';
+
+/**
+ * Expected locales in each preset.
+ * Tests assert behavior (contains expected locales) rather than implementation details (exact counts).
+ */
+const EXPECTED_BASIC_LOCALES = ['en', 'zh', 'es', 'fr', 'de', 'pt', 'ja', 'ko', 'ar', 'it', 'ru', 'hi', 'hy', 'id'];
+const EXPECTED_EXTENDED_ADDITIONS = ['tr', 'vi', 'pl', 'nl', 'th', 'ms', 'sv', 'no', 'da', 'fi', 'el', 'cs'];
 
 const createDictionary = (): I18nDictionary => ({
   'ui.toolbar.toolbox.Click to add below': 'Cliquez pour ajouter ci-dessous',
@@ -251,22 +265,10 @@ describe('I18n', () => {
     it('returns array of all supported locales', () => {
       const locales = I18n.getSupportedLocales();
 
-      expect(locales).toContain('ar');
-      expect(locales).toContain('de');
-      expect(locales).toContain('en');
-      expect(locales).toContain('es');
-      expect(locales).toContain('fr');
-      expect(locales).toContain('hy');
-      expect(locales).toContain('it');
-      expect(locales).toContain('ja');
-      expect(locales).toContain('ko');
-      expect(locales).toContain('nl');
-      expect(locales).toContain('pl');
-      expect(locales).toContain('pt');
-      expect(locales).toContain('ru');
-      expect(locales).toContain('sv');
-      expect(locales).toContain('zh');
-      expect(locales.length).toBeGreaterThanOrEqual(68);
+      // Default is basicLocales - verify it contains expected languages
+      for (const code of EXPECTED_BASIC_LOCALES) {
+        expect(locales).toContain(code);
+      }
     });
   });
 
@@ -322,8 +324,9 @@ describe('I18n', () => {
     it('works without any options', () => {
       I18n.init({});
 
+      // Default is basicLocales - verify expected behavior
       expect(I18n.getDefaultLocale()).toBe('en');
-      expect(I18n.getSupportedLocales().length).toBeGreaterThanOrEqual(68);
+      expect(I18n.getSupportedLocales()).toContain('en');
     });
   });
 
@@ -339,9 +342,10 @@ describe('I18n', () => {
 
       I18n.reset();
 
+      // Default is basicLocales - verify expected behavior
       expect(I18n.getLocale()).toBe('en');
       expect(I18n.getDefaultLocale()).toBe('en');
-      expect(I18n.getSupportedLocales().length).toBeGreaterThanOrEqual(68);
+      expect(I18n.getSupportedLocales()).toContain('en');
     });
   });
 
@@ -562,6 +566,73 @@ describe('I18n', () => {
       I18n.setLocale('en');
       expect(I18n.getLocale()).toBe('fr');
       console.warn = originalConsoleWarn;
+    });
+  });
+
+  describe('locale presets', () => {
+    it('basicLocales contains expected locales', () => {
+      const locales = Object.keys(basicLocales);
+
+      // Verify all expected basic locales are present
+      for (const code of EXPECTED_BASIC_LOCALES) {
+        expect(locales).toContain(code);
+      }
+    });
+
+    it('extendedLocales contains basic plus extended locales', () => {
+      const locales = Object.keys(extendedLocales);
+      const expectedExtended = [...EXPECTED_BASIC_LOCALES, ...EXPECTED_EXTENDED_ADDITIONS];
+
+      // Verify all expected extended locales are present
+      for (const code of expectedExtended) {
+        expect(locales).toContain(code);
+      }
+    });
+
+    it('completeLocales contains all supported locales', () => {
+      const locales = Object.keys(completeLocales);
+
+      expect(locales.length).toBeGreaterThanOrEqual(68);
+    });
+
+    it('basicLocales works with I18n.init()', () => {
+      I18n.init({ locales: basicLocales });
+
+      // Verify behavior: contains expected locales and has correct default
+      expect(I18n.getSupportedLocales()).toContain('en');
+      expect(I18n.getSupportedLocales()).toContain('zh');
+      expect(I18n.getDefaultLocale()).toBe('en');
+    });
+
+    it('extendedLocales works with I18n.init()', () => {
+      I18n.init({ locales: extendedLocales });
+
+      // Verify behavior: contains basic + extended locales
+      expect(I18n.getSupportedLocales()).toContain('en');
+      expect(I18n.getSupportedLocales()).toContain('tr'); // extended addition
+      expect(I18n.getDefaultLocale()).toBe('en');
+    });
+
+    it('completeLocales works with I18n.init()', () => {
+      I18n.init({ locales: completeLocales, defaultLocale: 'en' });
+
+      expect(I18n.getSupportedLocales().length).toBeGreaterThanOrEqual(68);
+      expect(I18n.getDefaultLocale()).toBe('en');
+    });
+
+    it('presets can be extended with additional locales', () => {
+      const customLocales: LocaleRegistry = {
+        ...basicLocales,
+        uk: completeLocales.uk,
+        bg: completeLocales.bg,
+      };
+
+      I18n.init({ locales: customLocales });
+
+      // Verify original locales plus additions are present
+      expect(I18n.getSupportedLocales()).toContain('en');
+      expect(I18n.getSupportedLocales()).toContain('uk');
+      expect(I18n.getSupportedLocales()).toContain('bg');
     });
   });
 });

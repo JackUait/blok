@@ -81,6 +81,92 @@ Some patterns require manual attention:
 - [MIGRATION.md](./MIGRATION.md) — Full list of breaking changes and manual steps
 - [codemod/README.md](./codemod/README.md) — Programmatic usage and detailed examples
 
+## Localization
+
+Blok includes 14 languages by default (Basic preset) and supports 68 languages total.
+
+### Default Behavior
+
+Out of the box, Blok auto-detects the user's browser language:
+
+```typescript
+import Blok from '@jackuait/blok';
+
+new Blok({
+  holder: 'editor',
+  // Automatically uses Basic locales with browser language detection
+});
+```
+
+**Default languages (Basic):** English, Chinese, Spanish, French, German, Portuguese, Japanese, Korean, Arabic, Italian, Russian, Hindi, Armenian, Indonesian
+
+### Adding More Languages
+
+Import a larger preset for broader language coverage:
+
+```typescript
+import Blok from '@jackuait/blok';
+import { extendedLocales } from '@jackuait/blok/locales';
+
+new Blok({
+  holder: 'editor',
+  i18n: {
+    locales: extendedLocales,
+    activeLocale: 'auto',
+  }
+});
+```
+
+| Preset | Languages | Use Case |
+|--------|-----------|----------|
+| (default) | en, zh, es, fr, de, pt, ja, ko, ar, it, ru, hi, hy, id | Most applications |
+| `extendedLocales` | Default + tr, vi, pl, nl, th, ms, sv, no, da, fi, el, cs | Broader regional coverage |
+| `completeLocales` | All 68 languages | Full international support |
+
+### Individual Locales (Maximum Tree-Shaking)
+
+For the smallest bundle, import only what you need:
+
+```typescript
+import { enLocale, frLocale, deLocale } from '@jackuait/blok/locales';
+
+new Blok({
+  holder: 'editor',
+  i18n: {
+    locales: { en: enLocale, fr: frLocale, de: deLocale },
+    activeLocale: 'auto',
+  }
+});
+```
+
+### Extending with Additional Languages
+
+Add specific languages to your configuration:
+
+```typescript
+import { extendedLocales, ukLocale, bgLocale } from '@jackuait/blok/locales';
+
+new Blok({
+  holder: 'editor',
+  i18n: {
+    locales: { ...extendedLocales, uk: ukLocale, bg: bgLocale },
+    activeLocale: 'auto',
+  }
+});
+```
+
+### Setting a Specific Locale
+
+```typescript
+new Blok({
+  holder: 'editor',
+  i18n: {
+    activeLocale: 'fr',   // Use French
+    defaultLocale: 'en',  // Fallback if 'fr' unavailable
+  }
+});
+```
+
 ## Documentation
 
-📚 **Documentation is coming soon!** We're working hard to provide comprehensive guides, API references, and examples. Stay tuned for updates.
+📚 **Complete Documentation is coming soon!** We're working hard to provide comprehensive guides, API references, and examples. Stay tuned for updates.

@@ -1,30 +1,9 @@
 /**
- * Public entry point for locale imports with tree-shaking support.
- *
- * @example
- * // Import only the locales you need
- * import { enLocale, frLocale, deLocale } from '@jackuait/blok/locales';
- *
- * new Blok({
- *   i18n: {
- *     locales: { en: enLocale, fr: frLocale, de: deLocale },
- *     locale: 'auto',
- *   }
- * });
- *
- * @example
- * // Import all locales (no tree-shaking benefit)
- * import { allLocales } from '@jackuait/blok/locales';
- *
- * new Blok({
- *   i18n: {
- *     locales: allLocales,
- *     locale: 'auto',
- *   }
- * });
+ * Public entry point for locale imports.
+ * Note: All locales are bundled together. Use presets (basicLocales, extendedLocales)
+ * to limit which locales are *available* at runtime, not to reduce bundle size.
+ * @see README.md#localization for usage examples
  */
-
-// Re-export individual locales for tree-shaking
 export {
   amLocale,
   arLocale,
@@ -94,10 +73,13 @@ export {
   viLocale,
   yiLocale,
   zhLocale,
+  // Locale presets
+  basicLocales,
+  extendedLocales,
 } from './components/i18n/locales/exports';
 
-// Export the full registry for backwards compatibility (no tree-shaking)
-export { localeRegistry as allLocales } from './components/i18n/locales';
+// Export the full registry (no tree-shaking)
+export { localeRegistry as completeLocales } from './components/i18n/locales';
 
 // Re-export types
 export type { LocaleConfig, LocaleRegistry, SupportedLocale } from '../types/configs/i18n-config';

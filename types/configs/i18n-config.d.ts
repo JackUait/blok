@@ -21,74 +21,40 @@ export interface LocaleConfig {
 
 /**
  * Registry of locale configurations.
- * Used for tree-shaking by providing only the locales you need.
- *
- * @example
- * ```typescript
- * import { enLocale, frLocale } from '@jackuait/blok/locales';
- *
- * const myLocales: LocaleRegistry = {
- *   en: enLocale,
- *   fr: frLocale,
- * };
- * ```
  */
 export type LocaleRegistry = Partial<Record<SupportedLocale, LocaleConfig>>;
 
+/**
+ * I18n configuration options.
+ * @see README.md#localization for usage examples
+ */
 export interface I18nConfig {
   /**
-   * Locale code to use for translations.
-   * Can be a specific locale (e.g., 'en', 'ru') or 'auto' to detect from browser.
-   * When set to 'auto', uses navigator.language with fallback chain.
-   * If not set, defaults to 'auto'.
-   *
-   * @example
-   * locale: 'ru'        // Use Russian
-   * locale: 'en'        // Use English
-   * locale: 'auto'      // Detect from browser (default)
+   * Active locale code ('en', 'ru', etc.) or 'auto' to detect from browser.
+   * @default 'auto'
    */
-  locale?: SupportedLocale | 'auto';
+  activeLocale?: SupportedLocale | 'auto';
 
   /**
-   * Dictionary used for translation.
-   * If provided, overrides the locale-based dictionary.
-   * Use this for custom translations or unsupported languages.
+   * Custom dictionary that overrides locale-based translations.
    */
   messages?: I18nDictionary;
 
   /**
-   * Text direction. If not set, automatically determined by locale
-   * or defaults to 'ltr'.
+   * Text direction. Auto-determined by locale if not set.
+   * @default 'ltr'
    */
   direction?: 'ltr' | 'rtl';
 
   /**
-   * Default locale to use when detection fails or requested locale is not available.
-   * Must be present in `locales` if `locales` is specified.
-   *
-   * @default 'en' or first locale in `locales`
+   * Fallback locale when detection fails or requested locale unavailable.
+   * @default 'en'
    */
   defaultLocale?: SupportedLocale;
 
   /**
-   * Custom locale registry for tree-shaking and locale restriction.
-   * When provided:
-   * - Only these locales will be available at runtime
-   * - Bundle size is reduced (tree-shaking removes unused locales)
-   * - detectLocale() will only return locales from this registry
-   * - setLocale() will reject locales not in this registry
-   *
-   * @example
-   * ```typescript
-   * import { enLocale, frLocale, deLocale } from '@jackuait/blok/locales';
-   *
-   * new Blok({
-   *   i18n: {
-   *     locales: { en: enLocale, fr: frLocale, de: deLocale },
-   *     locale: 'auto',
-   *   }
-   * });
-   * ```
+   * Custom locale registry. Use presets (basicLocales, extendedLocales,
+   * completeLocales) or build your own for tree-shaking.
    */
   locales?: LocaleRegistry;
 }

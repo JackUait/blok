@@ -1,18 +1,9 @@
 /**
- * Individual locale exports for tree-shaking support.
- * These exports derive from the main localeRegistry to avoid duplication.
- *
- * @example
- * import { enLocale, frLocale } from '@jackuait/blok/locales';
- *
- * new Blok({
- *   i18n: {
- *     locales: { en: enLocale, fr: frLocale },
- *     locale: 'auto',
- *   }
- * });
+ * Individual locale exports.
+ * Note: All locales are bundled together - individual exports are for API convenience, not tree-shaking.
+ * @see README.md#localization for usage examples
  */
-import { localeRegistry } from './index';
+import { localeRegistry, basicLocales, extendedLocales } from './index';
 
 // Export individual locales derived from the registry
 export const amLocale = localeRegistry.am;
@@ -83,3 +74,6 @@ export const urLocale = localeRegistry.ur;
 export const viLocale = localeRegistry.vi;
 export const yiLocale = localeRegistry.yi;
 export const zhLocale = localeRegistry.zh;
+
+// Re-export presets from index.ts (single source of truth)
+export { basicLocales, extendedLocales };

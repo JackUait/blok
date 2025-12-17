@@ -1,16 +1,6 @@
 /**
- * Public entry point for locale imports with tree-shaking support.
- *
- * @example
- * // Import only the locales you need
- * import { enLocale, frLocale, deLocale } from '@jackuait/blok/locales';
- *
- * new Blok({
- *   i18n: {
- *     locales: { en: enLocale, fr: frLocale, de: deLocale },
- *     locale: 'auto',
- *   }
- * });
+ * Public entry point for locale imports.
+ * @see README.md#localization for usage examples
  */
 
 import type { LocaleConfig, LocaleRegistry, SupportedLocale } from './configs/i18n-config';
@@ -85,11 +75,14 @@ export declare const viLocale: LocaleConfig;
 export declare const yiLocale: LocaleConfig;
 export declare const zhLocale: LocaleConfig;
 
-/**
- * Full locale registry containing all 71 locales.
- * Use this for backwards compatibility when tree-shaking is not needed.
- */
-export declare const allLocales: Record<SupportedLocale, LocaleConfig>;
+/** All supported locales. Use for complete language coverage. */
+export declare const completeLocales: LocaleRegistry;
+
+/** Default preset: 14 most common languages. */
+export declare const basicLocales: LocaleRegistry;
+
+/** Extended preset: 26 languages (Basic + European/Asian additions). */
+export declare const extendedLocales: LocaleRegistry;
 
 // Re-export types for convenience
 export type { LocaleConfig, LocaleRegistry, SupportedLocale };

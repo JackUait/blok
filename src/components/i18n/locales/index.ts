@@ -1,5 +1,47 @@
-import type { LocaleConfig, SupportedLocale } from '../../../../types/configs/i18n-config';
+import type { LocaleConfig, LocaleRegistry, SupportedLocale } from '../../../../types/configs/i18n-config';
+import type { I18nDictionary } from '../../../../types/configs/i18n-dictionary';
 import amMessages from './am/messages.json';
+
+/**
+ * RTL (right-to-left) locale codes.
+ * Single source of truth for text direction.
+ */
+const RTL_LOCALES: ReadonlySet<SupportedLocale> = new Set([
+  'ar', 'dv', 'fa', 'he', 'ku', 'ps', 'sd', 'ug', 'ur', 'yi',
+]);
+
+/**
+ * Build a locale config from a dictionary.
+ * Direction is determined automatically from RTL_LOCALES.
+ */
+const buildConfig = (code: SupportedLocale, dictionary: I18nDictionary): LocaleConfig => ({
+  dictionary,
+  direction: RTL_LOCALES.has(code) ? 'rtl' : 'ltr',
+});
+
+/**
+ * Locale codes included in the Basic preset (14 languages).
+ * Most commonly used languages covering major global markets.
+ */
+const BASIC_LOCALE_CODES: readonly SupportedLocale[] = [
+  'en', 'zh', 'es', 'fr', 'de', 'pt', 'ja', 'ko', 'ar', 'it', 'ru', 'hi', 'hy', 'id',
+] as const;
+
+/**
+ * Additional locale codes for the Extended preset (12 languages).
+ * Regional European and Asian language coverage.
+ */
+const EXTENDED_LOCALE_ADDITIONS: readonly SupportedLocale[] = [
+  'tr', 'vi', 'pl', 'nl', 'th', 'ms', 'sv', 'no', 'da', 'fi', 'el', 'cs',
+] as const;
+
+/**
+ * All locale codes in the Extended preset.
+ */
+const EXTENDED_LOCALE_CODES: readonly SupportedLocale[] = [
+  ...BASIC_LOCALE_CODES,
+  ...EXTENDED_LOCALE_ADDITIONS,
+];
 import arMessages from './ar/messages.json';
 import azMessages from './az/messages.json';
 import bgMessages from './bg/messages.json';
@@ -69,282 +111,79 @@ import yiMessages from './yi/messages.json';
 import zhMessages from './zh/messages.json';
 
 /**
- * Registry of all available locales with their configurations
+ * Registry of all available locales with their configurations.
+ * Direction is derived from RTL_LOCALES - single source of truth.
  */
-export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
-  am: {
-    dictionary: amMessages,
-    direction: 'ltr',
-  },
-  ar: {
-    dictionary: arMessages,
-    direction: 'rtl',
-  },
-  az: {
-    dictionary: azMessages,
-    direction: 'ltr',
-  },
-  bg: {
-    dictionary: bgMessages,
-    direction: 'ltr',
-  },
-  bn: {
-    dictionary: bnMessages,
-    direction: 'ltr',
-  },
-  bs: {
-    dictionary: bsMessages,
-    direction: 'ltr',
-  },
-  cs: {
-    dictionary: csMessages,
-    direction: 'ltr',
-  },
-  da: {
-    dictionary: daMessages,
-    direction: 'ltr',
-  },
-  de: {
-    dictionary: deMessages,
-    direction: 'ltr',
-  },
-  dv: {
-    dictionary: dvMessages,
-    direction: 'rtl',
-  },
-  el: {
-    dictionary: elMessages,
-    direction: 'ltr',
-  },
-  en: {
-    dictionary: enMessages,
-    direction: 'ltr',
-  },
-  es: {
-    dictionary: esMessages,
-    direction: 'ltr',
-  },
-  et: {
-    dictionary: etMessages,
-    direction: 'ltr',
-  },
-  fa: {
-    dictionary: faMessages,
-    direction: 'rtl',
-  },
-  fi: {
-    dictionary: fiMessages,
-    direction: 'ltr',
-  },
-  fil: {
-    dictionary: filMessages,
-    direction: 'ltr',
-  },
-  fr: {
-    dictionary: frMessages,
-    direction: 'ltr',
-  },
-  gu: {
-    dictionary: guMessages,
-    direction: 'ltr',
-  },
-  he: {
-    dictionary: heMessages,
-    direction: 'rtl',
-  },
-  hi: {
-    dictionary: hiMessages,
-    direction: 'ltr',
-  },
-  hr: {
-    dictionary: hrMessages,
-    direction: 'ltr',
-  },
-  hu: {
-    dictionary: huMessages,
-    direction: 'ltr',
-  },
-  hy: {
-    dictionary: hyMessages,
-    direction: 'ltr',
-  },
-  id: {
-    dictionary: idMessages,
-    direction: 'ltr',
-  },
-  it: {
-    dictionary: itMessages,
-    direction: 'ltr',
-  },
-  ja: {
-    dictionary: jaMessages,
-    direction: 'ltr',
-  },
-  ka: {
-    dictionary: kaMessages,
-    direction: 'ltr',
-  },
-  km: {
-    dictionary: kmMessages,
-    direction: 'ltr',
-  },
-  kn: {
-    dictionary: knMessages,
-    direction: 'ltr',
-  },
-  ko: {
-    dictionary: koMessages,
-    direction: 'ltr',
-  },
-  ku: {
-    dictionary: kuMessages,
-    direction: 'rtl',
-  },
-  lo: {
-    dictionary: loMessages,
-    direction: 'ltr',
-  },
-  lt: {
-    dictionary: ltMessages,
-    direction: 'ltr',
-  },
-  lv: {
-    dictionary: lvMessages,
-    direction: 'ltr',
-  },
-  mk: {
-    dictionary: mkMessages,
-    direction: 'ltr',
-  },
-  ml: {
-    dictionary: mlMessages,
-    direction: 'ltr',
-  },
-  mn: {
-    dictionary: mnMessages,
-    direction: 'ltr',
-  },
-  mr: {
-    dictionary: mrMessages,
-    direction: 'ltr',
-  },
-  ms: {
-    dictionary: msMessages,
-    direction: 'ltr',
-  },
-  my: {
-    dictionary: myMessages,
-    direction: 'ltr',
-  },
-  ne: {
-    dictionary: neMessages,
-    direction: 'ltr',
-  },
-  nl: {
-    dictionary: nlMessages,
-    direction: 'ltr',
-  },
-  no: {
-    dictionary: noMessages,
-    direction: 'ltr',
-  },
-  pa: {
-    dictionary: paMessages,
-    direction: 'ltr',
-  },
-  pl: {
-    dictionary: plMessages,
-    direction: 'ltr',
-  },
-  ps: {
-    dictionary: psMessages,
-    direction: 'rtl',
-  },
-  pt: {
-    dictionary: ptMessages,
-    direction: 'ltr',
-  },
-  ro: {
-    dictionary: roMessages,
-    direction: 'ltr',
-  },
-  ru: {
-    dictionary: ruMessages,
-    direction: 'ltr',
-  },
-  sd: {
-    dictionary: sdMessages,
-    direction: 'rtl',
-  },
-  si: {
-    dictionary: siMessages,
-    direction: 'ltr',
-  },
-  sk: {
-    dictionary: skMessages,
-    direction: 'ltr',
-  },
-  sl: {
-    dictionary: slMessages,
-    direction: 'ltr',
-  },
-  sq: {
-    dictionary: sqMessages,
-    direction: 'ltr',
-  },
-  sr: {
-    dictionary: srMessages,
-    direction: 'ltr',
-  },
-  sv: {
-    dictionary: svMessages,
-    direction: 'ltr',
-  },
-  sw: {
-    dictionary: swMessages,
-    direction: 'ltr',
-  },
-  ta: {
-    dictionary: taMessages,
-    direction: 'ltr',
-  },
-  te: {
-    dictionary: teMessages,
-    direction: 'ltr',
-  },
-  th: {
-    dictionary: thMessages,
-    direction: 'ltr',
-  },
-  tr: {
-    dictionary: trMessages,
-    direction: 'ltr',
-  },
-  ug: {
-    dictionary: ugMessages,
-    direction: 'rtl',
-  },
-  uk: {
-    dictionary: ukMessages,
-    direction: 'ltr',
-  },
-  ur: {
-    dictionary: urMessages,
-    direction: 'rtl',
-  },
-  vi: {
-    dictionary: viMessages,
-    direction: 'ltr',
-  },
-  yi: {
-    dictionary: yiMessages,
-    direction: 'rtl',
-  },
-  zh: {
-    dictionary: zhMessages,
-    direction: 'ltr',
-  },
-};
+export const localeRegistry = {
+  am: buildConfig('am', amMessages),
+  ar: buildConfig('ar', arMessages),
+  az: buildConfig('az', azMessages),
+  bg: buildConfig('bg', bgMessages),
+  bn: buildConfig('bn', bnMessages),
+  bs: buildConfig('bs', bsMessages),
+  cs: buildConfig('cs', csMessages),
+  da: buildConfig('da', daMessages),
+  de: buildConfig('de', deMessages),
+  dv: buildConfig('dv', dvMessages),
+  el: buildConfig('el', elMessages),
+  en: buildConfig('en', enMessages),
+  es: buildConfig('es', esMessages),
+  et: buildConfig('et', etMessages),
+  fa: buildConfig('fa', faMessages),
+  fi: buildConfig('fi', fiMessages),
+  fil: buildConfig('fil', filMessages),
+  fr: buildConfig('fr', frMessages),
+  gu: buildConfig('gu', guMessages),
+  he: buildConfig('he', heMessages),
+  hi: buildConfig('hi', hiMessages),
+  hr: buildConfig('hr', hrMessages),
+  hu: buildConfig('hu', huMessages),
+  hy: buildConfig('hy', hyMessages),
+  id: buildConfig('id', idMessages),
+  it: buildConfig('it', itMessages),
+  ja: buildConfig('ja', jaMessages),
+  ka: buildConfig('ka', kaMessages),
+  km: buildConfig('km', kmMessages),
+  kn: buildConfig('kn', knMessages),
+  ko: buildConfig('ko', koMessages),
+  ku: buildConfig('ku', kuMessages),
+  lo: buildConfig('lo', loMessages),
+  lt: buildConfig('lt', ltMessages),
+  lv: buildConfig('lv', lvMessages),
+  mk: buildConfig('mk', mkMessages),
+  ml: buildConfig('ml', mlMessages),
+  mn: buildConfig('mn', mnMessages),
+  mr: buildConfig('mr', mrMessages),
+  ms: buildConfig('ms', msMessages),
+  my: buildConfig('my', myMessages),
+  ne: buildConfig('ne', neMessages),
+  nl: buildConfig('nl', nlMessages),
+  no: buildConfig('no', noMessages),
+  pa: buildConfig('pa', paMessages),
+  pl: buildConfig('pl', plMessages),
+  ps: buildConfig('ps', psMessages),
+  pt: buildConfig('pt', ptMessages),
+  ro: buildConfig('ro', roMessages),
+  ru: buildConfig('ru', ruMessages),
+  sd: buildConfig('sd', sdMessages),
+  si: buildConfig('si', siMessages),
+  sk: buildConfig('sk', skMessages),
+  sl: buildConfig('sl', slMessages),
+  sq: buildConfig('sq', sqMessages),
+  sr: buildConfig('sr', srMessages),
+  sv: buildConfig('sv', svMessages),
+  sw: buildConfig('sw', swMessages),
+  ta: buildConfig('ta', taMessages),
+  te: buildConfig('te', teMessages),
+  th: buildConfig('th', thMessages),
+  tr: buildConfig('tr', trMessages),
+  ug: buildConfig('ug', ugMessages),
+  uk: buildConfig('uk', ukMessages),
+  ur: buildConfig('ur', urMessages),
+  vi: buildConfig('vi', viMessages),
+  yi: buildConfig('yi', yiMessages),
+  zh: buildConfig('zh', zhMessages),
+} satisfies Record<SupportedLocale, LocaleConfig>;
 
 /**
  * Default locale to use when detection fails or locale is not supported
@@ -352,24 +191,26 @@ export const localeRegistry: Record<SupportedLocale, LocaleConfig> = {
 export const DEFAULT_LOCALE: SupportedLocale = 'en';
 
 /**
- * List of all supported locale codes
+ * Build a locale registry from an array of locale codes.
  */
-export const supportedLocales: SupportedLocale[] = Object.keys(localeRegistry) as SupportedLocale[];
+const buildRegistry = (codes: readonly SupportedLocale[]): LocaleRegistry => {
+  const registry: LocaleRegistry = {};
 
-/**
- * Check if a locale code is supported
- * @param locale - Locale code to check
- * @returns True if the locale is supported
- */
-export const isLocaleSupported = (locale: string): locale is SupportedLocale => {
-  return supportedLocales.includes(locale as SupportedLocale);
+  for (const code of codes) {
+    registry[code] = localeRegistry[code];
+  }
+
+  return registry;
 };
 
 /**
- * Get locale config by locale code
- * @param locale - Locale code
- * @returns Locale config or undefined if not found
+ * Basic locale preset - the default for Blok.
+ * Contains the most commonly used languages.
  */
-export const getLocaleConfig = (locale: SupportedLocale): LocaleConfig => {
-  return localeRegistry[locale];
-};
+export const basicLocales: LocaleRegistry = buildRegistry(BASIC_LOCALE_CODES);
+
+/**
+ * Extended locale preset.
+ * Contains Basic languages plus additional European and Asian languages.
+ */
+export const extendedLocales: LocaleRegistry = buildRegistry(EXTENDED_LOCALE_CODES);

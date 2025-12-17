@@ -1,12 +1,7 @@
 import defaultDictionary from './locales/en/messages.json';
 import type { I18nDictionary, LocaleConfig, LocaleRegistry } from '../../../types/configs';
 import type { SupportedLocale } from '../../../types/configs/i18n-config';
-import {
-  localeRegistry,
-  DEFAULT_LOCALE,
-  isLocaleSupported,
-  getLocaleConfig,
-} from './locales';
+import { DEFAULT_LOCALE, basicLocales } from './locales';
 
 /**
  * Result of locale detection containing the resolved locale and direction
@@ -18,36 +13,19 @@ export interface LocaleDetectionResult {
 }
 
 /**
- * Options for initializing the I18n system
+ * Options for initializing the I18n system.
+ * @see README.md#localization for usage examples
  */
 export interface I18nInitOptions {
   /**
    * Default locale to use when detection fails or locale is not available.
    * Must be present in `locales` if `locales` is specified.
-   *
    * @default 'en' or first locale in `locales`
    */
   defaultLocale?: SupportedLocale;
 
   /**
-   * Custom locale registry for tree-shaking and locale restriction.
-   * When provided:
-   * - Only these locales will be available at runtime
-   * - Bundle size is reduced (tree-shaking removes unused locales)
-   * - detectLocale() will only return locales from this registry
-   * - setLocale() will reject locales not in this registry
-   *
-   * @example
-   * ```typescript
-   * import { enLocale, frLocale, deLocale } from '@jackuait/blok/locales';
-   *
-   * new Blok({
-   *   i18n: {
-   *     locales: { en: enLocale, fr: frLocale, de: deLocale },
-   *     locale: 'auto',
-   *   }
-   * });
-   * ```
+   * Custom locale registry. When provided, only these locales are available.
    */
   locales?: LocaleRegistry;
 }
@@ -127,18 +105,9 @@ export default class I18n {
    * @returns True if the locale is available
    */
   private static isLocaleAvailable(locale: string): locale is SupportedLocale {
-    // First check if it's a valid SupportedLocale
-    if (!isLocaleSupported(locale)) {
-      return false;
-    }
+    const registry = I18n.customRegistry ?? basicLocales;
 
-    // If custom registry is set, locale must be in it
-    if (I18n.customRegistry !== null) {
-      return locale in I18n.customRegistry;
-    }
-
-    // No restrictions - all supported locales are available
-    return true;
+    return locale in registry;
   }
 
   /**
@@ -148,14 +117,11 @@ export default class I18n {
    * @returns Locale config
    */
   private static getLocaleConfigInternal(locale: SupportedLocale): LocaleConfig {
-    if (I18n.customRegistry === null) {
-      return getLocaleConfig(locale);
-    }
-
-    const config = I18n.customRegistry[locale];
+    const registry = I18n.customRegistry ?? basicLocales;
+    const config = registry[locale];
 
     if (config === undefined) {
-      throw new Error(`Locale "${locale}" not found in custom registry`);
+      throw new Error(`Locale "${locale}" not found in registry`);
     }
 
     return config;
@@ -278,8 +244,7 @@ export default class I18n {
 
       const matched = I18n.matchLanguageTag(lang);
 
-      // Only return if the matched locale is available
-      if (matched !== null && I18n.isLocaleAvailable(matched)) {
+      if (matched !== null) {
         return matched;
       }
     }
@@ -288,7 +253,7 @@ export default class I18n {
   }
 
   /**
-   * Try to match a language tag to a supported locale
+   * Try to match a language tag to an available locale
    * @param languageTag - BCP 47 language tag (e.g., 'en-US', 'ru')
    * @returns Matched locale or null if no match found
    */
@@ -296,14 +261,14 @@ export default class I18n {
     const normalizedTag = languageTag.toLowerCase();
 
     // Try exact match first (e.g., 'ru', 'en')
-    if (isLocaleSupported(normalizedTag)) {
+    if (I18n.isLocaleAvailable(normalizedTag)) {
       return normalizedTag;
     }
 
     // Try base language (e.g., 'en-US' -> 'en', 'ru-RU' -> 'ru')
     const baseLang = normalizedTag.split('-')[0];
 
-    if (baseLang !== undefined && isLocaleSupported(baseLang)) {
+    if (baseLang !== undefined && I18n.isLocaleAvailable(baseLang)) {
       return baseLang;
     }
 
@@ -332,11 +297,9 @@ export default class I18n {
    * @returns Array of supported locale codes
    */
   public static getSupportedLocales(): SupportedLocale[] {
-    if (I18n.customRegistry !== null) {
-      return Object.keys(I18n.customRegistry) as SupportedLocale[];
-    }
+    const registry = I18n.customRegistry ?? basicLocales;
 
-    return Object.keys(localeRegistry) as SupportedLocale[];
+    return Object.keys(registry) as SupportedLocale[];
   }
 
   /**

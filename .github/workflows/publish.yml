@@ -1,0 +1,88 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'yarn'
+
+      - name: Detect release type
+        id: release-type
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+
+          # Extract prerelease identifier if present (e.g., beta, alpha, rc)
+          if [[ "$TAG" == *"-"* ]]; then
+            PREID=$(echo "$TAG" | sed 's/.*-\([^.]*\).*/\1/')
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+            echo "tag=$PREID" >> $GITHUB_OUTPUT
+            echo "version=$TAG" >> $GITHUB_OUTPUT
+            echo "Publishing prerelease: v$TAG (npm tag: $PREID)"
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "tag=latest" >> $GITHUB_OUTPUT
+            echo "version=$TAG" >> $GITHUB_OUTPUT
+            echo "Publishing stable release: v$TAG (npm tag: latest)"
+          fi
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Run unit tests
+        run: yarn test
+
+      - name: Build
+        run: yarn build
+
+      - name: Run E2E tests
+        run: yarn e2e
+
+      - name: Publish to NPM
+        run: |
+          if [[ "${{ steps.release-type.outputs.tag }}" == "latest" ]]; then
+            npm publish --access public --provenance
+          else
+            npm publish --access public --provenance --tag ${{ steps.release-type.outputs.tag }}
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: v${{ steps.release-type.outputs.version }}
+          prerelease: ${{ steps.release-type.outputs.prerelease }}
+          generate_release_notes: true
+          body: |
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md) for full details.
+
+      - name: Summary
+        run: |
+          echo "## 🚀 Published v${{ steps.release-type.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Dist-tag:** ${{ steps.release-type.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Package published to [npm](https://www.npmjs.com/package/@jackuait/blok/v/${{ steps.release-type.outputs.version }})" >> $GITHUB_STEP_SUMMARY

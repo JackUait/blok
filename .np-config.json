@@ -1,0 +1,11 @@
+{
+  "branch": "master",
+  "yarn": false,
+  "cleanup": true,
+  "tests": true,
+  "2fa": false,
+  "message": "chore: release v%s",
+  "tag": "latest",
+  "releaseDraft": false,
+  "testScript": "lint && test && build"
+}

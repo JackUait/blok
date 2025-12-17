@@ -45,35 +45,27 @@ const tryTranslate = (key: string): string | undefined => {
  */
 export const translateToolTitle = (entry: ToolboxConfigEntry, fallback = ''): string => {
   // Try titleKey first (explicit translation key)
-  if (entry.titleKey) {
-    const translated = tryTranslate(entry.titleKey);
+  const titleKeyTranslation = entry.titleKey ? tryTranslate(entry.titleKey) : undefined;
 
-    if (translated !== undefined) {
-      return translated;
-    }
+  if (titleKeyTranslation !== undefined) {
+    return titleKeyTranslation;
   }
 
   // Try title as translation key (for external tools without titleKey)
+  const titleTranslation = entry.title ? tryTranslate(entry.title) : undefined;
+
+  if (titleTranslation !== undefined) {
+    return titleTranslation;
+  }
+
   if (entry.title) {
-    const translated = tryTranslate(entry.title);
-
-    if (translated !== undefined) {
-      return translated;
-    }
-
     return entry.title;
   }
 
   // Try fallback as translation key (for tools without title)
-  if (fallback) {
-    const translated = tryTranslate(fallback);
+  const fallbackTranslation = fallback ? tryTranslate(fallback) : undefined;
 
-    if (translated !== undefined) {
-      return translated;
-    }
-  }
-
-  return fallback;
+  return fallbackTranslation ?? fallback;
 };
 
 /**
@@ -90,16 +82,14 @@ export const translateToolTitle = (entry: ToolboxConfigEntry, fallback = ''): st
  */
 export const translateToolName = (titleKey: string | undefined, title: string): string => {
   // Try explicit titleKey first
-  if (titleKey) {
-    const translated = tryTranslate(titleKey);
+  const titleKeyTranslation = titleKey ? tryTranslate(titleKey) : undefined;
 
-    if (translated !== undefined) {
-      return translated;
-    }
+  if (titleKeyTranslation !== undefined) {
+    return titleKeyTranslation;
   }
 
   // Try title as translation key (for external tools without titleKey)
-  const translated = tryTranslate(title);
+  const titleTranslation = tryTranslate(title);
 
-  return translated ?? title;
+  return titleTranslation ?? title;
 };

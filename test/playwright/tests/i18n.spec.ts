@@ -60,7 +60,7 @@ const createBlokWithI18n = async (
       const resolveFromWindow = (value: unknown): unknown => {
         if (typeof value === 'string') {
           return value.split('.').reduce<unknown>((acc, key) => {
-            if (acc && typeof acc === 'object') {
+            if (acc && (typeof acc === 'object' || typeof acc === 'function')) {
               return (acc as Record<string, unknown>)[key];
             }
 
@@ -1159,6 +1159,303 @@ test.describe('blok i18n', () => {
 
       await expect(deleteItem).toBeVisible();
       await expect(deleteItem).toContainText(translatedDelete);
+    });
+  });
+
+  test.describe('inline tools translations', () => {
+    test('should translate bold tool hint in inline toolbar', async ({ page }) => {
+      const translatedBold = 'Жирный';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.bold': translatedBold,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Some text to select' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
+
+      await expect(paragraph).toHaveCount(1);
+      await selectText(paragraph, 'Some text');
+
+      const inlinePopover = await openInlineToolbarPopover(page);
+      const boldButton = inlinePopover.locator('[data-blok-item-name="bold"]');
+
+      await expect(boldButton).toBeVisible();
+
+      // Inline tools show title in hint tooltip, not as text content
+      const tooltipText = await getTooltipText(page, boldButton);
+
+      expect(tooltipText).toContain(translatedBold);
+    });
+
+    test('should translate italic tool hint in inline toolbar', async ({ page }) => {
+      const translatedItalic = 'Курсив';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.italic': translatedItalic,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Some text to select' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
+
+      await expect(paragraph).toHaveCount(1);
+      await selectText(paragraph, 'Some text');
+
+      const inlinePopover = await openInlineToolbarPopover(page);
+      const italicButton = inlinePopover.locator('[data-blok-item-name="italic"]');
+
+      await expect(italicButton).toBeVisible();
+
+      // Inline tools show title in hint tooltip, not as text content
+      const tooltipText = await getTooltipText(page, italicButton);
+
+      expect(tooltipText).toContain(translatedItalic);
+    });
+
+    test('should translate link tool hint in inline toolbar', async ({ page }) => {
+      const translatedLink = 'Ссылка';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.link': translatedLink,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Some text to select' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
+
+      await expect(paragraph).toHaveCount(1);
+      await selectText(paragraph, 'Some text');
+
+      const inlinePopover = await openInlineToolbarPopover(page);
+      const linkButton = inlinePopover.locator('[data-blok-item-name="link"]');
+
+      await expect(linkButton).toBeVisible();
+
+      // Inline tools show title in hint tooltip, not as text content
+      const tooltipText = await getTooltipText(page, linkButton);
+
+      expect(tooltipText).toContain(translatedLink);
+    });
+  });
+
+  test.describe('toolbox translations', () => {
+    test('should translate Text tool name in toolbox', async ({ page }) => {
+      const translatedText = 'Текст';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.text': translatedText,
+          },
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      const textItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);
+
+      await expect(textItem).toBeVisible();
+      await expect(textItem).toContainText(translatedText);
+    });
+  });
+
+  test.describe('header tool translations', () => {
+    test('should translate heading level names in header settings', async ({ page }) => {
+      const translations = {
+        'tools.header.heading1': 'Заголовок 1',
+        'tools.header.heading2': 'Заголовок 2',
+        'tools.header.heading3': 'Заголовок 3',
+      };
+
+      await createBlokWithI18n(page, {
+        tools: {
+          header: 'Blok.Header',
+        },
+        i18n: {
+          messages: translations,
+        },
+        data: {
+          blocks: [
+            {
+              type: 'header',
+              data: { text: 'Test header', level: 2 },
+            },
+          ],
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+
+      // Open block settings
+      await page.locator(SETTINGS_BUTTON_SELECTOR).click();
+
+      // Check heading level options are translated - use popover-item testid and filter by text
+      const popoverItems = page.getByTestId('popover-item');
+
+      const heading1Option = popoverItems.filter({ hasText: translations['tools.header.heading1'] });
+      const heading2Option = popoverItems.filter({ hasText: translations['tools.header.heading2'] });
+      const heading3Option = popoverItems.filter({ hasText: translations['tools.header.heading3'] });
+
+      await expect(heading1Option).toBeVisible();
+      await expect(heading2Option).toBeVisible();
+      await expect(heading3Option).toBeVisible();
+    });
+  });
+
+  test.describe('link tool translations', () => {
+    test('should translate invalid link message', async ({ page }) => {
+      const translatedInvalidLink = 'Некорректная ссылка';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'tools.link.invalidLink': translatedInvalidLink,
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Some text to link' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = await getParagraphLocatorByBlockIndex(page);
+
+      await expect(paragraph).toHaveCount(1);
+      await selectText(paragraph, 'Some text');
+
+      const inlinePopover = await openInlineToolbarPopover(page);
+      const linkButton = inlinePopover.locator('[data-blok-item-name="link"]');
+
+      await expect(linkButton).toBeVisible();
+      await linkButton.click();
+
+      // Type an invalid URL
+      const linkInput = page.locator('[data-blok-link-tool-input-opened="true"]');
+
+      await expect(linkInput).toBeVisible();
+      await linkInput.fill('not a valid url');
+      await linkInput.press('Enter');
+
+      // Check for invalid link message
+      const errorMessage = page.locator(`text=${translatedInvalidLink}`);
+
+      await expect(errorMessage).toBeVisible();
+    });
+  });
+
+  test.describe('list tool translations', () => {
+    test('should translate bulleted list tool name in toolbox', async ({ page }) => {
+      const translatedBulletedList = 'Маркированный список';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.bulletedList': translatedBulletedList,
+          },
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      // Find the bulleted list by translated text
+      const popoverItems = page.getByTestId('popover-item');
+      const bulletedListItem = popoverItems.filter({ hasText: translatedBulletedList });
+
+      await expect(bulletedListItem).toBeVisible();
+    });
+
+    test('should translate numbered list tool name in toolbox', async ({ page }) => {
+      const translatedNumberedList = 'Нумерованный список';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.numberedList': translatedNumberedList,
+          },
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      // Find the numbered list by translated text
+      const popoverItems = page.getByTestId('popover-item');
+      const numberedListItem = popoverItems.filter({ hasText: translatedNumberedList });
+
+      await expect(numberedListItem).toBeVisible();
+    });
+
+    test('should translate todo list tool name in toolbox', async ({ page }) => {
+      const translatedTodoList = 'Список задач';
+
+      await createBlokWithI18n(page, {
+        i18n: {
+          messages: {
+            'toolNames.todoList': translatedTodoList,
+          },
+        },
+      });
+
+      const block = page.locator(BLOCK_SELECTOR);
+
+      await expect(block).toHaveCount(1);
+      await block.click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      // Find the todo list by translated text
+      const popoverItems = page.getByTestId('popover-item');
+      const todoListItem = popoverItems.filter({ hasText: translatedTodoList });
+
+      await expect(todoListItem).toBeVisible();
     });
   });
 });

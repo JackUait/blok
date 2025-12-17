@@ -20,6 +20,11 @@ export default class I18nAPI extends Module {
   private static buildKey(toolName: string, isTune: boolean, dictKey: string): string {
     const namespace = isTune ? 'blockSettings' : 'tools';
 
+    // For tunes, if dictKey matches toolName, use simpler key format (e.g., blockSettings.delete)
+    if (isTune && dictKey === toolName) {
+      return `${namespace}.${toolName}`;
+    }
+
     return `${namespace}.${toolName}.${dictKey}`;
   }
 

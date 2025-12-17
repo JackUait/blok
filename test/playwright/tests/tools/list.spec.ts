@@ -1110,7 +1110,7 @@ test.describe('list tool (ListItem)', () => {
       console.log('After timeout markers:', result.timeoutMarkers);
 
       // The final markers should be 1. and 2.
-      expect(result.timeoutMarkers).toEqual(['1.', '2.']);
+      expect(result.timeoutMarkers).toStrictEqual(['1.', '2.']);
     });
 
     test('numbers new items correctly when created via Enter', async ({ page }) => {

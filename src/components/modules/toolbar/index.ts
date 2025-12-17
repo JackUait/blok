@@ -761,11 +761,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     settingsToggler.setAttribute('tabindex', '-1');
     settingsToggler.setAttribute(
       'aria-label',
-      I18n.t('accessibility.dragHandle.aria-label')
+      I18n.t('accessibility.dragHandle.ariaLabel')
     );
     settingsToggler.setAttribute(
       'aria-roledescription',
-      I18n.t('accessibility.dragHandle.aria-roledescription')
+      I18n.t('accessibility.dragHandle.ariaRoleDescription')
     );
 
     this.nodes.settingsToggler = settingsToggler;

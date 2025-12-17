@@ -98,79 +98,38 @@ new Blok({
 });
 ```
 
-### Loading Additional Languages
-
-Use the async loader functions to load locales on-demand:
-
-```typescript
-import Blok from '@jackuait/blok';
-import { loadBasicLocales } from '@jackuait/blok/locales';
-
-// Load the Basic preset (14 languages) during app initialization
-const locales = await loadBasicLocales();
-
-new Blok({
-  holder: 'editor',
-  i18n: {
-    locales,
-    locale: 'auto',
-  }
-});
-```
-
-| Loader Function | Languages | Bundle Impact |
-|-----------------|-----------|---------------|
-| (none) | English only | ~3KB |
-| `loadBasicLocales()` | en, zh, es, fr, de, pt, ja, ko, ar, it, ru, hi, hy, id | ~45KB on-demand |
-| `loadExtendedLocales()` | Basic + tr, vi, pl, nl, th, ms, sv, no, da, fi, el, cs | ~80KB on-demand |
-| `loadAllLocales()` | All 68 languages | ~200KB on-demand |
-
-### Loading Individual Locales
-
-For maximum control, load only the languages you need:
-
-```typescript
-import Blok from '@jackuait/blok';
-import { loadLocale, buildRegistry } from '@jackuait/blok/locales';
-
-// Option 1: Load a single locale
-const frConfig = await loadLocale('fr');
-
-// Option 2: Build a custom registry
-const locales = await buildRegistry(['en', 'fr', 'de', 'es']);
-
-new Blok({
-  holder: 'editor',
-  i18n: {
-    locales,
-    locale: 'auto',
-  }
-});
-```
 
 ### Preloading Locales
 
-By default, switching locales requires an async call (`setLocaleAsync`) to fetch the locale chunk. If you need **instant, synchronous** locale switching—for example, in a language dropdown where you can't await—you can preload locales during app initialization:
+By default, locales are loaded on-demand. If you need to ensure locales are available before initializing the editor—for example, to avoid any loading delay or to support offline usage—you can preload them:
 
 ```typescript
-import { preloadLocales, getLocaleSync } from '@jackuait/blok/locales';
+import Blok from '@jackuait/blok';
+import { preloadLocales, buildRegistry } from '@jackuait/blok/locales';
 
-// Preload during app startup (triggers network requests)
+// Preload during app startup (triggers network requests and caches the locales)
 await preloadLocales(['en', 'fr', 'de']);
 
-// Later, access synchronously (no await needed, already cached)
-const frConfig = getLocaleSync('fr');
-I18n.setLocale('fr'); // Instant, no network request
+// Build registry from preloaded locales (instant, no network request)
+const locales = await buildRegistry(['en', 'fr', 'de']);
+
+new Blok({
+  holder: 'editor',
+  i18n: {
+    locales,
+    locale: 'auto',
+  }
+});
 ```
 
 **When to preload:**
-- Language switcher UI that can't handle async operations
-- Offline support (preload before going offline)
-- Performance-critical paths where you can't await
+- Offline support (preload all needed locales before going offline)
+- Eliminating any loading delay during editor initialization
+- Progressive web apps that cache resources upfront
 
 **When not to preload:**
-- Most apps—just use `setLocaleAsync()` and show a brief loading state
-- The ~50-100ms delay on language switch is usually imperceptible
+- Most apps—just use `buildRegistry()` directly and accept the ~50-100ms loading time
+- The on-demand loading is usually imperceptible
 
 ### Setting a Specific Locale
 

@@ -26,7 +26,7 @@
   "tools.header.heading5": "शीर्षक ५",
   "tools.header.heading6": "शीर्षक ६",
   "tools.list.list": "सूची",
-  "blockTunes.delete.delete": "मेटाउनुहोस्",
+  "blockTunes.delete": "मेटाउनुहोस्",
   "accessibility.dragHandle.ariaLabel": "ब्लक सार्न तान्नुहोस् वा मेनुको लागि क्लिक गर्नुहोस्",
   "accessibility.dragHandle.ariaRoleDescription": "ड्र्याग ह्यान्डल",
   "accessibility.dragAnnouncements.dragStarted": "ब्लक तान्दै",

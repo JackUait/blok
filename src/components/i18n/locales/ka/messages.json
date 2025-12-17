@@ -26,7 +26,7 @@
   "tools.header.heading5": "სათაური 5",
   "tools.header.heading6": "სათაური 6",
   "tools.list.list": "სია",
-  "blockTunes.delete.delete": "წაშლა",
+  "blockTunes.delete": "წაშლა",
   "accessibility.dragHandle.ariaLabel": "გადაიტანეთ ბლოკის გადასატანად ან დააწკაპუნეთ მენიუსთვის",
   "accessibility.dragHandle.ariaRoleDescription": "გადატანის სახელური",
   "accessibility.dragAnnouncements.dragStarted": "ბლოკის გადატანა",

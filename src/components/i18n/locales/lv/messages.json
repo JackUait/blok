@@ -26,7 +26,7 @@
   "tools.header.heading5": "Virsraksts 5",
   "tools.header.heading6": "Virsraksts 6",
   "tools.list.list": "Saraksts",
-  "blockTunes.delete.delete": "Dzēst",
+  "blockTunes.delete": "Dzēst",
   "accessibility.dragHandle.ariaLabel": "Velciet, lai pārvietotu bloku, vai noklikšķiniet izvēlnei",
   "accessibility.dragHandle.ariaRoleDescription": "vilkšanas rokturis",
   "accessibility.dragAnnouncements.dragStarted": "Velk bloku",

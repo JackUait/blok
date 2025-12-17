@@ -26,7 +26,7 @@
   "tools.header.heading5": "ಶೀರ್ಷಿಕೆ 5",
   "tools.header.heading6": "ಶೀರ್ಷಿಕೆ 6",
   "tools.list.list": "ಪಟ್ಟಿ",
-  "blockTunes.delete.delete": "ಅಳಿಸಿ",
+  "blockTunes.delete": "ಅಳಿಸಿ",
   "accessibility.dragHandle.ariaLabel": "ಬ್ಲಾಕ್ ಸರಿಸಲು ಎಳೆಯಿರಿ ಅಥವಾ ಮೆನುಗಾಗಿ ಕ್ಲಿಕ್ ಮಾಡಿ",
   "accessibility.dragHandle.ariaRoleDescription": "ಎಳೆಯುವ ಹಿಡಿಕೆ",
   "accessibility.dragAnnouncements.dragStarted": "ಬ್ಲಾಕ್ ಎಳೆಯಲಾಗುತ್ತಿದೆ",

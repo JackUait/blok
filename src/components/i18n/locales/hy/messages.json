@@ -26,7 +26,7 @@
   "tools.header.heading5": "Վերնագիր 5",
   "tools.header.heading6": "Վերնագիր 6",
   "tools.list.list": "Ցուցակ",
-  "blockTunes.delete.delete": "Ջնջել",
+  "blockTunes.delete": "Ջնջել",
   "accessibility.dragHandle.ariaLabel": "Քաշեք տեղափոխելու կամ սեղմեք մենյուի համար",
   "accessibility.dragHandle.ariaRoleDescription": "քաշման կոճակ",
   "accessibility.dragAnnouncements.dragStarted": "Բլոկի քաշում",

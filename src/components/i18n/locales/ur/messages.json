@@ -26,7 +26,7 @@
   "tools.header.heading5": "عنوان 5",
   "tools.header.heading6": "عنوان 6",
   "tools.list.list": "فہرست",
-  "blockTunes.delete.delete": "حذف کریں",
+  "blockTunes.delete": "حذف کریں",
   "accessibility.dragHandle.ariaLabel": "بلاک منتقل کرنے کے لیے گھسیٹیں یا مینو کے لیے کلک کریں",
   "accessibility.dragHandle.ariaRoleDescription": "گھسیٹنے کا ہینڈل",
   "accessibility.dragAnnouncements.dragStarted": "بلاک گھسیٹا جا رہا ہے",

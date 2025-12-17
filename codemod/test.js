@@ -713,6 +713,9 @@ test('I18N_KEY_MAPPINGS contains expected mappings', () => {
   // Tools messages mappings (values are now camelCase)
   assertEqual(I18N_KEY_MAPPINGS['tools.stub.The block can not be displayed correctly'], 'tools.stub.blockCannotBeDisplayed');
 
+  // Block tunes mappings
+  assertEqual(I18N_KEY_MAPPINGS['blockTunes.delete.Delete'], 'blockTunes.delete');
+
   // Removed keys (mapped to null)
   assertEqual(I18N_KEY_MAPPINGS['blockTunes.moveUp.Move up'], null);
   assertEqual(I18N_KEY_MAPPINGS['blockTunes.moveDown.Move down'], null);
@@ -765,7 +768,7 @@ test('flattenI18nDictionary removes moveUp/moveDown keys', () => {
   };
   const result = flattenI18nDictionary(input);
   // Keys are normalized to camelCase, moveUp/moveDown are removed
-  assertEqual(result['blockTunes.delete.delete'], 'Удалить');
+  assertEqual(result['blockTunes.delete'], 'Удалить');
   assertEqual(result['blockTunes.moveUp.Move up'], undefined);
   assertEqual(result['blockTunes.moveDown.Move down'], undefined);
 });

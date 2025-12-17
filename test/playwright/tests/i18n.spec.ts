@@ -486,7 +486,7 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'blockTunes.delete.delete': translatedDelete,
+            'blockTunes.delete': translatedDelete,
           },
         },
         data: {
@@ -1125,7 +1125,7 @@ test.describe('blok i18n', () => {
 
   test.describe('translation key consistency', () => {
     test('should use lowercase translation key for delete button', async ({ page }) => {
-      // This test verifies that the translation key 'blockTunes.delete.delete' (lowercase)
+      // This test verifies that the translation key 'blockTunes.delete' (lowercase)
       // is correctly used by the code after fixing the key mismatch bug.
       const translatedDelete = 'Удалить';
 
@@ -1133,7 +1133,7 @@ test.describe('blok i18n', () => {
         i18n: {
           // Using lowercase 'delete' key to match the fixed code
           messages: {
-            'blockTunes.delete.delete': translatedDelete,
+            'blockTunes.delete': translatedDelete,
           },
         },
         data: {

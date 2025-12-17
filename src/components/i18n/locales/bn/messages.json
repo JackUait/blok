@@ -26,7 +26,7 @@
   "tools.header.heading5": "শিরোনাম 5",
   "tools.header.heading6": "শিরোনাম 6",
   "tools.list.list": "তালিকা",
-  "blockTunes.delete.delete": "মুছুন",
+  "blockTunes.delete": "মুছুন",
   "accessibility.dragHandle.ariaLabel": "ব্লক সরাতে টানুন বা মেনুর জন্য ক্লিক করুন",
   "accessibility.dragHandle.ariaRoleDescription": "টানার হ্যান্ডেল",
   "accessibility.dragAnnouncements.dragStarted": "ব্লক টানা হচ্ছে",

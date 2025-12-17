@@ -26,7 +26,7 @@
   "tools.header.heading5": "ސުރުޚީ 5",
   "tools.header.heading6": "ސުރުޚީ 6",
   "tools.list.list": "ލިސްޓް",
-  "blockTunes.delete.delete": "ފޮހެލާ",
+  "blockTunes.delete": "ފޮހެލާ",
   "accessibility.dragHandle.ariaLabel": "ބްލޮކް ބަދަލުކުރަން ދަމާލާ ނުވަތަ މެނޫއަށް ކްލިކް ކުރޭ",
   "accessibility.dragHandle.ariaRoleDescription": "ދެމުމުގެ ހެންޑަލް",
   "accessibility.dragAnnouncements.dragStarted": "ބްލޮކް ދަމަނީ",

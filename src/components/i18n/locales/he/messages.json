@@ -26,7 +26,7 @@
   "tools.header.heading5": "כותרת 5",
   "tools.header.heading6": "כותרת 6",
   "tools.list.list": "רשימה",
-  "blockTunes.delete.delete": "מחק",
+  "blockTunes.delete": "מחק",
   "accessibility.dragHandle.ariaLabel": "גרור להזזת הבלוק או לחץ לתפריט",
   "accessibility.dragHandle.ariaRoleDescription": "ידית גרירה",
   "accessibility.dragAnnouncements.dragStarted": "גורר בלוק",

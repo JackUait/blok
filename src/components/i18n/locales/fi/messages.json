@@ -26,7 +26,7 @@
   "tools.header.heading5": "Otsikko 5",
   "tools.header.heading6": "Otsikko 6",
   "tools.list.list": "Lista",
-  "blockTunes.delete.delete": "Poista",
+  "blockTunes.delete": "Poista",
   "accessibility.dragHandle.ariaLabel": "Vedä siirtääksesi lohkon tai napsauta avataksesi valikon",
   "accessibility.dragHandle.ariaRoleDescription": "vetokahva",
   "accessibility.dragAnnouncements.dragStarted": "Lohkoa vedetään",

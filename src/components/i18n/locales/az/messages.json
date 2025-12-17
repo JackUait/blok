@@ -26,7 +26,7 @@
   "tools.header.heading5": "Başlıq 5",
   "tools.header.heading6": "Başlıq 6",
   "tools.list.list": "Siyahı",
-  "blockTunes.delete.delete": "Sil",
+  "blockTunes.delete": "Sil",
   "accessibility.dragHandle.ariaLabel": "Köçürmək üçün dartın və ya menyu üçün klikləyin",
   "accessibility.dragHandle.ariaRoleDescription": "dartma tutacağı",
   "accessibility.dragAnnouncements.dragStarted": "Blok dartılır",

@@ -26,7 +26,7 @@
   "tools.header.heading5": "ခေါင်းစဉ် ၅",
   "tools.header.heading6": "ခေါင်းစဉ် ၆",
   "tools.list.list": "စာရင်း",
-  "blockTunes.delete.delete": "ဖျက်ရန်",
+  "blockTunes.delete": "ဖျက်ရန်",
   "accessibility.dragHandle.ariaLabel": "ဘလောက်ရွှေ့ရန် ဆွဲယူပါ သို့မဟုတ် မီနူးအတွက် နှိပ်ပါ",
   "accessibility.dragHandle.ariaRoleDescription": "ဆွဲယူကိုင်တံ",
   "accessibility.dragAnnouncements.dragStarted": "ဘလောက်ကို ဆွဲယူနေသည်",

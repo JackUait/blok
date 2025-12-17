@@ -26,7 +26,7 @@
   "tools.header.heading5": "제목 5",
   "tools.header.heading6": "제목 6",
   "tools.list.list": "목록",
-  "blockTunes.delete.delete": "삭제",
+  "blockTunes.delete": "삭제",
   "accessibility.dragHandle.ariaLabel": "드래그하여 이동하거나 클릭하여 메뉴 열기",
   "accessibility.dragHandle.ariaRoleDescription": "드래그 핸들",
   "accessibility.dragAnnouncements.dragStarted": "블록 드래그 중",

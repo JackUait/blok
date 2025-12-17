@@ -26,7 +26,7 @@
   "tools.header.heading5": "Titolo 5",
   "tools.header.heading6": "Titolo 6",
   "tools.list.list": "Elenco",
-  "blockTunes.delete.delete": "Elimina",
+  "blockTunes.delete": "Elimina",
   "accessibility.dragHandle.ariaLabel": "Trascina per spostare o clicca per il menu",
   "accessibility.dragHandle.ariaRoleDescription": "maniglia di trascinamento",
   "accessibility.dragAnnouncements.dragStarted": "Trascinamento blocco",

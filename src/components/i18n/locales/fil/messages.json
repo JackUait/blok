@@ -26,7 +26,7 @@
   "tools.header.heading5": "Heading 5",
   "tools.header.heading6": "Heading 6",
   "tools.list.list": "Listahan",
-  "blockTunes.delete.delete": "Burahin",
+  "blockTunes.delete": "Burahin",
   "accessibility.dragHandle.ariaLabel": "I-drag para ilipat ang block o i-click para sa menu",
   "accessibility.dragHandle.ariaRoleDescription": "drag handle",
   "accessibility.dragAnnouncements.dragStarted": "Dina-drag ang block",

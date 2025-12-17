@@ -26,7 +26,7 @@
   "tools.header.heading5": "ចំណងជើង ៥",
   "tools.header.heading6": "ចំណងជើង ៦",
   "tools.list.list": "បញ្ជី",
-  "blockTunes.delete.delete": "លុប",
+  "blockTunes.delete": "លុប",
   "accessibility.dragHandle.ariaLabel": "អូសដើម្បីផ្លាស់ទីប្លុក ឬចុចសម្រាប់ម៉ឺនុយ",
   "accessibility.dragHandle.ariaRoleDescription": "ចំណុចទាញ",
   "accessibility.dragAnnouncements.dragStarted": "កំពុងអូសប្លុក",

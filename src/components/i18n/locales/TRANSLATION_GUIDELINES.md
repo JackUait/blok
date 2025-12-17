@@ -69,7 +69,7 @@ Be clear and helpful without being alarming:
 |-----|---------|---------------|
 | `ui.popover.search` | Search | Rechercher |
 | `toolNames.bulletedList` | Bulleted list | Liste à puces |
-| `blockTunes.delete.delete` | Delete | Supprimer |
+| `blockTunes.delete` | Delete | Supprimer |
 
 ### What to Avoid
 

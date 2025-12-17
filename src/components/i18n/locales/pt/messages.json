@@ -26,7 +26,7 @@
   "tools.header.heading5": "Título 5",
   "tools.header.heading6": "Título 6",
   "tools.list.list": "Lista",
-  "blockTunes.delete.delete": "Excluir",
+  "blockTunes.delete": "Excluir",
   "accessibility.dragHandle.ariaLabel": "Arraste para mover ou clique para abrir o menu",
   "accessibility.dragHandle.ariaRoleDescription": "controle de arrastar",
   "accessibility.dragAnnouncements.dragStarted": "Arrastando bloco",

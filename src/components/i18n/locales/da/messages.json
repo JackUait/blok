@@ -26,7 +26,7 @@
   "tools.header.heading5": "Overskrift 5",
   "tools.header.heading6": "Overskrift 6",
   "tools.list.list": "Liste",
-  "blockTunes.delete.delete": "Slet",
+  "blockTunes.delete": "Slet",
   "accessibility.dragHandle.ariaLabel": "Træk for at flytte blok eller klik for menu",
   "accessibility.dragHandle.ariaRoleDescription": "trækhåndtag",
   "accessibility.dragAnnouncements.dragStarted": "Trækker blok",

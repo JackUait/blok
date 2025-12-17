@@ -26,7 +26,7 @@
   "tools.header.heading5": "Überschrift 5",
   "tools.header.heading6": "Überschrift 6",
   "tools.list.list": "Liste",
-  "blockTunes.delete.delete": "Löschen",
+  "blockTunes.delete": "Löschen",
   "accessibility.dragHandle.ariaLabel": "Ziehen zum Verschieben oder klicken für Menü",
   "accessibility.dragHandle.ariaRoleDescription": "Ziehgriff",
   "accessibility.dragAnnouncements.dragStarted": "Block wird verschoben",

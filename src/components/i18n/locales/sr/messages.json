@@ -26,7 +26,7 @@
   "tools.header.heading5": "Наслов 5",
   "tools.header.heading6": "Наслов 6",
   "tools.list.list": "Листа",
-  "blockTunes.delete.delete": "Обриши",
+  "blockTunes.delete": "Обриши",
   "accessibility.dragHandle.ariaLabel": "Превуците за премештање блока или кликните за мени",
   "accessibility.dragHandle.ariaRoleDescription": "ручка за превлачење",
   "accessibility.dragAnnouncements.dragStarted": "Превлачење блока",

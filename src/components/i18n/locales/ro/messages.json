@@ -26,7 +26,7 @@
   "tools.header.heading5": "Titlu 5",
   "tools.header.heading6": "Titlu 6",
   "tools.list.list": "Listă",
-  "blockTunes.delete.delete": "Șterge",
+  "blockTunes.delete": "Șterge",
   "accessibility.dragHandle.ariaLabel": "Trageți pentru a muta sau clic pentru meniu",
   "accessibility.dragHandle.ariaRoleDescription": "mâner de tragere",
   "accessibility.dragAnnouncements.dragStarted": "Mutare bloc",

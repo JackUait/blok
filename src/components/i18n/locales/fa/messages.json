@@ -26,7 +26,7 @@
   "tools.header.heading5": "عنوان ۵",
   "tools.header.heading6": "عنوان ۶",
   "tools.list.list": "لیست",
-  "blockTunes.delete.delete": "حذف",
+  "blockTunes.delete": "حذف",
   "accessibility.dragHandle.ariaLabel": "برای جابجایی بلوک بکشید یا برای منو کلیک کنید",
   "accessibility.dragHandle.ariaRoleDescription": "دستگیره کشیدن",
   "accessibility.dragAnnouncements.dragStarted": "در حال کشیدن بلوک",

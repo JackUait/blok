@@ -26,7 +26,7 @@
   "tools.header.heading5": "Encabezado 5",
   "tools.header.heading6": "Encabezado 6",
   "tools.list.list": "Lista",
-  "blockTunes.delete.delete": "Eliminar",
+  "blockTunes.delete": "Eliminar",
   "accessibility.dragHandle.ariaLabel": "Arrastra para mover o haz clic para el menú",
   "accessibility.dragHandle.ariaRoleDescription": "control de arrastre",
   "accessibility.dragAnnouncements.dragStarted": "Arrastrando bloque",

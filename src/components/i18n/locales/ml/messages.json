@@ -26,7 +26,7 @@
   "tools.header.heading5": "തലക്കെട്ട് 5",
   "tools.header.heading6": "തലക്കെട്ട് 6",
   "tools.list.list": "ലിസ്റ്റ്",
-  "blockTunes.delete.delete": "ഇല്ലാതാക്കുക",
+  "blockTunes.delete": "ഇല്ലാതാക്കുക",
   "accessibility.dragHandle.ariaLabel": "ബ്ലോക്ക് നീക്കാൻ വലിച്ചിടുക അല്ലെങ്കിൽ മെനുവിന് ക്ലിക്ക് ചെയ്യുക",
   "accessibility.dragHandle.ariaRoleDescription": "വലിച്ചിടൽ ഹാൻഡിൽ",
   "accessibility.dragAnnouncements.dragStarted": "ബ്ലോക്ക് വലിച്ചിടുന്നു",

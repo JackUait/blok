@@ -26,7 +26,7 @@
   "tools.header.heading5": "Rubrik 5",
   "tools.header.heading6": "Rubrik 6",
   "tools.list.list": "Lista",
-  "blockTunes.delete.delete": "Ta bort",
+  "blockTunes.delete": "Ta bort",
   "accessibility.dragHandle.ariaLabel": "Dra för att flytta eller klicka för meny",
   "accessibility.dragHandle.ariaRoleDescription": "draghandtag",
   "accessibility.dragAnnouncements.dragStarted": "Drar block",

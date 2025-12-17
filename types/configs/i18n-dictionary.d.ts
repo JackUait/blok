@@ -13,7 +13,7 @@ export type TranslationKey = keyof typeof EnglishMessages;
  * Keys use dot notation to represent the translation path:
  * - "toolNames.text" - Tool name translations
  * - "tools.link.addLink" - Tool-specific translations
- * - "blockTunes.delete.delete" - Block tune translations
+ * - "blockTunes.delete" - Block tune translations
  * - "ui.popover.search" - UI component translations
  * - "accessibility.dragHandle.aria-label" - Accessibility translations
  *

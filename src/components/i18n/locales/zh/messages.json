@@ -26,7 +26,7 @@
   "tools.header.heading5": "五级标题",
   "tools.header.heading6": "六级标题",
   "tools.list.list": "列表",
-  "blockTunes.delete.delete": "删除",
+  "blockTunes.delete": "删除",
   "accessibility.dragHandle.ariaLabel": "拖动移动或点击打开菜单",
   "accessibility.dragHandle.ariaRoleDescription": "拖动控件",
   "accessibility.dragAnnouncements.dragStarted": "正在拖动内容块",

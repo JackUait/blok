@@ -26,7 +26,7 @@
   "tools.header.heading5": "عنوان 5",
   "tools.header.heading6": "عنوان 6",
   "tools.list.list": "قائمة",
-  "blockTunes.delete.delete": "حذف",
+  "blockTunes.delete": "حذف",
   "accessibility.dragHandle.ariaLabel": "اسحب لتحريك الكتلة أو انقر للقائمة",
   "accessibility.dragHandle.ariaRoleDescription": "مقبض السحب",
   "accessibility.dragAnnouncements.dragStarted": "جارٍ سحب الكتلة",

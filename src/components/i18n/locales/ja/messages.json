@@ -26,7 +26,7 @@
   "tools.header.heading5": "見出し 5",
   "tools.header.heading6": "見出し 6",
   "tools.list.list": "リスト",
-  "blockTunes.delete.delete": "削除",
+  "blockTunes.delete": "削除",
   "accessibility.dragHandle.ariaLabel": "ドラッグで移動、クリックでメニュー",
   "accessibility.dragHandle.ariaRoleDescription": "ドラッグハンドル",
   "accessibility.dragAnnouncements.dragStarted": "ブロックをドラッグ中",

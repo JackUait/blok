@@ -26,7 +26,7 @@
   "tools.header.heading5": "หัวข้อ 5",
   "tools.header.heading6": "หัวข้อ 6",
   "tools.list.list": "รายการ",
-  "blockTunes.delete.delete": "ลบ",
+  "blockTunes.delete": "ลบ",
   "accessibility.dragHandle.ariaLabel": "ลากเพื่อย้ายบล็อก หรือคลิกเพื่อเปิดเมนู",
   "accessibility.dragHandle.ariaRoleDescription": "ที่จับสำหรับลาก",
   "accessibility.dragAnnouncements.dragStarted": "กำลังลากบล็อก",

@@ -350,7 +350,7 @@ export default class BlockSettings extends Module<BlockSettingsNodes> {
     } else {
       items.push({
         icon: IconCross,
-        title: I18n.t('blockTunes.delete.delete'),
+        title: I18n.t('blockTunes.delete'),
         name: 'delete',
         closeOnActivate: true,
         onActivate: () => {

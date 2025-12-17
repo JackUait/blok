@@ -26,7 +26,7 @@
   "tools.header.heading5": "Címsor 5",
   "tools.header.heading6": "Címsor 6",
   "tools.list.list": "Lista",
-  "blockTunes.delete.delete": "Törlés",
+  "blockTunes.delete": "Törlés",
   "accessibility.dragHandle.ariaLabel": "Húzza az áthelyezéshez vagy kattintson a menühöz",
   "accessibility.dragHandle.ariaRoleDescription": "húzófogantyú",
   "accessibility.dragAnnouncements.dragStarted": "Blokk áthelyezése",

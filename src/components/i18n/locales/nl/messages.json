@@ -26,7 +26,7 @@
   "tools.header.heading5": "Kop 5",
   "tools.header.heading6": "Kop 6",
   "tools.list.list": "Lijst",
-  "blockTunes.delete.delete": "Verwijderen",
+  "blockTunes.delete": "Verwijderen",
   "accessibility.dragHandle.ariaLabel": "Sleep om te verplaatsen of klik voor menu",
   "accessibility.dragHandle.ariaRoleDescription": "sleepgreep",
   "accessibility.dragAnnouncements.dragStarted": "Blok wordt versleept",

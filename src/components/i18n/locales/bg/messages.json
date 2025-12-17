@@ -26,7 +26,7 @@
   "tools.header.heading5": "Заглавие 5",
   "tools.header.heading6": "Заглавие 6",
   "tools.list.list": "Списък",
-  "blockTunes.delete.delete": "Изтриване",
+  "blockTunes.delete": "Изтриване",
   "accessibility.dragHandle.ariaLabel": "Плъзнете за преместване на блок или щракнете за меню",
   "accessibility.dragHandle.ariaRoleDescription": "манипулатор за плъзгане",
   "accessibility.dragAnnouncements.dragStarted": "Плъзгане на блок",

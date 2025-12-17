@@ -56,6 +56,9 @@ const I18N_KEY_MAPPINGS = {
   'tools.stub.The block can not be displayed correctly': 'tools.stub.blockCannotBeDisplayed',
   'tools.stub.The block can not be displayed correctly.': 'tools.stub.blockCannotBeDisplayed',
 
+  // Block tunes that changed in Blok
+  'blockTunes.delete.Delete': 'blockTunes.delete',
+
   // Block tunes that are removed in Blok (moveUp/moveDown replaced with drag)
   // These are mapped to null to indicate they should be removed
   'blockTunes.moveUp.Move up': null,

@@ -26,7 +26,7 @@
   "tools.header.heading5": "શીર્ષક 5",
   "tools.header.heading6": "શીર્ષક 6",
   "tools.list.list": "યાદી",
-  "blockTunes.delete.delete": "કાઢી નાખો",
+  "blockTunes.delete": "કાઢી નાખો",
   "accessibility.dragHandle.ariaLabel": "બ્લોક ખસેડવા માટે ખેંચો અથવા મેનૂ માટે ક્લિક કરો",
   "accessibility.dragHandle.ariaRoleDescription": "ખેંચવાનું હેન્ડલ",
   "accessibility.dragAnnouncements.dragStarted": "બ્લોક ખેંચાઈ રહ્યો છે",

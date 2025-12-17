@@ -26,7 +26,7 @@
   "tools.header.heading5": "शीर्षक 5",
   "tools.header.heading6": "शीर्षक 6",
   "tools.list.list": "सूची",
-  "blockTunes.delete.delete": "हटाएं",
+  "blockTunes.delete": "हटाएं",
   "accessibility.dragHandle.ariaLabel": "खींचकर ब्लॉक ले जाएं या मेनू के लिए क्लिक करें",
   "accessibility.dragHandle.ariaRoleDescription": "खींचने का हैंडल",
   "accessibility.dragAnnouncements.dragStarted": "ब्लॉक खींचा जा रहा है",

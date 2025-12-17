@@ -21,8 +21,8 @@ const EXPECTED_BASIC_LOCALES = ['en', 'zh', 'es', 'fr', 'de', 'pt', 'ja', 'ko', 
 const EXPECTED_EXTENDED_ADDITIONS = ['tr', 'vi', 'pl', 'nl', 'th', 'ms', 'sv', 'no', 'da', 'fi', 'el', 'cs'];
 
 const createDictionary = (): I18nDictionary => ({
-  'ui.toolbar.toolbox.clickToAddBelow': 'Cliquez pour ajouter ci-dessous',
-  'ui.toolbar.toolbox.optionClickToAddAbove': 'Option-clic pour ajouter ci-dessus',
+  'toolbox.addBelow': 'Cliquez pour ajouter ci-dessous',
+  'toolbox.optionAddAbove': 'Option-clic pour ajouter ci-dessus',
   'tools.link.addLink': 'Ajouter un lien',
 });
 
@@ -44,7 +44,7 @@ describe('I18n', () => {
 
     I18n.setDictionary(dictionary);
 
-    expect(I18n.t('ui.toolbar.toolbox.clickToAddBelow')).toBe('Cliquez pour ajouter ci-dessous');
+    expect(I18n.t('toolbox.addBelow')).toBe('Cliquez pour ajouter ci-dessous');
     expect(I18n.t('tools.link.addLink')).toBe('Ajouter un lien');
   });
 
@@ -84,7 +84,7 @@ describe('I18n', () => {
       expect(result.locale).toBe('ru');
       expect(result.direction).toBe('ltr');
       expect(I18n.getLocale()).toBe('ru');
-      expect(I18n.t('ui.blockTunes.toggler.dragToMove')).toBe('Тяните, чтобы переместить');
+      expect(I18n.t('blockSettings.dragToMove')).toBe('Тяните, чтобы переместить');
     });
 
     it('sets locale to Chinese and loads Chinese dictionary', async () => {
@@ -95,7 +95,7 @@ describe('I18n', () => {
       expect(result.locale).toBe('zh');
       expect(result.direction).toBe('ltr');
       expect(I18n.getLocale()).toBe('zh');
-      expect(I18n.t('ui.blockTunes.toggler.dragToMove')).toBe('拖动以移动');
+      expect(I18n.t('blockSettings.dragToMove')).toBe('拖动以移动');
     });
 
     it('sets locale to English and loads English dictionary', async () => {
@@ -123,7 +123,7 @@ describe('I18n', () => {
       expect(result.locale).toBe('fr');
       expect(result.direction).toBe('ltr');
       expect(I18n.getLocale()).toBe('fr');
-      expect(I18n.t('ui.blockTunes.toggler.dragToMove')).toBe('Glisser pour déplacer');
+      expect(I18n.t('blockSettings.dragToMove')).toBe('Glisser pour déplacer');
     });
   });
 
@@ -437,7 +437,7 @@ describe('I18n', () => {
       I18n.init({ locales: customLocales });
       I18n.setLocale('fr');
 
-      expect(I18n.t('ui.blockTunes.toggler.dragToMove')).toBe('Glisser pour déplacer');
+      expect(I18n.t('blockSettings.dragToMove')).toBe('Glisser pour déplacer');
     });
 
     it('falls back to defaultLocale when setting unavailable locale', async () => {

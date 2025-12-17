@@ -18,7 +18,7 @@ export default class I18nAPI extends Module {
    * @param dictKey - the translation key
    */
   private static buildKey(toolName: string, isTune: boolean, dictKey: string): string {
-    const namespace = isTune ? 'blockTunes' : 'tools';
+    const namespace = isTune ? 'blockSettings' : 'tools';
 
     return `${namespace}.${toolName}.${dictKey}`;
   }

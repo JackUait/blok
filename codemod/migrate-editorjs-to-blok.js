@@ -42,11 +42,11 @@ const FILE_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.html
  */
 const I18N_KEY_MAPPINGS = {
   // UI keys that changed
-  'ui.blockTunes.toggler.Click to tune': 'ui.blockTunes.toggler.clickToOpenMenu',
-  'ui.blockTunes.toggler.or drag to move': 'ui.blockTunes.toggler.dragToMove',
-  'ui.toolbar.toolbox.Add': 'ui.toolbar.toolbox.clickToAddBelow',
-  'ui.inlineToolbar.converter.Convert to': 'ui.popover.convertTo',
-  'ui.popover.Filter': 'ui.popover.search',
+  'ui.blockTunes.toggler.Click to tune': 'blockSettings.clickToOpenMenu',
+  'ui.blockTunes.toggler.or drag to move': 'blockSettings.dragToMove',
+  'ui.toolbar.toolbox.Add': 'toolbox.addBelow',
+  'ui.inlineToolbar.converter.Convert to': 'popover.convertTo',
+  'ui.popover.Filter': 'popover.search',
 
   // Tool names that changed (EditorJS uses different casing/wording)
   'toolNames.Ordered List': 'toolNames.numberedList',
@@ -57,7 +57,7 @@ const I18N_KEY_MAPPINGS = {
   'tools.stub.The block can not be displayed correctly.': 'tools.stub.blockCannotBeDisplayed',
 
   // Block tunes that changed in Blok
-  'blockTunes.delete.Delete': 'blockTunes.delete',
+  'blockTunes.delete.Delete': 'blockSettings.delete',
 
   // Block tunes that are removed in Blok (moveUp/moveDown replaced with drag)
   // These are mapped to null to indicate they should be removed
@@ -66,9 +66,21 @@ const I18N_KEY_MAPPINGS = {
 };
 
 /**
+ * Namespace mappings from old verbose prefixes to new simplified prefixes.
+ * Applied after camelCase normalization.
+ */
+const NAMESPACE_MAPPINGS = {
+  'ui.blockTunes.toggler': 'blockSettings',
+  'ui.toolbar.toolbox': 'toolbox',
+  'ui.popover': 'popover',
+  'blockTunes': 'blockSettings',
+};
+
+/**
  * Converts an EditorJS-style key (with English text) to Blok-style (camelCase).
  * Blok uses camelCase for the final segment of translation keys.
- * Example: 'ui.popover.Nothing found' → 'ui.popover.nothingFound'
+ * Also applies namespace simplification for known verbose prefixes.
+ * Example: 'ui.popover.Nothing found' → 'popover.nothingFound'
  * Example: 'toolNames.Text' → 'toolNames.text'
  * @param {string} key - The dot-notation key with English text
  * @returns {string} The normalized key with camelCase final segment
@@ -91,7 +103,18 @@ function normalizeKey(key) {
     .join('');
 
   parts[parts.length - 1] = camelCase;
-  return parts.join('.');
+  let normalizedKey = parts.join('.');
+
+  // Apply namespace mappings (longest prefix first for correct matching)
+  const sortedPrefixes = Object.keys(NAMESPACE_MAPPINGS).sort((a, b) => b.length - a.length);
+  for (const oldPrefix of sortedPrefixes) {
+    if (normalizedKey.startsWith(oldPrefix + '.')) {
+      normalizedKey = NAMESPACE_MAPPINGS[oldPrefix] + normalizedKey.slice(oldPrefix.length);
+      break;
+    }
+  }
+
+  return normalizedKey;
 }
 
 /**

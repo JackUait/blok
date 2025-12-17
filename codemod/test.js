@@ -560,8 +560,8 @@ test('flattenI18nDictionary flattens simple nested object', () => {
     }
   };
   const result = flattenI18nDictionary(input);
-  // 'ui.toolbar.toolbox.Add' is mapped to 'ui.toolbar.toolbox.clickToAddBelow' by I18N_KEY_MAPPINGS
-  assertEqual(result['ui.toolbar.toolbox.clickToAddBelow'], 'Добавить');
+  // 'ui.toolbar.toolbox.Add' is mapped to 'toolbox.addBelow' by I18N_KEY_MAPPINGS
+  assertEqual(result['toolbox.addBelow'], 'Добавить');
 });
 
 test('flattenI18nDictionary flattens deeply nested object', () => {
@@ -575,8 +575,8 @@ test('flattenI18nDictionary flattens deeply nested object', () => {
     }
   };
   const result = flattenI18nDictionary(input);
-  // Keys are normalized to camelCase
-  assertEqual(result['ui.blockTunes.toggler.dragToMove'], 'Перетащите');
+  // Keys are normalized to camelCase and mapped to simplified keys
+  assertEqual(result['blockSettings.dragToMove'], 'Перетащите');
 });
 
 test('flattenI18nDictionary handles multiple namespaces', () => {
@@ -609,8 +609,8 @@ test('flattenI18nDictionary applies key mappings', () => {
     }
   };
   const result = flattenI18nDictionary(input);
-  // 'Click to tune' should be mapped to 'clickToOpenMenu' (camelCase)
-  assertEqual(result['ui.blockTunes.toggler.clickToOpenMenu'], 'Нажмите для настройки');
+  // 'Click to tune' should be mapped to 'blockSettings.clickToOpenMenu'
+  assertEqual(result['blockSettings.clickToOpenMenu'], 'Нажмите для настройки');
   assertEqual(result['ui.blockTunes.toggler.Click to tune'], undefined);
 });
 
@@ -652,9 +652,9 @@ test('transformI18nConfig transforms deeply nested messages', () => {
 };`;
   const { result, changed } = transformI18nConfig(input);
   assertEqual(changed, true, 'Should indicate change');
-  // Keys are normalized to camelCase
-  assertEqual(result.includes('"ui.popover.search": "Поиск"'), true, 'Should have flattened ui.popover.search');
-  assertEqual(result.includes('"ui.popover.nothingFound": "Ничего не найдено"'), true, 'Should have flattened ui.popover.nothingFound');
+  // Keys are normalized to camelCase and mapped to simplified keys
+  assertEqual(result.includes('"popover.search": "Поиск"'), true, 'Should have flattened popover.search');
+  assertEqual(result.includes('"popover.nothingFound": "Ничего не найдено"'), true, 'Should have flattened popover.nothingFound');
 });
 
 test('transformI18nConfig does not change content without i18n config', () => {
@@ -699,12 +699,12 @@ test('transformI18nConfig handles single quotes', () => {
 });
 
 test('I18N_KEY_MAPPINGS contains expected mappings', () => {
-  // UI key mappings (values are now camelCase)
-  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.Click to tune'], 'ui.blockTunes.toggler.clickToOpenMenu');
-  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.or drag to move'], 'ui.blockTunes.toggler.dragToMove');
-  assertEqual(I18N_KEY_MAPPINGS['ui.toolbar.toolbox.Add'], 'ui.toolbar.toolbox.clickToAddBelow');
-  assertEqual(I18N_KEY_MAPPINGS['ui.inlineToolbar.converter.Convert to'], 'ui.popover.convertTo');
-  assertEqual(I18N_KEY_MAPPINGS['ui.popover.Filter'], 'ui.popover.search');
+  // UI key mappings (values use simplified key format)
+  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.Click to tune'], 'blockSettings.clickToOpenMenu');
+  assertEqual(I18N_KEY_MAPPINGS['ui.blockTunes.toggler.or drag to move'], 'blockSettings.dragToMove');
+  assertEqual(I18N_KEY_MAPPINGS['ui.toolbar.toolbox.Add'], 'toolbox.addBelow');
+  assertEqual(I18N_KEY_MAPPINGS['ui.inlineToolbar.converter.Convert to'], 'popover.convertTo');
+  assertEqual(I18N_KEY_MAPPINGS['ui.popover.Filter'], 'popover.search');
 
   // Tool names mappings (values are now camelCase)
   assertEqual(I18N_KEY_MAPPINGS['toolNames.Ordered List'], 'toolNames.numberedList');
@@ -714,7 +714,7 @@ test('I18N_KEY_MAPPINGS contains expected mappings', () => {
   assertEqual(I18N_KEY_MAPPINGS['tools.stub.The block can not be displayed correctly'], 'tools.stub.blockCannotBeDisplayed');
 
   // Block tunes mappings
-  assertEqual(I18N_KEY_MAPPINGS['blockTunes.delete.Delete'], 'blockTunes.delete');
+  assertEqual(I18N_KEY_MAPPINGS['blockTunes.delete.Delete'], 'blockSettings.delete');
 
   // Removed keys (mapped to null)
   assertEqual(I18N_KEY_MAPPINGS['blockTunes.moveUp.Move up'], null);
@@ -746,9 +746,9 @@ test('flattenI18nDictionary applies Filter to Search mapping', () => {
     },
   };
   const result = flattenI18nDictionary(input);
-  // Keys are mapped and normalized to camelCase
-  assertEqual(result['ui.popover.search'], 'Фильтр');
-  assertEqual(result['ui.popover.nothingFound'], 'Ничего не найдено');
+  // Keys are mapped to simplified keys
+  assertEqual(result['popover.search'], 'Фильтр');
+  assertEqual(result['popover.nothingFound'], 'Ничего не найдено');
   assertEqual(result['ui.popover.Filter'], undefined);
 });
 
@@ -767,8 +767,8 @@ test('flattenI18nDictionary removes moveUp/moveDown keys', () => {
     },
   };
   const result = flattenI18nDictionary(input);
-  // Keys are normalized to camelCase, moveUp/moveDown are removed
-  assertEqual(result['blockTunes.delete'], 'Удалить');
+  // Keys are mapped to simplified keys, moveUp/moveDown are removed
+  assertEqual(result['blockSettings.delete'], 'Удалить');
   assertEqual(result['blockTunes.moveUp.Move up'], undefined);
   assertEqual(result['blockTunes.moveDown.Move down'], undefined);
 });
@@ -795,8 +795,8 @@ test('normalizeKey converts single word to lowercase', () => {
 });
 
 test('normalizeKey converts multi-word keys to camelCase', () => {
-  assertEqual(normalizeKey('ui.popover.Nothing found'), 'ui.popover.nothingFound');
-  assertEqual(normalizeKey('ui.toolbar.toolbox.Click to add below'), 'ui.toolbar.toolbox.clickToAddBelow');
+  assertEqual(normalizeKey('popover.Nothing found'), 'popover.nothingFound');
+  assertEqual(normalizeKey('toolbox.Click to add below'), 'toolbox.clickToAddBelow');
 });
 
 test('normalizeKey handles keys with multiple spaces', () => {
@@ -804,7 +804,7 @@ test('normalizeKey handles keys with multiple spaces', () => {
 });
 
 test('normalizeKey preserves namespace segments', () => {
-  assertEqual(normalizeKey('ui.blockTunes.toggler.Drag to move'), 'ui.blockTunes.toggler.dragToMove');
+  assertEqual(normalizeKey('blockSettings.Drag to move'), 'blockSettings.dragToMove');
 });
 
 console.log('\n🗑️  removeI18nMessages (--use-library-i18n)\n');

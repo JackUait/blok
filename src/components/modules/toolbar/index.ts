@@ -724,11 +724,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
      */
     const userOS = _.getUserOS();
     const modifierClickText = userOS.win
-      ? I18n.t('ui.toolbar.toolbox.ctrlClickToAddAbove')
-      : I18n.t('ui.toolbar.toolbox.optionClickToAddAbove');
+      ? I18n.t('toolbox.ctrlAddAbove')
+      : I18n.t('toolbox.optionAddAbove');
 
     const tooltipContent = this.createTooltipContent([
-      I18n.t('ui.toolbar.toolbox.clickToAddBelow'),
+      I18n.t('toolbox.addBelow'),
       modifierClickText,
     ]);
 
@@ -761,11 +761,11 @@ export default class Toolbar extends Module<ToolbarNodes> {
     settingsToggler.setAttribute('tabindex', '-1');
     settingsToggler.setAttribute(
       'aria-label',
-      I18n.t('accessibility.dragHandle.ariaLabel')
+      I18n.t('a11y.dragHandle')
     );
     settingsToggler.setAttribute(
       'aria-roledescription',
-      I18n.t('accessibility.dragHandle.ariaRoleDescription')
+      I18n.t('a11y.dragHandleRole')
     );
 
     this.nodes.settingsToggler = settingsToggler;
@@ -773,8 +773,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
     $.append(actions, settingsToggler);
 
     const blockTunesTooltip = this.createTooltipContent([
-      I18n.t('ui.blockTunes.toggler.dragToMove'),
-      I18n.t('ui.blockTunes.toggler.clickToOpenMenu'),
+      I18n.t('blockSettings.dragToMove'),
+      I18n.t('blockSettings.clickToOpenMenu'),
     ]);
 
     tooltip.onHover(settingsToggler, blockTunesTooltip, {
@@ -811,8 +811,8 @@ export default class Toolbar extends Module<ToolbarNodes> {
       api: this.Blok.API.methods,
       tools: this.Blok.Tools.blockTools,
       i18nLabels: {
-        filter: I18n.t('ui.popover.search'),
-        nothingFound: I18n.t('ui.popover.nothingFound'),
+        filter: I18n.t('popover.search'),
+        nothingFound: I18n.t('popover.nothingFound'),
       },
       triggerElement: this.nodes.plusButton,
     });

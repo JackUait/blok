@@ -3,7 +3,7 @@
  */
 export interface I18n {
   /**
-   * Perform translation with automatically added namespace like `tools.${toolName}` or `blockTunes.${tuneName}`
+   * Perform translation with automatically added namespace like `tools.${toolName}` or `blockSettings.${tuneName}`
    *
    * @param dictKey - what to translate
    */

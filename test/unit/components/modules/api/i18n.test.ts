@@ -43,10 +43,10 @@ describe('I18nAPI', () => {
       const api = createI18nApi();
 
       translateMock.mockReturnValue('Translated');
-      const result = api.methods.t('ui.popover.search');
+      const result = api.methods.t('popover.search');
 
-      expect(hasTranslationMock).toHaveBeenCalledWith('ui.popover.search');
-      expect(translateMock).toHaveBeenCalledWith('ui.popover.search');
+      expect(hasTranslationMock).toHaveBeenCalledWith('popover.search');
+      expect(translateMock).toHaveBeenCalledWith('popover.search');
       expect(result).toBe('Translated');
     });
 
@@ -91,8 +91,8 @@ describe('I18nAPI', () => {
       translateMock.mockReturnValue('Title');
       const result = methods.t('title');
 
-      expect(hasTranslationMock).toHaveBeenCalledWith('blockTunes.settings.title');
-      expect(translateMock).toHaveBeenCalledWith('blockTunes.settings.title');
+      expect(hasTranslationMock).toHaveBeenCalledWith('blockSettings.settings.title');
+      expect(translateMock).toHaveBeenCalledWith('blockSettings.settings.title');
       expect(result).toBe('Title');
     });
 

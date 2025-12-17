@@ -108,7 +108,7 @@ export default class ConvertInlineTool implements InlineTool {
       name: 'convert-to',
       title: currentBlockTitle,
        hint: {
-        title: I18nInternal.t('ui.popover.convertTo'),
+        title: I18nInternal.t('popover.convertTo'),
       },
       children: {
         items: convertToItems,

@@ -385,13 +385,13 @@ export default class DragManager extends Module {
     const blockCount = this.dragState!.sourceBlocks.length;
 
     if (blockCount > 1) {
-      const message = I18n.t('accessibility.dragAnnouncements.dragStartedMultiple')
+      const message = I18n.t('a11y.dragStartedMultiple')
         .replace('{count}', String(blockCount));
 
       announce(message, { politeness: 'assertive' });
     } else {
       announce(
-        I18n.t('accessibility.dragAnnouncements.dragStarted'),
+        I18n.t('a11y.dragStarted'),
         { politeness: 'assertive' }
       );
     }
@@ -547,7 +547,7 @@ export default class DragManager extends Module {
       this.dragState.lastAnnouncedDropIndex = pendingIndex;
 
       const total = this.Blok.BlockManager.blocks.length;
-      const message = I18n.t('accessibility.dragAnnouncements.dropPosition')
+      const message = I18n.t('a11y.dropPosition')
         .replace('{position}', String(pendingIndex + 1))
         .replace('{total}', String(total));
 
@@ -815,14 +815,14 @@ export default class DragManager extends Module {
     const count = duplicatedBlocks.length;
 
     if (count > 1) {
-      const message = I18n.t('accessibility.dragAnnouncements.blocksDuplicated')
+      const message = I18n.t('a11y.blocksDuplicated')
         .replace('{count}', String(count))
         .replace('{position}', String(newIndex + 1));
 
       announce(message, { politeness: 'assertive' });
     } else {
       const total = this.Blok.BlockManager.blocks.length;
-      const message = I18n.t('accessibility.dragAnnouncements.blockDuplicated')
+      const message = I18n.t('a11y.blockDuplicated')
         .replace('{position}', String(newIndex + 1))
         .replace('{total}', String(total));
 
@@ -841,13 +841,13 @@ export default class DragManager extends Module {
     const total = this.Blok.BlockManager.blocks.length;
 
     if (isMultiBlockDrag) {
-      const message = I18n.t('accessibility.dragAnnouncements.blocksMoved')
+      const message = I18n.t('a11y.blocksMoved')
         .replace('{count}', String(sourceBlocks.length))
         .replace('{position}', String(newIndex + 1));
 
       announce(message, { politeness: 'assertive' });
     } else {
-      const message = I18n.t('accessibility.dragAnnouncements.blockMoved')
+      const message = I18n.t('a11y.blockMoved')
         .replace('{position}', String(newIndex + 1))
         .replace('{total}', String(total));
 
@@ -981,7 +981,7 @@ export default class DragManager extends Module {
     // Announce cancellation to screen readers if drag was in progress and cancelled
     if (wasCancelled && this.dragState.isDragging) {
       announce(
-        I18n.t('accessibility.dragAnnouncements.dropCancelled'),
+        I18n.t('a11y.dropCancelled'),
         { politeness: 'polite' }
       );
     }

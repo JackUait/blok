@@ -486,7 +486,7 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'blockTunes.delete': translatedDelete,
+            'blockSettings.delete': translatedDelete,
           },
         },
         data: {
@@ -682,8 +682,8 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'ui.popover.search': translatedSearch,
-            'ui.popover.nothingFound': translatedNothingFound,
+            'popover.search': translatedSearch,
+            'popover.nothingFound': translatedNothingFound,
           },
         },
         tools: {
@@ -741,8 +741,8 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'ui.toolbar.toolbox.clickToAddBelow': translatedClickToAddBelow,
-            'ui.toolbar.toolbox.optionClickToAddAbove': translatedOptionClickToAddAbove,
+            'toolbox.addBelow': translatedClickToAddBelow,
+            'toolbox.optionAddAbove': translatedOptionClickToAddAbove,
           },
         },
       });
@@ -771,8 +771,8 @@ test.describe('blok i18n', () => {
       await createBlokWithI18n(page, {
         i18n: {
           messages: {
-            'ui.blockTunes.toggler.dragToMove': translatedDragToMove,
-            'ui.blockTunes.toggler.clickToOpenMenu': translatedClickToOpenMenu,
+            'blockSettings.dragToMove': translatedDragToMove,
+            'blockSettings.clickToOpenMenu': translatedClickToOpenMenu,
           },
         },
         data: {
@@ -879,7 +879,7 @@ test.describe('blok i18n', () => {
             },
             i18n: {
               messages: {
-                'ui.popover.convertTo': convertTo,
+                'popover.convertTo': convertTo,
               },
             },
             data: {
@@ -1125,7 +1125,7 @@ test.describe('blok i18n', () => {
 
   test.describe('translation key consistency', () => {
     test('should use lowercase translation key for delete button', async ({ page }) => {
-      // This test verifies that the translation key 'blockTunes.delete' (lowercase)
+      // This test verifies that the translation key 'blockSettings.delete' (lowercase)
       // is correctly used by the code after fixing the key mismatch bug.
       const translatedDelete = 'Удалить';
 
@@ -1133,7 +1133,7 @@ test.describe('blok i18n', () => {
         i18n: {
           // Using lowercase 'delete' key to match the fixed code
           messages: {
-            'blockTunes.delete': translatedDelete,
+            'blockSettings.delete': translatedDelete,
           },
         },
         data: {

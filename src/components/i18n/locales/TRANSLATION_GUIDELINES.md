@@ -16,23 +16,24 @@ This document provides guidelines for creating and maintaining translations for 
 
 - Each locale has a directory named with its ISO 639-1 code (e.g., `en/`, `fr/`, `de/`)
 - Translations are stored in `messages.json` as a flat key-value object
-- Keys use dot notation for namespacing (e.g., `ui.popover.search`)
+- Keys use dot notation for namespacing (e.g., `popover.search`)
 - All keys from `en/messages.json` must be present in every locale
 
 ### Key Naming
 
 Keys follow this structure:
-- `ui.*` - General UI elements (popovers, toolbars, menus)
 - `toolNames.*` - Names of tools shown in the toolbox
 - `tools.*` - Tool-specific strings (e.g., `tools.link.addLink`)
-- `blockTunes.*` - Block menu actions (e.g., delete, duplicate)
-- `accessibility.*` - Screen reader announcements and ARIA labels
+- `toolbox.*` - Toolbox/slash menu UI (e.g., `toolbox.addBelow`)
+- `popover.*` - Popover UI elements (e.g., `popover.search`)
+- `blockSettings.*` - Block menu actions (e.g., `blockSettings.delete`)
+- `a11y.*` - Screen reader announcements and ARIA labels
 
 ### Placeholders
 
 Some strings contain placeholders in `{curlyBraces}` format. These must be preserved exactly as-is:
 ```json
-"accessibility.dragAnnouncements.dropPosition": "Will drop at position {position} of {total}"
+"a11y.dropPosition": "Will drop at position {position} of {total}"
 ```
 
 ## Translation Context
@@ -49,7 +50,7 @@ These are tooltips and button labels. Be concise and action-oriented:
 - Good: "Drag to move", "Click to add below"
 - Avoid: "You can drag this to move it", "Click here to add a new block below"
 
-### Accessibility (`accessibility.*`)
+### Accessibility (`a11y.*`)
 
 Screen reader text should be descriptive but not verbose:
 - Good: "Drag to move block or click for menu"
@@ -67,9 +68,9 @@ Be clear and helpful without being alarming:
 
 | Key | English | French (Good) |
 |-----|---------|---------------|
-| `ui.popover.search` | Search | Rechercher |
+| `popover.search` | Search | Rechercher |
 | `toolNames.bulletedList` | Bulleted list | Liste à puces |
-| `blockTunes.delete` | Delete | Supprimer |
+| `blockSettings.delete` | Delete | Supprimer |
 
 ### What to Avoid
 

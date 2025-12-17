@@ -83,77 +83,94 @@ Some patterns require manual attention:
 
 ## Localization
 
-Blok includes 14 languages by default (Basic preset) and supports 68 languages total.
+Blok supports 68 languages with lazy loading—only English is bundled by default (~3KB). Additional locales are loaded on-demand, keeping your initial bundle small.
 
 ### Default Behavior
 
-Out of the box, Blok auto-detects the user's browser language:
+Out of the box, Blok uses English and auto-detects the user's browser language:
 
 ```typescript
 import Blok from '@jackuait/blok';
 
 new Blok({
   holder: 'editor',
-  // Automatically uses Basic locales with browser language detection
+  // Uses English by default, auto-detects browser language
 });
 ```
 
-**Default languages (Basic):** English, Chinese, Spanish, French, German, Portuguese, Japanese, Korean, Arabic, Italian, Russian, Hindi, Armenian, Indonesian
+### Loading Additional Languages
 
-### Adding More Languages
-
-Import a larger preset for broader language coverage:
+Use the async loader functions to load locales on-demand:
 
 ```typescript
 import Blok from '@jackuait/blok';
-import { extendedLocales } from '@jackuait/blok/locales';
+import { loadBasicLocales } from '@jackuait/blok/locales';
+
+// Load the Basic preset (14 languages) during app initialization
+const locales = await loadBasicLocales();
 
 new Blok({
   holder: 'editor',
   i18n: {
-    locales: extendedLocales,
+    locales,
     activeLocale: 'auto',
   }
 });
 ```
 
-| Preset | Languages | Use Case |
-|--------|-----------|----------|
-| (default) | en, zh, es, fr, de, pt, ja, ko, ar, it, ru, hi, hy, id | Most applications |
-| `extendedLocales` | Default + tr, vi, pl, nl, th, ms, sv, no, da, fi, el, cs | Broader regional coverage |
-| `completeLocales` | All 68 languages | Full international support |
+| Loader Function | Languages | Bundle Impact |
+|-----------------|-----------|---------------|
+| (none) | English only | ~3KB |
+| `loadBasicLocales()` | en, zh, es, fr, de, pt, ja, ko, ar, it, ru, hi, hy, id | ~45KB on-demand |
+| `loadExtendedLocales()` | Basic + tr, vi, pl, nl, th, ms, sv, no, da, fi, el, cs | ~80KB on-demand |
+| `loadAllLocales()` | All 68 languages | ~200KB on-demand |
 
-### Individual Locales (Maximum Tree-Shaking)
+### Loading Individual Locales
 
-For the smallest bundle, import only what you need:
+For maximum control, load only the languages you need:
 
 ```typescript
-import { enLocale, frLocale, deLocale } from '@jackuait/blok/locales';
+import Blok from '@jackuait/blok';
+import { loadLocale, buildRegistry } from '@jackuait/blok/locales';
+
+// Option 1: Load a single locale
+const frConfig = await loadLocale('fr');
+
+// Option 2: Build a custom registry
+const locales = await buildRegistry(['en', 'fr', 'de', 'es']);
 
 new Blok({
   holder: 'editor',
   i18n: {
-    locales: { en: enLocale, fr: frLocale, de: deLocale },
+    locales,
     activeLocale: 'auto',
   }
 });
 ```
 
-### Extending with Additional Languages
+### Preloading Locales
 
-Add specific languages to your configuration:
+By default, switching locales requires an async call (`setLocaleAsync`) to fetch the locale chunk. If you need **instant, synchronous** locale switching—for example, in a language dropdown where you can't await—you can preload locales during app initialization:
 
 ```typescript
-import { extendedLocales, ukLocale, bgLocale } from '@jackuait/blok/locales';
+import { preloadLocales, getLocaleSync } from '@jackuait/blok/locales';
 
-new Blok({
-  holder: 'editor',
-  i18n: {
-    locales: { ...extendedLocales, uk: ukLocale, bg: bgLocale },
-    activeLocale: 'auto',
-  }
-});
+// Preload during app startup (triggers network requests)
+await preloadLocales(['en', 'fr', 'de']);
+
+// Later, access synchronously (no await needed, already cached)
+const frConfig = getLocaleSync('fr');
+I18n.setLocale('fr'); // Instant, no network request
 ```
+
+**When to preload:**
+- Language switcher UI that can't handle async operations
+- Offline support (preload before going offline)
+- Performance-critical paths where you can't await
+
+**When not to preload:**
+- Most apps—just use `setLocaleAsync()` and show a brief loading state
+- The ~50-100ms delay on language switch is usually imperceptible
 
 ### Setting a Specific Locale
 

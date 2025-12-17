@@ -1,29 +1,37 @@
 import type { LocaleConfig, LocaleRegistry, SupportedLocale } from '../../../../types/configs/i18n-config';
 import type { I18nDictionary } from '../../../../types/configs/i18n-dictionary';
-import amMessages from './am/messages.json';
+
+// Only English is statically imported - it's the default/fallback
+import enMessages from './en/messages.json';
 
 /**
  * RTL (right-to-left) locale codes.
  * Single source of truth for text direction.
  */
-const RTL_LOCALES: ReadonlySet<SupportedLocale> = new Set([
+export const RTL_LOCALES: ReadonlySet<SupportedLocale> = new Set([
   'ar', 'dv', 'fa', 'he', 'ku', 'ps', 'sd', 'ug', 'ur', 'yi',
 ]);
+
+/**
+ * Get direction for a locale code.
+ */
+export const getDirection = (code: SupportedLocale): 'ltr' | 'rtl' =>
+  RTL_LOCALES.has(code) ? 'rtl' : 'ltr';
 
 /**
  * Build a locale config from a dictionary.
  * Direction is determined automatically from RTL_LOCALES.
  */
-const buildConfig = (code: SupportedLocale, dictionary: I18nDictionary): LocaleConfig => ({
+export const buildConfig = (code: SupportedLocale, dictionary: I18nDictionary): LocaleConfig => ({
   dictionary,
-  direction: RTL_LOCALES.has(code) ? 'rtl' : 'ltr',
+  direction: getDirection(code),
 });
 
 /**
  * Locale codes included in the Basic preset (14 languages).
  * Most commonly used languages covering major global markets.
  */
-const BASIC_LOCALE_CODES: readonly SupportedLocale[] = [
+export const BASIC_LOCALE_CODES: readonly SupportedLocale[] = [
   'en', 'zh', 'es', 'fr', 'de', 'pt', 'ja', 'ko', 'ar', 'it', 'ru', 'hi', 'hy', 'id',
 ] as const;
 
@@ -31,159 +39,28 @@ const BASIC_LOCALE_CODES: readonly SupportedLocale[] = [
  * Additional locale codes for the Extended preset (12 languages).
  * Regional European and Asian language coverage.
  */
-const EXTENDED_LOCALE_ADDITIONS: readonly SupportedLocale[] = [
+export const EXTENDED_LOCALE_ADDITIONS: readonly SupportedLocale[] = [
   'tr', 'vi', 'pl', 'nl', 'th', 'ms', 'sv', 'no', 'da', 'fi', 'el', 'cs',
 ] as const;
 
 /**
  * All locale codes in the Extended preset.
  */
-const EXTENDED_LOCALE_CODES: readonly SupportedLocale[] = [
+export const EXTENDED_LOCALE_CODES: readonly SupportedLocale[] = [
   ...BASIC_LOCALE_CODES,
   ...EXTENDED_LOCALE_ADDITIONS,
 ];
-import arMessages from './ar/messages.json';
-import azMessages from './az/messages.json';
-import bgMessages from './bg/messages.json';
-import bnMessages from './bn/messages.json';
-import bsMessages from './bs/messages.json';
-import csMessages from './cs/messages.json';
-import daMessages from './da/messages.json';
-import deMessages from './de/messages.json';
-import dvMessages from './dv/messages.json';
-import elMessages from './el/messages.json';
-import enMessages from './en/messages.json';
-import esMessages from './es/messages.json';
-import etMessages from './et/messages.json';
-import faMessages from './fa/messages.json';
-import fiMessages from './fi/messages.json';
-import filMessages from './fil/messages.json';
-import frMessages from './fr/messages.json';
-import guMessages from './gu/messages.json';
-import heMessages from './he/messages.json';
-import hiMessages from './hi/messages.json';
-import hrMessages from './hr/messages.json';
-import huMessages from './hu/messages.json';
-import hyMessages from './hy/messages.json';
-import idMessages from './id/messages.json';
-import itMessages from './it/messages.json';
-import jaMessages from './ja/messages.json';
-import kaMessages from './ka/messages.json';
-import kmMessages from './km/messages.json';
-import knMessages from './kn/messages.json';
-import koMessages from './ko/messages.json';
-import kuMessages from './ku/messages.json';
-import loMessages from './lo/messages.json';
-import ltMessages from './lt/messages.json';
-import lvMessages from './lv/messages.json';
-import mkMessages from './mk/messages.json';
-import mlMessages from './ml/messages.json';
-import mnMessages from './mn/messages.json';
-import mrMessages from './mr/messages.json';
-import msMessages from './ms/messages.json';
-import myMessages from './my/messages.json';
-import nlMessages from './nl/messages.json';
-import noMessages from './no/messages.json';
-import paMessages from './pa/messages.json';
-import plMessages from './pl/messages.json';
-import psMessages from './ps/messages.json';
-import ptMessages from './pt/messages.json';
-import roMessages from './ro/messages.json';
-import ruMessages from './ru/messages.json';
-import neMessages from './ne/messages.json';
-import sdMessages from './sd/messages.json';
-import siMessages from './si/messages.json';
-import skMessages from './sk/messages.json';
-import slMessages from './sl/messages.json';
-import sqMessages from './sq/messages.json';
-import srMessages from './sr/messages.json';
-import svMessages from './sv/messages.json';
-import swMessages from './sw/messages.json';
-import taMessages from './ta/messages.json';
-import teMessages from './te/messages.json';
-import thMessages from './th/messages.json';
-import trMessages from './tr/messages.json';
-import ugMessages from './ug/messages.json';
-import ukMessages from './uk/messages.json';
-import urMessages from './ur/messages.json';
-import viMessages from './vi/messages.json';
-import yiMessages from './yi/messages.json';
-import zhMessages from './zh/messages.json';
 
 /**
- * Registry of all available locales with their configurations.
- * Direction is derived from RTL_LOCALES - single source of truth.
+ * All supported locale codes.
  */
-export const localeRegistry = {
-  am: buildConfig('am', amMessages),
-  ar: buildConfig('ar', arMessages),
-  az: buildConfig('az', azMessages),
-  bg: buildConfig('bg', bgMessages),
-  bn: buildConfig('bn', bnMessages),
-  bs: buildConfig('bs', bsMessages),
-  cs: buildConfig('cs', csMessages),
-  da: buildConfig('da', daMessages),
-  de: buildConfig('de', deMessages),
-  dv: buildConfig('dv', dvMessages),
-  el: buildConfig('el', elMessages),
-  en: buildConfig('en', enMessages),
-  es: buildConfig('es', esMessages),
-  et: buildConfig('et', etMessages),
-  fa: buildConfig('fa', faMessages),
-  fi: buildConfig('fi', fiMessages),
-  fil: buildConfig('fil', filMessages),
-  fr: buildConfig('fr', frMessages),
-  gu: buildConfig('gu', guMessages),
-  he: buildConfig('he', heMessages),
-  hi: buildConfig('hi', hiMessages),
-  hr: buildConfig('hr', hrMessages),
-  hu: buildConfig('hu', huMessages),
-  hy: buildConfig('hy', hyMessages),
-  id: buildConfig('id', idMessages),
-  it: buildConfig('it', itMessages),
-  ja: buildConfig('ja', jaMessages),
-  ka: buildConfig('ka', kaMessages),
-  km: buildConfig('km', kmMessages),
-  kn: buildConfig('kn', knMessages),
-  ko: buildConfig('ko', koMessages),
-  ku: buildConfig('ku', kuMessages),
-  lo: buildConfig('lo', loMessages),
-  lt: buildConfig('lt', ltMessages),
-  lv: buildConfig('lv', lvMessages),
-  mk: buildConfig('mk', mkMessages),
-  ml: buildConfig('ml', mlMessages),
-  mn: buildConfig('mn', mnMessages),
-  mr: buildConfig('mr', mrMessages),
-  ms: buildConfig('ms', msMessages),
-  my: buildConfig('my', myMessages),
-  ne: buildConfig('ne', neMessages),
-  nl: buildConfig('nl', nlMessages),
-  no: buildConfig('no', noMessages),
-  pa: buildConfig('pa', paMessages),
-  pl: buildConfig('pl', plMessages),
-  ps: buildConfig('ps', psMessages),
-  pt: buildConfig('pt', ptMessages),
-  ro: buildConfig('ro', roMessages),
-  ru: buildConfig('ru', ruMessages),
-  sd: buildConfig('sd', sdMessages),
-  si: buildConfig('si', siMessages),
-  sk: buildConfig('sk', skMessages),
-  sl: buildConfig('sl', slMessages),
-  sq: buildConfig('sq', sqMessages),
-  sr: buildConfig('sr', srMessages),
-  sv: buildConfig('sv', svMessages),
-  sw: buildConfig('sw', swMessages),
-  ta: buildConfig('ta', taMessages),
-  te: buildConfig('te', teMessages),
-  th: buildConfig('th', thMessages),
-  tr: buildConfig('tr', trMessages),
-  ug: buildConfig('ug', ugMessages),
-  uk: buildConfig('uk', ukMessages),
-  ur: buildConfig('ur', urMessages),
-  vi: buildConfig('vi', viMessages),
-  yi: buildConfig('yi', yiMessages),
-  zh: buildConfig('zh', zhMessages),
-} satisfies Record<SupportedLocale, LocaleConfig>;
+export const ALL_LOCALE_CODES: readonly SupportedLocale[] = [
+  'am', 'ar', 'az', 'bg', 'bn', 'bs', 'cs', 'da', 'de', 'dv', 'el', 'en', 'es', 'et',
+  'fa', 'fi', 'fil', 'fr', 'gu', 'he', 'hi', 'hr', 'hu', 'hy', 'id', 'it', 'ja', 'ka',
+  'km', 'kn', 'ko', 'ku', 'lo', 'lt', 'lv', 'mk', 'ml', 'mn', 'mr', 'ms', 'my', 'ne',
+  'nl', 'no', 'pa', 'pl', 'ps', 'pt', 'ro', 'ru', 'sd', 'si', 'sk', 'sl', 'sq', 'sr',
+  'sv', 'sw', 'ta', 'te', 'th', 'tr', 'ug', 'uk', 'ur', 'vi', 'yi', 'zh',
+] as const;
 
 /**
  * Default locale to use when detection fails or locale is not supported
@@ -191,26 +68,198 @@ export const localeRegistry = {
 export const DEFAULT_LOCALE: SupportedLocale = 'en';
 
 /**
- * Build a locale registry from an array of locale codes.
+ * English locale config - always available (statically imported).
  */
-const buildRegistry = (codes: readonly SupportedLocale[]): LocaleRegistry => {
+export const enLocale: LocaleConfig = buildConfig('en', enMessages);
+
+/**
+ * Cache for loaded locales.
+ */
+const localeCache = new Map<SupportedLocale, LocaleConfig>();
+localeCache.set('en', enLocale);
+
+/**
+ * Dynamic import map for locale dictionaries.
+ * Vite/Rollup will code-split these into separate chunks.
+ */
+const localeImporters: Record<SupportedLocale, () => Promise<{ default: I18nDictionary }>> = {
+  am: () => import('./am/messages.json'),
+  ar: () => import('./ar/messages.json'),
+  az: () => import('./az/messages.json'),
+  bg: () => import('./bg/messages.json'),
+  bn: () => import('./bn/messages.json'),
+  bs: () => import('./bs/messages.json'),
+  cs: () => import('./cs/messages.json'),
+  da: () => import('./da/messages.json'),
+  de: () => import('./de/messages.json'),
+  dv: () => import('./dv/messages.json'),
+  el: () => import('./el/messages.json'),
+  en: () => Promise.resolve({ default: enMessages }),
+  es: () => import('./es/messages.json'),
+  et: () => import('./et/messages.json'),
+  fa: () => import('./fa/messages.json'),
+  fi: () => import('./fi/messages.json'),
+  fil: () => import('./fil/messages.json'),
+  fr: () => import('./fr/messages.json'),
+  gu: () => import('./gu/messages.json'),
+  he: () => import('./he/messages.json'),
+  hi: () => import('./hi/messages.json'),
+  hr: () => import('./hr/messages.json'),
+  hu: () => import('./hu/messages.json'),
+  hy: () => import('./hy/messages.json'),
+  id: () => import('./id/messages.json'),
+  it: () => import('./it/messages.json'),
+  ja: () => import('./ja/messages.json'),
+  ka: () => import('./ka/messages.json'),
+  km: () => import('./km/messages.json'),
+  kn: () => import('./kn/messages.json'),
+  ko: () => import('./ko/messages.json'),
+  ku: () => import('./ku/messages.json'),
+  lo: () => import('./lo/messages.json'),
+  lt: () => import('./lt/messages.json'),
+  lv: () => import('./lv/messages.json'),
+  mk: () => import('./mk/messages.json'),
+  ml: () => import('./ml/messages.json'),
+  mn: () => import('./mn/messages.json'),
+  mr: () => import('./mr/messages.json'),
+  ms: () => import('./ms/messages.json'),
+  my: () => import('./my/messages.json'),
+  ne: () => import('./ne/messages.json'),
+  nl: () => import('./nl/messages.json'),
+  no: () => import('./no/messages.json'),
+  pa: () => import('./pa/messages.json'),
+  pl: () => import('./pl/messages.json'),
+  ps: () => import('./ps/messages.json'),
+  pt: () => import('./pt/messages.json'),
+  ro: () => import('./ro/messages.json'),
+  ru: () => import('./ru/messages.json'),
+  sd: () => import('./sd/messages.json'),
+  si: () => import('./si/messages.json'),
+  sk: () => import('./sk/messages.json'),
+  sl: () => import('./sl/messages.json'),
+  sq: () => import('./sq/messages.json'),
+  sr: () => import('./sr/messages.json'),
+  sv: () => import('./sv/messages.json'),
+  sw: () => import('./sw/messages.json'),
+  ta: () => import('./ta/messages.json'),
+  te: () => import('./te/messages.json'),
+  th: () => import('./th/messages.json'),
+  tr: () => import('./tr/messages.json'),
+  ug: () => import('./ug/messages.json'),
+  uk: () => import('./uk/messages.json'),
+  ur: () => import('./ur/messages.json'),
+  vi: () => import('./vi/messages.json'),
+  yi: () => import('./yi/messages.json'),
+  zh: () => import('./zh/messages.json'),
+};
+
+/**
+ * Load a locale configuration asynchronously.
+ * Returns cached config if already loaded.
+ *
+ * @param code - Locale code to load
+ * @returns Promise resolving to the locale config
+ */
+export const loadLocale = async (code: SupportedLocale): Promise<LocaleConfig> => {
+  // Return cached if available
+  const cached = localeCache.get(code);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // Load and cache
+  const importer = localeImporters[code];
+  const module = await importer();
+  const config = buildConfig(code, module.default);
+
+  localeCache.set(code, config);
+
+  return config;
+};
+
+/**
+ * Get a locale configuration synchronously.
+ * Returns undefined if not yet loaded. Use loadLocale() to load first.
+ *
+ * @param code - Locale code
+ * @returns Locale config or undefined if not loaded
+ */
+export const getLocaleSync = (code: SupportedLocale): LocaleConfig | undefined =>
+  localeCache.get(code);
+
+/**
+ * Check if a locale is already loaded in the cache.
+ *
+ * @param code - Locale code to check
+ * @returns True if locale is loaded
+ */
+export const isLocaleLoaded = (code: SupportedLocale): boolean =>
+  localeCache.has(code);
+
+/**
+ * Preload multiple locales.
+ * Useful for preloading a preset's locales.
+ *
+ * @param codes - Array of locale codes to preload
+ * @returns Promise that resolves when all locales are loaded
+ */
+export const preloadLocales = async (codes: readonly SupportedLocale[]): Promise<void> => {
+  await Promise.all(codes.map(loadLocale));
+};
+
+/**
+ * Build a locale registry from loaded locales.
+ * Only includes locales that are already loaded in the cache.
+ *
+ * @param codes - Array of locale codes
+ * @returns Registry with loaded locales
+ */
+export const buildRegistryFromCache = (codes: readonly SupportedLocale[]): LocaleRegistry => {
   const registry: LocaleRegistry = {};
 
   for (const code of codes) {
-    registry[code] = localeRegistry[code];
+    const config = localeCache.get(code);
+
+    if (config !== undefined) {
+      registry[code] = config;
+    }
   }
 
   return registry;
 };
 
 /**
- * Basic locale preset - the default for Blok.
- * Contains the most commonly used languages.
+ * Load and build a locale registry asynchronously.
+ *
+ * @param codes - Array of locale codes
+ * @returns Promise resolving to the registry
  */
-export const basicLocales: LocaleRegistry = buildRegistry(BASIC_LOCALE_CODES);
+export const buildRegistry = async (codes: readonly SupportedLocale[]): Promise<LocaleRegistry> => {
+  await preloadLocales(codes);
+
+  return buildRegistryFromCache(codes);
+};
+
+// ============================================================================
+// Preset factories - these return promises and load only what's needed
+// ============================================================================
 
 /**
- * Extended locale preset.
- * Contains Basic languages plus additional European and Asian languages.
+ * Load the Basic locale preset (14 languages).
+ * Use this for tree-shaking - only these locales will be bundled.
  */
-export const extendedLocales: LocaleRegistry = buildRegistry(EXTENDED_LOCALE_CODES);
+export const loadBasicLocales = async (): Promise<LocaleRegistry> =>
+  buildRegistry(BASIC_LOCALE_CODES);
+
+/**
+ * Load the Extended locale preset (26 languages).
+ */
+export const loadExtendedLocales = async (): Promise<LocaleRegistry> =>
+  buildRegistry(EXTENDED_LOCALE_CODES);
+
+/**
+ * Load all locales (68 languages).
+ */
+export const loadAllLocales = async (): Promise<LocaleRegistry> =>
+  buildRegistry(ALL_LOCALE_CODES);

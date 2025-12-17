@@ -89,8 +89,9 @@ export default class I18n {
     I18n.customRegistry = options.locales ?? null;
     I18n.allowedLocales = options.allowedLocales ?? null;
 
-    // Determine available locales
-    const availableLocales = I18n.getAvailableLocalesFromOptions();
+    // Determine available locales (null means no restriction)
+    const hasCustomLocales = I18n.customRegistry !== null || I18n.allowedLocales !== null;
+    const availableLocales = hasCustomLocales ? I18n.getSupportedLocales() : null;
 
     // Determine default locale
     const candidateDefault = options.defaultLocale ??
@@ -106,21 +107,6 @@ export default class I18n {
     }
 
     I18n.configuredDefaultLocale = candidateDefault;
-  }
-
-  /**
-   * Get available locales from current options
-   */
-  private static getAvailableLocalesFromOptions(): SupportedLocale[] | null {
-    if (I18n.customRegistry !== null) {
-      return Object.keys(I18n.customRegistry) as SupportedLocale[];
-    }
-
-    if (I18n.allowedLocales !== null) {
-      return [...I18n.allowedLocales];
-    }
-
-    return null;
   }
 
   /**
@@ -224,7 +210,6 @@ export default class I18n {
    * @returns The locale config that was set
    */
   public static setLocale(locale: SupportedLocale): LocaleDetectionResult {
-    // Try to get config for available locale
     const config = I18n.isLocaleAvailable(locale)
       ? I18n.getLocaleConfigInternal(locale)
       : undefined;
@@ -240,28 +225,22 @@ export default class I18n {
       };
     }
 
-    // Guard against infinite recursion if default locale is misconfigured
-    if (locale === I18n.configuredDefaultLocale && locale !== 'en') {
+    // Requested locale unavailable - try fallback
+    if (locale !== I18n.configuredDefaultLocale) {
       console.warn(
-        `Default locale "${locale}" is not loaded. Falling back to English.`
+        `Locale "${locale}" is not available. Falling back to "${I18n.configuredDefaultLocale}". ` +
+        `Available locales: ${I18n.getSupportedLocales().join(', ')}`
       );
 
-      return I18n.setEnglishFallback();
+      return I18n.setLocale(I18n.configuredDefaultLocale);
     }
 
-    if (locale === I18n.configuredDefaultLocale) {
-      // English is always available
-      return I18n.setEnglishFallback();
+    // Default locale also unavailable - use English as final fallback
+    if (locale !== 'en') {
+      console.warn(`Default locale "${locale}" is not loaded. Falling back to English.`);
     }
 
-    const available = I18n.getSupportedLocales();
-
-    console.warn(
-      `Locale "${locale}" is not available. Falling back to "${I18n.configuredDefaultLocale}". ` +
-      `Available locales: ${available.join(', ')}`
-    );
-
-    return I18n.setLocale(I18n.configuredDefaultLocale);
+    return I18n.setEnglishFallback();
   }
 
   /**
@@ -286,13 +265,14 @@ export default class I18n {
    * @returns Promise resolving to the locale config that was set
    */
   public static async setLocaleAsync(locale: SupportedLocale): Promise<LocaleDetectionResult> {
-    // Check if locale is allowed
     if (!I18n.isLocaleAllowed(locale)) {
       console.warn(
         `Locale "${locale}" is not allowed. Falling back to "${I18n.configuredDefaultLocale}".`
       );
 
-      return I18n.setLocaleAsync(I18n.configuredDefaultLocale);
+      return locale === I18n.configuredDefaultLocale
+        ? I18n.setEnglishFallback()
+        : I18n.setLocaleAsync(I18n.configuredDefaultLocale);
     }
 
     // If using custom registry, use sync method
@@ -300,7 +280,6 @@ export default class I18n {
       return I18n.setLocale(locale);
     }
 
-    // Load locale if not already loaded
     try {
       const config = await loadLocale(locale);
 
@@ -318,19 +297,9 @@ export default class I18n {
         error
       );
 
-      // Prevent infinite recursion
-      if (locale === I18n.configuredDefaultLocale) {
-        I18n.currentLocale = 'en';
-        I18n.currentDictionary = enLocale.dictionary;
-
-        return {
-          locale: 'en',
-          dictionary: enLocale.dictionary,
-          direction: 'ltr',
-        };
-      }
-
-      return I18n.setLocaleAsync(I18n.configuredDefaultLocale);
+      return locale === I18n.configuredDefaultLocale
+        ? I18n.setEnglishFallback()
+        : I18n.setLocaleAsync(I18n.configuredDefaultLocale);
     }
   }
 

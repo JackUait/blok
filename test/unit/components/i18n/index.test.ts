@@ -10,7 +10,7 @@ import {
   BASIC_LOCALE_CODES,
   EXTENDED_LOCALE_CODES,
   ALL_LOCALE_CODES,
-} from '../../../../src/components/i18n/locales/exports';
+} from '../../../../src/components/i18n/locales';
 import type { I18nDictionary, LocaleRegistry, TranslationKey } from '../../../../types/configs';
 
 /**

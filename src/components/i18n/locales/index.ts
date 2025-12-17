@@ -209,13 +209,14 @@ export const preloadLocales = async (codes: readonly SupportedLocale[]): Promise
 };
 
 /**
- * Build a locale registry from loaded locales.
- * Only includes locales that are already loaded in the cache.
+ * Load and build a locale registry asynchronously.
  *
  * @param codes - Array of locale codes
- * @returns Registry with loaded locales
+ * @returns Promise resolving to the registry
  */
-export const buildRegistryFromCache = (codes: readonly SupportedLocale[]): LocaleRegistry => {
+export const buildRegistry = async (codes: readonly SupportedLocale[]): Promise<LocaleRegistry> => {
+  await preloadLocales(codes);
+
   const registry: LocaleRegistry = {};
 
   for (const code of codes) {
@@ -227,18 +228,6 @@ export const buildRegistryFromCache = (codes: readonly SupportedLocale[]): Local
   }
 
   return registry;
-};
-
-/**
- * Load and build a locale registry asynchronously.
- *
- * @param codes - Array of locale codes
- * @returns Promise resolving to the registry
- */
-export const buildRegistry = async (codes: readonly SupportedLocale[]): Promise<LocaleRegistry> => {
-  await preloadLocales(codes);
-
-  return buildRegistryFromCache(codes);
 };
 
 // ============================================================================

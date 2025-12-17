@@ -20,10 +20,6 @@ const AMOUNT_OF_LOCAL_WORKERS = 3;
  * - Is it pure logic/API testing? → Add to LOGIC_TESTS
  * - Unsure? Default to CROSS_BROWSER_TESTS (safer)
  *
- * PERFORMANCE IMPACT:
- * - Before: 61 files × 3 browsers = ~1,600 test runs
- * - After: Cross-browser (272×3) + Logic (566×1) = ~1,400 runs (13% faster)
- *
  * IMPORTANT: If you rename test directories, update the patterns below.
  * Run `yarn e2e --list` to verify all tests are matched after changes.
  *

@@ -34,11 +34,15 @@ export type LocaleRegistry = Partial<Record<SupportedLocale, LocaleConfig>>;
 
 /**
  * I18n configuration options.
+ *
+ * All 68 supported locales are available for lazy loading by default.
+ *
  * @see README.md#localization for usage examples
  */
 export interface I18nConfig {
   /**
    * Active locale code ('en', 'ru', etc.) or 'auto' to detect from browser.
+   * All 68 locales are supported and will be loaded on-demand.
    * @default 'auto'
    */
   locale?: SupportedLocale | 'auto';
@@ -59,10 +63,4 @@ export interface I18nConfig {
    * @default 'en'
    */
   defaultLocale?: SupportedLocale;
-
-  /**
-   * Allowed locale codes for lazy loading.
-   * If not set, defaults to basic locales (en, ru, de, fr, es, it, pt, pl, ja, zh, ko, ar).
-   */
-  allowedLocales?: readonly SupportedLocale[];
 }

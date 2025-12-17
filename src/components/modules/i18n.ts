@@ -9,7 +9,7 @@ import {
   loadLocale,
   getDirection,
   enLocale,
-  BASIC_LOCALE_CODES,
+  ALL_LOCALE_CODES,
 } from '../i18n/locales';
 
 /**
@@ -38,12 +38,6 @@ export default class I18n extends Module {
    * Current locale code
    */
   private locale: SupportedLocale = DEFAULT_LOCALE;
-
-  /**
-   * Allowed locale codes for lazy loading.
-   * If null, defaults to BASIC_LOCALE_CODES.
-   */
-  private allowedLocales: ReadonlySet<SupportedLocale> | null = null;
 
   /**
    * Default locale to fall back to
@@ -91,36 +85,28 @@ export default class I18n extends Module {
 
   /**
    * Set the active locale, loading it if necessary.
+   * All 68 supported locales are available for loading.
    *
    * @param locale - Locale code to set
    * @returns Promise that resolves when locale is loaded and set
    */
   public async setLocale(locale: SupportedLocale): Promise<void> {
-    const targetLocale = this.isLocaleAllowed(locale) ? locale : (() => {
-      console.warn(
-        `Locale "${locale}" is not allowed. Falling back to "${this.defaultLocale}". ` +
-        `Allowed: ${this.getSupportedLocales().join(', ')}`
-      );
-
-      return this.defaultLocale;
-    })();
-
     try {
-      const config = await loadLocale(targetLocale);
+      const config = await loadLocale(locale);
 
       // Add resources to i18next if not already added
-      if (!this.i18n.hasResourceBundle(targetLocale, 'translation')) {
-        this.i18n.addResourceBundle(targetLocale, 'translation', config.dictionary);
+      if (!this.i18n.hasResourceBundle(locale, 'translation')) {
+        this.i18n.addResourceBundle(locale, 'translation', config.dictionary);
       }
 
-      await this.i18n.changeLanguage(targetLocale);
-      this.locale = targetLocale;
+      await this.i18n.changeLanguage(locale);
+      this.locale = locale;
     } catch (error) {
-      // Log warning but don't throw - graceful degradation to English
+      // Log warning but don't throw - graceful degradation to default locale
       // Note: If you need to track these failures, check browser console or add custom error monitoring
-      console.warn(`Failed to load locale "${locale}". Falling back to English.`, error);
-      await this.i18n.changeLanguage('en');
-      this.locale = 'en';
+      console.warn(`Failed to load locale "${locale}". Falling back to "${this.defaultLocale}".`, error);
+      await this.i18n.changeLanguage(this.defaultLocale);
+      this.locale = this.defaultLocale;
     }
   }
 
@@ -172,27 +158,11 @@ export default class I18n extends Module {
   }
 
   /**
-   * Get list of allowed locale codes
-   */
-  public getSupportedLocales(): SupportedLocale[] {
-    if (this.allowedLocales !== null) {
-      return [...this.allowedLocales];
-    }
-
-    return [...BASIC_LOCALE_CODES];
-  }
-
-  /**
    * Module preparation - called during editor initialization.
    * Initializes i18next and resolves locale from configuration.
    */
   public async prepare(): Promise<void> {
     const i18nConfig = this.config.i18n;
-
-    // Set allowed locales if configured
-    if (i18nConfig?.allowedLocales !== undefined) {
-      this.allowedLocales = new Set(i18nConfig.allowedLocales);
-    }
 
     // Set default locale if configured
     this.applyDefaultLocale(i18nConfig?.defaultLocale);
@@ -253,18 +223,11 @@ export default class I18n extends Module {
   }
 
   /**
-   * Apply default locale from config if valid
+   * Apply default locale from config if valid.
+   * The locale is type-checked at compile time via SupportedLocale type.
    */
   private applyDefaultLocale(defaultLocale: SupportedLocale | undefined): void {
     if (defaultLocale === undefined) {
-      return;
-    }
-
-    if (!this.isLocaleAllowed(defaultLocale)) {
-      console.warn(
-        `Default locale "${defaultLocale}" is not in allowed locales. Using "en".`
-      );
-
       return;
     }
 
@@ -272,15 +235,11 @@ export default class I18n extends Module {
   }
 
   /**
-   * Check if a locale is in the allowed list
+   * Check if a locale code is supported.
+   * All 68 locales in ALL_LOCALE_CODES are supported.
    */
-  private isLocaleAllowed(locale: string): locale is SupportedLocale {
-    if (this.allowedLocales !== null) {
-      return this.allowedLocales.has(locale as SupportedLocale);
-    }
-
-    // Default: allow basic locales
-    return BASIC_LOCALE_CODES.includes(locale as SupportedLocale);
+  private isLocaleSupported(locale: string): locale is SupportedLocale {
+    return ALL_LOCALE_CODES.includes(locale as SupportedLocale);
   }
 
   /**
@@ -309,7 +268,8 @@ export default class I18n extends Module {
   }
 
   /**
-   * Match a browser language tag to an allowed locale
+   * Match a browser language tag to a supported locale.
+   * All 68 locales are supported.
    *
    * @param languageTag - BCP 47 language tag (e.g., 'en-US', 'ru')
    */
@@ -317,15 +277,15 @@ export default class I18n extends Module {
     const normalized = languageTag.toLowerCase();
 
     // Try exact match (e.g., 'ru')
-    if (this.isLocaleAllowed(normalized)) {
-      return normalized;
+    if (this.isLocaleSupported(normalized)) {
+      return normalized as SupportedLocale;
     }
 
     // Try base language (e.g., 'en-US' -> 'en')
     const baseLang = normalized.split('-')[0];
 
-    if (baseLang !== undefined && this.isLocaleAllowed(baseLang)) {
-      return baseLang;
+    if (baseLang !== undefined && this.isLocaleSupported(baseLang)) {
+      return baseLang as SupportedLocale;
     }
 
     return null;

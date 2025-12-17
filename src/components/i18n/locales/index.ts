@@ -30,32 +30,9 @@ const buildConfig = (code: SupportedLocale, dictionary: I18nDictionary): LocaleC
 });
 
 /**
- * Locale codes included in the Basic preset (14 languages).
- * Most commonly used languages covering major global markets.
- */
-export const BASIC_LOCALE_CODES: readonly SupportedLocale[] = [
-  'en', 'zh', 'es', 'fr', 'de', 'pt', 'ja', 'ko', 'ar', 'it', 'ru', 'hi', 'hy', 'id',
-] as const;
-
-/**
- * Additional locale codes for the Extended preset (12 languages).
- * Regional European and Asian language coverage.
- * @internal
- */
-const EXTENDED_LOCALE_ADDITIONS: readonly SupportedLocale[] = [
-  'tr', 'vi', 'pl', 'nl', 'th', 'ms', 'sv', 'no', 'da', 'fi', 'el', 'cs',
-] as const;
-
-/**
- * All locale codes in the Extended preset.
- */
-export const EXTENDED_LOCALE_CODES: readonly SupportedLocale[] = [
-  ...BASIC_LOCALE_CODES,
-  ...EXTENDED_LOCALE_ADDITIONS,
-];
-
-/**
- * All supported locale codes.
+ * All supported locale codes (68 languages).
+ *
+ * All locales are available for lazy loading by default - no preset restrictions.
  *
  * IMPORTANT: This array must match the SupportedLocale type in types/configs/i18n-config.d.ts.
  * The localeImporters object below will fail to compile if they don't match since it's typed
@@ -246,25 +223,3 @@ export const buildRegistry = async (codes: readonly SupportedLocale[]): Promise<
   return registry;
 };
 
-// ============================================================================
-// Preset factories - these return promises and load only what's needed
-// ============================================================================
-
-/**
- * Load the Basic locale preset (14 languages).
- * Use this for tree-shaking - only these locales will be bundled.
- */
-export const loadBasicLocales = async (): Promise<LocaleRegistry> =>
-  buildRegistry(BASIC_LOCALE_CODES);
-
-/**
- * Load the Extended locale preset (26 languages).
- */
-export const loadExtendedLocales = async (): Promise<LocaleRegistry> =>
-  buildRegistry(EXTENDED_LOCALE_CODES);
-
-/**
- * Load all locales (68 languages).
- */
-export const loadAllLocales = async (): Promise<LocaleRegistry> =>
-  buildRegistry(ALL_LOCALE_CODES);

@@ -1,24 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import I18n from '../../../../src/components/modules/i18n';
 import {
   enLocale,
   loadLocale,
-  BASIC_LOCALE_CODES,
-  EXTENDED_LOCALE_CODES,
   ALL_LOCALE_CODES,
   getDirection,
 } from '../../../../src/components/i18n/locales';
 import type { I18nDictionary } from '../../../../types/configs';
 import type { BlokConfig } from '../../../../types';
 import EventsDispatcher from '../../../../src/components/utils/events';
-
-/**
- * Expected locales in each preset.
- * Tests assert behavior (contains expected locales) rather than implementation details (exact counts).
- */
-const EXPECTED_BASIC_LOCALES = ['en', 'zh', 'es', 'fr', 'de', 'pt', 'ja', 'ko', 'ar', 'it', 'ru', 'hi', 'hy', 'id'];
-const EXPECTED_EXTENDED_ADDITIONS = ['tr', 'vi', 'pl', 'nl', 'th', 'ms', 'sv', 'no', 'da', 'fi', 'el', 'cs'];
 
 /**
  * Creates a new I18n module instance for testing
@@ -114,9 +105,7 @@ describe('I18n Module', () => {
 
   describe('setLocale', () => {
     it('sets locale to Russian and loads Russian dictionary', async () => {
-      const i18n = createI18nModule({
-        i18n: { allowedLocales: ALL_LOCALE_CODES },
-      });
+      const i18n = createI18nModule();
 
       await i18n.prepare();
       await i18n.setLocale('ru');
@@ -126,9 +115,7 @@ describe('I18n Module', () => {
     });
 
     it('sets locale to Chinese and loads Chinese dictionary', async () => {
-      const i18n = createI18nModule({
-        i18n: { allowedLocales: ALL_LOCALE_CODES },
-      });
+      const i18n = createI18nModule();
 
       await i18n.prepare();
       await i18n.setLocale('zh');
@@ -138,9 +125,7 @@ describe('I18n Module', () => {
     });
 
     it('sets locale to English and loads English dictionary', async () => {
-      const i18n = createI18nModule({
-        i18n: { allowedLocales: ALL_LOCALE_CODES },
-      });
+      const i18n = createI18nModule();
 
       await i18n.prepare();
       await i18n.setLocale('ru');
@@ -200,9 +185,7 @@ describe('I18n Module', () => {
         configurable: true,
       });
 
-      const i18n = createI18nModule({
-        i18n: { allowedLocales: ['en', 'ru'] },
-      });
+      const i18n = createI18nModule();
 
       await i18n.prepare();
       const result = await i18n.detectAndSetLocale();
@@ -228,30 +211,6 @@ describe('I18n Module', () => {
     });
   });
 
-  describe('getSupportedLocales', () => {
-    it('returns array of all supported locales', async () => {
-      const i18n = createI18nModule();
-
-      await i18n.prepare();
-      const locales = i18n.getSupportedLocales();
-
-      // Default is basic locales - verify it contains expected languages
-      for (const code of EXPECTED_BASIC_LOCALES) {
-        expect(locales).toContain(code);
-      }
-    });
-
-    it('returns allowed locales when set', async () => {
-      const i18n = createI18nModule({
-        i18n: { allowedLocales: ['en', 'fr', 'de'] },
-      });
-
-      await i18n.prepare();
-      const locales = i18n.getSupportedLocales();
-
-      expect(locales).toEqual(['en', 'fr', 'de']);
-    });
-  });
 
   describe('has() method', () => {
     it('returns true when translation exists', async () => {
@@ -331,58 +290,30 @@ describe('I18n Module', () => {
     });
   });
 
-  describe('lazy loading with allowedLocales', () => {
-    const originalConsoleWarn = console.warn;
-
-    beforeEach(() => {
-      console.warn = vi.fn();
-    });
-
-    afterEach(() => {
-      console.warn = originalConsoleWarn;
-    });
-
-    it('allows setting locale that is in allowed list', async () => {
-      const i18n = createI18nModule({
-        i18n: { allowedLocales: ['en', 'fr', 'de'] },
-      });
+  describe('locale loading', () => {
+    it('loads any of the 68 supported locales', async () => {
+      const i18n = createI18nModule();
 
       await i18n.prepare();
-      await i18n.setLocale('fr');
 
-      expect(i18n.getLocale()).toBe('fr');
-    });
-
-    it('falls back when locale is not in allowed list', async () => {
-      const i18n = createI18nModule({
-        i18n: { allowedLocales: ['en', 'fr'] },
-      });
-
-      await i18n.prepare();
+      // Test loading a few different locales from different regions
       await i18n.setLocale('de');
+      expect(i18n.getLocale()).toBe('de');
 
-      expect(i18n.getLocale()).toBe('en');
-      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Locale "de" is not allowed'));
+      await i18n.setLocale('ja');
+      expect(i18n.getLocale()).toBe('ja');
+
+      await i18n.setLocale('ar');
+      expect(i18n.getLocale()).toBe('ar');
+
+      await i18n.setLocale('fr');
+      expect(i18n.getLocale()).toBe('fr');
     });
   });
 
-  describe('locale presets', () => {
-    it('BASIC_LOCALE_CODES contains expected locales', () => {
-      for (const code of EXPECTED_BASIC_LOCALES) {
-        expect(BASIC_LOCALE_CODES).toContain(code);
-      }
-    });
-
-    it('EXTENDED_LOCALE_CODES contains basic plus extended locales', () => {
-      const expectedExtended = [...EXPECTED_BASIC_LOCALES, ...EXPECTED_EXTENDED_ADDITIONS];
-
-      for (const code of expectedExtended) {
-        expect(EXTENDED_LOCALE_CODES).toContain(code);
-      }
-    });
-
-    it('ALL_LOCALE_CODES contains all supported locales', () => {
-      expect(ALL_LOCALE_CODES.length).toBeGreaterThanOrEqual(68);
+  describe('locale system', () => {
+    it('ALL_LOCALE_CODES contains all 68 supported locales', () => {
+      expect(ALL_LOCALE_CODES.length).toBe(68);
     });
 
     it('loadLocale loads a specific locale', async () => {
@@ -429,7 +360,7 @@ describe('I18n Module', () => {
 
     it('uses specified locale when provided', async () => {
       const i18n = createI18nModule({
-        i18n: { locale: 'fr', allowedLocales: ['en', 'fr'] },
+        i18n: { locale: 'fr' },
       });
 
       await i18n.prepare();
@@ -447,7 +378,7 @@ describe('I18n Module', () => {
       });
 
       const i18n = createI18nModule({
-        i18n: { locale: 'auto', allowedLocales: ['en', 'fr'] },
+        i18n: { locale: 'auto' },
       });
 
       await i18n.prepare();

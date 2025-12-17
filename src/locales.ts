@@ -1,32 +1,31 @@
 /**
  * Public entry point for locale imports.
  *
- * Lazy Loading (Recommended):
- * Only English is bundled by default. Use loadLocale() or loadBasicLocales()
- * to load additional locales on-demand, reducing initial bundle size.
+ * Lazy Loading:
+ * Only English is bundled by default. All 68 supported locales are available
+ * for on-demand loading, reducing initial bundle size while providing full
+ * language support.
  *
  * @example
  * // Load a single locale on-demand
- * import { loadLocale, BASIC_LOCALE_CODES } from '@aspect/blok/locales';
+ * import { loadLocale } from '@aspect/blok/locales';
  * const frConfig = await loadLocale('fr');
  *
  * @example
- * // Preload basic locales during app initialization
- * import { loadBasicLocales } from '@aspect/blok/locales';
- * await loadBasicLocales();
+ * // Get all supported locale codes
+ * import { ALL_LOCALE_CODES } from '@aspect/blok/locales';
+ * console.log(ALL_LOCALE_CODES); // Array of all 68 locale codes
  *
  * @see README.md#localization for usage examples
  */
 
 // ============================================================================
-// Constants - no bundle size impact
+// Constants and utilities
 // ============================================================================
 
 export {
   // Constants
   DEFAULT_LOCALE,
-  BASIC_LOCALE_CODES,
-  EXTENDED_LOCALE_CODES,
   ALL_LOCALE_CODES,
 
   // English locale (always bundled)
@@ -34,9 +33,6 @@ export {
 
   // Lazy loading functions
   loadLocale,
-  loadBasicLocales,
-  loadExtendedLocales,
-  loadAllLocales,
   preloadLocales,
   buildRegistry,
   getLocaleSync,

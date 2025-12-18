@@ -125,8 +125,7 @@ test.describe('blok basic initialization', () => {
     test('@smoke creates a visible UI', async ({ page }) => {
       await createBlok(page, {});
 
-      // INTENTIONALLY BROKEN: This selector doesn't exist
-      await expect(page.locator('[data-blok-nonexistent-element="broken"]')).toBeVisible();
+      await expect(page.locator(BLOK_ROOT_SELECTOR)).toBeVisible();
     });
   });
 

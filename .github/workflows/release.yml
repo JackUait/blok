@@ -58,10 +58,13 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Build bundle variants
+        run: node scripts/build-bundle-variants.mjs --verbose
+
       - name: Track bundle size
         run: |
           echo "📊 Tracking bundle sizes..."
-          node scripts/track-bundle-size.mjs --verbose --output=bundle-size-report.md
+          node scripts/track-bundle-size.mjs --verbose --with-variants --output=bundle-size-report.md
           echo ""
           echo "Bundle size report:"
           cat bundle-size-report.md
@@ -81,10 +84,10 @@ jobs:
         run: |
           if [ -f .bundle-size-history.json ]; then
             echo "Found previous bundle size history"
-            node scripts/track-bundle-size.mjs --verbose --output=bundle-size-comparison.md --threshold=10
+            node scripts/track-bundle-size.mjs --verbose --with-variants --output=bundle-size-comparison.md --threshold=10
           else
             echo "No previous bundle size history found, creating initial baseline"
-            node scripts/track-bundle-size.mjs --verbose --output=bundle-size-comparison.md
+            node scripts/track-bundle-size.mjs --verbose --with-variants --output=bundle-size-comparison.md
           fi
 
           # Set output for PR comment

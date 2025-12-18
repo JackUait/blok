@@ -17,6 +17,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
+import { formatBytes, getGzipSize } from './lib/bundle-utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -39,29 +40,19 @@ const VARIANTS = {
   maximum: {
     entry: 'src/variants/blok-maximum.ts',
     outDir: 'dist-variants/maximum',
-    description: 'All tools + all 68 locales',
+    description: 'All tools + all 68 locales bundled',
   },
 };
-
-/**
- * Format bytes to human-readable string
- */
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
 
 /**
  * Calculate total size of a directory (recursively)
  */
 async function calculateDirSize(dir) {
-  let totalSize = 0;
+  let totalRaw = 0;
+  let totalGzip = 0;
 
   if (!existsSync(dir)) {
-    return 0;
+    return { raw: 0, gzip: 0 };
   }
 
   const items = await readdir(dir, { withFileTypes: true });
@@ -69,14 +60,22 @@ async function calculateDirSize(dir) {
   for (const item of items) {
     const itemPath = join(dir, item.name);
     if (item.isDirectory()) {
-      totalSize += await calculateDirSize(itemPath);
+      const subTotal = await calculateDirSize(itemPath);
+      totalRaw += subTotal.raw;
+      totalGzip += subTotal.gzip;
     } else {
       const stats = await stat(itemPath);
-      totalSize += stats.size;
+      totalRaw += stats.size;
+      // Only gzip .mjs files
+      if (item.name.endsWith('.mjs')) {
+        totalGzip += await getGzipSize(itemPath);
+      } else {
+        totalGzip += stats.size;
+      }
     }
   }
 
-  return totalSize;
+  return { raw: totalRaw, gzip: totalGzip };
 }
 
 /**
@@ -95,7 +94,8 @@ async function getMjsSizes(dir) {
     if (item.endsWith('.mjs')) {
       const itemPath = join(dir, item);
       const stats = await stat(itemPath);
-      files[item] = stats.size;
+      const gzip = await getGzipSize(itemPath);
+      files[item] = { raw: stats.size, gzip };
     }
   }
 
@@ -169,7 +169,8 @@ async function measureVariant(name, config) {
   const totalSize = await calculateDirSize(outDir);
 
   // Find the main bundle file(s)
-  let mainBundleSize = 0;
+  let mainBundleRaw = 0;
+  let mainBundleGzip = 0;
   const mainBundleFiles = {};
 
   for (const [fileName, size] of Object.entries(files)) {
@@ -182,26 +183,29 @@ async function measureVariant(name, config) {
     if (name === 'normal') {
       // Normal build: include blok.mjs, blok-*.mjs, locales.mjs (but not message chunks)
       if (isEntryPoint || isMainChunk) {
-        mainBundleSize += size;
+        mainBundleRaw += size.raw;
+        mainBundleGzip += size.gzip;
         mainBundleFiles[fileName] = size;
       }
     } else if (name === 'minimum') {
       // Minimum: only blok.mjs and blok-minimum-*.mjs
       if (fileName === 'blok.mjs' || (isMainChunk && fileName.includes('minimum'))) {
-        mainBundleSize += size;
+        mainBundleRaw += size.raw;
+        mainBundleGzip += size.gzip;
         mainBundleFiles[fileName] = size;
       }
     } else if (name === 'maximum') {
       // Maximum: blok.mjs and blok-maximum-*.mjs (all locales are inlined)
       if (fileName === 'blok.mjs' || (isMainChunk && fileName.includes('maximum'))) {
-        mainBundleSize += size;
+        mainBundleRaw += size.raw;
+        mainBundleGzip += size.gzip;
         mainBundleFiles[fileName] = size;
       }
     }
   }
 
   return {
-    size: mainBundleSize,
+    size: { raw: mainBundleRaw, gzip: mainBundleGzip },
     totalSize,
     files: mainBundleFiles,
     allFiles: files,
@@ -254,11 +258,12 @@ async function main() {
       results[name] = await measureVariant(name, config);
 
       if (verbose) {
-        console.log(`   ${name}: ${formatBytes(results[name].size)}`);
+        const size = results[name].size;
+        console.log(`   ${name}: ${formatBytes(size.gzip)}`);
         console.log(`      ${config.description}`);
         if (Object.keys(results[name].files).length > 0) {
-          for (const [file, size] of Object.entries(results[name].files)) {
-            console.log(`      - ${file}: ${formatBytes(size)}`);
+          for (const [file, fileSize] of Object.entries(results[name].files)) {
+            console.log(`      - ${file}: ${formatBytes(fileSize.gzip)}`);
           }
         }
       }
@@ -272,9 +277,9 @@ async function main() {
     // Print summary
     console.log('\n📊 Bundle Size Tiers:');
     console.log('─'.repeat(60));
-    console.log(`   Minimum: ${formatBytes(results.minimum.size).padStart(10)}`);
-    console.log(`   Normal:  ${formatBytes(results.normal.size).padStart(10)}`);
-    console.log(`   Maximum: ${formatBytes(results.maximum.size).padStart(10)}`);
+    console.log(`   Minimum: ${formatBytes(results.minimum.size.gzip).padStart(10)}`);
+    console.log(`   Normal:  ${formatBytes(results.normal.size.gzip).padStart(10)}`);
+    console.log(`   Maximum: ${formatBytes(results.maximum.size.gzip).padStart(10)}`);
     console.log('─'.repeat(60));
 
     // Cleanup unless skipped

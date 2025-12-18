@@ -74,15 +74,50 @@ jobs:
           fi
 
       - name: Verify published package
+        id: verify
         if: github.event.inputs.dry_run != 'true'
         run: |
           PUBLISHED_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
           echo "Verifying published package version: $PUBLISHED_VERSION"
           echo "Waiting for npm registry propagation..."
           sleep 120
           node scripts/verify-published-package.mjs --version $PUBLISHED_VERSION --timeout 300000
         env:
           NODE_ENV: production
+        continue-on-error: true
+
+      - name: Rollback on verification failure
+        if: github.event.inputs.dry_run != 'true' && steps.verify.outcome == 'failure'
+        run: |
+          VERSION="${{ steps.verify.outputs.version }}"
+          PACKAGE_NAME="@jackuait/blok"
+
+          echo "❌ Post-publish verification failed!"
+          echo "🔄 Initiating automatic rollback..."
+          echo ""
+          echo "Package: $PACKAGE_NAME@$VERSION"
+          echo "Action: Unpublishing from npm registry"
+          echo ""
+
+          # Attempt to unpublish the broken package
+          if npm unpublish "$PACKAGE_NAME@$VERSION" --force; then
+            echo "✅ Successfully unpublished $PACKAGE_NAME@$VERSION"
+            echo ""
+            echo "⚠️  The broken package has been removed from npm registry."
+            echo "Please investigate the verification failures and trigger a new release."
+          else
+            echo "❌ Failed to unpublish $PACKAGE_NAME@$VERSION"
+            echo ""
+            echo "⚠️  MANUAL INTERVENTION REQUIRED:"
+            echo "Run: npm unpublish $PACKAGE_NAME@$VERSION"
+            echo ""
+            echo "This package is currently published but failed verification."
+            echo "It should be removed from the registry as soon as possible."
+            exit 1
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Upload verification report
         if: always() && github.event.inputs.dry_run != 'true'
@@ -91,3 +126,10 @@ jobs:
           name: package-verification-report
           path: verification-report.json
           retention-days: 30
+
+      - name: Fail workflow on verification failure
+        if: github.event.inputs.dry_run != 'true' && steps.verify.outcome == 'failure'
+        run: |
+          echo "❌ Workflow failed due to post-publish verification failure"
+          echo "Check the verification report artifact for details"
+          exit 1

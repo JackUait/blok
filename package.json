@@ -71,7 +71,8 @@
     "chromatic": "chromatic --exit-zero-on-changes",
     "verify:package": "node scripts/verify-published-package.mjs",
     "verify:package:local": "npm pack && node scripts/verify-published-package.mjs --local",
-    "verify:version": "node scripts/verify-version.mjs"
+    "verify:version": "node scripts/verify-version.mjs",
+    "unpublish": "node scripts/unpublish-package.mjs"
   },
   "author": "JackUait",
   "contributors": [

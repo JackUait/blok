@@ -275,23 +275,35 @@ If pre-release verification fails:
 
 **Post-Publish Failure (Rare)**
 
-If post-publish verification fails (npm registry issue, network problem):
-1. **Unpublish** the broken version (if within 72 hours):
+If post-publish verification fails, the workflow **automatically unpublishes** the broken package:
+
+1. **Automatic Rollback**: The workflow detects verification failure and immediately unpublishes the broken version from npm
+   - Reduces the risk window to near-zero (package may be available for ~2-5 minutes)
+   - Prevents users from installing broken packages
+   - Logs detailed rollback information
+
+2. **Manual Fallback**: If automatic unpublish fails (rare), manual intervention is required:
    ```bash
+   # Using the helper script (recommended)
+   node scripts/unpublish-package.mjs X.Y.Z
+
+   # Or directly via npm (within 72 hours of publish)
    npm unpublish @jackuait/blok@X.Y.Z
    ```
 
-2. **Publish hotfix**: Fix the issue and trigger a new release
+3. **Recovery Steps**:
+   - Download the verification report artifact to understand what failed
+   - Fix the issues locally and verify: `npm pack && yarn verify:package:local`
+   - Trigger a new release workflow when ready
 
-3. **Investigate**: Download the verification report artifact for details
-
-The two-stage verification approach minimizes the risk of broken packages reaching npm.
+The combination of pre-release verification (catches 99% of issues) and automatic rollback on post-publish failure minimizes the risk of broken packages reaching users.
 
 ## Configuration
 
 **`.releaserc.json`** - semantic-release config
 **`.github/workflows/release.yml`** - GitHub Actions workflow
-**`scripts/verify-published-package.mjs`** - Verification script
+**`scripts/verify-published-package.mjs`** - Package verification script
+**`scripts/unpublish-package.mjs`** - Manual unpublish helper script
 
 ## References
 

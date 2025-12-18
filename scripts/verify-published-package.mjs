@@ -243,9 +243,17 @@ async function runVerification() {
     if (results.failed > 0) {
       console.log('');
       console.log('REMEDIATION OPTIONS:');
-      console.log(`1. Unpublish broken version: npm unpublish ${PACKAGE_NAME}@${options.version}`);
-      console.log('2. Publish hotfix: Fix issue and trigger new release');
-      console.log('3. Investigate locally: npm pack && node scripts/verify-published-package.mjs --local');
+      if (options.local) {
+        console.log('1. Fix the issues identified above');
+        console.log('2. Rebuild: yarn build');
+        console.log('3. Re-verify: npm pack && node scripts/verify-published-package.mjs --local');
+        console.log('4. When fixed, trigger release workflow');
+      } else {
+        console.log(`1. Unpublish broken version: node scripts/unpublish-package.mjs ${options.version}`);
+        console.log(`   Or manually: npm unpublish ${PACKAGE_NAME}@${options.version}`);
+        console.log('2. Publish hotfix: Fix issue and trigger new release');
+        console.log('3. Investigate locally: npm pack && node scripts/verify-published-package.mjs --local');
+      }
       console.log('');
       console.log('See full report: verification-report.json');
     }

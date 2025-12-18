@@ -2,22 +2,22 @@
  * Contains keyboard and mouse events bound on each Block by Block Manager
  */
 import { Module } from '../__module';
-import * as _ from '../utils';
+import { delay, isIosDevice, keyCodes } from '../utils';
 import { SelectionUtils } from '../selection';
 import { Flipper } from '../flipper';
 import type { Block } from '../block';
 import { areBlocksMergeable } from '../utils/blocks';
-import * as caretUtils from '../utils/caret';
+import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../utils/caret';
 
 const KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP: Record<string, number> = {
-  Backspace: _.keyCodes.BACKSPACE,
-  Delete: _.keyCodes.DELETE,
-  Enter: _.keyCodes.ENTER,
-  Tab: _.keyCodes.TAB,
-  ArrowDown: _.keyCodes.DOWN,
-  ArrowRight: _.keyCodes.RIGHT,
-  ArrowUp: _.keyCodes.UP,
-  ArrowLeft: _.keyCodes.LEFT,
+  Backspace: keyCodes.BACKSPACE,
+  Delete: keyCodes.DELETE,
+  Enter: keyCodes.ENTER,
+  Tab: keyCodes.TAB,
+  ArrowDown: keyCodes.DOWN,
+  ArrowRight: keyCodes.RIGHT,
+  ArrowUp: keyCodes.UP,
+  ArrowLeft: keyCodes.LEFT,
 };
 
 const PRINTABLE_SPECIAL_KEYS = new Set(['Enter', 'Process', 'Spacebar', 'Space', 'Dead']);
@@ -84,29 +84,29 @@ export class BlockEvents extends Module {
      * Fire keydown processor by normalized keyboard code
      */
     switch (keyCode) {
-      case _.keyCodes.BACKSPACE:
+      case keyCodes.BACKSPACE:
         this.backspace(event);
         break;
 
-      case _.keyCodes.DELETE:
+      case keyCodes.DELETE:
         this.delete(event);
         break;
 
-      case _.keyCodes.ENTER:
+      case keyCodes.ENTER:
         this.enter(event);
         break;
 
-      case _.keyCodes.DOWN:
-      case _.keyCodes.RIGHT:
+      case keyCodes.DOWN:
+      case keyCodes.RIGHT:
         this.arrowRightAndDown(event);
         break;
 
-      case _.keyCodes.UP:
-      case _.keyCodes.LEFT:
+      case keyCodes.UP:
+      case keyCodes.LEFT:
         this.arrowLeftAndUp(event);
         break;
 
-      case _.keyCodes.TAB:
+      case keyCodes.TAB:
         this.tabPressed(event);
         break;
     }
@@ -777,7 +777,7 @@ export class BlockEvents extends Module {
      * (it used for capitalizing of the first letter of the next sentence)
      * We don't need to lead soft line break in this case — new block should be created
      */
-    if (event.shiftKey && !_.isIosDevice) {
+    if (event.shiftKey && !isIosDevice) {
       return;
     }
 
@@ -785,7 +785,7 @@ export class BlockEvents extends Module {
      * If enter has been pressed at the start of the text, just insert paragraph Block above
      */
     const blockToFocus = (() => {
-      if (currentBlock.currentInput !== undefined && caretUtils.isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
+      if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
         this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
 
         return currentBlock;
@@ -795,7 +795,7 @@ export class BlockEvents extends Module {
        * If caret is at very end of the block, just append the new block without splitting
        * to prevent unnecessary dom mutation observing
        */
-      if (currentBlock.currentInput && caretUtils.isCaretAtEndOfInput(currentBlock.currentInput)) {
+      if (currentBlock.currentInput && isCaretAtEndOfInput(currentBlock.currentInput)) {
         return this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
       }
 
@@ -838,7 +838,7 @@ export class BlockEvents extends Module {
     /**
      * If caret is not at the start, leave native behaviour
      */
-    if (!currentBlock.currentInput || !caretUtils.isCaretAtStartOfInput(currentBlock.currentInput)) {
+    if (!currentBlock.currentInput || !isCaretAtStartOfInput(currentBlock.currentInput)) {
       return;
     }
 
@@ -925,7 +925,7 @@ export class BlockEvents extends Module {
     /**
      * If caret is not at the end, leave native behaviour
      */
-    if (!currentBlock.currentInput || !caretUtils.isCaretAtEndOfInput(currentBlock.currentInput)) {
+    if (!currentBlock.currentInput || !isCaretAtEndOfInput(currentBlock.currentInput)) {
       return;
     }
 
@@ -998,7 +998,7 @@ export class BlockEvents extends Module {
       return;
     }
 
-    caretUtils.focus(targetBlock.lastInput, false);
+    focus(targetBlock.lastInput, false);
 
     BlockManager
       .mergeBlocks(targetBlock, blockToMerge)
@@ -1030,7 +1030,7 @@ export class BlockEvents extends Module {
     }
 
     const isFlipperCombination = Flipper.usedKeys.includes(keyCode) &&
-      (!event.shiftKey || keyCode === _.keyCodes.TAB);
+      (!event.shiftKey || keyCode === keyCodes.TAB);
 
     /**
      * Arrows might be handled on toolbars by flipper
@@ -1067,10 +1067,10 @@ export class BlockEvents extends Module {
     const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find((candidate): candidate is HTMLElement => {
       return candidate instanceof HTMLElement;
     });
-    const caretAtEnd = caretInput !== undefined ? caretUtils.isCaretAtEndOfInput(caretInput) : undefined;
+    const caretAtEnd = caretInput !== undefined ? isCaretAtEndOfInput(caretInput) : undefined;
     const shouldEnableCBS = caretAtEnd || this.Blok.BlockSelection.anyBlockSelected;
 
-    const isShiftDownKey = event.shiftKey && keyCode === _.keyCodes.DOWN;
+    const isShiftDownKey = event.shiftKey && keyCode === keyCodes.DOWN;
 
     if (isShiftDownKey && shouldEnableCBS) {
       this.Blok.CrossBlockSelection.toggleBlockSelectedState();
@@ -1082,10 +1082,10 @@ export class BlockEvents extends Module {
       void this.Blok.InlineToolbar.tryToShow();
     }
 
-    const isPlainRightKey = keyCode === _.keyCodes.RIGHT && !event.shiftKey && !this.isRtl;
+    const isPlainRightKey = keyCode === keyCodes.RIGHT && !event.shiftKey && !this.isRtl;
 
     const nbpsTarget = isPlainRightKey && caretInput instanceof HTMLElement
-      ? caretUtils.findNbspAfterEmptyInline(caretInput)
+      ? findNbspAfterEmptyInline(caretInput)
       : null;
 
     if (nbpsTarget !== null) {
@@ -1100,8 +1100,8 @@ export class BlockEvents extends Module {
      * - Arrow Down: use vertical navigation (Notion-style line-by-line)
      * - Arrow Right: use horizontal navigation (character-by-character)
      */
-    const isDownKey = keyCode === _.keyCodes.DOWN;
-    const isRightKey = keyCode === _.keyCodes.RIGHT && !this.isRtl;
+    const isDownKey = keyCode === keyCodes.DOWN;
+    const isRightKey = keyCode === keyCodes.RIGHT && !this.isRtl;
 
     const isNavigated = (() => {
       if (isDownKey) {
@@ -1135,7 +1135,7 @@ export class BlockEvents extends Module {
     /**
      * After caret is set, update Block input index
      */
-    _.delay(() => {
+    delay(() => {
       /** Check currentBlock for case when user moves selection out of Blok */
       if (this.Blok.BlockManager.currentBlock) {
         this.Blok.BlockManager.currentBlock.updateCurrentInput();
@@ -1174,7 +1174,7 @@ export class BlockEvents extends Module {
       return;
     }
 
-    if (toolbarOpened && Flipper.usedKeys.includes(keyCode) && (!event.shiftKey || keyCode === _.keyCodes.TAB)) {
+    if (toolbarOpened && Flipper.usedKeys.includes(keyCode) && (!event.shiftKey || keyCode === keyCodes.TAB)) {
       return;
     }
 
@@ -1208,10 +1208,10 @@ export class BlockEvents extends Module {
     const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find((candidate): candidate is HTMLElement => {
       return candidate instanceof HTMLElement;
     });
-    const caretAtStart = caretInput !== undefined ? caretUtils.isCaretAtStartOfInput(caretInput) : undefined;
+    const caretAtStart = caretInput !== undefined ? isCaretAtStartOfInput(caretInput) : undefined;
     const shouldEnableCBS = caretAtStart || this.Blok.BlockSelection.anyBlockSelected;
 
-    const isShiftUpKey = event.shiftKey && keyCode === _.keyCodes.UP;
+    const isShiftUpKey = event.shiftKey && keyCode === keyCodes.UP;
 
     if (isShiftUpKey && shouldEnableCBS) {
       this.Blok.CrossBlockSelection.toggleBlockSelectedState(false);
@@ -1228,8 +1228,8 @@ export class BlockEvents extends Module {
      * - Arrow Up: use vertical navigation (Notion-style line-by-line)
      * - Arrow Left: use horizontal navigation (character-by-character)
      */
-    const isUpKey = keyCode === _.keyCodes.UP;
-    const isLeftKey = keyCode === _.keyCodes.LEFT && !this.isRtl;
+    const isUpKey = keyCode === keyCodes.UP;
+    const isLeftKey = keyCode === keyCodes.LEFT && !this.isRtl;
 
     const isNavigated = (() => {
       if (isUpKey) {
@@ -1263,7 +1263,7 @@ export class BlockEvents extends Module {
     /**
      * After caret is set, update Block input index
      */
-    _.delay(() => {
+    delay(() => {
       /** Check currentBlock for case when user ends selection out of Blok and then press arrow-key */
       if (this.Blok.BlockManager.currentBlock) {
         this.Blok.BlockManager.currentBlock.updateCurrentInput();
@@ -1283,8 +1283,8 @@ export class BlockEvents extends Module {
    */
   private needToolbarClosing(event: KeyboardEvent): boolean {
     const keyCode = this.getKeyCode(event);
-    const isEnter = keyCode === _.keyCodes.ENTER;
-    const isTab = keyCode === _.keyCodes.TAB;
+    const isEnter = keyCode === keyCodes.ENTER;
+    const isTab = keyCode === keyCodes.TAB;
     const toolboxItemSelected = (isEnter && this.Blok.Toolbar.toolbox.opened);
     const blockSettingsItemSelected = (isEnter && this.Blok.BlockSettings.opened);
     const inlineToolbarItemSelected = (isEnter && this.Blok.InlineToolbar.opened);

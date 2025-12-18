@@ -1,6 +1,6 @@
 import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
 import type { BlockToolData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
-import * as _ from './../../utils';
+import { logLabeled } from './../../utils';
 import { BlockAPI } from '../../block/api';
 import { Module } from '../../__module';
 import { Block } from '../../block';
@@ -61,7 +61,7 @@ export class BlocksAPI extends Module {
     const block = this.Blok.BlockManager.getBlockById(id);
 
     if (!block) {
-      _.logLabeled('There is no block with id `' + id + '`', 'warn');
+      logLabeled('There is no block with id `' + id + '`', 'warn');
 
       return;
     }
@@ -77,7 +77,7 @@ export class BlocksAPI extends Module {
     const block = this.Blok.BlockManager.getBlockByIndex(index);
 
     if (block === undefined) {
-      _.logLabeled('There is no block at index `' + index + '`', 'warn');
+      logLabeled('There is no block at index `' + index + '`', 'warn');
 
       return;
     }
@@ -93,7 +93,7 @@ export class BlocksAPI extends Module {
     const block = this.Blok.BlockManager.getBlockById(id);
 
     if (block === undefined) {
-      _.logLabeled('There is no block with id `' + id + '`', 'warn');
+      logLabeled('There is no block with id `' + id + '`', 'warn');
 
       return null;
     }
@@ -109,7 +109,7 @@ export class BlocksAPI extends Module {
     const block = this.Blok.BlockManager.getBlock(element);
 
     if (block === undefined) {
-      _.logLabeled('There is no block corresponding to element `' + element + '`', 'warn');
+      logLabeled('There is no block corresponding to element `' + element + '`', 'warn');
 
       return;
     }
@@ -134,7 +134,7 @@ export class BlocksAPI extends Module {
     const block = this.Blok.BlockManager.getBlockByIndex(blockIndex);
 
     if (block === undefined) {
-      _.logLabeled(`There is no block at index \`${blockIndex}\``, 'warn');
+      logLabeled(`There is no block at index \`${blockIndex}\``, 'warn');
 
       return;
     }
@@ -142,7 +142,7 @@ export class BlocksAPI extends Module {
     try {
       await this.Blok.BlockManager.removeBlock(block);
     } catch (error: unknown) {
-      _.logLabeled(error as unknown as string, 'warn');
+      logLabeled(error as unknown as string, 'warn');
 
       return;
     }

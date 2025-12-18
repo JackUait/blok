@@ -1,5 +1,5 @@
 import { Dom as $ } from './dom';
-import * as _ from './utils';
+import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import type { BlokConfig, SanitizerConfig } from '../../types';
 import type { BlokModules } from '../types-internal/blok-modules';
 import { CriticalError } from './errors/critical';
@@ -67,7 +67,7 @@ export class Core {
           resolve();
         })
         .catch((error) => {
-          _.log(`Blok is not ready because of ${error}`, 'error');
+          log(`Blok is not ready because of ${error}`, 'error');
 
           /**
            * Reject this.isReady promise
@@ -86,7 +86,7 @@ export class Core {
      * Place config into the class property
      * @type {BlokConfig}
      */
-    if (_.isObject(config)) {
+    if (isObject(config)) {
       this.config = {
         ...config,
       };
@@ -108,10 +108,10 @@ export class Core {
     }
 
     if (this.config.logLevel == null) {
-      this.config.logLevel = _.LogLevels.VERBOSE;
+      this.config.logLevel = LogLevels.VERBOSE;
     }
 
-    _.setLogLevel(this.config.logLevel);
+    setLogLevel(this.config.logLevel);
 
     /**
      * If default Block's Tool was not passed, use the Paragraph Tool
@@ -131,7 +131,7 @@ export class Core {
       !hasDefaultBlockTool &&
       !hasInitialBlocks
     ) {
-      _.log(
+      log(
         `Default block "${defaultBlockName}" is not configured. Falling back to "paragraph" tool.`,
         'warn'
       );
@@ -184,7 +184,7 @@ export class Core {
     /**
      * Initialize default Block to pass data to the Renderer
      */
-    if (_.isEmpty(this.config.data) || !this.config.data.blocks || this.config.data.blocks.length === 0) {
+    if (isEmpty(this.config.data) || !this.config.data.blocks || this.config.data.blocks.length === 0) {
       this.config.data = { blocks: [ defaultBlockData ] };
     }
 
@@ -208,11 +208,11 @@ export class Core {
     /**
      * Check for a holder element's existence
      */
-    if (_.isString(holder) && !$.get(holder)) {
+    if (isString(holder) && !$.get(holder)) {
       throw Error(`element with ID «${holder}» is missing. Pass correct holder's ID.`);
     }
 
-    if (Boolean(holder) && _.isObject(holder) && !$.isElement(holder)) {
+    if (Boolean(holder) && isObject(holder) && !$.isElement(holder)) {
       throw Error('«holder» value must be an Element node');
     }
   }
@@ -256,7 +256,7 @@ export class Core {
 
     await modulesToPrepare.reduce(
       (promise, module) => promise.then(async () => {
-        // _.log(`Preparing ${module} module`, 'time');
+        // log(`Preparing ${module} module`, 'time');
 
         try {
           const moduleInstance = this.moduleInstances[module as keyof BlokModules] as { prepare: () => Promise<void> | void };
@@ -270,9 +270,9 @@ export class Core {
           if (e instanceof CriticalError) {
             throw new Error(e.message);
           }
-          _.log(`Module ${module} was skipped because of %o`, 'warn', e);
+          log(`Module ${module} was skipped because of %o`, 'warn', e);
         }
-        // _.log(`Preparing ${module} module`, 'timeEnd');
+        // log(`Preparing ${module} module`, 'timeEnd');
       }),
       Promise.resolve()
     );
@@ -306,7 +306,7 @@ export class Core {
           eventsDispatcher: this.eventsDispatcher,
         }) as BlokModules[keyof BlokModules];
       } catch (e) {
-        _.log(`[constructModules] Module ${key} skipped because`, 'error', e);
+        log(`[constructModules] Module ${key} skipped because`, 'error', e);
       }
     });
   }
@@ -341,7 +341,7 @@ export class Core {
       };
     }
 
-    if (_.isFunction(paragraphEntry)) {
+    if (isFunction(paragraphEntry)) {
       return {
         class: paragraphEntry,
         config: {
@@ -350,14 +350,14 @@ export class Core {
       };
     }
 
-    if (_.isObject(paragraphEntry)) {
+    if (isObject(paragraphEntry)) {
       const paragraphSettings = paragraphEntry as Record<string, unknown>;
       const existingConfig = paragraphSettings.config;
 
       return {
         ...paragraphSettings,
         config: {
-          ...(_.isObject(existingConfig) ? existingConfig as Record<string, unknown> : {}),
+          ...(isObject(existingConfig) ? existingConfig as Record<string, unknown> : {}),
           preserveBlank: true,
         },
       };

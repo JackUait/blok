@@ -1,6 +1,6 @@
 import type { InlineTool, API } from '../../../types';
 import type { MenuConfig, MenuConfigItem } from '../../../types/tools';
-import * as _ from '../utils';
+import { capitalize, isMobileScreen } from '../utils';
 import type { Blocks, Selection, Tools, Caret, I18n } from '../../../types/api';
 import { SelectionUtils } from '../selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
@@ -112,8 +112,8 @@ export class ConvertInlineTool implements InlineTool {
     const currentBlockToolboxItem = await currentBlock.getActiveToolboxEntry();
     const currentBlockTitle = currentBlockToolboxItem
       ? translateToolTitle(this.i18nInstance, currentBlockToolboxItem, currentBlock.name)
-      : translateToolName(this.i18nInstance, currentBlock.name, _.capitalize(currentBlock.name));
-    const isDesktop =  !_.isMobileScreen();
+      : translateToolName(this.i18nInstance, currentBlock.name, capitalize(currentBlock.name));
+    const isDesktop =  !isMobileScreen();
 
     return {
       name: 'convert-to',

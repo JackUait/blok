@@ -8,7 +8,7 @@ import { Module } from '../__module';
 import { Dom as $ } from '../dom';
 
 import { SelectionUtils } from '../selection';
-import * as _ from '../utils';
+import { throttle } from '../utils';
 import {
   INLINE_TOOLBAR_INTERFACE_SELECTOR,
   DATA_ATTR,
@@ -200,7 +200,7 @@ export class RectangleSelection extends Module {
       this.processMouseDown(event as MouseEvent);
     }, false);
 
-    const throttledMouseMove = _.throttle((event: unknown) => {
+    const throttledMouseMove = throttle((event: unknown) => {
       if (event instanceof MouseEvent) {
         this.processMouseMove(event);
       }
@@ -215,7 +215,7 @@ export class RectangleSelection extends Module {
       this.processMouseLeave();
     });
 
-    const throttledScroll = _.throttle((event: unknown) => {
+    const throttledScroll = throttle((event: unknown) => {
       this.processScroll(event as MouseEvent);
 
     }, 10) as EventListener;

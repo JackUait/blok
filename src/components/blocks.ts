@@ -1,4 +1,4 @@
-import * as _ from './utils';
+import { array } from './utils';
 import type { Block } from './block';
 import { BlockToolAPI } from './block';
 import type { MoveEvent } from '../../types/tools';
@@ -50,7 +50,7 @@ export class Blocks {
    * @returns {HTMLElement[]}
    */
   public get nodes(): HTMLElement[] {
-    return _.array(this.workingArea.children);
+    return array(this.workingArea.children);
   }
 
   /**

@@ -1,5 +1,5 @@
 import { SelectionUtils } from '../selection';
-import * as _ from '../utils';
+import { log } from '../utils';
 import type {
   InlineTool,
   InlineToolConstructorOptions,
@@ -385,7 +385,7 @@ export class LinkInlineTool implements InlineTool {
         style: 'error',
       });
 
-      _.log('Incorrect Link pasted', 'warn', value);
+      log('Incorrect Link pasted', 'warn', value);
 
       return;
     }

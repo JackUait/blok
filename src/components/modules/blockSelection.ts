@@ -6,7 +6,7 @@
  */
 import { Module } from '../__module';
 import type { Block } from '../block';
-import * as _ from '../utils';
+import { delay } from '../utils';
 import { Dom as $ } from '../dom';
 import { Shortcuts } from '../utils/shortcuts';
 
@@ -693,7 +693,7 @@ export class BlockSelection extends Module {
       Caret.setToBlock(currentBlock);
     }
 
-    _.delay(() => {
+    delay(() => {
       const eventKey = event.key;
 
       /**

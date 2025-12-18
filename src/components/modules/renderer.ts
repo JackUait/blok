@@ -1,5 +1,5 @@
 import { Module } from '../__module';
-import * as _ from '../utils';
+import { log, logLabeled } from '../utils';
 import type { BlockId, BlockToolData, OutputBlockData } from '../../../types';
 import type { BlockToolAdapter } from '../tools/block';
 import type { StubData } from '../../tools/stub';
@@ -62,7 +62,7 @@ export class Renderer extends Module {
               };
             }
 
-            _.logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Blok config.`, 'warn');
+            logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Blok config.`, 'warn');
 
             return {
               tool: Tools.stubTool,
@@ -81,7 +81,7 @@ export class Renderer extends Module {
                 contentIds: content,
               });
             } catch (error) {
-              _.log(`Block «${tool}» skipped because of plugins error`, 'error', {
+              log(`Block «${tool}» skipped because of plugins error`, 'error', {
                 data,
                 error,
               });

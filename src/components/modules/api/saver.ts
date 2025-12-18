@@ -1,6 +1,6 @@
 import type { Saver } from '../../../../types/api';
 import type { OutputData } from '../../../../types';
-import * as _ from '../../utils';
+import { logLabeled } from '../../utils';
 import { Module } from '../../__module';
 
 /**
@@ -26,7 +26,7 @@ export class SaverAPI extends Module {
     const errorText = 'Blok\'s content can not be saved in read-only mode';
 
     if (this.Blok.ReadOnly.isEnabled) {
-      _.logLabeled(errorText, 'warn');
+      logLabeled(errorText, 'warn');
 
       throw new Error(errorText);
     }

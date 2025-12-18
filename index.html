@@ -67,7 +67,7 @@
 
   <!-- Initialization -->
   <script type="module">
-    import Blok from './src/blok.ts';
+    import { Blok, Header, List } from './src/blok.ts';
 
     window.Blok = Blok;
 
@@ -102,7 +102,7 @@
          * Each Tool is a Plugin. Pass them via 'class' option with necessary settings {@link docs/tools.md}
          */
         header: {
-          class: Blok.Header,
+          class: Header,
           inlineToolbar: ['link'],
           config: {
             placeholder: 'Header'
@@ -110,7 +110,7 @@
           shortcut: 'CMD+SHIFT+H'
         },
         list: {
-          class: Blok.List,
+          class: List,
         },
       },
 

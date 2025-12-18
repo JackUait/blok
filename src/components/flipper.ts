@@ -1,5 +1,5 @@
 import { DomIterator } from './domIterator';
-import * as _ from './utils';
+import { isFunction, keyCodes } from './utils';
 
 /**
  * Flipper construction options
@@ -119,12 +119,12 @@ export class Flipper {
    */
   public static get usedKeys(): number[] {
     return [
-      _.keyCodes.TAB,
-      _.keyCodes.LEFT,
-      _.keyCodes.RIGHT,
-      _.keyCodes.ENTER,
-      _.keyCodes.UP,
-      _.keyCodes.DOWN,
+      keyCodes.TAB,
+      keyCodes.LEFT,
+      keyCodes.RIGHT,
+      keyCodes.ENTER,
+      keyCodes.UP,
+      keyCodes.DOWN,
     ];
   }
 
@@ -276,12 +276,12 @@ export class Flipper {
    */
   private getKeyCode(event: KeyboardEvent): number | null {
     const keyToCodeMap: Record<string, number> = {
-      'Tab': _.keyCodes.TAB,
-      'Enter': _.keyCodes.ENTER,
-      'ArrowLeft': _.keyCodes.LEFT,
-      'ArrowRight': _.keyCodes.RIGHT,
-      'ArrowUp': _.keyCodes.UP,
-      'ArrowDown': _.keyCodes.DOWN,
+      'Tab': keyCodes.TAB,
+      'Enter': keyCodes.ENTER,
+      'ArrowLeft': keyCodes.LEFT,
+      'ArrowRight': keyCodes.RIGHT,
+      'ArrowUp': keyCodes.UP,
+      'ArrowDown': keyCodes.DOWN,
     };
 
     return keyToCodeMap[event.key] ?? null;
@@ -299,10 +299,10 @@ export class Flipper {
     }
 
     const keyCode = this.getKeyCode(event);
-    const isDirectionalArrow = keyCode === _.keyCodes.LEFT
-      || keyCode === _.keyCodes.RIGHT
-      || keyCode === _.keyCodes.UP
-      || keyCode === _.keyCodes.DOWN;
+    const isDirectionalArrow = keyCode === keyCodes.LEFT
+      || keyCode === keyCodes.RIGHT
+      || keyCode === keyCodes.UP
+      || keyCode === keyCodes.DOWN;
 
     /**
      * Allow selecting text with Shift combined with arrow keys by delegating handling to the browser.
@@ -322,7 +322,7 @@ export class Flipper {
      * For Enter key, only handle it if there's a focused item.
      * Otherwise, let the event propagate to allow block splitting etc.
      */
-    if (keyCode === _.keyCodes.ENTER && !this.iterator?.currentItem) {
+    if (keyCode === keyCodes.ENTER && !this.iterator?.currentItem) {
       return;
     }
 
@@ -343,29 +343,29 @@ export class Flipper {
     }
 
     switch (keyCode) {
-      case _.keyCodes.TAB:
+      case keyCodes.TAB:
         this.handleTabPress(event);
         break;
-      case _.keyCodes.LEFT:
+      case keyCodes.LEFT:
         // ArrowLeft triggers callback only if callback is set (for nested popovers)
         if (this.onArrowLeftCallback) {
           this.onArrowLeftCallback();
         }
         break;
-      case _.keyCodes.UP:
+      case keyCodes.UP:
         this.flipLeft();
         break;
-      case _.keyCodes.RIGHT:
+      case keyCodes.RIGHT:
         // ArrowRight clicks the focused item to open nested popover, but only if item has children
         // Otherwise, do nothing (don't activate items without nested menu)
         if (this.iterator?.currentItem && this.currentItemHasChildren()) {
           this.handleEnterPress(event);
         }
         break;
-      case _.keyCodes.DOWN:
+      case keyCodes.DOWN:
         this.flipRight();
         break;
-      case _.keyCodes.ENTER:
+      case keyCodes.ENTER:
         this.handleEnterPress(event);
         break;
     }
@@ -442,7 +442,7 @@ export class Flipper {
       this.iterator.currentItem.click();
     }
 
-    if (_.isFunction(this.activateCallback) && this.iterator?.currentItem) {
+    if (isFunction(this.activateCallback) && this.iterator?.currentItem) {
       this.activateCallback(this.iterator.currentItem);
     }
   }

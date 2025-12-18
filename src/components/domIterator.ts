@@ -1,5 +1,5 @@
 import { Dom } from './dom';
-import * as _ from './utils';
+import { delay } from './utils';
 import { SelectionUtils } from './selection';
 
 /**
@@ -172,7 +172,7 @@ export class DomIterator {
        * Focus input with micro-delay to ensure DOM is updated
        */
        
-      _.delay(() => SelectionUtils.setCursor(this.items[focusedButtonIndex]), 50)();
+      delay(() => SelectionUtils.setCursor(this.items[focusedButtonIndex]), 50)();
     }
 
     /**

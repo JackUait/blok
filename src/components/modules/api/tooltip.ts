@@ -2,7 +2,7 @@ import type { Tooltip as ITooltip } from '../../../../types/api';
 import type { TooltipOptions, TooltipContent } from '../../utils/tooltip';
 import { Module } from '../../__module';
 import type { ModuleConfig } from '../../../types-internal/module-config';
-import * as tooltip from '../../utils/tooltip';
+import { hide, onHover, show } from '../../utils/tooltip';
 /**
  * @class TooltipAPI
  * @classdesc Tooltip API
@@ -45,14 +45,14 @@ export class TooltipAPI extends Module {
    * @param {TooltipOptions} options - tooltip options
    */
   public show(element: HTMLElement, content: TooltipContent, options?: TooltipOptions): void {
-    tooltip.show(element, content, options);
+    show(element, content, options);
   }
 
   /**
    * Method hides tooltip on HTML page
    */
   public hide(): void {
-    tooltip.hide();
+    hide();
   }
 
   /**
@@ -62,6 +62,6 @@ export class TooltipAPI extends Module {
    * @param {TooltipOptions} options - tooltip options
    */
   public onHover(element: HTMLElement, content: TooltipContent, options?: TooltipOptions): void {
-    tooltip.onHover(element, content, options);
+    onHover(element, content, options);
   }
 }

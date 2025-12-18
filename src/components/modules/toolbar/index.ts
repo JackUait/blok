@@ -1,7 +1,7 @@
 import { Module } from '../../__module';
 import { Dom as $ } from '../../dom';
-import * as _ from '../../utils';
-import * as tooltip from '../../utils/tooltip';
+import { getUserOS, isMobileScreen, log } from '../../utils';
+import { hide, onHover } from '../../utils/tooltip';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Block } from '../../block';
 import { Toolbox,  ToolboxEvent  } from '../../ui/toolbox';
@@ -267,7 +267,7 @@ export class Toolbar extends Module<ToolbarNodes> {
          * If Toolbox is not initialized yet, do nothing
          */
         if (this.toolboxInstance === null)  {
-          _.log('toolbox.open() called before initialization is finished', 'warn');
+          log('toolbox.open() called before initialization is finished', 'warn');
 
           return;
         }
@@ -286,7 +286,7 @@ export class Toolbar extends Module<ToolbarNodes> {
          * If Toolbox is not initialized yet, do nothing
          */
         if (this.toolboxInstance === null)  {
-          _.log('toolbox.toggle() called before initialization is finished', 'warn');
+          log('toolbox.toggle() called before initialization is finished', 'warn');
 
           return;
         }
@@ -355,7 +355,7 @@ export class Toolbar extends Module<ToolbarNodes> {
      * Some UI elements creates inside requestIdleCallback, so the can be not ready yet
      */
     if (this.toolboxInstance === null)  {
-      _.log('Can\'t open Toolbar since Blok initialization is not finished yet', 'warn');
+      log('Can\'t open Toolbar since Blok initialization is not finished yet', 'warn');
 
       return;
     }
@@ -451,7 +451,7 @@ export class Toolbar extends Module<ToolbarNodes> {
      * Some UI elements creates inside requestIdleCallback, so they can be not ready yet
      */
     if (this.toolboxInstance === null) {
-      _.log('Can\'t open Toolbar since Blok initialization is not finished yet', 'warn');
+      log('Can\'t open Toolbar since Blok initialization is not finished yet', 'warn');
 
       return;
     }
@@ -709,14 +709,14 @@ export class Toolbar extends Module<ToolbarNodes> {
         return;
       }
 
-      tooltip.hide(true);
+      hide(true);
       this.plusButtonClicked();
     }, true);
 
     /**
      * Add events to show/hide tooltip for plus button
      */
-    const userOS = _.getUserOS();
+    const userOS = getUserOS();
     const modifierClickText = userOS.win
       ? this.Blok.I18n.t('toolbox.ctrlAddAbove')
       : this.Blok.I18n.t('toolbox.optionAddAbove');
@@ -726,7 +726,7 @@ export class Toolbar extends Module<ToolbarNodes> {
       modifierClickText,
     ]);
 
-    tooltip.onHover(plusButton, tooltipContent, {
+    onHover(plusButton, tooltipContent, {
       hidingDelay: 400,
     });
 
@@ -771,7 +771,7 @@ export class Toolbar extends Module<ToolbarNodes> {
       this.Blok.I18n.t('blockSettings.clickToOpenMenu'),
     ]);
 
-    tooltip.onHover(settingsToggler, blockTunesTooltip, {
+    onHover(settingsToggler, blockTunesTooltip, {
       hidingDelay: 400,
     });
 
@@ -917,7 +917,7 @@ export class Toolbar extends Module<ToolbarNodes> {
        * Stores the initial mouse position to distinguish between click and drag
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
-        tooltip.hide(true);
+        hide(true);
 
         const mouseEvent = e as MouseEvent;
 
@@ -992,7 +992,7 @@ export class Toolbar extends Module<ToolbarNodes> {
      * Subscribe to the 'block-hovered' event if current view is not mobile
      * @see https://github.com/codex-team/editor.js/issues/1972
      */
-    if (!_.isMobileScreen()) {
+    if (!isMobileScreen()) {
       /**
        * Subscribe to the 'block-hovered' event
        */

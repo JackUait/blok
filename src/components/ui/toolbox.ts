@@ -1,4 +1,4 @@
-import * as _ from '../utils';
+import { beautifyShortcut, capitalize, isMobileScreen } from '../utils';
 import { Shortcuts } from '../utils/shortcuts';
 import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
@@ -279,7 +279,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Creates toolbox popover and appends it inside wrapper element
    */
   private initPopover(): void {
-    const PopoverClass = _.isMobileScreen() ? PopoverMobile : PopoverDesktop;
+    const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
 
     this.popover = new PopoverClass({
       scopeElement: this.api.ui.nodes.redactor,
@@ -356,12 +356,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemParams => {
       return {
         icon: toolboxItem.icon,
-        title: translateToolTitle(this.i18n, toolboxItem, _.capitalize(tool.name)),
+        title: translateToolTitle(this.i18n, toolboxItem, capitalize(tool.name)),
         name: toolboxItem.name ?? tool.name,
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);
         },
-        secondaryLabel: (tool.shortcut && displaySecondaryLabel) ? _.beautifyShortcut(tool.shortcut) : '',
+        secondaryLabel: (tool.shortcut && displaySecondaryLabel) ? beautifyShortcut(tool.shortcut) : '',
       };
     };
 

@@ -1,6 +1,6 @@
 import type { Tool, ToolConstructable, ToolSettings } from '@/types/tools';
 import type { SanitizerConfig, API as ApiMethods, ToolConfig } from '@/types';
-import * as _ from '../utils';
+import { isFunction } from '../utils';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 import type { BaseToolAdapter as BaseToolAdapterInterface } from '@/types/tools/adapters/base-tool-adapter';
 import type { InlineToolAdapter as InlineToolAdapterInterface } from '@/types/tools/adapters/inline-tool-adapter';
@@ -204,7 +204,7 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
    * Calls Tool's reset method
    */
   public reset(): void | Promise<void> {
-    if (_.isFunction(this.constructable.reset)) {
+    if (isFunction(this.constructable.reset)) {
       return this.constructable.reset();
     }
   }
@@ -215,7 +215,7 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
   public prepare(): void | Promise<void> {
     const prepare = this.constructable.prepare;
 
-    if (!_.isFunction(prepare)) {
+    if (!isFunction(prepare)) {
       return;
     }
 

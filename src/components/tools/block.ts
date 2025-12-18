@@ -8,7 +8,7 @@ import type {
   PasteConfig, SanitizerConfig, ToolboxConfig,
   ToolboxConfigEntry
 } from '@/types';
-import * as _ from '../utils';
+import { isEmpty, isObject } from '../utils';
 import type { InlineToolAdapter } from './inline';
 import type { BlockTuneAdapter } from './tune';
 import { ToolsCollection } from './collection';
@@ -95,7 +95,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
     const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox] as ToolboxConfig | undefined;
     const userToolboxSettings = this.config[UserSettings.Toolbox];
 
-    if (!toolToolboxSettings || _.isEmpty(toolToolboxSettings)) {
+    if (!toolToolboxSettings || isEmpty(toolToolboxSettings)) {
       return;
     }
     if (userToolboxSettings === false) {
@@ -234,7 +234,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
     const toolRules = super.sanitizeConfig;
     const baseConfig = this.baseSanitizeConfig;
 
-    if (_.isEmpty(toolRules)) {
+    if (isEmpty(toolRules)) {
       this._sanitizeConfig = baseConfig;
 
       return baseConfig;
@@ -254,7 +254,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
        *
        * Otherwise pass as it is
        */
-      if (_.isObject(rule)) {
+      if (isObject(rule)) {
         toolConfig[fieldName] = Object.assign({}, baseConfig, rule);
       } else {
         toolConfig[fieldName] = rule;

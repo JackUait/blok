@@ -1,6 +1,6 @@
 import type { Toolbar } from '../../../../types/api';
 import { Module } from '../../__module';
-import * as _ from './../../utils';
+import { logLabeled } from './../../utils';
 /**
  * @class ToolbarAPI
  * Provides methods for working with the Toolbar
@@ -39,7 +39,7 @@ export class ToolbarAPI extends Module {
    */
   public toggleBlockSettings(openingState?: boolean): void {
     if (this.Blok.BlockManager.currentBlockIndex === -1) {
-      _.logLabeled('Could\'t toggle the Toolbar because there is no block selected ', 'warn');
+      logLabeled('Could\'t toggle the Toolbar because there is no block selected ', 'warn');
 
       return;
     }
@@ -62,7 +62,7 @@ export class ToolbarAPI extends Module {
    */
   public toggleToolbox(openingState?: boolean): void {
     if (this.Blok.BlockManager.currentBlockIndex === -1) {
-      _.logLabeled('Could\'t toggle the Toolbox because there is no block selected ', 'warn');
+      logLabeled('Could\'t toggle the Toolbox because there is no block selected ', 'warn');
 
       return;
     }

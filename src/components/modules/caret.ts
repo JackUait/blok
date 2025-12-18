@@ -1,7 +1,7 @@
 import { SelectionUtils as Selection } from '../selection';
 import { Module } from '../__module';
 import type { Block } from '../block';
-import * as caretUtils from '../utils/caret';
+import { getCaretXPosition, isCaretAtEndOfInput, isCaretAtFirstLine, isCaretAtLastLine, isCaretAtStartOfInput, setCaretAtXPosition } from '../utils/caret';
 import { Dom as $ } from '../dom';
 
 const ASCII_MAX_CODE_POINT = 0x7f;
@@ -280,7 +280,7 @@ export class Caret extends Module {
     }
 
     if (targetX !== null) {
-      caretUtils.setCaretAtXPosition(element, targetX, atFirstLine);
+      setCaretAtXPosition(element, targetX, atFirstLine);
     } else {
       const position = atFirstLine ? this.positions.START : this.positions.END;
 
@@ -302,7 +302,7 @@ export class Caret extends Module {
     const { currentBlock } = this.Blok.BlockManager;
 
     if (targetX !== null) {
-      caretUtils.setCaretAtXPosition(input, targetX, atFirstLine);
+      setCaretAtXPosition(input, targetX, atFirstLine);
     } else {
       const position = atFirstLine ? this.positions.START : this.positions.END;
 
@@ -500,7 +500,7 @@ export class Caret extends Module {
     }
 
     const { nextInput, currentInput } = currentBlock;
-    const isAtEnd = currentInput !== undefined ? caretUtils.isCaretAtEndOfInput(currentInput) : undefined;
+    const isAtEnd = currentInput !== undefined ? isCaretAtEndOfInput(currentInput) : undefined;
 
     /**
      * We should jump to the next block if:
@@ -575,7 +575,7 @@ export class Caret extends Module {
      * - caret is at the start of the current block
      * - block does not contain any inputs (e.g. to allow go back when Delimiter is focused)
      */
-    const caretAtStart = currentInput !== undefined ? caretUtils.isCaretAtStartOfInput(currentInput) : undefined;
+    const caretAtStart = currentInput !== undefined ? isCaretAtStartOfInput(currentInput) : undefined;
     const navigationAllowed = force || caretAtStart || !currentBlock.focusable;
 
     /** If previous Tool`s input exists, focus on it. Otherwise set caret to the previous Block */
@@ -653,7 +653,7 @@ export class Caret extends Module {
     /**
      * Check if caret is at the last line - if not, let browser handle line navigation
      */
-    const isAtLastLine = currentInput !== undefined ? caretUtils.isCaretAtLastLine(currentInput) : true;
+    const isAtLastLine = currentInput !== undefined ? isCaretAtLastLine(currentInput) : true;
 
     if (!isAtLastLine) {
       return false;
@@ -662,7 +662,7 @@ export class Caret extends Module {
     /**
      * Save the current caret X position before navigation
      */
-    const caretX = caretUtils.getCaretXPosition();
+    const caretX = getCaretXPosition();
 
     /**
      * Navigate to next input within the block first
@@ -687,7 +687,7 @@ export class Caret extends Module {
     /**
      * At the last block - check if we should create a new block
      */
-    const isAtEnd = currentInput !== undefined ? caretUtils.isCaretAtEndOfInput(currentInput) : true;
+    const isAtEnd = currentInput !== undefined ? isCaretAtEndOfInput(currentInput) : true;
 
     if (!currentBlock.tool.isDefault && isAtEnd) {
       const newBlock = BlockManager.insertAtEnd() as Block;
@@ -733,7 +733,7 @@ export class Caret extends Module {
     /**
      * Check if caret is at the first line - if not, let browser handle line navigation
      */
-    const isAtFirstLine = currentInput !== undefined ? caretUtils.isCaretAtFirstLine(currentInput) : true;
+    const isAtFirstLine = currentInput !== undefined ? isCaretAtFirstLine(currentInput) : true;
 
     if (!isAtFirstLine) {
       return false;
@@ -742,7 +742,7 @@ export class Caret extends Module {
     /**
      * Save the current caret X position before navigation
      */
-    const caretX = caretUtils.getCaretXPosition();
+    const caretX = getCaretXPosition();
 
     /**
      * Navigate to previous input within the block first

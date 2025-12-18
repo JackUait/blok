@@ -1,7 +1,7 @@
 import { Module } from '../../__module';
 import { Dom as $ } from '../../dom';
 import { SelectionUtils } from '../../selection';
-import * as _ from '../../utils';
+import { beautifyShortcut, capitalize, isMobileScreen } from '../../utils';
 import type { InlineTool as IInlineTool } from '../../../../types';
 import { Shortcuts } from '../../utils/shortcuts';
 import type { ModuleConfig } from '../../../types-internal/module-config';
@@ -97,7 +97,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   /**
    * Margin above/below the Toolbar
    */
-  private readonly toolbarVerticalMargin: number = _.isMobileScreen() ? 20 : 6;
+  private readonly toolbarVerticalMargin: number = isMobileScreen() ? 20 : 6;
 
   /**
    * Tracks whether inline toolbar DOM and shortcuts are initialized
@@ -482,9 +482,9 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     for (const [index, [tool, instance]] of toolsEntries.entries()) {
       const renderedTool = await instance.render();
       const shortcut = this.getToolShortcut(tool.name);
-      const shortcutBeautified = shortcut !== undefined ? _.beautifyShortcut(shortcut) : undefined;
+      const shortcutBeautified = shortcut !== undefined ? beautifyShortcut(shortcut) : undefined;
 
-      const toolTitle = translateToolName(this.Blok.I18n, tool.titleKey, tool.title || _.capitalize(tool.name));
+      const toolTitle = translateToolName(this.Blok.I18n, tool.titleKey, tool.title || capitalize(tool.name));
 
       const items = Array.isArray(renderedTool) ? renderedTool : [renderedTool];
       const isFirstItem = index === 0;

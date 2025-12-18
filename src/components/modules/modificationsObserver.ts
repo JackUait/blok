@@ -4,7 +4,7 @@ import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
 import { modificationsObserverBatchTimeout } from '../constants';
 import { BlockChanged, FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../events';
-import * as _ from '../utils';
+import { isFunction } from '../utils';
 
 /**
  * We use map of block mutations to filter only unique events
@@ -103,7 +103,7 @@ export class ModificationsObserver extends Module {
    * @param event - some of our custom change events
    */
   private particularBlockChanged(event: BlockMutationEvent): void {
-    if (this.disabled || !_.isFunction(this.config.onChange)) {
+    if (this.disabled || !isFunction(this.config.onChange)) {
       return;
     }
 

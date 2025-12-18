@@ -1,7 +1,7 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { SelectionUtils } from '../selection';
-import * as _ from '../utils';
+import { mouseButtons } from '../utils';
 
 /**
  *
@@ -32,7 +32,7 @@ export class CrossBlockSelection extends Module {
    * @param {MouseEvent} event - mouse down event
    */
   public watchSelection(event: MouseEvent): void {
-    if (event.button !== _.mouseButtons.LEFT) {
+    if (event.button !== mouseButtons.LEFT) {
       return;
     }
 

@@ -1,7 +1,7 @@
 import { Paragraph } from '../../tools/paragraph';
 import { ListItem as List } from '../../tools/list';
 import { Module } from '../__module';
-import * as _ from '../utils';
+import { deepMerge, isFunction, isObject, isUndefined, log } from '../utils';
 import { PromiseQueue } from '../utils/promise-queue';
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
 import { BoldInlineTool } from '../inline-tools/inline-tool-bold';
@@ -36,7 +36,7 @@ type ToolPrepareData = {
 type ToolPrepareFunction = (data: ToolPrepareData) => void | Promise<void>;
 
 const toToolConstructable = (constructable: unknown): ToolConstructable => {
-  if (!_.isFunction(constructable)) {
+  if (!isFunction(constructable)) {
     throw new Error('Tool constructable must be a function');
   }
 
@@ -152,7 +152,7 @@ export class Tools extends Module {
      */
     const userTools = this.config.tools ?? {};
 
-    this.config.tools = _.deepMerge({}, this.internalTools, userTools);
+    this.config.tools = deepMerge({}, this.internalTools, userTools);
 
     this.validateTools();
 
@@ -198,7 +198,7 @@ export class Tools extends Module {
 
     sequenceData.forEach(chainData => {
       void queue.add(async () => {
-        const callbackData = !_.isUndefined(chainData.data) ? chainData.data : {};
+        const callbackData = !isUndefined(chainData.data) ? chainData.data : {};
 
         try {
           await chainData.function(chainData.data);
@@ -243,7 +243,7 @@ export class Tools extends Module {
         try {
           return tool.reset();
         } catch (error) {
-          _.log(`Tool "${tool.name}" reset failed`, 'warn', error);
+          log(`Tool "${tool.name}" reset failed`, 'warn', error);
 
           return undefined;
         }
@@ -251,7 +251,7 @@ export class Tools extends Module {
 
       if (resetResult instanceof Promise) {
         resetResult.catch(error => {
-          _.log(`Tool "${tool.name}" reset failed`, 'warn', error);
+          log(`Tool "${tool.name}" reset failed`, 'warn', error);
         });
       }
     }
@@ -323,7 +323,7 @@ export class Tools extends Module {
     const notImplementedMethods = tool.getMissingMethods(inlineToolRequiredMethods);
 
     if (notImplementedMethods.length) {
-      _.log(
+      log(
         `Incorrect Inline Tool: ${tool.name}. Some of required methods is not implemented %o`,
         'warn',
         notImplementedMethods
@@ -364,7 +364,7 @@ export class Tools extends Module {
         const prepareFunction: ChainData['function'] = async (payload?: unknown) => {
           const constructable = settings.class;
 
-          if (!constructable || !_.isFunction(constructable.prepare)) {
+          if (!constructable || !isFunction(constructable.prepare)) {
             return;
           }
 
@@ -499,9 +499,9 @@ export class Tools extends Module {
       }
 
       const tool = toolsConfig[toolName];
-      const isConstructorFunction = _.isFunction(tool);
+      const isConstructorFunction = isFunction(tool);
       const toolSettings = tool as ToolSettings;
-      const hasToolClass = _.isFunction(toolSettings.class);
+      const hasToolClass = isFunction(toolSettings.class);
 
       if (!isConstructorFunction && !hasToolClass) {
         throw new CriticalError(
@@ -532,7 +532,7 @@ export class Tools extends Module {
 
       const tool = toolsConfig[toolName];
 
-      if (_.isObject(tool)) {
+      if (isObject(tool)) {
         config[toolName] = tool as ToolSettings;
 
         continue;
@@ -578,7 +578,7 @@ export class Tools extends Module {
       const inlineTool = this.inlineTools.get(name);
 
       if (!inlineTool) {
-        _.log(`Inline tool "${name}" is not available and will be skipped`, 'warn');
+        log(`Inline tool "${name}" is not available and will be skipped`, 'warn');
         continue;
       }
 
@@ -600,7 +600,7 @@ export class Tools extends Module {
       const tune = this.blockTunes.get(name);
 
       if (!tune) {
-        _.log(`Block tune "${name}" is not available and will be skipped`, 'warn');
+        log(`Block tune "${name}" is not available and will be skipped`, 'warn');
         continue;
       }
 

@@ -8,7 +8,7 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { Dom as $ } from '../dom';
-import * as tooltip from '../utils/tooltip';
+import { hide } from '../utils/tooltip';
 import { DATA_ATTR, createSelector } from '../constants';
 import { twMerge } from '../utils/tw';
 import { announce } from '../utils/announcer';
@@ -369,7 +369,7 @@ export class DragManager extends Module {
       this.Blok.BlockSelection.clearSelection();
     }
 
-    tooltip.hide(true);
+    hide(true);
     this.Blok.Toolbar.close();
 
     // Announce drag started to screen readers

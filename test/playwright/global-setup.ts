@@ -3,7 +3,7 @@ import { existsSync, rmSync, writeFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const LOCK_FILE = '.playwright-build.lock';
-const LOCK_TIMEOUT_MS = 120_000; // 2 minutes max wait for build
+const LOCK_TIMEOUT_MS = 300_000; // 5 minutes max wait for build (handles slower CI runners)
 
 /**
  * Global setup for Playwright tests.

@@ -77,7 +77,8 @@
     "bundle:history": "node scripts/view-bundle-trends.mjs",
     "perf:analyze": "node scripts/analyze-performance.mjs",
     "perf:compare": "node scripts/analyze-performance.mjs --baseline",
-    "perf:dashboard": "node scripts/generate-performance-dashboard.mjs"
+    "perf:dashboard": "node scripts/generate-performance-dashboard.mjs",
+    "e2e:validate-categories": "node scripts/validate-test-categories.mjs"
   },
   "author": "JackUait",
   "contributors": [

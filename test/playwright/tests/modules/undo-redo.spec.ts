@@ -146,7 +146,7 @@ test.describe('undo/Redo', () => {
   });
 
   test.describe('focus Preservation', () => {
-    test('editor retains focus after undo', async ({ page }) => {
+    test('@smoke editor retains focus after undo', async ({ page }) => {
       await createBlok(page, {
         data: {
           blocks: [

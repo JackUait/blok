@@ -963,7 +963,7 @@ test.describe('toolbox keyboard navigation', () => {
     await expect(testToolBlock).toBeVisible();
   });
 
-  test('closes toolbox with Escape key', async ({ page }) => {
+  test('@smoke closes toolbox with Escape key', async ({ page }) => {
     await createBlokWithTools(page, {
       simpleTool: {
         class: SimpleTestTool as unknown as BlockToolConstructable,

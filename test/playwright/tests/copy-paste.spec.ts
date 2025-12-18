@@ -338,7 +338,7 @@ test.describe('copy and paste', () => {
   });
 
   test.describe('pasting', () => {
-    test('should paste plain text', async ({ page }) => {
+    test('@smoke should paste plain text', async ({ page }) => {
       await createBlok(page);
 
       const block = getBlockByIndex(page, 0);

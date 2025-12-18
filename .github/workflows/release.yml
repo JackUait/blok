@@ -46,6 +46,52 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Track bundle size
+        run: |
+          echo "📊 Tracking bundle sizes..."
+          node scripts/track-bundle-size.mjs --verbose --output=bundle-size-report.md
+          echo ""
+          echo "Bundle size report:"
+          cat bundle-size-report.md
+
+      - name: Download previous bundle size history
+        id: download-history
+        uses: actions/download-artifact@v4
+        with:
+          name: bundle-size-history
+          path: .
+        continue-on-error: true
+
+      - name: Compare bundle sizes
+        id: compare-sizes
+        run: |
+          if [ -f .bundle-size-history.json ]; then
+            echo "Found previous bundle size history"
+            node scripts/track-bundle-size.mjs --verbose --output=bundle-size-comparison.md --threshold=10
+          else
+            echo "No previous bundle size history found, creating initial baseline"
+            node scripts/track-bundle-size.mjs --verbose --output=bundle-size-comparison.md
+          fi
+
+          # Set output for PR comment
+          if [ -f bundle-size-comparison.md ]; then
+            echo "has_report=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload bundle size history
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-history
+          path: .bundle-size-history.json
+          retention-days: 90
+
+      - name: Upload bundle size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-report
+          path: bundle-size-*.md
+          retention-days: 30
+
       - name: Run E2E tests
         run: yarn e2e
 
@@ -80,8 +126,7 @@ jobs:
           PUBLISHED_VERSION=$(node -p "require('./package.json').version")
           echo "version=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
           echo "Verifying published package version: $PUBLISHED_VERSION"
-          echo "Waiting for npm registry propagation..."
-          sleep 120
+          node scripts/wait-for-registry.mjs --version $PUBLISHED_VERSION --timeout 300000 --verbose
           node scripts/verify-published-package.mjs --version $PUBLISHED_VERSION --timeout 300000
         env:
           NODE_ENV: production

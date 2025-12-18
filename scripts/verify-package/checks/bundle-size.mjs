@@ -27,11 +27,12 @@ export async function checkBundleSize(packageDir, verbose = false) {
     totalSize: 0
   };
 
-  // Bundle size limits (in bytes)
+  // Bundle size reference values (informational, not enforced)
+  // For trend-based tracking, see: scripts/track-bundle-size.mjs
   const limits = {
-    'blok.umd.js': 800 * 1024, // 800KB
-    'blok.mjs': 5 * 1024,      // 5KB (entry point)
-    total: 3 * 1024 * 1024     // 3MB total package
+    'blok.umd.js': 800 * 1024, // 800KB (reference)
+    'blok.mjs': 5 * 1024,      // 5KB (entry point, reference)
+    total: 3 * 1024 * 1024     // 3MB total package (reference)
   };
 
   try {

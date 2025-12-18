@@ -64,6 +64,7 @@ export async function installPackage(name, version, dir, { retries = 3, verbose 
 
 /**
  * Wait for package to be available on npm registry
+ * Uses exponential backoff with jitter for efficient polling
  * @param {string} name - Package name
  * @param {string} version - Package version
  * @param {number} maxWaitMs - Maximum time to wait in milliseconds
@@ -73,31 +74,56 @@ export async function installPackage(name, version, dir, { retries = 3, verbose 
 export async function waitForPackageAvailability(name, version, maxWaitMs = 300000, verbose = false) {
   const packageSpec = `${name}@${version}`;
   const startTime = Date.now();
-  const pollInterval = 10000;
+  const initialInterval = 2000; // Start with 2 seconds
+  const maxInterval = 30000; // Cap at 30 seconds
+  let currentInterval = initialInterval;
+  let attempt = 0;
 
   if (verbose) {
     console.log(`Waiting for ${packageSpec} to be available on npm registry...`);
+    console.log(`Using exponential backoff (2s → 30s max interval)`);
   }
 
   while (Date.now() - startTime < maxWaitMs) {
+    attempt++;
     try {
       const info = await getPackageInfo(name, version);
       if (info && info.version === version) {
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
         if (verbose) {
-          console.log(`Package ${packageSpec} is available!`);
+          console.log(`✓ Package ${packageSpec} is available! (found after ${elapsed}s, ${attempt} attempts)`);
         }
         return true;
       }
     } catch (error) {
       // Package not available yet, continue polling
+      if (verbose && error.message && !error.message.includes('404')) {
+        console.log(`  Registry check error: ${error.message}`);
+      }
     }
 
-    await sleep(pollInterval);
+    // Calculate next wait interval with exponential backoff + jitter
+    const jitter = Math.random() * 1000; // 0-1000ms random jitter
+    const backoffInterval = Math.min(currentInterval, maxInterval);
+    const waitTime = backoffInterval + jitter;
+
+    // Don't wait if we're going to exceed the timeout
+    const timeRemaining = maxWaitMs - (Date.now() - startTime);
+    if (timeRemaining <= 0) {
+      break;
+    }
+
+    const actualWait = Math.min(waitTime, timeRemaining);
 
     if (verbose) {
       const elapsed = Math.round((Date.now() - startTime) / 1000);
-      console.log(`Still waiting... (${elapsed}s elapsed)`);
+      console.log(`  Attempt ${attempt}: Package not found yet (${elapsed}s elapsed, waiting ${Math.round(actualWait / 1000)}s before retry)`);
     }
+
+    await sleep(actualWait);
+
+    // Exponential backoff: double the interval for next time
+    currentInterval = Math.min(currentInterval * 2, maxInterval);
   }
 
   return false;

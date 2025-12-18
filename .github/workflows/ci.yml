@@ -261,13 +261,6 @@ jobs:
       - name: Run E2E Tests
         run: yarn playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}
 
-      - name: Analyze Performance Metrics
-        if: always()
-        run: |
-          SHARD_SUFFIX="${{ matrix.shard && format('-{0}', matrix.shard) || '' }}"
-          SHARD_SUFFIX="${SHARD_SUFFIX//\//-}"
-          node scripts/analyze-performance.mjs --format console --output "test-results/performance-metrics-${{ matrix.project }}${SHARD_SUFFIX}.json"
-
       - name: Upload E2E Test Results
         if: failure()
         uses: actions/upload-artifact@v4
@@ -283,14 +276,6 @@ jobs:
           name: blob-report-${{ matrix.project }}-${{ strategy.job-index }}
           path: blob-report/
           retention-days: 1
-
-      - name: Upload Performance Metrics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: performance-metrics-${{ matrix.project }}-${{ strategy.job-index }}
-          path: test-results/performance-metrics-*.json
-          retention-days: 14
 
   storybook-tests:
     name: Storybook Tests

@@ -31,3 +31,9 @@ storybook-static
 # Bundle size tracking (stored in GitHub artifacts)
 .bundle-size-history.json
 bundle-size-*.md
+
+# Performance tracking (stored in GitHub artifacts)
+.performance-baseline/
+.performance-history/
+performance-dashboard/
+test-results/*.json

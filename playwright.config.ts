@@ -120,6 +120,8 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { open: 'never' }],
+    ['github'],
+    ['json', { outputFile: 'test-results/test-results.json' }],
   ],
   use: {
     headless: true,
@@ -137,7 +139,7 @@ export default defineConfig({
     },
   ],
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 3 : AMOUNT_OF_LOCAL_WORKERS,
+  workers: process.env.CI ? undefined : AMOUNT_OF_LOCAL_WORKERS,
 });
 
 // Export for tooling/scripts

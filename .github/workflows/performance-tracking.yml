@@ -1,0 +1,220 @@
+name: Performance Tracking
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["**"]
+  schedule:
+    # Run weekly on Sundays at 00:00 UTC to track long-term trends
+    - cron: '0 0 * * 0'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  performance-analysis:
+    name: Performance Analysis & Trend Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            playwright-browsers-
+
+      - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
+
+      - name: Download Previous Performance Baseline
+        id: download-baseline
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: performance-baseline
+          path: .performance-baseline/
+
+      - name: Run E2E Tests (All Projects)
+        run: yarn e2e
+
+      - name: Analyze Current Performance
+        run: |
+          node scripts/analyze-performance.mjs \
+            --format console \
+            --output test-results/current-performance.json
+
+      - name: Compare with Baseline (if available)
+        if: steps.download-baseline.outcome == 'success'
+        continue-on-error: true
+        run: |
+          echo "📊 Comparing with previous baseline..."
+          node scripts/analyze-performance.mjs \
+            --current test-results/test-results.json \
+            --baseline .performance-baseline/baseline.json \
+            --threshold 15 \
+            --format markdown \
+            --output test-results/regression-report.md
+
+      - name: Generate Performance Report
+        if: always()
+        run: |
+          node scripts/analyze-performance.mjs \
+            --format markdown \
+            --output test-results/performance-report.md
+
+      - name: Comment PR with Performance Report
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## 📊 Performance Analysis Report\n\n';
+
+            // Add regression report if it exists
+            if (fs.existsSync('test-results/regression-report.md')) {
+              const regressionReport = fs.readFileSync('test-results/regression-report.md', 'utf8');
+              comment += regressionReport;
+            } else {
+              const perfReport = fs.readFileSync('test-results/performance-report.md', 'utf8');
+              comment += perfReport;
+              comment += '\n\n> ℹ️ No baseline available for comparison. This will be used as the baseline for future PRs.\n';
+            }
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Performance Analysis Report')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+      - name: Save Current Results as Baseline
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          mkdir -p .performance-baseline
+          cp test-results/test-results.json .performance-baseline/baseline.json
+          cp test-results/current-performance.json .performance-baseline/performance.json
+
+      - name: Upload Performance Baseline
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-baseline
+          path: .performance-baseline/
+          retention-days: 90
+
+      - name: Upload Performance Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-reports-${{ github.run_number }}
+          path: test-results/*.json
+          retention-days: 90
+
+      - name: Check for Critical Regressions
+        if: steps.download-baseline.outcome == 'success'
+        run: |
+          echo "🔍 Checking for critical performance regressions..."
+          node scripts/analyze-performance.mjs \
+            --current test-results/test-results.json \
+            --baseline .performance-baseline/baseline.json \
+            --threshold 25 \
+            --fail-on-regression
+
+  performance-dashboard:
+    name: Generate Performance Dashboard
+    runs-on: ubuntu-latest
+    needs: performance-analysis
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Download All Historical Performance Data
+        continue-on-error: true
+        run: |
+          mkdir -p .performance-history
+
+          # Download recent artifacts (last 30 runs)
+          gh run list --workflow=performance-tracking.yml --limit 30 --json databaseId --jq '.[].databaseId' | \
+          while read run_id; do
+            echo "Downloading artifacts from run $run_id..."
+            gh run download $run_id --pattern "performance-reports-*" --dir .performance-history/ || true
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Generate Performance Trends Dashboard
+        run: node scripts/generate-performance-dashboard.mjs
+
+      - name: Upload Dashboard
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-dashboard
+          path: performance-dashboard/
+          retention-days: 90
+
+      - name: Deploy Dashboard to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./performance-dashboard
+          destination_dir: performance

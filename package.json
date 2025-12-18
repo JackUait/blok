@@ -74,7 +74,10 @@
     "unpublish": "node scripts/unpublish-package.mjs",
     "bundle:track": "node scripts/track-bundle-size.mjs --verbose",
     "bundle:trends": "node scripts/view-bundle-trends.mjs --trends",
-    "bundle:history": "node scripts/view-bundle-trends.mjs"
+    "bundle:history": "node scripts/view-bundle-trends.mjs",
+    "perf:analyze": "node scripts/analyze-performance.mjs",
+    "perf:compare": "node scripts/analyze-performance.mjs --baseline",
+    "perf:dashboard": "node scripts/generate-performance-dashboard.mjs"
   },
   "author": "JackUait",
   "contributors": [

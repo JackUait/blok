@@ -214,7 +214,7 @@ function generateMarkdown(metrics) {
 
     for (const test of metrics.failedTests.slice(0, 10)) {
       const location = test.location || 'N/A';
-      md += `| ${truncate(test.title, 60)} | \`${location}\` | ${test.project} |\n`;
+      md += `| ${test.title} | \`${location}\` | ${test.project} |\n`;
     }
 
     if (metrics.failedTests.length > 10) {
@@ -230,7 +230,7 @@ function generateMarkdown(metrics) {
     md += `|------|---------|----------|\n`;
 
     for (const test of metrics.flakyTests.slice(0, 10)) {
-      md += `| ${truncate(test.title, 60)} | ${test.retries} | ${test.project} |\n`;
+      md += `| ${test.title} | ${test.retries} | ${test.project} |\n`;
     }
 
     if (metrics.flakyTests.length > 10) {
@@ -240,14 +240,6 @@ function generateMarkdown(metrics) {
   }
 
   return md;
-}
-
-/**
- * Truncate string with ellipsis
- */
-function truncate(str, maxLength) {
-  if (str.length <= maxLength) return str;
-  return str.substring(0, maxLength - 3) + '...';
 }
 
 /**

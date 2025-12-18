@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# Verify version hasn't been manually changed
+node scripts/verify-version.mjs

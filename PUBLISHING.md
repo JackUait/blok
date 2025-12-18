@@ -107,6 +107,43 @@ gh workflow run release.yml --ref beta -f dry_run=true
 
 Shows what would be released without actually publishing.
 
+## Version Protection
+
+To prevent manual version bumps that could break semantic-release, the project has **automated version verification**:
+
+### CI Check
+
+Every pull request and push to master runs a version check:
+- Compares `package.json` version with the latest git tag
+- Fails if a manual version bump is detected
+- Allows version bumps only in semantic-release commits
+
+### Pre-Commit Hook
+
+A Husky pre-commit hook prevents accidental manual version changes:
+```bash
+# Automatically runs before every commit
+node scripts/verify-version.mjs
+```
+
+### Manual Verification
+
+Check version integrity manually:
+```bash
+yarn verify:version
+```
+
+### Why This Matters
+
+Manual version bumps can cause:
+- **Skipped releases** - If version is ahead of the last tag
+- **Duplicate releases** - If version is behind
+- **Broken changelog** - semantic-release loses track of history
+
+**Always let semantic-release handle versioning.**
+
+If you need a specific version, use commit message conventions to trigger the correct bump type.
+
 ## Troubleshooting
 
 ### No release created
@@ -132,6 +169,26 @@ feat: add new feature
 semantic-release has automatic rollback. If npm publish fails, no git tag is created.
 
 To retry: Re-run the workflow after fixing the issue.
+
+### Version verification failed
+
+**Cause:** Manual version change detected in `package.json`.
+
+**Fix:**
+```bash
+# Check what version should be
+yarn verify:version
+
+# Revert to the correct version
+git checkout HEAD -- package.json
+
+# Or manually edit package.json to match the latest git tag
+```
+
+**Prevention:** The pre-commit hook should catch this before commit. If it didn't run, ensure Husky is installed:
+```bash
+yarn prepare
+```
 
 ### Manual recovery
 

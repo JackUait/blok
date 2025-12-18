@@ -171,6 +171,14 @@ function generateMarkdown(metrics) {
   const statusIcon = allPassed ? '✅' : '❌';
   const statusText = allPassed ? 'All tests passed!' : `${metrics.failed} test${metrics.failed > 1 ? 's' : ''} failed`;
 
+  // Find the longest browser duration
+  let longestDuration = 0;
+  for (const [, project] of metrics.projects) {
+    if (project.duration > longestDuration) {
+      longestDuration = project.duration;
+    }
+  }
+
   let md = `## 🧪 E2E Test Report\n\n`;
   md += `**${statusIcon} ${statusText}**\n\n`;
 
@@ -187,7 +195,8 @@ function generateMarkdown(metrics) {
   if (metrics.flaky > 0) {
     md += `| 🔄 Flaky | ${metrics.flaky} |\n`;
   }
-  md += `| ⏱️ Duration | ${formatDuration(metrics.duration)} |\n`;
+  md += `| ⏱️ Total Duration (all browsers combined) | ${formatDuration(metrics.duration)} |\n`;
+  md += `| ⏱️ Longest Browser | ${formatDuration(longestDuration)} |\n`;
   md += `\n`;
 
   // Browser/project breakdown

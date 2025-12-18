@@ -123,12 +123,9 @@ jobs:
           retention-days: 1
 
   install-browsers:
-    name: Install Browsers (${{ matrix.browser }})
+    name: Install Browsers
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    strategy:
-      matrix:
-        browser: [chromium, firefox, webkit]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -136,20 +133,20 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
-      - name: Cache Playwright Browser
+      - name: Cache Playwright Browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
 
-      - name: Install Playwright Browser
+      - name: Install Playwright Browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install ${{ matrix.browser }} --with-deps
+        run: npx playwright install chromium firefox webkit --with-deps
 
       - name: Install Playwright Browser Dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps ${{ matrix.browser }}
+        run: npx playwright install-deps chromium firefox webkit
 
   smoke-test:
     name: Smoke Tests
@@ -172,11 +169,11 @@ jobs:
       - name: Mark Build as Available
         run: echo "BLOK_BUILT=true" >> $GITHUB_ENV
 
-      - name: Restore Playwright Browser from Cache
+      - name: Restore Playwright Browsers from Cache
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
           fail-on-cache-miss: true
 
       - name: Install Browser Dependencies
@@ -246,11 +243,11 @@ jobs:
       - name: Mark Build as Available
         run: echo "BLOK_BUILT=true" >> $GITHUB_ENV
 
-      - name: Restore Playwright Browser from Cache
+      - name: Restore Playwright Browsers from Cache
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
           fail-on-cache-miss: true
 
       - name: Install Browser Dependencies
@@ -349,7 +346,7 @@ jobs:
               echo "EOF"
             } >> $GITHUB_OUTPUT
           else
-            echo "No test results found"
+            echo "::warning::No test results found at playwright-report/results.json"
             {
               echo "REPORT<<EOF"
               echo "## 🧪 E2E Test Report"
@@ -359,6 +356,11 @@ jobs:
             } >> $GITHUB_OUTPUT
           fi
         continue-on-error: true
+
+      - name: Warn on Report Generation Failure
+        if: steps.e2e-report.outcome == 'failure'
+        run: |
+          echo "::warning::E2E report generation failed. Check the 'Generate E2E Report Summary' step for details."
 
       - name: Comment on PR
         if: github.event_name == 'pull_request'

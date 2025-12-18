@@ -163,7 +163,7 @@ test.describe('block movement shortcuts', () => {
       expect(blocks).toHaveLength(3);
       expect((blocks[0]?.data as { text: string }).text).toBe('Second');
       expect((blocks[1]?.data as { text: string }).text).toBe('First');
-      expect((blocks[2]?.data as { text: string }).text).toBe('WRONG VALUE');
+      expect((blocks[2]?.data as { text: string }).text).toBe('Third');
     });
 
     test('does nothing when the first block is selected', async ({ page }) => {

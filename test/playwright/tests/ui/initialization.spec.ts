@@ -122,7 +122,7 @@ test.describe('blok basic initialization', () => {
   });
 
   test.describe('zero-config initialization', () => {
-    test('creates a visible UI', async ({ page }) => {
+    test('@smoke creates a visible UI', async ({ page }) => {
       await createBlok(page, {});
 
       await expect(page.locator(BLOK_ROOT_SELECTOR)).toBeVisible();

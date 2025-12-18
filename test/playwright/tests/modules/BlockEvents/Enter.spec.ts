@@ -109,7 +109,7 @@ test.describe('enter keydown', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  test('should split block and remove selected fragment when part of text is selected', async ({ page }) => {
+  test('@smoke should split block and remove selected fragment when part of text is selected', async ({ page }) => {
     await createParagraphBlok(page, [ 'The block with some text' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);

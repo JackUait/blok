@@ -46,6 +46,69 @@ node scripts/view-bundle-trends.mjs --csv=sizes.csv
 - `--limit=N` - Show last N entries (default: 10)
 - `--csv=FILE` - Export data to CSV file
 
+## Performance Tracking
+
+### [`analyze-performance.mjs`](./analyze-performance.mjs)
+
+Analyzes Playwright test performance metrics and detects regressions.
+
+**Usage:**
+```bash
+# Basic analysis
+yarn perf:analyze
+
+# Compare with baseline
+node scripts/analyze-performance.mjs --baseline path/to/baseline.json --threshold 20
+
+# Save metrics to file
+node scripts/analyze-performance.mjs --output metrics.json --format markdown
+
+# Fail build on regression (for CI)
+node scripts/analyze-performance.mjs --baseline baseline.json --fail-on-regression
+```
+
+**Options:**
+- `--current <file>` - Current test results JSON (default: test-results/test-results.json)
+- `--baseline <file>` - Baseline for comparison
+- `--threshold <percent>` - Regression threshold (default: 20)
+- `--output <file>` - Save metrics to JSON file
+- `--format <type>` - Output format: console, markdown, json (default: console)
+- `--fail-on-regression` - Exit with code 1 if regressions found
+
+**Outputs:**
+- Overall metrics (duration, test count, pass/fail/skip counts)
+- Project breakdown (per browser)
+- Slowest tests (top 10)
+- Flaky tests (passed after retries)
+- Regressions (if baseline provided)
+
+**See:** [Performance Tracking Documentation](../docs/PERFORMANCE-TRACKING.md)
+
+### [`generate-performance-dashboard.mjs`](./generate-performance-dashboard.mjs)
+
+Generates an interactive HTML dashboard with historical performance trends.
+
+**Usage:**
+```bash
+# Generate dashboard
+yarn perf:dashboard
+
+# Open dashboard
+open performance-dashboard/index.html
+```
+
+**Requirements:**
+- Historical data in `.performance-history/` directory
+- Internet connection (for Chart.js CDN)
+
+**Features:**
+- Real-time metrics cards
+- Duration trend chart
+- Pass rate trend chart
+- Flaky rate trend chart
+- Test count over time
+- Slowest tests table
+
 ## Package Verification
 
 ### [`verify-published-package.mjs`](./verify-published-package.mjs)
@@ -111,6 +174,8 @@ yarn i18n:check
 ```
 scripts/
 ├── README.md                           # This file
+├── analyze-performance.mjs            # Performance metrics analyzer
+├── generate-performance-dashboard.mjs # Performance dashboard generator
 ├── track-bundle-size.mjs              # Bundle size tracking
 ├── view-bundle-trends.mjs             # Historical trend viewer
 ├── verify-published-package.mjs       # Package verification
@@ -132,6 +197,17 @@ scripts/
 ## CI/CD Integration
 
 These scripts are integrated into GitHub Actions workflows:
+
+- **CI workflow** ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml))
+  - Collects performance metrics on every test run
+  - Uploads metrics as artifacts
+
+- **Performance tracking** ([`.github/workflows/performance-tracking.yml`](../.github/workflows/performance-tracking.yml))
+  - Compares with baseline on PRs
+  - Generates performance reports
+  - Posts PR comments with regression analysis
+  - Updates baseline on master
+  - Generates historical dashboard
 
 - **Release workflow** ([`.github/workflows/release.yml`](../.github/workflows/release.yml))
   - Tracks bundle sizes
@@ -191,6 +267,5 @@ When adding new scripts:
 
 ## Related Documentation
 
-- [Bundle Size Tracking](../docs/bundle-size-tracking.md)
 - [Development Guide](../CLAUDE.md)
 - [Contributing Guide](../CONTRIBUTING.md)

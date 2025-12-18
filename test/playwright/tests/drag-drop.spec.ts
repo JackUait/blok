@@ -194,7 +194,7 @@ test.describe('drag and drop', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  test('should move block from first position to the last', async ({ page }) => {
+  test('@smoke should move block from first position to the last', async ({ page }) => {
     const blocks = [
       {
         type: 'paragraph',

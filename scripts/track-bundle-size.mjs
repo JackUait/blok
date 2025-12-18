@@ -207,17 +207,17 @@ function compareSizes(current, previous, threshold = 10) {
 function generateMarkdownReport(comparison, current) {
   const lines = [];
 
-  lines.push('# Bundle Size Report\n');
+  lines.push('## Bundle Size Report\n');
 
   if (comparison.alerts.length > 0) {
-    lines.push('## Alerts\n');
+    lines.push('### Alerts\n');
     for (const alert of comparison.alerts) {
       lines.push(`- ${alert}`);
     }
     lines.push('');
   }
 
-  lines.push('## Current Bundle Sizes\n');
+  lines.push('### Current Bundle Sizes\n');
   lines.push('| Bundle | Size | Previous | Change |');
   lines.push('|--------|------|----------|--------|');
 

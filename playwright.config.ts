@@ -57,6 +57,10 @@ const CROSS_BROWSER_TESTS = [
   // UI state management
   '**/onchange.spec.ts',
   '**/modules/multi-block-conversion.spec.ts',
+
+  // UI interactions requiring cross-browser validation
+  '**/ui/plus-block-tunes-interaction.spec.ts',
+  '**/ui/inline-toolbar-nested-popover-keyboard.spec.ts',
 ] as const;
 
 // Logic/API tests - browser-agnostic, run once on Chromium
@@ -65,7 +69,7 @@ const LOGIC_TESTS = [
   '**/api/**/*.spec.ts',
 
   // Module logic tests
-  '**/modules/BlockManager.spec.ts',
+  '**/modules/blockManager.spec.ts',
   '**/modules/block-movement.spec.ts',
   '**/modules/Saver.spec.ts',
   '**/modules/BlockIds.spec.ts',
@@ -116,8 +120,18 @@ export default defineConfig({
   expect: {
     timeout: 5_000,
   },
-  fullyParallel: false,
-  reporter: [['list']],
+  fullyParallel: true,
+  reporter: process.env.CI
+    ? [
+        ['blob', { outputDir: 'blob-report' }],
+        ['github'],
+        ['json', { outputFile: 'test-results/test-results.json' }],
+      ]
+    : [
+        ['list'],
+        ['html', { open: 'never' }],
+        ['json', { outputFile: 'test-results/test-results.json' }],
+      ],
   use: {
     headless: true,
     screenshot: 'only-on-failure',
@@ -134,7 +148,7 @@ export default defineConfig({
     },
   ],
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 3 : AMOUNT_OF_LOCAL_WORKERS,
+  workers: process.env.CI ? undefined : AMOUNT_OF_LOCAL_WORKERS,
 });
 
 // Export for tooling/scripts

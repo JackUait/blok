@@ -190,7 +190,7 @@ test.describe('paragraph tool', () => {
   });
 
   test.describe('rendering', () => {
-    test('renders paragraph block with text content', async ({ page }) => {
+    test('@smoke renders paragraph block with text content', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createParagraphData('Test paragraph content'),
@@ -235,7 +235,7 @@ test.describe('paragraph tool', () => {
   });
 
   test.describe('editing', () => {
-    test('allows editing paragraph text', async ({ page }) => {
+    test('@smoke allows editing paragraph text', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createParagraphData('Original text'),
@@ -434,7 +434,7 @@ test.describe('paragraph tool', () => {
   });
 
   test.describe('data saving', () => {
-    test('saves paragraph data correctly', async ({ page }) => {
+    test('@smoke saves paragraph data correctly', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createParagraphData('Test paragraph content'),

@@ -18,6 +18,7 @@ process.env.BROWSER = 'open';
 export default defineConfig(({ mode }) => {
   const NODE_ENV = mode || 'development';
   const VERSION = pkg.version;
+  const isStorybookBuild = process.env.npm_lifecycle_script?.includes('storybook');
 
   return {
     build: {
@@ -76,12 +77,13 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [
-      cssInjectedByJsPlugin({
+      // Only use CSS injection plugin for library builds, not Storybook
+      !isStorybookBuild && cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (outputChunk) => {
           // Only inject CSS into the main blok bundle, not locales
           return outputChunk.name === 'blok';
         },
       }),
-    ],
+    ].filter(Boolean),
   };
 });

@@ -9,6 +9,7 @@ node_modules/*
 
 npm-debug.log
 yarn-error.log
+.yarn/cache
 .yarn/install-state.gz
 install-state.gz
 
@@ -20,6 +21,7 @@ coverage/
 .nyc_output/
 .vscode/launch.json
 jscpd-report/
+playwright-report/
 
 *storybook.log
 storybook-static
@@ -31,3 +33,9 @@ storybook-static
 # Bundle size tracking (stored in GitHub artifacts)
 .bundle-size-history.json
 bundle-size-*.md
+
+# Performance tracking (stored in GitHub artifacts)
+.performance-baseline/
+.performance-history/
+performance-dashboard/
+test-results/*.json

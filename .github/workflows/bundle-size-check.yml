@@ -28,10 +28,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'yarn'
+
+      - name: Cache Yarn dependencies
+        id: yarn-cache
+        uses: actions/cache@v4
+        with:
+          path: .yarn/cache
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            yarn-
 
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --immutable
+
+      - name: Verify cache hit
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        run: echo "::warning::Yarn cache miss, slower install expected"
 
       - name: Build PR
         run: yarn build
@@ -73,7 +85,7 @@ jobs:
             {
               echo "has_report=false"
               echo "REPORT<<EOF"
-              echo "# Bundle Size Report"
+              echo "## Bundle Size Report"
               echo ""
               echo "No baseline data available for comparison. This is expected for the first run."
               echo ""
@@ -112,7 +124,7 @@ jobs:
             }
 
             // Create new comment with latest report
-            const commentBody = `${report}\n\n---\n*Automated bundle size tracking*`;
+            const commentBody = `${report}`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,

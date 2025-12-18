@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: ["**"]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -14,6 +18,7 @@ jobs:
   version-check:
     name: Version Verification
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,6 +36,7 @@ jobs:
   i18n:
     name: i18n Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,37 +52,41 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Lint
         run: yarn lint
 
-  unit-tests:
-    name: Unit Tests
+  validate-test-categories:
+    name: Validate Test Categories
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'yarn'
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
-      - name: Install dependencies
-        run: yarn install
+      - name: Validate E2E Test Categorization
+        run: yarn e2e:validate-categories
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Run Unit Tests
         run: yarn test
@@ -84,20 +94,25 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      cache-hit: ${{ steps.build-cache.outputs.cache-hit }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'yarn'
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
-      - name: Install dependencies
-        run: yarn install
+      - name: Cache Build Output
+        id: build-cache
+        uses: actions/cache@v4
+        with:
+          path: dist/
+          key: build-${{ runner.os }}-${{ hashFiles('src/**', 'types/**', 'package.json', 'vite.config.mjs', 'tsconfig.json') }}
 
       - name: Build
+        if: steps.build-cache.outputs.cache-hit != 'true'
         run: yarn build
 
       - name: Upload build artifacts
@@ -107,68 +122,300 @@ jobs:
           path: dist/
           retention-days: 1
 
-  e2e-tests:
-    name: E2E Tests
-    needs: build
+  install-browsers:
+    name: Install Browsers
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
         with:
-          node-version: 24
-          cache: 'yarn'
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
 
-      - name: Install dependencies
-        run: yarn install
+      - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium firefox webkit --with-deps
 
-      - name: Download build artifacts
+      - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium firefox webkit
+
+  smoke-test:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [build, install-browsers]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
 
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+      - name: Mark Build as Available
+        run: echo "BLOK_BUILT=true" >> $GITHUB_ENV
+
+      - name: Restore Playwright Browsers from Cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
+          fail-on-cache-miss: true
+
+      - name: Install Browser Dependencies
+        run: npx playwright install-deps chromium
+
+      - name: Run Smoke Tests
+        run: yarn playwright test --project=chromium --grep="@smoke"
+
+      - name: Upload Smoke Test Results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: test-results/
+          retention-days: 3
+
+  e2e-tests:
+    name: E2E Tests (${{ matrix.project }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
+    runs-on: ubuntu-latest
+    needs: [smoke-test, build, install-browsers]
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium
+            browser: chromium
+            shard: 1/2
+          - project: chromium
+            browser: chromium
+            shard: 2/2
+          - project: firefox
+            browser: firefox
+            shard: 1/2
+          - project: firefox
+            browser: firefox
+            shard: 2/2
+          - project: webkit
+            browser: webkit
+            shard: 1/2
+          - project: webkit
+            browser: webkit
+            shard: 2/2
+          # chromium-logic has ~2x more tests (566 vs 278), so use 3 shards
+          - project: chromium-logic
+            browser: chromium
+            shard: 1/3
+          - project: chromium-logic
+            browser: chromium
+            shard: 2/3
+          - project: chromium-logic
+            browser: chromium
+            shard: 3/3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Mark Build as Available
+        run: echo "BLOK_BUILT=true" >> $GITHUB_ENV
+
+      - name: Restore Playwright Browsers from Cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
+          fail-on-cache-miss: true
+
+      - name: Install Browser Dependencies
+        run: npx playwright install-deps ${{ matrix.browser }}
 
       - name: Run E2E Tests
-        run: yarn e2e
+        run: yarn playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}
 
       - name: Upload E2E Test Results
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-results
+          name: playwright-results-${{ matrix.project }}-${{ strategy.job-index }}
           path: test-results/
-          retention-days: 7
+          retention-days: 3
+
+      - name: Upload Blob Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.project }}-${{ strategy.job-index }}
+          path: blob-report/
+          retention-days: 1
 
   storybook-tests:
     name: Storybook Tests
-    needs: build
     runs-on: ubuntu-latest
+    # No E2E dependency - storybook tests run independently
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Cache Playwright Browser
+        id: playwright-cache
+        uses: actions/cache@v4
         with:
-          node-version: 24
-          cache: 'yarn'
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('**/yarn.lock') }}
 
-      - name: Install dependencies
-        run: yarn install
+      - name: Install Playwright Browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
+      - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+      - name: Build Storybook
+        run: yarn storybook:build
 
       - name: Run Storybook Tests
         run: yarn storybook:test
+
+  merge-e2e-reports:
+    name: Merge E2E Reports
+    runs-on: ubuntu-latest
+    needs: [e2e-tests]
+    if: always() && needs.e2e-tests.result != 'skipped'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Download All Blob Reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: all-blob-reports/
+          merge-multiple: true
+
+      - name: Merge Reports
+        run: |
+          echo "Downloaded blob reports:"
+          ls -la all-blob-reports/
+
+          # Merge blob reports into HTML and JSON reports
+          mkdir -p playwright-report
+          PLAYWRIGHT_JSON_OUTPUT_FILE=playwright-report/results.json npx playwright merge-reports --reporter=html,json ./all-blob-reports
+
+      - name: Generate E2E Report Summary
+        id: e2e-report
+        if: always()
+        run: |
+          if [ -f playwright-report/results.json ]; then
+            node scripts/generate-e2e-report.mjs --input=playwright-report/results.json --output=e2e-report.md
+            {
+              echo "REPORT<<EOF"
+              cat e2e-report.md
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          else
+            echo "::warning::No test results found at playwright-report/results.json"
+            {
+              echo "REPORT<<EOF"
+              echo "## 🧪 E2E Test Report"
+              echo ""
+              echo "⚠️ No test results available"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Warn on Report Generation Failure
+        if: steps.e2e-report.outcome == 'failure'
+        run: |
+          echo "::warning::E2E report generation failed. Check the 'Generate E2E Report Summary' step for details."
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          E2E_REPORT: ${{ steps.e2e-report.outputs.REPORT }}
+        with:
+          script: |
+            const report = process.env.E2E_REPORT;
+
+            // Skip if no report content available
+            if (!report || report.trim() === '') {
+              console.log('No report content available, skipping comment');
+              return;
+            }
+
+            // Get PR number from payload (more reliable than context.issue)
+            const prNumber = context.payload.pull_request?.number;
+            if (!prNumber) {
+              console.log('No PR number found, skipping comment');
+              return;
+            }
+
+            // Find existing E2E report comments
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const e2eComments = comments.filter(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('E2E Test Report')
+            );
+
+            // Delete existing E2E report comments
+            for (const comment of e2eComments) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: comment.id
+              });
+            }
+
+            // Create new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: report
+            });
+
+      - name: Upload Merged HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-merged
+          path: playwright-report/
+          retention-days: 7

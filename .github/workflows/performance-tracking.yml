@@ -1,18 +1,19 @@
 name: Performance Tracking
 
 on:
-  # Run after CI completes for push/PR events
+  # Run after CI completes for master branch pushes
   workflow_run:
     workflows: ["CI"]
     types:
       - completed
+    branches:
+      - master
   # Run weekly on Sundays at 00:00 UTC to track long-term trends
   schedule:
     - cron: '0 0 * * 0'
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   performance-analysis:
@@ -126,71 +127,13 @@ jobs:
             --format markdown \
             --output test-results/performance-report.md
 
-      - name: Comment PR with Performance Report
-        if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-
-            let comment = '## 📊 Performance Analysis Report\n\n';
-
-            // Add regression report if it exists
-            if (fs.existsSync('test-results/regression-report.md')) {
-              const regressionReport = fs.readFileSync('test-results/regression-report.md', 'utf8');
-              comment += regressionReport;
-            } else {
-              const perfReport = fs.readFileSync('test-results/performance-report.md', 'utf8');
-              comment += perfReport;
-              comment += '\n\n> ℹ️ No baseline available for comparison. This will be used as the baseline for future PRs.\n';
-            }
-
-            // Get PR number from the workflow_run event
-            const prNumber = ${{ github.event.workflow_run.pull_requests[0].number || 'null' }};
-            if (!prNumber) {
-              console.log('No PR number found, skipping comment');
-              return;
-            }
-
-            // Find existing comment
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-            });
-
-            const botComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('Performance Analysis Report')
-            );
-
-            if (botComment) {
-              // Update existing comment
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: comment
-              });
-            } else {
-              // Create new comment
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: comment
-              });
-            }
-
       - name: Save Current Results as Baseline
-        if: (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'master') || (github.event_name == 'schedule')
         run: |
           mkdir -p .performance-baseline
           cp test-results/test-results.json .performance-baseline/baseline.json
           cp test-results/current-performance.json .performance-baseline/performance.json
 
       - name: Upload Performance Baseline
-        if: (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'master') || (github.event_name == 'schedule')
         uses: actions/upload-artifact@v4
         with:
           name: performance-baseline
@@ -220,7 +163,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: performance-analysis
     timeout-minutes: 20
-    if: (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'master') || (github.event_name == 'schedule')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -273,7 +215,6 @@ jobs:
           retention-days: 30
 
       - name: Deploy Dashboard to GitHub Pages
-        if: (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'master') || (github.event_name == 'schedule')
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

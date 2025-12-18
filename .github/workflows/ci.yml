@@ -351,7 +351,8 @@ jobs:
           ls -la all-blob-reports/
 
           # Merge blob reports into HTML and JSON reports
-          npx playwright merge-reports --reporter=html,json ./all-blob-reports
+          mkdir -p playwright-report
+          PLAYWRIGHT_JSON_OUTPUT_FILE=playwright-report/results.json npx playwright merge-reports --reporter=html,json ./all-blob-reports
 
       - name: Generate E2E Report Summary
         id: e2e-report

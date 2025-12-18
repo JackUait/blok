@@ -365,9 +365,11 @@ jobs:
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
+        env:
+          E2E_REPORT: ${{ steps.e2e-report.outputs.REPORT }}
         with:
           script: |
-            const report = `${{ steps.e2e-report.outputs.REPORT }}`;
+            const report = process.env.E2E_REPORT;
 
             // Skip if no report content available
             if (!report || report.trim() === '') {

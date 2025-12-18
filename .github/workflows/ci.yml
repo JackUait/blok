@@ -268,7 +268,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-results-${{ matrix.project }}${{ matrix.shard && format('-{0}', matrix.shard) || '' }}
+          name: playwright-results-${{ matrix.project }}-${{ strategy.job-index }}
           path: test-results/
           retention-days: 3
 
@@ -284,7 +284,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: performance-metrics-${{ matrix.project }}${{ matrix.shard && format('-{0}', matrix.shard) || '' }}
+          name: performance-metrics-${{ matrix.project }}-${{ strategy.job-index }}
           path: test-results/performance-metrics-*.json
           retention-days: 14
 

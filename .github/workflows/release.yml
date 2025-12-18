@@ -32,10 +32,22 @@ jobs:
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
-          cache: 'yarn'
+
+      - name: Cache Yarn dependencies
+        id: yarn-cache
+        uses: actions/cache@v4
+        with:
+          path: .yarn/cache
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            yarn-
 
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --immutable
+
+      - name: Verify cache hit
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        run: echo "::warning::Yarn cache miss, slower install expected"
 
       - name: Lint
         run: yarn lint

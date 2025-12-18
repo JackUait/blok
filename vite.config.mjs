@@ -29,6 +29,10 @@ export default defineConfig(({ mode }) => {
         fileName: 'blok',
       },
       rollupOptions: {
+        output: {
+          // Disable code splitting for library builds to keep everything in one file
+          inlineDynamicImports: true,
+        },
         plugins: [
           license({
             thirdParty: {

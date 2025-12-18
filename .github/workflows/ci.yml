@@ -121,7 +121,6 @@ jobs:
   install-browsers:
     name: Install Browsers (${{ matrix.browser }})
     runs-on: ubuntu-latest
-    needs: [build]
     timeout-minutes: 10
     strategy:
       matrix:
@@ -219,12 +218,16 @@ jobs:
           - project: webkit
             browser: webkit
             shard: 2/2
+          # chromium-logic has ~2x more tests (566 vs 278), so use 3 shards
           - project: chromium-logic
             browser: chromium
-            shard: 1/2
+            shard: 1/3
           - project: chromium-logic
             browser: chromium
-            shard: 2/2
+            shard: 2/3
+          - project: chromium-logic
+            browser: chromium
+            shard: 3/3
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -288,7 +291,7 @@ jobs:
   storybook-tests:
     name: Storybook Tests
     runs-on: ubuntu-latest
-    needs: [install-browsers]
+    # No E2E dependency - storybook tests run independently
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -297,14 +300,19 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
-      - name: Restore Playwright Browser from Cache
-        uses: actions/cache/restore@v4
+      - name: Cache Playwright Browser
+        id: playwright-cache
+        uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-chromium-${{ hashFiles('**/yarn.lock') }}
-          fail-on-cache-miss: true
+
+      - name: Install Playwright Browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
 
       - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
       - name: Build Storybook

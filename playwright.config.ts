@@ -116,8 +116,11 @@ export default defineConfig({
   expect: {
     timeout: 5_000,
   },
-  fullyParallel: false,
-  reporter: [['list']],
+  fullyParallel: true,
+  reporter: [
+    ['list'],
+    ['html', { open: 'never' }],
+  ],
   use: {
     headless: true,
     screenshot: 'only-on-failure',

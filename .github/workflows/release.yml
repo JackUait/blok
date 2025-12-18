@@ -92,6 +92,23 @@ jobs:
           path: bundle-size-*.md
           retention-days: 30
 
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            playwright-browsers-
+
+      - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
+
       - name: Run E2E tests
         run: yarn e2e
 

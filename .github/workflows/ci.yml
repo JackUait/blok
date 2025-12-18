@@ -109,7 +109,6 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -124,14 +123,22 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
         with:
-          name: dist
-          path: dist/
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            playwright-browsers-
 
       - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
 
       - name: Run E2E Tests
         run: yarn e2e
@@ -144,9 +151,16 @@ jobs:
           path: test-results/
           retention-days: 7
 
+      - name: Upload E2E HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   storybook-tests:
     name: Storybook Tests
-    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -161,14 +175,22 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
         with:
-          name: dist
-          path: dist/
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            playwright-browsers-
 
       - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
 
       - name: Run Storybook Tests
         run: yarn storybook:test

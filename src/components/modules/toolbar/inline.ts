@@ -227,6 +227,17 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
+    /**
+     * Guard against race condition: the deferred callback from scheduleInitialization()
+     * can fire before UI module has created its wrapper element.
+     * If UI isn't ready yet, reschedule and try again.
+     */
+    if (this.Blok.UI?.nodes?.wrapper === undefined) {
+      this.initializationScheduled = false;
+      this.scheduleInitialization();
+
+      return;
+    }
 
     this.make();
     this.tryRegisterShortcuts();

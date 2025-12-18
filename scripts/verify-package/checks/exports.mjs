@@ -11,7 +11,7 @@ import { pathToFileURL } from 'url';
  */
 export async function checkExports(tempDir, packageName, verbose = false) {
   const details = {
-    defaultImport: false,
+    namedImport: false,
     localesImport: false,
     commonjsRequire: false,
     dynamicImport: false,
@@ -19,26 +19,26 @@ export async function checkExports(tempDir, packageName, verbose = false) {
   };
 
   try {
-    // Test 1: Default ESM import
+    // Test 1: Named ESM import (Blok uses named exports)
     if (verbose) {
-      console.log('  Testing default ESM import...');
+      console.log('  Testing named ESM import...');
     }
     try {
-      const testFile = join(tempDir, 'test-default-import.mjs');
+      const testFile = join(tempDir, 'test-named-import.mjs');
       await writeFile(testFile, `
-        import Blok from '${packageName}';
+        import { Blok } from '${packageName}';
         if (typeof Blok !== 'function') {
           throw new Error('Blok is not a constructor function');
         }
-        console.log('Default import: OK');
+        console.log('Named import: OK');
       `);
 
       const module = await import(pathToFileURL(testFile).href);
-      details.defaultImport = true;
+      details.namedImport = true;
     } catch (error) {
-      details.errors.push(`Default import failed: ${error.message}`);
+      details.errors.push(`Named import failed: ${error.message}`);
       if (verbose) {
-        console.log(`  ✗ Default import failed: ${error.message}`);
+        console.log(`  ✗ Named import failed: ${error.message}`);
       }
     }
 
@@ -65,16 +65,16 @@ export async function checkExports(tempDir, packageName, verbose = false) {
       }
     }
 
-    // Test 3: CommonJS require
+    // Test 3: CommonJS require (returns an object with Blok property)
     if (verbose) {
       console.log('  Testing CommonJS require...');
     }
     try {
       const testFile = join(tempDir, 'test-require.cjs');
       await writeFile(testFile, `
-        const Blok = require('${packageName}');
-        if (typeof Blok !== 'function') {
-          throw new Error('Blok is not a constructor function');
+        const pkg = require('${packageName}');
+        if (typeof pkg.Blok !== 'function') {
+          throw new Error('pkg.Blok is not a constructor function');
         }
         console.log('CommonJS require: OK');
       `);
@@ -89,15 +89,15 @@ export async function checkExports(tempDir, packageName, verbose = false) {
       }
     }
 
-    // Test 4: Dynamic import
+    // Test 4: Dynamic import (uses named export)
     if (verbose) {
       console.log('  Testing dynamic import...');
     }
     try {
       const packagePath = join(tempDir, 'node_modules', packageName);
       const module = await import(pathToFileURL(join(packagePath, 'dist', 'blok.mjs')).href);
-      if (typeof module.default !== 'function') {
-        throw new Error('Default export is not a constructor function');
+      if (typeof module.Blok !== 'function') {
+        throw new Error('Blok named export is not a constructor function');
       }
       details.dynamicImport = true;
     } catch (error) {
@@ -108,7 +108,7 @@ export async function checkExports(tempDir, packageName, verbose = false) {
     }
 
     // Determine if all checks passed
-    const allPassed = details.defaultImport &&
+    const allPassed = details.namedImport &&
                       details.localesImport &&
                       details.commonjsRequire &&
                       details.dynamicImport;

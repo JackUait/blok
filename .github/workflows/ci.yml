@@ -180,7 +180,7 @@ jobs:
         run: npx playwright install-deps chromium
 
       - name: Run Smoke Tests
-        run: yarn playwright test --project=chromium --grep="@smoke"
+        run: yarn e2e:smoke
 
       - name: Upload Smoke Test Results
         if: failure()

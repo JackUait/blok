@@ -34,7 +34,7 @@ export { DATA_ATTR } from './components/constants/data-attributes';
  * Blok
  * @license Apache-2.0
  */
-export class Blok {
+class Blok {
   /**
    * Store user-provided configuration for later export
    */
@@ -284,3 +284,5 @@ export class Blok {
       });
   }
 }
+
+export { Blok };

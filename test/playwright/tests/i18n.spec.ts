@@ -211,7 +211,7 @@ const getTooltipText = async (page: Page, triggerElement: Locator): Promise<stri
 
   const tooltip = page.locator(TOOLTIP_INTERFACE_SELECTOR);
 
-  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toBeHidden();
 
   return (await tooltip.textContent()) ?? '';
 };

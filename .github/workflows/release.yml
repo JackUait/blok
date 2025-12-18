@@ -68,10 +68,12 @@ jobs:
 
       - name: Download previous bundle size history
         id: download-history
-        uses: actions/download-artifact@v4
+        uses: dawidd6/action-download-artifact@v6
         with:
+          workflow: release.yml
           name: bundle-size-history
           path: .
+          if_no_artifact_found: warn
         continue-on-error: true
 
       - name: Compare bundle sizes

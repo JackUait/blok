@@ -76,7 +76,12 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [
-      cssInjectedByJsPlugin(),
+      cssInjectedByJsPlugin({
+        jsAssetsFilterFunction: (outputChunk) => {
+          // Only inject CSS into the main blok bundle, not locales
+          return outputChunk.name === 'blok';
+        },
+      }),
     ],
   };
 });

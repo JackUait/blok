@@ -3,66 +3,29 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      release-type:
-        description: 'Release type'
-        type: choice
-        options:
-          - release
-          - prerelease
-        default: release
-      prerelease-type:
-        description: 'Pre-release type (only for prerelease)'
-        type: choice
-        options:
-          - beta
-          - alpha
-          - rc
-        default: beta
-      dry-run:
-        description: 'Dry run (no publish)'
+      dry_run:
+        description: 'Dry run (preview without publishing)'
+        required: false
         type: boolean
         default: false
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
+  id-token: write
 
 jobs:
-  release-please:
-    name: Create Release PR
+  release:
+    name: Release
     runs-on: ubuntu-latest
-    outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
-      version: ${{ steps.release.outputs.version }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Update release-please config for prerelease
-        if: ${{ inputs.release-type == 'prerelease' }}
-        run: |
-          jq '.packages["."].prerelease = true | .packages["."]["prerelease-type"] = "${{ inputs.prerelease-type }}"' release-please-config.json > tmp.json && mv tmp.json release-please-config.json
-
-      - name: Run release-please
-        id: release
-        uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  publish:
-    name: Publish to NPM
-    needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -74,25 +37,144 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Lint
+        run: yarn lint
+
+      - name: Run unit tests
+        run: yarn test
+
       - name: Build
         run: yarn build
 
-      - name: Publish to NPM
-        if: ${{ !inputs.dry-run }}
-        run: npm publish --access public --provenance ${{ inputs.release-type == 'prerelease' && format('--tag {0}', inputs.prerelease-type) || '' }}
+      - name: Track bundle size
+        run: |
+          echo "📊 Tracking bundle sizes..."
+          node scripts/track-bundle-size.mjs --verbose --output=bundle-size-report.md
+          echo ""
+          echo "Bundle size report:"
+          cat bundle-size-report.md
+
+      - name: Download previous bundle size history
+        id: download-history
+        uses: actions/download-artifact@v4
+        with:
+          name: bundle-size-history
+          path: .
+        continue-on-error: true
+
+      - name: Compare bundle sizes
+        id: compare-sizes
+        run: |
+          if [ -f .bundle-size-history.json ]; then
+            echo "Found previous bundle size history"
+            node scripts/track-bundle-size.mjs --verbose --output=bundle-size-comparison.md --threshold=10
+          else
+            echo "No previous bundle size history found, creating initial baseline"
+            node scripts/track-bundle-size.mjs --verbose --output=bundle-size-comparison.md
+          fi
+
+          # Set output for PR comment
+          if [ -f bundle-size-comparison.md ]; then
+            echo "has_report=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload bundle size history
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-history
+          path: .bundle-size-history.json
+          retention-days: 90
+
+      - name: Upload bundle size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-report
+          path: bundle-size-*.md
+          retention-days: 30
+
+      - name: Run E2E tests
+        run: yarn e2e
+
+      - name: Pre-release verification (staging)
+        run: |
+          echo "📦 Creating package tarball for pre-release verification..."
+          npm pack
+          echo "✓ Package tarball created"
+          echo ""
+          echo "🔍 Running pre-release verification against local build..."
+          node scripts/verify-published-package.mjs --local --verbose
+        env:
+          NODE_ENV: production
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "Running in dry-run mode (no publish)"
+            npx semantic-release --dry-run
+          else
+            npx semantic-release
+          fi
+
+      - name: Verify published package
+        id: verify
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          PUBLISHED_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
+          echo "Verifying published package version: $PUBLISHED_VERSION"
+          node scripts/wait-for-registry.mjs --version $PUBLISHED_VERSION --timeout 300000 --verbose
+          node scripts/verify-published-package.mjs --version $PUBLISHED_VERSION --timeout 300000
+        env:
+          NODE_ENV: production
+        continue-on-error: true
+
+      - name: Rollback on verification failure
+        if: github.event.inputs.dry_run != 'true' && steps.verify.outcome == 'failure'
+        run: |
+          VERSION="${{ steps.verify.outputs.version }}"
+          PACKAGE_NAME="@jackuait/blok"
+
+          echo "❌ Post-publish verification failed!"
+          echo "🔄 Initiating automatic rollback..."
+          echo ""
+          echo "Package: $PACKAGE_NAME@$VERSION"
+          echo "Action: Unpublishing from npm registry"
+          echo ""
+
+          # Attempt to unpublish the broken package
+          if npm unpublish "$PACKAGE_NAME@$VERSION" --force; then
+            echo "✅ Successfully unpublished $PACKAGE_NAME@$VERSION"
+            echo ""
+            echo "⚠️  The broken package has been removed from npm registry."
+            echo "Please investigate the verification failures and trigger a new release."
+          else
+            echo "❌ Failed to unpublish $PACKAGE_NAME@$VERSION"
+            echo ""
+            echo "⚠️  MANUAL INTERVENTION REQUIRED:"
+            echo "Run: npm unpublish $PACKAGE_NAME@$VERSION"
+            echo ""
+            echo "This package is currently published but failed verification."
+            echo "It should be removed from the registry as soon as possible."
+            exit 1
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Dry Run Summary
-        if: ${{ inputs.dry-run }}
-        run: |
-          echo "## 🧪 Dry Run - v${{ needs.release-please.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "No package was published (dry run mode)" >> $GITHUB_STEP_SUMMARY
+      - name: Upload verification report
+        if: always() && github.event.inputs.dry_run != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-verification-report
+          path: verification-report.json
+          retention-days: 30
 
-      - name: Summary
-        if: ${{ !inputs.dry-run }}
+      - name: Fail workflow on verification failure
+        if: github.event.inputs.dry_run != 'true' && steps.verify.outcome == 'failure'
         run: |
-          echo "## 🚀 Published v${{ needs.release-please.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Package published to [npm](https://www.npmjs.com/package/@jackuait/blok)" >> $GITHUB_STEP_SUMMARY
+          echo "❌ Workflow failed due to post-publish verification failure"
+          echo "Check the verification report artifact for details"
+          exit 1

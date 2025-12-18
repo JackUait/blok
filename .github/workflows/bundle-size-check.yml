@@ -1,0 +1,131 @@
+name: Bundle Size Check
+
+on:
+  pull_request:
+    branches:
+      - master
+      - main
+    paths:
+      - 'src/**'
+      - 'vite.config.mjs'
+      - 'package.json'
+      - 'yarn.lock'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-bundle-size:
+    name: Check Bundle Size
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build PR
+        run: yarn build
+
+      - name: Get PR bundle sizes
+        run: |
+          echo "📊 Analyzing PR bundle sizes..."
+          node scripts/track-bundle-size.mjs --verbose
+
+      - name: Download base branch bundle size history
+        id: download-base-history
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: release.yml
+          name: bundle-size-history
+          path: .
+          if_no_artifact_found: warn
+        continue-on-error: true
+
+      - name: Compare with base branch
+        id: compare
+        run: |
+          if [ -f .bundle-size-history.json ]; then
+            echo "📈 Comparing with base branch history..."
+            node scripts/track-bundle-size.mjs --verbose --output=bundle-size-comparison.md --threshold=5
+
+            # Read the comparison report
+            if [ -f bundle-size-comparison.md ]; then
+              {
+                echo "REPORT<<EOF"
+                cat bundle-size-comparison.md
+                echo ""
+                echo "EOF"
+                echo "has_report=true"
+              } >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No base branch history found, skipping comparison"
+            {
+              echo "has_report=false"
+              echo "REPORT<<EOF"
+              echo "# Bundle Size Report"
+              echo ""
+              echo "No baseline data available for comparison. This is expected for the first run."
+              echo ""
+              echo "Bundle sizes will be tracked once this PR is merged."
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const report = `${{ steps.compare.outputs.REPORT }}`;
+
+            // Find ALL existing bundle size report comments
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const bundleSizeComments = comments.filter(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Bundle Size Report')
+            );
+
+            // Delete all existing bundle size reports
+            for (const comment of bundleSizeComments) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: comment.id
+              });
+            }
+
+            // Create new comment with latest report
+            const commentBody = `${report}\n\n---\n*Automated bundle size tracking*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: commentBody
+            });
+
+      - name: Upload PR bundle size data
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-bundle-size-report
+          path: |
+            bundle-size-*.md
+            .bundle-size-history.json
+          retention-days: 7

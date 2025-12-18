@@ -74,8 +74,9 @@ These **do not** trigger releases:
 4. Creates git tag
 5. Publishes to npm with OIDC provenance
 6. Creates GitHub release
+7. **Verifies published package** (post-publish validation)
 
-If any step fails, nothing is published.
+If any step fails, the workflow fails. Post-publish verification runs after npm publish to ensure the published package works correctly.
 
 ## Examples
 
@@ -141,10 +142,56 @@ git push --delete origin v1.0.0
 # Re-run workflow
 ```
 
+## Post-Publish Verification
+
+After publishing to npm, the workflow automatically verifies the published package to catch potential issues:
+
+### What Gets Verified
+
+- **Installation**: Package installs without errors
+- **Exports**: All entry points work (ESM, CommonJS, locales subpath)
+- **Types**: TypeScript definitions are valid and accessible
+- **Bin Script**: `migrate-from-editorjs` command is executable
+- **Smoke Tests**: Editor can be instantiated (Node.js + browser)
+- **Bundle Sizes**: Within expected ranges
+
+### Verification Reports
+
+After each release, a verification report is uploaded as a GitHub Actions artifact:
+- Navigate to **Actions** → **Release** workflow run
+- Download `package-verification-report` artifact
+- Review `verification-report.json` for detailed results
+
+### Local Verification
+
+Test package verification before releasing:
+
+```bash
+# Test local build
+yarn verify:package:local
+
+# Test specific published version
+yarn verify:package --version 1.0.0
+```
+
+### Verification Failure
+
+If verification fails after publish:
+
+1. **Unpublish** the broken version (if within 72 hours):
+   ```bash
+   npm unpublish @jackuait/blok@X.Y.Z
+   ```
+
+2. **Publish hotfix**: Fix the issue and trigger a new release
+
+3. **Investigate**: Download the verification report artifact for details
+
 ## Configuration
 
 **`.releaserc.json`** - semantic-release config
 **`.github/workflows/release.yml`** - GitHub Actions workflow
+**`scripts/verify-published-package.mjs`** - Verification script
 
 ## References
 

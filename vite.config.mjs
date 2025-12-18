@@ -24,9 +24,17 @@ export default defineConfig(({ mode }) => {
       copyPublicDir: false,
       target: 'es2017',
       lib: {
-        entry: path.resolve(__dirname, 'src', 'blok.ts'),
+        entry: {
+          blok: path.resolve(__dirname, 'src', 'blok.ts'),
+          locales: path.resolve(__dirname, 'src', 'locales.ts'),
+        },
         name: 'Blok',
-        fileName: 'blok',
+        fileName: (format, entryName) => {
+          if (format === 'es') {
+            return `${entryName}.mjs`;
+          }
+          return `${entryName}.umd.js`;
+        },
       },
       rollupOptions: {
         plugins: [

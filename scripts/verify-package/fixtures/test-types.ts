@@ -3,7 +3,8 @@
  * This file verifies that all types are properly exported and accessible
  */
 
-import type { BlokConfig, BlokData, OutputBlockData } from '@jackuait/blok';
+import type { BlokConfig, OutputBlockData } from '@jackuait/blok';
+import type { OutputData } from '@jackuait/blok';
 import Blok from '@jackuait/blok';
 import { loadLocale } from '@jackuait/blok/locales';
 
@@ -19,8 +20,8 @@ const config: BlokConfig = {
 // Test Blok constructor type
 const editor: Blok = new Blok(config);
 
-// Test BlokData type
-const data: BlokData = {
+// Test OutputData type
+const data: OutputData = {
   blocks: [
     {
       id: '1',
@@ -33,7 +34,7 @@ const data: BlokData = {
 };
 
 // Test OutputBlockData type
-const block: OutputBlockData = {
+const _block: OutputBlockData = {
   id: '1',
   type: 'paragraph',
   data: {
@@ -42,14 +43,14 @@ const block: OutputBlockData = {
 };
 
 // Test loadLocale type
-const locale = loadLocale('en');
+void loadLocale('en');
 
 // Test API methods
-async function testAPI() {
-  const savedData = await editor.save();
+const _testAPI = async (): Promise<void> => {
+  const _savedData = await editor.save();
   await editor.clear();
   await editor.render(data);
   await editor.destroy();
-}
+};
 
 console.log('TypeScript types verified successfully');

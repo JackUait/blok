@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Post-publish package verification script
- * Verifies that the published npm package works correctly
+ * Package verification script
+ * Verifies that the package works correctly (pre-release or post-publish)
  */
 
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, readdir } from 'fs/promises';
 import { join } from 'path';
 import { createTempDir, cleanupTempDir } from './verify-package/utils/temp-dir.mjs';
 import { installPackage } from './verify-package/utils/npm-helpers.mjs';
@@ -64,6 +64,23 @@ Options:
 const PACKAGE_NAME = '@jackuait/blok';
 
 /**
+ * Find the most recent .tgz tarball in the current directory
+ * @returns {Promise<string>} Path to tarball
+ */
+async function findLatestTarball() {
+  const files = await readdir(process.cwd());
+  const tarballs = files.filter(f => f.endsWith('.tgz') && f.startsWith('jackuait-blok-'));
+
+  if (tarballs.length === 0) {
+    throw new Error('No .tgz tarball found. Run "npm pack" first.');
+  }
+
+  // Sort by modification time (most recent first)
+  tarballs.sort().reverse();
+  return join(process.cwd(), tarballs[0]);
+}
+
+/**
  * Format check duration
  */
 function formatDuration(ms) {
@@ -78,6 +95,7 @@ async function runVerification() {
   let tempDir;
 
   console.log('🔍 Package Verification Started');
+  console.log(`  Mode: ${options.local ? 'Pre-release (local tarball)' : 'Post-publish (npm registry)'}`);
   console.log(`  Package: ${PACKAGE_NAME}`);
   console.log(`  Version: ${options.version || 'local'}`);
   console.log('');
@@ -106,11 +124,21 @@ async function runVerification() {
     }, null, 2));
 
     // Install the package
-    console.log(`📦 Installing ${PACKAGE_NAME}@${options.version}...`);
-    await installPackage(PACKAGE_NAME, options.version, tempDir, {
-      retries: 3,
-      verbose: options.verbose
-    });
+    if (options.local) {
+      const tarballPath = await findLatestTarball();
+      console.log(`📦 Installing from local tarball: ${tarballPath}...`);
+      await installPackage(PACKAGE_NAME, null, tempDir, {
+        retries: 3,
+        verbose: options.verbose,
+        tarballPath
+      });
+    } else {
+      console.log(`📦 Installing ${PACKAGE_NAME}@${options.version}...`);
+      await installPackage(PACKAGE_NAME, options.version, tempDir, {
+        retries: 3,
+        verbose: options.verbose
+      });
+    }
     console.log('✓ Package installed\n');
 
     const packageDir = join(tempDir, 'node_modules', PACKAGE_NAME);

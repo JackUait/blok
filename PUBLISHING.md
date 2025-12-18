@@ -69,14 +69,15 @@ These **do not** trigger releases:
 ## What Happens During Release
 
 1. Runs tests (lint, unit, build, e2e)
-2. Analyzes commits to determine version
-3. Updates `package.json` and `CHANGELOG.md`
-4. Creates git tag
-5. Publishes to npm with OIDC provenance
-6. Creates GitHub release
-7. **Verifies published package** (post-publish validation)
+2. **Pre-release verification** (staging environment - tests package before publishing)
+3. Analyzes commits to determine version
+4. Updates `package.json` and `CHANGELOG.md`
+5. Creates git tag
+6. Publishes to npm with OIDC provenance
+7. Creates GitHub release
+8. **Post-publish verification** (final safety check)
 
-If any step fails, the workflow fails. Post-publish verification runs after npm publish to ensure the published package works correctly.
+If any step fails, the workflow fails and publishing is aborted. The pre-release verification stage creates a local tarball and tests it in a clean environment before publishing to npm.
 
 ## Examples
 
@@ -142,12 +143,38 @@ git push --delete origin v1.0.0
 # Re-run workflow
 ```
 
-## Post-Publish Verification
+## Package Verification (Pre-Release + Post-Publish)
 
-After publishing to npm, the workflow automatically verifies the published package to catch potential issues:
+The release workflow includes **two verification stages** to ensure package quality:
+
+### 1. Pre-Release Verification (Staging)
+
+**Before** publishing to npm, the workflow:
+1. Creates a local package tarball (`npm pack`)
+2. Installs it in a clean test environment
+3. Runs all verification checks against the local build
+
+This catches issues **before** they reach npm users, such as:
+- Missing files in `package.json` "files" array
+- Incorrect exports configuration
+- Bundler-specific issues (Webpack, Rollup, Vite)
+- TypeScript definition problems
+- Broken bin scripts
+
+If pre-release verification fails, the workflow stops and **nothing is published**.
+
+### 2. Post-Publish Verification (Safety Net)
+
+After publishing to npm, the workflow:
+1. Waits for npm registry propagation (120 seconds)
+2. Installs the published package from npm
+3. Re-runs all verification checks
+
+This final safety check ensures the npm package is correctly published and accessible.
 
 ### What Gets Verified
 
+Both stages verify:
 - **Installation**: Package installs without errors
 - **Exports**: All entry points work (ESM, CommonJS, locales subpath)
 - **Types**: TypeScript definitions are valid and accessible
@@ -164,20 +191,34 @@ After each release, a verification report is uploaded as a GitHub Actions artifa
 
 ### Local Verification
 
-Test package verification before releasing:
+Test package verification locally before releasing:
 
 ```bash
-# Test local build
+# Test local build (pre-release simulation)
+npm pack
 yarn verify:package:local
 
 # Test specific published version
 yarn verify:package --version 1.0.0
+
+# Debug mode (keeps temp directory)
+node scripts/verify-published-package.mjs --local --debug
 ```
+
+This simulates the pre-release verification stage and helps catch issues early.
 
 ### Verification Failure
 
-If verification fails after publish:
+**Pre-Release Failure (Best Case)**
 
+If pre-release verification fails:
+1. The workflow stops before publishing to npm
+2. No broken package reaches users
+3. Fix the issue locally and re-run the workflow
+
+**Post-Publish Failure (Rare)**
+
+If post-publish verification fails (npm registry issue, network problem):
 1. **Unpublish** the broken version (if within 72 hours):
    ```bash
    npm unpublish @jackuait/blok@X.Y.Z
@@ -186,6 +227,8 @@ If verification fails after publish:
 2. **Publish hotfix**: Fix the issue and trigger a new release
 
 3. **Investigate**: Download the verification report artifact for details
+
+The two-stage verification approach minimizes the risk of broken packages reaching npm.
 
 ## Configuration
 

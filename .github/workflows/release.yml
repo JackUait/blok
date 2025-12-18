@@ -49,6 +49,17 @@ jobs:
       - name: Run E2E tests
         run: yarn e2e
 
+      - name: Pre-release verification (staging)
+        run: |
+          echo "📦 Creating package tarball for pre-release verification..."
+          npm pack
+          echo "✓ Package tarball created"
+          echo ""
+          echo "🔍 Running pre-release verification against local build..."
+          node scripts/verify-published-package.mjs --local --verbose
+        env:
+          NODE_ENV: production
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -15,15 +15,16 @@ function sleep(ms) {
 /**
  * Install a package from npm with retry logic
  * @param {string} name - Package name
- * @param {string} version - Package version
+ * @param {string|null} version - Package version (null for local tarball)
  * @param {string} dir - Directory to install in
  * @param {object} options - Options
  * @param {number} [options.retries=3] - Number of retries
  * @param {boolean} [options.verbose=false] - Verbose logging
+ * @param {string|null} [options.tarballPath=null] - Path to local tarball
  * @returns {Promise<void>}
  */
-export async function installPackage(name, version, dir, { retries = 3, verbose = false } = {}) {
-  const packageSpec = `${name}@${version}`;
+export async function installPackage(name, version, dir, { retries = 3, verbose = false, tarballPath = null } = {}) {
+  const packageSpec = tarballPath || `${name}@${version}`;
   let lastError;
 
   for (let attempt = 1; attempt <= retries; attempt++) {

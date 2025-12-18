@@ -48,10 +48,13 @@ jobs:
       - name: Build PR
         run: yarn build
 
+      - name: Build bundle variants
+        run: node scripts/build-bundle-variants.mjs --verbose
+
       - name: Get PR bundle sizes
         run: |
           echo "📊 Analyzing PR bundle sizes..."
-          node scripts/track-bundle-size.mjs --verbose
+          node scripts/track-bundle-size.mjs --verbose --with-variants
 
       - name: Download base branch bundle size history
         id: download-base-history
@@ -68,7 +71,7 @@ jobs:
         run: |
           if [ -f .bundle-size-history.json ]; then
             echo "📈 Comparing with base branch history..."
-            node scripts/track-bundle-size.mjs --verbose --output=bundle-size-comparison.md --threshold=5
+            node scripts/track-bundle-size.mjs --verbose --with-variants --output=bundle-size-comparison.md --threshold=5
 
             # Read the comparison report
             if [ -f bundle-size-comparison.md ]; then
@@ -140,4 +143,5 @@ jobs:
           path: |
             bundle-size-*.md
             .bundle-size-history.json
+            .bundle-variants.json
           retention-days: 7

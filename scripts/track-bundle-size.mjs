@@ -199,15 +199,64 @@ function compareSizes(current, previous, threshold = 10) {
 }
 
 /**
+ * Load bundle variants data if available
+ * @param {string} variantsFile - Path to variants JSON file
+ * @returns {Promise<object|null>} Variants data or null
+ */
+async function loadVariants(variantsFile) {
+  if (!existsSync(variantsFile)) {
+    return null;
+  }
+
+  try {
+    const content = await readFile(variantsFile, 'utf8');
+    return JSON.parse(content);
+  } catch (error) {
+    console.warn('Failed to load variants data:', error.message);
+    return null;
+  }
+}
+
+/**
  * Generate markdown report
  * @param {object} comparison - Comparison results
  * @param {object} current - Current bundle sizes
+ * @param {object|null} variants - Bundle variants data (minimum/normal/maximum)
+ * @param {object|null} previousVariants - Previous variants for comparison
  * @returns {string} Markdown report
  */
-function generateMarkdownReport(comparison, current) {
+function generateMarkdownReport(comparison, current, variants = null, previousVariants = null) {
   const lines = [];
 
   lines.push('## Bundle Size Report\n');
+
+  // Bundle Size Tiers section (if variants available)
+  if (variants) {
+    lines.push('### Bundle Size Tiers\n');
+    lines.push('| Tier | Size | Previous | Change | Description |');
+    lines.push('|------|------|----------|--------|-------------|');
+
+    for (const [name, data] of Object.entries(variants)) {
+      const prevData = previousVariants?.[name];
+      const prevSize = prevData?.size || 0;
+      const change = data.size - prevSize;
+      const percentageChange = prevSize > 0
+        ? ((change / prevSize) * 100).toFixed(2)
+        : 0;
+
+      const changeStr = prevSize > 0
+        ? `${change > 0 ? '+' : ''}${formatBytes(change)} (${change > 0 ? '+' : ''}${percentageChange}%)`
+        : 'New';
+
+      const tierName = name.charAt(0).toUpperCase() + name.slice(1);
+
+      lines.push(
+        `| **${tierName}** | ${formatBytes(data.size)} | ${prevSize > 0 ? formatBytes(prevSize) : 'N/A'} | ${changeStr} | ${data.description} |`
+      );
+    }
+
+    lines.push('');
+  }
 
   if (comparison.alerts.length > 0) {
     lines.push('### Alerts\n');
@@ -217,19 +266,19 @@ function generateMarkdownReport(comparison, current) {
     lines.push('');
   }
 
-  lines.push('### Current Bundle Sizes\n');
+  lines.push('### Individual Bundle Files\n');
   lines.push('| Bundle | Size | Previous | Change |');
   lines.push('|--------|------|----------|--------|');
 
   for (const [bundleName, bundleComparison] of Object.entries(comparison.bundles)) {
-    const { current, previous, change, percentageChange } = bundleComparison;
+    const { current: currentSize, previous, change, percentageChange } = bundleComparison;
 
     const changeStr = previous > 0
       ? `${change > 0 ? '+' : ''}${formatBytes(change)} (${percentageChange > 0 ? '+' : ''}${percentageChange.toFixed(2)}%)`
       : 'New';
 
     lines.push(
-      `| ${bundleName} | ${formatBytes(current)} | ${previous > 0 ? formatBytes(previous) : 'N/A'} | ${changeStr} |`
+      `| ${bundleName} | ${formatBytes(currentSize)} | ${previous > 0 ? formatBytes(previous) : 'N/A'} | ${changeStr} |`
     );
   }
 
@@ -250,6 +299,7 @@ function generateMarkdownReport(comparison, current) {
 async function trackBundleSize() {
   const args = process.argv.slice(2);
   const verbose = args.includes('--verbose') || args.includes('-v');
+  const withVariants = args.includes('--with-variants');
   const outputFile = args.find(arg => arg.startsWith('--output='))?.split('=')[1];
   const threshold = parseInt(args.find(arg => arg.startsWith('--threshold='))?.split('=')[1] || '10');
   const maxEntries = parseInt(args.find(arg => arg.startsWith('--max-entries='))?.split('=')[1] || '100');
@@ -260,6 +310,7 @@ async function trackBundleSize() {
   const projectRoot = join(__dirname, '..');
   const distDir = join(projectRoot, 'dist');
   const historyFile = join(projectRoot, '.bundle-size-history.json');
+  const variantsFile = join(projectRoot, '.bundle-variants.json');
 
   // Get current sizes
   const currentSizes = await getBundleSizes(distDir);
@@ -272,12 +323,28 @@ async function trackBundleSize() {
     console.log('');
   }
 
+  // Load variants if requested and available
+  let variants = null;
+  if (withVariants) {
+    variants = await loadVariants(variantsFile);
+    if (variants && verbose) {
+      console.log('Bundle size tiers:');
+      for (const [name, data] of Object.entries(variants)) {
+        console.log(`  ${name}: ${formatBytes(data.size)}`);
+      }
+      console.log('');
+    } else if (!variants) {
+      console.log('⚠️  No variants data found. Run yarn bundle:variants first.\n');
+    }
+  }
+
   // Load history
   const history = await loadHistory(historyFile);
 
   // Get previous entry (if exists)
   const previousEntry = history.length > 0 ? history[history.length - 1] : null;
   const previousSizes = previousEntry?.bundles;
+  const previousVariants = previousEntry?.variants || null;
 
   // Compare sizes
   const comparison = compareSizes(currentSizes, previousSizes, threshold);
@@ -297,6 +364,7 @@ async function trackBundleSize() {
     commit: process.env.GITHUB_SHA || 'local',
     version: process.env.PACKAGE_VERSION || 'unknown',
     bundles: currentSizes,
+    variants: variants || undefined,
     comparison: {
       hasSignificantChange: comparison.hasSignificantChange,
       totalChange: comparison.totalChange,
@@ -322,7 +390,7 @@ async function trackBundleSize() {
 
   // Generate and save markdown report if requested
   if (outputFile) {
-    const report = generateMarkdownReport(comparison, currentSizes);
+    const report = generateMarkdownReport(comparison, currentSizes, variants, previousVariants);
     await writeFile(outputFile, report, 'utf8');
     console.log(`✓ Report saved to: ${outputFile}\n`);
   }

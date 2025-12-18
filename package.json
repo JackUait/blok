@@ -76,6 +76,7 @@
     "verify:version": "node scripts/verify-version.mjs",
     "unpublish": "node scripts/unpublish-package.mjs",
     "bundle:track": "node scripts/track-bundle-size.mjs --verbose",
+    "bundle:variants": "node scripts/build-bundle-variants.mjs --verbose",
     "bundle:trends": "node scripts/view-bundle-trends.mjs --trends",
     "bundle:history": "node scripts/view-bundle-trends.mjs",
     "perf:analyze": "node scripts/analyze-performance.mjs",

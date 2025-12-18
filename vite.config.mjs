@@ -24,17 +24,9 @@ export default defineConfig(({ mode }) => {
       copyPublicDir: false,
       target: 'es2017',
       lib: {
-        entry: {
-          blok: path.resolve(__dirname, 'src', 'blok.ts'),
-          locales: path.resolve(__dirname, 'src', 'locales.ts'),
-        },
+        entry: path.resolve(__dirname, 'src', 'blok.ts'),
         name: 'Blok',
-        fileName: (format, entryName) => {
-          if (format === 'es') {
-            return `${entryName}.mjs`;
-          }
-          return `${entryName}.umd.js`;
-        },
+        fileName: 'blok',
       },
       rollupOptions: {
         plugins: [
@@ -84,7 +76,12 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [
-      cssInjectedByJsPlugin(),
+      cssInjectedByJsPlugin({
+        jsAssetsFilterFunction: (outputChunk) => {
+          // Only inject CSS into the main blok bundle, not locales
+          return outputChunk.name === 'blok';
+        },
+      }),
     ],
   };
 });

@@ -4,14 +4,14 @@
  * @module BlockManager
  * @version 2.0.0
  */
-import Block, { BlockToolAPI } from '../block';
-import Module from '../__module';
-import $ from '../dom';
+import { Block, BlockToolAPI } from '../block';
+import { Module } from '../__module';
+import { Dom as $ } from '../dom';
 import * as _ from '../utils';
-import Blocks from '../blocks';
+import { Blocks } from '../blocks';
 import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import BlockAPI from '../block/api';
+import { BlockAPI } from '../block/api';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../types/events/block';
 import { BlockRemovedMutationType } from '../../../types/events/block/BlockRemoved';
 import { BlockAddedMutationType } from '../../../types/events/block/BlockAdded';
@@ -20,9 +20,9 @@ import { BlockChangedMutationType } from '../../../types/events/block/BlockChang
 import { BlockChanged } from '../events';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
-import PromiseQueue from '../utils/promise-queue';
+import { PromiseQueue } from '../utils/promise-queue';
 import { DATA_ATTR, createSelector } from '../constants';
-import Shortcuts from '../utils/shortcuts';
+import { Shortcuts } from '../utils/shortcuts';
 import { announce } from '../utils/announcer';
 
 type BlocksStore = Blocks & {
@@ -34,7 +34,7 @@ type BlocksStore = Blocks & {
  * @property {number} currentBlockIndex - Index of current working block
  * @property {Proxy} _blocks - Proxy for Blocks instance {@link Blocks}
  */
-export default class BlockManager extends Module {
+export class BlockManager extends Module {
   /**
    * Returns current Block index
    * @returns {number}

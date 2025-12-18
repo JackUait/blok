@@ -3,7 +3,7 @@
  * These utilities help work around browser environment differences in Chromatic.
  */
 
-import Blok from '../blok';
+import { Blok } from '../blok';
 import type { OutputData, BlokConfig, ToolConstructable, ToolSettings, I18nConfig } from '@/types';
 
 /**

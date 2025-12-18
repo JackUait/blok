@@ -1,4 +1,4 @@
-import type BlockToolAdapter from '../tools/block';
+import type { BlockToolAdapter } from '../tools/block';
 import type { ToolboxConfigEntry } from '@/types';
 import { isFunction, isString } from '../utils';
 

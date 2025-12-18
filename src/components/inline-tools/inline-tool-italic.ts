@@ -9,7 +9,7 @@ import type { MenuConfig } from '../../../types/tools';
  *
  * Style selected text with italic
  */
-export default class ItalicInlineTool implements InlineTool {
+export class ItalicInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
    * @returns {boolean}

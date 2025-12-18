@@ -2,7 +2,7 @@ import { IconCross } from '../../../../src/components/icons';
 import type { Mock } from 'vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import DeleteTune from '../../../../src/components/block-tunes/block-tune-delete';
+import { DeleteTune } from '../../../../src/components/block-tunes/block-tune-delete';
 import type { API } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
 

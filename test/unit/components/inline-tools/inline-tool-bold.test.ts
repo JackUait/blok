@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import BoldInlineTool from '../../../../src/components/inline-tools/inline-tool-bold';
+import { BoldInlineTool } from '../../../../src/components/inline-tools/inline-tool-bold';
 import type { PopoverItemDefaultBaseParams } from '../../../../types/utils/popover';
 
 type BoldInlineToolInternals = {

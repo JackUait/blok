@@ -1,6 +1,6 @@
  
 import { expect, test } from '@playwright/test';
-import BlockTuneAdapter from '../../../../src/components/tools/tune';
+import { BlockTuneAdapter } from '../../../../src/components/tools/tune';
 import { ToolType } from '../../../../types/tools/adapters/tool-type';
 import type { ToolSettings } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';

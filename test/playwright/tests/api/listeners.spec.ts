@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type Blok from '@/types';
+import type { Blok } from '@/types';
 import type { BlokConfig } from '@/types';
 import type { Listeners as ListenersAPI } from '@/types/api/listeners';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';

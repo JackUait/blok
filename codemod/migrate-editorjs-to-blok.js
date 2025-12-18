@@ -397,32 +397,155 @@ const IMPORT_TRANSFORMS = [
     pattern: /require\s*\(\s*['"]@editorjs\/editorjs\/([^'"]+)['"]\s*\)/g,
     replacement: "require('@jackuait/blok/$1')",
   },
-  // Main EditorJS import
+  // Combined default + named imports: import EditorJS, { EditorConfig } from '@editorjs/editorjs'
+  // → import { Blok, EditorConfig } from '@jackuait/blok' (EditorConfig → BlokConfig handled by TYPE_TRANSFORMS)
+  // IMPORTANT: Must come before regular default import patterns to avoid partial matching
   {
-    pattern: /from\s+['"]@editorjs\/editorjs['"]/g,
-    replacement: "from '@jackuait/blok'",
+    pattern: /import\s+EditorJS\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"]@editorjs\/editorjs['"]/g,
+    replacement: "import { Blok, $1 } from '@jackuait/blok'",
+    note: 'Converted combined default + named import',
+  },
+  // Aliased combined: import Editor, { EditorConfig } from '@editorjs/editorjs'
+  {
+    pattern: /import\s+(\w+)\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"]@editorjs\/editorjs['"]/g,
+    replacement: "import { Blok as $1, $2 } from '@jackuait/blok'",
+    note: 'Converted aliased combined default + named import',
+  },
+  // Main EditorJS default import -> Blok named import
+  // e.g., import EditorJS from '@editorjs/editorjs' -> import { Blok } from '@jackuait/blok'
+  {
+    pattern: /import\s+EditorJS\s+from\s+['"]@editorjs\/editorjs['"]/g,
+    replacement: "import { Blok } from '@jackuait/blok'",
+    note: 'Converted default import to named import',
+  },
+  // EditorJS default import with alias -> Blok named import with alias
+  // e.g., import Editor from '@editorjs/editorjs' -> import { Blok as Editor } from '@jackuait/blok'
+  {
+    pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/editorjs['"]/g,
+    replacement: "import { Blok as $1 } from '@jackuait/blok'",
+    note: 'Converted default import to named import with alias',
+  },
+  // Destructured require with default: const { default: EditorJS } = require(...)
+  // IMPORTANT: Must come before generic require pattern to avoid partial matching
+  {
+    pattern: /const\s+\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*require\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)/g,
+    replacement: "const { Blok: $1 } = require('@jackuait/blok')",
+    note: 'Converted destructured default require to named require',
   },
   {
     pattern: /require\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)/g,
-    replacement: "require('@jackuait/blok')",
+    replacement: "require('@jackuait/blok').Blok",
   },
-  // Header tool (now bundled)
+  // Namespace import: import * as EditorJS from '@editorjs/editorjs'
+  // → convert to named import (namespace pattern no longer needed with named exports)
+  {
+    pattern: /import\s+\*\s+as\s+(\w+)\s+from\s+['"]@editorjs\/editorjs['"]/g,
+    replacement: "import { Blok as $1 } from '@jackuait/blok'",
+    note: 'Converted namespace import to named import (namespace no longer needed)',
+  },
+  // Dynamic import with .then chaining that expects default (must come before generic dynamic import)
+  {
+    pattern: /import\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)\s*\.then\s*\(\s*(\w+)\s*=>\s*\1\.default\s*\)/g,
+    replacement: "import('@jackuait/blok').then($1 => $1.Blok)",
+    note: 'Converted dynamic import .then(m => m.default) pattern',
+  },
+  // Dynamic import with destructuring: const { default: Editor } = await import('@editorjs/editorjs')
+  // IMPORTANT: Must come before generic dynamic import to avoid partial matching
+  {
+    pattern: /\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*await\s+import\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)/g,
+    replacement: "{ Blok: $1 } = await import('@jackuait/blok')",
+    note: 'Converted destructured dynamic import',
+  },
+  // Dynamic import: import('@editorjs/editorjs')
+  {
+    pattern: /import\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)/g,
+    replacement: "import('@jackuait/blok').then(m => ({ default: m.Blok }))",
+    note: 'Converted dynamic import (wraps named export as default for compatibility)',
+  },
+  // Type-only default import: import type EditorJS from '@editorjs/editorjs'
+  {
+    pattern: /import\s+type\s+(\w+)\s+from\s+['"]@editorjs\/editorjs['"]/g,
+    replacement: "import type { Blok as $1 } from '@jackuait/blok'",
+    note: 'Converted type-only default import to named import',
+  },
+  // Re-export default as named: export { default as Editor } from '@editorjs/editorjs'
+  {
+    pattern: /export\s+\{\s*default\s+as\s+(\w+)\s*\}\s*from\s+['"]@editorjs\/editorjs['"]/g,
+    replacement: "export { Blok as $1 } from '@jackuait/blok'",
+    note: 'Converted default re-export to named export',
+  },
+  // Re-export default: export { default } from '@editorjs/editorjs'
+  {
+    pattern: /export\s+\{\s*default\s*\}\s*from\s+['"]@editorjs\/editorjs['"]/g,
+    replacement: "export { Blok } from '@jackuait/blok'",
+    note: 'Converted default re-export',
+  },
+  // Header tool (now bundled) - import directly from @jackuait/blok
+  {
+    pattern: /import\s+Header\s+from\s+['"]@editorjs\/header['"];?\n?/g,
+    replacement: "import { Header } from '@jackuait/blok';\n",
+    note: 'Header tool is now bundled with Blok',
+  },
   {
     pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/header['"];?\n?/g,
-    replacement: '// Header is now bundled with Blok: use Blok.Header\n',
-    note: 'Header tool is now bundled',
+    replacement: "import { Header as $1 } from '@jackuait/blok';\n",
+    note: 'Header tool is now bundled with Blok (aliased)',
   },
-  // Paragraph tool (now bundled)
+  // Paragraph tool (now bundled) - import directly from @jackuait/blok
+  {
+    pattern: /import\s+Paragraph\s+from\s+['"]@editorjs\/paragraph['"];?\n?/g,
+    replacement: "import { Paragraph } from '@jackuait/blok';\n",
+    note: 'Paragraph tool is now bundled with Blok',
+  },
   {
     pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/paragraph['"];?\n?/g,
-    replacement: '// Paragraph is now bundled with Blok: use Blok.Paragraph\n',
-    note: 'Paragraph tool is now bundled',
+    replacement: "import { Paragraph as $1 } from '@jackuait/blok';\n",
+    note: 'Paragraph tool is now bundled with Blok (aliased)',
   },
-  // List tool (now bundled)
+  // List tool (now bundled) - import directly from @jackuait/blok
+  {
+    pattern: /import\s+List\s+from\s+['"]@editorjs\/list['"];?\n?/g,
+    replacement: "import { List } from '@jackuait/blok';\n",
+    note: 'List tool is now bundled with Blok',
+  },
   {
     pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/list['"];?\n?/g,
-    replacement: '// List is now bundled with Blok: use Blok.List\n',
-    note: 'List tool is now bundled',
+    replacement: "import { List as $1 } from '@jackuait/blok';\n",
+    note: 'List tool is now bundled with Blok (aliased)',
+  },
+  // Tool require statements (CommonJS)
+  // Header require: const Header = require('@editorjs/header')
+  {
+    pattern: /const\s+Header\s*=\s*require\s*\(\s*['"]@editorjs\/header['"]\s*\)/g,
+    replacement: "const { Header } = require('@jackuait/blok')",
+    note: 'Header tool is now bundled with Blok',
+  },
+  {
+    pattern: /const\s+(\w+)\s*=\s*require\s*\(\s*['"]@editorjs\/header['"]\s*\)/g,
+    replacement: "const { Header: $1 } = require('@jackuait/blok')",
+    note: 'Header tool is now bundled with Blok (aliased)',
+  },
+  // Paragraph require
+  {
+    pattern: /const\s+Paragraph\s*=\s*require\s*\(\s*['"]@editorjs\/paragraph['"]\s*\)/g,
+    replacement: "const { Paragraph } = require('@jackuait/blok')",
+    note: 'Paragraph tool is now bundled with Blok',
+  },
+  {
+    pattern: /const\s+(\w+)\s*=\s*require\s*\(\s*['"]@editorjs\/paragraph['"]\s*\)/g,
+    replacement: "const { Paragraph: $1 } = require('@jackuait/blok')",
+    note: 'Paragraph tool is now bundled with Blok (aliased)',
+  },
+  // List require
+  {
+    pattern: /const\s+List\s*=\s*require\s*\(\s*['"]@editorjs\/list['"]\s*\)/g,
+    replacement: "const { List } = require('@jackuait/blok')",
+    note: 'List tool is now bundled with Blok',
+  },
+  {
+    pattern: /const\s+(\w+)\s*=\s*require\s*\(\s*['"]@editorjs\/list['"]\s*\)/g,
+    replacement: "const { List: $1 } = require('@jackuait/blok')",
+    note: 'List tool is now bundled with Blok (aliased)',
   },
 ];
 
@@ -616,15 +739,16 @@ const HOLDER_TRANSFORMS = [
 const BUNDLED_TOOLS = ['Header', 'Paragraph', 'List'];
 
 // Tool configuration transformations
+// Note: With named exports, tools are imported directly (e.g., { Header } from '@jackuait/blok')
+// so the tool class references don't need the Blok. prefix anymore
 const TOOL_CONFIG_TRANSFORMS = [
-  // Handle class property syntax
-  { pattern: /class:\s*Header(?!Config)/g, replacement: 'class: Blok.Header' },
-  { pattern: /class:\s*Paragraph(?!Config)/g, replacement: 'class: Blok.Paragraph' },
-  { pattern: /class:\s*List(?!Config|Item)/g, replacement: 'class: Blok.List' },
-  // Handle standalone tool references in tools config (e.g., `paragraph: Paragraph`)
-  { pattern: /(\bheader\s*:\s*)Header(?!Config)(?=\s*[,}\n])/g, replacement: '$1Blok.Header' },
-  { pattern: /(\bparagraph\s*:\s*)Paragraph(?!Config)(?=\s*[,}\n])/g, replacement: '$1Blok.Paragraph' },
-  { pattern: /(\blist\s*:\s*)List(?!Config|Item)(?=\s*[,}\n])/g, replacement: '$1Blok.List' },
+  // Convert old Blok.Header style to direct Header reference (for existing Blok users upgrading)
+  { pattern: /class:\s*Blok\.Header(?!Config)/g, replacement: 'class: Header' },
+  { pattern: /class:\s*Blok\.Paragraph(?!Config)/g, replacement: 'class: Paragraph' },
+  { pattern: /class:\s*Blok\.List(?!Config|Item)/g, replacement: 'class: List' },
+  { pattern: /(\bheader\s*:\s*)Blok\.Header(?!Config)(?=\s*[,}\n])/g, replacement: '$1Header' },
+  { pattern: /(\bparagraph\s*:\s*)Blok\.Paragraph(?!Config)(?=\s*[,}\n])/g, replacement: '$1Paragraph' },
+  { pattern: /(\blist\s*:\s*)Blok\.List(?!Config|Item)(?=\s*[,}\n])/g, replacement: '$1List' },
 ];
 
 // Text transformations for "EditorJS" string references
@@ -695,101 +819,70 @@ function applyTransforms(content, transforms, fileName) {
 }
 
 /**
- * Ensures that Blok is properly imported when bundled tools (Blok.Header, Blok.Paragraph, etc.) are used.
- * This function checks if the content uses any Blok.* tool references and ensures there's a proper import.
+ * Ensures that bundled tools (Header, Paragraph, List) are properly imported when used.
+ * Since Blok now uses named exports, tools are imported directly.
  *
  * Handles the following scenarios:
- * 1. No existing @jackuait/blok import -> adds `import Blok from '@jackuait/blok'`
- * 2. Named imports only (e.g., `import { BlokConfig } from '@jackuait/blok'`) -> adds Blok default import
- * 3. Default import with different name -> adds Blok to named imports
- * 4. Already has Blok default import -> no changes needed
+ * 1. Tool used without import -> adds `import { Header, Paragraph, List } from '@jackuait/blok'`
+ * 2. Existing @jackuait/blok import without tools -> adds tools to named imports
  */
 function ensureBlokImport(content) {
-  // Check if content uses any Blok.* tool (e.g., Blok.Header, Blok.Paragraph)
-  const blokToolPattern = new RegExp(`Blok\\.(${BUNDLED_TOOLS.join('|')})`, 'g');
-  const usesBlokTools = blokToolPattern.test(content);
+  // Check which bundled tools are used in the content
+  const usedTools = BUNDLED_TOOLS.filter(tool => {
+    // Match tool usage in class: Tool or tool: Tool patterns, or direct Tool references
+    const toolPattern = new RegExp(`\\b${tool}\\b`, 'g');
+    return toolPattern.test(content);
+  });
 
-  if (!usesBlokTools) {
+  if (usedTools.length === 0) {
     return { result: content, changed: false };
   }
 
-  // Check if Blok is already available as a default import
-  // Matches: import Blok from '@jackuait/blok' or import Blok, { ... } from '@jackuait/blok'
-  const hasBlokDefaultImport = /import\s+Blok\s*(?:,\s*\{[^}]*\}\s*)?from\s*['"]@jackuait\/blok['"]/.test(content);
-
-  if (hasBlokDefaultImport) {
-    return { result: content, changed: false };
-  }
-
-  // Check for existing @jackuait/blok import patterns
-  const namedOnlyImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"]@jackuait\/blok['"];?/;
-  const defaultWithNamedPattern = /import\s+(\w+)\s*,\s*\{([^}]+)\}\s*from\s*['"]@jackuait\/blok['"];?/;
-  const defaultOnlyPattern = /import\s+(\w+)\s+from\s*['"]@jackuait\/blok['"];?/;
+  // Check for existing @jackuait/blok import
+  const namedImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"]@jackuait\/blok['"];?/;
+  const namedMatch = content.match(namedImportPattern);
 
   let result = content;
 
-  // Case 1: Named imports only -> add Blok default import
-  // e.g., `import { BlokConfig } from '@jackuait/blok'` -> `import Blok, { BlokConfig } from '@jackuait/blok'`
-  const namedOnlyMatch = content.match(namedOnlyImportPattern);
-  if (namedOnlyMatch) {
-    const namedImports = namedOnlyMatch[1];
-    result = content.replace(
-      namedOnlyImportPattern,
-      `import Blok, {${namedImports}} from '@jackuait/blok';`
-    );
-    return { result, changed: true };
-  }
+  if (namedMatch) {
+    // Check which tools are missing from the import
+    const existingImports = namedMatch[1];
+    const missingTools = usedTools.filter(tool => {
+      const toolPattern = new RegExp(`\\b${tool}\\b`);
+      return !toolPattern.test(existingImports);
+    });
 
-  // Case 2: Default import with different name + named imports -> add Blok to named imports
-  // e.g., `import Editor, { BlokConfig } from '@jackuait/blok'` -> `import Editor, { Blok, BlokConfig } from '@jackuait/blok'`
-  const defaultWithNamedMatch = content.match(defaultWithNamedPattern);
-  if (defaultWithNamedMatch) {
-    const defaultName = defaultWithNamedMatch[1];
-    const namedImports = defaultWithNamedMatch[2];
-    // Check if Blok is already in named imports
-    if (!/\bBlok\b/.test(namedImports)) {
+    if (missingTools.length > 0) {
+      // Add missing tools to existing import
+      const newImports = `${missingTools.join(', ')}, ${existingImports.trim()}`;
       result = content.replace(
-        defaultWithNamedPattern,
-        `import ${defaultName}, { Blok, ${namedImports.trim()} } from '@jackuait/blok';`
+        namedImportPattern,
+        `import { ${newImports} } from '@jackuait/blok';`
       );
       return { result, changed: true };
     }
     return { result: content, changed: false };
   }
 
-  // Case 3: Default import only with different name -> add Blok to named imports
-  // e.g., `import Editor from '@jackuait/blok'` -> `import Editor, { Blok } from '@jackuait/blok'`
-  const defaultOnlyMatch = content.match(defaultOnlyPattern);
-  if (defaultOnlyMatch) {
-    const defaultName = defaultOnlyMatch[1];
-    if (defaultName !== 'Blok') {
-      result = content.replace(
-        defaultOnlyPattern,
-        `import ${defaultName}, { Blok } from '@jackuait/blok';`
-      );
-      return { result, changed: true };
-    }
-    return { result: content, changed: false };
-  }
-
-  // Case 4: No @jackuait/blok import at all -> add new import at the top (after any existing imports)
-  // Find the last import statement to insert after it
+  // No @jackuait/blok import at all -> add new import
   const importStatements = content.match(/^import\s+.+from\s+['"][^'"]+['"];?\s*$/gm);
+  const newImport = `import { ${usedTools.join(', ')} } from '@jackuait/blok';`;
+
   if (importStatements && importStatements.length > 0) {
     const lastImport = importStatements[importStatements.length - 1];
     const lastImportIndex = content.lastIndexOf(lastImport);
     const insertPosition = lastImportIndex + lastImport.length;
     result =
       content.slice(0, insertPosition) +
-      "\nimport Blok from '@jackuait/blok';" +
+      '\n' + newImport +
       content.slice(insertPosition);
   } else {
     // No imports found, add at the very beginning (after shebang if present)
     const shebangMatch = content.match(/^#!.*\n/);
     if (shebangMatch) {
-      result = shebangMatch[0] + "import Blok from '@jackuait/blok';\n" + content.slice(shebangMatch[0].length);
+      result = shebangMatch[0] + newImport + '\n' + content.slice(shebangMatch[0].length);
     } else {
-      result = "import Blok from '@jackuait/blok';\n" + content;
+      result = newImport + '\n' + content;
     }
   }
 
@@ -984,7 +1077,12 @@ Examples:
   npx -p @jackuait/blok migrate-from-editorjs . --verbose
 
 What this codemod does:
-  • Transforms EditorJS imports to Blok imports
+  • Transforms EditorJS imports to Blok named imports:
+    - import EditorJS from '@editorjs/editorjs' → import { Blok } from '@jackuait/blok'
+    - import Editor from '@editorjs/editorjs' → import { Blok as Editor } from '@jackuait/blok'
+  • Updates bundled tool imports (Header, Paragraph, List):
+    - import Header from '@editorjs/header' → import { Header } from '@jackuait/blok'
+    - import List from '@editorjs/list' → import { List } from '@jackuait/blok'
   • Updates type names (EditorConfig → BlokConfig)
   • Replaces 'new EditorJS()' with 'new Blok()'
   • Converts CSS class selectors to data attributes:
@@ -1002,8 +1100,7 @@ What this codemod does:
   • Updates data attributes (data-id → data-blok-id)
   • Changes default holder from 'editorjs' to 'blok'
   • Updates package.json dependencies
-  • Converts bundled tool imports (Header, Paragraph, List)
-  • Ensures Blok is imported when using bundled tools (Blok.Header, etc.)
+  • Ensures tools are imported from @jackuait/blok when used
   • Transforms nested i18n messages to flat dot-notation format with camelCase keys:
     - { ui: { toolbar: { Add: "..." } } } → { "ui.toolbar.add": "..." }
     - { toolNames: { "Nothing found": "..." } } → { "toolNames.nothingFound": "..." }

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { ToolSettings, API } from '@/types';
 import { ToolType } from '@/types/tools/adapters/tool-type';
-import InlineToolAdapter from '../../../src/components/tools/inline';
+import { InlineToolAdapter } from '../../../src/components/tools/inline';
 
 type InlineToolAdapterOptions = ConstructorParameters<typeof InlineToolAdapter>[0];
 

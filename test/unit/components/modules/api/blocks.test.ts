@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import BlocksAPI from '../../../../../src/components/modules/api/blocks';
-import EventsDispatcher from '../../../../../src/components/utils/events';
+import { BlocksAPI } from '../../../../../src/components/modules/api/blocks';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import * as utils from '../../../../../src/components/utils';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
@@ -28,12 +28,12 @@ const { blockConstructorSpy, blockAPIConstructorSpy } = vi.hoisted(() => {
 
 vi.mock('../../../../../src/components/block', () => ({
   ['__esModule']: true,
-  default: blockConstructorSpy,
+  Block: blockConstructorSpy,
 }));
 
 vi.mock('../../../../../src/components/block/api', () => ({
   ['__esModule']: true,
-  default: blockAPIConstructorSpy,
+  BlockAPI: blockAPIConstructorSpy,
 }));
 
 type BlockStub = {

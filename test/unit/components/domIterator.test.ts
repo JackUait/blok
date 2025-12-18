@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import DomIterator from '../../../src/components/domIterator';
+import { DomIterator } from '../../../src/components/domIterator';
 
 const hoistedMocks = vi.hoisted(() => {
   return {
@@ -11,14 +11,14 @@ const hoistedMocks = vi.hoisted(() => {
 
 vi.mock('../../../src/components/dom', () => ({
   ['__esModule']: true,
-  default: {
+  Dom: {
     canSetCaret: hoistedMocks.canSetCaretMock,
   },
 }));
 
 vi.mock('../../../src/components/selection', () => ({
   ['__esModule']: true,
-  default: {
+  SelectionUtils: {
     setCursor: hoistedMocks.setCursorMock,
   },
 }));

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import InlineToolbar from '../../../../src/components/modules/toolbar/inline';
-import type InlineToolAdapter from '../../../../src/components/tools/inline';
-import SelectionUtils from '../../../../src/components/selection';
+import { InlineToolbar } from '../../../../src/components/modules/toolbar/inline';
+import type { InlineToolAdapter } from '../../../../src/components/tools/inline';
+import { SelectionUtils } from '../../../../src/components/selection';
 import type { Popover } from '../../../../src/components/utils/popover';
-import Shortcuts from '../../../../src/components/utils/shortcuts';
+import { Shortcuts } from '../../../../src/components/utils/shortcuts';
 import type { InlineTool } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools';
 
@@ -34,7 +34,7 @@ vi.mock('../../../../src/components/utils/popover/popover-inline', () => {
 });
 
 vi.mock('../../../../src/components/utils/shortcuts', () => ({
-  default: {
+  Shortcuts: {
     add: vi.fn(),
     remove: vi.fn(),
   },
@@ -67,7 +67,7 @@ vi.mock('../../../../src/components/selection', async () => {
 // I18n is now an instance-based module, no longer a static class to mock
 
 vi.mock('../../../../src/components/dom', () => ({
-  default: {
+  Dom: {
     make: vi.fn((tag: string, classNameArg: string | string[]) => {
       const el = document.createElement(tag);
 

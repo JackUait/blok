@@ -1,4 +1,4 @@
-import Flipper from '../../flipper';
+import { Flipper } from '../../flipper';
 import { PopoverAbstract } from './popover-abstract';
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
 import { PopoverItemSeparator, css as popoverItemCls } from './components/popover-item';
@@ -120,7 +120,7 @@ export class PopoverDesktop extends PopoverAbstract {
       });
     }
 
-    this.flipper.onFlip(this.onFlip);
+    this.flipper?.onFlip(this.onFlip);
   }
 
   /**

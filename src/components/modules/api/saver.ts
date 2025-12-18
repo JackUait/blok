@@ -1,13 +1,13 @@
 import type { Saver } from '../../../../types/api';
 import type { OutputData } from '../../../../types';
 import * as _ from '../../utils';
-import Module from '../../__module';
+import { Module } from '../../__module';
 
 /**
  * @class SaverAPI
  * provides with methods to save data
  */
-export default class SaverAPI extends Module {
+export class SaverAPI extends Module {
   /**
    * Available methods
    * @returns {Saver}

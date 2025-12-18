@@ -10,7 +10,7 @@ import { DATA_ATTR, createSelector } from '../constants';
  *
  * Makes selected text bolder
  */
-export default class BoldInlineTool implements InlineTool {
+export class BoldInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
    * @returns {boolean}

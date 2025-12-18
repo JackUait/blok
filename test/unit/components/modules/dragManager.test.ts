@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
-import DragManager from '../../../../src/components/modules/dragManager';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { DragManager } from '../../../../src/components/modules/dragManager';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../types';
-import type Block from '../../../../src/components/block';
+import type { Block } from '../../../../src/components/block';
 import { DATA_ATTR } from '../../../../src/components/constants';
 import * as tooltip from '../../../../src/components/utils/tooltip';
 import * as announcer from '../../../../src/components/utils/announcer';

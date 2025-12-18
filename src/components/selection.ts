@@ -2,7 +2,7 @@
  * TextRange interface for IE9-
  */
 import * as _ from './utils';
-import $ from './dom';
+import { Dom as $ } from './dom';
 import { DATA_ATTR, createSelector } from './constants';
 
 interface TextRange {
@@ -33,7 +33,7 @@ interface Document {
  * Working with selection
  * @typedef {SelectionUtils} SelectionUtils
  */
-export default class SelectionUtils {
+export class SelectionUtils {
   /**
    * Selection instances
    * @todo Check if this is still relevant

@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
-import Paragraph from '../../../../src/tools/paragraph';
-import LinkInlineTool from '../../../../src/components/inline-tools/inline-tool-link';
-import DeleteTune from '../../../../src/components/block-tunes/block-tune-delete';
-import ToolsFactory from '../../../../src/components/tools/factory';
-import InlineToolAdapter from '../../../../src/components/tools/inline';
-import BlockToolAdapter from '../../../../src/components/tools/block';
-import BlockTuneAdapter from '../../../../src/components/tools/tune';
-import type ApiModule from '../../../../src/components/modules/api';
+import { Paragraph } from '../../../../src/tools/paragraph';
+import { LinkInlineTool } from '../../../../src/components/inline-tools/inline-tool-link';
+import { DeleteTune } from '../../../../src/components/block-tunes/block-tune-delete';
+import { ToolsFactory } from '../../../../src/components/tools/factory';
+import { InlineToolAdapter } from '../../../../src/components/tools/inline';
+import { BlockToolAdapter } from '../../../../src/components/tools/block';
+import { BlockTuneAdapter } from '../../../../src/components/tools/tune';
+import type { API as ApiModule } from '../../../../src/components/modules/api';
 import type {
   BlockToolConstructable,
   ToolConstructable,

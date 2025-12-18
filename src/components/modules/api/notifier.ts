@@ -1,13 +1,13 @@
 import type { Notifier as INotifier } from '../../../../types/api';
-import Notifier from '../../utils/notifier';
+import { Notifier } from '../../utils/notifier';
 import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } from '../../utils/notifier/types';
-import Module from '../../__module';
+import { Module } from '../../__module';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 
 /**
  *
  */
-export default class NotifierAPI extends Module {
+export class NotifierAPI extends Module {
   /**
    * Notifier utility Instance
    */

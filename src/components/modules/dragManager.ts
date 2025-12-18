@@ -5,9 +5,9 @@
  * This allows full control over the cursor during drag operations
  * @module DragManager
  */
-import Module from '../__module';
-import type Block from '../block';
-import $ from '../dom';
+import { Module } from '../__module';
+import type { Block } from '../block';
+import { Dom as $ } from '../dom';
 import * as tooltip from '../utils/tooltip';
 import { DATA_ATTR, createSelector } from '../constants';
 import { twMerge } from '../utils/tw';
@@ -70,7 +70,7 @@ interface DragState {
   scrollContainer: HTMLElement | null;
 }
 
-export default class DragManager extends Module {
+export class DragManager extends Module {
   /**
    * Current drag state
    */

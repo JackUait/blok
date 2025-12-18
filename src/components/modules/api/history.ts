@@ -3,13 +3,13 @@
  * @classdesc Provides public API for history (undo/redo) functionality
  * @module HistoryAPI
  */
-import Module from '../../__module';
+import { Module } from '../../__module';
 import type { History as HistoryInterface } from '../../../../types/api';
 
 /**
  * HistoryAPI provides methods for undo/redo operations
  */
-export default class HistoryAPI extends Module {
+export class HistoryAPI extends Module {
   /**
    * Available methods for public API
    */

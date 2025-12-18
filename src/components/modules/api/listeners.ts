@@ -1,11 +1,11 @@
 import type { Listeners } from '../../../../types/api';
-import Module from '../../__module';
+import { Module } from '../../__module';
 
 /**
  * @class ListenersAPI
  * Provides with methods working with DOM Listener
  */
-export default class ListenersAPI extends Module {
+export class ListenersAPI extends Module {
   /**
    * Available methods
    * @returns {Listeners}

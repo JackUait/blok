@@ -1,13 +1,13 @@
 import type { Tooltip as ITooltip } from '../../../../types/api';
 import type { TooltipOptions, TooltipContent } from '../../utils/tooltip';
-import Module from '../../__module';
+import { Module } from '../../__module';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import * as tooltip from '../../utils/tooltip';
 /**
  * @class TooltipAPI
  * @classdesc Tooltip API
  */
-export default class TooltipAPI extends Module {
+export class TooltipAPI extends Module {
   /**
    * @class
    * @param moduleConfiguration - Module Configuration

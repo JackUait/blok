@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
-import Saver from '../../../../src/components/modules/saver';
-import type Block from '../../../../src/components/block';
+import { Saver } from '../../../../src/components/modules/saver';
+import type { Block } from '../../../../src/components/block';
 import type { BlokConfig, SanitizerConfig } from '../../../../types';
 import type { SavedData } from '../../../../types/data-formats';
 import * as sanitizer from '../../../../src/components/utils/sanitizer';

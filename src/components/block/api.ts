@@ -1,4 +1,4 @@
-import type Block from './index';
+import type { Block } from './index';
 import type { BlockToolData, ToolConfig, ToolboxConfigEntry } from '../../../types/tools';
 import type { SavedData } from '../../../types/data-formats';
 import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
@@ -8,7 +8,7 @@ import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
  * @class
  * @param {Block} block - Block to expose
  */
-const BlockAPI = function BlockAPI(
+const BlockAPIConstructor = function BlockAPI(
   this: BlockAPIInterface,
   block: Block
 ): BlockAPIInterface {
@@ -150,6 +150,6 @@ const BlockAPI = function BlockAPI(
 };
 
 // Export BlockAPI with proper constructor type
-export default BlockAPI as unknown as {
+export const BlockAPI = BlockAPIConstructor as unknown as {
   new (block: Block): BlockAPIInterface;
 };

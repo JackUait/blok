@@ -10,7 +10,7 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 /**
  *
  */
-export default class DeleteTune implements BlockTune {
+export class DeleteTune implements BlockTune {
   /**
    * Set Tool is Tune
    */

@@ -1,5 +1,5 @@
 import type { Styles } from '../../../../types/api';
-import Module from '../../__module';
+import { Module } from '../../__module';
 
 /**
  * StylesAPI provides CSS class names for tool authors.
@@ -13,7 +13,7 @@ import Module from '../../__module';
  * import { twMerge } from '@jackuait/blok/utils/tw';
  * const customBlock = twMerge(api.styles.block, 'my-4 bg-gray-100');
  */
-export default class StylesAPI extends Module {
+export class StylesAPI extends Module {
   /**
    * Exported CSS class names for tool styling.
    * These are single class names that can be safely used with classList.add().

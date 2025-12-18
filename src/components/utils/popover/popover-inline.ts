@@ -8,7 +8,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { twMerge } from '../tw';
-import Flipper from '../../flipper';
+import { Flipper } from '../../flipper';
 import { css as popoverItemCls } from './components/popover-item';
 
 /**

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
-import Flipper from '../../../src/components/flipper';
+import { Flipper } from '../../../src/components/flipper';
 
 const focusedClass = 'is-focused';
 

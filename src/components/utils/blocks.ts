@@ -2,8 +2,8 @@ import type { BlockAPI, ToolConfig } from '../../../types';
 import type { ConversionConfig } from '../../../types/configs/conversion-config';
 import type { SavedData } from '../../../types/data-formats';
 import type { BlockToolData } from '../../../types/tools/block-tool-data';
-import type Block from '../block';
-import type BlockToolAdapter from '../tools/block';
+import type { Block } from '../block';
+import type { BlockToolAdapter } from '../tools/block';
 import { isFunction, isString, log, equals, isEmpty } from '../utils';
 import { isToolConvertable } from './tools';
 

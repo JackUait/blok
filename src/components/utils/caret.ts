@@ -1,4 +1,4 @@
-import $, { isCollapsedWhitespaces } from '../dom';
+import { Dom as $, isCollapsedWhitespaces } from '../dom';
 
 const NBSP_CHAR = '\u00A0';
 

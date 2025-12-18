@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import CrossBlockSelection from '../../../../src/components/modules/crossBlockSelection';
+import { CrossBlockSelection } from '../../../../src/components/modules/crossBlockSelection';
 import * as _ from '../../../../src/components/utils';
-import type Block from '../../../../src/components/block';
-import type Listeners from '../../../../src/components/utils/listeners';
+import type { Block } from '../../../../src/components/block';
+import type { Listeners } from '../../../../src/components/utils/listeners';
 
 type MutableSelection = Selection & {
   isCollapsed: boolean;

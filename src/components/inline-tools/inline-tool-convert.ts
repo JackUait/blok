@@ -2,15 +2,15 @@ import type { InlineTool, API } from '../../../types';
 import type { MenuConfig, MenuConfigItem } from '../../../types/tools';
 import * as _ from '../utils';
 import type { Blocks, Selection, Tools, Caret, I18n } from '../../../types/api';
-import SelectionUtils from '../selection';
+import { SelectionUtils } from '../selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
 import { translateToolTitle, translateToolName, type I18nInstance } from '../utils/tools';
-import type BlockToolAdapter from '../tools/block';
+import type { BlockToolAdapter } from '../tools/block';
 
 /**
  * Inline tools for converting blocks
  */
-export default class ConvertInlineTool implements InlineTool {
+export class ConvertInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
    */

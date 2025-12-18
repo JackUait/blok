@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PopoverHeader } from '../../../../src/components/utils/popover/components/popover-header';
-import Listeners from '../../../../src/components/utils/listeners';
+import { Listeners } from '../../../../src/components/utils/listeners';
 
 const { iconMarkup } = vi.hoisted(() => ({
   iconMarkup: '<svg data-blok-testid="chevron"></svg>',

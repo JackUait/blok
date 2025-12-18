@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import BlockEvents from '../../../../src/components/modules/blockEvents';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { BlockEvents } from '../../../../src/components/modules/blockEvents';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../types';
 import type { BlokEventMap } from '../../../../src/components/events';
-import type Block from '../../../../src/components/block';
-import SelectionUtils from '../../../../src/components/selection';
+import type { Block } from '../../../../src/components/block';
+import { SelectionUtils } from '../../../../src/components/selection';
 import * as caretUtils from '../../../../src/components/utils/caret';
 import * as blocksUtils from '../../../../src/components/utils/blocks';
 import { keyCodes } from '../../../../src/components/utils';

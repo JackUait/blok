@@ -4,7 +4,7 @@ import * as _ from './utils';
  * DOM manipulations helper
  * @todo get rid of class and make separate utility functions
  */
-export default class Dom {
+export class Dom {
   /**
    * Check if passed tag has no closed tag
    * @param {HTMLElement} tag - element to check

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/html-vite';
 import type { OutputData } from '@/types';
 import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import Paragraph, { type ParagraphConfig } from '../tools/paragraph';
+import { Paragraph,  type ParagraphConfig  } from '../tools/paragraph';
 
 interface ParagraphArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -67,6 +67,7 @@ const meta: Meta<ParagraphArgs> = {
 };
 
 export default meta;
+
 
 type Story = StoryObj<ParagraphArgs>;
 

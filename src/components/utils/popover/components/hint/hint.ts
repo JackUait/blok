@@ -1,4 +1,4 @@
-import Dom from '../../../../dom';
+import { Dom } from '../../../../dom';
 import { css } from './hint.const';
 import type { HintParams } from '@/types/utils/popover/hint';
 

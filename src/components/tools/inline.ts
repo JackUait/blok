@@ -1,4 +1,4 @@
-import BaseToolAdapter from './base';
+import { BaseToolAdapter } from './base';
 import type { InlineTool as IInlineTool, InlineToolConstructable } from '@/types';
 import type { InlineToolAdapter as InlineToolAdapterInterface } from '@/types/tools/adapters/inline-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
@@ -6,7 +6,7 @@ import { ToolType } from '@/types/tools/adapters/tool-type';
 /**
  * InlineTool object to work with Inline Tools constructables
  */
-export default class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineTool> implements InlineToolAdapterInterface {
+export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineTool> implements InlineToolAdapterInterface {
   /**
    * Tool type — Inline
    */

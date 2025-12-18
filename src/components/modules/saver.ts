@@ -4,11 +4,11 @@
  * @author Blok Team
  * @version 2.0.0
  */
-import Module from '../__module';
+import { Module } from '../__module';
 import type { BlockToolData, OutputData, SanitizerConfig } from '../../../types';
 import type { SavedData, ValidatedData } from '../../../types/data-formats';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import type Block from '../block';
+import type { Block } from '../block';
 import * as _ from '../utils';
 import { sanitizeBlocks } from '../utils/sanitizer';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
@@ -33,7 +33,7 @@ type SanitizableBlockData = SaverValidatedData & Pick<SavedData, 'data' | 'tool'
  * @property {Element} html - Blok HTML content
  * @property {string} json - Blok JSON output
  */
-export default class Saver extends Module {
+export class Saver extends Module {
   /**
    * Stores the last error raised during save attempt
    */

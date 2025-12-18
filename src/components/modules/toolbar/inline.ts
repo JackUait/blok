@@ -1,16 +1,16 @@
-import Module from '../../__module';
-import $ from '../../dom';
-import SelectionUtils from '../../selection';
+import { Module } from '../../__module';
+import { Dom as $ } from '../../dom';
+import { SelectionUtils } from '../../selection';
 import * as _ from '../../utils';
 import type { InlineTool as IInlineTool } from '../../../../types';
-import Shortcuts from '../../utils/shortcuts';
+import { Shortcuts } from '../../utils/shortcuts';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import { CommonInternalSettings } from '../../tools/base';
 import type { Popover, PopoverItemParams } from '../../utils/popover';
 import { PopoverItemType } from '../../utils/popover';
 import { PopoverInline } from '../../utils/popover/popover-inline';
-import type InlineToolAdapter from 'src/components/tools/inline';
+import type { InlineToolAdapter } from 'src/components/tools/inline';
 import { translateToolName } from '../../utils/tools';
 import { DATA_ATTR, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../constants';
 import { twMerge } from '../../utils/tw';
@@ -32,7 +32,7 @@ interface InlineToolbarNodes {
  * |   B  i [link] [mark]   |
  * |________________________|
  */
-export default class InlineToolbar extends Module<InlineToolbarNodes> {
+export class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * State of inline toolbar

@@ -1,4 +1,4 @@
-import DomIterator from './domIterator';
+import { DomIterator } from './domIterator';
 import * as _ from './utils';
 
 /**
@@ -51,7 +51,7 @@ export interface FlipperOptions {
  * Flipper is a component that iterates passed items array by TAB or Arrows and clicks it by ENTER
  * @internal
  */
-export default class Flipper {
+export class Flipper {
   /**
    * True if flipper is currently activated
    */

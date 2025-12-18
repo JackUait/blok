@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import ScrollLocker from '../../../../src/components/utils/scroll-locker';
+import { ScrollLocker } from '../../../../src/components/utils/scroll-locker';
 
 const { getIsIosDeviceValue, setIsIosDeviceValue } = vi.hoisted(() => {
   let value = false;

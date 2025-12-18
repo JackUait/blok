@@ -1,20 +1,20 @@
-import Paragraph from '../../tools/paragraph';
-import List from '../../tools/list';
-import Module from '../__module';
+import { Paragraph } from '../../tools/paragraph';
+import { ListItem as List } from '../../tools/list';
+import { Module } from '../__module';
 import * as _ from '../utils';
-import PromiseQueue from '../utils/promise-queue';
+import { PromiseQueue } from '../utils/promise-queue';
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
-import BoldInlineTool from '../inline-tools/inline-tool-bold';
-import ItalicInlineTool from '../inline-tools/inline-tool-italic';
-import LinkInlineTool from '../inline-tools/inline-tool-link';
-import ConvertInlineTool from '../inline-tools/inline-tool-convert';
-import Stub from '../../tools/stub';
-import ToolsFactory from '../tools/factory';
-import type InlineToolAdapter from '../tools/inline';
-import type BlockToolAdapter from '../tools/block';
-import type BlockTuneAdapter from '../tools/tune';
-import DeleteTune from '../block-tunes/block-tune-delete';
-import ToolsCollection from '../tools/collection';
+import { BoldInlineTool } from '../inline-tools/inline-tool-bold';
+import { ItalicInlineTool } from '../inline-tools/inline-tool-italic';
+import { LinkInlineTool } from '../inline-tools/inline-tool-link';
+import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
+import { Stub } from '../../tools/stub';
+import { ToolsFactory } from '../tools/factory';
+import type { InlineToolAdapter } from '../tools/inline';
+import type { BlockToolAdapter } from '../tools/block';
+import type { BlockTuneAdapter } from '../tools/tune';
+import { DeleteTune } from '../block-tunes/block-tune-delete';
+import { ToolsCollection } from '../tools/collection';
 import { CriticalError } from '../errors/critical';
 
 /**
@@ -52,7 +52,7 @@ const toToolConstructable = (constructable: unknown): ToolConstructable => {
 /**
  * Modules that works with tools classes
  */
-export default class Tools extends Module {
+export class Tools extends Module {
   /**
    * Name of Stub Tool
    * Stub Tool is used to substitute unavailable block Tools and store their data

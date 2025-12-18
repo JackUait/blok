@@ -1,8 +1,7 @@
-import SelectionUtils from '../selection';
+import { SelectionUtils } from '../selection';
 import * as _ from '../utils';
 import type {
   InlineTool,
-  InlineToolConstructable,
   InlineToolConstructorOptions,
   SanitizerConfig
 } from '../../../types';
@@ -20,7 +19,7 @@ import { twMerge } from '../utils/tw';
  *
  * Wrap selected text with <a> tag
  */
-const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements InlineTool {
+export class LinkInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
    * @returns {boolean}
@@ -540,4 +539,3 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   }
 };
 
-export default LinkInlineTool;

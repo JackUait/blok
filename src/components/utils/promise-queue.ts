@@ -5,7 +5,7 @@
  *            queue.add(async () => { ... });
  *            await queue.completed;
  */
-export default class PromiseQueue {
+export class PromiseQueue {
   /**
    * Tail promise representing the queued operations chain
    */

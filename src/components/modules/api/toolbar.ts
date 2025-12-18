@@ -1,11 +1,11 @@
 import type { Toolbar } from '../../../../types/api';
-import Module from '../../__module';
+import { Module } from '../../__module';
 import * as _ from './../../utils';
 /**
  * @class ToolbarAPI
  * Provides methods for working with the Toolbar
  */
-export default class ToolbarAPI extends Module {
+export class ToolbarAPI extends Module {
   /**
    * Available methods
    * @returns {Toolbar}

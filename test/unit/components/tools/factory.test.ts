@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BlokConfig } from '@/types';
 import type { ToolConstructable, ToolSettings } from '@/types/tools';
-import ToolsFactory from '../../../../src/components/tools/factory';
+import { ToolsFactory } from '../../../../src/components/tools/factory';
 import {
   InternalInlineToolSettings,
   InternalTuneSettings,
   type ToolOptions
 } from '../../../../src/components/tools/base';
-import type ApiModule from '../../../../src/components/modules/api';
-import BlockToolAdapter from '../../../../src/components/tools/block';
+import type { API as ApiModule } from '../../../../src/components/modules/api';
+import { BlockToolAdapter } from '../../../../src/components/tools/block';
 
 type ToolAdapterOptions = {
   name: string;
@@ -69,7 +69,7 @@ vi.mock('../../../../src/components/tools/inline', () => {
   }
 
   return {
-    default: InlineToolAdapterMockImpl,
+    InlineToolAdapter: InlineToolAdapterMockImpl,
   };
 });
 
@@ -100,7 +100,7 @@ vi.mock('../../../../src/components/tools/block', () => {
   }
 
   return {
-    default: BlockToolAdapterMockImpl,
+    BlockToolAdapter: BlockToolAdapterMockImpl,
   };
 });
 
@@ -131,7 +131,7 @@ vi.mock('../../../../src/components/tools/tune', () => {
   }
 
   return {
-    default: BlockTuneAdapterMockImpl,
+    BlockTuneAdapter: BlockTuneAdapterMockImpl,
   };
 });
 

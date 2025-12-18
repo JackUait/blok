@@ -1,7 +1,7 @@
 import type { BlockId } from '../../../types';
 import type { BlockMutationEvent, BlockMutationType } from '../../../types/events/block';
 import type { ModuleConfig } from '../../types-internal/module-config';
-import Module from '../__module';
+import { Module } from '../__module';
 import { modificationsObserverBatchTimeout } from '../constants';
 import { BlockChanged, FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../events';
 import * as _ from '../utils';
@@ -14,7 +14,7 @@ type UniqueBlockMutationKey = `block:${BlockId}:event:${BlockMutationType}`;
 /**
  * Single entry point for Block mutation events
  */
-export default class ModificationsObserver extends Module {
+export class ModificationsObserver extends Module {
   /**
    * Flag shows onChange event is disabled
    */

@@ -1,10 +1,10 @@
-import Module from '../../__module';
+import { Module } from '../../__module';
 import type { Ui, UiNodes } from '../../../../types/api';
 
 /**
  * API module allowing to access some Blok UI elements
  */
-export default class UiAPI extends Module {
+export class UiAPI extends Module {
   /**
    * Available methods / getters
    */

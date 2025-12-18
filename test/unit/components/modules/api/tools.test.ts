@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
-import ToolsAPI from '../../../../../src/components/modules/api/tools';
-import EventsDispatcher from '../../../../../src/components/utils/events';
+import { ToolsAPI } from '../../../../../src/components/modules/api/tools';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../../types';
 import type { BlokEventMap } from '../../../../../src/components/events';
-import type BlockToolAdapter from '../../../../../src/components/tools/block';
+import type { BlockToolAdapter } from '../../../../../src/components/tools/block';
 
 type CreateToolsApiResult = {
   toolsApi: ToolsAPI;

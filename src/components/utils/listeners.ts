@@ -51,7 +51,7 @@ interface NormalizedListenerOptions {
  * @typedef {Listeners} Listeners
  * @property {ListenerData[]} allListeners - listeners store
  */
-export default class Listeners {
+export class Listeners {
   /**
    * Stores all listeners data to find/remove/process it
    * @type {ListenerData[]}

@@ -1,4 +1,4 @@
-import BaseToolAdapter, { InternalBlockToolSettings, UserSettings } from './base';
+import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
 import type {
   BlockAPI,
   BlockTool as IBlockTool,
@@ -9,16 +9,16 @@ import type {
   ToolboxConfigEntry
 } from '@/types';
 import * as _ from '../utils';
-import type InlineToolAdapter from './inline';
-import type BlockTuneAdapter from './tune';
-import ToolsCollection from './collection';
+import type { InlineToolAdapter } from './inline';
+import type { BlockTuneAdapter } from './tune';
+import { ToolsCollection } from './collection';
 import type { BlockToolAdapter as BlockToolAdapterInterface } from '@/types/tools/adapters/block-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 
 /**
  * Class to work with Block tools constructables
  */
-export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool> implements BlockToolAdapterInterface {
+export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool> implements BlockToolAdapterInterface {
   /**
    * Tool type — Block
    */

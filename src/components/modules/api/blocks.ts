@@ -1,9 +1,9 @@
 import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
 import type { BlockToolData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
 import * as _ from './../../utils';
-import BlockAPI from '../../block/api';
-import Module from '../../__module';
-import Block from '../../block';
+import { BlockAPI } from '../../block/api';
+import { Module } from '../../__module';
+import { Block } from '../../block';
 import { capitalize } from '../../utils';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 
@@ -11,7 +11,7 @@ import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-dat
  * @class BlocksAPI
  * provides with methods working with Block
  */
-export default class BlocksAPI extends Module {
+export class BlocksAPI extends Module {
   /**
    * Available methods
    * @returns {Blocks}

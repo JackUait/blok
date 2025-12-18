@@ -3,7 +3,7 @@ import { userEvent, waitFor, expect } from 'storybook/test';
 import type { OutputData, ToolSettings } from '@/types';
 import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import Blok from '../blok';
+import { Blok } from '../blok';
 import type { ListConfig } from '../../types/tools/list';
 
 // Constants
@@ -131,6 +131,7 @@ const meta: Meta<ListCustomStylesArgs> = {
 };
 
 export default meta;
+
 
 type Story = StoryObj<ListCustomStylesArgs>;
 

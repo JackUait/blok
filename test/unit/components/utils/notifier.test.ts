@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NotifierOptions } from '../../../../src/components/utils/notifier/types';
 
-import Notifier from '../../../../src/components/utils/notifier';
+import { Notifier } from '../../../../src/components/utils/notifier';
 
 type ShowMock = ReturnType<typeof vi.fn>;
 
@@ -26,6 +26,9 @@ const hoisted = vi.hoisted(() => {
       delete moduleExports[key];
     }
 
+    // Always set __esModule first
+    moduleExports.__esModule = true;
+
     if (typeof exports === 'object' && exports !== null) {
       Object.assign(moduleExports, exports as Record<string, unknown>);
     }
@@ -33,9 +36,8 @@ const hoisted = vi.hoisted(() => {
 
   const setDefaultExports = (): void => {
     overwriteModuleExports({
-      default: {
-        show: showSpy,
-      },
+      __esModule: true,
+      show: showSpy,
     });
   };
 
@@ -95,14 +97,13 @@ describe('Notifier utility', () => {
   describe('loadNotifierModule', () => {
     it('loads notifier lazily and caches the resolved module', async () => {
       const { internals } = createNotifierWithInternals();
-      const moduleInstance: NotifierModule = { show: showSpy };
 
-      setModuleExports({ default: moduleInstance });
+      setModuleExports({ show: showSpy });
 
       const loadedModule = await internals.loadNotifierModule();
 
-      expect(loadedModule).toBe(moduleInstance);
-      expect(internals.getNotifierModule()).toBe(moduleInstance);
+      expect(loadedModule.show).toBe(showSpy);
+      expect(internals.getNotifierModule()).toBe(loadedModule);
     });
 
     it('returns cached module when it is already available', async () => {
@@ -111,7 +112,7 @@ describe('Notifier utility', () => {
 
       internals.setNotifierModule(cachedModule);
 
-      setModuleExports({ default: { show: showSpy } });
+      setModuleExports({ show: showSpy });
 
       const loadedModule = await internals.loadNotifierModule();
 
@@ -121,21 +122,23 @@ describe('Notifier utility', () => {
 
     it('reuses the same promise while loading is in progress', async () => {
       const { internals } = createNotifierWithInternals();
-      const moduleInstance: NotifierModule = { show: showSpy };
 
-      setModuleExports({ default: moduleInstance });
+      setModuleExports({ show: showSpy });
 
       const firstPromise = internals.loadNotifierModule();
       const secondPromise = internals.loadNotifierModule();
 
       expect(secondPromise).toBe(firstPromise);
-      await expect(firstPromise).resolves.toBe(moduleInstance);
+
+      const result = await firstPromise;
+
+      expect(result.show).toBe(showSpy);
     });
 
     it('rejects when module does not expose show and resets loading promise', async () => {
       const { internals } = createNotifierWithInternals();
 
-      setModuleExports({ default: {} });
+      setModuleExports({});
 
       await expect(internals.loadNotifierModule()).rejects.toThrow('notifier module does not expose a "show" method.');
       expect(internals.getLoadingPromise()).toBeNull();
@@ -149,7 +152,7 @@ describe('Notifier utility', () => {
       const options = { message: 'Hello' } as NotifierOptions;
       const moduleInstance: NotifierModule = { show: showSpy };
 
-      setModuleExports({ default: moduleInstance });
+      setModuleExports(moduleInstance);
 
       notifier.show(options);
 
@@ -166,7 +169,7 @@ describe('Notifier utility', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const { notifier, internals } = createNotifierWithInternals();
 
-      setModuleExports({ default: {} });
+      setModuleExports({});
 
       notifier.show({ message: 'Oops' } as NotifierOptions);
 

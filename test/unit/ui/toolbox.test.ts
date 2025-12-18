@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import Toolbox, { ToolboxEvent } from '../../../src/components/ui/toolbox';
+import { Toolbox, ToolboxEvent } from '../../../src/components/ui/toolbox';
 import type { API, BlockToolData, ToolboxConfigEntry, BlockAPI } from '@/types';
-import type BlockToolAdapter from '../../../src/components/tools/block';
-import type ToolsCollection from '../../../src/components/tools/collection';
+import type { BlockToolAdapter } from '../../../src/components/tools/block';
+import type { ToolsCollection } from '../../../src/components/tools/collection';
 import type { Popover } from '../../../src/components/utils/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { BlokMobileLayoutToggled } from '../../../src/components/events';
-import Shortcuts from '../../../src/components/utils/shortcuts';
+import { Shortcuts } from '../../../src/components/utils/shortcuts';
 
 // Use vi.hoisted to create mock instance that can be shared between factory and tests
 const mockPopoverInstance = vi.hoisted(() => ({
@@ -20,7 +20,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../src/components/dom', () => ({
-  default: {
+  Dom: {
     make: vi.fn((tag: string, classNames: string) => {
       const el = document.createElement(tag);
 
@@ -55,7 +55,7 @@ vi.mock('../../../src/components/utils/popover', () => {
 });
 
 vi.mock('../../../src/components/utils/shortcuts', () => ({
-  default: {
+  Shortcuts: {
     add: vi.fn(),
     remove: vi.fn(),
   },

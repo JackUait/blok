@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import Caret from '../../../../src/components/modules/caret';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { Caret } from '../../../../src/components/modules/caret';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../types';
-import type Block from '../../../../src/components/block';
-import Selection from '../../../../src/components/selection';
+import type { Block } from '../../../../src/components/block';
+import { SelectionUtils as Selection } from '../../../../src/components/selection';
 import * as caretUtils from '../../../../src/components/utils/caret';
 
 type BlockManagerStub = {

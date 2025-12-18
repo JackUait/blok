@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 import type { ToolClass } from '../../../../src/components/tools/collection';
-import ToolsCollection from '../../../../src/components/tools/collection';
-import type BlockToolAdapter from '../../../../src/components/tools/block';
-import type InlineToolAdapter from '../../../../src/components/tools/inline';
-import type BlockTuneAdapter from '../../../../src/components/tools/tune';
+import { ToolsCollection } from '../../../../src/components/tools/collection';
+import type { BlockToolAdapter } from '../../../../src/components/tools/block';
+import type { InlineToolAdapter } from '../../../../src/components/tools/inline';
+import type { BlockTuneAdapter } from '../../../../src/components/tools/tune';
 
 type ToolStubOptions = {
   block?: boolean;

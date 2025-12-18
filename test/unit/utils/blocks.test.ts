@@ -3,8 +3,8 @@ import type { BlockAPI, ToolConfig } from '../../../types';
 import type { ConversionConfig } from '../../../types/configs/conversion-config';
 import type { SavedData } from '../../../types/data-formats';
 import type { BlockToolData } from '../../../types/tools/block-tool-data';
-import type Block from '../../../src/components/block';
-import type BlockToolAdapter from '../../../src/components/tools/block';
+import type { Block } from '../../../src/components/block';
+import type { BlockToolAdapter } from '../../../src/components/tools/block';
 import {
   isBlockConvertable,
   isSameBlockData,

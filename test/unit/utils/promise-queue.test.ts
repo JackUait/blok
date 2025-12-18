@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
-import PromiseQueue from '../../../src/components/utils/promise-queue';
+import { PromiseQueue } from '../../../src/components/utils/promise-queue';
 
 describe('PromiseQueue', () => {
   beforeEach(() => {

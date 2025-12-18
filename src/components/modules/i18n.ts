@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import type { i18n as I18nextInstance } from 'i18next';
 
-import Module from '../__module';
+import { Module } from '../__module';
 import type { I18nDictionary } from '../../../types/configs';
 import type { SupportedLocale } from '../../../types/configs/i18n-config';
 import {
@@ -28,7 +28,7 @@ const CUSTOM_MESSAGES_LOCALE = 'custom';
  * - RTL support
  * - Pluralization support (via i18next)
  */
-export default class I18n extends Module {
+export class I18n extends Module {
   /**
    * i18next instance for this editor
    */

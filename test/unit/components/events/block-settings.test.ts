@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { BlockSettingsClosed, type BlockSettingsClosedPayload } from '../../../../src/components/events/BlockSettingsClosed';
 import type { BlokEventMap } from '../../../../src/components/events';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 
 describe('BlockSettingsClosed event', () => {
   it('uses stable event name', () => {

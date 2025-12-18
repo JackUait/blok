@@ -1,10 +1,10 @@
 import type { Tools as ToolsAPIInterface } from '../../../../types/api';
-import Module from '../../__module';
+import { Module } from '../../__module';
 
 /**
  * Provides methods for accessing installed Blok tools
  */
-export default class ToolsAPI extends Module {
+export class ToolsAPI extends Module {
   /**
    * Available methods
    */

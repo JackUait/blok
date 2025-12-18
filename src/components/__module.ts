@@ -1,8 +1,8 @@
 import type { BlokModules } from '../types-internal/blok-modules';
 import type { BlokConfig } from '../../types';
 import type { ModuleConfig } from '../types-internal/module-config';
-import Listeners from './utils/listeners';
-import type EventsDispatcher from './utils/events';
+import { Listeners } from './utils/listeners';
+import type { EventsDispatcher } from './utils/events';
 import type { BlokEventMap } from './events';
 
 /**
@@ -19,7 +19,7 @@ export type ModuleNodes = object;
  * @property {object} config - Blok user settings
  * @property {BlokModules} Blok - List of Blok modules
  */
-export default class Module<T extends ModuleNodes = Record<string, HTMLElement>> {
+export class Module<T extends ModuleNodes = Record<string, HTMLElement>> {
   /**
    * Each module can provide some UI elements that will be stored in this property
    */

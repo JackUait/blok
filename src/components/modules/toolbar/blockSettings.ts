@@ -1,8 +1,8 @@
-import Module from '../../__module';
-import $ from '../../dom';
-import SelectionUtils from '../../selection';
-import type Block from '../../block';
-import Flipper from '../../flipper';
+import { Module } from '../../__module';
+import { Dom as $ } from '../../dom';
+import { SelectionUtils } from '../../selection';
+import type { Block } from '../../block';
+import { Flipper } from '../../flipper';
 import type { MenuConfigItem } from '../../../../types/tools';
 import type { PopoverItemParams } from '../../utils/popover';
 import { type Popover, PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
@@ -14,8 +14,8 @@ import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } fro
 import { IconReplace, IconCross } from '../../icons';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
 import { translateToolTitle } from '../../utils/tools';
-import BlockAPI from '../../block/api';
-import type BlockToolAdapter from '../../tools/block';
+import { BlockAPI } from '../../block/api';
+import type { BlockToolAdapter } from '../../tools/block';
 
 /**
  * HTML Elements that used for BlockSettings
@@ -31,7 +31,7 @@ interface BlockSettingsNodes {
  * Block Settings
  *  @todo Make Block Settings no-module but a standalone class, like Toolbox
  */
-export default class BlockSettings extends Module<BlockSettingsNodes> {
+export class BlockSettings extends Module<BlockSettingsNodes> {
   /**
    * Module Events
    */

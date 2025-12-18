@@ -4,10 +4,10 @@
  * @module RectangleSelection
  * @version 1.0.0
  */
-import Module from '../__module';
-import $ from '../dom';
+import { Module } from '../__module';
+import { Dom as $ } from '../dom';
 
-import SelectionUtils from '../selection';
+import { SelectionUtils } from '../selection';
 import * as _ from '../utils';
 import {
   INLINE_TOOLBAR_INTERFACE_SELECTOR,
@@ -18,7 +18,7 @@ import {
 /**
  *
  */
-export default class RectangleSelection extends Module {
+export class RectangleSelection extends Module {
   /**
    * CSS classes for the Block - kept for backward compatibility
    * @returns {{wrapper: string, content: string}}

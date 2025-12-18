@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 import type { API, BlockAPI } from '@/types';
 import type { BlockToolConstructorOptions } from '@/types/tools/block-tool';
-import Stub, { type StubData } from '../../../src/tools/stub';
+import { Stub, type StubData } from '../../../src/tools/stub';
 
 interface CreateStubOptions {
   data?: Partial<StubData>;

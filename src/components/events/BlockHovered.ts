@@ -1,4 +1,4 @@
-import type Block from '../block';
+import type { Block } from '../block';
 
 /**
  * Fired when some block is hovered by user

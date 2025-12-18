@@ -1,5 +1,5 @@
 import * as _ from './utils';
-import type Block from './block';
+import type { Block } from './block';
 import { BlockToolAPI } from './block';
 import type { MoveEvent } from '../../types/tools';
 
@@ -9,7 +9,7 @@ import type { MoveEvent } from '../../types/tools';
  * @private
  * @property {HTMLElement} workingArea — blok`s working node
  */
-export default class Blocks {
+export class Blocks {
   /**
    * Array of Block instances in order of addition
    */

@@ -1,9 +1,9 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import type { BlockAPI, BlockToolData, ToolSettings, BlockToolConstructable, API } from '@/types';
 import { ToolType } from '@/types/tools/adapters/tool-type';
-import BlockToolAdapter from '../../../src/components/tools/block';
-import InlineToolAdapter from '../../../src/components/tools/inline';
-import ToolsCollection from '../../../src/components/tools/collection';
+import { BlockToolAdapter } from '../../../src/components/tools/block';
+import { InlineToolAdapter } from '../../../src/components/tools/inline';
+import { ToolsCollection } from '../../../src/components/tools/collection';
 import { InternalBlockToolSettings } from '../../../src/components/tools/base';
 
 type BlockToolAdapterOptions = ConstructorParameters<typeof BlockToolAdapter>[0];

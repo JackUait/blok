@@ -111,6 +111,7 @@ const meta: Meta<TooltipArgs> = {
 
 export default meta;
 
+
 type Story = StoryObj<TooltipArgs>;
 
 export const TooltipStates: Story = {

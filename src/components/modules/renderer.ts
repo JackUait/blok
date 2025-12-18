@@ -1,9 +1,9 @@
-import Module from '../__module';
+import { Module } from '../__module';
 import * as _ from '../utils';
 import type { BlockId, BlockToolData, OutputBlockData } from '../../../types';
-import type BlockToolAdapter from '../tools/block';
+import type { BlockToolAdapter } from '../tools/block';
 import type { StubData } from '../../tools/stub';
-import type Block from '../block';
+import type { Block } from '../block';
 import {
   analyzeDataFormat,
   expandToHierarchical,
@@ -14,7 +14,7 @@ import {
 /**
  * Module that responsible for rendering Blocks on blok initialization
  */
-export default class Renderer extends Module {
+export class Renderer extends Module {
   /**
    * Stores the detected input data format for use during save
    */

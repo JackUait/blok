@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IconItalic } from '../../../../src/components/icons';
 
-import ItalicInlineTool from '../../../../src/components/inline-tools/inline-tool-italic';
+import { ItalicInlineTool } from '../../../../src/components/inline-tools/inline-tool-italic';
 
 describe('ItalicInlineTool', () => {
   let tool: ItalicInlineTool;

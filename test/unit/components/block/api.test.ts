@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
-import BlockAPIConstructor from '../../../../src/components/block/api';
-import type Block from '../../../../src/components/block';
+import { BlockAPI as BlockAPIConstructor } from '../../../../src/components/block/api';
+import type { Block } from '../../../../src/components/block';
 import type { BlockToolData, ToolConfig, ToolboxConfigEntry } from '../../../../types/tools';
 import type { SavedData } from '../../../../types/data-formats';
 import type { BlockAPI as BlockAPIInterface } from '../../../../types/api';

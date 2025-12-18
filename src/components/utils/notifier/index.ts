@@ -61,6 +61,6 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   }
 };
 
-export default {
+export const Notifier = {
   show,
 };

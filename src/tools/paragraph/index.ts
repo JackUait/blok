@@ -95,7 +95,7 @@ const parseHtml = (html: string): DocumentFragment => {
  * @copyright CodeX 2018
  * @license MIT
  */
-export default class Paragraph implements BlockTool {
+export class Paragraph implements BlockTool {
   /**
    * Default placeholder for Paragraph Tool
    *

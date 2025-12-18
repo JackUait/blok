@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeAll, afterAll, afterEach, type Mock } from 'vitest';
 
-import Block from '../../../../src/components/block';
-import ToolsCollection from '../../../../src/components/tools/collection';
-import type BlockToolAdapter from '../../../../src/components/tools/block';
-import type BlockTuneAdapter from '../../../../src/components/tools/tune';
-import type ApiModules from '../../../../src/components/modules/api';
+import { Block } from '../../../../src/components/block';
+import { ToolsCollection } from '../../../../src/components/tools/collection';
+import type { BlockToolAdapter } from '../../../../src/components/tools/block';
+import type { BlockTuneAdapter } from '../../../../src/components/tools/tune';
+import type { API as ApiModules } from '../../../../src/components/modules/api';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { BlockToolData } from '@/types';
 import type { BlockTuneData } from '@/types/block-tunes/block-tune-data';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet } from '../../../../src/components/events';
-import SelectionUtils from '../../../../src/components/selection';
+import { SelectionUtils } from '../../../../src/components/selection';
 
 interface MockToolInstance {
   render: Mock<() => HTMLElement>;

@@ -1,6 +1,6 @@
  
 import { expect, test } from '@playwright/test';
-import InlineToolAdapter from '../../../../src/components/tools/inline';
+import { InlineToolAdapter } from '../../../../src/components/tools/inline';
 import { ToolType } from '../../../../types/tools/adapters/tool-type';
 import type { ToolConfig, ToolSettings } from '../../../../types';
 

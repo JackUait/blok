@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ShortcutData } from '../../../src/components/utils/shortcuts';
-import type Shortcuts from '../../../src/components/utils/shortcuts';
+import type { Shortcuts } from '../../../src/components/utils/shortcuts';
 
 type ShortcutHandler = ShortcutData['handler'];
 
@@ -16,7 +16,7 @@ const shortcutInstances: ShortcutMockInstance[] = [];
 const ShortcutConstructor = vi.fn();
 
 vi.mock('../../../src/components/utils/shortcut', () => ({
-  default: ShortcutConstructor,
+  Shortcut: ShortcutConstructor,
 }));
 
 type ShortcutsApi = typeof Shortcuts;
@@ -26,7 +26,7 @@ let shortcuts: ShortcutsApi;
 const importShortcuts = async (): Promise<void> => {
   const module = await import('../../../src/components/utils/shortcuts');
 
-  shortcuts = module.default;
+  shortcuts = module.Shortcuts;
 };
 
 beforeEach(async () => {

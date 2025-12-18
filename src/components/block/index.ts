@@ -11,17 +11,17 @@ import type {
 
 import type { SavedData } from '../../../types/data-formats';
 import { twMerge } from '../utils/tw';
-import $, { toggleEmptyMark } from '../dom';
+import { Dom as $, toggleEmptyMark } from '../dom';
 import * as _ from '../utils';
-import type ApiModules from '../modules/api';
-import BlockAPI from './api';
-import SelectionUtils from '../selection';
-import type BlockToolAdapter from '../tools/block';
+import type { API as ApiModules } from '../modules/api';
+import { BlockAPI } from './api';
+import { SelectionUtils } from '../selection';
+import type { BlockToolAdapter } from '../tools/block';
 
-import type BlockTuneAdapter from '../tools/tune';
+import type { BlockTuneAdapter } from '../tools/tune';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import type ToolsCollection from '../tools/collection';
-import EventsDispatcher from '../utils/events';
+import type { ToolsCollection } from '../tools/collection';
+import { EventsDispatcher } from '../utils/events';
 import type { MenuConfigItem } from '../../../types/tools';
 import { isMutationBelongsToElement } from '../utils/mutations';
 import type { BlokEventMap } from '../events';
@@ -30,7 +30,7 @@ import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { DATA_ATTR, createSelector } from '../constants';
-import type DragManager from '../modules/dragManager';
+import type { DragManager } from '../modules/dragManager';
 
 /**
  * Interface describes Block class constructor argument
@@ -113,7 +113,7 @@ interface BlockEvents {
  * @property {HTMLElement} holder - Div element that wraps block content with Tool's content.
  * @property {HTMLElement} pluginsContent - HTML content that returns by Tool's render function
  */
-export default class Block extends EventsDispatcher<BlockEvents> {
+export class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Tailwind styles for the Block elements

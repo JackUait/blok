@@ -1,6 +1,6 @@
 import { PopoverItem } from '../popover-item';
 import type { PopoverItemHtmlParams, PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
-import Dom from '../../../../../dom';
+import { Dom } from '../../../../../dom';
 import { css, cssInline } from './popover-item-html.const';
 import { DATA_ATTR } from '../../../../../constants/data-attributes';
 import { twMerge } from '../../../../tw';

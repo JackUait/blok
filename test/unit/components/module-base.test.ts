@@ -1,14 +1,14 @@
  
 import { describe, it, expect, vi } from 'vitest';
 
-import Module from '../../../src/components/__module';
-import EventsDispatcher from '../../../src/components/utils/events';
+import { Module } from '../../../src/components/__module';
+import { EventsDispatcher } from '../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../src/types-internal/module-config';
 import type { BlokConfig } from '../../../types';
 import type { BlokEventMap } from '../../../src/components/events';
 import type { BlokModules } from '../../../src/types-internal/blok-modules';
-import type Listeners from '../../../src/components/utils/listeners';
+import type { Listeners } from '../../../src/components/utils/listeners';
 
 const createModuleConfig = (configOverrides?: Partial<BlokConfig>): ModuleConfig => {
   const defaultConfig = {

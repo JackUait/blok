@@ -11,7 +11,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type Blok from '@/types';
+import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { MODIFIER_KEY } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';

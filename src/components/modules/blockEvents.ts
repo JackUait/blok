@@ -1,11 +1,11 @@
 /**
  * Contains keyboard and mouse events bound on each Block by Block Manager
  */
-import Module from '../__module';
+import { Module } from '../__module';
 import * as _ from '../utils';
-import SelectionUtils from '../selection';
-import Flipper from '../flipper';
-import type Block from '../block';
+import { SelectionUtils } from '../selection';
+import { Flipper } from '../flipper';
+import type { Block } from '../block';
 import { areBlocksMergeable } from '../utils/blocks';
 import * as caretUtils from '../utils/caret';
 
@@ -40,7 +40,7 @@ const isBlockMovementShortcut = (event: KeyboardEvent, direction: 'up' | 'down')
 /**
  *
  */
-export default class BlockEvents extends Module {
+export class BlockEvents extends Module {
   /**
    * All keydowns on Block
    * @param {KeyboardEvent} event - keydown

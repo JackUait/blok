@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import SaverAPI from '../../../../../src/components/modules/api/saver';
-import EventsDispatcher from '../../../../../src/components/utils/events';
+import { SaverAPI } from '../../../../../src/components/modules/api/saver';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import * as utils from '../../../../../src/components/utils';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';

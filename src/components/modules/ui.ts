@@ -3,12 +3,12 @@
  * Module UI
  * @type {UI}
  */
-import Module from '../__module';
-import $, { toggleEmptyMark } from '../dom';
+import { Module } from '../__module';
+import { Dom as $, toggleEmptyMark } from '../dom';
 import * as _ from '../utils';
 
-import Selection from '../selection';
-import Flipper from '../flipper';
+import { SelectionUtils as Selection } from '../selection';
+import { Flipper } from '../flipper';
 import { mobileScreenBreakpoint } from '../utils';
 
 import styles from '../../styles/main.css?inline';
@@ -45,7 +45,7 @@ interface UINodes {
  * @property {Element} nodes.wrapper  - <blok-editor>
  * @property {Element} nodes.redactor - <blok-redactor>
  */
-export default class UI extends Module<UINodes> {
+export class UI extends Module<UINodes> {
   /**
    * Return Width of center column of Blok
    * @returns {DOMRect}

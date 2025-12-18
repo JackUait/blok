@@ -1,10 +1,10 @@
-import Module from '../../__module';
-import $ from '../../dom';
+import { Module } from '../../__module';
+import { Dom as $ } from '../../dom';
 import * as _ from '../../utils';
 import * as tooltip from '../../utils/tooltip';
 import type { ModuleConfig } from '../../../types-internal/module-config';
-import Block from '../../block';
-import Toolbox, { ToolboxEvent } from '../../ui/toolbox';
+import { Block } from '../../block';
+import { Toolbox,  ToolboxEvent  } from '../../ui/toolbox';
 import { IconMenu, IconPlus } from '../../icons';
 import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
@@ -13,7 +13,7 @@ import type { BlockChangedPayload } from '../../events/BlockChanged';
 import { BlockChanged } from '../../events/BlockChanged';
 import { twJoin } from '../../utils/tw';
 import { DATA_ATTR } from '../../constants';
-import SelectionUtils from '../../selection';
+import { SelectionUtils } from '../../selection';
 
 /**
  * @todo Tab on non-empty block should open Block Settings of the hoveredBlock (not where caret is set)
@@ -90,7 +90,7 @@ const DRAG_THRESHOLD = 1000;
  * @property {Element} nodes.pluginSettings    - Plugin Settings section of Settings Panel
  * @property {Element} nodes.defaultSettings   - Default Settings section of Settings Panel
  */
-export default class Toolbar extends Module<ToolbarNodes> {
+export class Toolbar extends Module<ToolbarNodes> {
   /**
    * Block near which we display the Toolbox
    */

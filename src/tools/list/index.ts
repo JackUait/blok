@@ -110,7 +110,7 @@ interface StyleConfig {
  * ListItem block for the Blok Editor.
  * Represents a single list item that can have children (nested items).
  */
-export default class ListItem implements BlockTool {
+export class ListItem implements BlockTool {
   private api: API;
   private readOnly: boolean;
   private _settings: ListItemConfig;

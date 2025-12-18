@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import Listeners, { type ListenerData } from '../../../src/components/utils/listeners';
+import { Listeners, type ListenerData } from '../../../src/components/utils/listeners';
 import * as Utils from '../../../src/components/utils';
 
 const getStoredListeners = (instance: Listeners): ListenerData[] => {

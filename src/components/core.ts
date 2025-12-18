@@ -1,17 +1,17 @@
-import $ from './dom';
+import { Dom as $ } from './dom';
 import * as _ from './utils';
 import type { BlokConfig, SanitizerConfig } from '../../types';
 import type { BlokModules } from '../types-internal/blok-modules';
 import { CriticalError } from './errors/critical';
-import EventsDispatcher from './utils/events';
-import Modules from './modules';
+import { EventsDispatcher } from './utils/events';
+import { Modules } from './modules';
 import type { BlokEventMap } from './events';
-import type Renderer from './modules/renderer';
+import type { Renderer } from './modules/renderer';
 
 /**
  * Blok core class. Bootstraps modules.
  */
-export default class Core {
+export class Core {
   /**
    * Blok configuration passed by user to the constructor
    */

@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 
-import Paste from '../../../../src/components/modules/paste';
-import type BlockToolAdapter from '../../../../src/components/tools/block';
+import { Paste } from '../../../../src/components/modules/paste';
+import type { BlockToolAdapter } from '../../../../src/components/tools/block';
 import type { SanitizerConfig } from '../../../../types';
 import * as sanitizer from '../../../../src/components/utils/sanitizer';
-import Listeners from '../../../../src/components/utils/listeners';
+import { Listeners } from '../../../../src/components/utils/listeners';
 import * as utils from '../../../../src/components/utils';
 
 interface CreatePasteOptions {

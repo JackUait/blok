@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import BlockSelection from '../../../../src/components/modules/blockSelection';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { BlockSelection } from '../../../../src/components/modules/blockSelection';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../types';
-import SelectionUtils from '../../../../src/components/selection';
-import Shortcuts from '../../../../src/components/utils/shortcuts';
+import { SelectionUtils } from '../../../../src/components/selection';
+import { Shortcuts } from '../../../../src/components/utils/shortcuts';
 import * as utils from '../../../../src/components/utils';
 import type { SanitizerConfig } from '../../../../types/configs';
-import type Block from '../../../../src/components/block';
+import type { Block } from '../../../../src/components/block';
 
 type ModuleOverrides = Partial<BlokModules>;
 

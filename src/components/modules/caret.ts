@@ -1,8 +1,8 @@
-import Selection from '../selection';
-import Module from '../__module';
-import type Block from '../block';
+import { SelectionUtils as Selection } from '../selection';
+import { Module } from '../__module';
+import type { Block } from '../block';
 import * as caretUtils from '../utils/caret';
-import $ from '../dom';
+import { Dom as $ } from '../dom';
 
 const ASCII_MAX_CODE_POINT = 0x7f;
 
@@ -82,7 +82,7 @@ const findLastMeaningfulTextNode = (root: HTMLElement): Text | null => {
  * Contains methods for working Caret
  * @todo get rid of this module and separate it for utility functions
  */
-export default class Caret extends Module {
+export class Caret extends Module {
   /**
    * Allowed caret positions in input
    * @static

@@ -40,6 +40,10 @@
     "headless editor",
     "extensible editor"
   ],
+  "sideEffects": [
+    "./src/components/polyfills.ts",
+    "*.css"
+  ],
   "scripts": {
     "serve": "vite --no-open",
     "build": "vite build --mode production && node scripts/build-locales.mjs",

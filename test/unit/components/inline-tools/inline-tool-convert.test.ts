@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import ConvertInlineTool from '../../../../src/components/inline-tools/inline-tool-convert';
-import SelectionUtils from '../../../../src/components/selection';
+import { ConvertInlineTool } from '../../../../src/components/inline-tools/inline-tool-convert';
+import { SelectionUtils } from '../../../../src/components/selection';
 import * as Utils from '../../../../src/components/utils';
 import * as BlocksUtils from '../../../../src/components/utils/blocks';
 import * as ToolsUtils from '../../../../src/components/utils/tools';
 import type { API } from '../../../../types';
-import type BlockToolAdapter from '../../../../src/components/tools/block';
+import type { BlockToolAdapter } from '../../../../src/components/tools/block';
 
 type MenuConfigWithChildren = {
   icon?: string;

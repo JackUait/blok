@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import UiAPI from '../../../../../src/components/modules/api/ui';
-import EventsDispatcher from '../../../../../src/components/utils/events';
+import { UiAPI } from '../../../../../src/components/modules/api/ui';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';

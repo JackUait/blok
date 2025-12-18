@@ -1,4 +1,4 @@
-import Shortcut from './shortcut';
+import { Shortcut } from './shortcut';
 
 /**
  * Contains keyboard and mouse events binded on each Block by Block Manager
@@ -36,7 +36,7 @@ export interface ShortcutData {
  *
  * Internal Shortcuts Module
  */
-class Shortcuts {
+class ShortcutsClass {
   /**
    * All registered shortcuts
    * @type {Map<HTMLElement | Document, Shortcut[]>}
@@ -110,4 +110,4 @@ class Shortcuts {
   }
 }
 
-export default new Shortcuts();
+export const Shortcuts = new ShortcutsClass();

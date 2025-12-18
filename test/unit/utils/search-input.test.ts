@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchInput } from '../../../src/components/utils/popover/components/search-input/search-input';
 import { SearchInputEvent } from '../../../src/components/utils/popover/components/search-input/search-input.types';
-import type Listeners from '../../../src/components/utils/listeners';
+import type { Listeners } from '../../../src/components/utils/listeners';
 
 const getInput = (instance: SearchInput): HTMLInputElement => {
   return (instance as unknown as { input: HTMLInputElement }).input;

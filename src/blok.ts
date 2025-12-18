@@ -9,19 +9,32 @@ import type { BlokModules } from './types-internal/blok-modules';
 import '@babel/register';
 
 import './components/polyfills';
-import Core from './components/core';
-import * as _ from './components/utils';
+import { Core } from './components/core';
+import { getBlokVersion, isObject, isFunction } from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
-import Header from './tools/header';
-import Paragraph from './tools/paragraph';
-import List from './tools/list';
+import { Header } from './tools/header';
+import { Paragraph } from './tools/paragraph';
+import { ListItem as List } from './tools/list';
 import { DATA_ATTR } from './components/constants/data-attributes';
+
+/**
+ * Export version as a named export
+ */
+export const version = getBlokVersion();
+
+/**
+ * Re-export bundled tools for direct import
+ */
+export { Header } from './tools/header';
+export { Paragraph } from './tools/paragraph';
+export { ListItem as List } from './tools/list';
+export { DATA_ATTR } from './components/constants/data-attributes';
 
 /**
  * Blok
  * @license Apache-2.0
  */
-export default class Blok {
+export class Blok {
   /**
    * Store user-provided configuration for later export
    */
@@ -40,7 +53,7 @@ export default class Blok {
 
   /** Blok version */
   public static get version(): string {
-    return _.getBlokVersion();
+    return getBlokVersion();
   }
 
   /**
@@ -75,7 +88,7 @@ export default class Blok {
    * @param {BlokConfig|string|undefined} [configuration] - user configuration
    */
   constructor(configuration?: BlokConfig|string) {
-    this.initialConfiguration = _.isObject(configuration)
+    this.initialConfiguration = isObject(configuration)
       ? { ...configuration }
       : configuration;
 
@@ -83,7 +96,7 @@ export default class Blok {
      * Set default onReady function or use the one from configuration if provided
      */
 
-    const onReady = (_.isObject(configuration) && _.isFunction(configuration.onReady))
+    const onReady = (isObject(configuration) && isFunction(configuration.onReady))
       ? configuration.onReady
       : () => {};
 
@@ -125,13 +138,13 @@ export default class Blok {
             return;
           }
 
-          if (_.isFunction((moduleInstance as { destroy?: () => void }).destroy)) {
+          if (isFunction((moduleInstance as { destroy?: () => void }).destroy)) {
             (moduleInstance as { destroy: () => void }).destroy();
           }
 
           const listeners = (moduleInstance as { listeners?: { removeAll?: () => void } }).listeners;
 
-          if (listeners && _.isFunction(listeners.removeAll)) {
+          if (listeners && isFunction(listeners.removeAll)) {
             listeners.removeAll();
           }
         });
@@ -155,7 +168,7 @@ export default class Blok {
       }
 
       const coreConfiguration = (blok as unknown as { configuration?: BlokConfig|string|undefined }).configuration;
-      const configurationToExport = _.isObject(this.initialConfiguration)
+      const configurationToExport = isObject(this.initialConfiguration)
         ? this.initialConfiguration
         : coreConfiguration ?? this.initialConfiguration;
 

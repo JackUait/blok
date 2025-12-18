@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { resolveBlock } from '../../../src/components/utils/api';
 import type { BlokModules } from '../../../src/types-internal/blok-modules';
-import type Block from '../../../src/components/block';
+import type { Block } from '../../../src/components/block';
 import type { BlockAPI } from '../../../types/api/block';
 
 type BlockManagerStub = {

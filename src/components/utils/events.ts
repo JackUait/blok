@@ -20,7 +20,7 @@ type Subscriptions<EventMap> = {
  *    - {Function} emit - fires all subscribers with data
  *    - {Function off - unsubscribes callback
  */
-export default class EventsDispatcher<EventMap> {
+export class EventsDispatcher<EventMap> {
   /**
    * All subscribers grouped by event name
    * Object with events` names as key and array of callback functions as value

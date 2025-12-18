@@ -1,4 +1,4 @@
-import Module from '../../__module';
+import { Module } from '../../__module';
 import type { Events } from '../../../../types/api';
 import type { BlokEventMap } from '../../events';
 
@@ -6,7 +6,7 @@ import type { BlokEventMap } from '../../events';
  * @class EventsAPI
  * provides with methods working with Toolbar
  */
-export default class EventsAPI extends Module {
+export class EventsAPI extends Module {
   /**
    * Available methods
    * @returns {Events}

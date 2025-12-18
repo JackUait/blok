@@ -1,5 +1,5 @@
-import Module from '../__module';
-import $ from '../dom';
+import { Module } from '../__module';
+import { Dom as $ } from '../dom';
 import * as _ from '../utils';
 import type {
   PasteEvent,
@@ -9,7 +9,7 @@ import type {
 } from '../../../types';
 import type { SavedData } from '../../../types/data-formats';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
-import type BlockToolAdapter from '../tools/block';
+import type { BlockToolAdapter } from '../tools/block';
 
 /**
  * Tag substitute object.
@@ -119,7 +119,7 @@ interface PasteData {
  * @module Paste
  * @version 2.0.0
  */
-export default class Paste extends Module {
+export class Paste extends Module {
   /** If string`s length is greater than this number we don't check paste patterns */
   public static readonly PATTERN_PROCESSING_MAX_LENGTH = 450;
 

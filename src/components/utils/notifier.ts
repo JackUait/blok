@@ -10,7 +10,7 @@ type NotifierModule = {
 /**
  * Util for showing notifications
  */
-export default class Notifier {
+export class Notifier {
   /**
    * Cached notifier module instance
    */
@@ -33,7 +33,7 @@ export default class Notifier {
     if (this.loadingPromise === null) {
       this.loadingPromise = import('./notifier/index')
         .then((module) => {
-          const resolvedModule = (module?.default ?? module) as unknown;
+          const resolvedModule = module as unknown;
 
           if (!this.isNotifierModule(resolvedModule)) {
             throw new Error('notifier module does not expose a "show" method.');

@@ -10,30 +10,18 @@ inputs:
 outputs:
   cache-hit:
     description: 'Whether the Yarn cache was hit'
-    value: ${{ steps.yarn-cache.outputs.cache-hit }}
+    value: ${{ steps.setup-node.outputs.cache-hit }}
 
 runs:
   using: 'composite'
   steps:
     - name: Setup Node.js
+      id: setup-node
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-
-    - name: Cache Yarn dependencies
-      id: yarn-cache
-      uses: actions/cache@v4
-      with:
-        path: .yarn/cache
-        key: yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          yarn-
+        cache: 'yarn'
 
     - name: Install dependencies
       shell: bash
       run: yarn install --immutable
-
-    - name: Verify cache hit
-      if: steps.yarn-cache.outputs.cache-hit != 'true'
-      shell: bash
-      run: echo "::warning::Yarn cache miss, slower install expected"

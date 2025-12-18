@@ -268,8 +268,9 @@ async function main() {
       console.log(markdown);
     }
 
-    // Exit with error code if there are failures
-    process.exit(metrics.failed > 0 ? 1 : 0);
+    // Always exit successfully - the report itself shows pass/fail status
+    // The CI workflow handles failure detection separately
+    process.exit(0);
   } catch (error) {
     console.error(`Error: ${error.message}`);
     process.exit(1);

@@ -60,23 +60,26 @@ jobs:
 
             # Read the comparison report
             if [ -f bundle-size-comparison.md ]; then
-              echo "REPORT<<EOF" >> $GITHUB_OUTPUT
-              cat bundle-size-comparison.md >> $GITHUB_OUTPUT
-              echo "EOF" >> $GITHUB_OUTPUT
-              echo "has_report=true" >> $GITHUB_OUTPUT
+              {
+                echo "REPORT<<EOF"
+                cat bundle-size-comparison.md
+                echo ""
+                echo "EOF"
+                echo "has_report=true"
+              } >> $GITHUB_OUTPUT
             fi
           else
             echo "No base branch history found, skipping comparison"
-            echo "has_report=false" >> $GITHUB_OUTPUT
-
-            # Create a simple report
-            echo "REPORT<<EOF" >> $GITHUB_OUTPUT
-            echo "# Bundle Size Report" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            echo "No baseline data available for comparison. This is expected for the first run." >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            echo "Bundle sizes will be tracked once this PR is merged." >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            {
+              echo "has_report=false"
+              echo "REPORT<<EOF"
+              echo "# Bundle Size Report"
+              echo ""
+              echo "No baseline data available for comparison. This is expected for the first run."
+              echo ""
+              echo "Bundle sizes will be tracked once this PR is merged."
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
           fi
 
       - name: Comment on PR

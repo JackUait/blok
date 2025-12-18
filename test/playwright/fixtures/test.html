@@ -4,12 +4,16 @@
   <meta charset="utf-8" />
 </head>
 <body>
-  <!-- Load Blok's Core -->
-  <script src="./../../../dist/blok.umd.js"></script>
-  <script>
-    /**
-     * Allow to access the Blok API via window.Blok to support existing tests
-     */
+  <script type="module">
+    import { Blok, Header, Paragraph, List, DATA_ATTR, version } from '/dist/blok.mjs';
+
+    // Expose named exports on window for tests
+    window.Blok = Blok;
+    window.BlokHeader = Header;
+    window.BlokParagraph = Paragraph;
+    window.BlokList = List;
+    window.BlokDataAttr = DATA_ATTR;
+    window.BlokVersion = version;
   </script>
   <h1>Blok test page</h1>
 </body>

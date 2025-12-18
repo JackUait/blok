@@ -26,8 +26,8 @@ export default defineConfig(({ mode }) => {
       target: 'es2017',
       lib: {
         entry: path.resolve(__dirname, 'src', 'blok.ts'),
-        name: 'Blok',
         fileName: 'blok',
+        formats: ['es'],
       },
       rollupOptions: {
         plugins: [

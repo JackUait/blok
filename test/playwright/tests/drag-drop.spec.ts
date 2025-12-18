@@ -1,15 +1,9 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
-import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
 import { DATA_ATTR, createSelector } from '../../../src/components/constants';
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../fixtures/test.html')
-).href;
 
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="settings-toggler"]`;

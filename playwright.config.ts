@@ -116,6 +116,11 @@ const crossBrowserProjects = BROWSERS.map(browser => ({
 export default defineConfig({
   globalSetup: './test/playwright/global-setup.ts',
   testDir: 'test/playwright/tests',
+  webServer: {
+    command: 'npx serve . -l 3333 --no-clipboard',
+    port: 3333,
+    reuseExistingServer: !process.env.CI,
+  },
   timeout: 15_000,
   expect: {
     timeout: 5_000,

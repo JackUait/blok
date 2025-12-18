@@ -43,8 +43,8 @@ async function getBundleSizes(distDir) {
   try {
     const files = await readdir(distDir);
 
-    // Track specific bundles
-    const bundlesToTrack = ['blok.umd.js', 'blok.mjs', 'locales.mjs', 'locales.umd.js'];
+    // Track specific bundles (ES modules only)
+    const bundlesToTrack = ['blok.mjs', 'locales.mjs'];
 
     for (const bundleName of bundlesToTrack) {
       if (files.includes(bundleName)) {

@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 import type { Blok } from '@/types';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BlockChanged } from '../../../../src/components/events/BlockChanged';
 import { BlockHovered } from '../../../../src/components/events/BlockHovered';
 import { RedactorDomChanged } from '../../../../src/components/events/RedactorDomChanged';
@@ -21,10 +19,6 @@ declare global {
     blokInstance?: Blok;
   }
 }
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../fixtures/test.html')
-).href;
 
 const HOLDER_ID = 'blok';
 

@@ -53,26 +53,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Cache Yarn dependencies
-        id: yarn-cache
-        uses: actions/cache@v4
-        with:
-          path: .yarn/cache
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Verify cache hit
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: echo "::warning::Yarn cache miss, slower install expected"
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Lint
         run: yarn lint
@@ -85,26 +67,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Cache Yarn dependencies
-        id: yarn-cache
-        uses: actions/cache@v4
-        with:
-          path: .yarn/cache
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Verify cache hit
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: echo "::warning::Yarn cache miss, slower install expected"
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Run Unit Tests
         run: yarn test
@@ -113,32 +77,24 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      cache-hit: ${{ steps.build-cache.outputs.cache-hit }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
-      - name: Cache Yarn dependencies
-        id: yarn-cache
+      - name: Cache Build Output
+        id: build-cache
         uses: actions/cache@v4
         with:
-          path: .yarn/cache
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Verify cache hit
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: echo "::warning::Yarn cache miss, slower install expected"
+          path: dist/
+          key: build-${{ runner.os }}-${{ hashFiles('src/**', 'types/**', 'package.json', 'vite.config.mjs', 'tsconfig.json') }}
 
       - name: Build
+        if: steps.build-cache.outputs.cache-hit != 'true'
         run: yarn build
 
       - name: Upload build artifacts
@@ -148,35 +104,59 @@ jobs:
           path: dist/
           retention-days: 1
 
+  install-browsers:
+    name: Install Browsers (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    needs: [build]
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Cache Playwright Browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Install Playwright Browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install ${{ matrix.browser }} --with-deps
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps ${{ matrix.browser }}
+
+      - name: Package Browser for Artifact
+        run: |
+          mkdir -p browser-cache
+          cp -r ~/.cache/ms-playwright browser-cache/
+
+      - name: Upload Browser Cache
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-browser-${{ matrix.browser }}
+          path: browser-cache/
+          retention-days: 1
+
   smoke-test:
     name: Smoke Tests
     runs-on: ubuntu-latest
-    needs: [lint, build]
+    needs: [build]
     timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Cache Yarn dependencies
-        id: yarn-cache
-        uses: actions/cache@v4
-        with:
-          path: .yarn/cache
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Verify cache hit
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: echo "::warning::Yarn cache miss, slower install expected"
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -192,9 +172,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            playwright-browsers-
+            playwright-${{ runner.os }}-chromium-
 
       - name: Install Playwright Browsers (Chromium only)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -216,38 +196,32 @@ jobs:
           retention-days: 3
 
   e2e-tests:
-    name: E2E Tests (${{ matrix.project }})
+    name: E2E Tests (${{ matrix.project }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
     runs-on: ubuntu-latest
-    needs: [smoke-test, build]
-    timeout-minutes: 30
+    needs: [smoke-test, build, install-browsers]
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, webkit, chromium-logic]
+        include:
+          - project: chromium
+            browser: chromium
+          - project: firefox
+            browser: firefox
+          - project: webkit
+            browser: webkit
+          - project: chromium-logic
+            browser: chromium
+            shard: 1/2
+          - project: chromium-logic
+            browser: chromium
+            shard: 2/2
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Cache Yarn dependencies
-        id: yarn-cache
-        uses: actions/cache@v4
-        with:
-          path: .yarn/cache
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Verify cache hit
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: echo "::warning::Yarn cache miss, slower install expected"
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -258,46 +232,40 @@ jobs:
       - name: Mark Build as Available
         run: echo "BLOK_BUILT=true" >> $GITHUB_ENV
 
-      - name: Cache Playwright Browsers
-        id: playwright-cache
-        uses: actions/cache@v4
+      - name: Download Browser Cache
+        uses: actions/download-artifact@v4
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            playwright-browsers-
+          name: playwright-browser-${{ matrix.browser }}
+          path: browser-cache/
 
-      - name: Determine Browser to Install
-        id: browser
+      - name: Restore Browser Cache
         run: |
-          if [ "${{ matrix.project }}" = "chromium" ] || [ "${{ matrix.project }}" = "chromium-logic" ]; then
-            echo "name=chromium" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.project }}" = "firefox" ]; then
-            echo "name=firefox" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.project }}" = "webkit" ]; then
-            echo "name=webkit" >> $GITHUB_OUTPUT
-          fi
+          mkdir -p ~/.cache
+          cp -r browser-cache/ms-playwright ~/.cache/
 
-      - name: Install Playwright Browser
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install ${{ steps.browser.outputs.name }} --with-deps
-
-      - name: Install Playwright Browser Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps ${{ steps.browser.outputs.name }}
+      - name: Install Browser Dependencies
+        run: npx playwright install-deps ${{ matrix.browser }}
 
       - name: Run E2E Tests
-        run: yarn playwright test --project=${{ matrix.project }}
+        run: |
+          if [ -n "${{ matrix.shard }}" ]; then
+            yarn playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}
+          else
+            yarn playwright test --project=${{ matrix.project }}
+          fi
 
       - name: Analyze Performance Metrics
         if: always()
-        run: node scripts/analyze-performance.mjs --format console --output test-results/performance-metrics-${{ matrix.project }}.json
+        run: |
+          SHARD_SUFFIX="${{ matrix.shard && format('-{0}', matrix.shard) || '' }}"
+          SHARD_SUFFIX="${SHARD_SUFFIX//\//-}"
+          node scripts/analyze-performance.mjs --format console --output "test-results/performance-metrics-${{ matrix.project }}${SHARD_SUFFIX}.json"
 
       - name: Upload E2E Test Results
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-results-${{ matrix.project }}
+          name: playwright-results-${{ matrix.project }}${{ matrix.shard && format('-{0}', matrix.shard) || '' }}
           path: test-results/
           retention-days: 3
 
@@ -305,7 +273,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.project }}
+          name: playwright-report-${{ matrix.project }}${{ matrix.shard && format('-{0}', matrix.shard) || '' }}
           path: playwright-report/
           retention-days: 3
 
@@ -313,8 +281,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: performance-metrics-${{ matrix.project }}
-          path: test-results/performance-metrics-${{ matrix.project }}.json
+          name: performance-metrics-${{ matrix.project }}${{ matrix.shard && format('-{0}', matrix.shard) || '' }}
+          path: test-results/performance-metrics-*.json
           retention-days: 14
 
   storybook-tests:
@@ -325,35 +293,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Cache Yarn dependencies
-        id: yarn-cache
-        uses: actions/cache@v4
-        with:
-          path: .yarn/cache
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Verify cache hit
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: echo "::warning::Yarn cache miss, slower install expected"
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Cache Playwright Browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            playwright-browsers-
+            playwright-${{ runner.os }}-chromium-
 
       - name: Install Playwright Browsers (Chromium only)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -368,3 +318,48 @@ jobs:
 
       - name: Run Storybook Tests
         run: yarn storybook:test
+
+  merge-e2e-reports:
+    name: Merge E2E Reports
+    runs-on: ubuntu-latest
+    needs: [e2e-tests]
+    if: always() && needs.e2e-tests.result != 'skipped'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Download All E2E Reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: playwright-report-*
+          path: all-reports/
+          merge-multiple: false
+
+      - name: Merge Reports
+        run: |
+          # Create blob reports directory structure for merging
+          mkdir -p all-blob-reports
+
+          # Find and copy all report files
+          for dir in all-reports/playwright-report-*/; do
+            if [ -d "$dir" ]; then
+              project=$(basename "$dir" | sed 's/playwright-report-//')
+              echo "Processing report for: $project"
+              cp -r "$dir"* all-blob-reports/ 2>/dev/null || true
+            fi
+          done
+
+          # List what we collected
+          echo "Collected reports:"
+          ls -la all-blob-reports/ || echo "No reports found"
+
+      - name: Upload Merged Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-merged
+          path: all-blob-reports/
+          retention-days: 7

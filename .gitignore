@@ -20,6 +20,7 @@ coverage/
 .nyc_output/
 .vscode/launch.json
 jscpd-report/
+playwright-report/
 
 *storybook.log
 storybook-static

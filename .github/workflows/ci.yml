@@ -313,6 +313,23 @@ jobs:
         if: steps.yarn-cache.outputs.cache-hit != 'true'
         run: echo "::warning::Yarn cache miss, slower install expected"
 
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            playwright-browsers-
+
+      - name: Install Playwright Browsers (Chromium only)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
       - name: Build Storybook
         run: yarn storybook:build
 

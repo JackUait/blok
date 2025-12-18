@@ -25,13 +25,18 @@ const config = {
 // Parse command line arguments
 const args = process.argv.slice(2);
 for (let i = 0; i < args.length; i++) {
-  switch (args[i]) {
-    case '--input':
-      config.inputFile = args[++i];
-      break;
-    case '--output':
-      config.outputFile = args[++i];
-      break;
+  const arg = args[i];
+
+  // Handle --key=value format
+  if (arg.startsWith('--input=')) {
+    config.inputFile = arg.slice('--input='.length);
+  } else if (arg.startsWith('--output=')) {
+    config.outputFile = arg.slice('--output='.length);
+  // Handle --key value format
+  } else if (arg === '--input') {
+    config.inputFile = args[++i];
+  } else if (arg === '--output') {
+    config.outputFile = args[++i];
   }
 }
 

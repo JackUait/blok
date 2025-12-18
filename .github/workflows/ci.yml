@@ -179,12 +179,7 @@ jobs:
             playwright-${{ runner.os }}-chromium-
 
       - name: Install Playwright Browsers (Chromium only)
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install chromium --with-deps
-
-      - name: Install Playwright Browser Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
 
       - name: Run Smoke Tests
         run: yarn playwright test --grep="@smoke"

@@ -90,37 +90,36 @@ jobs:
             const fs = require('fs');
             const report = `${{ steps.compare.outputs.REPORT }}`;
 
-            // Find existing comment
+            // Find ALL existing bundle size report comments
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
 
-            const botComment = comments.find(comment =>
+            const bundleSizeComments = comments.filter(comment =>
               comment.user.type === 'Bot' &&
               comment.body.includes('Bundle Size Report')
             );
 
-            const commentBody = `${report}\n\n---\n*Automated bundle size tracking*`;
-
-            if (botComment) {
-              // Update existing comment
-              await github.rest.issues.updateComment({
+            // Delete all existing bundle size reports
+            for (const comment of bundleSizeComments) {
+              await github.rest.issues.deleteComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: commentBody
-              });
-            } else {
-              // Create new comment
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: commentBody
+                comment_id: comment.id
               });
             }
+
+            // Create new comment with latest report
+            const commentBody = `${report}\n\n---\n*Automated bundle size tracking*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: commentBody
+            });
 
       - name: Upload PR bundle size data
         uses: actions/upload-artifact@v4

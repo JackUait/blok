@@ -148,7 +148,7 @@ test.describe('saver module', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test('saves block data when extraneous DOM nodes are present', async ({ page }) => {
+  test('@smoke saves block data when extraneous DOM nodes are present', async ({ page }) => {
     await createBlok(page, {
       data: {
         blocks: [

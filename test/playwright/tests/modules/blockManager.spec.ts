@@ -167,7 +167,7 @@ test.describe('modules/blockManager', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  test('deletes the last block without adding fillers when other blocks remain', async ({ page }) => {
+  test('@smoke deletes the last block without adding fillers when other blocks remain', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         id: 'block1',

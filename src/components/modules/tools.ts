@@ -377,6 +377,7 @@ export class Tools extends Module {
    * @returns Merged tool configuration
    */
   private extractToolConfig(settings: ToolSettings): ToolConfig {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: reading legacy config for backwards compatibility
     const nestedConfig = (settings.config ?? {}) as ToolConfig;
 
     // Extract non-Blok keys as tool-specific config

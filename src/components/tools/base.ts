@@ -205,6 +205,7 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
    * Extracts tool-specific options from flat config and merges with nested config.
    */
   public get settings(): ToolConfig {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: reading legacy config for backwards compatibility
     const nestedConfig = (this.config[UserSettings.Config] ?? {}) as ToolConfig;
 
     // Extract non-Blok keys as tool-specific config

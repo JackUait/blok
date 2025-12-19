@@ -204,13 +204,18 @@ export class Header implements BlockTool {
     const toolboxEntries = this._settings._toolboxEntries;
 
     /**
-     * If user provided custom toolbox entries WITH level-specific data, use them to build settings menu.
+     * If user provided custom toolbox entries with level data, use them to build settings menu.
      * This ensures block settings match the toolbox configuration.
-     *
-     * A single entry without level data (default toolbox config) should fall back to default levels,
-     * so users see "Heading 1", "Heading 2", "Heading 3" options instead of just "Heading".
+     * Fall back to levels config when _toolboxEntries is empty or doesn't contain level data
+     * (e.g., when using the default single "Heading" toolbox entry).
      */
-    if (toolboxEntries !== undefined && toolboxEntries.length > 0 && this.hasCustomLevelConfig(toolboxEntries)) {
+    const hasLevelData = toolboxEntries?.some(entry => {
+      const data = entry.data as { level?: number } | undefined;
+
+      return data?.level !== undefined;
+    });
+
+    if (toolboxEntries !== undefined && toolboxEntries.length > 0 && hasLevelData) {
       return this.buildSettingsFromToolboxEntries(toolboxEntries);
     }
 
@@ -286,25 +291,6 @@ export class Header implements BlockTool {
     const translated = this.api.i18n.t(namespacedKey);
 
     return translated !== namespacedKey ? translated : fallback;
-  }
-
-  /**
-   * Checks if toolbox entries contain custom level configuration.
-   * Returns true if there are multiple entries or any entry has level data.
-   *
-   * @param entries - Toolbox entries to check
-   * @returns True if entries have custom level configuration
-   */
-  private hasCustomLevelConfig(entries: ToolboxConfigEntry[]): boolean {
-    if (entries.length > 1) {
-      return true;
-    }
-
-    return entries.some(entry => {
-      const data = entry.data as { level?: number } | undefined;
-
-      return data?.level !== undefined;
-    });
   }
 
   /**

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import Tools from '../../../../src/components/modules/tools';
-import BlockToolAdapter from '../../../../src/components/tools/block';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { Tools } from '../../../../src/components/modules/tools';
+import { BlockToolAdapter } from '../../../../src/components/tools/block';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { ModuleConfig } from '../../../../src/types-internal/module-config';
 import type { BlokConfig } from '../../../../types';

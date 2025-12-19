@@ -1,13 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { TOOLTIP_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../fixtures/test.html')
-).href;
 
 const HOLDER_ID = 'blok';
 

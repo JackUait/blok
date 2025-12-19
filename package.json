@@ -2,14 +2,20 @@
   "name": "@jackuait/blok",
   "version": "0.4.1-beta.5",
   "description": "Blok — headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch",
-  "main": "dist/blok.umd.js",
   "module": "dist/blok.mjs",
   "types": "./types/index.d.ts",
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
-      "import": "./dist/blok.mjs",
-      "require": "./dist/blok.umd.js"
+      "import": "./dist/blok.mjs"
+    },
+    "./tools": {
+      "types": "./types/tools-entry.d.ts",
+      "import": "./dist/tools.mjs"
+    },
+    "./full": {
+      "types": "./types/full.d.ts",
+      "import": "./dist/full.mjs"
     },
     "./locales": {
       "types": "./types/locales.d.ts",
@@ -40,6 +46,10 @@
     "headless editor",
     "extensible editor"
   ],
+  "sideEffects": [
+    "./src/components/polyfills.ts",
+    "*.css"
+  ],
   "scripts": {
     "serve": "vite --no-open",
     "build": "vite build --mode production && node scripts/build-locales.mjs",
@@ -50,6 +60,7 @@
     "lint:types": "tsc --noEmit",
     "i18n:check": "node scripts/i18n/check-translations.mjs",
     "e2e": "playwright test",
+    "e2e:smoke": "playwright test --project=chromium --grep=\"@smoke\"",
     "e2e:chrome": "playwright test --project=chromium",
     "e2e:firefox": "playwright test --project=firefox",
     "e2e:safari": "playwright test --project=webkit",
@@ -73,6 +84,7 @@
     "verify:version": "node scripts/verify-version.mjs",
     "unpublish": "node scripts/unpublish-package.mjs",
     "bundle:track": "node scripts/track-bundle-size.mjs --verbose",
+    "bundle:variants": "node scripts/build-bundle-variants.mjs --verbose",
     "bundle:trends": "node scripts/view-bundle-trends.mjs --trends",
     "bundle:history": "node scripts/view-bundle-trends.mjs",
     "perf:analyze": "node scripts/analyze-performance.mjs",
@@ -137,9 +149,6 @@
     "yaml": "2.8.1"
   },
   "dependencies": {
-    "@types/lodash": "4.17.21",
-    "i18next": "^25.7.3",
-    "lodash": "4.17.21",
-    "tailwind-merge": "3.4.0"
+    "i18next": "^25.7.3"
   }
 }

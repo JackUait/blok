@@ -1,4 +1,4 @@
-import Module from 'module';
+import { Module } from 'module';
 
 // @ts-expect-error Module._load is internal
 const originalLoad = Module._load;

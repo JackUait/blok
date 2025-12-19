@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 
-import ListenersAPI from '../../../../../src/components/modules/api/listeners';
-import EventsDispatcher from '../../../../../src/components/utils/events';
+import { ListenersAPI } from '../../../../../src/components/modules/api/listeners';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
 
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';

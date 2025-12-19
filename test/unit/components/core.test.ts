@@ -40,7 +40,7 @@ const mockRegistry = vi.hoisted(() => ({
 
 vi.mock('../../../src/components/dom', () => ({
   __esModule: true,
-  default: {
+  Dom: {
     get: mockRegistry.dom.get,
     isElement: mockRegistry.dom.isElement,
   },
@@ -186,7 +186,7 @@ vi.mock('../../../src/components/modules', () => {
 
   return {
     __esModule: true,
-    default: {
+    Modules: {
       I18n: MockI18n,
       Tools: MockTools,
       UI: MockUI,
@@ -230,7 +230,7 @@ const {
 } = moduleMocks;
 
 // Import Core after mocks are configured
-import Core from '../../../src/components/core';
+import { Core } from '../../../src/components/core';
 
 const createReadyCore = async (config?: BlokConfig | string): Promise<Core> => {
   const core = new Core(config);

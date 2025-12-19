@@ -1,5 +1,5 @@
 import { PopoverAbstract } from './popover-abstract';
-import ScrollLocker from '../scroll-locker';
+import { ScrollLocker } from '../scroll-locker';
 import { PopoverHeader } from './components/popover-header';
 import { PopoverStatesHistory } from './utils/popover-states-history';
 import type { PopoverMobileNodes, PopoverParams } from '@/types/utils/popover/popover';
@@ -7,7 +7,7 @@ import type { PopoverItemDefault, PopoverItemParams } from './components/popover
 import { PopoverItemType } from './components/popover-item';
 import { css } from './popover.const';
 import { DATA_ATTR } from '../../constants/data-attributes';
-import Dom from '../../dom';
+import { Dom } from '../../dom';
 import { twMerge } from '../tw';
 
 
@@ -91,11 +91,14 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     super.show();
 
     // Apply mobile opened state classes AFTER super.show() to override base class styles
+    // For mobile, we use max-h-none instead of max-h-[var(--max-height)] since mobile popovers
+    // should expand to fit their content
+    // Use z-[4] to ensure container is above the overlay (z-[3])
     this.nodes.popoverContainer.className = twMerge(
       css.popoverContainer,
       css.popoverContainerMobile,
       css.popoverContainerOpened,
-      'animate-[panelShowingMobile_250ms_ease]'
+      'max-h-none z-[4] animate-[panelShowingMobile_250ms_ease]'
     );
 
     this.scrollLocker.lock();

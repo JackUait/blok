@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import Blocks from '../../../src/components/blocks';
-import type Block from '../../../src/components/block';
+import { Blocks } from '../../../src/components/blocks';
+import type { Block } from '../../../src/components/block';
 import { BlockToolAPI } from '../../../src/components/block';
 
 /**

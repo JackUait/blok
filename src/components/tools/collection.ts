@@ -1,6 +1,6 @@
-import type BlockToolAdapter from './block';
-import type InlineToolAdapter from './inline';
-import type BlockTuneAdapter from './tune';
+import type { BlockToolAdapter } from './block';
+import type { InlineToolAdapter } from './inline';
+import type { BlockTuneAdapter } from './tune';
 import type { ToolsCollection as ToolsCollectionInterface } from '@/types/tools/adapters/tools-collection';
 
 
@@ -9,7 +9,7 @@ export type ToolClass = BlockToolAdapter | InlineToolAdapter | BlockTuneAdapter;
 /**
  * Class to store Blok Tools
  */
-export default class ToolsCollection<V extends ToolClass = ToolClass> extends Map<string, V> implements ToolsCollectionInterface<V> {
+export class ToolsCollection<V extends ToolClass = ToolClass> extends Map<string, V> implements ToolsCollectionInterface<V> {
   /**
    * Returns Block Tools collection
    */

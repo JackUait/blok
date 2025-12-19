@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import SelectionAPI from '../../../../../src/components/modules/api/selection';
-import type SelectionUtils from '../../../../../src/components/selection';
-import EventsDispatcher from '../../../../../src/components/utils/events';
+import { SelectionAPI } from '../../../../../src/components/modules/api/selection';
+import type { SelectionUtils } from '../../../../../src/components/selection';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokConfig } from '../../../../../types';

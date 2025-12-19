@@ -1,8 +1,8 @@
 /**
  * TextRange interface for IE9-
  */
-import * as _ from './utils';
-import $ from './dom';
+import { log } from './utils';
+import { Dom as $ } from './dom';
 import { DATA_ATTR, createSelector } from './constants';
 
 interface TextRange {
@@ -33,7 +33,7 @@ interface Document {
  * Working with selection
  * @typedef {SelectionUtils} SelectionUtils
  */
-export default class SelectionUtils {
+export class SelectionUtils {
   /**
    * Selection instances
    * @todo Check if this is still relevant
@@ -229,13 +229,13 @@ export default class SelectionUtils {
     const sel = window.getSelection();
 
     if (!sel) {
-      _.log('Method window.getSelection returned null', 'warn');
+      log('Method window.getSelection returned null', 'warn');
 
       return rect;
     }
 
     if (sel.rangeCount === null || isNaN(sel.rangeCount)) {
-      _.log('Method SelectionUtils.rangeCount is not supported', 'warn');
+      log('Method SelectionUtils.rangeCount is not supported', 'warn');
 
       return rect;
     }

@@ -1,10 +1,10 @@
-import * as _ from './utils';
+import { array, isNumber, isString } from './utils';
 
 /**
  * DOM manipulations helper
  * @todo get rid of class and make separate utility functions
  */
-export default class Dom {
+export class Dom {
   /**
    * Check if passed tag has no closed tag
    * @param {HTMLElement} tag - element to check
@@ -237,7 +237,7 @@ export default class Dom {
    * @param holder - element where to find inputs
    */
   public static findAllInputs(holder: Element): HTMLElement[] {
-    return _.array(holder.querySelectorAll(Dom.allInputsSelector))
+    return array(holder.querySelectorAll(Dom.allInputsSelector))
       /**
        * If contenteditable element contains block elements, treat them as inputs.
        */
@@ -311,7 +311,7 @@ export default class Dom {
    */
 
   public static isElement(node: any): node is Element {
-    if (_.isNumber(node)) {
+    if (isNumber(node)) {
       return false;
     }
 
@@ -325,7 +325,7 @@ export default class Dom {
    */
 
   public static isFragment(node: any): node is DocumentFragment {
-    if (_.isNumber(node)) {
+    if (isNumber(node)) {
       return false;
     }
 
@@ -530,7 +530,7 @@ export default class Dom {
    * @returns {boolean}
    */
   public static containsOnlyInlineElements(data: string | HTMLElement): boolean {
-    const wrapper = _.isString(data)
+    const wrapper = isString(data)
       ? (() => {
         const container = document.createElement('div');
 
@@ -569,7 +569,7 @@ export default class Dom {
    * @returns {HTMLElement}
    */
   public static getHolder(element: string | HTMLElement): HTMLElement {
-    if (!_.isString(element)) {
+    if (!isString(element)) {
       return element;
     }
 

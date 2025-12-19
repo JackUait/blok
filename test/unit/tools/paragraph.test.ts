@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import Paragraph, { type ParagraphConfig, type ParagraphData } from '../../../src/tools/paragraph';
+import { Paragraph, type ParagraphConfig, type ParagraphData } from '../../../src/tools/paragraph';
 import type { API, BlockToolConstructorOptions } from '../../../types';
 
 const createMockAPI = (): API => ({

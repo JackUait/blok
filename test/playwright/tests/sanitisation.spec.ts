@@ -1,14 +1,8 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
-import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../fixtures/test.html')
-).href;
 
 const HOLDER_ID = 'blok';
 const INITIAL_BLOCK_ID = 'sanitisation-initial-block';
@@ -55,14 +49,6 @@ const createBlokWithElements = async (page: Page, blocks: OutputData['blocks']):
     const blok = new window.Blok({
       holder: holder,
       data: { blocks: blokBlocks },
-      tools: {
-        paragraph: {
-          inlineToolbar: true,
-          config: {
-            preserveBlank: true,
-          },
-        },
-      },
     });
 
     window.blokInstance = blok;
@@ -90,14 +76,6 @@ const createBlok = async (page: Page): Promise<void> => {
             },
           },
         ],
-      },
-      tools: {
-        paragraph: {
-          inlineToolbar: true,
-          config: {
-            preserveBlank: true,
-          },
-        },
       },
     });
 
@@ -233,13 +211,6 @@ const createBlokWithSanitizer = async (page: Page, sanitizerConfig: Record<strin
     const blok = new window.Blok({
       holder: holder,
       sanitizer,
-      tools: {
-        paragraph: {
-          config: {
-            preserveBlank: true,
-          },
-        },
-      },
     });
 
     window.blokInstance = blok;

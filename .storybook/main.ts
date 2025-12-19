@@ -30,6 +30,10 @@ const config: StorybookConfig = {
           '@/types': path.resolve(__dirname, '../types'),
         },
       },
+      // Remove vite-plugin-css-injected-by-js as it's incompatible with Storybook builds
+      plugins: viteConfig.plugins?.filter(
+        (plugin) => plugin && 'name' in plugin && plugin.name !== 'vite-plugin-css-injected-by-js'
+      ),
     };
 
     return updatedConfig;

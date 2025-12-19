@@ -3,9 +3,8 @@
  * This file verifies that all types are properly exported and accessible
  */
 
-import type { BlokConfig, OutputBlockData } from '@jackuait/blok';
-import type { OutputData } from '@jackuait/blok';
-import Blok from '@jackuait/blok';
+import type { BlokConfig, OutputBlockData, OutputData } from '@jackuait/blok';
+import { Blok } from '@jackuait/blok';
 import { loadLocale } from '@jackuait/blok/locales';
 
 // Test BlokConfig type

@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
-import { readFile, writeFile } from 'fs/promises';
+import { writeFile, mkdir, cp } from 'fs/promises';
 import { join } from 'path';
+import { spawn } from 'child_process';
 
 /**
  * Verify package works in a real browser environment
@@ -20,18 +21,22 @@ export async function checkBrowserSmokeTest(packageDir, tempDir, verbose = false
   };
 
   let browser;
-  let page;
+  let serverProcess;
+  const PORT = 3334;
 
   try {
-    // Read the bundle content to inline it (avoiding file:// protocol issues in CI)
-    const bundlePath = join(packageDir, 'dist', 'blok.umd.js');
-    const bundleContent = await readFile(bundlePath, 'utf-8');
+    // Create test directory structure
+    const testDir = join(tempDir, 'browser-test');
+    const distDir = join(testDir, 'dist');
+    await mkdir(distDir, { recursive: true });
 
-    // Create a simple HTML page with inlined bundle
-    const testHtmlPath = join(tempDir, 'test-browser.html');
+    // Copy the ES module bundle
+    await cp(join(packageDir, 'dist'), distDir, { recursive: true });
 
-    const htmlContent = `
-<!DOCTYPE html>
+    // Create a simple HTML page that imports the ES module
+    const testHtmlPath = join(testDir, 'index.html');
+
+    const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -46,8 +51,9 @@ export async function checkBrowserSmokeTest(packageDir, tempDir, verbose = false
 </head>
 <body>
   <div id="editor"></div>
-  <script>${bundleContent}</script>
-  <script>
+  <script type="module">
+    import { Blok } from '/dist/blok.mjs';
+
     window.testResult = {
       initialized: false,
       error: null
@@ -81,10 +87,22 @@ export async function checkBrowserSmokeTest(packageDir, tempDir, verbose = false
     }
   </script>
 </body>
-</html>
-    `;
+</html>`;
 
     await writeFile(testHtmlPath, htmlContent);
+
+    // Start a simple HTTP server (ES modules require HTTP, not file://)
+    if (verbose) {
+      console.log('  Starting HTTP server...');
+    }
+
+    serverProcess = spawn('npx', ['serve', testDir, '-l', String(PORT), '--no-clipboard'], {
+      stdio: verbose ? 'inherit' : 'ignore',
+      shell: process.platform === 'win32'
+    });
+
+    // Wait for server to start
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Launch browser
     if (verbose) {
@@ -94,7 +112,7 @@ export async function checkBrowserSmokeTest(packageDir, tempDir, verbose = false
     browser = await chromium.launch({ headless: true });
     details.browserLaunched = true;
 
-    page = await browser.newPage();
+    const page = await browser.newPage();
 
     // Capture console messages
     page.on('console', msg => {
@@ -113,7 +131,7 @@ export async function checkBrowserSmokeTest(packageDir, tempDir, verbose = false
       console.log('  Loading test page...');
     }
 
-    await page.goto(`file://${testHtmlPath}`, { waitUntil: 'networkidle' });
+    await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
     details.pageLoaded = true;
 
     // Wait a bit for the editor to initialize
@@ -146,6 +164,7 @@ export async function checkBrowserSmokeTest(packageDir, tempDir, verbose = false
     }
 
     await browser.close();
+    serverProcess.kill();
 
     // Determine if all checks passed
     const allPassed = details.browserLaunched &&
@@ -174,6 +193,9 @@ export async function checkBrowserSmokeTest(packageDir, tempDir, verbose = false
       } catch (closeError) {
         // Ignore close errors
       }
+    }
+    if (serverProcess) {
+      serverProcess.kill();
     }
 
     return {

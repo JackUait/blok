@@ -22,10 +22,10 @@ export async function checkTypes(packageDir, tempDir, verbose = false) {
 
   try {
     // Check for required type definition files
+    // Note: types/blok.d.ts is not needed - the Blok class is exported from types/index.d.ts
     const requiredTypeFiles = [
       'types/index.d.ts',
-      'types/locales.d.ts',
-      'types/blok.d.ts'
+      'types/locales.d.ts'
     ];
 
     for (const typeFile of requiredTypeFiles) {
@@ -48,10 +48,10 @@ export async function checkTypes(packageDir, tempDir, verbose = false) {
     const testTsFile = join(tempDir, 'test-types.ts');
     const testTsConfig = join(tempDir, 'tsconfig.json');
 
-    // Write a test TypeScript file
+    // Write a test TypeScript file (using named imports)
     await writeFile(testTsFile, `
 import type { BlokConfig } from '@jackuait/blok';
-import Blok from '@jackuait/blok';
+import { Blok } from '@jackuait/blok';
 import { loadLocale } from '@jackuait/blok/locales';
 
 // Test that types are properly accessible
@@ -60,7 +60,7 @@ const config: BlokConfig = {
   tools: {}
 };
 
-// Test constructor type
+// Test constructor type (Blok is both a type and a value when using class)
 const editor: Blok = new Blok(config);
 
 // Test locale loading type
@@ -90,6 +90,9 @@ console.log('Type checking passed');
     }
 
     try {
+      // Install TypeScript without saving to package.json to avoid affecting the test environment
+      await execAsync('npm install --no-save typescript@latest', { cwd: tempDir, timeout: 60000 });
+
       const { stdout, stderr } = await execAsync(
         'npx tsc --noEmit',
         { cwd: tempDir, timeout: 30000 }

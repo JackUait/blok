@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import I18n from '../../../../src/components/modules/i18n';
+import { I18n } from '../../../../src/components/modules/i18n';
 import {
   enLocale,
   loadLocale,
@@ -9,7 +9,7 @@ import {
 } from '../../../../src/components/i18n/locales';
 import type { I18nDictionary } from '../../../../types/configs';
 import type { BlokConfig } from '../../../../types';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 
 /**
  * Creates a new I18n module instance for testing

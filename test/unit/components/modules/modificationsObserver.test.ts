@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import ModificationsObserver from '../../../../src/components/modules/modificationsObserver';
+import { ModificationsObserver } from '../../../../src/components/modules/modificationsObserver';
 import { modificationsObserverBatchTimeout } from '../../../../src/components/constants';
 import {
   BlockChanged,
@@ -8,7 +8,7 @@ import {
   FakeCursorHaveBeenSet,
   RedactorDomChanged
 } from '../../../../src/components/events';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokConfig } from '../../../../types';
 import type { BlockMutationEvent, BlockMutationType } from '../../../../types/events/block';

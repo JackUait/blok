@@ -1,5 +1,5 @@
 import type { I18n } from '../../../../types/api';
-import Module from '../../__module';
+import { Module } from '../../__module';
 
 /**
  * API module exposing i18n methods to tools.
@@ -9,7 +9,7 @@ import Module from '../../__module';
  *
  * Tools should use full translation keys (e.g., 'tools.link.addLink', 'blockSettings.delete').
  */
-export default class I18nAPI extends Module {
+export class I18nAPI extends Module {
   /**
    * Cached methods object to avoid creating new closures on every access.
    */

@@ -7,7 +7,7 @@
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { waitFor, expect } from 'storybook/test';
-import * as Tooltip from '../components/utils/tooltip';
+import { hide, show } from '../components/utils/tooltip';
 
 interface TooltipArgs {
   placement: 'top' | 'bottom' | 'left' | 'right';
@@ -111,6 +111,7 @@ const meta: Meta<TooltipArgs> = {
 
 export default meta;
 
+
 type Story = StoryObj<TooltipArgs>;
 
 export const TooltipStates: Story = {
@@ -131,7 +132,7 @@ export const TooltipStates: Story = {
 
       expect(trigger).toBeInTheDocument();
 
-      Tooltip.show(trigger, `Tooltip at ${placement}`, { placement, delay: 0 });
+      show(trigger, `Tooltip at ${placement}`, { placement, delay: 0 });
 
       await waitFor(
         () => {
@@ -156,7 +157,7 @@ export const TooltipStates: Story = {
         await showAndClone(placement);
       }
 
-      Tooltip.hide(true);
+      hide(true);
     });
   },
 };
@@ -180,7 +181,7 @@ export const WithHTMLContent: Story = {
         const content = document.createElement('span');
 
         content.innerHTML = '<strong>Bold</strong> and <em>italic</em>';
-        Tooltip.show(trigger, content, { placement: 'bottom', delay: 0 });
+        show(trigger, content, { placement: 'bottom', delay: 0 });
       }
 
       await waitFor(

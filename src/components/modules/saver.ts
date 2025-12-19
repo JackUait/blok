@@ -4,12 +4,12 @@
  * @author Blok Team
  * @version 2.0.0
  */
-import Module from '../__module';
+import { Module } from '../__module';
 import type { BlockToolData, OutputData, SanitizerConfig } from '../../../types';
 import type { SavedData, ValidatedData } from '../../../types/data-formats';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import type Block from '../block';
-import * as _ from '../utils';
+import type { Block } from '../block';
+import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { sanitizeBlocks } from '../utils/sanitizer';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
 
@@ -33,7 +33,7 @@ type SanitizableBlockData = SaverValidatedData & Pick<SavedData, 'data' | 'tool'
  * @property {Element} html - Blok HTML content
  * @property {string} json - Blok JSON output
  */
-export default class Saver extends Module {
+export class Saver extends Module {
   /**
    * Stores the last error raised during save attempt
    */
@@ -54,7 +54,7 @@ export default class Saver extends Module {
       return {
         time: +new Date(),
         blocks: [],
-        version: _.getBlokVersion(),
+        version: getBlokVersion(),
       };
     }
 
@@ -78,7 +78,7 @@ export default class Saver extends Module {
 
       const normalizedError = error instanceof Error ? error : new Error(String(error));
 
-      _.logLabeled(`Saving failed due to the Error %o`, 'error', normalizedError);
+      logLabeled(`Saving failed due to the Error %o`, 'error', normalizedError);
 
       return undefined;
     }
@@ -123,13 +123,13 @@ export default class Saver extends Module {
 
     allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds }) => {
       if (!isValid) {
-        _.log(`Block «${tool}» skipped because saved data is invalid`);
+        log(`Block «${tool}» skipped because saved data is invalid`);
 
         return;
       }
 
       if (tool === undefined || data === undefined) {
-        _.log('Block skipped because saved data is missing required fields');
+        log('Block skipped because saved data is missing required fields');
 
         return;
       }
@@ -142,12 +142,12 @@ export default class Saver extends Module {
       }
 
       if (tool === this.Blok.Tools.stubTool) {
-        _.log('Stub block data is malformed and was skipped');
+        log('Stub block data is malformed and was skipped');
 
         return;
       }
 
-      const isTunesEmpty = tunes === undefined || _.isEmpty(tunes);
+      const isTunesEmpty = tunes === undefined || isEmpty(tunes);
       const hasParent = parentId !== undefined && parentId !== null;
       const hasContent = contentIds !== undefined && contentIds.length > 0;
 
@@ -180,7 +180,7 @@ export default class Saver extends Module {
     return {
       time: +new Date(),
       blocks: finalBlocks,
-      version: _.getBlokVersion(),
+      version: getBlokVersion(),
     };
   }
 
@@ -243,7 +243,7 @@ export default class Saver extends Module {
    * @param data - saved stub data that should represent original block payload
    */
   private isStubSavedData(data: BlockToolData): data is OutputData['blocks'][number] {
-    if (!_.isObject(data)) {
+    if (!isObject(data)) {
       return false;
     }
 
@@ -266,7 +266,7 @@ export default class Saver extends Module {
   private getPreservedSavedData(block: Block): (SavedData & { tunes?: Record<string, BlockTuneData> }) | undefined {
     const preservedData = block.preservedData;
 
-    if (_.isEmpty(preservedData)) {
+    if (isEmpty(preservedData)) {
       return undefined;
     }
 
@@ -276,7 +276,7 @@ export default class Saver extends Module {
       id: block.id,
       tool: block.name,
       data: preservedData,
-      ...( _.isEmpty(preservedTunes) ? {} : { tunes: preservedTunes }),
+      ...( isEmpty(preservedTunes) ? {} : { tunes: preservedTunes }),
       time: 0,
     };
   }

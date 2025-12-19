@@ -1,4 +1,4 @@
-import BaseToolAdapter from './base';
+import { BaseToolAdapter } from './base';
 import type { BlockAPI, BlockTune as IBlockTune, BlockTuneConstructable } from '@/types';
 import type { BlockTuneData } from '@/types/block-tunes/block-tune-data';
 import type { BlockTuneAdapter as BlockTuneAdapterInterface } from '@/types/tools/adapters/block-tune-adapter';
@@ -8,7 +8,7 @@ import { ToolType } from '@/types/tools/adapters/tool-type';
  * Stub class for BlockTunes
  * @todo Implement
  */
-export default class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBlockTune> implements BlockTuneAdapterInterface {
+export class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBlockTune> implements BlockTuneAdapterInterface {
   /**
    * Tool type — Tune
    */

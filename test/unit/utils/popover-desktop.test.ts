@@ -79,7 +79,7 @@ vi.mock('../../../src/components/flipper', () => {
 
   return {
     ['__esModule']: true,
-    default: MockFlipper,
+    Flipper: MockFlipper,
   };
 });
 
@@ -155,7 +155,7 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { CSSVariables } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import { PopoverItemDefault, PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item';
-import Flipper from '../../../src/components/flipper';
+import { Flipper } from '../../../src/components/flipper';
 import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
 
 type PopoverDesktopInternal = Omit<PopoverDesktop, 'shouldOpenBottom' | 'shouldOpenRight'> & {

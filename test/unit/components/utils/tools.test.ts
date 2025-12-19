@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { isToolConvertable } from '../../../../src/components/utils/tools';
-import type BlockToolAdapter from '../../../../src/components/tools/block';
+import type { BlockToolAdapter } from '../../../../src/components/tools/block';
 
 /**
  * Unit tests for tools.ts utility functions

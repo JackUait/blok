@@ -67,7 +67,8 @@
 
   <!-- Initialization -->
   <script type="module">
-    import Blok from './src/blok.ts';
+    import { Blok } from './src/blok.ts';
+    import { Paragraph, Header, List, Bold, Italic, Link } from './src/tools/index.ts';
 
     window.Blok = Blok;
 
@@ -101,8 +102,12 @@
         /**
          * Each Tool is a Plugin. Pass them via 'class' option with necessary settings {@link docs/tools.md}
          */
+        paragraph: {
+          class: Paragraph,
+          inlineToolbar: true,
+        },
         header: {
-          class: Blok.Header,
+          class: Header,
           inlineToolbar: ['link'],
           config: {
             placeholder: 'Header'
@@ -110,8 +115,13 @@
           shortcut: 'CMD+SHIFT+H'
         },
         list: {
-          class: Blok.List,
+          class: List,
+          inlineToolbar: true,
         },
+        // Inline tools
+        bold: { class: Bold },
+        italic: { class: Italic },
+        link: { class: Link },
       },
 
       /**

@@ -9,9 +9,9 @@ import type {
   ToolboxConfigEntry
 } from '../../../../types';
 import { ToolType } from '../../../../types/tools/adapters/tool-type';
-import BlockToolAdapter from '../../../../src/components/tools/block';
-import InlineToolAdapter from '../../../../src/components/tools/inline';
-import ToolsCollection from '../../../../src/components/tools/collection';
+import { BlockToolAdapter } from '../../../../src/components/tools/block';
+import { InlineToolAdapter } from '../../../../src/components/tools/inline';
+import { ToolsCollection } from '../../../../src/components/tools/collection';
 
 type BlockToolAdapterOptions = ConstructorParameters<typeof BlockToolAdapter>[0];
 type InlineToolAdapterOptions = ConstructorParameters<typeof InlineToolAdapter>[0];

@@ -9,8 +9,8 @@ import { waitFor, expect } from 'storybook/test';
 import type { OutputData, ToolSettings, BlockToolConstructable } from '@/types';
 import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import Header from '../tools/header';
-import Paragraph from '../tools/paragraph';
+import { Header } from '../tools/header';
+import { Paragraph } from '../tools/paragraph';
 
 interface ToolboxArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -65,6 +65,7 @@ const meta: Meta<ToolboxArgs> = {
 };
 
 export default meta;
+
 
 type Story = StoryObj<ToolboxArgs>;
 

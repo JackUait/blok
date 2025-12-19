@@ -3,7 +3,7 @@ import { isIosDevice } from '../utils';
 /**
  * Utility allowing to lock body scroll on demand
  */
-export default class ScrollLocker {
+export class ScrollLocker {
   /**
    * Tailwind utility classes for styling
    */

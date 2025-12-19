@@ -4,14 +4,80 @@
   <meta charset="utf-8" />
 </head>
 <body>
-  <!-- Load Blok's Core -->
-  <script src="./../../../dist/blok.umd.js"></script>
-  <script>
-    /**
-     * Allow to access the Blok API via window.Blok to support existing tests
-     */
+  <script type="module">
+    import { Blok, DATA_ATTR, version } from '/dist/blok.mjs';
+    import { Header, Paragraph, List, Bold, Italic, Link, Convert } from '/dist/tools.mjs';
+
+    // Create default tools configuration (mimics pre-modular behavior)
+    // Block tools with inlineToolbar enabled
+    const defaultBlockTools = {
+      paragraph: {
+        class: Paragraph,
+        inlineToolbar: true,
+        config: { preserveBlank: true },
+      },
+      header: {
+        class: Header,
+        inlineToolbar: true,
+      },
+      list: {
+        class: List,
+        inlineToolbar: true,
+      },
+    };
+
+    // Inline tools (these become part of the tools config)
+    const defaultInlineTools = {
+      bold: { class: Bold },
+      italic: { class: Italic },
+      link: { class: Link },
+      convertTo: { class: Convert },
+    };
+
+    // Combined default tools
+    const defaultTools = {
+      ...defaultBlockTools,
+      ...defaultInlineTools,
+    };
+
+    // Create a wrapper that auto-injects default tools
+    const BlokWithDefaults = class extends Blok {
+      constructor(config = {}) {
+        // Merge user tools with defaults (user tools take precedence)
+        const mergedConfig = {
+          ...config,
+          tools: { ...defaultTools, ...(config.tools || {}) },
+        };
+        super(mergedConfig);
+      }
+    };
+
+    // Expose named exports on window for tests
+    window.Blok = BlokWithDefaults;
+    window.BlokOriginal = Blok;  // Original Blok without defaults for explicit testing
+    window.BlokHeader = Header;
+    window.BlokParagraph = Paragraph;
+    window.BlokList = List;
+    window.BlokBold = Bold;
+    window.BlokItalic = Italic;
+    window.BlokLink = Link;
+    window.BlokConvert = Convert;
+    window.BlokDataAttr = DATA_ATTR;
+    window.BlokVersion = version;
+    window.defaultTools = defaultTools;
+    window.defaultBlockTools = defaultBlockTools;
+    window.defaultInlineTools = defaultInlineTools;
+
+    // Add static properties on Blok for backwards compatibility with tests
+    // (These were removed in Strategy 3 but some tests still reference them)
+    BlokWithDefaults.Header = Header;
+    BlokWithDefaults.Paragraph = Paragraph;
+    BlokWithDefaults.List = List;
+    BlokWithDefaults.Bold = Bold;
+    BlokWithDefaults.Italic = Italic;
+    BlokWithDefaults.Link = Link;
+    BlokWithDefaults.Convert = Convert;
   </script>
   <h1>Blok test page</h1>
 </body>
 </html>
-

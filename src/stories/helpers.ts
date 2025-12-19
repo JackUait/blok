@@ -3,8 +3,39 @@
  * These utilities help work around browser environment differences in Chromatic.
  */
 
-import Blok from '../blok';
+import { Blok } from '../blok';
 import type { OutputData, BlokConfig, ToolConstructable, ToolSettings, I18nConfig } from '@/types';
+import { Paragraph } from '../tools/paragraph';
+import { Header } from '../tools/header';
+import { ListItem } from '../tools/list';
+import { BoldInlineTool } from '../components/inline-tools/inline-tool-bold';
+import { ItalicInlineTool } from '../components/inline-tools/inline-tool-italic';
+import { LinkInlineTool } from '../components/inline-tools/inline-tool-link';
+import { ConvertInlineTool } from '../components/inline-tools/inline-tool-convert';
+
+/**
+ * Default tools configuration for Storybook stories.
+ * Since tools are no longer bundled by default, stories need to explicitly include them.
+ */
+export const defaultTools: { [toolName: string]: ToolConstructable | ToolSettings } = {
+  paragraph: {
+    class: Paragraph,
+    inlineToolbar: true,
+    config: { preserveBlank: true },
+  },
+  header: {
+    class: Header,
+    inlineToolbar: true,
+  },
+  list: {
+    class: ListItem,
+    inlineToolbar: true,
+  },
+  bold: BoldInlineTool,
+  italic: ItalicInlineTool,
+  link: LinkInlineTool,
+  convertTo: ConvertInlineTool,
+};
 
 /**
  * Test ID selectors used in story tests
@@ -83,13 +114,16 @@ export const createEditorContainer = (options: EditorFactoryOptions = {}): HTMLE
   editorHolder.id = `blok-editor-${Date.now()}`;
   container.appendChild(editorHolder);
 
+  // Merge default tools with user-provided tools (user tools override defaults)
+  const mergedTools = { ...defaultTools, ...tools };
+
   const config: BlokConfig = {
     holder: editorHolder,
     autofocus,
     readOnly,
     data,
     placeholder,
-    tools,
+    tools: mergedTools,
     i18n,
   };
 

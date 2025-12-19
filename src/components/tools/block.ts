@@ -1,4 +1,4 @@
-import BaseToolAdapter, { InternalBlockToolSettings, UserSettings } from './base';
+import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
 import type {
   BlockAPI,
   BlockTool as IBlockTool,
@@ -8,17 +8,17 @@ import type {
   PasteConfig, SanitizerConfig, ToolboxConfig,
   ToolboxConfigEntry
 } from '@/types';
-import * as _ from '../utils';
-import type InlineToolAdapter from './inline';
-import type BlockTuneAdapter from './tune';
-import ToolsCollection from './collection';
+import { isEmpty, isObject } from '../utils';
+import type { InlineToolAdapter } from './inline';
+import type { BlockTuneAdapter } from './tune';
+import { ToolsCollection } from './collection';
 import type { BlockToolAdapter as BlockToolAdapterInterface } from '@/types/tools/adapters/block-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 
 /**
  * Class to work with Block tools constructables
  */
-export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool> implements BlockToolAdapterInterface {
+export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool> implements BlockToolAdapterInterface {
   /**
    * Tool type — Block
    */
@@ -95,7 +95,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
     const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox] as ToolboxConfig | undefined;
     const userToolboxSettings = this.config[UserSettings.Toolbox];
 
-    if (!toolToolboxSettings || _.isEmpty(toolToolboxSettings)) {
+    if (!toolToolboxSettings || isEmpty(toolToolboxSettings)) {
       return;
     }
     if (userToolboxSettings === false) {
@@ -234,7 +234,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
     const toolRules = super.sanitizeConfig;
     const baseConfig = this.baseSanitizeConfig;
 
-    if (_.isEmpty(toolRules)) {
+    if (isEmpty(toolRules)) {
       this._sanitizeConfig = baseConfig;
 
       return baseConfig;
@@ -254,7 +254,7 @@ export default class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IB
        *
        * Otherwise pass as it is
        */
-      if (_.isObject(rule)) {
+      if (isObject(rule)) {
         toolConfig[fieldName] = Object.assign({}, baseConfig, rule);
       } else {
         toolConfig[fieldName] = rule;

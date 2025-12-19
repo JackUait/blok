@@ -1,38 +1,40 @@
-import i18next from 'i18next';
-import type { i18n as I18nextInstance } from 'i18next';
-
-import Module from '../__module';
+import { Module } from '../__module';
 import type { I18nDictionary } from '../../../types/configs';
 import type { SupportedLocale } from '../../../types/configs/i18n-config';
 import {
   DEFAULT_LOCALE,
   loadLocale,
   getDirection,
-  enLocale,
   ALL_LOCALE_CODES,
 } from '../i18n/locales';
+import { LightweightI18n } from '../i18n/lightweight-i18n';
+import type { I18nextInitResult } from '../i18n/i18next-loader';
 
 /**
- * Virtual locale code used when custom messages are provided via config.
- * This is not a real locale - it's an i18next resource bundle name.
- */
-const CUSTOM_MESSAGES_LOCALE = 'custom';
-
-/**
- * I18n module - handles translations and locale management using i18next.
+ * I18n module - handles translations and locale management.
+ *
+ * Uses a lightweight implementation for English (default) and dynamically
+ * loads i18next only when non-English locales are needed.
+ *
+ * This lazy-loading approach saves ~18 KB gzipped for English-only users.
  *
  * Instance-based module that provides:
- * - Translation lookup with interpolation (via i18next)
+ * - Translation lookup with interpolation
  * - Lazy locale loading
  * - Browser locale detection
  * - RTL support
- * - Pluralization support (via i18next)
+ * - Pluralization support (via i18next when loaded)
  */
-export default class I18n extends Module {
+export class I18n extends Module {
   /**
-   * i18next instance for this editor
+   * Lightweight i18n for English (synchronous, no dependencies)
    */
-  private i18n: I18nextInstance;
+  private lightweightI18n: LightweightI18n;
+
+  /**
+   * Full i18next instance (loaded dynamically for non-English locales)
+   */
+  private i18nextWrapper: I18nextInitResult | null = null;
 
   /**
    * Current locale code
@@ -45,13 +47,16 @@ export default class I18n extends Module {
   private defaultLocale: SupportedLocale = DEFAULT_LOCALE;
 
   /**
-   * Constructor - creates a new i18next instance for this editor
+   * Whether we're using the full i18next implementation
+   */
+  private usingI18next = false;
+
+  /**
+   * Constructor - creates lightweight i18n instance
    */
   constructor(...args: ConstructorParameters<typeof Module>) {
     super(...args);
-
-    // Create a new i18next instance (not the global one) for isolation
-    this.i18n = i18next.createInstance();
+    this.lightweightI18n = new LightweightI18n();
   }
 
   /**
@@ -70,7 +75,11 @@ export default class I18n extends Module {
    * this.Blok.I18n.t('a11y.blockMoved', { position: 3, total: 10 })
    */
   public t(key: string, vars?: Record<string, string | number>): string {
-    return this.i18n.t(key, vars);
+    if (this.usingI18next && this.i18nextWrapper !== null) {
+      return this.i18nextWrapper.t(key, vars);
+    }
+
+    return this.lightweightI18n.t(key, vars);
   }
 
   /**
@@ -80,7 +89,11 @@ export default class I18n extends Module {
    * @returns True if translation exists
    */
   public has(key: string): boolean {
-    return this.i18n.exists(key);
+    if (this.usingI18next && this.i18nextWrapper !== null) {
+      return this.i18nextWrapper.has(key);
+    }
+
+    return this.lightweightI18n.has(key);
   }
 
   /**
@@ -92,21 +105,42 @@ export default class I18n extends Module {
    */
   public async setLocale(locale: SupportedLocale): Promise<void> {
     try {
-      const config = await loadLocale(locale);
+      // For English, use lightweight implementation
+      if (locale === 'en') {
+        this.locale = 'en';
+        this.usingI18next = false;
 
-      // Add resources to i18next if not already added
-      if (!this.i18n.hasResourceBundle(locale, 'translation')) {
-        this.i18n.addResourceBundle(locale, 'translation', config.dictionary);
+        return;
       }
 
-      await this.i18n.changeLanguage(locale);
+      // For non-English, load i18next dynamically
+      const localeConfig = await loadLocale(locale);
+
+      await this.ensureI18nextLoaded(locale, localeConfig);
+
+      if (this.i18nextWrapper === null) {
+        return;
+      }
+
+      // If locale was already loaded, just change language
+      const needsBundle = !this.i18nextWrapper.instance.hasResourceBundle(locale, 'translation');
+
+      if (needsBundle) {
+        this.i18nextWrapper.instance.addResourceBundle(locale, 'translation', localeConfig.dictionary);
+      }
+
+      await this.i18nextWrapper.changeLanguage(locale);
+
       this.locale = locale;
+      this.usingI18next = true;
     } catch (error) {
       // Log warning but don't throw - graceful degradation to default locale
-      // Note: If you need to track these failures, check browser console or add custom error monitoring
       console.warn(`Failed to load locale "${locale}". Falling back to "${this.defaultLocale}".`, error);
-      await this.i18n.changeLanguage(this.defaultLocale);
       this.locale = this.defaultLocale;
+
+      if (this.defaultLocale === 'en') {
+        this.usingI18next = false;
+      }
     }
   }
 
@@ -130,8 +164,11 @@ export default class I18n extends Module {
    * @param dictionary - Custom translation dictionary
    */
   public setDictionary(dictionary: I18nDictionary): void {
-    // Add as a custom namespace and switch to it
-    this.i18n.addResourceBundle(this.locale, 'translation', dictionary, true, true);
+    if (this.usingI18next && this.i18nextWrapper !== null) {
+      this.i18nextWrapper.setDictionary(dictionary);
+    } else {
+      this.lightweightI18n.setDictionary(dictionary);
+    }
   }
 
   /**
@@ -159,7 +196,7 @@ export default class I18n extends Module {
 
   /**
    * Module preparation - called during editor initialization.
-   * Initializes i18next and resolves locale from configuration.
+   * Uses lightweight i18n for English, loads i18next only for other locales.
    */
   public async prepare(): Promise<void> {
     const i18nConfig = this.config.i18n;
@@ -167,33 +204,11 @@ export default class I18n extends Module {
     // Set default locale if configured
     this.applyDefaultLocale(i18nConfig?.defaultLocale);
 
-    // Initialize i18next with English as the fallback
-    await this.i18n.init({
-      lng: 'en',
-      fallbackLng: this.defaultLocale,
-      resources: {
-        en: {
-          translation: enLocale.dictionary,
-        },
-      },
-      interpolation: {
-        // Use single braces {var} to match existing format
-        prefix: '{',
-        suffix: '}',
-        escapeValue: false, // React/DOM handles escaping
-      },
-      // Return key if translation is missing (consistent behavior)
-      returnNull: false,
-      returnEmptyString: false,
-      // Don't parse keys as nested objects - we use flat keys with dots
-      keySeparator: false,
-      nsSeparator: false,
-    });
-
     // Handle custom messages (highest priority)
     if (i18nConfig?.messages !== undefined) {
-      this.i18n.addResourceBundle(CUSTOM_MESSAGES_LOCALE, 'translation', i18nConfig.messages, true, true);
-      await this.i18n.changeLanguage(CUSTOM_MESSAGES_LOCALE);
+      // For custom messages, use lightweight implementation with overrides
+      this.lightweightI18n.setDictionary(i18nConfig.messages);
+      this.usingI18next = false;
       // Set direction from config or default to 'ltr' for custom messages
       this.updateConfigDirection(i18nConfig.direction ?? 'ltr');
 
@@ -210,6 +225,23 @@ export default class I18n extends Module {
 
     // Update config.i18n.direction so other modules can access it via isRtl getter
     this.updateConfigDirection(i18nConfig?.direction ?? this.getDirection());
+  }
+
+  /**
+   * Dynamically load i18next when needed for non-English locales
+   */
+  private async ensureI18nextLoaded(
+    locale: SupportedLocale,
+    localeConfig: { dictionary: I18nDictionary }
+  ): Promise<void> {
+    if (this.i18nextWrapper !== null) {
+      return;
+    }
+
+    // Dynamic import of the i18next loader
+    const { loadI18next } = await import('../i18n/i18next-loader');
+
+    this.i18nextWrapper = await loadI18next(locale, localeConfig);
   }
 
   /**

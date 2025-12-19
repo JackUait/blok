@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import Dom, { isCollapsedWhitespaces, calculateBaseline, toggleEmptyMark } from '../../../src/components/dom';
+import { Dom, isCollapsedWhitespaces, calculateBaseline, toggleEmptyMark } from '../../../src/components/dom';
 
 describe('Dom helper utilities', () => {
   beforeEach(() => {

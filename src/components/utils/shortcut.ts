@@ -229,4 +229,3 @@ export class Shortcut {
   }
 }
 
-export default Shortcut;

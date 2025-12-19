@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { IconLink } from '../../../../src/components/icons';
 
-import LinkInlineTool from '../../../../src/components/inline-tools/inline-tool-link';
-import type SelectionUtils from '../../../../src/components/selection';
+import { LinkInlineTool } from '../../../../src/components/inline-tools/inline-tool-link';
+import type { SelectionUtils } from '../../../../src/components/selection';
 import type { API } from '../../../../types';
 
 type SelectionMock = Pick<SelectionUtils,
@@ -130,10 +130,7 @@ describe('LinkInlineTool', () => {
         rel: 'nofollow',
       },
     });
-
-    const { tool } = createTool();
-
-    expect(tool.shortcut).toBe('CMD+K');
+    expect(LinkInlineTool.shortcut).toBe('CMD+K');
   });
 
   it('renders menu config with correct properties', () => {

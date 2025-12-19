@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import EventsAPI from '../../../../../src/components/modules/api/events';
-import EventsDispatcher from '../../../../../src/components/utils/events';
+import { EventsAPI } from '../../../../../src/components/modules/api/events';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import { BlockChanged } from '../../../../../src/components/events/BlockChanged';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';

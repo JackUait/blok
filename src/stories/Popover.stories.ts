@@ -3,7 +3,7 @@ import { userEvent, waitFor, expect } from 'storybook/test';
 import type { OutputData } from '@/types';
 import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID, dispatchKeyboardEvent, focusSearchInput, waitForPointerEvents } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import Header from '../tools/header';
+import { Header } from '../tools/header';
 
 interface PopoverArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -59,6 +59,7 @@ const meta: Meta<PopoverArgs> = {
 };
 
 export default meta;
+
 
 type Story = StoryObj<PopoverArgs>;
 

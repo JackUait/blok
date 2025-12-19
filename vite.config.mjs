@@ -18,18 +18,24 @@ process.env.BROWSER = 'open';
 export default defineConfig(({ mode }) => {
   const NODE_ENV = mode || 'development';
   const VERSION = pkg.version;
-  const isStorybookBuild = process.env.npm_lifecycle_script?.includes('storybook');
 
   return {
     build: {
       copyPublicDir: false,
       target: 'es2017',
       lib: {
-        entry: path.resolve(__dirname, 'src', 'blok.ts'),
-        name: 'Blok',
-        fileName: 'blok',
+        entry: {
+          blok: path.resolve(__dirname, 'src', 'blok.ts'),
+          tools: path.resolve(__dirname, 'src', 'tools', 'index.ts'),
+          full: path.resolve(__dirname, 'src', 'full.ts'),
+        },
+        formats: ['es'],
       },
       rollupOptions: {
+        output: {
+          entryFileNames: '[name].mjs',
+          chunkFileNames: 'chunks/[name]-[hash].mjs',
+        },
         plugins: [
           license({
             thirdParty: {
@@ -77,13 +83,13 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [
-      // Only use CSS injection plugin for library builds, not Storybook
-      !isStorybookBuild && cssInjectedByJsPlugin({
+      cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (outputChunk) => {
-          // Only inject CSS into the main blok bundle, not locales
+          // Only inject CSS into the main blok bundle, not locales or tools
+          // CSS is injected into 'blok' entry, 'full' includes blok so it gets CSS too
           return outputChunk.name === 'blok';
         },
       }),
-    ].filter(Boolean),
+    ],
   };
 });

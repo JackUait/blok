@@ -1,8 +1,8 @@
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
 import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './components/popover-item';
 import type { SearchInput } from './components/search-input';
-import EventsDispatcher from '../events';
-import Listeners from '../listeners';
+import { EventsDispatcher } from '../events';
+import { Listeners } from '../listeners';
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { PopoverItemParams } from './components/popover-item';

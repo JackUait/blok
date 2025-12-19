@@ -10,7 +10,7 @@ import { DATA_ATTR, createSelector } from '../constants';
  *
  * Makes selected text bolder
  */
-export default class BoldInlineTool implements InlineTool {
+export class BoldInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
    * @returns {boolean}
@@ -712,12 +712,9 @@ export default class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Set a shortcut
-   * @returns {boolean}
+   * Shortcut for bold tool
    */
-  public get shortcut(): string {
-    return 'CMD+B';
-  }
+  public static shortcut = 'CMD+B';
 
   /**
    * Check if a range contains bold text

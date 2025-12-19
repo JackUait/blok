@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import UI from '../../../../src/components/modules/ui';
-import SelectionUtils from '../../../../src/components/selection';
-import Flipper from '../../../../src/components/flipper';
+import { UI } from '../../../../src/components/modules/ui';
+import { SelectionUtils } from '../../../../src/components/selection';
+import { Flipper } from '../../../../src/components/flipper';
 import { DATA_ATTR, BLOK_INTERFACE_VALUE } from '../../../../src/components/constants';
 import { BlockHovered } from '../../../../src/components/events/BlockHovered';
 import { BlokMobileLayoutToggled } from '../../../../src/components/events';

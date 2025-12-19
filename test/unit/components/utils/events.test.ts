@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 
 type TestEventMap = {
   simple: string;

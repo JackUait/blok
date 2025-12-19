@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 
-import Renderer from '../../../../src/components/modules/renderer';
+import { Renderer } from '../../../../src/components/modules/renderer';
 import type { OutputBlockData } from '../../../../types';
 import type { StubData } from '../../../../src/tools/stub';
 import * as utils from '../../../../src/components/utils';

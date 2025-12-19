@@ -8,15 +8,11 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import type Blok from '@/types';
+import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../fixtures/test.html')
-).href;
 const BLOK_BUNDLE_PATH = path.resolve(__dirname, '../../../../dist/editorjs.umd.js');
 
 const HOLDER_ID = 'blok';

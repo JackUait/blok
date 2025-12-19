@@ -1,4 +1,4 @@
-import $ from '../../components/dom';
+import { Dom as $ } from '../../components/dom';
 import type { API, BlockTool, BlockToolConstructorOptions, BlockToolData } from '../../../types';
 import { IconWarning } from '../../components/icons';
 import { DATA_ATTR } from '../../components/constants';
@@ -12,7 +12,7 @@ export interface StubData extends BlockToolData {
  * This tool will be shown in place of a block without corresponding plugin
  * It will store its data inside and pass it back with article saving
  */
-export default class Stub implements BlockTool {
+export class Stub implements BlockTool {
   /**
    * Notify core that tool supports read-only mode
    */

@@ -1,16 +1,10 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
-import type Blok from '@/types';
+import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../fixtures/test.html')
-).href;
 
 const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -80,20 +74,9 @@ const createBlokWithBlocks = async (
   blocks: OutputData['blocks'],
   tools: ToolDefinition[] = []
 ): Promise<void> => {
-  const hasParagraphOverride = tools.some((tool) => tool.name === 'paragraph');
-  const serializedTools: ToolDefinition[] = hasParagraphOverride
-    ? tools
-    : [
-      {
-        name: 'paragraph',
-        config: {
-          config: {
-            preserveBlank: true,
-          },
-        },
-      },
-      ...tools,
-    ];
+  // BlokWithDefaults already provides paragraph with preserveBlank: true,
+  // so we don't need to add it here. Only pass through custom tools.
+  const serializedTools: ToolDefinition[] = tools;
 
   await resetBlok(page);
   await page.evaluate(async ({

@@ -4,22 +4,10 @@ import { readFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
+import { formatBytes, normalizeSize } from './lib/bundle-utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-/**
- * Format bytes to human-readable string
- * @param {number} bytes - Number of bytes
- * @returns {string} Formatted string
- */
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
 
 /**
  * Load bundle size history
@@ -45,6 +33,26 @@ async function loadHistory(historyFile) {
 }
 
 /**
+ * Get display size from a size value (supports both old and new formats)
+ * @param {number|{raw: number, gzip: number}} size - Size value
+ * @returns {number} Size to display (gzip if available, otherwise raw)
+ */
+function getDisplaySize(size) {
+  const normalized = normalizeSize(size);
+  return normalized.gzip ?? normalized.raw;
+}
+
+/**
+ * Format size for display
+ * @param {number|{raw: number, gzip: number}} size - Size value
+ * @returns {string} Formatted size string
+ */
+function formatDisplaySize(size) {
+  const normalized = normalizeSize(size);
+  return formatBytes(normalized.gzip ?? normalized.raw);
+}
+
+/**
  * Display history in table format
  * @param {Array} history - Historical data
  * @param {number} limit - Number of entries to show
@@ -66,17 +74,17 @@ function displayHistory(history, limit = 10) {
     // Display bundle sizes
     const bundles = Object.entries(entry.bundles)
       .filter(([name]) => name !== '_total')
-      .sort((a, b) => b[1] - a[1]); // Sort by size descending
+      .sort((a, b) => getDisplaySize(b[1]) - getDisplaySize(a[1])); // Sort by size descending
 
     for (const [bundleName, size] of bundles) {
-      const sizeStr = formatBytes(size).padStart(10);
-      console.log(`  ${bundleName.padEnd(30)} ${sizeStr}`);
+      const displaySize = formatDisplaySize(size);
+      console.log(`  ${bundleName.padEnd(30)} ${displaySize.padStart(20)}`);
     }
 
     // Display total
     if (entry.bundles._total) {
-      console.log('  ' + '─'.repeat(42));
-      console.log(`  ${'Total'.padEnd(30)} ${formatBytes(entry.bundles._total).padStart(10)}`);
+      console.log('  ' + '─'.repeat(52));
+      console.log(`  ${'Total'.padEnd(30)} ${formatDisplaySize(entry.bundles._total).padStart(20)}`);
     }
 
     // Display alerts if any
@@ -116,8 +124,8 @@ function displayTrends(history) {
   const trends = [];
 
   for (const bundleName of allBundles) {
-    const firstSize = first.bundles[bundleName] || 0;
-    const lastSize = last.bundles[bundleName] || 0;
+    const firstSize = getDisplaySize(first.bundles[bundleName] || 0);
+    const lastSize = getDisplaySize(last.bundles[bundleName] || 0);
 
     if (firstSize === 0 && lastSize === 0) continue;
 
@@ -185,16 +193,31 @@ async function exportToCsv(history, outputFile) {
 
   const bundleNames = Array.from(allBundles).sort();
 
-  // Create CSV header
-  const header = ['timestamp', 'commit', 'version', ...bundleNames].join(',');
+  // Create CSV header (with _gzip suffix for gzip sizes)
+  const header = ['timestamp', 'commit', 'version', ...bundleNames.map(n => `${n}_raw`), ...bundleNames.map(n => `${n}_gzip`)].join(',');
 
   // Create CSV rows
   const rows = history.map(entry => {
+    const rawSizes = bundleNames.map(name => {
+      const size = entry.bundles[name];
+      if (!size) return '';
+      const normalized = normalizeSize(size);
+      return normalized.raw;
+    });
+
+    const gzipSizes = bundleNames.map(name => {
+      const size = entry.bundles[name];
+      if (!size) return '';
+      const normalized = normalizeSize(size);
+      return normalized.gzip ?? '';
+    });
+
     const row = [
       entry.timestamp,
       entry.commit,
       entry.version || 'unknown',
-      ...bundleNames.map(name => entry.bundles[name] || '')
+      ...rawSizes,
+      ...gzipSizes
     ];
     return row.join(',');
   });

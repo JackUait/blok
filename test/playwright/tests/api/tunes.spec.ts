@@ -1,15 +1,9 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
-import type Blok from '@/types';
+import type { Blok } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../fixtures/test.html')
-).href;
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 const HOLDER_ID = 'blok';
 const FIRST_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]:first-of-type`;

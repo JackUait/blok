@@ -1,13 +1,13 @@
-import Dom from './dom';
-import * as _ from './utils';
-import SelectionUtils from './selection';
+import { Dom } from './dom';
+import { delay } from './utils';
+import { SelectionUtils } from './selection';
 
 /**
  * Iterator above passed Elements list.
  * Each next or previous action adds provides CSS-class and sets cursor to this item
  * @internal
  */
-export default class DomIterator {
+export class DomIterator {
   /**
    * This is a static property that defines iteration directions
    * @type {{RIGHT: string, LEFT: string}}
@@ -172,7 +172,7 @@ export default class DomIterator {
        * Focus input with micro-delay to ensure DOM is updated
        */
        
-      _.delay(() => SelectionUtils.setCursor(this.items[focusedButtonIndex]), 50)();
+      delay(() => SelectionUtils.setCursor(this.items[focusedButtonIndex]), 50)();
     }
 
     /**

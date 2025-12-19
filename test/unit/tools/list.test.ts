@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import List, { type ListItemConfig, type ListItemData } from '../../../src/tools/list';
+import { ListItem as List, type ListItemConfig, type ListItemData } from '../../../src/tools/list';
 import defaultDictionary from '../../../src/components/i18n/locales/en/messages.json';
 import type { API, BlockToolConstructorOptions } from '../../../types';
 import type { I18nDictionary } from '../../../types/configs';

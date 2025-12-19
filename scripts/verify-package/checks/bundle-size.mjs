@@ -30,7 +30,6 @@ export async function checkBundleSize(packageDir, verbose = false) {
   // Bundle size reference values (informational, not enforced)
   // For trend-based tracking, see: scripts/track-bundle-size.mjs
   const limits = {
-    'blok.umd.js': 800 * 1024, // 800KB (reference)
     'blok.mjs': 5 * 1024,      // 5KB (entry point, reference)
     total: 3 * 1024 * 1024     // 3MB total package (reference)
   };
@@ -41,8 +40,8 @@ export async function checkBundleSize(packageDir, verbose = false) {
     // Get all files in dist directory
     const files = await readdir(distDir);
 
-    // Check specific bundle files
-    const bundlesToCheck = ['blok.umd.js', 'blok.mjs', 'locales.mjs'];
+    // Check specific bundle files (ES modules only, no UMD)
+    const bundlesToCheck = ['blok.mjs', 'locales.mjs'];
 
     for (const bundleName of bundlesToCheck) {
       if (files.includes(bundleName)) {

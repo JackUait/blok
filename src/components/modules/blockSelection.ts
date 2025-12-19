@@ -4,20 +4,20 @@
  * @module BlockSelection
  * @version 1.0.0
  */
-import Module from '../__module';
-import type Block from '../block';
-import * as _ from '../utils';
-import $ from '../dom';
-import Shortcuts from '../utils/shortcuts';
+import { Module } from '../__module';
+import type { Block } from '../block';
+import { delay } from '../utils';
+import { Dom as $ } from '../dom';
+import { Shortcuts } from '../utils/shortcuts';
 
-import SelectionUtils from '../selection';
+import { SelectionUtils } from '../selection';
 import type { SanitizerConfig } from '../../../types/configs';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
 
 /**
  *
  */
-export default class BlockSelection extends Module {
+export class BlockSelection extends Module {
   /**
    * Sometimes .anyBlockSelected can be called frequently,
    * for example at ui@selectionChange (to clear native browser selection in CBS)
@@ -693,7 +693,7 @@ export default class BlockSelection extends Module {
       Caret.setToBlock(currentBlock);
     }
 
-    _.delay(() => {
+    delay(() => {
       const eventKey = event.key;
 
       /**

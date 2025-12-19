@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import BoldInlineTool from '../../../../src/components/inline-tools/inline-tool-bold';
+import { BoldInlineTool } from '../../../../src/components/inline-tools/inline-tool-bold';
 import type { PopoverItemDefaultBaseParams } from '../../../../types/utils/popover';
 
 type BoldInlineToolInternals = {
@@ -99,9 +99,7 @@ describe('BoldInlineTool', () => {
       b: {},
     });
 
-    const tool = new BoldInlineTool();
-
-    expect(tool.shortcut).toBe('CMD+B');
+    expect(BoldInlineTool.shortcut).toBe('CMD+B');
   });
 
   it('wraps selected text and reports bold state', () => {

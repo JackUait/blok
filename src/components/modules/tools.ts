@@ -1,20 +1,15 @@
-import Paragraph from '../../tools/paragraph';
-import List from '../../tools/list';
-import Module from '../__module';
-import * as _ from '../utils';
-import PromiseQueue from '../utils/promise-queue';
+import { Module } from '../__module';
+import { deepMerge, isFunction, isObject, isUndefined, log } from '../utils';
+import { PromiseQueue } from '../utils/promise-queue';
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
-import BoldInlineTool from '../inline-tools/inline-tool-bold';
-import ItalicInlineTool from '../inline-tools/inline-tool-italic';
-import LinkInlineTool from '../inline-tools/inline-tool-link';
-import ConvertInlineTool from '../inline-tools/inline-tool-convert';
-import Stub from '../../tools/stub';
-import ToolsFactory from '../tools/factory';
-import type InlineToolAdapter from '../tools/inline';
-import type BlockToolAdapter from '../tools/block';
-import type BlockTuneAdapter from '../tools/tune';
-import DeleteTune from '../block-tunes/block-tune-delete';
-import ToolsCollection from '../tools/collection';
+import { Stub } from '../../tools/stub';
+import { ToolsFactory } from '../tools/factory';
+import type { InlineToolAdapter } from '../tools/inline';
+import type { BlockToolAdapter } from '../tools/block';
+import type { BlockTuneAdapter } from '../tools/tune';
+import { DeleteTune } from '../block-tunes/block-tune-delete';
+import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
+import { ToolsCollection } from '../tools/collection';
 import { CriticalError } from '../errors/critical';
 
 /**
@@ -36,7 +31,7 @@ type ToolPrepareData = {
 type ToolPrepareFunction = (data: ToolPrepareData) => void | Promise<void>;
 
 const toToolConstructable = (constructable: unknown): ToolConstructable => {
-  if (!_.isFunction(constructable)) {
+  if (!isFunction(constructable)) {
     throw new Error('Tool constructable must be a function');
   }
 
@@ -52,7 +47,7 @@ const toToolConstructable = (constructable: unknown): ToolConstructable => {
 /**
  * Modules that works with tools classes
  */
-export default class Tools extends Module {
+export class Tools extends Module {
   /**
    * Name of Stub Tool
    * Stub Tool is used to substitute unavailable block Tools and store their data
@@ -152,7 +147,7 @@ export default class Tools extends Module {
      */
     const userTools = this.config.tools ?? {};
 
-    this.config.tools = _.deepMerge({}, this.internalTools, userTools);
+    this.config.tools = deepMerge({}, this.internalTools, userTools);
 
     this.validateTools();
 
@@ -198,7 +193,7 @@ export default class Tools extends Module {
 
     sequenceData.forEach(chainData => {
       void queue.add(async () => {
-        const callbackData = !_.isUndefined(chainData.data) ? chainData.data : {};
+        const callbackData = !isUndefined(chainData.data) ? chainData.data : {};
 
         try {
           await chainData.function(chainData.data);
@@ -243,7 +238,7 @@ export default class Tools extends Module {
         try {
           return tool.reset();
         } catch (error) {
-          _.log(`Tool "${tool.name}" reset failed`, 'warn', error);
+          log(`Tool "${tool.name}" reset failed`, 'warn', error);
 
           return undefined;
         }
@@ -251,53 +246,34 @@ export default class Tools extends Module {
 
       if (resetResult instanceof Promise) {
         resetResult.catch(error => {
-          _.log(`Tool "${tool.name}" reset failed`, 'warn', error);
+          log(`Tool "${tool.name}" reset failed`, 'warn', error);
         });
       }
     }
   }
 
   /**
-   * Returns internal tools
-   * Includes Bold, Italic, Link and Paragraph
+   * Returns essential internal tools that are always bundled.
+   * Includes:
+   * - stub: for graceful handling of unknown block types
+   * - delete: fundamental block operation in settings menu
+   * - convertTo: inline tool for converting blocks between types
+   *
+   * Other tools (paragraph, header, list, bold, italic, link) are optional
+   * and should be imported from '@jackuait/blok/tools' or '@jackuait/blok/full'.
    */
   private get internalTools(): { [toolName: string]: ToolConstructable | ToolSettings & { isInternal?: boolean } } {
     return {
-      convertTo: {
-        class: toToolConstructable(ConvertInlineTool),
-        isInternal: true,
-      },
-      link: {
-        class: toToolConstructable(LinkInlineTool),
-        isInternal: true,
-      },
-      bold: {
-        class: toToolConstructable(BoldInlineTool),
-        isInternal: true,
-      },
-      italic: {
-        class: toToolConstructable(ItalicInlineTool),
-        isInternal: true,
-      },
-      paragraph: {
-        class: toToolConstructable(Paragraph),
-        inlineToolbar: true,
-        config: {
-          preserveBlank: true,
-        },
-        isInternal: true,
-      },
-      list: {
-        class: toToolConstructable(List),
-        inlineToolbar: true,
-        isInternal: true,
-      },
       stub: {
         class: toToolConstructable(Stub),
         isInternal: true,
       },
       delete: {
         class: toToolConstructable(DeleteTune),
+        isInternal: true,
+      },
+      convertTo: {
+        class: toToolConstructable(ConvertInlineTool),
         isInternal: true,
       },
     };
@@ -323,7 +299,7 @@ export default class Tools extends Module {
     const notImplementedMethods = tool.getMissingMethods(inlineToolRequiredMethods);
 
     if (notImplementedMethods.length) {
-      _.log(
+      log(
         `Incorrect Inline Tool: ${tool.name}. Some of required methods is not implemented %o`,
         'warn',
         notImplementedMethods
@@ -364,7 +340,7 @@ export default class Tools extends Module {
         const prepareFunction: ChainData['function'] = async (payload?: unknown) => {
           const constructable = settings.class;
 
-          if (!constructable || !_.isFunction(constructable.prepare)) {
+          if (!constructable || !isFunction(constructable.prepare)) {
             return;
           }
 
@@ -414,9 +390,10 @@ export default class Tools extends Module {
       const inlineTools = Array.isArray(this.config.inlineToolbar)
         ? this.createInlineToolsCollection(this.config.inlineToolbar)
         /**
-         * If common settings is 'true' or not specified (will be set as true at core.ts), get the default order
+         * If common settings is 'true' or not specified (will be set as true at core.ts), get the default order.
+         * Prepend convertTo so it appears first (same as when explicit array is passed).
          */
-        : new ToolsCollection<InlineToolAdapter>(Array.from(this.inlineTools.entries()));
+        : this.createInlineToolsCollection(['convertTo', ...this.inlineTools.keys()]);
 
       blockTool.inlineTools = inlineTools;
 
@@ -499,9 +476,9 @@ export default class Tools extends Module {
       }
 
       const tool = toolsConfig[toolName];
-      const isConstructorFunction = _.isFunction(tool);
+      const isConstructorFunction = isFunction(tool);
       const toolSettings = tool as ToolSettings;
-      const hasToolClass = _.isFunction(toolSettings.class);
+      const hasToolClass = isFunction(toolSettings.class);
 
       if (!isConstructorFunction && !hasToolClass) {
         throw new CriticalError(
@@ -532,7 +509,7 @@ export default class Tools extends Module {
 
       const tool = toolsConfig[toolName];
 
-      if (_.isObject(tool)) {
+      if (isObject(tool)) {
         config[toolName] = tool as ToolSettings;
 
         continue;
@@ -578,7 +555,7 @@ export default class Tools extends Module {
       const inlineTool = this.inlineTools.get(name);
 
       if (!inlineTool) {
-        _.log(`Inline tool "${name}" is not available and will be skipped`, 'warn');
+        log(`Inline tool "${name}" is not available and will be skipped`, 'warn');
         continue;
       }
 
@@ -600,7 +577,7 @@ export default class Tools extends Module {
       const tune = this.blockTunes.get(name);
 
       if (!tune) {
-        _.log(`Block tune "${name}" is not available and will be skipped`, 'warn');
+        log(`Block tune "${name}" is not available and will be skipped`, 'warn');
         continue;
       }
 

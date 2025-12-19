@@ -3,18 +3,6 @@
  */
 
 import { nanoid } from 'nanoid';
-import lodashDelay from 'lodash/delay';
-import lodashIsBoolean from 'lodash/isBoolean';
-import lodashIsEmpty from 'lodash/isEmpty';
-import lodashIsEqual from 'lodash/isEqual';
-import lodashIsFunction from 'lodash/isFunction';
-import lodashIsNumber from 'lodash/isNumber';
-import lodashIsPlainObject from 'lodash/isPlainObject';
-import lodashIsString from 'lodash/isString';
-import lodashIsUndefined from 'lodash/isUndefined';
-import lodashMergeWith from 'lodash/mergeWith';
-import lodashThrottle from 'lodash/throttle';
-import lodashToArray from 'lodash/toArray';
 
 /**
  * Possible log levels
@@ -304,16 +292,21 @@ export const logLabeled = (
  * @returns {boolean}
  */
 export const isFunction = (fn: unknown): fn is (...args: unknown[]) => unknown => {
-  return lodashIsFunction(fn);
+  return typeof fn === 'function';
 };
 
 /**
- * Checks if passed argument is an object
+ * Checks if passed argument is a plain object (created by {} or Object constructor)
  * @param {*} v - object to check
  * @returns {boolean}
  */
 export const isObject = (v: unknown): v is object => {
-  return lodashIsPlainObject(v);
+  if (v === null || typeof v !== 'object') {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(v);
+
+  return proto === null || proto === Object.prototype;
 };
 
 /**
@@ -322,7 +315,7 @@ export const isObject = (v: unknown): v is object => {
  * @returns {boolean}
  */
 export const isString = (v: unknown): v is string => {
-  return lodashIsString(v);
+  return typeof v === 'string';
 };
 
 /**
@@ -331,16 +324,16 @@ export const isString = (v: unknown): v is string => {
  * @returns {boolean}
  */
 export const isBoolean = (v: unknown): v is boolean => {
-  return lodashIsBoolean(v);
+  return typeof v === 'boolean';
 };
 
 /**
- * Checks if passed argument is number
+ * Checks if passed argument is number (including NaN, which has typeof 'number')
  * @param {*} v - variable to check
  * @returns {boolean}
  */
 export const isNumber = (v: unknown): v is number => {
-  return lodashIsNumber(v);
+  return typeof v === 'number';
 };
 
 /**
@@ -349,16 +342,29 @@ export const isNumber = (v: unknown): v is number => {
  * @returns {boolean}
  */
 export const isUndefined = function (v: unknown): v is undefined {
-  return lodashIsUndefined(v);
+  return v === undefined;
 };
 
 /**
- * Checks if object is empty
- * @param {object} object - object to check
+ * Checks if value is empty (null, undefined, empty string, empty array, empty object, empty Map/Set)
+ * @param {*} value - value to check
  * @returns {boolean}
  */
-export const isEmpty = (object: object | null | undefined): boolean => {
-  return lodashIsEmpty(object);
+export const isEmpty = (value: unknown): boolean => {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  if (typeof value === 'string' || Array.isArray(value)) {
+    return value.length === 0;
+  }
+  if (value instanceof Map || value instanceof Set) {
+    return value.size === 0;
+  }
+  if (typeof value === 'object') {
+    return Object.keys(value).length === 0;
+  }
+
+  return false;
 };
 
 /**
@@ -381,9 +387,8 @@ export const isPrintableKey = (keyCode: number): boolean => {
  * @param {ArrayLike} collection - collection to convert to array
  * @returns {Array}
  */
-
 export const array = (collection: ArrayLike<any>): any[] => {
-  return lodashToArray(collection);
+  return Array.from(collection);
 };
 
 /**
@@ -393,7 +398,7 @@ export const array = (collection: ArrayLike<any>): any[] => {
  */
 export const delay = (method: (...args: unknown[]) => unknown, timeout: number) => {
   return function (this: unknown, ...args: unknown[]): void {
-    void lodashDelay(() => method.apply(this, args), timeout);
+    setTimeout(() => method.apply(this, args), timeout);
   };
 };
 
@@ -464,7 +469,88 @@ export const throttle = (
   wait: number,
   options?: {leading?: boolean; trailing?: boolean}
 ): ((...args: unknown[]) => unknown) => {
-  return lodashThrottle(func, wait, options);
+  const leading = options?.leading !== false;
+  const trailing = options?.trailing !== false;
+
+  const state = {
+    lastCallTime: undefined as number | undefined,
+    lastInvokeTime: 0,
+    timerId: undefined as ReturnType<typeof setTimeout> | undefined,
+    lastArgs: undefined as unknown[] | undefined,
+    lastThis: undefined as unknown,
+  };
+
+  const invokeFunc = (time: number): unknown => {
+    state.lastInvokeTime = time;
+    const args = state.lastArgs;
+    const thisArg = state.lastThis;
+
+    state.lastArgs = undefined;
+    state.lastThis = undefined;
+
+    return func.apply(thisArg, args ?? []);
+  };
+
+  const remainingWait = (time: number): number => {
+    const timeSinceLastCall = time - (state.lastCallTime ?? 0);
+    const timeSinceLastInvoke = time - state.lastInvokeTime;
+    const timeWaiting = wait - timeSinceLastCall;
+
+    return trailing ? Math.min(timeWaiting, wait - timeSinceLastInvoke) : timeWaiting;
+  };
+
+  const shouldInvoke = (time: number): boolean => {
+    const timeSinceLastCall = time - (state.lastCallTime ?? 0);
+    const timeSinceLastInvoke = time - state.lastInvokeTime;
+
+    return (
+      state.lastCallTime === undefined ||
+      timeSinceLastCall >= wait ||
+      timeSinceLastCall < 0 ||
+      timeSinceLastInvoke >= wait
+    );
+  };
+
+  const timerExpired = (): void => {
+    const time = Date.now();
+
+    if (!shouldInvoke(time)) {
+      state.timerId = setTimeout(timerExpired, remainingWait(time));
+
+      return;
+    }
+
+    state.timerId = undefined;
+    const shouldInvokeTrailing = trailing && state.lastArgs !== undefined;
+
+    if (shouldInvokeTrailing) {
+      invokeFunc(time);
+    }
+    state.lastArgs = undefined;
+    state.lastThis = undefined;
+  };
+
+  const throttled = function (this: unknown, ...args: unknown[]): unknown {
+    const time = Date.now();
+    const isInvoking = shouldInvoke(time);
+
+    state.lastArgs = args;
+    state.lastThis = this;
+    state.lastCallTime = time;
+
+    const canStartTimer = isInvoking && state.timerId === undefined;
+
+    if (!canStartTimer) {
+      return undefined;
+    }
+
+    state.lastInvokeTime = time;
+    state.timerId = setTimeout(timerExpired, wait);
+
+    return leading ? invokeFunc(time) : undefined;
+  };
+
+  return throttled;
 };
 
 /**
@@ -505,31 +591,63 @@ export const capitalize = (text: string): string => {
 };
 
 /**
- * Customizer function for deep merge that overwrites arrays
- * @param {unknown} objValue - object value
- * @param {unknown} srcValue - source value
- * @returns {unknown}
+ * Deep merge two objects recursively. Arrays are overwritten (not merged).
+ * Undefined values in source are skipped (matching lodash.mergeWith behavior).
+ * @param target - target object
+ * @param source - source object
+ * @returns new merged object
  */
-const overwriteArrayMerge = (objValue: unknown, srcValue: unknown): unknown => {
-  if (Array.isArray(srcValue)) {
-    return srcValue;
-  }
+const deepMergeTwo = (target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> => {
+  const result = { ...target };
 
-  return undefined;
+  Object.keys(source).forEach((key) => {
+    const targetValue = result[key];
+    const sourceValue = source[key];
+
+    if (sourceValue === undefined) {
+      return;
+    }
+
+    const shouldRecurseMerge = isObject(sourceValue) && isObject(targetValue) && !Array.isArray(sourceValue);
+
+    if (shouldRecurseMerge) {
+      result[key] = deepMergeTwo(
+        targetValue as Record<string, unknown>,
+        sourceValue as Record<string, unknown>
+      );
+
+      return;
+    }
+
+    result[key] = sourceValue;
+  });
+
+  return result;
 };
 
+/**
+ * Deep merge objects. Arrays are overwritten (not merged).
+ * Mutates and returns the target object for compatibility with lodash.mergeWith.
+ * @param target - target object to merge into
+ * @param sources - source objects to merge from
+ * @returns merged object (same reference as target)
+ */
 export const deepMerge = <T extends object> (target: T, ...sources: Partial<T>[]): T => {
   if (!isObject(target) || sources.length === 0) {
     return target;
   }
 
-  return sources.reduce((acc: T, source) => {
+  const merged = sources.reduce((acc, source) => {
     if (!isObject(source)) {
       return acc;
     }
 
-    return lodashMergeWith(acc, source, overwriteArrayMerge) as T;
-  }, target);
+    return deepMergeTwo(acc as Record<string, unknown>, source as Record<string, unknown>);
+  }, target as Record<string, unknown>);
+
+  Object.assign(target, merged);
+
+  return target;
 };
 
 /**
@@ -878,13 +996,53 @@ export const isIosDevice = (() => {
 })();
 
 /**
- * Compares two values with unknown type
+ * Compares two arrays deeply for equality
+ * @param arr1 - first array
+ * @param arr2 - second array
+ * @returns {boolean} true if arrays are equal
+ */
+const arraysEqual = (arr1: unknown[], arr2: unknown[]): boolean => {
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+
+  return arr1.every((item, index) => equals(item, arr2[index]));
+};
+
+/**
+ * Compares two values deeply for equality
  * @param var1 - value to compare
  * @param var2 - value to compare with
  * @returns {boolean} true if they are equal
  */
 export const equals = (var1: unknown, var2: unknown): boolean => {
-  return lodashIsEqual(var1, var2);
+  if (var1 === var2) {
+    return true;
+  }
+
+  if (var1 === null || var2 === null || typeof var1 !== 'object' || typeof var2 !== 'object') {
+    return false;
+  }
+
+  if (Array.isArray(var1) !== Array.isArray(var2)) {
+    return false;
+  }
+
+  if (Array.isArray(var1) && Array.isArray(var2)) {
+    return arraysEqual(var1, var2);
+  }
+
+  const keys1 = Object.keys(var1);
+  const keys2 = Object.keys(var2);
+
+  if (keys1.length !== keys2.length) {
+    return false;
+  }
+
+  return keys1.every((key) =>
+    Object.prototype.hasOwnProperty.call(var2, key) &&
+    equals((var1 as Record<string, unknown>)[key], (var2 as Record<string, unknown>)[key])
+  );
 };
 
 /**

@@ -1,5 +1,5 @@
-import * as _ from './utils';
-import type Block from './block';
+import { array } from './utils';
+import type { Block } from './block';
 import { BlockToolAPI } from './block';
 import type { MoveEvent } from '../../types/tools';
 
@@ -9,7 +9,7 @@ import type { MoveEvent } from '../../types/tools';
  * @private
  * @property {HTMLElement} workingArea — blok`s working node
  */
-export default class Blocks {
+export class Blocks {
   /**
    * Array of Block instances in order of addition
    */
@@ -50,7 +50,7 @@ export default class Blocks {
    * @returns {HTMLElement[]}
    */
   public get nodes(): HTMLElement[] {
-    return _.array(this.workingArea.children);
+    return array(this.workingArea.children);
   }
 
   /**

@@ -4,14 +4,14 @@
  * @module BlockManager
  * @version 2.0.0
  */
-import Block, { BlockToolAPI } from '../block';
-import Module from '../__module';
-import $ from '../dom';
-import * as _ from '../utils';
-import Blocks from '../blocks';
+import { Block, BlockToolAPI } from '../block';
+import { Module } from '../__module';
+import { Dom as $ } from '../dom';
+import { isEmpty, isObject, isString, log } from '../utils';
+import { Blocks } from '../blocks';
 import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import BlockAPI from '../block/api';
+import { BlockAPI } from '../block/api';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../types/events/block';
 import { BlockRemovedMutationType } from '../../../types/events/block/BlockRemoved';
 import { BlockAddedMutationType } from '../../../types/events/block/BlockAdded';
@@ -20,9 +20,9 @@ import { BlockChangedMutationType } from '../../../types/events/block/BlockChang
 import { BlockChanged } from '../events';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
-import PromiseQueue from '../utils/promise-queue';
+import { PromiseQueue } from '../utils/promise-queue';
 import { DATA_ATTR, createSelector } from '../constants';
-import Shortcuts from '../utils/shortcuts';
+import { Shortcuts } from '../utils/shortcuts';
 import { announce } from '../utils/announcer';
 
 type BlocksStore = Blocks & {
@@ -34,7 +34,7 @@ type BlocksStore = Blocks & {
  * @property {number} currentBlockIndex - Index of current working block
  * @property {Proxy} _blocks - Proxy for Blocks instance {@link Blocks}
  */
-export default class BlockManager extends Module {
+export class BlockManager extends Module {
   /**
    * Returns current Block index
    * @returns {number}
@@ -487,7 +487,7 @@ export default class BlockManager extends Module {
        */
       block.refreshToolRootElement();
     } catch (e) {
-      _.log(`${toolName}: onPaste callback call is failed`, 'error', e);
+      log(`${toolName}: onPaste callback call is failed`, 'error', e);
     }
 
     return block;
@@ -551,7 +551,7 @@ export default class BlockManager extends Module {
     const canMergeBlocksDirectly = targetBlock.name === blockToMerge.name && targetBlock.mergeable;
     const blockToMergeDataRaw = canMergeBlocksDirectly ? await blockToMerge.data : undefined;
 
-    if (canMergeBlocksDirectly && _.isEmpty(blockToMergeDataRaw)) {
+    if (canMergeBlocksDirectly && isEmpty(blockToMergeDataRaw)) {
       console.error('Could not merge Block. Failed to extract original Block data.');
 
       return;
@@ -580,7 +580,7 @@ export default class BlockManager extends Module {
        * Extract the field-specific sanitize rules for the field that will receive the imported content.
        */
       const importProp = targetBlock.tool.conversionConfig?.import;
-      const fieldSanitizeConfig = _.isString(importProp) && _.isObject(targetBlock.tool.sanitizeConfig[importProp])
+      const fieldSanitizeConfig = isString(importProp) && isObject(targetBlock.tool.sanitizeConfig[importProp])
         ? targetBlock.tool.sanitizeConfig[importProp] as SanitizerConfig
         : targetBlock.tool.sanitizeConfig;
 
@@ -952,13 +952,13 @@ export default class BlockManager extends Module {
   public move(toIndex: number, fromIndex: number = this.currentBlockIndex, skipDOM = false): void {
     // make sure indexes are valid and within a valid range
     if (isNaN(toIndex) || isNaN(fromIndex)) {
-      _.log(`Warning during 'move' call: incorrect indices provided.`, 'warn');
+      log(`Warning during 'move' call: incorrect indices provided.`, 'warn');
 
       return;
     }
 
     if (!this.validateIndex(toIndex) || !this.validateIndex(fromIndex)) {
-      _.log(`Warning during 'move' call: indices cannot be lower than 0 or greater than the amount of blocks.`, 'warn');
+      log(`Warning during 'move' call: indices cannot be lower than 0 or greater than the amount of blocks.`, 'warn');
 
       return;
     }
@@ -1020,7 +1020,7 @@ export default class BlockManager extends Module {
      * The tool's sanitizeConfig has the format { fieldName: { tagRules } }, but clean() expects just { tagRules }.
      */
     const importProp = replacingTool.conversionConfig?.import;
-    const fieldSanitizeConfig = _.isString(importProp) && _.isObject(replacingTool.sanitizeConfig[importProp])
+    const fieldSanitizeConfig = isString(importProp) && isObject(replacingTool.sanitizeConfig[importProp])
       ? replacingTool.sanitizeConfig[importProp] as SanitizerConfig
       : replacingTool.sanitizeConfig;
 

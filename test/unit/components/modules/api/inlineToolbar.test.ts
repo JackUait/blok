@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import InlineToolbarAPI from '../../../../../src/components/modules/api/inlineToolbar';
-import EventsDispatcher from '../../../../../src/components/utils/events';
+import { InlineToolbarAPI } from '../../../../../src/components/modules/api/inlineToolbar';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../../types';

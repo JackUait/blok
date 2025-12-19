@@ -1,11 +1,9 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
-import type Blok from '@/types';
+import type { Blok } from '@/types';
 import type { Notifier as NotifierAPI } from '@/types/api/notifier';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 declare global {
   interface Window {
@@ -14,10 +12,6 @@ declare global {
 }
 
 type BlokWithNotifier = Blok & { notifier: NotifierAPI };
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../fixtures/test.html')
-).href;
 
 const HOLDER_ID = 'blok';
 const NOTIFIER_CONTAINER_SELECTOR = '[data-blok-testid="notifier-container"]';

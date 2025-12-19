@@ -6,7 +6,7 @@ import type { PopoverItemHtml } from '../../../src/components/utils/popover/comp
 import { CSSVariables, getNestedLevelAttrValue } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import type { PopoverParams } from '@/types/utils/popover/popover';
-import Flipper from '../../../src/components/flipper';
+import { Flipper } from '../../../src/components/flipper';
 
 // Mock dependencies
 vi.mock('../../../src/components/utils/popover/popover-desktop');

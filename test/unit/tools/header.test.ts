@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import Header, { type HeaderConfig, type HeaderData } from '../../../src/tools/header';
+import { Header, type HeaderConfig, type HeaderData } from '../../../src/tools/header';
 import type { API, BlockToolConstructorOptions } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 

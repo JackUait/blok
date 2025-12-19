@@ -3,7 +3,7 @@ import { userEvent, waitFor, expect } from 'storybook/test';
 import type { OutputData } from '@/types';
 import { createEditorContainer, simulateClick, waitForToolbar, selectTextInBlock, waitForPointerEvents } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import Header from '../tools/header';
+import { Header } from '../tools/header';
 
 interface InlineToolbarArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -79,6 +79,7 @@ const meta: Meta<InlineToolbarArgs> = {
 };
 
 export default meta;
+
 
 type Story = StoryObj<InlineToolbarArgs>;
 

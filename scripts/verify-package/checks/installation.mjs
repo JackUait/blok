@@ -18,12 +18,11 @@ export async function checkInstallation(packageDir, verbose = false) {
     // Check if package directory exists
     await access(packageDir);
 
-    // Required directories and files
+    // Required directories and files (ES modules only, no UMD)
     const requiredPaths = [
       'dist',
       'types',
       'codemod',
-      'dist/blok.umd.js',
       'dist/blok.mjs',
       'dist/locales.mjs',
       'types/index.d.ts',
@@ -74,14 +73,13 @@ export async function checkInstallation(packageDir, verbose = false) {
       }
     }
 
-    // Verify dist directory has bundles
+    // Verify dist directory has ES module bundles
     const distDir = join(packageDir, 'dist');
     const distFiles = await readdir(distDir);
-    const hasUMD = distFiles.some(f => f === 'blok.umd.js');
     const hasMJS = distFiles.some(f => f === 'blok.mjs');
     const hasLocales = distFiles.some(f => f === 'locales.mjs');
 
-    if (!hasUMD || !hasMJS || !hasLocales) {
+    if (!hasMJS || !hasLocales) {
       return {
         passed: false,
         message: 'Missing required bundle files in dist/',

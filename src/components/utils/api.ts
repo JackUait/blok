@@ -1,6 +1,6 @@
 import type { BlockAPI } from '../../../types/api/block';
 import type { BlokModules } from '../../types-internal/blok-modules';
-import type Block from '../block';
+import type { Block } from '../block';
 
 /**
  * Returns Block instance by passed Block index or Block id

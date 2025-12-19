@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import CaretAPI from '../../../../../src/components/modules/api/caret';
-import EventsDispatcher from '../../../../../src/components/utils/events';
+import { CaretAPI } from '../../../../../src/components/modules/api/caret';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokConfig } from '../../../../../types';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';

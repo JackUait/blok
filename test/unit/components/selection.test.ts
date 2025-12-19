@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, vi } from 'vitest';
-import SelectionUtils from '../../../src/components/selection';
+import { SelectionUtils } from '../../../src/components/selection';
 import * as utils from '../../../src/components/utils';
 
 const ensureSelection = (): Selection => {

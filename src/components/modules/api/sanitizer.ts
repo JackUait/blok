@@ -1,13 +1,13 @@
 import type { Sanitizer as ISanitizer } from '../../../../types/api';
 import type { SanitizerConfig } from '../../../../types/configs';
-import Module from '../../__module';
+import { Module } from '../../__module';
 import { clean } from '../../utils/sanitizer';
 
 /**
  * @class SanitizerAPI
  * Provides Blok Sanitizer that allows developers to clean their HTML
  */
-export default class SanitizerAPI extends Module {
+export class SanitizerAPI extends Module {
   /**
    * Available methods
    * @returns {SanitizerConfig}

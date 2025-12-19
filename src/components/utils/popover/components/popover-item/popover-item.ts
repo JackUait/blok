@@ -1,4 +1,4 @@
-import * as tooltip from '../../../../utils/tooltip';
+import { hide, onHover } from '../../../../utils/tooltip';
 import { type HintPosition, Hint } from '../hint';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 
@@ -28,7 +28,7 @@ export abstract class PopoverItem {
    * Destroys the instance
    */
   public destroy(): void {
-    tooltip.hide();
+    hide();
   }
 
   /**
@@ -80,7 +80,7 @@ export abstract class PopoverItem {
   protected addHint(itemElement: HTMLElement, hintData: { title: string, description?: string; position: HintPosition; alignment?: 'start' | 'center' }): void {
     const content = new Hint(hintData);
 
-    tooltip.onHover(itemElement, content.getElement(), {
+    onHover(itemElement, content.getElement(), {
       placement: hintData.position,
       hidingDelay: 100,
     });

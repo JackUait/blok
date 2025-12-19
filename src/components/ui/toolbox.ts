@@ -1,13 +1,13 @@
-import * as _ from '../utils';
-import Shortcuts from '../utils/shortcuts';
-import type BlockToolAdapter from '../tools/block';
-import type ToolsCollection from '../tools/collection';
+import { beautifyShortcut, capitalize, isMobileScreen } from '../utils';
+import { Shortcuts } from '../utils/shortcuts';
+import type { BlockToolAdapter } from '../tools/block';
+import type { ToolsCollection } from '../tools/collection';
 import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
-import EventsDispatcher from '../utils/events';
+import { EventsDispatcher } from '../utils/events';
 import { translateToolTitle, type I18nInstance } from '../utils/tools';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import Listeners from '../utils/listeners';
-import Dom from '../dom';
+import { Listeners } from '../utils/listeners';
+import { Dom } from '../dom';
 import type { Popover } from '../utils/popover';
 import { PopoverDesktop, PopoverMobile } from '../utils/popover';
 import { BlokMobileLayoutToggled } from '../events';
@@ -60,7 +60,7 @@ type ToolboxTextLabelsKeys = 'filter' | 'nothingFound';
  * It appears after click on the Plus Button
  * @implements {EventsDispatcher} with some events, see {@link ToolboxEvent}
  */
-export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
+export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   /**
    * Returns True if Toolbox is Empty and nothing to show
    * @returns {boolean}
@@ -279,7 +279,7 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Creates toolbox popover and appends it inside wrapper element
    */
   private initPopover(): void {
-    const PopoverClass = _.isMobileScreen() ? PopoverMobile : PopoverDesktop;
+    const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
 
     this.popover = new PopoverClass({
       scopeElement: this.api.ui.nodes.redactor,
@@ -356,12 +356,12 @@ export default class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemParams => {
       return {
         icon: toolboxItem.icon,
-        title: translateToolTitle(this.i18n, toolboxItem, _.capitalize(tool.name)),
+        title: translateToolTitle(this.i18n, toolboxItem, capitalize(tool.name)),
         name: toolboxItem.name ?? tool.name,
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);
         },
-        secondaryLabel: (tool.shortcut && displaySecondaryLabel) ? _.beautifyShortcut(tool.shortcut) : '',
+        secondaryLabel: (tool.shortcut && displaySecondaryLabel) ? beautifyShortcut(tool.shortcut) : '',
       };
     };
 

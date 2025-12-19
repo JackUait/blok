@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Mock, MockInstance } from 'vitest';
 
-import BlockManager from '../../../../src/components/modules/blockManager';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { BlockManager } from '../../../../src/components/modules/blockManager';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokConfig } from '../../../../types';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import { BlockChanged } from '../../../../src/components/events';
 import type { BlokEventMap } from '../../../../src/components/events';
-import type Block from '../../../../src/components/block';
+import type { Block } from '../../../../src/components/block';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';

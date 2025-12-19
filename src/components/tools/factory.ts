@@ -1,9 +1,9 @@
 import type { ToolConstructable, ToolSettings } from '../../../types/tools';
 import { InternalInlineToolSettings, InternalTuneSettings } from './base';
-import InlineToolAdapter from './inline';
-import BlockTuneAdapter from './tune';
-import BlockToolAdapter from './block';
-import type ApiModule from '../modules/api';
+import { InlineToolAdapter } from './inline';
+import { BlockTuneAdapter } from './tune';
+import { BlockToolAdapter } from './block';
+import type { API as ApiModule } from '../modules/api';
 import type { BlokConfig } from '../../../types/configs';
 
 type ToolConstructor = typeof InlineToolAdapter | typeof BlockToolAdapter | typeof BlockTuneAdapter;
@@ -11,7 +11,7 @@ type ToolConstructor = typeof InlineToolAdapter | typeof BlockToolAdapter | type
 /**
  * Factory to construct classes to work with tools
  */
-export default class ToolsFactory {
+export class ToolsFactory {
   /**
    * Tools configuration specified by user
    */

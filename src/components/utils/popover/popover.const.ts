@@ -8,7 +8,8 @@ export const css = {
   popoverContainer: 'absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none z-[4] max-h-0 min-w-[var(--width)] w-[var(--width)] rounded-lg shadow-[0_3px_15px_-3px_theme(colors.popover-shadow)] left-[var(--popover-left)] top-[var(--popover-top)] bg-popover-bg',
 
   // Popover container - mobile styles (applied conditionally)
-  popoverContainerMobile: 'fixed max-w-none rounded-[10px] min-w-[calc(100%-var(--offset)*2)] inset-[auto_var(--offset)_calc(var(--offset)+env(safe-area-inset-bottom))_var(--offset)]',
+  // Reset left/top from base class since inset shorthand may not properly override them in twMerge
+  popoverContainerMobile: 'fixed max-w-none rounded-[10px] min-w-[calc(100%-var(--offset)*2)] left-auto top-auto inset-[auto_var(--offset)_calc(var(--offset)+env(safe-area-inset-bottom))_var(--offset)]',
 
   // Popover container - opened state
   popoverContainerOpened: 'opacity-100 pointer-events-auto p-1 max-h-[var(--max-height)] border border-popover-border animate-[panelShowing_100ms_ease]',

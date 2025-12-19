@@ -3,12 +3,12 @@
  * @classdesc Manages undo/redo functionality using state snapshots
  * @module History
  */
-import Module from '../__module';
+import { Module } from '../__module';
 import type { OutputData, OutputBlockData } from '../../../types';
 import { BlockChanged, HistoryStateChanged } from '../events';
 import type { BlockMutationEvent } from '../../../types/events/block';
-import Shortcuts from '../utils/shortcuts';
-import type Block from '../block';
+import { Shortcuts } from '../utils/shortcuts';
+import type { Block } from '../block';
 
 /**
  * Default maximum history stack size
@@ -80,7 +80,7 @@ interface HistoryEntry {
  * - Debounces rapid changes (typing) into single undo steps
  * - Provides keyboard shortcuts (Cmd+Z / Cmd+Shift+Z)
  */
-export default class History extends Module {
+export class History extends Module {
   /**
    * Tracks which History instance should respond to global shortcuts.
    * Set to the instance that last received a block mutation.

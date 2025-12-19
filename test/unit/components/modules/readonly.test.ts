@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { MockInstance } from 'vitest';
 
-import ReadOnly from '../../../../src/components/modules/readonly';
+import { ReadOnly } from '../../../../src/components/modules/readonly';
 import { CriticalError } from '../../../../src/components/errors/critical';
 import type { BlokConfig } from '../../../../types';
 

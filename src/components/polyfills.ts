@@ -15,7 +15,7 @@ declare global {
  * @see {@link https://gist.github.com/KilianSSL/774297b76378566588f02538631c3137}
  * @param centerIfNeeded - true, if the element should be aligned so it is centered within the visible area of the scrollable ancestor.
  */
-if (typeof Element.prototype.scrollIntoViewIfNeeded === 'undefined') {
+if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoViewIfNeeded === 'undefined') {
   Element.prototype.scrollIntoViewIfNeeded = function (this: HTMLElement, centerIfNeeded): void {
     const shouldCenter = centerIfNeeded ?? true;
 
@@ -69,7 +69,7 @@ const resolveNumericHandle = (handle: TimeoutHandle): number => {
   return Date.now();
 };
 
-if (typeof window.requestIdleCallback === 'undefined') {
+if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'undefined') {
   window.requestIdleCallback = function (cb) {
     const start = Date.now();
     const handleRef: { value?: number } = {};
@@ -97,7 +97,7 @@ if (typeof window.requestIdleCallback === 'undefined') {
   };
 }
 
-if (typeof window.cancelIdleCallback === 'undefined') {
+if (typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'undefined') {
   window.cancelIdleCallback = function (id) {
     const timeoutHandle = idleCallbackTimeouts.get(id);
 

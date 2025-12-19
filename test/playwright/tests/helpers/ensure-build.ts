@@ -6,9 +6,14 @@ let didBuild = false;
 const PROJECT_ROOT = path.resolve(__dirname, '../../../..');
 
 /**
+ * Test page URL served by Playwright's webServer on port 3333.
+ */
+export const TEST_PAGE_URL = 'http://localhost:3333/test/playwright/fixtures/test.html';
+
+/**
  * Ensure the Blok bundle is freshly built before running Playwright tests.
  *
- * Necessary because the Playwright fixtures load the UMD bundle directly from the dist folder.
+ * Necessary because the Playwright fixtures load the ES module bundle from the dist folder.
  * Without rebuilding we might exercise stale code that doesn't match the current TypeScript sources.
  *
  * Note: The Header tool is bundled as part of Blok and accessible via Blok.Header

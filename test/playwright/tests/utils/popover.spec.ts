@@ -1,16 +1,10 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import type { OutputData } from '@/types';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { BlockToolConstructable } from '@/types/tools';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../fixtures/test.html')
-).href;
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 
 const HOLDER_ID = 'blok';
@@ -1162,14 +1156,15 @@ test.describe('popover', () => {
       // Check first item became focused after tab
       await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="convert-to"][data-blok-focused="true"]`)).toBeVisible();
 
-      // Check second item is NOT focused
-      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="link"][data-blok-focused="true"]`)).toBeHidden();
+      // Check second item (bold) is NOT focused
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="bold"][data-blok-focused="true"]`)).toBeHidden();
 
       // Press Tab
       await page.keyboard.press('Tab');
 
-      // Check second item became focused after tab
-      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="link"][data-blok-focused="true"]`)).toBeVisible();
+      // Check second item (bold) became focused after tab
+      // Note: inline tool order is convert-to -> bold -> italic -> link
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="bold"][data-blok-focused="true"]`)).toBeVisible();
     });
 
     test('should allow to reach nested popover via keyboard', async ({ page }) => {

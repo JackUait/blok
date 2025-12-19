@@ -1,8 +1,7 @@
-import SelectionUtils from '../selection';
-import * as _ from '../utils';
+import { SelectionUtils } from '../selection';
+import { log } from '../utils';
 import type {
   InlineTool,
-  InlineToolConstructable,
   InlineToolConstructorOptions,
   SanitizerConfig
 } from '../../../types';
@@ -20,7 +19,7 @@ import { twMerge } from '../utils/tw';
  *
  * Wrap selected text with <a> tag
  */
-const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements InlineTool {
+export class LinkInlineTool implements InlineTool {
   /**
    * Specifies Tool as Inline Toolbar Tool
    * @returns {boolean}
@@ -171,11 +170,9 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   }
 
   /**
-   * Set a shortcut
+   * Shortcut for the link tool
    */
-  public get shortcut(): string {
-    return 'CMD+K';
-  }
+  public static shortcut = 'CMD+K';
 
   /**
    * @param {boolean} needFocus - on link creation we need to focus input. On editing - nope.
@@ -386,7 +383,7 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
         style: 'error',
       });
 
-      _.log('Incorrect Link pasted', 'warn', value);
+      log('Incorrect Link pasted', 'warn', value);
 
       return;
     }
@@ -540,4 +537,3 @@ const LinkInlineTool: InlineToolConstructable = class LinkInlineTool implements 
   }
 };
 
-export default LinkInlineTool;

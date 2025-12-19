@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import BlockTuneAdapter from '../../../src/components/tools/tune';
+import { BlockTuneAdapter } from '../../../src/components/tools/tune';
 import { UserSettings } from '../../../src/components/tools/base';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 import type { ToolOptions } from '../../../src/components/tools/base';

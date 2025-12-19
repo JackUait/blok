@@ -11,7 +11,7 @@
  * {@link SanitizerConfig}
  */
 
-import * as _ from '../utils';
+import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
 
 /**
  * @typedef {object} SanitizerConfig
@@ -53,10 +53,10 @@ export const sanitizeBlocks = (
   globalSanitizer: SanitizerConfig = {} as SanitizerConfig
 ): Array<Pick<SavedData, 'data' | 'tool'>> => {
   return blocksData.map((block) => {
-    const toolConfig = _.isFunction(sanitizeConfig) ? sanitizeConfig(block.tool) : sanitizeConfig;
+    const toolConfig = isFunction(sanitizeConfig) ? sanitizeConfig(block.tool) : sanitizeConfig;
     const rules: DeepSanitizerRule = (toolConfig ?? {}) as SanitizerConfig;
 
-    if (_.isObject(rules) && _.isEmpty(rules) && _.isEmpty(globalSanitizer)) {
+    if (isObject(rules) && isEmpty(rules) && isEmpty(globalSanitizer)) {
       return block;
     }
 
@@ -110,7 +110,7 @@ const deepSanitize = (
     return cleanArray(dataToSanitize, rules, globalRules);
   }
 
-  if (_.isObject(dataToSanitize)) {
+  if (isObject(dataToSanitize)) {
     /**
      * Objects: just clean object deeper.
      */
@@ -122,7 +122,7 @@ const deepSanitize = (
    *
    * Clean only strings
    */
-  if (_.isString(dataToSanitize)) {
+  if (isString(dataToSanitize)) {
     return cleanOneItem(dataToSanitize, rules, globalRules);
   }
 
@@ -170,7 +170,7 @@ const cleanObject = (
      *   - if it is a HTML Janitor rule, call with this rule
      *   - otherwise, call with parent's config
      */
-    const rulesRecord = _.isObject(rules) ? (rules as Record<string, DeepSanitizerRule>) : undefined;
+    const rulesRecord = isObject(rules) ? (rules as Record<string, DeepSanitizerRule>) : undefined;
     const ruleCandidate = rulesRecord?.[fieldName];
     const ruleForItem = ruleCandidate !== undefined && isRule(ruleCandidate)
       ? ruleCandidate
@@ -202,7 +202,7 @@ const cleanOneItem = (
     return stripUnsafeUrls(applyAttributeOverrides(cleaned, effectiveRule));
   }
 
-  if (!_.isEmpty(globalRules)) {
+  if (!isEmpty(globalRules)) {
     const cleaned = clean(taintString, globalRules);
 
     return stripUnsafeUrls(applyAttributeOverrides(cleaned, globalRules));
@@ -218,7 +218,7 @@ const cleanOneItem = (
  * @param {SanitizerConfig} config - config to check
  */
 const isRule = (config: DeepSanitizerRule): boolean => {
-  return _.isObject(config) || _.isBoolean(config) || _.isFunction(config);
+  return isObject(config) || isBoolean(config) || isFunction(config);
 };
 
 /**
@@ -266,7 +266,7 @@ const stripUnsafeUrls = (value: string): string => {
  * @param {SanitizerConfig} config - sanitizer config to clone
  */
 const cloneSanitizerConfig = (config: SanitizerConfig): SanitizerConfig => {
-  if (_.isEmpty(config)) {
+  if (isEmpty(config)) {
     return {} as SanitizerConfig;
   }
 
@@ -332,16 +332,16 @@ const cloneTagConfig = (rule: SanitizerRule): SanitizerRule => {
     return false;
   }
 
-  if (_.isFunction(rule)) {
+  if (isFunction(rule)) {
     return wrapFunctionRule(rule as SanitizerFunctionRule);
   }
 
-  if (_.isString(rule)) {
+  if (isString(rule)) {
     return rule;
   }
 
-  if (_.isObject(rule)) {
-    return _.deepMerge({}, rule as Record<string, unknown>) as SanitizerRule;
+  if (isObject(rule)) {
+    return deepMerge({}, rule as Record<string, unknown>) as SanitizerRule;
   }
 
   return rule;
@@ -353,7 +353,7 @@ const cloneTagConfig = (rule: SanitizerRule): SanitizerRule => {
  * @param {SanitizerConfig} fieldRules - field-specific sanitizer config
  */
 const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig): SanitizerConfig => {
-  if (_.isEmpty(globalRules)) {
+  if (isEmpty(globalRules)) {
     return cloneSanitizerConfig(fieldRules);
   }
 
@@ -367,20 +367,20 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
     const globalValue = globalRules[tag];
     const fieldValue = fieldRules ? fieldRules[tag] : undefined;
 
-    if (_.isFunction(fieldValue)) {
+    if (isFunction(fieldValue)) {
       merged[tag] = cloneTagConfig(fieldValue as SanitizerRule);
 
       continue;
     }
 
-    if (_.isFunction(globalValue)) {
+    if (isFunction(globalValue)) {
       merged[tag] = cloneTagConfig(globalValue as SanitizerRule);
 
       continue;
     }
 
-    if (_.isObject(globalValue) && _.isObject(fieldValue)) {
-      merged[tag] = _.deepMerge({}, fieldValue as SanitizerConfig, globalValue as SanitizerConfig);
+    if (isObject(globalValue) && isObject(fieldValue)) {
+      merged[tag] = deepMerge({}, fieldValue as SanitizerConfig, globalValue as SanitizerConfig);
 
       continue;
     }
@@ -406,7 +406,7 @@ const getEffectiveRuleForString = (
   rule: DeepSanitizerRule,
   globalRules: SanitizerConfig
 ): SanitizerConfig | null => {
-  if (_.isObject(rule) && !_.isFunction(rule)) {
+  if (isObject(rule) && !isFunction(rule)) {
     return mergeTagRules(globalRules, rule as SanitizerConfig);
   }
 
@@ -414,7 +414,7 @@ const getEffectiveRuleForString = (
     return {} as SanitizerConfig;
   }
 
-  if (_.isEmpty(globalRules)) {
+  if (isEmpty(globalRules)) {
     return null;
   }
 
@@ -430,7 +430,7 @@ export const composeSanitizerConfig = (
   globalConfig: SanitizerConfig,
   ...configs: SanitizerConfig[]
 ): SanitizerConfig => {
-  if (_.isEmpty(globalConfig)) {
+  if (isEmpty(globalConfig)) {
     return Object.assign({}, ...configs) as SanitizerConfig;
   }
 
@@ -457,28 +457,28 @@ export const composeSanitizerConfig = (
 
       const targetValue = base[tag];
 
-      if (_.isFunction(sourceValue)) {
+      if (isFunction(sourceValue)) {
         base[tag] = sourceValue;
 
         continue;
       }
 
-      if (sourceValue === true && _.isFunction(targetValue)) {
+      if (sourceValue === true && isFunction(targetValue)) {
         continue;
       }
 
       if (sourceValue === true) {
-        const targetIsPlainObject = _.isObject(targetValue) && !_.isFunction(targetValue);
+        const targetIsPlainObject = isObject(targetValue) && !isFunction(targetValue);
 
         base[tag] = targetIsPlainObject
-          ? _.deepMerge({}, targetValue as SanitizerConfig)
+          ? deepMerge({}, targetValue as SanitizerConfig)
           : cloneTagConfig(sourceValue as SanitizerRule);
 
         continue;
       }
 
-      if (_.isObject(sourceValue) && _.isObject(targetValue)) {
-        base[tag] = _.deepMerge({}, targetValue as SanitizerConfig, sourceValue as SanitizerConfig);
+      if (isObject(sourceValue) && isObject(targetValue)) {
+        base[tag] = deepMerge({}, targetValue as SanitizerConfig, sourceValue as SanitizerConfig);
 
         continue;
       }
@@ -495,7 +495,7 @@ const applyAttributeOverrides = (html: string, rules: SanitizerConfig): string =
     return html;
   }
 
-  const entries = Object.entries(rules).filter(([, value]) => _.isFunction(value));
+  const entries = Object.entries(rules).filter(([, value]) => isFunction(value));
 
   if (entries.length === 0) {
     return html;
@@ -511,7 +511,7 @@ const applyAttributeOverrides = (html: string, rules: SanitizerConfig): string =
     elements.forEach((element) => {
       const ruleResult = (rule as (el: Element) => SanitizerRule)(element);
 
-      if (_.isBoolean(ruleResult) || _.isFunction(ruleResult) || ruleResult == null) {
+      if (isBoolean(ruleResult) || isFunction(ruleResult) || ruleResult == null) {
         return;
       }
 
@@ -526,7 +526,7 @@ const applyAttributeOverrides = (html: string, rules: SanitizerConfig): string =
           continue;
         }
 
-        if (_.isString(attrRule)) {
+        if (isString(attrRule)) {
           element.setAttribute(attr, attrRule);
         }
       }

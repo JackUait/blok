@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
-import BlockSettings from '../../../../../src/components/modules/toolbar/blockSettings';
-import type Block from '../../../../../src/components/block';
+import { BlockSettings } from '../../../../../src/components/modules/toolbar/blockSettings';
+import type { Block } from '../../../../../src/components/block';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../../types';
 import type { MenuConfigItem } from '../../../../../types/tools';
 import { PopoverItemType } from '../../../../../src/components/utils/popover';
 import type { PopoverItemParams } from '../../../../../types/utils/popover/popover-item';
-import SelectionUtils from '../../../../../src/components/selection';
+import { SelectionUtils } from '../../../../../src/components/selection';
 
 type PopoverMock = {
   on: Mock<(event: string, handler: () => void) => void>;
@@ -66,7 +66,7 @@ vi.mock('../../../../../src/components/flipper', () => {
   } as unknown as new () => FlipperMock;
 
   return {
-    default: FlipperMockClass,
+    Flipper: FlipperMockClass,
   };
 });
 
@@ -116,7 +116,7 @@ vi.mock('../../../../../src/components/icons', () => ({
 }));
 
 vi.mock('../../../../../src/components/i18n', () => ({
-  default: {
+  I18n: {
     ui: vi.fn((_ns: string, key: string) => key),
     t: vi.fn((_ns: string, key: string) => key),
     hasTranslation: vi.fn(() => false),
@@ -138,7 +138,7 @@ const { domModuleMock } = vi.hoisted(() => {
 
   return {
     domModuleMock: {
-      default: {
+      Dom: {
         make: makeDomNodeMock,
       },
     },

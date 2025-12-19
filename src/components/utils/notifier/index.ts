@@ -1,4 +1,4 @@
-import * as draw from './draw';
+import { alert, confirm, getWrapper, prompt } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './types';
 
 const DEFAULT_TIME = 8000;
@@ -14,7 +14,7 @@ const prepare_ = (): HTMLElement => {
     return existingWrapper;
   }
 
-  const wrapper = draw.getWrapper();
+  const wrapper = getWrapper();
 
   document.body.appendChild(wrapper);
 
@@ -37,19 +37,19 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   const notify: HTMLElement = (() => {
     switch (options.type) {
       case 'confirm':
-        return draw.confirm(options as ConfirmNotifierOptions);
+        return confirm(options as ConfirmNotifierOptions);
 
       case 'prompt':
-        return draw.prompt(options as PromptNotifierOptions);
+        return prompt(options as PromptNotifierOptions);
 
       default: {
-        const alert = draw.alert(options);
+        const alertElement = alert(options);
 
         window.setTimeout(() => {
-          alert.remove();
+          alertElement.remove();
         }, time);
 
-        return alert;
+        return alertElement;
       }
     }
   })();
@@ -61,6 +61,6 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   }
 };
 
-export default {
+export const Notifier = {
   show,
 };

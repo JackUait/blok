@@ -1,16 +1,16 @@
-import Module from '../../__module';
-import $ from '../../dom';
-import SelectionUtils from '../../selection';
-import * as _ from '../../utils';
+import { Module } from '../../__module';
+import { Dom as $ } from '../../dom';
+import { SelectionUtils } from '../../selection';
+import { beautifyShortcut, capitalize, isMobileScreen } from '../../utils';
 import type { InlineTool as IInlineTool } from '../../../../types';
-import Shortcuts from '../../utils/shortcuts';
+import { Shortcuts } from '../../utils/shortcuts';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import { CommonInternalSettings } from '../../tools/base';
 import type { Popover, PopoverItemParams } from '../../utils/popover';
 import { PopoverItemType } from '../../utils/popover';
 import { PopoverInline } from '../../utils/popover/popover-inline';
-import type InlineToolAdapter from 'src/components/tools/inline';
+import type { InlineToolAdapter } from 'src/components/tools/inline';
 import { translateToolName } from '../../utils/tools';
 import { DATA_ATTR, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../constants';
 import { twMerge } from '../../utils/tw';
@@ -32,7 +32,7 @@ interface InlineToolbarNodes {
  * |   B  i [link] [mark]   |
  * |________________________|
  */
-export default class InlineToolbar extends Module<InlineToolbarNodes> {
+export class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * State of inline toolbar
@@ -95,9 +95,15 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   private popover: Popover | null = null;
 
   /**
+   * Promise that resolves when the toolbar is fully opened
+   * Used to ensure shortcuts wait for popover initialization
+   */
+  private openingPromise: Promise<void> | null = null;
+
+  /**
    * Margin above/below the Toolbar
    */
-  private readonly toolbarVerticalMargin: number = _.isMobileScreen() ? 20 : 6;
+  private readonly toolbarVerticalMargin: number = isMobileScreen() ? 20 : 6;
 
   /**
    * Tracks whether inline toolbar DOM and shortcuts are initialized
@@ -227,6 +233,17 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
+    /**
+     * Guard against race condition: the deferred callback from scheduleInitialization()
+     * can fire before UI module has created its wrapper element.
+     * If UI isn't ready yet, reschedule and try again.
+     */
+    if (this.Blok.UI?.nodes?.wrapper === undefined) {
+      this.initializationScheduled = false;
+      this.scheduleInitialization();
+
+      return;
+    }
 
     this.make();
     this.tryRegisterShortcuts();
@@ -324,7 +341,9 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
-    await this.open();
+    this.openingPromise = this.open();
+    await this.openingPromise;
+    this.openingPromise = null;
 
     this.Blok.Toolbar.close();
   }
@@ -339,6 +358,7 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
 
     this.tools = new Map();
     this.opened = false;
+    this.openingPromise = null;
 
     // Hide and destroy popover
     if (this.popover) {
@@ -482,9 +502,9 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
     for (const [index, [tool, instance]] of toolsEntries.entries()) {
       const renderedTool = await instance.render();
       const shortcut = this.getToolShortcut(tool.name);
-      const shortcutBeautified = shortcut !== undefined ? _.beautifyShortcut(shortcut) : undefined;
+      const shortcutBeautified = shortcut !== undefined ? beautifyShortcut(shortcut) : undefined;
 
-      const toolTitle = translateToolName(this.Blok.I18n, tool.titleKey, tool.title || _.capitalize(tool.name));
+      const toolTitle = translateToolName(this.Blok.I18n, tool.titleKey, tool.title || capitalize(tool.name));
 
       const items = Array.isArray(renderedTool) ? renderedTool : [renderedTool];
       const isFirstItem = index === 0;
@@ -827,6 +847,16 @@ export default class InlineToolbar extends Module<InlineToolbarNodes> {
   private async activateToolByShortcut(toolName: string): Promise<void> {
     if (!this.opened) {
       await this.tryToShow();
+    }
+
+    /**
+     * Wait for any pending opening operation to complete.
+     * This handles the race condition where the toolbar is being opened
+     * asynchronously (e.g., from a selectionchange event) and the shortcut
+     * is pressed before the popover is fully initialized.
+     */
+    if (this.openingPromise !== null) {
+      await this.openingPromise;
     }
 
     if (this.popover) {

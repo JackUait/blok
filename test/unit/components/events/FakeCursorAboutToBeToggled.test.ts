@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { FakeCursorAboutToBeToggled } from '../../../../src/components/events/FakeCursorAboutToBeToggled';
 import type { FakeCursorAboutToBeToggledPayload } from '../../../../src/components/events/FakeCursorAboutToBeToggled';
 import type { BlokEventMap } from '../../../../src/components/events';
-import EventsDispatcher from '../../../../src/components/utils/events';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
 
 describe('FakeCursorAboutToBeToggled event', () => {
   it('exposes the stable event name used across the blok', () => {

@@ -26,16 +26,25 @@ export async function checkSmokeTest(packageDir, verbose = false) {
 
     global.window = dom.window;
     global.document = dom.window.document;
-    global.navigator = dom.window.navigator;
+    // Use Object.defineProperty for navigator since it may be read-only in newer Node.js
+    try {
+      global.navigator = dom.window.navigator;
+    } catch {
+      Object.defineProperty(global, 'navigator', {
+        value: dom.window.navigator,
+        configurable: true,
+        writable: true
+      });
+    }
     global.HTMLElement = dom.window.HTMLElement;
     global.Element = dom.window.Element;
     global.Node = dom.window.Node;
     global.MutationObserver = dom.window.MutationObserver;
     global.requestAnimationFrame = dom.window.requestAnimationFrame;
 
-    // Import the package
+    // Import the package (using named export)
     const modulePath = join(packageDir, 'dist', 'blok.mjs');
-    const { default: Blok } = await import(pathToFileURL(modulePath).href);
+    const { Blok } = await import(pathToFileURL(modulePath).href);
 
     // Check constructor is available
     if (typeof Blok === 'function') {

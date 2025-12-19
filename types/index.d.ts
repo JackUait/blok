@@ -143,47 +143,19 @@ export interface API {
   ui: Ui;
 }
 
-import { HeaderConstructable } from './tools/header';
-import { ParagraphConstructable } from './tools/paragraph';
-import { ListConstructable } from './tools/list';
 import { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector } from './data-attributes';
 
 export { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector };
 
 /**
+ * Blok version string
+ */
+export const version: string;
+
+/**
  * Main Blok class
  */
-declare class Blok {
-  public static version: string;
-
-  /**
-   * Header tool bundled with Blok
-   */
-  public static Header: HeaderConstructable;
-
-  /**
-   * Paragraph tool bundled with Blok
-   */
-  public static Paragraph: ParagraphConstructable;
-
-  /**
-   * List tool bundled with Blok
-   */
-  public static List: ListConstructable;
-
-  /**
-   * Data attributes used by the editor.
-   * Single source of truth for all data-blok-* attributes.
-   *
-   * @example
-   * // Query editor elements
-   * document.querySelectorAll(`[${Blok.DATA_ATTR.element}]`);
-   *
-   * // Check if block is selected
-   * block.getAttribute(Blok.DATA_ATTR.selected) === 'true';
-   */
-  public static DATA_ATTR: typeof DATA_ATTR;
-
+export class Blok {
   public isReady: Promise<void>;
 
   public blocks: Blocks;
@@ -243,6 +215,3 @@ declare class Blok {
    */
   public destroy(): void;
 }
-
-export as namespace Blok;
-export default Blok;

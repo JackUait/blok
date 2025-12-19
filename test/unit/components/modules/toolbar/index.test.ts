@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import Toolbar from '../../../../../src/components/modules/toolbar/index';
+import { Toolbar } from '../../../../../src/components/modules/toolbar/index';
 import type * as UtilsModule from '../../../../../src/components/utils';
 import { BlockHovered } from '../../../../../src/components/events/BlockHovered';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
@@ -15,7 +15,7 @@ vi.mock('../../../../../src/components/utils/tooltip', () => ({
 }));
 
 vi.mock('../../../../../src/components/dom', () => ({
-  default: {
+  Dom: {
     make: vi.fn((tag: string) => document.createElement(tag)),
     append: vi.fn((parent: HTMLElement, child: HTMLElement) => {
       parent.appendChild(child);
@@ -37,7 +37,7 @@ vi.mock('../../../../../src/components/utils', async () => {
 });
 
 vi.mock('../../../../../src/components/i18n', () => ({
-  default: {
+  I18n: {
     ui: vi.fn(() => ''),
     t: vi.fn(() => ''),
     tToolName: vi.fn((title: string) => title),

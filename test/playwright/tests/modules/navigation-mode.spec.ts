@@ -1,16 +1,10 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
-import type Blok from '@/types';
+import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../fixtures/test.html')
-).href;
 
 const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -73,13 +67,6 @@ const createBlokWithBlocks = async (
     const blok = new window.Blok({
       holder: holder,
       data: { blocks: blokBlocks },
-      tools: {
-        paragraph: {
-          config: {
-            preserveBlank: true,
-          },
-        },
-      },
     });
 
     window.blokInstance = blok;

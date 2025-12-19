@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Tool, ToolConstructable } from '@/types/tools';
 import type { API } from '@/types';
 import type { ToolOptions } from '../../../src/components/tools/base';
-import BaseToolAdapter, { CommonInternalSettings, UserSettings } from '../../../src/components/tools/base';
+import { BaseToolAdapter, CommonInternalSettings, UserSettings } from '../../../src/components/tools/base';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 
 interface AdapterOptions {

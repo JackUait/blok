@@ -3,12 +3,12 @@
  * Module UI
  * @type {UI}
  */
-import Module from '../__module';
-import $, { toggleEmptyMark } from '../dom';
-import * as _ from '../utils';
+import { Module } from '../__module';
+import { Dom as $, toggleEmptyMark } from '../dom';
+import { debounce, getValidUrl, isEmpty, openTab, throttle } from '../utils';
 
-import Selection from '../selection';
-import Flipper from '../flipper';
+import { SelectionUtils as Selection } from '../selection';
+import { Flipper } from '../flipper';
 import { mobileScreenBreakpoint } from '../utils';
 
 import styles from '../../styles/main.css?inline';
@@ -45,7 +45,7 @@ interface UINodes {
  * @property {Element} nodes.wrapper  - <blok-editor>
  * @property {Element} nodes.redactor - <blok-redactor>
  */
-export default class UI extends Module<UINodes> {
+export class UI extends Module<UINodes> {
   /**
    * Return Width of center column of Blok
    * @returns {DOMRect}
@@ -91,7 +91,7 @@ export default class UI extends Module<UINodes> {
    * Handle window resize only when it finished
    * @type {() => void}
    */
-  private resizeDebouncer: () => void = _.debounce(() => {
+  private resizeDebouncer: () => void = debounce(() => {
     this.windowResize();
 
   }, 200);
@@ -99,7 +99,7 @@ export default class UI extends Module<UINodes> {
   /**
    * Handle selection change to manipulate Inline Toolbar appearance
    */
-  private selectionChangeDebounced = _.debounce(() => {
+  private selectionChangeDebounced = debounce(() => {
     this.selectionChanged();
   }, selectionChangeDebounceTimeout);
 
@@ -371,7 +371,7 @@ export default class UI extends Module<UINodes> {
      * If user enabled Content Security Policy, he can pass nonce through the config
      * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
      */
-    if (this.config.style && !_.isEmpty(this.config.style) && this.config.style.nonce) {
+    if (this.config.style && !isEmpty(this.config.style) && this.config.style.nonce) {
       tag.setAttribute('nonce', this.config.style.nonce);
     }
 
@@ -496,7 +496,7 @@ export default class UI extends Module<UINodes> {
       });
     };
 
-    const throttledHandleBlockHovered = _.throttle(
+    const throttledHandleBlockHovered = throttle(
       handleBlockHovered as (...args: unknown[]) => unknown,
 
       20
@@ -997,9 +997,9 @@ export default class UI extends Module<UINodes> {
       return;
     }
 
-    const validUrl = _.getValidUrl(href);
+    const validUrl = getValidUrl(href);
 
-    _.openTab(validUrl);
+    openTab(validUrl);
   }
 
   /**

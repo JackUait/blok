@@ -33,7 +33,7 @@ const scrollLockerMock = vi.hoisted(() => {
 });
 
 vi.mock('../../../src/components/utils/scroll-locker', () => ({
-  default: scrollLockerMock.MockScrollLocker,
+  ScrollLocker: scrollLockerMock.MockScrollLocker,
 }));
 
 const popoverHeaderMock = vi.hoisted(() => {

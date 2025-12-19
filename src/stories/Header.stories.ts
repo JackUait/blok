@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/html-vite';
 import type { OutputData } from '@/types';
 import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import Header, { type HeaderConfig } from '../tools/header';
+import { Header,  type HeaderConfig  } from '../tools/header';
 
 interface HeaderArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -42,6 +42,7 @@ const meta: Meta<HeaderArgs> = {
 };
 
 export default meta;
+
 
 type Story = StoryObj<HeaderArgs>;
 

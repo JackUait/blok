@@ -144,6 +144,7 @@ async function runVerification() {
     const packageDir = join(tempDir, 'node_modules', PACKAGE_NAME);
 
     // Define all checks
+    // NOTE: Types check must run LAST because it installs TypeScript which may modify node_modules
     const checks = [
       {
         name: 'Installation',
@@ -152,10 +153,6 @@ async function runVerification() {
       {
         name: 'Exports',
         fn: () => checkExports(tempDir, PACKAGE_NAME, options.verbose)
-      },
-      {
-        name: 'Types',
-        fn: () => checkTypes(packageDir, tempDir, options.verbose)
       },
       {
         name: 'Bin script',
@@ -168,6 +165,10 @@ async function runVerification() {
       {
         name: 'Bundle sizes',
         fn: () => checkBundleSize(packageDir, options.verbose)
+      },
+      {
+        name: 'Types',
+        fn: () => checkTypes(packageDir, tempDir, options.verbose)
       }
     ];
 

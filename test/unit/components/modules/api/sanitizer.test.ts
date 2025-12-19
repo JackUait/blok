@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import EventsDispatcher from '../../../../../src/components/utils/events';
-import SanitizerAPI from '../../../../../src/components/modules/api/sanitizer';
+import { EventsDispatcher } from '../../../../../src/components/utils/events';
+import { SanitizerAPI } from '../../../../../src/components/modules/api/sanitizer';
 import * as sanitizerUtils from '../../../../../src/components/utils/sanitizer';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokConfig } from '../../../../../types';

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { BlokConfig } from '../../types';
-import type Core from '../../src/components/core';
+import type { Core } from '../../src/components/core';
 import type { BlokModules } from '../../src/types-internal/blok-modules';
 
 // Mock VERSION global variable
@@ -95,7 +95,7 @@ vi.mock('../../src/components/core', () => {
   }
 
   return {
-    default: MockCore,
+    Core: MockCore,
     mockModuleInstances,
     lastInstance: () => lastInstanceRef.value,
   };
@@ -108,7 +108,7 @@ vi.mock('@babel/register', () => ({}));
 vi.mock('../../src/components/polyfills', () => ({}));
 
 // Import Blok after mocks are set up
-import Blok from '../../src/blok';
+import { Blok } from '../../src/blok';
 
 describe('Blok', () => {
   // Get mocked instances
@@ -122,7 +122,7 @@ describe('Blok', () => {
   beforeEach(async () => {
     // Import the mocked modules to access the mock instances
     const coreModule = await import('../../src/components/core') as {
-      default: new (...args: unknown[]) => Core;
+      Core: new (...args: unknown[]) => Core;
       mockModuleInstances?: Partial<BlokModules>;
     };
 
@@ -306,7 +306,7 @@ describe('Blok', () => {
 
       // Get the actual Core instance that was created
       const coreModule = await import('../../src/components/core') as {
-        default: new (...args: unknown[]) => Core;
+        Core: new (...args: unknown[]) => Core;
         lastInstance?: () => Core | undefined;
       };
       const lastCall = coreModule.lastInstance?.();

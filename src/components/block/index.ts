@@ -11,17 +11,17 @@ import type {
 
 import type { SavedData } from '../../../types/data-formats';
 import { twMerge } from '../utils/tw';
-import $, { toggleEmptyMark } from '../dom';
-import * as _ from '../utils';
-import type ApiModules from '../modules/api';
-import BlockAPI from './api';
-import SelectionUtils from '../selection';
-import type BlockToolAdapter from '../tools/block';
+import { Dom as $, toggleEmptyMark } from '../dom';
+import { generateBlockId, isEmpty, isFunction, log } from '../utils';
+import type { API as ApiModules } from '../modules/api';
+import { BlockAPI } from './api';
+import { SelectionUtils } from '../selection';
+import type { BlockToolAdapter } from '../tools/block';
 
-import type BlockTuneAdapter from '../tools/tune';
+import type { BlockTuneAdapter } from '../tools/tune';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import type ToolsCollection from '../tools/collection';
-import EventsDispatcher from '../utils/events';
+import type { ToolsCollection } from '../tools/collection';
+import { EventsDispatcher } from '../utils/events';
 import type { MenuConfigItem } from '../../../types/tools';
 import { isMutationBelongsToElement } from '../utils/mutations';
 import type { BlokEventMap } from '../events';
@@ -30,7 +30,7 @@ import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { DATA_ATTR, createSelector } from '../constants';
-import type DragManager from '../modules/dragManager';
+import type { DragManager } from '../modules/dragManager';
 
 /**
  * Interface describes Block class constructor argument
@@ -113,7 +113,7 @@ interface BlockEvents {
  * @property {HTMLElement} holder - Div element that wraps block content with Tool's content.
  * @property {HTMLElement} pluginsContent - HTML content that returns by Tool's render function
  */
-export default class Block extends EventsDispatcher<BlockEvents> {
+export class Block extends EventsDispatcher<BlockEvents> {
 
   /**
    * Tailwind styles for the Block elements
@@ -262,7 +262,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @param [eventBus] - Blok common event bus. Allows to subscribe on some Blok events. Could be omitted when "virtual" Block is created. See BlocksAPI@composeBlockData.
    */
   constructor({
-    id = _.generateBlockId(),
+    id = generateBlockId(),
     data,
     tool,
     readOnly,
@@ -366,7 +366,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
      */
     const method = (this.toolInstance as unknown as Record<string, unknown>)[methodName];
 
-    if (!_.isFunction(method)) {
+    if (!isFunction(method)) {
       return;
     }
 
@@ -376,7 +376,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
 
-      _.log(`Error during '${methodName}' call: ${errorMessage}`, 'error');
+      log(`Error during '${methodName}' call: ${errorMessage}`, 'error');
     }
   }
 
@@ -385,7 +385,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @param {BlockToolData} data - data to merge
    */
   public async mergeWith(data: BlockToolData): Promise<void> {
-    if (!_.isFunction(this.toolInstance.merge)) {
+    if (!isFunction(this.toolInstance.merge)) {
       throw new Error(`Block tool "${this.name}" does not support merging`);
     }
 
@@ -426,11 +426,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
       ...this.defaultTunesInstances.entries(),
     ]
       .forEach(([name, tune]) => {
-        if (_.isFunction(tune.save)) {
+        if (isFunction(tune.save)) {
           try {
             tunesData[name] = tune.save();
           } catch (e) {
-            _.log(`Tune ${tune.constructor.name} save method throws an Error %o`, 'warn', e);
+            log(`Tune ${tune.constructor.name} save method throws an Error %o`, 'warn', e);
           }
         }
       });
@@ -489,7 +489,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
     } catch (error) {
       const normalizedError = error instanceof Error ? error : new Error(String(error));
 
-      _.log(
+      log(
         `Saving process for ${this.name} tool failed due to the ${normalizedError}`,
         'log',
         normalizedError
@@ -662,7 +662,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
         return true;
       } catch (e) {
-        _.log(`Tool ${this.name} setData failed: ${e instanceof Error ? e.message : String(e)}`, 'warn');
+        log(`Tool ${this.name} setData failed: ${e instanceof Error ? e.message : String(e)}`, 'warn');
 
         return false;
       }
@@ -708,7 +708,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
 
     super.destroy();
 
-    if (_.isFunction(this.toolInstance.destroy)) {
+    if (isFunction(this.toolInstance.destroy)) {
       this.toolInstance.destroy();
     }
   }
@@ -861,7 +861,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    */
   public get data(): Promise<BlockToolData> {
     return this.save().then((savedObject) => {
-      if (savedObject && !_.isEmpty(savedObject.data)) {
+      if (savedObject && !isEmpty(savedObject.data)) {
         return savedObject.data;
       } else {
         return {};
@@ -897,7 +897,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get mergeable(): boolean {
-    return _.isFunction(this.toolInstance.merge);
+    return isFunction(this.toolInstance.merge);
   }
 
   /**
@@ -1076,7 +1076,7 @@ export default class Block extends EventsDispatcher<BlockEvents> {
         contentNode.appendChild(resolvedElement);
         this.readyResolver?.();
       }).catch((error) => {
-        _.log(`Tool render promise rejected: %o`, 'error', error);
+        log(`Tool render promise rejected: %o`, 'error', error);
         this.readyResolver?.();
       });
     } else {
@@ -1098,11 +1098,11 @@ export default class Block extends EventsDispatcher<BlockEvents> {
      */
     const wrappedContentNode: HTMLElement = [...this.tunesInstances.values(), ...this.defaultTunesInstances.values()]
       .reduce((acc, tune) => {
-        if (_.isFunction(tune.wrap)) {
+        if (isFunction(tune.wrap)) {
           try {
             return tune.wrap(acc);
           } catch (e) {
-            _.log(`Tune ${tune.constructor.name} wrap method throws an Error %o`, 'warn', e);
+            log(`Tune ${tune.constructor.name} wrap method throws an Error %o`, 'warn', e);
 
             return acc;
           }

@@ -1,16 +1,10 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { nanoid } from 'nanoid';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import type { BlockMutationEvent } from '../../../../types';
-
-const TEST_PAGE_URL = pathToFileURL(
-  path.resolve(__dirname, '../../fixtures/test.html')
-).href;
 
 const HOLDER_ID = 'blok-';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;

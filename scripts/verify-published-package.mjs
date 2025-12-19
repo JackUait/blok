@@ -168,7 +168,7 @@ async function runVerification() {
       },
       {
         name: 'Types',
-        fn: () => checkTypes(packageDir, tempDir, options.verbose)
+        fn: () => checkTypes(packageDir, tempDir, PACKAGE_NAME, options.verbose)
       }
     ];
 

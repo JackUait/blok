@@ -57,11 +57,9 @@ export class ItalicInlineTool implements InlineTool {
   }
 
   /**
-   * Set a shortcut
+   * Shortcut for italic tool
    */
-  public get shortcut(): string {
-    return 'CMD+I';
-  }
+  public static shortcut = 'CMD+I';
 
   /**
    * Apply or remove italic formatting using modern Selection API

@@ -91,11 +91,14 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     super.show();
 
     // Apply mobile opened state classes AFTER super.show() to override base class styles
+    // For mobile, we use max-h-none instead of max-h-[var(--max-height)] since mobile popovers
+    // should expand to fit their content
+    // Use z-[4] to ensure container is above the overlay (z-[3])
     this.nodes.popoverContainer.className = twMerge(
       css.popoverContainer,
       css.popoverContainerMobile,
       css.popoverContainerOpened,
-      'animate-[panelShowingMobile_250ms_ease]'
+      'max-h-none z-[4] animate-[panelShowingMobile_250ms_ease]'
     );
 
     this.scrollLocker.lock();

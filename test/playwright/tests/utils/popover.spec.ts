@@ -1156,14 +1156,15 @@ test.describe('popover', () => {
       // Check first item became focused after tab
       await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="convert-to"][data-blok-focused="true"]`)).toBeVisible();
 
-      // Check second item is NOT focused
-      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="link"][data-blok-focused="true"]`)).toBeHidden();
+      // Check second item (bold) is NOT focused
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="bold"][data-blok-focused="true"]`)).toBeHidden();
 
       // Press Tab
       await page.keyboard.press('Tab');
 
-      // Check second item became focused after tab
-      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="link"][data-blok-focused="true"]`)).toBeVisible();
+      // Check second item (bold) became focused after tab
+      // Note: inline tool order is convert-to -> bold -> italic -> link
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"] [data-blok-item-name="bold"][data-blok-focused="true"]`)).toBeVisible();
     });
 
     test('should allow to reach nested popover via keyboard', async ({ page }) => {

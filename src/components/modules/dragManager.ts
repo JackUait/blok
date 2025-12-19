@@ -35,6 +35,8 @@ const DRAG_CONFIG = {
   autoScrollSpeed: 10,
   /** Throttle delay for drop position announcements (ms) */
   announcementThrottleMs: 300,
+  /** Horizontal distance to the left of blocks where drop is still valid */
+  leftDropZone: 50,
 };
 
 /**
@@ -424,20 +426,10 @@ export class DragManager extends Module {
       return;
     }
 
-    // Find block holder
-    const blockHolder = elementUnderCursor.closest(createSelector(DATA_ATTR.element)) as HTMLElement | null;
+    // Find block holder - first try direct hit, then left drop zone fallback
+    const { block: targetBlock, holder: blockHolder } = this.findDropTargetBlock(elementUnderCursor, clientX, clientY);
 
-    if (!blockHolder) {
-      this.dragState.targetBlock = null;
-      this.dragState.targetEdge = null;
-
-      return;
-    }
-
-    // Find the block instance
-    const targetBlock = this.Blok.BlockManager.blocks.find(b => b.holder === blockHolder);
-
-    if (!targetBlock || targetBlock === this.dragState.sourceBlock) {
+    if (!blockHolder || !targetBlock || targetBlock === this.dragState.sourceBlock) {
       this.dragState.targetBlock = null;
       this.dragState.targetEdge = null;
 
@@ -1130,6 +1122,72 @@ export class DragManager extends Module {
     };
 
     return collectDescendants(blockIndex + 1, []);
+  }
+
+  /**
+   * Finds the drop target block from an element or by checking the left drop zone.
+   * @param elementUnderCursor - Element directly under the cursor
+   * @param clientX - Cursor X position
+   * @param clientY - Cursor Y position
+   * @returns Object with block and holder, or nulls if no valid target found
+   */
+  private findDropTargetBlock(
+    elementUnderCursor: Element,
+    clientX: number,
+    clientY: number
+  ): { block: Block | undefined; holder: HTMLElement | null } {
+    // First try: find block holder directly under cursor
+    const directHolder = elementUnderCursor.closest(createSelector(DATA_ATTR.element)) as HTMLElement | null;
+
+    if (directHolder) {
+      const block = this.Blok.BlockManager.blocks.find(b => b.holder === directHolder);
+
+      return { block, holder: directHolder };
+    }
+
+    // Fallback: check if cursor is in the left drop zone
+    const leftZoneBlock = this.findBlockInLeftDropZone(clientX, clientY);
+
+    if (leftZoneBlock) {
+      return { block: leftZoneBlock, holder: leftZoneBlock.holder };
+    }
+
+    return { block: undefined, holder: null };
+  }
+
+  /**
+   * Finds a block by vertical position when cursor is in the left drop zone.
+   * Used as a fallback when elementFromPoint doesn't find a block directly.
+   * @param clientX - Cursor X position
+   * @param clientY - Cursor Y position
+   * @returns Block at the vertical position, or null if not in left zone or no block found
+   */
+  private findBlockInLeftDropZone(clientX: number, clientY: number): Block | null {
+    const contentRect = this.Blok.UI.contentRect;
+    const leftEdge = contentRect.left;
+
+    // Check if cursor is within left drop zone (between leftEdge - leftDropZone and leftEdge)
+    const distanceFromEdge = leftEdge - clientX;
+
+    if (distanceFromEdge < 0 || distanceFromEdge > DRAG_CONFIG.leftDropZone) {
+      return null;
+    }
+
+    // Find block by Y position
+    for (const block of this.Blok.BlockManager.blocks) {
+      // Skip source blocks
+      if (this.dragState?.sourceBlocks.includes(block)) {
+        continue;
+      }
+
+      const rect = block.holder.getBoundingClientRect();
+
+      if (clientY >= rect.top && clientY <= rect.bottom) {
+        return block;
+      }
+    }
+
+    return null;
   }
 
   /**

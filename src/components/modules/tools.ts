@@ -334,7 +334,7 @@ export class Tools extends Module {
       .map(([toolName, settings]): ChainData => {
         const toolData: ToolPrepareData = {
           toolName,
-          config: (settings.config ?? {}) as ToolConfig,
+          config: this.extractToolConfig(settings),
         };
 
         const prepareFunction: ChainData['function'] = async (payload?: unknown) => {
@@ -355,6 +355,41 @@ export class Tools extends Module {
           data: toolData,
         };
       });
+  }
+
+  /**
+   * Keys that are Blok-level settings (not passed to tool constructor)
+   */
+  private static readonly BLOK_SETTINGS_KEYS = new Set([
+    'class',
+    'inlineToolbar',
+    'tunes',
+    'shortcut',
+    'toolbox',
+    'config',
+    'isInternal',
+  ]);
+
+  /**
+   * Extracts tool configuration from settings.
+   * Merges nested config with flat tool-specific options (flat takes precedence).
+   * @param settings - Tool settings from user config
+   * @returns Merged tool configuration
+   */
+  private extractToolConfig(settings: ToolSettings): ToolConfig {
+    const nestedConfig = (settings.config ?? {}) as ToolConfig;
+
+    // Extract non-Blok keys as tool-specific config
+    const flatConfig: Record<string, unknown> = {};
+
+    for (const key of Object.keys(settings)) {
+      if (!Tools.BLOK_SETTINGS_KEYS.has(key)) {
+        flatConfig[key] = settings[key as keyof typeof settings];
+      }
+    }
+
+    // Merge: nested config first, flat config overrides
+    return { ...nestedConfig, ...flatConfig } as ToolConfig;
   }
 
   /**

@@ -8,6 +8,19 @@ import type { BlockToolAdapter as BlockToolAdapterInterface } from '@/types/tool
 import type { BlockTuneAdapter as BlockTuneAdapterInterface } from '@/types/tools/adapters/block-tune-adapter';
 
 /**
+ * Keys that are Blok-level settings (not passed to tool constructor)
+ */
+const BLOK_SETTINGS_KEYS = new Set([
+  'class',
+  'inlineToolbar',
+  'tunes',
+  'shortcut',
+  'toolbox',
+  'config',
+  'isInternal',
+]);
+
+/**
  * Enum of Tool options provided by user
  */
 export enum UserSettings {
@@ -188,10 +201,23 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
   }
 
   /**
-   * Returns Tool user configuration
+   * Returns Tool user configuration.
+   * Extracts tool-specific options from flat config and merges with nested config.
    */
   public get settings(): ToolConfig {
-    const config = (this.config[UserSettings.Config] ?? {}) as ToolConfig;
+    const nestedConfig = (this.config[UserSettings.Config] ?? {}) as ToolConfig;
+
+    // Extract non-Blok keys as tool-specific config
+    const flatConfig: Record<string, unknown> = {};
+
+    for (const key of Object.keys(this.config)) {
+      if (!BLOK_SETTINGS_KEYS.has(key)) {
+        flatConfig[key] = this.config[key as keyof typeof this.config];
+      }
+    }
+
+    // Merge: nested config first, flat config overrides
+    const config = { ...nestedConfig, ...flatConfig } as ToolConfig;
 
     if (this.isDefault && !('placeholder' in config) && this.defaultPlaceholder) {
       config.placeholder = this.defaultPlaceholder;

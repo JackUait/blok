@@ -383,12 +383,13 @@ describe('RectangleSelection', () => {
       button: 0,
       pageX: 150,
       pageY: 200,
+      shiftKey: false,
       target: document.createElement('div'),
     } as unknown as MouseEvent;
 
     internal.processMouseDown(primaryEvent);
 
-    expect(startSelectionSpy).toHaveBeenCalledWith(150, 200);
+    expect(startSelectionSpy).toHaveBeenCalledWith(150, 200, false);
 
     startSelectionSpy.mockClear();
 
@@ -396,6 +397,7 @@ describe('RectangleSelection', () => {
       button: 1,
       pageX: 150,
       pageY: 200,
+      shiftKey: false,
       target: document.createElement('div'),
     } as unknown as MouseEvent;
 
@@ -976,5 +978,107 @@ describe('RectangleSelection', () => {
     rectangleSelection.startSelection(50, 600);
 
     expect(internal.mousedown).toBe(false);
+  });
+
+  it('preserves existing selection when Shift key is held during selection start', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Mock editor bounds
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 1000,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const internal = rectangleSelection as unknown as {
+      stackOfSelected: number[];
+      mousedown: boolean;
+    };
+
+    // Pre-populate selection stack
+    internal.stackOfSelected = [0, 1];
+    blockSelection.allBlocksSelected = true;
+
+    const startTarget = document.createElement('div');
+    blokWrapper.appendChild(startTarget);
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+
+    // Start selection with Shift key
+    rectangleSelection.startSelection(120, 240, true);
+
+    // stackOfSelected should NOT be cleared
+    expect(internal.stackOfSelected).toEqual([0, 1]);
+    // allBlocksSelected should NOT be reset
+    expect(blockSelection.allBlocksSelected).toBe(true);
+    expect(internal.mousedown).toBe(true);
+  });
+
+  it('clears existing selection when Shift key is not held', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Mock editor bounds
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 1000,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const internal = rectangleSelection as unknown as {
+      stackOfSelected: number[];
+      mousedown: boolean;
+    };
+
+    // Pre-populate selection stack
+    internal.stackOfSelected = [0, 1];
+    blockSelection.allBlocksSelected = true;
+
+    const startTarget = document.createElement('div');
+    blokWrapper.appendChild(startTarget);
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+
+    // Start selection without Shift key
+    rectangleSelection.startSelection(120, 240, false);
+
+    // stackOfSelected should be cleared
+    expect(internal.stackOfSelected).toEqual([]);
+    // allBlocksSelected should be reset
+    expect(blockSelection.allBlocksSelected).toBe(false);
+    expect(internal.mousedown).toBe(true);
   });
 });

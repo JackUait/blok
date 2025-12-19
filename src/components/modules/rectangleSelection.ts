@@ -116,8 +116,9 @@ export class RectangleSelection extends Module {
    * Init rect params
    * @param {number} pageX - X coord of mouse
    * @param {number} pageY - Y coord of mouse
+   * @param {boolean} shiftKey - whether Shift key is held for additive selection
    */
-  public startSelection(pageX: number, pageY: number): void {
+  public startSelection(pageX: number, pageY: number, shiftKey = false): void {
     const { UI } = this.Blok;
     const redactor = UI.nodes.redactor;
 
@@ -149,7 +150,11 @@ export class RectangleSelection extends Module {
      */
     const startsInsideToolbar = elemWhereSelectionStart.closest(createSelector(DATA_ATTR.toolbar));
 
-    if (!startsInsideToolbar) {
+    /**
+     * When Shift is held, preserve existing selection for additive behavior.
+     * Otherwise, clear selection state.
+     */
+    if (!startsInsideToolbar && !shiftKey) {
       this.Blok.BlockSelection.allBlocksSelected = false;
       this.clearSelection();
       this.stackOfSelected = [];
@@ -261,7 +266,7 @@ export class RectangleSelection extends Module {
     const startedFromContentEditable = (mouseEvent.target as Element).closest($.allInputsSelector) !== null;
 
     if (!startedFromContentEditable) {
-      this.startSelection(mouseEvent.pageX, mouseEvent.pageY);
+      this.startSelection(mouseEvent.pageX, mouseEvent.pageY, mouseEvent.shiftKey);
     }
   }
 

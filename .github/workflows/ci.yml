@@ -122,36 +122,10 @@ jobs:
           path: dist/
           retention-days: 1
 
-  install-browsers:
-    name: Install Browsers
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
-
-      - name: Cache Playwright Browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
-
-      - name: Install Playwright Browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium firefox webkit --with-deps
-
-      - name: Install Playwright Browser Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium firefox webkit
-
   smoke-test:
     name: Smoke Tests
     runs-on: ubuntu-latest
-    needs: [build, install-browsers]
+    needs: [build]
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -169,14 +143,19 @@ jobs:
       - name: Mark Build as Available
         run: echo "BLOK_BUILT=true" >> $GITHUB_ENV
 
-      - name: Restore Playwright Browsers from Cache
-        uses: actions/cache/restore@v4
+      - name: Cache Playwright Browser
+        id: playwright-cache
+        uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
-          fail-on-cache-miss: true
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('**/yarn.lock') }}
 
-      - name: Install Browser Dependencies
+      - name: Install Playwright Browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
       - name: Run Smoke Tests
@@ -191,86 +170,11 @@ jobs:
           retention-days: 3
 
   e2e-tests:
-    name: E2E Tests (${{ matrix.project }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
-    runs-on: ubuntu-latest
-    needs: [smoke-test, build, install-browsers]
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - project: chromium
-            browser: chromium
-            shard: 1/2
-          - project: chromium
-            browser: chromium
-            shard: 2/2
-          - project: firefox
-            browser: firefox
-            shard: 1/2
-          - project: firefox
-            browser: firefox
-            shard: 2/2
-          - project: webkit
-            browser: webkit
-            shard: 1/2
-          - project: webkit
-            browser: webkit
-            shard: 2/2
-          # chromium-logic has ~2x more tests (566 vs 278), so use 3 shards
-          - project: chromium-logic
-            browser: chromium
-            shard: 1/3
-          - project: chromium-logic
-            browser: chromium
-            shard: 2/3
-          - project: chromium-logic
-            browser: chromium
-            shard: 3/3
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
-
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Mark Build as Available
-        run: echo "BLOK_BUILT=true" >> $GITHUB_ENV
-
-      - name: Restore Playwright Browsers from Cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
-          fail-on-cache-miss: true
-
-      - name: Install Browser Dependencies
-        run: npx playwright install-deps ${{ matrix.browser }}
-
-      - name: Run E2E Tests
-        run: yarn playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}
-
-      - name: Upload E2E Test Results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-results-${{ matrix.project }}-${{ strategy.job-index }}
-          path: test-results/
-          retention-days: 3
-
-      - name: Upload Blob Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: blob-report-${{ matrix.project }}-${{ strategy.job-index }}
-          path: blob-report/
-          retention-days: 1
+    name: E2E Tests
+    needs: [smoke-test, build]
+    uses: ./.github/workflows/e2e.yml
+    with:
+      artifact-name: dist
 
   storybook-tests:
     name: Storybook Tests

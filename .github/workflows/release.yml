@@ -16,10 +16,10 @@ permissions:
   id-token: write
 
 jobs:
-  release:
-    name: Release
+  pre-checks:
+    name: Pre-Release Checks
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,27 +27,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Cache Yarn dependencies
-        id: yarn-cache
-        uses: actions/cache@v4
-        with:
-          path: .yarn/cache
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Verify cache hit
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: echo "::warning::Yarn cache miss, slower install expected"
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Lint
         run: yarn lint
@@ -55,11 +36,33 @@ jobs:
       - name: Run unit tests
         run: yarn test
 
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [pre-checks]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
       - name: Build
         run: yarn build
 
       - name: Build bundle variants
         run: node scripts/build-bundle-variants.mjs --verbose
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
 
       - name: Track bundle size
         run: |
@@ -109,25 +112,48 @@ jobs:
           path: bundle-size-*.md
           retention-days: 30
 
-      - name: Cache Playwright Browsers
-        id: playwright-cache
+  e2e-tests:
+    name: E2E Tests
+    needs: [build]
+    uses: ./.github/workflows/e2e.yml
+    with:
+      artifact-name: dist
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [pre-checks, build, e2e-tests]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Cache Yarn dependencies
+        id: yarn-cache
         uses: actions/cache@v4
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          path: .yarn/cache
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            playwright-browsers-
+            yarn-
 
-      - name: Install Playwright Browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps
+      - name: Install dependencies
+        run: yarn install --immutable
 
-      - name: Install Playwright Browser Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps
-
-      - name: Run E2E tests
-        run: yarn e2e
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - name: Pre-release verification (staging)
         run: |

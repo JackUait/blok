@@ -12,9 +12,6 @@ import './components/polyfills';
 import { Core } from './components/core';
 import { getBlokVersion, isObject, isFunction } from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
-import { Header } from './tools/header';
-import { Paragraph } from './tools/paragraph';
-import { ListItem as List } from './tools/list';
 import { DATA_ATTR } from './components/constants/data-attributes';
 
 /**
@@ -23,11 +20,8 @@ import { DATA_ATTR } from './components/constants/data-attributes';
 export const version = getBlokVersion();
 
 /**
- * Re-export bundled tools for direct import
+ * Re-export DATA_ATTR for querying editor elements
  */
-export { Header } from './tools/header';
-export { Paragraph } from './tools/paragraph';
-export { ListItem as List } from './tools/list';
 export { DATA_ATTR } from './components/constants/data-attributes';
 
 /**
@@ -55,21 +49,6 @@ class Blok {
   public static get version(): string {
     return getBlokVersion();
   }
-
-  /**
-   * Header tool bundled with Blok
-   */
-  public static Header = Header;
-
-  /**
-   * Paragraph tool bundled with Blok
-   */
-  public static Paragraph = Paragraph;
-
-  /**
-   * List tool bundled with Blok
-   */
-  public static List = List;
 
   /**
    * Data attributes used by the editor.

@@ -9,6 +9,14 @@
       "types": "./types/index.d.ts",
       "import": "./dist/blok.mjs"
     },
+    "./tools": {
+      "types": "./types/tools-entry.d.ts",
+      "import": "./dist/tools.mjs"
+    },
+    "./full": {
+      "types": "./types/full.d.ts",
+      "import": "./dist/full.mjs"
+    },
     "./locales": {
       "types": "./types/locales.d.ts",
       "import": "./dist/locales.mjs"

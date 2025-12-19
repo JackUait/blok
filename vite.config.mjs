@@ -25,11 +25,18 @@ export default defineConfig(({ mode }) => {
       copyPublicDir: false,
       target: 'es2017',
       lib: {
-        entry: path.resolve(__dirname, 'src', 'blok.ts'),
-        fileName: 'blok',
+        entry: {
+          blok: path.resolve(__dirname, 'src', 'blok.ts'),
+          tools: path.resolve(__dirname, 'src', 'tools', 'index.ts'),
+          full: path.resolve(__dirname, 'src', 'full.ts'),
+        },
         formats: ['es'],
       },
       rollupOptions: {
+        output: {
+          entryFileNames: '[name].mjs',
+          chunkFileNames: 'chunks/[name]-[hash].mjs',
+        },
         plugins: [
           license({
             thirdParty: {
@@ -80,7 +87,8 @@ export default defineConfig(({ mode }) => {
       // Only use CSS injection plugin for library builds, not Storybook
       !isStorybookBuild && cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (outputChunk) => {
-          // Only inject CSS into the main blok bundle, not locales
+          // Only inject CSS into the main blok bundle, not locales or tools
+          // CSS is injected into 'blok' entry, 'full' includes blok so it gets CSS too
           return outputChunk.name === 'blok';
         },
       }),

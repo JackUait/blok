@@ -3,7 +3,7 @@ import { userEvent, waitFor, expect } from 'storybook/test';
 import type { OutputData, ToolSettings } from '@/types';
 import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import { Blok } from '../blok';
+import { Paragraph, List } from '../tools';
 import type { ListConfig } from '../../types/tools/list';
 
 // Constants
@@ -86,7 +86,7 @@ const createEditor = (args: ListCustomStylesArgs): HTMLElement => {
 
   const listTool = hasCustomStyles
     ? ({
-        class: Blok.List,
+        class: List,
         inlineToolbar: true,
         config: {
           itemColor: args.itemColor,
@@ -94,14 +94,14 @@ const createEditor = (args: ListCustomStylesArgs): HTMLElement => {
         } as ListConfig,
       } as ToolSettings)
     : ({
-        class: Blok.List,
+        class: List,
         inlineToolbar: true,
       } as ToolSettings);
 
   return createEditorContainer({
     ...args,
     tools: {
-      paragraph: Blok.Paragraph,
+      paragraph: Paragraph,
       list: listTool,
     },
   });

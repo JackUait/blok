@@ -1,13 +1,7 @@
-import { Paragraph } from '../../tools/paragraph';
-import { ListItem as List } from '../../tools/list';
 import { Module } from '../__module';
 import { deepMerge, isFunction, isObject, isUndefined, log } from '../utils';
 import { PromiseQueue } from '../utils/promise-queue';
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
-import { BoldInlineTool } from '../inline-tools/inline-tool-bold';
-import { ItalicInlineTool } from '../inline-tools/inline-tool-italic';
-import { LinkInlineTool } from '../inline-tools/inline-tool-link';
-import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
 import { Stub } from '../../tools/stub';
 import { ToolsFactory } from '../tools/factory';
 import type { InlineToolAdapter } from '../tools/inline';
@@ -258,40 +252,14 @@ export class Tools extends Module {
   }
 
   /**
-   * Returns internal tools
-   * Includes Bold, Italic, Link and Paragraph
+   * Returns essential internal tools that are always bundled.
+   * Only includes stub (for graceful handling of unknown block types) and delete tune (fundamental block operation).
+   *
+   * Other tools (paragraph, header, list, bold, italic, link, convert) are now optional
+   * and should be imported from '@jackuait/blok/tools' or '@jackuait/blok/full'.
    */
   private get internalTools(): { [toolName: string]: ToolConstructable | ToolSettings & { isInternal?: boolean } } {
     return {
-      convertTo: {
-        class: toToolConstructable(ConvertInlineTool),
-        isInternal: true,
-      },
-      link: {
-        class: toToolConstructable(LinkInlineTool),
-        isInternal: true,
-      },
-      bold: {
-        class: toToolConstructable(BoldInlineTool),
-        isInternal: true,
-      },
-      italic: {
-        class: toToolConstructable(ItalicInlineTool),
-        isInternal: true,
-      },
-      paragraph: {
-        class: toToolConstructable(Paragraph),
-        inlineToolbar: true,
-        config: {
-          preserveBlank: true,
-        },
-        isInternal: true,
-      },
-      list: {
-        class: toToolConstructable(List),
-        inlineToolbar: true,
-        isInternal: true,
-      },
       stub: {
         class: toToolConstructable(Stub),
         isInternal: true,

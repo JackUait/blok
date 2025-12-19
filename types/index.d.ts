@@ -143,9 +143,6 @@ export interface API {
   ui: Ui;
 }
 
-import { HeaderConstructable, Header as HeaderTool } from './tools/header';
-import { ParagraphConstructable, Paragraph as ParagraphTool } from './tools/paragraph';
-import { ListConstructable, ListItem as ListTool } from './tools/list';
 import { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector } from './data-attributes';
 
 export { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector };
@@ -154,21 +151,6 @@ export { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector };
  * Blok version string
  */
 export const version: string;
-
-/**
- * Header tool bundled with Blok
- */
-export const Header: HeaderConstructable;
-
-/**
- * Paragraph tool bundled with Blok
- */
-export const Paragraph: ParagraphConstructable;
-
-/**
- * List tool bundled with Blok
- */
-export const List: ListConstructable;
 
 /**
  * Main Blok class

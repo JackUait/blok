@@ -101,27 +101,23 @@
       tools: {
         /**
          * Each Tool is a Plugin. Pass them via 'class' option with necessary settings {@link docs/tools.md}
+         * Tool options can be flat (no nested config: {}) - Blok extracts known keys automatically.
+         * inlineToolbar defaults to true for block tools.
          */
         paragraph: {
           class: Paragraph,
-          inlineToolbar: true,
+          preserveBlank: true,
         },
         header: {
           class: Header,
-          inlineToolbar: ['link'],
-          config: {
-            placeholder: 'Header'
-          },
-          shortcut: 'CMD+SHIFT+H'
+          placeholder: 'Header',
+          shortcut: 'CMD+SHIFT+H',
         },
-        list: {
-          class: List,
-          inlineToolbar: true,
-        },
+        list: List,
         // Inline tools
-        bold: { class: Bold },
-        italic: { class: Italic },
-        link: { class: Link },
+        bold: Bold,
+        italic: Italic,
+        link: Link,
       },
 
       /**

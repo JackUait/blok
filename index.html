@@ -67,7 +67,8 @@
 
   <!-- Initialization -->
   <script type="module">
-    import { Blok, Header, List } from './src/blok.ts';
+    import { Blok } from './src/blok.ts';
+    import { Paragraph, Header, List } from './src/tools/index.ts';
 
     window.Blok = Blok;
 
@@ -101,6 +102,10 @@
         /**
          * Each Tool is a Plugin. Pass them via 'class' option with necessary settings {@link docs/tools.md}
          */
+        paragraph: {
+          class: Paragraph,
+          inlineToolbar: true,
+        },
         header: {
           class: Header,
           inlineToolbar: ['link'],

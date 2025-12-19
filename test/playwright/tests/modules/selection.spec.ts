@@ -74,20 +74,9 @@ const createBlokWithBlocks = async (
   blocks: OutputData['blocks'],
   tools: ToolDefinition[] = []
 ): Promise<void> => {
-  const hasParagraphOverride = tools.some((tool) => tool.name === 'paragraph');
-  const serializedTools: ToolDefinition[] = hasParagraphOverride
-    ? tools
-    : [
-      {
-        name: 'paragraph',
-        config: {
-          config: {
-            preserveBlank: true,
-          },
-        },
-      },
-      ...tools,
-    ];
+  // BlokWithDefaults already provides paragraph with preserveBlank: true,
+  // so we don't need to add it here. Only pass through custom tools.
+  const serializedTools: ToolDefinition[] = tools;
 
   await resetBlok(page);
   await page.evaluate(async ({

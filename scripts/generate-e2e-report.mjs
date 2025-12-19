@@ -241,12 +241,8 @@ function generateMarkdown(metrics) {
     md += `| Test | Location | Browser |\n`;
     md += `|------|----------|----------|\n`;
 
-    for (const test of consolidatedFailures.slice(0, 10)) {
+    for (const test of consolidatedFailures) {
       md += `| ${test.title} | \`${test.location}\` | ${test.browsers} |\n`;
-    }
-
-    if (consolidatedFailures.length > 10) {
-      md += `\n*... and ${consolidatedFailures.length - 10} more failed tests*\n`;
     }
     md += `\n`;
   }

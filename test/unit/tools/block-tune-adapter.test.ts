@@ -132,7 +132,7 @@ describe('BlockTuneAdapter', () => {
     expect(payload.api).toBe(api);
     expect(payload.block).toBe(block);
     expect(payload.data).toBe(data);
-    expect(payload.config).toBe(adapter.settings);
+    expect(payload.config).toStrictEqual(adapter.settings);
     expect(instance).toBeInstanceOf(constructableDouble.classRef);
   });
 

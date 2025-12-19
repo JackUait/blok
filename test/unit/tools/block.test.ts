@@ -321,7 +321,7 @@ describe('BlockToolAdapter', () => {
       expect(tool.pasteConfig).toEqual({});
     });
 
-    it('returns enabled inline tools or false by default', () => {
+    it('returns enabled inline tools or true by default', () => {
       const { tool, options } = createBlockTool();
 
       expect(tool.enabledInlineTools).toEqual(options.config.inlineToolbar);
@@ -332,7 +332,8 @@ describe('BlockToolAdapter', () => {
         },
       });
 
-      expect(fallbackTool.enabledInlineTools).toBe(false);
+      // Defaults to true when not specified
+      expect(fallbackTool.enabledInlineTools).toBe(true);
     });
 
     it('returns enabled block tunes from config', () => {

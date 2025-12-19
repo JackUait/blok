@@ -245,35 +245,6 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('data-blok-placement')).toBe('top');
   });
 
-  it('delays hiding when hidingDelay is set but respects skip flag', () => {
-    const target = createTargetElement();
-    const wrapperText = 'delayed';
-
-    vi.useFakeTimers();
-
-    show(target, wrapperText, { delay: 0,
-      hidingDelay: 50 });
-
-    const wrapper = getTooltipWrapper();
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    hide();
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    vi.advanceTimersByTime(49);
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    vi.advanceTimersByTime(1);
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
-
-    show(target, wrapperText, { delay: 0,
-      hidingDelay: 50 });
-    hide(true);
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
-  });
-
   it('responds to hover events by showing and hiding the tooltip', () => {
     const target = createTargetElement();
 

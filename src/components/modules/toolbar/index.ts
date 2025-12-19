@@ -37,9 +37,11 @@ interface ToolbarNodes {
 }
 
 /**
- * Threshold in pixels to distinguish between a click and a drag
+ * Threshold in pixels to distinguish between a click and a drag.
+ * Should be higher than DragManager's dragThreshold (5px) so that
+ * clicks with slight mouse movement still open the menu.
  */
-const DRAG_THRESHOLD = 1000;
+const DRAG_THRESHOLD = 10;
 /**
  *
  *«Toolbar» is the node that moves up/down over current block
@@ -709,7 +711,7 @@ export class Toolbar extends Module<ToolbarNodes> {
         return;
       }
 
-      hide(true);
+      hide();
       this.plusButtonClicked();
     }, true);
 
@@ -727,7 +729,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     ]);
 
     onHover(plusButton, tooltipContent, {
-      hidingDelay: 400,
+      delay: 500,
     });
 
     /**
@@ -772,7 +774,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     ]);
 
     onHover(settingsToggler, blockTunesTooltip, {
-      hidingDelay: 400,
+      delay: 500,
     });
 
     /**
@@ -914,10 +916,12 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (settingsToggler) {
       /**
        * Settings toggler mousedown handler
-       * Stores the initial mouse position to distinguish between click and drag
+       * Stores the initial mouse position and sets up a document-level mouseup listener.
+       * Using document-level mouseup ensures we catch the event even if the mouse
+       * moves slightly off the toggler element during the click.
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
-        hide(true);
+        hide();
 
         const mouseEvent = e as MouseEvent;
 
@@ -929,62 +933,49 @@ export class Toolbar extends Module<ToolbarNodes> {
           x: mouseEvent.clientX,
           y: mouseEvent.clientY,
         };
-      }, true);
-
-      /**
-       * Settings toggler mouseup handler
-       * Only opens the menu if the mouse didn't move significantly (i.e., it was a click, not a drag)
-       *
-       * We use mouseup instead of click because SortableJS (used for drag-and-drop) calls
-       * removeAllRanges() during drag preparation, which causes the activeElement to change
-       * from the contenteditable DIV to BODY. When the activeElement changes between mousedown
-       * and mouseup, the browser doesn't generate a click event. By using mouseup, we can
-       * still detect clicks even when SortableJS interferes.
-       */
-      this.readOnlyMutableListeners.on(settingsToggler, 'mouseup', (e) => {
-        e.stopPropagation();
 
         /**
-         * Ignore mouseup after a block drop to prevent settings menu from opening
+         * Add document-level mouseup listener to catch the event even if mouse
+         * moves slightly off the toggler. This is removed after firing once.
          */
-        if (this.ignoreNextSettingsMouseUp) {
-          this.ignoreNextSettingsMouseUp = false;
+        const onMouseUp = (mouseUpEvent: MouseEvent): void => {
+          document.removeEventListener('mouseup', onMouseUp, true);
 
-          return;
-        }
+          /**
+           * Ignore mouseup after a block drop to prevent settings menu from opening
+           */
+          if (this.ignoreNextSettingsMouseUp) {
+            this.ignoreNextSettingsMouseUp = false;
+            this.settingsTogglerMouseDownPosition = null;
 
-        const mouseEvent = e as MouseEvent;
+            return;
+          }
 
-        /**
-         * Check if this was a drag or a click by comparing mouse positions
-         * If the mouse moved more than the threshold, it was a drag - don't open menu
-         */
-        const mouseDownPos = this.settingsTogglerMouseDownPosition;
+          const mouseDownPos = this.settingsTogglerMouseDownPosition;
 
-        this.settingsTogglerMouseDownPosition = null;
+          this.settingsTogglerMouseDownPosition = null;
 
-        /**
-         * If mouseDownPos is null, it means mousedown didn't happen on this element
-         * (e.g., user started drag from elsewhere), so ignore this mouseup
-         */
-        if (mouseDownPos === null) {
-          return;
-        }
+          if (mouseDownPos === null) {
+            return;
+          }
 
-        const wasDragged = (
-          Math.abs(mouseEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
-          Math.abs(mouseEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
-        );
+          const wasDragged = (
+            Math.abs(mouseUpEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
+            Math.abs(mouseUpEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
+          );
 
-        if (wasDragged) {
-          return;
-        }
+          if (wasDragged) {
+            return;
+          }
 
-        this.settingsTogglerClicked();
+          this.settingsTogglerClicked();
 
-        if (this.toolboxInstance?.opened) {
-          this.toolboxInstance.close();
-        }
+          if (this.toolboxInstance?.opened) {
+            this.toolboxInstance.close();
+          }
+        };
+
+        document.addEventListener('mouseup', onMouseUp, true);
       }, true);
     }
 

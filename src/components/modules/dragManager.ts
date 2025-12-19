@@ -371,7 +371,7 @@ export class DragManager extends Module {
       this.Blok.BlockSelection.clearSelection();
     }
 
-    hide(true);
+    hide();
     this.Blok.Toolbar.close();
 
     // Announce drag started to screen readers

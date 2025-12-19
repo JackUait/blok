@@ -82,7 +82,6 @@ export abstract class PopoverItem {
 
     onHover(itemElement, content.getElement(), {
       placement: hintData.position,
-      hidingDelay: 100,
     });
   }
 

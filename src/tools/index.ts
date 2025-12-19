@@ -22,6 +22,7 @@ export { ListItem as List } from './list';
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
 export { ItalicInlineTool as Italic } from '../components/inline-tools/inline-tool-italic';
 export { LinkInlineTool as Link } from '../components/inline-tools/inline-tool-link';
+export { ConvertInlineTool as Convert } from '../components/inline-tools/inline-tool-convert';
 
 // Default tools configuration for convenience
 export const defaultBlockTools = {

@@ -573,6 +573,73 @@ describe('tools module', () => {
         newOption: 'added',
       });
     });
+
+    it('defaults inlineToolbar to true for block tools', async () => {
+      class BlockToolNoSettings {
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+        public save(): void {}
+      }
+
+      class InlineTool {
+        public static isInline = true;
+        public render(): object {
+          return {};
+        }
+      }
+
+      const module = createModule({
+        defaultBlock: 'myBlock',
+        tools: {
+          myBlock: BlockToolNoSettings as unknown as ToolConstructable,
+          bold: InlineTool as unknown as ToolConstructable,
+        },
+        inlineToolbar: ['bold'],
+      });
+
+      await module.prepare();
+
+      const blockTool = module.blockTools.get('myBlock');
+
+      // Should have inline tools because inlineToolbar defaults to true
+      expect(blockTool?.inlineTools.has('bold')).toBe(true);
+    });
+
+    it('respects explicit inlineToolbar: false', async () => {
+      class BlockToolNoInline {
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+        public save(): void {}
+      }
+
+      class InlineTool {
+        public static isInline = true;
+        public render(): object {
+          return {};
+        }
+      }
+
+      const module = createModule({
+        defaultBlock: 'noInline',
+        tools: {
+          noInline: {
+            class: BlockToolNoInline as unknown as ToolConstructable,
+            inlineToolbar: false,
+          },
+          bold: InlineTool as unknown as ToolConstructable,
+        },
+        inlineToolbar: ['bold'],
+      });
+
+      await module.prepare();
+
+      const blockTool = module.blockTools.get('noInline');
+
+      // Should NOT have inline tools because explicitly disabled
+      expect(blockTool?.inlineTools.has('bold')).toBe(false);
+    });
   });
 });
 

@@ -163,6 +163,7 @@ export class RectangleSelection extends Module {
     const selectorsToAvoid = [
       createSelector(DATA_ATTR.elementContent),
       createSelector(DATA_ATTR.toolbar),
+      createSelector(DATA_ATTR.popover),
       INLINE_TOOLBAR_INTERFACE_SELECTOR,
     ];
 

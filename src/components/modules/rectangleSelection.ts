@@ -118,9 +118,26 @@ export class RectangleSelection extends Module {
    * @param {number} pageY - Y coord of mouse
    */
   public startSelection(pageX: number, pageY: number): void {
-    const scrollLeft = this.getScrollLeft();
+    const { UI } = this.Blok;
+    const redactor = UI.nodes.redactor;
+
+    if (!redactor) {
+      return;
+    }
+
+    const editorRect = redactor.getBoundingClientRect();
     const scrollTop = this.getScrollTop();
-    const elemWhereSelectionStart = document.elementFromPoint(pageX - scrollLeft, pageY - scrollTop);
+    const pointerY = pageY - scrollTop;
+
+    // Check if pointer is within editor's vertical bounds
+    const withinEditorVertically = pointerY >= editorRect.top && pointerY <= editorRect.bottom;
+
+    if (!withinEditorVertically) {
+      return;
+    }
+
+    const scrollLeft = this.getScrollLeft();
+    const elemWhereSelectionStart = document.elementFromPoint(pageX - scrollLeft, pointerY);
 
     if (!elemWhereSelectionStart) {
       return;
@@ -144,13 +161,12 @@ export class RectangleSelection extends Module {
       INLINE_TOOLBAR_INTERFACE_SELECTOR,
     ];
 
-    const startsInsideBlok = elemWhereSelectionStart.closest(createSelector(DATA_ATTR.editor));
     const startsInSelectorToAvoid = selectorsToAvoid.some((selector) => !!elemWhereSelectionStart.closest(selector));
 
     /**
-     * If selection starts outside of the blok or inside the blocks or on Blok UI elements, do not handle it
+     * If selection starts inside the blocks content or on Blok UI elements, do not handle it
      */
-    if (!startsInsideBlok || startsInSelectorToAvoid) {
+    if (startsInSelectorToAvoid) {
       return;
     }
 

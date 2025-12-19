@@ -68,7 +68,7 @@
   <!-- Initialization -->
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Bold, Italic, Link, Convert } from './src/tools/index.ts';
 
     window.Blok = Blok;
 
@@ -116,7 +116,13 @@
         },
         list: {
           class: List,
+          inlineToolbar: true,
         },
+        // Inline tools
+        bold: { class: Bold },
+        italic: { class: Italic },
+        link: { class: Link },
+        convertTo: { class: Convert },
       },
 
       /**

@@ -49,14 +49,6 @@ const createBlokWithElements = async (page: Page, blocks: OutputData['blocks']):
     const blok = new window.Blok({
       holder: holder,
       data: { blocks: blokBlocks },
-      tools: {
-        paragraph: {
-          inlineToolbar: true,
-          config: {
-            preserveBlank: true,
-          },
-        },
-      },
     });
 
     window.blokInstance = blok;
@@ -84,14 +76,6 @@ const createBlok = async (page: Page): Promise<void> => {
             },
           },
         ],
-      },
-      tools: {
-        paragraph: {
-          inlineToolbar: true,
-          config: {
-            preserveBlank: true,
-          },
-        },
       },
     });
 
@@ -227,13 +211,6 @@ const createBlokWithSanitizer = async (page: Page, sanitizerConfig: Record<strin
     const blok = new window.Blok({
       holder: holder,
       sanitizer,
-      tools: {
-        paragraph: {
-          config: {
-            preserveBlank: true,
-          },
-        },
-      },
     });
 
     window.blokInstance = blok;

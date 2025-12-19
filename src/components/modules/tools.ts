@@ -382,9 +382,10 @@ export class Tools extends Module {
       const inlineTools = Array.isArray(this.config.inlineToolbar)
         ? this.createInlineToolsCollection(this.config.inlineToolbar)
         /**
-         * If common settings is 'true' or not specified (will be set as true at core.ts), get the default order
+         * If common settings is 'true' or not specified (will be set as true at core.ts), get the default order.
+         * Prepend convertTo so it appears first (same as when explicit array is passed).
          */
-        : new ToolsCollection<InlineToolAdapter>(Array.from(this.inlineTools.entries()));
+        : this.createInlineToolsCollection(['convertTo', ...this.inlineTools.keys()]);
 
       blockTool.inlineTools = inlineTools;
 

@@ -215,35 +215,77 @@ function generateMarkdown(metrics) {
     md += `\n`;
   }
 
-  // Failed tests details
+  // Failed tests details - consolidate by test title (group browsers)
   if (metrics.failedTests.length > 0) {
+    // Group failed tests by title+location
+    const groupedFailures = new Map();
+    for (const test of metrics.failedTests) {
+      const key = `${test.title}|||${test.location || 'N/A'}`;
+      if (!groupedFailures.has(key)) {
+        groupedFailures.set(key, {
+          title: test.title,
+          location: test.location || 'N/A',
+          browsers: [],
+        });
+      }
+      groupedFailures.get(key).browsers.push(test.project);
+    }
+
+    // Convert to array and sort browsers alphabetically within each group
+    const consolidatedFailures = [...groupedFailures.values()].map((failure) => ({
+      ...failure,
+      browsers: failure.browsers.sort().join(', '),
+    }));
+
     md += `### ❌ Failed Tests\n\n`;
     md += `| Test | Location | Browser |\n`;
     md += `|------|----------|----------|\n`;
 
-    for (const test of metrics.failedTests.slice(0, 10)) {
-      const location = test.location || 'N/A';
-      md += `| ${test.title} | \`${location}\` | ${test.project} |\n`;
+    for (const test of consolidatedFailures.slice(0, 10)) {
+      md += `| ${test.title} | \`${test.location}\` | ${test.browsers} |\n`;
     }
 
-    if (metrics.failedTests.length > 10) {
-      md += `\n*... and ${metrics.failedTests.length - 10} more failed tests*\n`;
+    if (consolidatedFailures.length > 10) {
+      md += `\n*... and ${consolidatedFailures.length - 10} more failed tests*\n`;
     }
     md += `\n`;
   }
 
-  // Flaky tests warning
+  // Flaky tests warning - consolidate by test title (group browsers)
   if (metrics.flakyTests.length > 0) {
-    md += `<details>\n<summary>🔄 Flaky Tests (${metrics.flakyTests.length})</summary>\n\n`;
+    // Group flaky tests by title+location
+    const groupedFlaky = new Map();
+    for (const test of metrics.flakyTests) {
+      const key = `${test.title}|||${test.location || 'N/A'}`;
+      if (!groupedFlaky.has(key)) {
+        groupedFlaky.set(key, {
+          title: test.title,
+          location: test.location || 'N/A',
+          browsers: [],
+          maxRetries: 0,
+        });
+      }
+      const group = groupedFlaky.get(key);
+      group.browsers.push(test.project);
+      group.maxRetries = Math.max(group.maxRetries, test.retries);
+    }
+
+    // Convert to array and sort browsers alphabetically within each group
+    const consolidatedFlaky = [...groupedFlaky.values()].map((flaky) => ({
+      ...flaky,
+      browsers: flaky.browsers.sort().join(', '),
+    }));
+
+    md += `<details>\n<summary>🔄 Flaky Tests (${consolidatedFlaky.length})</summary>\n\n`;
     md += `| Test | Retries | Browser |\n`;
     md += `|------|---------|----------|\n`;
 
-    for (const test of metrics.flakyTests.slice(0, 10)) {
-      md += `| ${test.title} | ${test.retries} | ${test.project} |\n`;
+    for (const test of consolidatedFlaky.slice(0, 10)) {
+      md += `| ${test.title} | ${test.maxRetries} | ${test.browsers} |\n`;
     }
 
-    if (metrics.flakyTests.length > 10) {
-      md += `\n*... and ${metrics.flakyTests.length - 10} more flaky tests*\n`;
+    if (consolidatedFlaky.length > 10) {
+      md += `\n*... and ${consolidatedFlaky.length - 10} more flaky tests*\n`;
     }
     md += `\n</details>\n`;
   }

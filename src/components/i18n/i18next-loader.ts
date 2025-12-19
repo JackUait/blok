@@ -27,10 +27,10 @@ export interface I18nextInitResult {
  * @param localeConfig - The loaded locale configuration
  * @returns Initialized i18next wrapper
  */
-export async function loadI18next(
+export const loadI18next = async (
   initialLocale: SupportedLocale,
   localeConfig: { dictionary: I18nDictionary }
-): Promise<I18nextInitResult> {
+): Promise<I18nextInitResult> => {
   // Dynamic import of i18next - this is the key to tree-shaking it out
   const i18next = await import('i18next');
 

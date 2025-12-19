@@ -67,13 +67,6 @@ const createBlokWithBlocks = async (
     const blok = new window.Blok({
       holder: holder,
       data: { blocks: blokBlocks },
-      tools: {
-        paragraph: {
-          config: {
-            preserveBlank: true,
-          },
-        },
-      },
     });
 
     window.blokInstance = blok;

@@ -11,12 +11,6 @@ import { LightweightI18n } from '../i18n/lightweight-i18n';
 import type { I18nextInitResult } from '../i18n/i18next-loader';
 
 /**
- * Virtual locale code used when custom messages are provided via config.
- * This is not a real locale - it's an i18next resource bundle name.
- */
-const CUSTOM_MESSAGES_LOCALE = 'custom';
-
-/**
  * I18n module - handles translations and locale management.
  *
  * Uses a lightweight implementation for English (default) and dynamically
@@ -124,14 +118,18 @@ export class I18n extends Module {
 
       await this.ensureI18nextLoaded(locale, localeConfig);
 
-      if (this.i18nextWrapper !== null) {
-        // If locale was already loaded, just change language
-        if (!this.i18nextWrapper.instance.hasResourceBundle(locale, 'translation')) {
-          this.i18nextWrapper.instance.addResourceBundle(locale, 'translation', localeConfig.dictionary);
-        }
-
-        await this.i18nextWrapper.changeLanguage(locale);
+      if (this.i18nextWrapper === null) {
+        return;
       }
+
+      // If locale was already loaded, just change language
+      const needsBundle = !this.i18nextWrapper.instance.hasResourceBundle(locale, 'translation');
+
+      if (needsBundle) {
+        this.i18nextWrapper.instance.addResourceBundle(locale, 'translation', localeConfig.dictionary);
+      }
+
+      await this.i18nextWrapper.changeLanguage(locale);
 
       this.locale = locale;
       this.usingI18next = true;

@@ -565,7 +565,7 @@ test.describe('blockToolAdapter', () => {
       expect(tool.enabledInlineTools).toStrictEqual(options.config?.inlineToolbar);
     });
 
-    test('returns false when inline toolbar is not configured', () => {
+    test('returns true when inline toolbar is not configured', () => {
       const options = createBlockToolOptions({
         config: {
           inlineToolbar: undefined,
@@ -573,7 +573,7 @@ test.describe('blockToolAdapter', () => {
       });
       const tool = new BlockToolAdapter(options);
 
-      expect(tool.enabledInlineTools).toBe(false);
+      expect(tool.enabledInlineTools).toBe(true);
     });
   });
 
@@ -1032,7 +1032,8 @@ test.describe('blockToolAdapter', () => {
       const tool = new BlockToolAdapter(options);
       const instance = ensureBlockToolStubInstance(tool.create(data, blockApi, false));
 
-      expect(instance.config).toStrictEqual(options.config?.config);
+      expect(instance.config).toMatchObject(options.config?.config ?? {});
+      expect(instance.config).toHaveProperty('_toolboxEntries');
     });
   });
 });

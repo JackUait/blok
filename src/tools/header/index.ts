@@ -204,18 +204,19 @@ export class Header implements BlockTool {
     const toolboxEntries = this._settings._toolboxEntries;
 
     /**
-     * If user provided custom toolbox entries with level data, use them to build settings menu.
+     * If user provided custom toolbox entries, use them to build settings menu.
      * This ensures block settings match the toolbox configuration.
-     * Fall back to levels config when _toolboxEntries is empty or doesn't contain level data
-     * (e.g., when using the default single "Heading" toolbox entry).
+     * Entries without explicit level data will default to the configured defaultLevel.
+     *
+     * Only fall back to levels config when _toolboxEntries is not provided or empty,
+     * or when using the default single "Heading" toolbox entry (detected by having
+     * exactly one entry with no level data and no custom title).
      */
-    const hasLevelData = toolboxEntries?.some(entry => {
-      const data = entry.data as { level?: number } | undefined;
+    const isDefaultToolboxEntry = toolboxEntries?.length === 1 &&
+      toolboxEntries[0].data === undefined &&
+      toolboxEntries[0].title === undefined;
 
-      return data?.level !== undefined;
-    });
-
-    if (toolboxEntries !== undefined && toolboxEntries.length > 0 && hasLevelData) {
+    if (toolboxEntries !== undefined && toolboxEntries.length > 0 && !isDefaultToolboxEntry) {
       return this.buildSettingsFromToolboxEntries(toolboxEntries);
     }
 

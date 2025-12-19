@@ -844,4 +844,22 @@ describe('RectangleSelection', () => {
     expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(3);
     expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(2);
   });
+
+  it('attaches mousedown listener to document.body instead of container', () => {
+    const {
+      rectangleSelection,
+    } = createRectangleSelection();
+
+    const documentAddListenerSpy = vi.spyOn(document.body, 'addEventListener');
+
+    rectangleSelection.prepare();
+
+    const mousedownCalls = documentAddListenerSpy.mock.calls.filter(
+      (call) => call[0] === 'mousedown'
+    );
+
+    expect(mousedownCalls.length).toBeGreaterThan(0);
+
+    documentAddListenerSpy.mockRestore();
+  });
 });

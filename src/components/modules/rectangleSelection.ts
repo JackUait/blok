@@ -194,9 +194,9 @@ export class RectangleSelection extends Module {
    * Sets Module necessary event handlers
    */
   private enableModuleBindings(): void {
-    const { container } = this.genHTML();
+    this.genHTML();
 
-    this.listeners.on(container, 'mousedown', (event: Event) => {
+    this.listeners.on(document.body, 'mousedown', (event: Event) => {
       this.processMouseDown(event as MouseEvent);
     }, false);
 

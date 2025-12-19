@@ -79,23 +79,30 @@ async function calculateDirSize(dir) {
 }
 
 /**
- * Get sizes of all .mjs files in a directory
+ * Get sizes of all .mjs files in a directory (recursively, including chunks/)
+ * Returns a flat map with relative paths as keys (e.g., "blok.mjs", "chunks/blok-xxx.mjs")
  */
-async function getMjsSizes(dir) {
+async function getMjsSizes(dir, basePath = '') {
   const files = {};
 
   if (!existsSync(dir)) {
     return files;
   }
 
-  const items = await readdir(dir);
+  const items = await readdir(dir, { withFileTypes: true });
 
   for (const item of items) {
-    if (item.endsWith('.mjs')) {
-      const itemPath = join(dir, item);
+    const itemPath = join(dir, item.name);
+    const relativePath = basePath ? `${basePath}/${item.name}` : item.name;
+
+    if (item.isDirectory()) {
+      // Recursively scan subdirectories (e.g., chunks/)
+      const subFiles = await getMjsSizes(itemPath, relativePath);
+      Object.assign(files, subFiles);
+    } else if (item.name.endsWith('.mjs')) {
       const stats = await stat(itemPath);
       const gzip = await getGzipSize(itemPath);
-      files[item] = { raw: stats.size, gzip };
+      files[relativePath] = { raw: stats.size, gzip };
     }
   }
 
@@ -159,9 +166,40 @@ async function buildVariant(name, config) {
 }
 
 /**
+ * Check if a file is a locale message chunk (lazy-loaded, shouldn't count toward core bundle)
+ */
+function isMessageChunk(filePath) {
+  const fileName = filePath.split('/').pop();
+  return fileName.startsWith('messages-') && fileName.endsWith('.mjs');
+}
+
+/**
+ * Check if a file is a core bundle file for the normal variant
+ * Includes: entry points, main chunks in chunks/, but NOT message chunks
+ */
+function isNormalBundleFile(filePath) {
+  // Entry points in root
+  if (filePath === 'blok.mjs' || filePath === 'locales.mjs') {
+    return true;
+  }
+
+  // Main chunks in chunks/ directory (blok-*.mjs, i18next-*.mjs, block-tune-*.mjs, index-*.mjs)
+  // Exclude message chunks which are lazy-loaded locales
+  if (filePath.startsWith('chunks/') && filePath.endsWith('.mjs')) {
+    if (isMessageChunk(filePath)) {
+      return false;
+    }
+    // Include all non-message chunks (blok-*, i18next-*, block-tune-*, index-*, etc.)
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Measure a variant's size
  * For minimum/maximum variants, we measure only the main bundle (not code-split chunks)
- * For normal, we measure the main bundle + locales entry (what ships by default)
+ * For normal, we measure the main bundle + required chunks (what loads on init)
  */
 async function measureVariant(name, config) {
   const outDir = join(projectRoot, config.outDir);
@@ -173,33 +211,37 @@ async function measureVariant(name, config) {
   let mainBundleGzip = 0;
   const mainBundleFiles = {};
 
-  for (const [fileName, size] of Object.entries(files)) {
-    // Include entry points and their chunks, but NOT locale message chunks
-    const isEntryPoint = fileName === 'blok.mjs' || fileName === 'locales.mjs';
-    const isMainChunk = fileName.startsWith('blok-') && fileName.endsWith('.mjs');
-
+  for (const [filePath, size] of Object.entries(files)) {
     // For all variants, exclude individual message chunks from the "main" size
     // These are lazy-loaded and shouldn't count toward the core bundle
     if (name === 'normal') {
-      // Normal build: include blok.mjs, blok-*.mjs, locales.mjs (but not message chunks)
-      if (isEntryPoint || isMainChunk) {
+      // Normal build: include entry points and all core chunks (not message chunks)
+      if (isNormalBundleFile(filePath)) {
         mainBundleRaw += size.raw;
         mainBundleGzip += size.gzip;
-        mainBundleFiles[fileName] = size;
+        mainBundleFiles[filePath] = size;
       }
     } else if (name === 'minimum') {
-      // Minimum: only blok.mjs and blok-minimum-*.mjs
-      if (fileName === 'blok.mjs' || (isMainChunk && fileName.includes('minimum'))) {
+      // Minimum: blok.mjs entry + blok-minimum-*.mjs main chunk (no message chunks)
+      const fileName = filePath.split('/').pop();
+      const isMinimumBundle =
+        filePath === 'blok.mjs' ||
+        (fileName.startsWith('blok-minimum-') && fileName.endsWith('.mjs'));
+      if (isMinimumBundle) {
         mainBundleRaw += size.raw;
         mainBundleGzip += size.gzip;
-        mainBundleFiles[fileName] = size;
+        mainBundleFiles[filePath] = size;
       }
     } else if (name === 'maximum') {
-      // Maximum: blok.mjs and blok-maximum-*.mjs (all locales are inlined)
-      if (fileName === 'blok.mjs' || (isMainChunk && fileName.includes('maximum'))) {
+      // Maximum: blok.mjs entry + blok-maximum-*.mjs main chunk (all locales inlined)
+      const fileName = filePath.split('/').pop();
+      const isMaximumBundle =
+        filePath === 'blok.mjs' ||
+        (fileName.startsWith('blok-maximum-') && fileName.endsWith('.mjs'));
+      if (isMaximumBundle) {
         mainBundleRaw += size.raw;
         mainBundleGzip += size.gzip;
-        mainBundleFiles[fileName] = size;
+        mainBundleFiles[filePath] = size;
       }
     }
   }

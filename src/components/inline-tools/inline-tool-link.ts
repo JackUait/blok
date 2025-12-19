@@ -170,11 +170,9 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * Set a shortcut
+   * Shortcut for the link tool
    */
-  public get shortcut(): string {
-    return 'CMD+K';
-  }
+  public static shortcut = 'CMD+K';
 
   /**
    * @param {boolean} needFocus - on link creation we need to focus input. On editing - nope.

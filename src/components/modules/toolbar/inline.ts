@@ -95,6 +95,12 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   private popover: Popover | null = null;
 
   /**
+   * Promise that resolves when the toolbar is fully opened
+   * Used to ensure shortcuts wait for popover initialization
+   */
+  private openingPromise: Promise<void> | null = null;
+
+  /**
    * Margin above/below the Toolbar
    */
   private readonly toolbarVerticalMargin: number = isMobileScreen() ? 20 : 6;
@@ -335,7 +341,9 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
-    await this.open();
+    this.openingPromise = this.open();
+    await this.openingPromise;
+    this.openingPromise = null;
 
     this.Blok.Toolbar.close();
   }
@@ -350,6 +358,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
 
     this.tools = new Map();
     this.opened = false;
+    this.openingPromise = null;
 
     // Hide and destroy popover
     if (this.popover) {
@@ -838,6 +847,16 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   private async activateToolByShortcut(toolName: string): Promise<void> {
     if (!this.opened) {
       await this.tryToShow();
+    }
+
+    /**
+     * Wait for any pending opening operation to complete.
+     * This handles the race condition where the toolbar is being opened
+     * asynchronously (e.g., from a selectionchange event) and the shortcut
+     * is pressed before the popover is fully initialized.
+     */
+    if (this.openingPromise !== null) {
+      await this.openingPromise;
     }
 
     if (this.popover) {

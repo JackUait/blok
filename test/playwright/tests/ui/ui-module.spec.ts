@@ -356,5 +356,207 @@ test.describe('ui module', () => {
       expect(result.lastBlockIsEmpty).toBe(true);
     });
   });
+
+  test.describe('extended hover zone', () => {
+    const threeBlocksData: OutputData = {
+      blocks: [
+        {
+          id: 'block-1',
+          type: 'paragraph',
+          data: {
+            text: 'First block',
+          },
+        },
+        {
+          id: 'block-2',
+          type: 'paragraph',
+          data: {
+            text: 'Second block',
+          },
+        },
+        {
+          id: 'block-3',
+          type: 'paragraph',
+          data: {
+            text: 'Third block',
+          },
+        },
+      ],
+    };
+
+    /**
+     * Gets the position data needed to test hover zones
+     */
+    const getHoverZonePositions = async (page: Page): Promise<{
+      contentLeft: number;
+      firstBlockTop: number;
+      firstBlockBottom: number;
+      secondBlockTop: number;
+      secondBlockBottom: number;
+    }> => {
+      return await page.evaluate(() => {
+        const blocks = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
+        const firstBlock = blocks[0];
+        const secondBlock = blocks[1];
+
+        if (!firstBlock || !secondBlock) {
+          throw new Error('Blocks not found');
+        }
+
+        const contentElement = firstBlock.querySelector('[data-blok-testid="block-content"]');
+
+        if (!contentElement) {
+          throw new Error('Content element not found');
+        }
+
+        const contentRect = contentElement.getBoundingClientRect();
+        const firstBlockRect = firstBlock.getBoundingClientRect();
+        const secondBlockRect = secondBlock.getBoundingClientRect();
+
+        return {
+          contentLeft: contentRect.left,
+          firstBlockTop: firstBlockRect.top,
+          firstBlockBottom: firstBlockRect.bottom,
+          secondBlockTop: secondBlockRect.top,
+          secondBlockBottom: secondBlockRect.bottom,
+        };
+      });
+    };
+
+    /**
+     * Gets which block the toolbar is currently positioned on
+     */
+    const getToolbarBlockId = async (page: Page): Promise<string | null> => {
+      return await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+
+        if (!toolbar) {
+          return null;
+        }
+
+        // The toolbar is positioned next to its target block
+        // We can find it by checking which block-wrapper contains/is near the toolbar
+        const toolbarRect = toolbar.getBoundingClientRect();
+        const blocks = Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"]'));
+
+        for (const block of blocks) {
+          const blockRect = block.getBoundingClientRect();
+
+          // Check if toolbar's vertical center is within block bounds
+          const toolbarCenterY = toolbarRect.top + toolbarRect.height / 2;
+
+          if (toolbarCenterY >= blockRect.top && toolbarCenterY <= blockRect.bottom) {
+            return block.getAttribute('data-blok-id');
+          }
+        }
+
+        return null;
+      });
+    };
+
+    test('shows toolbar when hovering in extended zone to the left of content (LTR)', async ({ page }) => {
+      await createBlok(page, { data: threeBlocksData });
+
+      // First hover directly on the second block to establish toolbar there
+      const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({
+        hasText: 'Second block',
+      });
+
+      await secondParagraph.hover();
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is positioned at the second block
+      const initialBlockId = await getToolbarBlockId(page);
+
+      expect(initialBlockId).toBe('block-2');
+
+      // Get positions for hover zone calculation
+      const positions = await getHoverZonePositions(page);
+
+      // Now hover in the extended zone (50px left of content) at the first block's Y position
+      const hoverX = positions.contentLeft - 50; // 50px left of content edge (within 100px zone)
+      const hoverY = (positions.firstBlockTop + positions.firstBlockBottom) / 2; // Middle of first block
+
+      await page.mouse.move(hoverX, hoverY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar moved to the first block
+      const newBlockId = await getToolbarBlockId(page);
+
+      expect(newBlockId).toBe('block-1');
+    });
+
+    test('does not trigger hover when cursor is beyond the extended zone boundary', async ({ page }) => {
+      await createBlok(page, { data: threeBlocksData });
+
+      // Get positions first
+      const positions = await getHoverZonePositions(page);
+
+      // Hover in the extended zone to verify it works
+      const inZoneX = positions.contentLeft - 50; // 50px left (inside 100px zone)
+      const blockY = (positions.firstBlockTop + positions.firstBlockBottom) / 2;
+
+      await page.mouse.move(inZoneX, blockY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is on first block (zone hover worked)
+      const zoneBlockId = await getToolbarBlockId(page);
+
+      expect(zoneBlockId).toBe('block-1');
+
+      // Now move far outside the zone (200px left of content, beyond the 100px limit)
+      // Keep same Y position - since we're outside the zone, no new hover should trigger
+      const outsideZoneX = positions.contentLeft - 200;
+
+      await page.mouse.move(outsideZoneX, blockY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for potential hover event
+      await page.waitForTimeout(100);
+
+      // Toolbar should still be on first block (no new block detected outside zone)
+      const afterOutsideBlockId = await getToolbarBlockId(page);
+
+      expect(afterOutsideBlockId).toBe('block-1');
+    });
+
+    test('switches between blocks when moving vertically in the extended zone', async ({ page }) => {
+      await createBlok(page, { data: threeBlocksData });
+
+      // Get positions
+      const positions = await getHoverZonePositions(page);
+
+      // Hover in the extended zone at the first block's Y position
+      const hoverX = positions.contentLeft - 50;
+      const firstBlockY = (positions.firstBlockTop + positions.firstBlockBottom) / 2;
+
+      await page.mouse.move(hoverX, firstBlockY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is on first block
+      let currentBlockId = await getToolbarBlockId(page);
+
+      expect(currentBlockId).toBe('block-1');
+
+      // Move to the second block's Y position (staying in the extended zone)
+      const secondBlockY = (positions.secondBlockTop + positions.secondBlockBottom) / 2;
+
+      await page.mouse.move(hoverX, secondBlockY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar moved to second block
+      currentBlockId = await getToolbarBlockId(page);
+      expect(currentBlockId).toBe('block-2');
+    });
+  });
 });
 

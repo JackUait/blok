@@ -855,7 +855,7 @@ describe('UI module', () => {
 
   describe('hover and placeholder helpers', () => {
     it('emits block-hovered events for unique hovered blocks', () => {
-      const { ui, blok, redactor, eventsDispatcher } = createUI();
+      const { ui, blok, wrapper, redactor, eventsDispatcher } = createUI();
       const blockElement = document.createElement('div');
 
       blockElement.setAttribute('data-blok-testid', 'block-wrapper');
@@ -875,12 +875,278 @@ describe('UI module', () => {
       const event = new MouseEvent('mousemove', { bubbles: true });
 
       Object.defineProperty(event, 'target', { value: blockElement });
-      redactor.dispatchEvent(event);
+      wrapper.dispatchEvent(event);
 
       expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, { block: blockStub, target: blockElement });
       eventsDispatcher.emit.mockClear();
 
-      redactor.dispatchEvent(event);
+      wrapper.dispatchEvent(event);
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('emits block-hovered event when hovering in the extended left zone (LTR)', () => {
+      const { ui, blok, wrapper, eventsDispatcher } = createUI();
+
+      // Create a block with a holder that has specific bounds
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+
+      // Mock getBoundingClientRect for the block holder
+      vi.spyOn(blockHolder, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 200,
+        right: 600,
+        width: 400,
+        height: 50,
+      } as DOMRect);
+
+      const blockStub = {
+        id: 'zone-block',
+        name: 'paragraph',
+        holder: blockHolder,
+      };
+
+      // Set up BlockManager.blocks to return our block
+      Object.defineProperty(blok.BlockManager, 'blocks', {
+        value: [blockStub],
+        configurable: true,
+      });
+
+      // Mock contentRect to define the content area
+      // Content starts at x=200, so hover zone is 100-200
+      vi.spyOn(ui, 'contentRect', 'get').mockReturnValue({
+        left: 200,
+        right: 600,
+        width: 400,
+      } as DOMRect);
+
+      (ui as unknown as { watchBlockHoveredEvents: () => void }).watchBlockHoveredEvents();
+
+      // Simulate hovering in the left zone (x=150, which is 50px left of content edge)
+      // Y=125 is within the block's vertical bounds (100-150)
+      const event = new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 150,
+        clientY: 125,
+      });
+
+      // Target is the wrapper itself (not a block element)
+      Object.defineProperty(event, 'target', { value: wrapper });
+      wrapper.dispatchEvent(event);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: blockStub,
+        target: blockHolder,
+      });
+    });
+
+    it('does not emit block-hovered when cursor is outside the extended zone', () => {
+      const { ui, blok, wrapper, eventsDispatcher } = createUI();
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+      vi.spyOn(blockHolder, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 200,
+        right: 600,
+        width: 400,
+        height: 50,
+      } as DOMRect);
+
+      const blockStub = {
+        id: 'zone-block',
+        name: 'paragraph',
+        holder: blockHolder,
+      };
+
+      Object.defineProperty(blok.BlockManager, 'blocks', {
+        value: [blockStub],
+        configurable: true,
+      });
+
+      // Content starts at x=200, hover zone extends to x=100
+      vi.spyOn(ui, 'contentRect', 'get').mockReturnValue({
+        left: 200,
+        right: 600,
+        width: 400,
+      } as DOMRect);
+
+      (ui as unknown as { watchBlockHoveredEvents: () => void }).watchBlockHoveredEvents();
+
+      // Simulate hovering too far left (x=50, which is 150px from content edge, beyond 100px zone)
+      const event = new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 50,
+        clientY: 125,
+      });
+
+      Object.defineProperty(event, 'target', { value: wrapper });
+      wrapper.dispatchEvent(event);
+
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('does not emit block-hovered when cursor Y is outside block bounds', () => {
+      const { ui, blok, wrapper, eventsDispatcher } = createUI();
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+      vi.spyOn(blockHolder, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 200,
+        right: 600,
+        width: 400,
+        height: 50,
+      } as DOMRect);
+
+      const blockStub = {
+        id: 'zone-block',
+        name: 'paragraph',
+        holder: blockHolder,
+      };
+
+      Object.defineProperty(blok.BlockManager, 'blocks', {
+        value: [blockStub],
+        configurable: true,
+      });
+
+      vi.spyOn(ui, 'contentRect', 'get').mockReturnValue({
+        left: 200,
+        right: 600,
+        width: 400,
+      } as DOMRect);
+
+      (ui as unknown as { watchBlockHoveredEvents: () => void }).watchBlockHoveredEvents();
+
+      // X is in zone (150), but Y is below the block (200 > 150)
+      const event = new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 150,
+        clientY: 200,
+      });
+
+      Object.defineProperty(event, 'target', { value: wrapper });
+      wrapper.dispatchEvent(event);
+
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('emits block-hovered in extended right zone for RTL layouts', () => {
+      const { ui, blok, wrapper, eventsDispatcher } = createUI({
+        configOverrides: { i18n: { direction: 'rtl' } as unknown as BlokConfig['i18n'] },
+      });
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+      vi.spyOn(blockHolder, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 200,
+        right: 600,
+        width: 400,
+        height: 50,
+      } as DOMRect);
+
+      const blockStub = {
+        id: 'rtl-block',
+        name: 'paragraph',
+        holder: blockHolder,
+      };
+
+      Object.defineProperty(blok.BlockManager, 'blocks', {
+        value: [blockStub],
+        configurable: true,
+      });
+
+      // Content ends at x=600, so RTL hover zone is 600-700
+      vi.spyOn(ui, 'contentRect', 'get').mockReturnValue({
+        left: 200,
+        right: 600,
+        width: 400,
+      } as DOMRect);
+
+      (ui as unknown as { watchBlockHoveredEvents: () => void }).watchBlockHoveredEvents();
+
+      // Simulate hovering in the right zone for RTL (x=650, 50px right of content edge)
+      const event = new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 650,
+        clientY: 125,
+      });
+
+      Object.defineProperty(event, 'target', { value: wrapper });
+      wrapper.dispatchEvent(event);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: blockStub,
+        target: blockHolder,
+      });
+    });
+
+    it('does not re-emit for same block in extended zone', () => {
+      const { ui, blok, wrapper, eventsDispatcher } = createUI();
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+      vi.spyOn(blockHolder, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 200,
+        right: 600,
+        width: 400,
+        height: 50,
+      } as DOMRect);
+
+      const blockStub = {
+        id: 'zone-block',
+        name: 'paragraph',
+        holder: blockHolder,
+      };
+
+      Object.defineProperty(blok.BlockManager, 'blocks', {
+        value: [blockStub],
+        configurable: true,
+      });
+
+      vi.spyOn(ui, 'contentRect', 'get').mockReturnValue({
+        left: 200,
+        right: 600,
+        width: 400,
+      } as DOMRect);
+
+      (ui as unknown as { watchBlockHoveredEvents: () => void }).watchBlockHoveredEvents();
+
+      // First hover in zone
+      const event1 = new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 150,
+        clientY: 125,
+      });
+
+      Object.defineProperty(event1, 'target', { value: wrapper });
+      wrapper.dispatchEvent(event1);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledTimes(1);
+      eventsDispatcher.emit.mockClear();
+
+      // Second hover in same zone (different X but same block)
+      const event2 = new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 160,
+        clientY: 130,
+      });
+
+      Object.defineProperty(event2, 'target', { value: wrapper });
+      wrapper.dispatchEvent(event2);
+
       expect(eventsDispatcher.emit).not.toHaveBeenCalled();
     });
 

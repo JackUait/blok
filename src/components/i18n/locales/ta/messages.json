@@ -25,7 +25,7 @@
   "tools.header.heading4": "தலைப்பு 4",
   "tools.header.heading5": "தலைப்பு 5",
   "tools.header.heading6": "தலைப்பு 6",
-  "tools.list.list": "பட்டியல்",
+  "tools.list.placeholder": "பட்டியல்",
   "blockSettings.delete": "நீக்கு",
   "a11y.dragHandle": "தொகுதியை நகர்த்த இழுக்கவும் அல்லது மெனுவுக்கு கிளிக் செய்யவும்",
   "a11y.dragHandleRole": "இழுக்கும் கைப்பிடி",

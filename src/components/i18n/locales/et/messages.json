@@ -25,7 +25,7 @@
   "tools.header.heading4": "Pealkiri 4",
   "tools.header.heading5": "Pealkiri 5",
   "tools.header.heading6": "Pealkiri 6",
-  "tools.list.list": "Loend",
+  "tools.list.placeholder": "Loend",
   "blockSettings.delete": "Kustuta",
   "a11y.dragHandle": "Lohista ploki teisaldamiseks või klõpsa menüü jaoks",
   "a11y.dragHandleRole": "lohistamiskäepide",

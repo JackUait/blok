@@ -25,7 +25,7 @@
   "tools.header.heading4": "Nagłówek 4",
   "tools.header.heading5": "Nagłówek 5",
   "tools.header.heading6": "Nagłówek 6",
-  "tools.list.list": "Lista",
+  "tools.list.placeholder": "Lista",
   "blockSettings.delete": "Usuń",
   "a11y.dragHandle": "Przeciągnij, aby przenieść lub kliknij, aby otworzyć menu",
   "a11y.dragHandleRole": "uchwyt przeciągania",

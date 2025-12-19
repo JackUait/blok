@@ -25,7 +25,7 @@
   "tools.header.heading4": "Наслов 4",
   "tools.header.heading5": "Наслов 5",
   "tools.header.heading6": "Наслов 6",
-  "tools.list.list": "Листа",
+  "tools.list.placeholder": "Листа",
   "blockSettings.delete": "Обриши",
   "a11y.dragHandle": "Превуците за премештање блока или кликните за мени",
   "a11y.dragHandleRole": "ручка за превлачење",

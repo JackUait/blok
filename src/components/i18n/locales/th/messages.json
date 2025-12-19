@@ -25,7 +25,7 @@
   "tools.header.heading4": "หัวข้อ 4",
   "tools.header.heading5": "หัวข้อ 5",
   "tools.header.heading6": "หัวข้อ 6",
-  "tools.list.list": "รายการ",
+  "tools.list.placeholder": "รายการ",
   "blockSettings.delete": "ลบ",
   "a11y.dragHandle": "ลากเพื่อย้ายบล็อก หรือคลิกเพื่อเปิดเมนู",
   "a11y.dragHandleRole": "ที่จับสำหรับลาก",

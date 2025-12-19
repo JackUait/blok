@@ -25,7 +25,7 @@
   "tools.header.heading4": "سرلیک ۴",
   "tools.header.heading5": "سرلیک ۵",
   "tools.header.heading6": "سرلیک ۶",
-  "tools.list.list": "لیست",
+  "tools.list.placeholder": "لیست",
   "blockSettings.delete": "ړنګول",
   "a11y.dragHandle": "د لیږدولو لپاره کش کړئ یا د مینو لپاره کلیک وکړئ",
   "a11y.dragHandleRole": "د کشولو لاستی",

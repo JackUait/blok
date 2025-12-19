@@ -25,7 +25,7 @@
   "tools.header.heading4": "Վերնագիր 4",
   "tools.header.heading5": "Վերնագիր 5",
   "tools.header.heading6": "Վերնագիր 6",
-  "tools.list.list": "Ցուցակ",
+  "tools.list.placeholder": "Ցուցակ",
   "blockSettings.delete": "Ջնջել",
   "a11y.dragHandle": "Քաշեք տեղափոխելու կամ սեղմեք մենյուի համար",
   "a11y.dragHandleRole": "քաշման կոճակ",

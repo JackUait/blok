@@ -25,7 +25,7 @@
   "tools.header.heading4": "Otsikko 4",
   "tools.header.heading5": "Otsikko 5",
   "tools.header.heading6": "Otsikko 6",
-  "tools.list.list": "Lista",
+  "tools.list.placeholder": "Lista",
   "blockSettings.delete": "Poista",
   "a11y.dragHandle": "Vedä siirtääksesi lohkon tai napsauta avataksesi valikon",
   "a11y.dragHandleRole": "vetokahva",

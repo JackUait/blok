@@ -25,7 +25,7 @@
   "tools.header.heading4": "Tajuk 4",
   "tools.header.heading5": "Tajuk 5",
   "tools.header.heading6": "Tajuk 6",
-  "tools.list.list": "Senarai",
+  "tools.list.placeholder": "Senarai",
   "blockSettings.delete": "Padam",
   "a11y.dragHandle": "Seret untuk alih blok atau klik untuk menu",
   "a11y.dragHandleRole": "pemegang seret",

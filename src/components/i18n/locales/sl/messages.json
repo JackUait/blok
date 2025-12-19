@@ -25,7 +25,7 @@
   "tools.header.heading4": "Naslov 4",
   "tools.header.heading5": "Naslov 5",
   "tools.header.heading6": "Naslov 6",
-  "tools.list.list": "Seznam",
+  "tools.list.placeholder": "Seznam",
   "blockSettings.delete": "Izbriši",
   "a11y.dragHandle": "Povlecite za premik bloka ali kliknite za meni",
   "a11y.dragHandleRole": "ročaj za vlečenje",

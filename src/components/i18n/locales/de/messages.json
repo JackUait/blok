@@ -25,7 +25,7 @@
   "tools.header.heading4": "Überschrift 4",
   "tools.header.heading5": "Überschrift 5",
   "tools.header.heading6": "Überschrift 6",
-  "tools.list.list": "Liste",
+  "tools.list.placeholder": "Liste",
   "blockSettings.delete": "Löschen",
   "a11y.dragHandle": "Ziehen zum Verschieben oder klicken für Menü",
   "a11y.dragHandleRole": "Ziehgriff",

@@ -25,7 +25,7 @@
   "tools.header.heading4": "Tiêu đề 4",
   "tools.header.heading5": "Tiêu đề 5",
   "tools.header.heading6": "Tiêu đề 6",
-  "tools.list.list": "Danh sách",
+  "tools.list.placeholder": "Danh sách",
   "blockSettings.delete": "Xóa",
   "a11y.dragHandle": "Kéo để di chuyển khối hoặc nhấp để mở menu",
   "a11y.dragHandleRole": "tay nắm kéo",

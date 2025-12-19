@@ -25,7 +25,7 @@
   "tools.header.heading4": "ຫົວຂໍ້ 4",
   "tools.header.heading5": "ຫົວຂໍ້ 5",
   "tools.header.heading6": "ຫົວຂໍ້ 6",
-  "tools.list.list": "ລາຍການ",
+  "tools.list.placeholder": "ລາຍການ",
   "blockSettings.delete": "ລຶບ",
   "a11y.dragHandle": "ລາກເພື່ອຍ້າຍບລັອກ ຫຼື ຄລິກເພື່ອເປີດເມນູ",
   "a11y.dragHandleRole": "ບ່ອນຈັບລາກ",

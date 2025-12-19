@@ -25,7 +25,7 @@
   "tools.header.heading4": "Nadpis 4",
   "tools.header.heading5": "Nadpis 5",
   "tools.header.heading6": "Nadpis 6",
-  "tools.list.list": "Zoznam",
+  "tools.list.placeholder": "Zoznam",
   "blockSettings.delete": "Odstrániť",
   "a11y.dragHandle": "Potiahnutím presuniete blok alebo kliknutím otvoríte ponuku",
   "a11y.dragHandleRole": "úchyt na presun",

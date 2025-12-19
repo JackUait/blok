@@ -226,10 +226,10 @@ export class ListItem implements BlockTool {
     return this._settings.itemSize;
   }
 
-  private static readonly DEFAULT_PLACEHOLDER = 'List';
+  private static readonly PLACEHOLDER_KEY = 'tools.list.placeholder';
 
   private get placeholder(): string {
-    return this.api.i18n.t(ListItem.DEFAULT_PLACEHOLDER);
+    return this.api.i18n.t(ListItem.PLACEHOLDER_KEY);
   }
 
   private applyItemStyles(element: HTMLElement): void {

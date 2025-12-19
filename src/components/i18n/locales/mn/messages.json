@@ -25,7 +25,7 @@
   "tools.header.heading4": "Гарчиг 4",
   "tools.header.heading5": "Гарчиг 5",
   "tools.header.heading6": "Гарчиг 6",
-  "tools.list.list": "Жагсаалт",
+  "tools.list.placeholder": "Жагсаалт",
   "blockSettings.delete": "Устгах",
   "a11y.dragHandle": "Блок зөөхийн тулд чирнэ үү эсвэл цэсийг нээхийн тулд дарна уу",
   "a11y.dragHandleRole": "чирэх бариул",

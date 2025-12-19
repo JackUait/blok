@@ -25,7 +25,7 @@
   "tools.header.heading4": "Virsraksts 4",
   "tools.header.heading5": "Virsraksts 5",
   "tools.header.heading6": "Virsraksts 6",
-  "tools.list.list": "Saraksts",
+  "tools.list.placeholder": "Saraksts",
   "blockSettings.delete": "Dzēst",
   "a11y.dragHandle": "Velciet, lai pārvietotu bloku, vai noklikšķiniet izvēlnei",
   "a11y.dragHandleRole": "vilkšanas rokturis",

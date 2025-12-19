@@ -25,7 +25,7 @@
   "tools.header.heading4": "כותרת 4",
   "tools.header.heading5": "כותרת 5",
   "tools.header.heading6": "כותרת 6",
-  "tools.list.list": "רשימה",
+  "tools.list.placeholder": "רשימה",
   "blockSettings.delete": "מחק",
   "a11y.dragHandle": "גרור להזזת הבלוק או לחץ לתפריט",
   "a11y.dragHandleRole": "ידית גרירה",

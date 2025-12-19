@@ -25,7 +25,7 @@
   "tools.header.heading4": "Επικεφαλίδα 4",
   "tools.header.heading5": "Επικεφαλίδα 5",
   "tools.header.heading6": "Επικεφαλίδα 6",
-  "tools.list.list": "Λίστα",
+  "tools.list.placeholder": "Λίστα",
   "blockSettings.delete": "Διαγραφή",
   "a11y.dragHandle": "Σύρετε για μετακίνηση ή κλικ για μενού",
   "a11y.dragHandleRole": "λαβή μετακίνησης",

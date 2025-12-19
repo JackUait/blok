@@ -25,7 +25,7 @@
   "tools.header.heading4": "Kop 4",
   "tools.header.heading5": "Kop 5",
   "tools.header.heading6": "Kop 6",
-  "tools.list.list": "Lijst",
+  "tools.list.placeholder": "Lijst",
   "blockSettings.delete": "Verwijderen",
   "a11y.dragHandle": "Sleep om te verplaatsen of klik voor menu",
   "a11y.dragHandleRole": "sleepgreep",

@@ -25,7 +25,7 @@
   "tools.header.heading4": "Overskrift 4",
   "tools.header.heading5": "Overskrift 5",
   "tools.header.heading6": "Overskrift 6",
-  "tools.list.list": "Liste",
+  "tools.list.placeholder": "Liste",
   "blockSettings.delete": "Slett",
   "a11y.dragHandle": "Dra for å flytte blokk eller klikk for meny",
   "a11y.dragHandleRole": "drahåndtak",

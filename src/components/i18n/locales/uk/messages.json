@@ -25,7 +25,7 @@
   "tools.header.heading4": "Заголовок 4",
   "tools.header.heading5": "Заголовок 5",
   "tools.header.heading6": "Заголовок 6",
-  "tools.list.list": "Список",
+  "tools.list.placeholder": "Список",
   "blockSettings.delete": "Видалити",
   "a11y.dragHandle": "Перетягніть або натисніть для меню",
   "a11y.dragHandleRole": "елемент керування блоком",

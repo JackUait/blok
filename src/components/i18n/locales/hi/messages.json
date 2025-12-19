@@ -25,7 +25,7 @@
   "tools.header.heading4": "शीर्षक 4",
   "tools.header.heading5": "शीर्षक 5",
   "tools.header.heading6": "शीर्षक 6",
-  "tools.list.list": "सूची",
+  "tools.list.placeholder": "सूची",
   "blockSettings.delete": "हटाएं",
   "a11y.dragHandle": "खींचकर ब्लॉक ले जाएं या मेनू के लिए क्लिक करें",
   "a11y.dragHandleRole": "खींचने का हैंडल",

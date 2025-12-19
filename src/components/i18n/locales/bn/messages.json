@@ -25,7 +25,7 @@
   "tools.header.heading4": "শিরোনাম 4",
   "tools.header.heading5": "শিরোনাম 5",
   "tools.header.heading6": "শিরোনাম 6",
-  "tools.list.list": "তালিকা",
+  "tools.list.placeholder": "তালিকা",
   "blockSettings.delete": "মুছুন",
   "a11y.dragHandle": "ব্লক সরাতে টানুন বা মেনুর জন্য ক্লিক করুন",
   "a11y.dragHandleRole": "টানার হ্যান্ডেল",

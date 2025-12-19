@@ -25,7 +25,7 @@
   "tools.header.heading4": "Başlık 4",
   "tools.header.heading5": "Başlık 5",
   "tools.header.heading6": "Başlık 6",
-  "tools.list.list": "Liste",
+  "tools.list.placeholder": "Liste",
   "blockSettings.delete": "Sil",
   "a11y.dragHandle": "Taşımak için sürükle veya menü için tıkla",
   "a11y.dragHandleRole": "sürükleme tutamacı",

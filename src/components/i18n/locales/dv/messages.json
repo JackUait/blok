@@ -25,7 +25,7 @@
   "tools.header.heading4": "ސުރުޚީ 4",
   "tools.header.heading5": "ސުރުޚީ 5",
   "tools.header.heading6": "ސުރުޚީ 6",
-  "tools.list.list": "ލިސްޓް",
+  "tools.list.placeholder": "ލިސްޓް",
   "blockSettings.delete": "ފޮހެލާ",
   "a11y.dragHandle": "ބްލޮކް ބަދަލުކުރަން ދަމާލާ ނުވަތަ މެނޫއަށް ކްލިކް ކުރޭ",
   "a11y.dragHandleRole": "ދެމުމުގެ ހެންޑަލް",

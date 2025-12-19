@@ -25,7 +25,7 @@
   "tools.header.heading4": "სათაური 4",
   "tools.header.heading5": "სათაური 5",
   "tools.header.heading6": "სათაური 6",
-  "tools.list.list": "სია",
+  "tools.list.placeholder": "სია",
   "blockSettings.delete": "წაშლა",
   "a11y.dragHandle": "გადაიტანეთ ბლოკის გადასატანად ან დააწკაპუნეთ მენიუსთვის",
   "a11y.dragHandleRole": "გადატანის სახელური",

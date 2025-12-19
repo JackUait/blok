@@ -25,7 +25,7 @@
   "tools.header.heading4": "Judul 4",
   "tools.header.heading5": "Judul 5",
   "tools.header.heading6": "Judul 6",
-  "tools.list.list": "Daftar",
+  "tools.list.placeholder": "Daftar",
   "blockSettings.delete": "Hapus",
   "a11y.dragHandle": "Seret untuk memindahkan blok atau klik untuk menu",
   "a11y.dragHandleRole": "pegangan seret",

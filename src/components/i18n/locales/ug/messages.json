@@ -25,7 +25,7 @@
   "tools.header.heading4": "ماۋزۇ 4",
   "tools.header.heading5": "ماۋزۇ 5",
   "tools.header.heading6": "ماۋزۇ 6",
-  "tools.list.list": "تىزىملىك",
+  "tools.list.placeholder": "تىزىملىك",
   "blockSettings.delete": "ئۆچۈرۈش",
   "a11y.dragHandle": "بۆلەكنى يۆتكەش ئۈچۈن سۆرەڭ ياكى تىزىملىك ئۈچۈن چېكىڭ",
   "a11y.dragHandleRole": "سۆرەش تۇتقۇچى",

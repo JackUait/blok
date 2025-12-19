@@ -25,7 +25,7 @@
   "tools.header.heading4": "ចំណងជើង ៤",
   "tools.header.heading5": "ចំណងជើង ៥",
   "tools.header.heading6": "ចំណងជើង ៦",
-  "tools.list.list": "បញ្ជី",
+  "tools.list.placeholder": "បញ្ជី",
   "blockSettings.delete": "លុប",
   "a11y.dragHandle": "អូសដើម្បីផ្លាស់ទីប្លុក ឬចុចសម្រាប់ម៉ឺនុយ",
   "a11y.dragHandleRole": "ចំណុចទាញ",

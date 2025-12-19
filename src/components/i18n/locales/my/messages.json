@@ -25,7 +25,7 @@
   "tools.header.heading4": "ခေါင်းစဉ် ၄",
   "tools.header.heading5": "ခေါင်းစဉ် ၅",
   "tools.header.heading6": "ခေါင်းစဉ် ၆",
-  "tools.list.list": "စာရင်း",
+  "tools.list.placeholder": "စာရင်း",
   "blockSettings.delete": "ဖျက်ရန်",
   "a11y.dragHandle": "ဘလောက်ရွှေ့ရန် ဆွဲယူပါ သို့မဟုတ် မီနူးအတွက် နှိပ်ပါ",
   "a11y.dragHandleRole": "ဆွဲယူကိုင်တံ",

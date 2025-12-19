@@ -25,7 +25,7 @@
   "tools.header.heading4": "Naslov 4",
   "tools.header.heading5": "Naslov 5",
   "tools.header.heading6": "Naslov 6",
-  "tools.list.list": "Popis",
+  "tools.list.placeholder": "Popis",
   "blockSettings.delete": "Obriši",
   "a11y.dragHandle": "Povuci za premještanje bloka ili klikni za izbornik",
   "a11y.dragHandleRole": "ručka za povlačenje",

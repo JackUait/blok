@@ -25,7 +25,7 @@
   "tools.header.heading4": "見出し 4",
   "tools.header.heading5": "見出し 5",
   "tools.header.heading6": "見出し 6",
-  "tools.list.list": "リスト",
+  "tools.list.placeholder": "リスト",
   "blockSettings.delete": "削除",
   "a11y.dragHandle": "ドラッグで移動、クリックでメニュー",
   "a11y.dragHandleRole": "ドラッグハンドル",

@@ -203,10 +203,18 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
-   * Returns enabled inline tools for Tool
+   * Returns enabled inline tools for Tool.
+   * Defaults to true (all inline tools) unless explicitly set to false or array.
    */
   public get enabledInlineTools(): boolean | string[] {
-    return this.config[UserSettings.EnabledInlineTools] || false;
+    const setting = this.config[UserSettings.EnabledInlineTools];
+
+    // Default to true if not specified
+    if (setting === undefined) {
+      return true;
+    }
+
+    return setting;
   }
 
   /**

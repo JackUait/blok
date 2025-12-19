@@ -25,6 +25,7 @@ export class I18nAPI extends Module {
     if (this.cachedMethods === null) {
       this.cachedMethods = {
         t: (dictKey: string): string => this.Blok.I18n.t(dictKey),
+        has: (dictKey: string): boolean => this.Blok.I18n.has(dictKey),
       };
     }
 

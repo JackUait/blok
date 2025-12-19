@@ -358,6 +358,53 @@ describe('I18n Module', () => {
       expect(i18n.t('test.key')).toBe('Custom value');
     });
 
+    it('merges custom messages with base translations', async () => {
+      const customMessages: I18nDictionary = {
+        'custom.toolName': 'My Custom Tool',
+      };
+
+      const i18n = createI18nModule({
+        i18n: { messages: customMessages },
+      });
+
+      await i18n.prepare();
+
+      // Custom message should work
+      expect(i18n.t('custom.toolName')).toBe('My Custom Tool');
+
+      // Base translations should still be available
+      expect(i18n.has('toolbox.addBelow')).toBe(true);
+      expect(i18n.t('toolbox.addBelow')).not.toBe('toolbox.addBelow');
+    });
+
+    it('merges custom messages with non-English locale translations', async () => {
+      Object.defineProperty(global, 'navigator', {
+        value: {
+          languages: ['ru', 'en'],
+          language: 'ru',
+        },
+        configurable: true,
+      });
+
+      const customMessages: I18nDictionary = {
+        'toolNames.Table': 'Таблица',
+      };
+
+      const i18n = createI18nModule({
+        i18n: { messages: customMessages },
+      });
+
+      await i18n.prepare();
+
+      // Custom message should work
+      expect(i18n.t('toolNames.Table')).toBe('Таблица');
+
+      // Russian base translations should be available
+      expect(i18n.getLocale()).toBe('ru');
+      expect(i18n.t('popover.search')).toBe('Поиск');
+      expect(i18n.t('toolbox.addBelow')).toBe('Добавить блок');
+    });
+
     it('uses specified locale when provided', async () => {
       const i18n = createI18nModule({
         i18n: { locale: 'fr' },

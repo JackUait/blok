@@ -53,11 +53,6 @@ export class SelectionUtils {
    */
   public isFakeBackgroundEnabled = false;
 
-  /**
-   * The contenteditable element that had the selection when fake background was enabled
-   * Used to restore focus and selection when fake background is removed
-   */
-  private selectionContainer: HTMLElement | null = null;
 
   /**
    * Returns selected anchor
@@ -401,7 +396,6 @@ export class SelectionUtils {
     this.removeHighlightSpans();
 
     this.isFakeBackgroundEnabled = false;
-    this.selectionContainer = null;
   }
 
   /**
@@ -454,7 +448,6 @@ export class SelectionUtils {
   public clearFakeBackground(): void {
     this.removeOrphanedFakeBackgroundElements();
     this.isFakeBackgroundEnabled = false;
-    this.selectionContainer = null;
   }
 
   /**
@@ -478,12 +471,9 @@ export class SelectionUtils {
     }
 
     // Find the contenteditable container that holds the selection
-    const container = range.commonAncestorContainer;
-    const element = container.nodeType === Node.ELEMENT_NODE
-      ? container as HTMLElement
-      : container.parentElement;
+  
+    
 
-    this.selectionContainer = element?.closest('[contenteditable="true"]') as HTMLElement | null;
 
     // Collect text nodes and wrap them with highlight spans
     const textNodes = this.collectTextNodes(range);

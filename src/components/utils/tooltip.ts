@@ -583,20 +583,6 @@ class Tooltip {
     }
   }
 
-  /**
-   * Append element or a couple to the beginning of the parent elements
-   * @param {Element} parent - where to append
-   * @param {Element|Element[]} elements - element or elements list
-   */
-  private prepend(parent: Element, elements: Element | Element[]): void {
-    if (Array.isArray(elements)) {
-      const reversed = elements.reverse();
-
-      reversed.forEach((el) => parent.prepend(el));
-    } else {
-      parent.prepend(elements);
-    }
-  }
 }
 
 /**

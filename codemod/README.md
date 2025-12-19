@@ -34,16 +34,30 @@ npx migrate-from-editorjs ./src --dry-run
 
 ### Import Transformations
 
+**EditorJS → Blok:**
 ```diff
 - import EditorJS from '@editorjs/editorjs';
-+ import Blok from '@jackuait/blok';
++ import { Blok } from '@jackuait/blok';
+
+- import EditorJS, { EditorConfig } from '@editorjs/editorjs';
++ import { Blok, BlokConfig } from '@jackuait/blok';
 
 - import Header from '@editorjs/header';
 - import Paragraph from '@editorjs/paragraph';
 - import List from '@editorjs/list';
-+ // Header is now bundled with Blok: use Blok.Header
-+ // Paragraph is now bundled with Blok: use Blok.Paragraph
-+ // List is now bundled with Blok: use Blok.List
++ import { Header, Paragraph, List } from '@jackuait/blok/tools';
+```
+
+**Blok default imports → named imports** (Blok only exports named exports):
+```diff
+- import Blok from '@jackuait/blok';
++ import { Blok } from '@jackuait/blok';
+
+- import Editor from '@jackuait/blok';
++ import { Blok as Editor } from '@jackuait/blok';
+
+- import Blok, { BlokConfig } from '@jackuait/blok';
++ import { Blok, BlokConfig } from '@jackuait/blok';
 ```
 
 ### Type Transformations
@@ -98,15 +112,23 @@ npx migrate-from-editorjs ./src --dry-run
 
 ### Tool Configuration Transformations
 
+Old Blok static property references are converted to direct imports:
 ```diff
 tools: {
--   header: Header,
--   paragraph: Paragraph,
--   list: List,
-+   header: Blok.Header,
-+   paragraph: Blok.Paragraph,
-+   list: Blok.List,
+-   header: Blok.Header,
+-   paragraph: Blok.Paragraph,
+-   list: Blok.List,
++   header: Header,
++   paragraph: Paragraph,
++   list: List,
 }
+```
+
+Combined Blok imports are split into core and tools:
+```diff
+- import { Blok, Header, Paragraph, List } from '@jackuait/blok';
++ import { Blok } from '@jackuait/blok';
++ import { Header, Paragraph, List } from '@jackuait/blok/tools';
 ```
 
 ### package.json Updates

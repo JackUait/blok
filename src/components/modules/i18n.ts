@@ -204,23 +204,18 @@ export class I18n extends Module {
     // Set default locale if configured
     this.applyDefaultLocale(i18nConfig?.defaultLocale);
 
-    // Handle custom messages (highest priority)
-    if (i18nConfig?.messages !== undefined) {
-      // For custom messages, use lightweight implementation with overrides
-      this.lightweightI18n.setDictionary(i18nConfig.messages);
-      this.usingI18next = false;
-      // Set direction from config or default to 'ltr' for custom messages
-      this.updateConfigDirection(i18nConfig.direction ?? 'ltr');
-
-      return;
-    }
-
+    // Load base translations first
     const requestedLocale = i18nConfig?.locale;
 
     if (requestedLocale === undefined || requestedLocale === 'auto') {
       await this.detectAndSetLocale();
     } else {
       await this.setLocale(requestedLocale);
+    }
+
+    // Merge custom messages on top of base translations (if provided)
+    if (i18nConfig?.messages !== undefined) {
+      this.setDictionary(i18nConfig.messages);
     }
 
     // Update config.i18n.direction so other modules can access it via isRtl getter

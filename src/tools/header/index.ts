@@ -16,6 +16,7 @@ import type {
   BlockToolData,
   PasteEvent,
   ToolboxConfig,
+  ToolboxConfigEntry,
   ConversionConfig,
   SanitizerConfig,
   PasteConfig,
@@ -60,6 +61,11 @@ export interface HeaderConfig {
   defaultLevel?: number;
   /** Level-specific overrides keyed by level number (1-6) */
   levelOverrides?: Record<number, HeaderLevelConfig>;
+  /**
+   * @internal Injected by BlockToolAdapter - merged toolbox entries.
+   * When present, renderSettings() will use these entries instead of the default levels.
+   */
+  _toolboxEntries?: ToolboxConfigEntry[];
 }
 
 /**
@@ -195,6 +201,19 @@ export class Header implements BlockTool {
    * @returns MenuConfig array
    */
   public renderSettings(): MenuConfig {
+    const toolboxEntries = this._settings._toolboxEntries;
+
+    /**
+     * If user provided custom toolbox entries, use them to build settings menu.
+     * This ensures block settings match the toolbox configuration.
+     */
+    if (toolboxEntries !== undefined && toolboxEntries.length > 0) {
+      return this.buildSettingsFromToolboxEntries(toolboxEntries);
+    }
+
+    /**
+     * Fall back to existing behavior using levels config
+     */
     return this.levels.map(level => {
       const translated = this.api.i18n.t(level.nameKey);
       const title = translated !== level.nameKey ? translated : level.name;
@@ -210,6 +229,60 @@ export class Header implements BlockTool {
         },
       };
     });
+  }
+
+  /**
+   * Build settings menu items from toolbox entries.
+   * This allows users to customize which levels appear in block settings
+   * by configuring the toolbox.
+   *
+   * @param entries - Merged toolbox entries from user config
+   * @returns MenuConfig array
+   */
+  private buildSettingsFromToolboxEntries(entries: ToolboxConfigEntry[]): MenuConfig {
+    return entries.map(entry => {
+      const entryData = entry.data as { level?: number } | undefined;
+      const level = entryData?.level ?? this.defaultLevel.number;
+      const defaultLevel = Header.DEFAULT_LEVELS.find(l => l.number === level);
+      const fallbackTitle = defaultLevel?.name ?? `Heading ${level}`;
+
+      const title = this.resolveToolboxEntryTitle(entry, fallbackTitle);
+      const icon = entry.icon ?? defaultLevel?.icon ?? IconHeading;
+
+      return {
+        icon,
+        title,
+        onActivate: (): void => this.setLevel(level),
+        closeOnActivate: true,
+        isActive: this.currentLevel.number === level,
+        dataset: {
+          'blok-header-level': String(level),
+        },
+      };
+    });
+  }
+
+  /**
+   * Resolves the title for a toolbox entry.
+   * Priority: custom title > i18n key translation > fallback
+   *
+   * @param entry - Toolbox entry
+   * @param fallback - Fallback title if no custom title or translation found
+   * @returns Resolved title string
+   */
+  private resolveToolboxEntryTitle(entry: ToolboxConfigEntry, fallback: string): string {
+    if (entry.title !== undefined) {
+      return entry.title;
+    }
+
+    if (entry.titleKey === undefined) {
+      return fallback;
+    }
+
+    const namespacedKey = `toolNames.${entry.titleKey}`;
+    const translated = this.api.i18n.t(namespacedKey);
+
+    return translated !== namespacedKey ? translated : fallback;
   }
 
   /**

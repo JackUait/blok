@@ -51,13 +51,22 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * @param readOnly - True if Blok is in read-only mode
    */
   public create(data: BlockToolData, block: BlockAPI, readOnly: boolean): IBlockTool {
+    const toolboxEntries = this.toolbox;
+
+    /**
+     * Inject merged toolbox entries into config so tools can use them in renderSettings().
+     * This allows tools like Header to show the same options in block settings as in the toolbox.
+     */
+    const configWithToolbox = toolboxEntries !== undefined
+      ? { ...this.settings, _toolboxEntries: toolboxEntries }
+      : this.settings;
 
     return new this.constructable({
       data,
       block,
       readOnly,
       api: this.api,
-      config: this.settings,
+      config: configWithToolbox,
     }) as IBlockTool;
   }
 

@@ -570,7 +570,11 @@ describe('BlockToolAdapter', () => {
       expect((instance as unknown as { block: unknown }).block).toEqual(blockAPI);
       expect((instance as unknown as { readonly: boolean }).readonly).toBe(false);
       expect((instance as unknown as { api: unknown }).api).toEqual(options.api);
-      expect((instance as unknown as { config: unknown }).config).toEqual(options.config.config);
+      // Config should include original settings plus injected _toolboxEntries
+      const instanceConfig = (instance as unknown as { config: unknown }).config;
+
+      expect(instanceConfig).toMatchObject(options.config.config as object);
+      expect(instanceConfig).toHaveProperty('_toolboxEntries');
     });
   });
 });

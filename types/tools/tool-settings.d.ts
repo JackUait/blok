@@ -94,6 +94,58 @@ export interface ExternalToolSettings<Config extends object = any> {
 export type InternalToolSettings<Config extends object = any> = Omit<ExternalToolSettings<Config>, 'class'> & Partial<Pick<ExternalToolSettings<Config>, 'class'>>;
 
 /**
- * Union of external and internal Tools settings
+ * Keys that Blok extracts from tool settings (not passed to tool constructor)
  */
-export type ToolSettings<Config extends object = any> = InternalToolSettings<Config> | ExternalToolSettings<Config>;
+export type BlokToolSettingsKeys = 'class' | 'inlineToolbar' | 'tunes' | 'shortcut' | 'toolbox' | 'config';
+
+/**
+ * Flat tool settings - tool-specific options at top level.
+ * Blok extracts known keys and passes the rest as `config` to the tool.
+ */
+export interface FlatToolSettings<Config extends object = any> {
+  /**
+   * Tool's class
+   */
+  class: ToolConstructable | ToolClass;
+
+  /**
+   * Is need to show Inline Toolbar.
+   * Defaults to true for block tools.
+   */
+  inlineToolbar?: boolean | string[];
+
+  /**
+   * BlockTunes for Tool
+   */
+  tunes?: boolean | string[];
+
+  /**
+   * Define shortcut that will render Tool
+   */
+  shortcut?: string;
+
+  /**
+   * Tool's Toolbox settings
+   */
+  toolbox?: ToolboxConfig | false;
+
+  /**
+   * Legacy nested config - merged with top-level tool options
+   * @deprecated Use flat config instead
+   */
+  config?: ToolConfig<Config>;
+
+  /**
+   * Tool-specific options (placeholder, levels, etc.)
+   * These are passed to the tool constructor as `config`
+   */
+  [key: string]: unknown;
+}
+
+/**
+ * Union of all tool settings formats
+ */
+export type ToolSettings<Config extends object = any> =
+  | InternalToolSettings<Config>
+  | ExternalToolSettings<Config>
+  | FlatToolSettings<Config>;

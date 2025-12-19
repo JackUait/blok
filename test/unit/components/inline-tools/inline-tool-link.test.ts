@@ -130,10 +130,7 @@ describe('LinkInlineTool', () => {
         rel: 'nofollow',
       },
     });
-
-    const { tool } = createTool();
-
-    expect(tool.shortcut).toBe('CMD+K');
+    expect(LinkInlineTool.shortcut).toBe('CMD+K');
   });
 
   it('renders menu config with correct properties', () => {

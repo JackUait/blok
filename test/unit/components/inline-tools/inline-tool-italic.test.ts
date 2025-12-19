@@ -33,7 +33,7 @@ describe('ItalicInlineTool', () => {
   });
 
   it('exposes CMD+I shortcut', () => {
-    expect(tool.shortcut).toBe('CMD+I');
+    expect(ItalicInlineTool.shortcut).toBe('CMD+I');
   });
 
   describe('isActive', () => {

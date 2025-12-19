@@ -338,14 +338,14 @@ export class Tools extends Module {
         };
 
         const prepareFunction: ChainData['function'] = async (payload?: unknown) => {
-          const constructable = settings.class;
+          const constructable = settings.class as ToolConstructable | undefined;
 
           if (!constructable || !isFunction(constructable.prepare)) {
             return;
           }
 
           const data = (payload ?? toolData) as ToolPrepareData;
-          const prepareMethod = constructable.prepare as unknown as ToolPrepareFunction;
+          const prepareMethod = constructable.prepare as ToolPrepareFunction;
 
           return prepareMethod.call(constructable, data);
         };

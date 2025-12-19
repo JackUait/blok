@@ -2,6 +2,12 @@ import { ToolConfig } from './tool-config';
 import { ToolConstructable, BlockToolData, MenuConfig, MenuConfigItem } from './index';
 
 /**
+ * Permissive type for tool class - accepts any constructor.
+ * Runtime validation ensures the tool has required methods.
+ */
+export type ToolClass = new (...args: any[]) => any;
+
+/**
  * Tool may specify its toolbox configuration
  * It may include several entries as well
  */
@@ -49,9 +55,9 @@ export interface ToolboxConfigEntry {
 export interface ExternalToolSettings<Config extends object = any> {
 
   /**
-   * Tool's class
+   * Tool's class - accepts any constructor, validated at runtime
    */
-  class: ToolConstructable;
+  class: ToolConstructable | ToolClass;
 
   /**
    * User configuration object that will be passed to the Tool's constructor

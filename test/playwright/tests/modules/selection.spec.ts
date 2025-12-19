@@ -850,4 +850,120 @@ test.describe('modules/selection', () => {
     await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
     await expect(getBlockByIndex(page, 3)).toHaveAttribute('data-blok-selected', 'true');
   });
+
+  test('rubber band selection does not select blocks until rectangle intersects them horizontally', async ({ page }) => {
+    // Create a centered editor with margins to test horizontal intersection
+    await page.evaluate(({ holder }) => {
+      const existingHolder = document.getElementById(holder);
+
+      if (existingHolder) {
+        existingHolder.remove();
+      }
+
+      const container = document.createElement('div');
+
+      container.id = holder;
+      container.setAttribute('data-blok-testid', holder);
+      // Center the editor with a fixed width to create left/right margins
+      container.style.width = '400px';
+      container.style.margin = '0 auto';
+      container.style.border = '1px dotted #388AE5';
+
+      document.body.appendChild(container);
+    }, { holder: HOLDER_ID });
+
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({
+        holder: holder,
+        data: {
+          blocks: [
+            { type: 'paragraph', data: { text: 'First block' } },
+            { type: 'paragraph', data: { text: 'Second block' } },
+          ],
+        },
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+    const firstBox = await getRequiredBoundingBox(firstBlock);
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+
+    // Start drag from far left margin (x=10), well outside the centered editor
+    // Position Y in the middle of first block
+    const startX = 10;
+    const startY = firstBox.y + firstBox.height / 2;
+
+    // Drag down to second block's Y position, but stay in the left margin (x=10)
+    const endY = secondBox.y + secondBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX, endY, { steps: 10 });
+
+    // Blocks should NOT be selected because rectangle hasn't reached them horizontally
+    await expect(getBlockByIndex(page, 0)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).not.toHaveAttribute('data-blok-selected', 'true');
+
+    // Now continue dragging horizontally until we reach the block holder
+    const reachBlockX = firstBox.x + 10; // Just inside the block holder
+
+    await page.mouse.move(reachBlockX, endY, { steps: 10 });
+
+    // Now both blocks should be selected because rectangle intersects them
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+
+    await page.mouse.up();
+  });
+
+  test('toolbar is hidden during rubber band selection', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+    ]);
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+    const firstBox = await getRequiredBoundingBox(firstBlock);
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+
+    // Click on first block to make toolbar visible
+    await firstBlock.click();
+
+    // Wait for toolbar to open (check for data-blok-opened attribute)
+    const toolbar = page.locator('[data-blok-toolbar]');
+
+    await expect(toolbar).toHaveAttribute('data-blok-opened', 'true');
+
+    // Start rubber band selection from left margin
+    const startX = 10;
+    const startY = firstBox.y + firstBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+
+    // Drag down through blocks
+    const endY = secondBox.y + secondBox.height / 2;
+
+    await page.mouse.move(startX, endY, { steps: 10 });
+
+    // Toolbar should be closed during rubber band selection (no data-blok-opened attribute)
+    await expect(toolbar).not.toHaveAttribute('data-blok-opened', 'true');
+
+    await page.mouse.up();
+  });
 });

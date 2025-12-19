@@ -424,18 +424,36 @@ export class RectangleSelection extends Module {
       this.mouseY = event.pageY;
     }
 
-    const { index } = this.genInfoForMouseSelection();
-
-    // For page-wide selection: always consider the rectangle as crossing blocks
-    // if we have a valid block index. The vertical check in startSelection()
-    // already ensures we're within the editor's vertical bounds.
-    this.rectCrossesBlocks = index !== undefined;
-
     if (!this.isRectSelectionActivated) {
-      this.rectCrossesBlocks = false;
       this.isRectSelectionActivated = true;
       this.shrinkRectangleToPoint();
       overlayRectangle.style.display = 'block';
+    }
+
+    const { index } = this.genInfoForMouseSelection();
+
+    /**
+     * Check if the selection rectangle intersects the block holder horizontally.
+     * For page-wide selection, we need to verify the rectangle actually reaches the block,
+     * not just that the mouse Y position is at the same height as a block.
+     */
+    this.rectCrossesBlocks = false;
+    const block = index !== undefined ? this.Blok.BlockManager.getBlockByIndex(index) : undefined;
+
+    if (block) {
+      const holderRect = block.holder.getBoundingClientRect();
+      const scrollLeft = this.getScrollLeft();
+
+      // Selection rectangle horizontal bounds (in page coordinates)
+      const rectLeft = Math.min(this.startX, this.mouseX);
+      const rectRight = Math.max(this.startX, this.mouseX);
+
+      // Block holder horizontal bounds (convert from viewport to page coordinates)
+      const holderLeft = holderRect.left + scrollLeft;
+      const holderRight = holderRect.right + scrollLeft;
+
+      // Check for horizontal intersection
+      this.rectCrossesBlocks = rectRight >= holderLeft && rectLeft <= holderRight;
     }
 
     this.updateRectangleSize();

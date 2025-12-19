@@ -104,6 +104,9 @@ describe('Toolbar module interactions', () => {
       DragManager: {
         isDragging: false,
       },
+      RectangleSelection: {
+        isRectActivated: vi.fn(() => false),
+      },
     } as unknown as Toolbar['Blok'];
 
     (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes = {

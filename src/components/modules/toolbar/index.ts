@@ -998,9 +998,9 @@ export class Toolbar extends Module<ToolbarNodes> {
        */
       this.eventsDispatcher.on(BlockHovered, (data) => {
         /**
-         * Do not move toolbar during drag operations
+         * Do not move toolbar during drag or rectangle selection operations
          */
-        if (this.Blok.DragManager.isDragging) {
+        if (this.Blok.DragManager.isDragging || this.Blok.RectangleSelection.isRectActivated()) {
           return;
         }
 

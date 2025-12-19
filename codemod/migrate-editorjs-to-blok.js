@@ -735,21 +735,129 @@ const HOLDER_TRANSFORMS = [
   { pattern: /getElementById\s*\(\s*['"]editorjs['"]\s*\)/g, replacement: "getElementById('blok')" },
 ];
 
-// Bundled tools - add new tools here as they are bundled with Blok
+// Bundled tools - these are now in a separate entry point (@jackuait/blok/tools)
 const BUNDLED_TOOLS = ['Header', 'Paragraph', 'List'];
 
+// Inline tools - also in the tools entry point
+const INLINE_TOOLS = ['Bold', 'Italic', 'Link', 'Convert'];
+
+// All tools that should be imported from @jackuait/blok/tools
+const ALL_TOOLS = [...BUNDLED_TOOLS, ...INLINE_TOOLS];
+
 // Tool configuration transformations
-// Note: With named exports, tools are imported directly (e.g., { Header } from '@jackuait/blok')
+// Note: With named exports, tools are imported directly (e.g., { Header } from '@jackuait/blok/tools')
 // so the tool class references don't need the Blok. prefix anymore
 const TOOL_CONFIG_TRANSFORMS = [
   // Convert old Blok.Header style to direct Header reference (for existing Blok users upgrading)
+  // Block tools
   { pattern: /class:\s*Blok\.Header(?!Config)/g, replacement: 'class: Header' },
   { pattern: /class:\s*Blok\.Paragraph(?!Config)/g, replacement: 'class: Paragraph' },
   { pattern: /class:\s*Blok\.List(?!Config|Item)/g, replacement: 'class: List' },
   { pattern: /(\bheader\s*:\s*)Blok\.Header(?!Config)(?=\s*[,}\n])/g, replacement: '$1Header' },
   { pattern: /(\bparagraph\s*:\s*)Blok\.Paragraph(?!Config)(?=\s*[,}\n])/g, replacement: '$1Paragraph' },
   { pattern: /(\blist\s*:\s*)Blok\.List(?!Config|Item)(?=\s*[,}\n])/g, replacement: '$1List' },
+  // Inline tools
+  { pattern: /class:\s*Blok\.Bold(?!Config)/g, replacement: 'class: Bold' },
+  { pattern: /class:\s*Blok\.Italic(?!Config)/g, replacement: 'class: Italic' },
+  { pattern: /class:\s*Blok\.Link(?!Config)/g, replacement: 'class: Link' },
+  { pattern: /class:\s*Blok\.Convert(?!Config)/g, replacement: 'class: Convert' },
+  { pattern: /(\bbold\s*:\s*)Blok\.Bold(?!Config)(?=\s*[,}\n])/g, replacement: '$1Bold' },
+  { pattern: /(\bitalic\s*:\s*)Blok\.Italic(?!Config)(?=\s*[,}\n])/g, replacement: '$1Italic' },
+  { pattern: /(\blink\s*:\s*)Blok\.Link(?!Config)(?=\s*[,}\n])/g, replacement: '$1Link' },
+  { pattern: /(\bconvert(?:To)?\s*:\s*)Blok\.Convert(?!Config)(?=\s*[,}\n])/g, replacement: '$1Convert' },
 ];
+
+// ============================================================================
+// Blok Modular Import Transformations (Strategy 5)
+// ============================================================================
+
+/**
+ * Transforms for migrating old Blok imports to the new modular structure.
+ * After Strategy 3/4, tools are in a separate entry point (@jackuait/blok/tools).
+ *
+ * Detects and transforms patterns like:
+ *   import { Blok, Header, Paragraph } from '@jackuait/blok'
+ * To:
+ *   import { Blok } from '@jackuait/blok';
+ *   import { Header, Paragraph } from '@jackuait/blok/tools';
+ */
+const BLOK_MODULAR_IMPORT_TRANSFORMS = [
+  // Transform tool imports from old @jackuait/blok to @jackuait/blok/tools
+  // These patterns match tools being imported from the main entry point
+  // The actual splitting is done in splitBlokImports() function below
+];
+
+/**
+ * Splits a combined @jackuait/blok import that contains both core exports and tools
+ * into separate imports from the correct entry points.
+ *
+ * @param {string} content - The file content
+ * @returns {{result: string, changed: boolean}} Transformed content and change flag
+ */
+function splitBlokImports(content) {
+  // Pattern to find @jackuait/blok named imports
+  const blokImportPattern = /import\s*\{\s*([^}]+)\s*\}\s*from\s*['"]@jackuait\/blok['"];?/g;
+  let result = content;
+  let changed = false;
+
+  // Collect all matches first to avoid regex state issues
+  const matches = [];
+  let match;
+  while ((match = blokImportPattern.exec(content)) !== null) {
+    matches.push({
+      fullMatch: match[0],
+      imports: match[1],
+      index: match.index,
+    });
+  }
+
+  // Process matches in reverse order to preserve indices
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const { fullMatch, imports } = matches[i];
+
+    // Parse the imports
+    const importList = imports.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+    // Separate core imports from tool imports
+    const coreImports = [];
+    const toolImports = [];
+
+    for (const imp of importList) {
+      // Handle aliased imports: "Header as MyHeader"
+      const importName = imp.split(/\s+as\s+/)[0].trim();
+
+      if (ALL_TOOLS.includes(importName)) {
+        toolImports.push(imp);
+      } else {
+        coreImports.push(imp);
+      }
+    }
+
+    // Only transform if there are tool imports mixed with core imports
+    // or if there are only tool imports (they should come from /tools)
+    if (toolImports.length > 0) {
+      let newImports = '';
+
+      if (coreImports.length > 0) {
+        newImports += `import { ${coreImports.join(', ')} } from '@jackuait/blok';\n`;
+      }
+
+      if (toolImports.length > 0) {
+        newImports += `import { ${toolImports.join(', ')} } from '@jackuait/blok/tools';`;
+      }
+
+      // Preserve trailing newline if original had one
+      if (!fullMatch.endsWith(';')) {
+        newImports = newImports.replace(/;$/, '');
+      }
+
+      result = result.replace(fullMatch, newImports);
+      changed = true;
+    }
+  }
+
+  return { result, changed };
+}
 
 // Text transformations for "EditorJS" string references
 const TEXT_TRANSFORMS = [
@@ -822,6 +930,8 @@ function applyTransforms(content, transforms, fileName) {
  * Ensures that bundled tools (Header, Paragraph, List) are properly imported when used.
  * Since Blok now uses named exports, tools are imported directly.
  *
+ * @deprecated Use ensureToolsImport instead, which imports from @jackuait/blok/tools
+ *
  * Handles the following scenarios:
  * 1. Tool used without import -> adds `import { Header, Paragraph, List } from '@jackuait/blok'`
  * 2. Existing @jackuait/blok import without tools -> adds tools to named imports
@@ -867,6 +977,112 @@ function ensureBlokImport(content) {
   // No @jackuait/blok import at all -> add new import
   const importStatements = content.match(/^import\s+.+from\s+['"][^'"]+['"];?\s*$/gm);
   const newImport = `import { ${usedTools.join(', ')} } from '@jackuait/blok';`;
+
+  if (importStatements && importStatements.length > 0) {
+    const lastImport = importStatements[importStatements.length - 1];
+    const lastImportIndex = content.lastIndexOf(lastImport);
+    const insertPosition = lastImportIndex + lastImport.length;
+    result =
+      content.slice(0, insertPosition) +
+      '\n' + newImport +
+      content.slice(insertPosition);
+  } else {
+    // No imports found, add at the very beginning (after shebang if present)
+    const shebangMatch = content.match(/^#!.*\n/);
+    if (shebangMatch) {
+      result = shebangMatch[0] + newImport + '\n' + content.slice(shebangMatch[0].length);
+    } else {
+      result = newImport + '\n' + content;
+    }
+  }
+
+  return { result, changed: true };
+}
+
+/**
+ * Ensures that tools are properly imported from @jackuait/blok/tools when used.
+ * This is the modern approach after Strategy 3/4 where tools are in a separate entry point.
+ *
+ * Handles the following scenarios:
+ * 1. Tool used without import -> adds `import { Header, ... } from '@jackuait/blok/tools'`
+ * 2. Existing @jackuait/blok/tools import without tools -> adds tools to named imports
+ */
+function ensureToolsImport(content) {
+  // Check which tools are used in the content
+  const usedTools = ALL_TOOLS.filter(tool => {
+    // Match tool usage in class: Tool or tool: Tool patterns, or direct Tool references
+    const toolPattern = new RegExp(`\\b${tool}\\b`, 'g');
+    return toolPattern.test(content);
+  });
+
+  if (usedTools.length === 0) {
+    return { result: content, changed: false };
+  }
+
+  // Check for existing @jackuait/blok/tools import
+  const toolsImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"]@jackuait\/blok\/tools['"];?/;
+  const toolsMatch = content.match(toolsImportPattern);
+
+  // Also check for @jackuait/blok import (legacy, will be split later)
+  const mainImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"]@jackuait\/blok['"];?/;
+  const mainMatch = content.match(mainImportPattern);
+
+  let result = content;
+
+  // Check if tools are already imported from /tools
+  if (toolsMatch) {
+    const existingToolsImports = toolsMatch[1];
+    const missingTools = usedTools.filter(tool => {
+      const toolPattern = new RegExp(`\\b${tool}\\b`);
+      return !toolPattern.test(existingToolsImports);
+    });
+
+    if (missingTools.length > 0) {
+      // Add missing tools to existing /tools import
+      const newImports = `${existingToolsImports.trim()}, ${missingTools.join(', ')}`;
+      result = content.replace(
+        toolsImportPattern,
+        `import { ${newImports} } from '@jackuait/blok/tools';`
+      );
+      return { result, changed: true };
+    }
+    return { result: content, changed: false };
+  }
+
+  // Check if tools are in the main import (will be split later by splitBlokImports)
+  if (mainMatch) {
+    const existingMainImports = mainMatch[1];
+    const toolsInMain = usedTools.filter(tool => {
+      const toolPattern = new RegExp(`\\b${tool}\\b`);
+      return toolPattern.test(existingMainImports);
+    });
+
+    // If all tools are already in main import, don't add duplicate
+    // They'll be moved by splitBlokImports
+    if (toolsInMain.length === usedTools.length) {
+      return { result: content, changed: false };
+    }
+
+    // Some tools missing from both imports - add them to main (will be split later)
+    const missingTools = usedTools.filter(tool => {
+      const toolPattern = new RegExp(`\\b${tool}\\b`);
+      return !toolPattern.test(existingMainImports);
+    });
+
+    if (missingTools.length > 0) {
+      const newImports = `${missingTools.join(', ')}, ${existingMainImports.trim()}`;
+      result = content.replace(
+        mainImportPattern,
+        `import { ${newImports} } from '@jackuait/blok';`
+      );
+      return { result, changed: true };
+    }
+    return { result: content, changed: false };
+  }
+
+  // No @jackuait/blok or @jackuait/blok/tools import -> add new /tools import
+  const importStatements = content.match(/^import\s+.+from\s+['"][^'"]+['"];?\s*$/gm);
+  const newImport = `import { ${usedTools.join(', ')} } from '@jackuait/blok/tools';`;
 
   if (importStatements && importStatements.length > 0) {
     const lastImport = importStatements[importStatements.length - 1];
@@ -955,12 +1171,21 @@ function transformFile(filePath, dryRun = false, useLibraryI18n = false) {
     allChanges.push(...changes.map((c) => ({ ...c, category: 'tool-config' })));
   }
 
-  // Ensure Blok is imported if bundled tools are used (JS/TS only)
+  // Ensure tools are imported if bundled tools are used (JS/TS only)
   if (isJsFile) {
-    const { result, changed } = ensureBlokImport(transformed);
+    const { result, changed } = ensureToolsImport(transformed);
     if (changed) {
       transformed = result;
-      allChanges.push({ category: 'imports', pattern: 'ensureBlokImport', count: 1, note: 'Added Blok import for bundled tools' });
+      allChanges.push({ category: 'imports', pattern: 'ensureToolsImport', count: 1, note: 'Added tools import from @jackuait/blok/tools' });
+    }
+  }
+
+  // Split combined @jackuait/blok imports into core and tools (JS/TS only)
+  if (isJsFile) {
+    const { result, changed } = splitBlokImports(transformed);
+    if (changed) {
+      transformed = result;
+      allChanges.push({ category: 'imports', pattern: 'splitBlokImports', count: 1, note: 'Split tools into separate @jackuait/blok/tools import' });
     }
   }
 
@@ -1077,12 +1302,14 @@ Examples:
   npx -p @jackuait/blok migrate-from-editorjs . --verbose
 
 What this codemod does:
+
+  EditorJS Migration:
   • Transforms EditorJS imports to Blok named imports:
     - import EditorJS from '@editorjs/editorjs' → import { Blok } from '@jackuait/blok'
     - import Editor from '@editorjs/editorjs' → import { Blok as Editor } from '@jackuait/blok'
   • Updates bundled tool imports (Header, Paragraph, List):
-    - import Header from '@editorjs/header' → import { Header } from '@jackuait/blok'
-    - import List from '@editorjs/list' → import { List } from '@jackuait/blok'
+    - import Header from '@editorjs/header' → import { Header } from '@jackuait/blok/tools'
+    - import List from '@editorjs/list' → import { List } from '@jackuait/blok/tools'
   • Updates type names (EditorConfig → BlokConfig)
   • Replaces 'new EditorJS()' with 'new Blok()'
   • Converts CSS class selectors to data attributes:
@@ -1100,7 +1327,6 @@ What this codemod does:
   • Updates data attributes (data-id → data-blok-id)
   • Changes default holder from 'editorjs' to 'blok'
   • Updates package.json dependencies
-  • Ensures tools are imported from @jackuait/blok when used
   • Transforms nested i18n messages to flat dot-notation format with camelCase keys:
     - { ui: { toolbar: { Add: "..." } } } → { "ui.toolbar.add": "..." }
     - { toolNames: { "Nothing found": "..." } } → { "toolNames.nothingFound": "..." }
@@ -1112,6 +1338,18 @@ What this codemod does:
     - "Ordered List" → "numberedList"
     - "Unordered List" → "bulletedList"
   • Removes obsolete keys (moveUp/moveDown replaced with drag)
+
+  Old Blok → Modular Blok Migration:
+  • Splits combined imports into core and tools:
+    - import { Blok, Header } from '@jackuait/blok'
+    → import { Blok } from '@jackuait/blok';
+      import { Header } from '@jackuait/blok/tools';
+  • Transforms static property access to direct references:
+    - Blok.Header → Header (with import added)
+    - Blok.Paragraph → Paragraph
+    - Blok.List → List
+    - Blok.Bold, Blok.Italic, Blok.Link, Blok.Convert → Bold, Italic, Link, Convert
+  • Ensures tools are imported from @jackuait/blok/tools when used
 
 Note: After running, you may need to manually:
   • Update any custom tool implementations
@@ -1235,6 +1473,8 @@ module.exports = {
   updatePackageJson,
   applyTransforms,
   ensureBlokImport,
+  ensureToolsImport,
+  splitBlokImports,
   normalizeKey,
   flattenI18nDictionary,
   transformI18nConfig,
@@ -1244,6 +1484,8 @@ module.exports = {
   objectToString,
   I18N_KEY_MAPPINGS,
   BUNDLED_TOOLS,
+  INLINE_TOOLS,
+  ALL_TOOLS,
   IMPORT_TRANSFORMS,
   TYPE_TRANSFORMS,
   CLASS_NAME_TRANSFORMS,

@@ -5,12 +5,16 @@
 const {
   applyTransforms,
   ensureBlokImport,
+  ensureToolsImport,
+  splitBlokImports,
   normalizeKey,
   flattenI18nDictionary,
   transformI18nConfig,
   removeI18nMessages,
   I18N_KEY_MAPPINGS,
   BUNDLED_TOOLS,
+  INLINE_TOOLS,
+  ALL_TOOLS,
   IMPORT_TRANSFORMS,
   TYPE_TRANSFORMS,
   CLASS_NAME_TRANSFORMS,
@@ -950,6 +954,160 @@ test('removeI18nMessages does not change content without i18n', () => {
   const { result, changed } = removeI18nMessages(input);
   assertEqual(changed, false, 'Should not indicate change');
   assertEqual(result, input, 'Content should be unchanged');
+});
+
+// ============================================================================
+// Modular Import Tests (Strategy 5)
+// ============================================================================
+
+console.log('\n📦 Modular Import Transformations (Strategy 5)\n');
+
+test('ALL_TOOLS contains block and inline tools', () => {
+  assertEqual(ALL_TOOLS.includes('Header'), true, 'Should include Header');
+  assertEqual(ALL_TOOLS.includes('Paragraph'), true, 'Should include Paragraph');
+  assertEqual(ALL_TOOLS.includes('List'), true, 'Should include List');
+  assertEqual(ALL_TOOLS.includes('Bold'), true, 'Should include Bold');
+  assertEqual(ALL_TOOLS.includes('Italic'), true, 'Should include Italic');
+  assertEqual(ALL_TOOLS.includes('Link'), true, 'Should include Link');
+  assertEqual(ALL_TOOLS.includes('Convert'), true, 'Should include Convert');
+});
+
+test('splitBlokImports splits combined import with Blok and Header', () => {
+  const input = `import { Blok, Header } from '@jackuait/blok';`;
+  const { result, changed } = splitBlokImports(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes("from '@jackuait/blok';"), true, 'Should have core import');
+  assertEqual(result.includes("from '@jackuait/blok/tools';"), true, 'Should have tools import');
+  assertEqual(result.includes('Blok'), true, 'Should include Blok');
+  assertEqual(result.includes('Header'), true, 'Should include Header');
+});
+
+test('splitBlokImports splits combined import with multiple tools', () => {
+  const input = `import { Blok, Header, Paragraph, Bold } from '@jackuait/blok';`;
+  const { result, changed } = splitBlokImports(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes("import { Blok } from '@jackuait/blok';"), true, 'Should have core-only import');
+  assertEqual(result.includes("import { Header, Paragraph, Bold } from '@jackuait/blok/tools';"), true, 'Should have tools import');
+});
+
+test('splitBlokImports handles tools-only import', () => {
+  const input = `import { Header, Paragraph } from '@jackuait/blok';`;
+  const { result, changed } = splitBlokImports(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes("import { Header, Paragraph } from '@jackuait/blok/tools';"), true, 'Should move to tools');
+  assertEqual(result.includes("from '@jackuait/blok';") && !result.includes("/tools"), false, 'Should not have empty core import');
+});
+
+test('splitBlokImports does not change core-only import', () => {
+  const input = `import { Blok, BlokConfig } from '@jackuait/blok';`;
+  const { result, changed } = splitBlokImports(input);
+  assertEqual(changed, false, 'Should not indicate change');
+  assertEqual(result, input, 'Content should be unchanged');
+});
+
+test('splitBlokImports handles aliased imports', () => {
+  const input = `import { Blok, Header as MyHeader } from '@jackuait/blok';`;
+  const { result, changed } = splitBlokImports(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes("import { Blok } from '@jackuait/blok';"), true, 'Should have core import');
+  assertEqual(result.includes("Header as MyHeader"), true, 'Should preserve alias');
+  assertEqual(result.includes("@jackuait/blok/tools"), true, 'Should have tools import');
+});
+
+test('ensureToolsImport adds tools import when no import exists', () => {
+  const input = `const editor = new Blok({
+  tools: { header: Header }
+});`;
+  const { result, changed } = ensureToolsImport(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes("from '@jackuait/blok/tools';"), true, 'Should add tools import');
+});
+
+test('ensureToolsImport adds to existing /tools import', () => {
+  const input = `import { Header } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  tools: { header: Header, paragraph: Paragraph }
+});`;
+  const { result, changed } = ensureToolsImport(input);
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('Paragraph'), true, 'Should add Paragraph');
+  assertEqual(result.includes("from '@jackuait/blok/tools';"), true, 'Should use tools path');
+});
+
+test('ensureToolsImport does not duplicate when tools are in main import', () => {
+  const input = `import { Blok, Header } from '@jackuait/blok';
+
+const editor = new Blok({
+  tools: { header: Header }
+});`;
+  const { result, changed } = ensureToolsImport(input);
+  // Tools are in main import, will be moved by splitBlokImports later
+  assertEqual(changed, false, 'Should not add duplicate');
+});
+
+test('ensureToolsImport detects inline tools', () => {
+  const input = `const editor = new Blok({
+  tools: { bold: Bold, italic: Italic }
+});`;
+  const { result, changed } = ensureToolsImport(input);
+  assertEqual(changed, true, 'Should detect inline tools');
+  assertEqual(result.includes('Bold'), true, 'Should add Bold');
+  assertEqual(result.includes('Italic'), true, 'Should add Italic');
+  assertEqual(result.includes("from '@jackuait/blok/tools';"), true, 'Should use tools path');
+});
+
+test('transforms Blok.Bold to Bold', () => {
+  const input = `{ class: Blok.Bold, config: {} }`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `{ class: Bold, config: {} }`);
+});
+
+test('transforms Blok.Italic to Italic', () => {
+  const input = `{ class: Blok.Italic, config: {} }`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `{ class: Italic, config: {} }`);
+});
+
+test('transforms Blok.Link to Link', () => {
+  const input = `{ class: Blok.Link, config: {} }`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `{ class: Link, config: {} }`);
+});
+
+test('transforms Blok.Convert to Convert', () => {
+  const input = `{ class: Blok.Convert, config: {} }`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `{ class: Convert, config: {} }`);
+});
+
+test('transforms standalone inline tool references', () => {
+  const input = `tools: { bold: Blok.Bold, italic: Blok.Italic }`;
+  const { result } = applyTransforms(input, TOOL_CONFIG_TRANSFORMS);
+  assertEqual(result, `tools: { bold: Bold, italic: Italic }`);
+});
+
+test('full modular migration: old Blok import to new structure', () => {
+  const input = `import { Blok, Header, Paragraph, Bold, Italic } from '@jackuait/blok';
+
+const editor = new Blok({
+  holder: 'blok',
+  tools: {
+    header: { class: Header },
+    paragraph: { class: Paragraph },
+  },
+  inlineTools: {
+    bold: { class: Bold },
+    italic: { class: Italic },
+  },
+});`;
+
+  // Apply splitBlokImports
+  const { result: splitResult, changed } = splitBlokImports(input);
+
+  assertEqual(changed, true, 'Should split imports');
+  assertEqual(splitResult.includes("import { Blok } from '@jackuait/blok';"), true, 'Should have core import');
+  assertEqual(splitResult.includes("import { Header, Paragraph, Bold, Italic } from '@jackuait/blok/tools';"), true, 'Should have tools import');
 });
 
 // ============================================================================

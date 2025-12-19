@@ -34,6 +34,42 @@ or
 yarn add @jackuait/blok
 ```
 
+## Quick Start
+
+Blok uses a modular architecture for optimal bundle size. Import tools separately from the core:
+
+```typescript
+import { Blok } from '@jackuait/blok';
+import { Header, Paragraph, List, Bold, Italic, Link } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    header: Header,
+    paragraph: { class: Paragraph, inlineToolbar: true },
+    list: { class: List, inlineToolbar: true },
+  },
+  inlineTools: {
+    bold: Bold,
+    italic: Italic,
+    link: Link,
+  },
+});
+
+// Save content as JSON
+const data = await editor.save();
+```
+
+### Entry Points
+
+| Entry Point | Description |
+|-------------|-------------|
+| `@jackuait/blok` | Core editor (no tools included) |
+| `@jackuait/blok/tools` | Built-in tools: Header, Paragraph, List, Bold, Italic, Link, Convert |
+| `@jackuait/blok/locales` | Locale loading utilities |
+
+This modular approach means you only bundle the tools you use, resulting in smaller bundles for your users.
+
 ## Migrating from EditorJS
 
 Blok is designed as a drop-in replacement for EditorJS. The included codemod automatically transforms your imports, selectors, and configuration—so you can switch over in minutes, not hours.
@@ -63,11 +99,15 @@ The codemod processes: `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, `.html`,
 ### What Gets Transformed
 
 - **Imports** — `@editorjs/editorjs` → `@jackuait/blok`
+- **Tool imports** — `@editorjs/header` → `@jackuait/blok/tools`
 - **Types** — `EditorConfig` → `BlokConfig`
 - **CSS selectors** — `.ce-block`, `.ce-toolbar` → `[data-blok-*]` attributes
 - **Data attributes** — `data-id` → `data-blok-id`
-- **Bundled tools** — Header & Paragraph imports removed (now included in Blok)
 - **Default holder** — `#editorjs` → `#blok`
+
+The codemod also handles **existing Blok users** upgrading to the modular architecture:
+- Splits combined imports: `{ Blok, Header }` from `@jackuait/blok` → separate imports
+- Updates static property access: `Blok.Header` → `Header`
 
 ### Limitations
 
@@ -90,7 +130,7 @@ Blok supports 68 languages with lazy loading—only English is bundled by defaul
 Out of the box, Blok uses English and auto-detects the user's browser language:
 
 ```typescript
-import Blok from '@jackuait/blok';
+import { Blok } from '@jackuait/blok';
 
 new Blok({
   holder: 'editor',
@@ -104,7 +144,7 @@ new Blok({
 By default, locales are loaded on-demand. If you need to ensure locales are available before initializing the editor—for example, to avoid any loading delay or to support offline usage—you can preload them:
 
 ```typescript
-import Blok from '@jackuait/blok';
+import { Blok } from '@jackuait/blok';
 import { preloadLocales, buildRegistry } from '@jackuait/blok/locales';
 
 // Preload during app startup (triggers network requests and caches the locales)

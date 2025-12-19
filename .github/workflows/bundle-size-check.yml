@@ -60,7 +60,8 @@ jobs:
         id: download-base-history
         uses: dawidd6/action-download-artifact@v6
         with:
-          workflow: release.yml
+          workflow: ci.yml
+          branch: master
           name: bundle-size-history
           path: .
           if_no_artifact_found: warn

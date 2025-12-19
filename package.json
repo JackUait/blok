@@ -141,7 +141,6 @@
     "yaml": "2.8.1"
   },
   "dependencies": {
-    "i18next": "^25.7.3",
-    "tailwind-merge": "3.4.0"
+    "i18next": "^25.7.3"
   }
 }

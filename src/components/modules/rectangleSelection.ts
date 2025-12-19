@@ -423,13 +423,12 @@ export class RectangleSelection extends Module {
       this.mouseY = event.pageY;
     }
 
-    const { rightPos, leftPos, index } = this.genInfoForMouseSelection();
-    // There is not new block in selection
+    const { index } = this.genInfoForMouseSelection();
 
-    const rectIsOnRighSideOfredactor = this.startX > rightPos && this.mouseX > rightPos;
-    const rectISOnLeftSideOfRedactor = this.startX < leftPos && this.mouseX < leftPos;
-
-    this.rectCrossesBlocks = !(rectIsOnRighSideOfredactor || rectISOnLeftSideOfRedactor);
+    // For page-wide selection: always consider the rectangle as crossing blocks
+    // if we have a valid block index. The vertical check in startSelection()
+    // already ensures we're within the editor's vertical bounds.
+    this.rectCrossesBlocks = index !== undefined;
 
     if (!this.isRectSelectionActivated) {
       this.rectCrossesBlocks = false;
@@ -538,6 +537,7 @@ export class RectangleSelection extends Module {
 
   /**
    * Collects information needed to determine the behavior of the rectangle
+   * For page-wide selection, we check blocks at the center X position but at the actual mouse Y position
    * @returns {object} index - index next Block, leftPos - start of left border of Block, rightPos - right border
    */
   private genInfoForMouseSelection(): {index: number | undefined; leftPos: number; rightPos: number} {
@@ -545,6 +545,9 @@ export class RectangleSelection extends Module {
     const centerOfRedactor = widthOfRedactor / 2;
     const scrollTop = this.getScrollTop();
     const y = this.mouseY - scrollTop;
+
+    // For page-wide selection: check what block is at the center X, but at the mouse's Y position
+    // This allows selection to work even when mouse is in the left/right margins
     const elementUnderMouse = document.elementFromPoint(centerOfRedactor, y);
     const lastBlockHolder = this.Blok.BlockManager.lastBlock?.holder;
     const contentElement = lastBlockHolder?.querySelector(createSelector(DATA_ATTR.elementContent));

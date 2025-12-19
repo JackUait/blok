@@ -739,4 +739,115 @@ test.describe('modules/selection', () => {
     // Verify fake background elements are removed
     await expect(page.locator(FAKE_BACKGROUND_SELECTOR)).toHaveCount(0);
   });
+
+  test('rubber band selection works when starting from page margin outside editor', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Third block',
+        },
+      },
+    ]);
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+
+    const firstBox = await getRequiredBoundingBox(firstBlock);
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+
+    // Start drag from left margin (x=10), at the Y position of first block
+    const startX = 10;
+    const startY = firstBox.y + firstBox.height / 2;
+
+    // End drag still in margin, but at Y position of second block
+    const endX = 10;
+    const endY = secondBox.y + secondBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(endX, endY, { steps: 10 });
+    await page.mouse.up();
+
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).not.toHaveAttribute('data-blok-selected', 'true');
+  });
+
+  test('shift+drag adds to existing selection instead of replacing', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Third block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Fourth block',
+        },
+      },
+    ]);
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+    const thirdBlock = getBlockByIndex(page, 2);
+    const fourthBlock = getBlockByIndex(page, 3);
+
+    // First, select blocks 0-1 via rubber band
+    const firstBox = await getRequiredBoundingBox(firstBlock);
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+
+    await page.mouse.move(10, firstBox.y + firstBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(10, secondBox.y + secondBox.height / 2, { steps: 5 });
+    await page.mouse.up();
+
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 3)).not.toHaveAttribute('data-blok-selected', 'true');
+
+    // Now Shift+drag to add blocks 2-3
+    const thirdBox = await getRequiredBoundingBox(thirdBlock);
+    const fourthBox = await getRequiredBoundingBox(fourthBlock);
+
+    await page.keyboard.down('Shift');
+    await page.mouse.move(10, thirdBox.y + thirdBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(10, fourthBox.y + fourthBox.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await page.keyboard.up('Shift');
+
+    // All four blocks should now be selected
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 3)).toHaveAttribute('data-blok-selected', 'true');
+  });
 });

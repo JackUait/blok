@@ -210,11 +210,11 @@ export class Header implements BlockTool {
      *
      * Only fall back to levels config when _toolboxEntries is not provided or empty,
      * or when using the default single "Heading" toolbox entry (detected by having
-     * exactly one entry with no level data and no custom title).
+     * exactly one entry with no level data and no custom title or the default "Heading" title).
      */
     const isDefaultToolboxEntry = toolboxEntries?.length === 1 &&
       toolboxEntries[0].data === undefined &&
-      toolboxEntries[0].title === undefined;
+      (toolboxEntries[0].title === undefined || toolboxEntries[0].title === 'Heading');
 
     if (toolboxEntries !== undefined && toolboxEntries.length > 0 && !isDefaultToolboxEntry) {
       return this.buildSettingsFromToolboxEntries(toolboxEntries);

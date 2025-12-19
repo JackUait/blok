@@ -712,12 +712,9 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Set a shortcut
-   * @returns {boolean}
+   * Shortcut for bold tool
    */
-  public get shortcut(): string {
-    return 'CMD+B';
-  }
+  public static shortcut = 'CMD+B';
 
   /**
    * Check if a range contains bold text

@@ -22,10 +22,6 @@ export { ListItem as List } from './list';
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
 export { ItalicInlineTool as Italic } from '../components/inline-tools/inline-tool-italic';
 export { LinkInlineTool as Link } from '../components/inline-tools/inline-tool-link';
-export { ConvertInlineTool as Convert } from '../components/inline-tools/inline-tool-convert';
-
-// Block tunes
-export { DeleteTune as Delete } from '../components/block-tunes/block-tune-delete';
 
 // Default tools configuration for convenience
 export const defaultBlockTools = {
@@ -38,5 +34,4 @@ export const defaultInlineTools = {
   bold: {},
   italic: {},
   link: {},
-  convertTo: {},
 } as const;

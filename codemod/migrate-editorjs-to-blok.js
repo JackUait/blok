@@ -739,7 +739,10 @@ const HOLDER_TRANSFORMS = [
 const BUNDLED_TOOLS = ['Header', 'Paragraph', 'List'];
 
 // Inline tools - also in the tools entry point
-const INLINE_TOOLS = ['Bold', 'Italic', 'Link', 'Convert'];
+const INLINE_TOOLS = ['Bold', 'Italic', 'Link'];
+
+// Internal tools - these are bundled with core and don't need to be imported
+const INTERNAL_TOOLS = ['Convert', 'Delete'];
 
 // All tools that should be imported from @jackuait/blok/tools
 const ALL_TOOLS = [...BUNDLED_TOOLS, ...INLINE_TOOLS];
@@ -760,11 +763,19 @@ const TOOL_CONFIG_TRANSFORMS = [
   { pattern: /class:\s*Blok\.Bold(?!Config)/g, replacement: 'class: Bold' },
   { pattern: /class:\s*Blok\.Italic(?!Config)/g, replacement: 'class: Italic' },
   { pattern: /class:\s*Blok\.Link(?!Config)/g, replacement: 'class: Link' },
-  { pattern: /class:\s*Blok\.Convert(?!Config)/g, replacement: 'class: Convert' },
   { pattern: /(\bbold\s*:\s*)Blok\.Bold(?!Config)(?=\s*[,}\n])/g, replacement: '$1Bold' },
   { pattern: /(\bitalic\s*:\s*)Blok\.Italic(?!Config)(?=\s*[,}\n])/g, replacement: '$1Italic' },
   { pattern: /(\blink\s*:\s*)Blok\.Link(?!Config)(?=\s*[,}\n])/g, replacement: '$1Link' },
-  { pattern: /(\bconvert(?:To)?\s*:\s*)Blok\.Convert(?!Config)(?=\s*[,}\n])/g, replacement: '$1Convert' },
+];
+
+// Transforms to remove internal tools configuration (Convert and Delete are now bundled)
+const INTERNAL_TOOL_REMOVAL_TRANSFORMS = [
+  // Remove convertTo/convert configuration lines (with various formats)
+  { pattern: /,?\s*convert(?:To)?\s*:\s*\{\s*class\s*:\s*(?:Blok\.)?Convert\s*\}\s*,?/g, replacement: '' },
+  { pattern: /,?\s*convert(?:To)?\s*:\s*(?:Blok\.)?Convert\s*,?/g, replacement: '' },
+  // Remove delete configuration lines
+  { pattern: /,?\s*delete\s*:\s*\{\s*class\s*:\s*(?:Blok\.)?Delete(?:Tune)?\s*\}\s*,?/g, replacement: '' },
+  { pattern: /,?\s*delete\s*:\s*(?:Blok\.)?Delete(?:Tune)?\s*,?/g, replacement: '' },
 ];
 
 // ============================================================================
@@ -1171,6 +1182,13 @@ function transformFile(filePath, dryRun = false, useLibraryI18n = false) {
     allChanges.push(...changes.map((c) => ({ ...c, category: 'tool-config' })));
   }
 
+  // Remove internal tools configuration (Convert and Delete are now bundled) (JS/TS only)
+  if (isJsFile) {
+    const { result, changes } = applyTransforms(transformed, INTERNAL_TOOL_REMOVAL_TRANSFORMS, filePath);
+    transformed = result;
+    allChanges.push(...changes.map((c) => ({ ...c, category: 'internal-tools-removal' })));
+  }
+
   // Ensure tools are imported if bundled tools are used (JS/TS only)
   if (isJsFile) {
     const { result, changed } = ensureToolsImport(transformed);
@@ -1348,7 +1366,10 @@ What this codemod does:
     - Blok.Header → Header (with import added)
     - Blok.Paragraph → Paragraph
     - Blok.List → List
-    - Blok.Bold, Blok.Italic, Blok.Link, Blok.Convert → Bold, Italic, Link, Convert
+    - Blok.Bold, Blok.Italic, Blok.Link → Bold, Italic, Link
+  • Removes internal tools configuration (Convert and Delete are now bundled with core):
+    - convertTo: { class: Convert } → removed (automatically available)
+    - delete: { class: Delete } → removed (automatically available)
   • Ensures tools are imported from @jackuait/blok/tools when used
 
 Note: After running, you may need to manually:
@@ -1485,6 +1506,7 @@ module.exports = {
   I18N_KEY_MAPPINGS,
   BUNDLED_TOOLS,
   INLINE_TOOLS,
+  INTERNAL_TOOLS,
   ALL_TOOLS,
   IMPORT_TRANSFORMS,
   TYPE_TRANSFORMS,
@@ -1494,5 +1516,6 @@ module.exports = {
   SELECTOR_TRANSFORMS,
   HOLDER_TRANSFORMS,
   TOOL_CONFIG_TRANSFORMS,
+  INTERNAL_TOOL_REMOVAL_TRANSFORMS,
   TEXT_TRANSFORMS,
 };

@@ -8,6 +8,7 @@ import type { InlineToolAdapter } from '../tools/inline';
 import type { BlockToolAdapter } from '../tools/block';
 import type { BlockTuneAdapter } from '../tools/tune';
 import { DeleteTune } from '../block-tunes/block-tune-delete';
+import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
 import { ToolsCollection } from '../tools/collection';
 import { CriticalError } from '../errors/critical';
 
@@ -253,9 +254,12 @@ export class Tools extends Module {
 
   /**
    * Returns essential internal tools that are always bundled.
-   * Only includes stub (for graceful handling of unknown block types) and delete tune (fundamental block operation).
+   * Includes:
+   * - stub: for graceful handling of unknown block types
+   * - delete: fundamental block operation in settings menu
+   * - convertTo: inline tool for converting blocks between types
    *
-   * Other tools (paragraph, header, list, bold, italic, link, convert) are now optional
+   * Other tools (paragraph, header, list, bold, italic, link) are optional
    * and should be imported from '@jackuait/blok/tools' or '@jackuait/blok/full'.
    */
   private get internalTools(): { [toolName: string]: ToolConstructable | ToolSettings & { isInternal?: boolean } } {
@@ -266,6 +270,10 @@ export class Tools extends Module {
       },
       delete: {
         class: toToolConstructable(DeleteTune),
+        isInternal: true,
+      },
+      convertTo: {
+        class: toToolConstructable(ConvertInlineTool),
         isInternal: true,
       },
     };

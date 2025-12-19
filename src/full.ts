@@ -24,8 +24,6 @@ export {
   Bold,
   Italic,
   Link,
-  Convert,
-  Delete,
   defaultBlockTools,
   defaultInlineTools,
 } from './tools';
@@ -37,7 +35,6 @@ import { ListItem as List } from './tools/list';
 import { BoldInlineTool as Bold } from './components/inline-tools/inline-tool-bold';
 import { ItalicInlineTool as Italic } from './components/inline-tools/inline-tool-italic';
 import { LinkInlineTool as Link } from './components/inline-tools/inline-tool-link';
-import { ConvertInlineTool as Convert } from './components/inline-tools/inline-tool-convert';
 
 /**
  * Default tools configuration matching pre-modularization behavior.
@@ -62,11 +59,11 @@ export const defaultTools = {
 /**
  * All built-in tools including inline tools.
  * For users who want every tool available.
+ * Note: Convert and Delete are internal tools and don't need to be configured.
  */
 export const allTools = {
   ...defaultTools,
   bold: { class: Bold },
   italic: { class: Italic },
   link: { class: Link },
-  convertTo: { class: Convert },
 } as const;

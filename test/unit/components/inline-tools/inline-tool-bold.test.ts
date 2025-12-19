@@ -99,9 +99,7 @@ describe('BoldInlineTool', () => {
       b: {},
     });
 
-    const tool = new BoldInlineTool();
-
-    expect(tool.shortcut).toBe('CMD+B');
+    expect(BoldInlineTool.shortcut).toBe('CMD+B');
   });
 
   it('wraps selected text and reports bold state', () => {

@@ -42,6 +42,100 @@ const isBlockMovementShortcut = (event: KeyboardEvent, direction: 'up' | 'down')
  */
 export class BlockEvents extends Module {
   /**
+   * Tool name for list items
+   */
+  private static readonly LIST_TOOL_NAME = 'list';
+
+  /**
+   * Indentation padding per depth level in pixels (matches ListItem.INDENT_PER_LEVEL)
+   */
+  private static readonly INDENT_PER_LEVEL = 24;
+
+  /**
+   * Check if all selected blocks are list items.
+   * @returns true if all selected blocks are list items, false otherwise
+   */
+  private areAllSelectedBlocksListItems(): boolean {
+    const { BlockSelection } = this.Blok;
+    const selectedBlocks = BlockSelection.selectedBlocks;
+
+    if (selectedBlocks.length === 0) {
+      return false;
+    }
+
+    return selectedBlocks.every((block) => block.name === BlockEvents.LIST_TOOL_NAME);
+  }
+
+  /**
+   * Get the depth of a list block by reading from its DOM.
+   * @param block - the block to get depth from
+   * @returns depth value (0 if not found or not a list)
+   */
+  private getListBlockDepth(block: Block): number {
+    const blockHolder = block.holder;
+    const listItemEl = blockHolder?.querySelector('[role="listitem"]');
+    const styleAttr = listItemEl?.getAttribute('style');
+
+    const marginMatch = styleAttr?.match(/margin-left:\s*(\d+)px/);
+
+    return marginMatch ? Math.round(parseInt(marginMatch[1], 10) / BlockEvents.INDENT_PER_LEVEL) : 0;
+  }
+
+  /**
+   * Check if all selected list items can be indented.
+   * Each item must have a previous list item, and its depth must be <= previous item's depth.
+   * @returns true if all selected items can be indented
+   */
+  private canIndentSelectedListItems(): boolean {
+    const { BlockSelection, BlockManager } = this.Blok;
+    const selectedBlocks = BlockSelection.selectedBlocks;
+
+    for (const block of selectedBlocks) {
+      const blockIndex = BlockManager.getBlockIndex(block);
+
+      if (blockIndex === undefined || blockIndex === 0) {
+        return false; // First block or unknown index cannot be indented
+      }
+
+      const previousBlock = BlockManager.getBlockByIndex(blockIndex - 1);
+
+      if (!previousBlock || previousBlock.name !== BlockEvents.LIST_TOOL_NAME) {
+        return false; // Previous block must be a list item
+      }
+
+      const currentDepth = this.getListBlockDepth(block);
+      const previousDepth = this.getListBlockDepth(previousBlock);
+
+      // Can only indent to at most one level deeper than previous item
+      if (currentDepth > previousDepth) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Check if all selected list items can be outdented.
+   * Each item must have depth > 0.
+   * @returns true if all selected items can be outdented
+   */
+  private canOutdentSelectedListItems(): boolean {
+    const { BlockSelection } = this.Blok;
+    const selectedBlocks = BlockSelection.selectedBlocks;
+
+    for (const block of selectedBlocks) {
+      const currentDepth = this.getListBlockDepth(block);
+
+      if (currentDepth === 0) {
+        return false; // Can't outdent if already at root level
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * All keydowns on Block
    * @param {KeyboardEvent} event - keydown
    */

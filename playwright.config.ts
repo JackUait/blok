@@ -61,6 +61,9 @@ const CROSS_BROWSER_TESTS = [
   // UI interactions requiring cross-browser validation
   '**/ui/plus-block-tunes-interaction.spec.ts',
   '**/ui/inline-toolbar-nested-popover-keyboard.spec.ts',
+
+  // Keyboard shortcuts (contenteditable + keyboard behavior varies)
+  '**/tools/header-shortcut.spec.ts',
 ] as const;
 
 // Logic/API tests - browser-agnostic, run once on Chromium

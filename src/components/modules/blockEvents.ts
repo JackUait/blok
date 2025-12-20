@@ -477,7 +477,7 @@ export class BlockEvents extends Module {
 
   /**
    * Input event handler for Block
-   * Detects markdown-like shortcuts for auto-converting to lists
+   * Detects markdown-like shortcuts for auto-converting to lists or headers
    * @param {InputEvent} event - input event
    */
   public input(event: InputEvent): void {
@@ -489,6 +489,7 @@ export class BlockEvents extends Module {
     }
 
     this.handleListShortcut();
+    this.handleHeaderShortcut();
   }
 
   /**

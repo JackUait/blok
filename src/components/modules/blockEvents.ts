@@ -47,6 +47,11 @@ export class BlockEvents extends Module {
   private static readonly LIST_TOOL_NAME = 'list';
 
   /**
+   * Tool name for headers
+   */
+  private static readonly HEADER_TOOL_NAME = 'header';
+
+  /**
    * Get the depth of a list block from its data attribute.
    * @param block - the block to get depth from
    * @returns depth value (0 if not found or not a list)

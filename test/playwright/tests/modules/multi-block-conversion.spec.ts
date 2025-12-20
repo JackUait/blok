@@ -135,21 +135,6 @@ const selectAllBlocksViaKeyboard = async (page: Page): Promise<void> => {
   await page.keyboard.press(SELECT_ALL_SHORTCUT);
 };
 
-const selectAllBlocksViaShift = async (page: Page, totalBlocks: number): Promise<void> => {
-  const firstBlock = getParagraphByIndex(page, 0);
-
-  await firstBlock.click();
-  await placeCaretAtEnd(firstBlock);
-
-  await page.keyboard.down('Shift');
-
-  for (let i = 0; i < totalBlocks - 1; i++) {
-    await page.keyboard.press('ArrowDown');
-  }
-
-  await page.keyboard.up('Shift');
-};
-
 const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
   await locator.evaluate((element) => {
     const doc = element.ownerDocument;
@@ -197,11 +182,19 @@ const selectBlocksWithShift = async (page: Page, startIndex: number, count: numb
   await page.keyboard.up('Shift');
 };
 
+const selectAllBlocksViaShift = async (page: Page, totalBlocks: number): Promise<void> => {
+  await selectBlocksWithShift(page, 0, totalBlocks);
+};
+
 const openBlockTunesForSelectedBlocks = async (page: Page): Promise<void> => {
   const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
   await expect(settingsButton).toBeVisible();
-  await settingsButton.click();
+
+  // Use dispatchEvent for mousedown/mouseup to ensure proper event handling
+  // The toolbar listens on mousedown and sets up a document-level mouseup listener
+  await settingsButton.dispatchEvent('mousedown', { button: 0 });
+  await settingsButton.dispatchEvent('mouseup', { button: 0 });
 
   const popover = page.locator(POPOVER_CONTAINER_SELECTOR);
 
@@ -478,10 +471,11 @@ test.describe('multi-block conversion', () => {
 
       await headerOption.click();
 
-      // Popover should be closed
+      // Popover should be closed - wait for it to be removed from DOM
+      // Give the async conversion and close operations time to complete
       const popover = page.locator(POPOVER_CONTAINER_SELECTOR);
 
-      await expect(popover).toHaveCount(0);
+      await expect(popover).toHaveCount(0, { timeout: 5000 });
     });
   });
 

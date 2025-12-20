@@ -144,8 +144,6 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       return;
     }
 
-    this.opened = true;
-
     /**
      * If block settings contains any inputs, focus will be set there,
      * so we need to save current selection to restore it after block settings is closed
@@ -163,9 +161,6 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     /** Get tool's settings data - only relevant for single block selection */
     const { toolTunes, commonTunes } = block.getTunes();
-
-    /** Tell to subscribers that block settings is opened */
-    this.eventsDispatcher.emit(this.events.opened);
 
     const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
     const popoverParams: PopoverParams & { flipper?: Flipper } = {
@@ -187,6 +182,16 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     this.popover.getElement().setAttribute('data-blok-testid', 'block-tunes-popover');
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
+
+    /**
+     * Set opened flag AFTER popover is created to prevent race conditions
+     * where close() is called during the async getTunesItems() call
+     * when opened=true but popover is still null
+     */
+    this.opened = true;
+
+    /** Tell to subscribers that block settings is opened */
+    this.eventsDispatcher.emit(this.events.opened);
 
     this.popover.show();
     this.attachFlipperKeydownListener(block);

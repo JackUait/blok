@@ -180,6 +180,8 @@ export class Toolbar extends Module<ToolbarNodes> {
         '[&_svg]:h-6 [&_svg]:w-6',
         // Hover (can-hover)
         'can-hover:hover:bg-bg-light',
+        // Keep hover background when toolbox is open
+        'group-data-[blok-toolbox-opened=true]:bg-bg-light',
         // Mobile styles (static positioning with overlay-pane appearance)
         'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
@@ -206,6 +208,9 @@ export class Toolbar extends Module<ToolbarNodes> {
         'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
         // When toolbox is opened, use pointer cursor on hover
         'group-data-[blok-toolbox-opened=true]:can-hover:hover:cursor-pointer',
+        // When block settings is opened, show hover background and pointer cursor
+        'group-data-[blok-block-settings-opened=true]:bg-bg-light',
+        'group-data-[blok-block-settings-opened=true]:can-hover:hover:cursor-pointer',
         // Mobile styles (static positioning with overlay-pane appearance)
         'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
@@ -213,10 +218,7 @@ export class Toolbar extends Module<ToolbarNodes> {
         'not-mobile:w-6'
       ),
       settingsTogglerHidden: 'hidden',
-      settingsTogglerOpened: twJoin(
-        // When opened, override hover cursor
-        'can-hover:hover:cursor-pointer'
-      ),
+      settingsTogglerOpened: '',
     };
   }
 
@@ -1062,16 +1064,14 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Handler for BlockSettingsOpened event
    */
   private onBlockSettingsOpen = (): void => {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    this.nodes.settingsToggler?.classList.add(this.CSS.settingsTogglerOpened);
+    this.Blok.UI.nodes.wrapper.setAttribute(DATA_ATTR.blockSettingsOpened, 'true');
   };
 
   /**
    * Handler for BlockSettingsClosed event
    */
   private onBlockSettingsClose = (): void => {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    this.nodes.settingsToggler?.classList.remove(this.CSS.settingsTogglerOpened);
+    this.Blok.UI.nodes.wrapper.removeAttribute(DATA_ATTR.blockSettingsOpened);
   };
 
   /**

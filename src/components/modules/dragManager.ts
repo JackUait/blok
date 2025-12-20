@@ -126,6 +126,11 @@ export class DragManager extends Module {
         return;
       }
 
+      // Don't start drag when any popover is open
+      if (document.querySelector(`[${DATA_ATTR.popoverOpened}]`) !== null) {
+        return;
+      }
+
       this.startDragTracking(e, block);
     };
 

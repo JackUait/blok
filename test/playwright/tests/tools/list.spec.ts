@@ -1629,4 +1629,178 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
     });
   });
+
+  test.describe('multi-select indent/outdent', () => {
+    /**
+     * Helper to select multiple blocks by their indices using Shift+ArrowDown.
+     * Clicks on the first block, then uses Shift+Down to extend selection.
+     */
+    const selectBlocksRange = async (page: Page, startIndex: number, endIndex: number): Promise<void> => {
+      const startBlock = page.locator(LIST_BLOCK_SELECTOR).nth(startIndex).locator('[contenteditable="true"]');
+      await startBlock.click();
+
+      // Use Cmd+A twice to select the block, then Shift+Down to extend
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.press('Meta+a');
+
+      const stepsDown = endIndex - startIndex;
+      for (let i = 0; i < stepsDown; i++) {
+        await page.keyboard.press('Shift+ArrowDown');
+      }
+    };
+
+    test('tab indents all selected list items when all are at valid depth', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+          { text: 'Third item' },
+        ]),
+      });
+
+      // Select second and third items
+      await selectBlocksRange(page, 1, 2);
+
+      // Verify blocks are selected
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(2)).toHaveAttribute('data-blok-selected', 'true');
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+
+      // Verify both items are now at depth 1
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[1].data.depth).toBe(1);
+      expect(savedData?.blocks[2].data.depth).toBe(1);
+    });
+
+    test('shift+tab outdents all selected list items', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item', depth: 1 },
+          { text: 'Third item', depth: 1 },
+        ]),
+      });
+
+      // Select second and third items (both at depth 1)
+      await selectBlocksRange(page, 1, 2);
+
+      // Press Shift+Tab to outdent
+      await page.keyboard.press('Shift+Tab');
+
+      // Verify both items are now at depth 0
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[2].data.depth ?? 0).toBe(0);
+    });
+
+    test('tab does nothing when any selected item cannot be indented', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+          { text: 'Third item' },
+        ]),
+      });
+
+      // Select first and second items (first cannot be indented - no previous list item)
+      await selectBlocksRange(page, 0, 1);
+
+      // Press Tab - should do nothing because first item can't indent
+      await page.keyboard.press('Tab');
+
+      // Verify neither item was indented
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
+    });
+
+    test('shift+tab does nothing when any selected item is at depth 0', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item', depth: 1 },
+          { text: 'Third item' },  // depth 0
+        ]),
+      });
+
+      // Select second and third items (third is at depth 0)
+      await selectBlocksRange(page, 1, 2);
+
+      // Press Shift+Tab - should do nothing because third item can't outdent
+      await page.keyboard.press('Shift+Tab');
+
+      // Verify neither item changed
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[1].data.depth).toBe(1);
+      expect(savedData?.blocks[2].data.depth ?? 0).toBe(0);
+    });
+
+    test('tab does nothing when selection includes non-list blocks', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'list-1', type: 'list', data: { text: 'List item', style: 'unordered' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Paragraph' } },
+          ],
+        },
+      });
+
+      // Select both blocks (mixed types)
+      const listItem = page.locator(LIST_BLOCK_SELECTOR).first().locator('[contenteditable="true"]');
+      await listItem.click();
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.press('Shift+ArrowDown');
+
+      // Press Tab - should do nothing because selection includes paragraph
+      await page.keyboard.press('Tab');
+
+      // Verify list item was not indented
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+    });
+
+    test('selection is preserved after indent', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+          { text: 'Third item' },
+        ]),
+      });
+
+      // Select second and third items
+      await selectBlocksRange(page, 1, 2);
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+
+      // Verify blocks are still selected
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(2)).toHaveAttribute('data-blok-selected', 'true');
+    });
+  });
 });

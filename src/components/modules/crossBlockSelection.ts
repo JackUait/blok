@@ -228,7 +228,7 @@ export class CrossBlockSelection extends Module {
    */
   private onMouseOver = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
-    const { BlockManager, BlockSelection, BlockSettings, DragManager } = this.Blok;
+    const { BlockManager, BlockSelection, DragManager } = this.Blok;
 
     /**
      * Skip cross-block selection when a drag operation is in progress
@@ -238,9 +238,9 @@ export class CrossBlockSelection extends Module {
     }
 
     /**
-     * Skip cross-block selection when the settings menu is open
+     * Skip cross-block selection when any toolbar/popover is open
      */
-    if (BlockSettings.opened) {
+    if (this.Blok.UI.someToolbarOpened) {
       return;
     }
 

@@ -660,9 +660,13 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Plus button mousedown handler
-     * Stores the initial mouse position to distinguish between click and drag
+     * Stores the initial mouse position and sets up a document-level mouseup listener.
+     * Using document-level mouseup ensures we catch the event even if the mouse
+     * moves slightly off the button element during the click.
      */
     this.readOnlyMutableListeners.on(plusButton, 'mousedown', (e) => {
+      hide();
+
       const mouseEvent = e as MouseEvent;
 
       /**
@@ -673,48 +677,35 @@ export class Toolbar extends Module<ToolbarNodes> {
         x: mouseEvent.clientX,
         y: mouseEvent.clientY,
       };
-    }, true);
-
-    /**
-     * Plus button mouseup handler
-     * Only opens the toolbox if the mouse didn't move significantly (i.e., it was a click, not a drag)
-     *
-     * We use mouseup instead of click because when multiple blocks are selected,
-     * the browser may not generate a click event due to focus/selection changes
-     * during the mousedown phase.
-     */
-    this.readOnlyMutableListeners.on(plusButton, 'mouseup', (e) => {
-      e.stopPropagation();
-
-      const mouseEvent = e as MouseEvent;
 
       /**
-       * Check if this was a drag or a click by comparing mouse positions
-       * If the mouse moved more than the threshold, it was a drag - don't open toolbox
+       * Add document-level mouseup listener to catch the event even if mouse
+       * moves slightly off the button. This is removed after firing once.
        */
-      const mouseDownPos = this.plusButtonMouseDownPosition;
+      const onMouseUp = (mouseUpEvent: MouseEvent): void => {
+        document.removeEventListener('mouseup', onMouseUp, true);
 
-      this.plusButtonMouseDownPosition = null;
+        const mouseDownPos = this.plusButtonMouseDownPosition;
 
-      /**
-       * If mouseDownPos is null, it means mousedown didn't happen on this element
-       * (e.g., user started drag from elsewhere), so ignore this mouseup
-       */
-      if (mouseDownPos === null) {
-        return;
-      }
+        this.plusButtonMouseDownPosition = null;
 
-      const wasDragged = (
-        Math.abs(mouseEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
-        Math.abs(mouseEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
-      );
+        if (mouseDownPos === null) {
+          return;
+        }
 
-      if (wasDragged) {
-        return;
-      }
+        const wasDragged = (
+          Math.abs(mouseUpEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
+          Math.abs(mouseUpEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
+        );
 
-      hide();
-      this.plusButtonClicked();
+        if (wasDragged) {
+          return;
+        }
+
+        this.plusButtonClicked();
+      };
+
+      document.addEventListener('mouseup', onMouseUp, true);
     }, true);
 
     /**

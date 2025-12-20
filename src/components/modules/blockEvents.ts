@@ -645,29 +645,16 @@ export class BlockEvents extends Module {
   }
 
   /**
-   * Check if current block content matches a header shortcut pattern
-   * and convert to appropriate header level.
-   * Supports conversion even when there's existing text after the shortcut.
-   * Preserves HTML content and maintains caret position.
+   * Check if current block matches a header shortcut pattern and convert it.
    */
   private handleHeaderShortcut(): void {
     const { BlockManager, Tools } = this.Blok;
     const currentBlock = BlockManager.currentBlock;
 
-    if (!currentBlock) {
+    if (!currentBlock?.tool.isDefault) {
       return;
     }
 
-    /**
-     * Only convert default blocks (paragraphs)
-     */
-    if (!currentBlock.tool.isDefault) {
-      return;
-    }
-
-    /**
-     * Check if header tool is available
-     */
     const headerTool = Tools.blockTools.get(BlockEvents.HEADER_TOOL_NAME);
 
     if (!headerTool) {
@@ -680,29 +667,14 @@ export class BlockEvents extends Module {
       return;
     }
 
-    /**
-     * Use textContent to match the shortcut pattern
-     */
     const textContent = currentInput.textContent || '';
-
-    /**
-     * Check for header pattern (e.g., "# ", "## ", "### ")
-     */
     const headerMatch = BlockEvents.HEADER_PATTERN.exec(textContent);
 
     if (!headerMatch) {
       return;
     }
 
-    /**
-     * Extract header level from the number of # characters
-     */
     const level = headerMatch[1].length;
-
-    /**
-     * Check if the level is enabled in the Header tool's config
-     * If levels config is not specified, all levels (1-6) are allowed
-     */
     const headerSettings = headerTool.settings as { levels?: number[] };
     const allowedLevels = headerSettings.levels;
 
@@ -710,35 +682,14 @@ export class BlockEvents extends Module {
       return;
     }
 
-    /**
-     * Get the depth from the block holder if it was previously nested
-     * This preserves nesting when converting
-     */
-    const depthAttr = currentBlock.holder.getAttribute('data-blok-depth');
-    const depth = depthAttr ? parseInt(depthAttr, 10) : 0;
-
-    /**
-     * Extract remaining content and calculate shortcut length
-     * Shortcut length: number of # characters + " " = level + 1
-     */
     const shortcutLength = level + 1;
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
-    /**
-     * Build header data
-     */
-    const headerData: { text: string; level: number; depth?: number } = {
+    const newBlock = BlockManager.replace(currentBlock, BlockEvents.HEADER_TOOL_NAME, {
       text: remainingHtml,
       level,
-    };
-
-    // Preserve depth if the block was previously nested
-    if (depth > 0) {
-      headerData.depth = depth;
-    }
-
-    const newBlock = BlockManager.replace(currentBlock, BlockEvents.HEADER_TOOL_NAME, headerData);
+    });
 
     this.setCaretAfterConversion(newBlock, caretOffset);
   }

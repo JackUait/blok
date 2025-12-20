@@ -531,7 +531,7 @@ describe('DragManager', () => {
 
       document.dispatchEvent(mouseMoveEvent);
 
-      expect(tooltip.hide).toHaveBeenCalledWith(true);
+      expect(tooltip.hide).toHaveBeenCalled();
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));

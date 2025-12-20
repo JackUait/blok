@@ -47,38 +47,14 @@ export class BlockEvents extends Module {
   private static readonly LIST_TOOL_NAME = 'list';
 
   /**
-   * Indentation padding per depth level in pixels (matches ListItem.INDENT_PER_LEVEL)
-   */
-  private static readonly INDENT_PER_LEVEL = 24;
-
-  /**
-   * Check if all selected blocks are list items.
-   * @returns true if all selected blocks are list items, false otherwise
-   */
-  private areAllSelectedBlocksListItems(): boolean {
-    const { BlockSelection } = this.Blok;
-    const selectedBlocks = BlockSelection.selectedBlocks;
-
-    if (selectedBlocks.length === 0) {
-      return false;
-    }
-
-    return selectedBlocks.every((block) => block.name === BlockEvents.LIST_TOOL_NAME);
-  }
-
-  /**
-   * Get the depth of a list block by reading from its DOM.
+   * Get the depth of a list block from its data attribute.
    * @param block - the block to get depth from
    * @returns depth value (0 if not found or not a list)
    */
   private getListBlockDepth(block: Block): number {
-    const blockHolder = block.holder;
-    const listItemEl = blockHolder?.querySelector('[role="listitem"]');
-    const styleAttr = listItemEl?.getAttribute('style');
+    const depthAttr = block.holder?.querySelector('[data-list-depth]')?.getAttribute('data-list-depth');
 
-    const marginMatch = styleAttr?.match(/margin-left:\s*(\d+)px/);
-
-    return marginMatch ? Math.round(parseInt(marginMatch[1], 10) / BlockEvents.INDENT_PER_LEVEL) : 0;
+    return depthAttr ? parseInt(depthAttr, 10) : 0;
   }
 
   /**
@@ -88,26 +64,21 @@ export class BlockEvents extends Module {
    */
   private canIndentSelectedListItems(): boolean {
     const { BlockSelection, BlockManager } = this.Blok;
-    const selectedBlocks = BlockSelection.selectedBlocks;
 
-    for (const block of selectedBlocks) {
+    for (const block of BlockSelection.selectedBlocks) {
       const blockIndex = BlockManager.getBlockIndex(block);
 
       if (blockIndex === undefined || blockIndex === 0) {
-        return false; // First block or unknown index cannot be indented
+        return false;
       }
 
       const previousBlock = BlockManager.getBlockByIndex(blockIndex - 1);
 
       if (!previousBlock || previousBlock.name !== BlockEvents.LIST_TOOL_NAME) {
-        return false; // Previous block must be a list item
+        return false;
       }
 
-      const currentDepth = this.getListBlockDepth(block);
-      const previousDepth = this.getListBlockDepth(previousBlock);
-
-      // Can only indent to at most one level deeper than previous item
-      if (currentDepth > previousDepth) {
+      if (this.getListBlockDepth(block) > this.getListBlockDepth(previousBlock)) {
         return false;
       }
     }
@@ -116,99 +87,38 @@ export class BlockEvents extends Module {
   }
 
   /**
-   * Check if all selected list items can be outdented.
-   * Each item must have depth > 0.
+   * Check if all selected list items can be outdented (all have depth > 0).
    * @returns true if all selected items can be outdented
    */
   private canOutdentSelectedListItems(): boolean {
-    const { BlockSelection } = this.Blok;
-    const selectedBlocks = BlockSelection.selectedBlocks;
-
-    for (const block of selectedBlocks) {
-      const currentDepth = this.getListBlockDepth(block);
-
-      if (currentDepth === 0) {
-        return false; // Can't outdent if already at root level
-      }
-    }
-
-    return true;
+    return this.Blok.BlockSelection.selectedBlocks.every((block) => this.getListBlockDepth(block) > 0);
   }
 
   /**
-   * Indent all selected list items by one level.
-   * Updates each block's depth and triggers re-render.
+   * Update depth of all selected list items.
+   * @param delta - depth change (+1 for indent, -1 for outdent)
    */
-  private async indentSelectedListItems(): Promise<void> {
+  private async updateSelectedListItemsDepth(delta: number): Promise<void> {
     const { BlockSelection, BlockManager } = this.Blok;
-    const selectedBlocks = BlockSelection.selectedBlocks;
 
-    // Get indices of selected blocks to process in document order
-    const blockIndices = selectedBlocks
+    const blockIndices = BlockSelection.selectedBlocks
       .map((block) => BlockManager.getBlockIndex(block))
       .filter((index): index is number => index >= 0)
       .sort((a, b) => a - b);
 
     for (const blockIndex of blockIndices) {
-      // Get fresh block reference by index (in case previous updates changed the store)
       const block = BlockManager.getBlockByIndex(blockIndex);
 
       if (!block) {
         continue;
       }
 
-      const currentDepth = this.getListBlockDepth(block);
-      const newDepth = currentDepth + 1;
-
-      // Get current block data and update depth
       const savedData = await block.save();
-
       const newBlock = await BlockManager.update(block, {
         ...savedData,
-        depth: newDepth,
+        depth: Math.max(0, this.getListBlockDepth(block) + delta),
       });
 
-      // Re-select the new block after update
-      newBlock.selected = true;
-    }
-
-    BlockSelection.clearCache();
-  }
-
-  /**
-   * Outdent all selected list items by one level.
-   * Updates each block's depth and triggers re-render.
-   */
-  private async outdentSelectedListItems(): Promise<void> {
-    const { BlockSelection, BlockManager } = this.Blok;
-    const selectedBlocks = BlockSelection.selectedBlocks;
-
-    // Get indices of selected blocks to process in document order
-    const blockIndices = selectedBlocks
-      .map((block) => BlockManager.getBlockIndex(block))
-      .filter((index): index is number => index >= 0)
-      .sort((a, b) => a - b);
-
-    for (const blockIndex of blockIndices) {
-      // Get fresh block reference by index (in case previous updates changed the store)
-      const block = BlockManager.getBlockByIndex(blockIndex);
-
-      if (!block) {
-        continue;
-      }
-
-      const currentDepth = this.getListBlockDepth(block);
-      const newDepth = Math.max(0, currentDepth - 1);
-
-      // Get current block data and update depth
-      const savedData = await block.save();
-
-      const newBlock = await BlockManager.update(block, {
-        ...savedData,
-        depth: newDepth,
-      });
-
-      // Re-select the new block after update
       newBlock.selected = true;
     }
 
@@ -223,13 +133,15 @@ export class BlockEvents extends Module {
   private handleSelectedBlocksIndent(event: KeyboardEvent): boolean {
     const { BlockSelection } = this.Blok;
 
-    // Only handle when blocks are selected
     if (!BlockSelection.anyBlockSelected) {
       return false;
     }
 
-    // Only handle if all selected blocks are list items
-    if (!this.areAllSelectedBlocksListItems()) {
+    const allListItems = BlockSelection.selectedBlocks.every(
+      (block) => block.name === BlockEvents.LIST_TOOL_NAME
+    );
+
+    if (!allListItems) {
       return false;
     }
 
@@ -237,21 +149,16 @@ export class BlockEvents extends Module {
 
     const isOutdent = event.shiftKey;
 
-    // Handle outdent (Shift+Tab)
     if (isOutdent && this.canOutdentSelectedListItems()) {
-      void this.outdentSelectedListItems();
+      void this.updateSelectedListItemsDepth(-1);
 
       return true;
     }
 
-    // Handle indent (Tab)
     if (!isOutdent && this.canIndentSelectedListItems()) {
-      void this.indentSelectedListItems();
-
-      return true;
+      void this.updateSelectedListItemsDepth(1);
     }
 
-    // Handled but couldn't perform action (blocked at boundaries)
     return true;
   }
 

@@ -1148,24 +1148,37 @@ export class ListItem implements BlockTool {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       void this.handleEnter();
+
       return;
     }
 
     if (event.key === 'Backspace') {
       void this.handleBackspace(event);
+
       return;
     }
 
-    if (event.key === 'Tab' && event.shiftKey) {
-      event.preventDefault();
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    // For Tab/Shift+Tab, let BlockEvents handle it when multiple blocks are selected
+    const selectedBlocks = document.querySelectorAll('[data-blok-selected="true"]');
+
+    if (selectedBlocks.length > 1) {
+      // Multiple blocks selected - let the event bubble up to BlockEvents
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.shiftKey) {
       void this.handleOutdent();
+
       return;
     }
 
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      void this.handleIndent();
-    }
+    void this.handleIndent();
   }
 
   private async handleEnter(): Promise<void> {

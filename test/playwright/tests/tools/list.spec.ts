@@ -1,6 +1,6 @@
 /* eslint-disable playwright/no-nth-methods */
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
@@ -1632,21 +1632,39 @@ test.describe('list tool (ListItem)', () => {
 
   test.describe('multi-select indent/outdent', () => {
     /**
+     * Helper to place caret at end of an element
+     */
+    const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
+      await locator.evaluate((element: HTMLElement) => {
+        const selection = window.getSelection();
+        const range = document.createRange();
+
+        range.selectNodeContents(element);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      });
+    };
+
+    /**
      * Helper to select multiple blocks by their indices using Shift+ArrowDown.
-     * Clicks on the first block, then uses Shift+Down to extend selection.
+     * Clicks on the first block, places caret at end, then uses Shift+Down to extend selection.
      */
     const selectBlocksRange = async (page: Page, startIndex: number, endIndex: number): Promise<void> => {
       const startBlock = page.locator(LIST_BLOCK_SELECTOR).nth(startIndex).locator('[contenteditable="true"]');
-      await startBlock.click();
 
-      // Use Cmd+A twice to select the block, then Shift+Down to extend
-      await page.keyboard.press('Meta+a');
-      await page.keyboard.press('Meta+a');
+      await startBlock.click();
+      await placeCaretAtEnd(startBlock);
+
+      await page.keyboard.down('Shift');
 
       const stepsDown = endIndex - startIndex;
+
       for (let i = 0; i < stepsDown; i++) {
-        await page.keyboard.press('Shift+ArrowDown');
+        await page.keyboard.press('ArrowDown');
       }
+
+      await page.keyboard.up('Shift');
     };
 
     test('tab indents all selected list items when all are at valid depth', async ({ page }) => {
@@ -1662,12 +1680,19 @@ test.describe('list tool (ListItem)', () => {
       // Select second and third items
       await selectBlocksRange(page, 1, 2);
 
-      // Verify blocks are selected
-      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-blok-selected', 'true');
-      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(2)).toHaveAttribute('data-blok-selected', 'true');
+      // Verify blocks are selected (check on block wrapper, not tool element)
+      const secondBlockWrapper = page.locator('[data-blok-testid="block-wrapper"]').nth(1);
+      const thirdBlockWrapper = page.locator('[data-blok-testid="block-wrapper"]').nth(2);
+
+      await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
+      await expect(thirdBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
 
       // Press Tab to indent
       await page.keyboard.press('Tab');
+
+      // Wait for the DOM to update with new depth
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-list-depth', '1');
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(2)).toHaveAttribute('data-list-depth', '1');
 
       // Verify both items are now at depth 1
       const savedData = await page.evaluate(async () => {
@@ -1798,9 +1823,12 @@ test.describe('list tool (ListItem)', () => {
       // Press Tab to indent
       await page.keyboard.press('Tab');
 
-      // Verify blocks are still selected
-      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-blok-selected', 'true');
-      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(2)).toHaveAttribute('data-blok-selected', 'true');
+      // Verify blocks are still selected (data-blok-selected is on block wrapper, not tool element)
+      const secondBlockWrapper = page.locator('[data-blok-testid="block-wrapper"]').nth(1);
+      const thirdBlockWrapper = page.locator('[data-blok-testid="block-wrapper"]').nth(2);
+
+      await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
+      await expect(thirdBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
     });
   });
 });

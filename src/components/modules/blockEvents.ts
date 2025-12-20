@@ -143,28 +143,33 @@ export class BlockEvents extends Module {
     const { BlockSelection, BlockManager } = this.Blok;
     const selectedBlocks = BlockSelection.selectedBlocks;
 
-    // Sort blocks by index to process in document order
-    const sortedBlocks = [...selectedBlocks].sort((a, b) => {
-      const indexA = BlockManager.getBlockIndex(a) ?? 0;
-      const indexB = BlockManager.getBlockIndex(b) ?? 0;
+    // Get indices of selected blocks to process in document order
+    const blockIndices = selectedBlocks
+      .map((block) => BlockManager.getBlockIndex(block))
+      .filter((index): index is number => index >= 0)
+      .sort((a, b) => a - b);
 
-      return indexA - indexB;
-    });
+    for (const blockIndex of blockIndices) {
+      // Get fresh block reference by index (in case previous updates changed the store)
+      const block = BlockManager.getBlockByIndex(blockIndex);
 
-    for (const block of sortedBlocks) {
+      if (!block) {
+        continue;
+      }
+
       const currentDepth = this.getListBlockDepth(block);
       const newDepth = currentDepth + 1;
 
       // Get current block data and update depth
       const savedData = await block.save();
 
-      await this.Blok.BlockManager.update(block, {
+      const newBlock = await BlockManager.update(block, {
         ...savedData,
         depth: newDepth,
       });
 
-      // Re-select the block after update
-      block.selected = true;
+      // Re-select the new block after update
+      newBlock.selected = true;
     }
 
     BlockSelection.clearCache();
@@ -178,28 +183,33 @@ export class BlockEvents extends Module {
     const { BlockSelection, BlockManager } = this.Blok;
     const selectedBlocks = BlockSelection.selectedBlocks;
 
-    // Sort blocks by index to process in document order
-    const sortedBlocks = [...selectedBlocks].sort((a, b) => {
-      const indexA = BlockManager.getBlockIndex(a) ?? 0;
-      const indexB = BlockManager.getBlockIndex(b) ?? 0;
+    // Get indices of selected blocks to process in document order
+    const blockIndices = selectedBlocks
+      .map((block) => BlockManager.getBlockIndex(block))
+      .filter((index): index is number => index >= 0)
+      .sort((a, b) => a - b);
 
-      return indexA - indexB;
-    });
+    for (const blockIndex of blockIndices) {
+      // Get fresh block reference by index (in case previous updates changed the store)
+      const block = BlockManager.getBlockByIndex(blockIndex);
 
-    for (const block of sortedBlocks) {
+      if (!block) {
+        continue;
+      }
+
       const currentDepth = this.getListBlockDepth(block);
       const newDepth = Math.max(0, currentDepth - 1);
 
       // Get current block data and update depth
       const savedData = await block.save();
 
-      await this.Blok.BlockManager.update(block, {
+      const newBlock = await BlockManager.update(block, {
         ...savedData,
         depth: newDepth,
       });
 
-      // Re-select the block after update
-      block.selected = true;
+      // Re-select the new block after update
+      newBlock.selected = true;
     }
 
     BlockSelection.clearCache();

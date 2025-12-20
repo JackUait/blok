@@ -136,6 +136,123 @@ export class BlockEvents extends Module {
   }
 
   /**
+   * Indent all selected list items by one level.
+   * Updates each block's depth and triggers re-render.
+   */
+  private async indentSelectedListItems(): Promise<void> {
+    const { BlockSelection, BlockManager } = this.Blok;
+    const selectedBlocks = BlockSelection.selectedBlocks;
+
+    // Sort blocks by index to process in document order
+    const sortedBlocks = [...selectedBlocks].sort((a, b) => {
+      const indexA = BlockManager.getBlockIndex(a) ?? 0;
+      const indexB = BlockManager.getBlockIndex(b) ?? 0;
+
+      return indexA - indexB;
+    });
+
+    for (const block of sortedBlocks) {
+      const currentDepth = this.getListBlockDepth(block);
+      const newDepth = currentDepth + 1;
+
+      // Get current block data and update depth
+      const savedData = await block.save();
+
+      await this.Blok.BlockManager.update(block, {
+        ...savedData,
+        depth: newDepth,
+      });
+
+      // Re-select the block after update
+      block.selected = true;
+    }
+
+    BlockSelection.clearCache();
+  }
+
+  /**
+   * Outdent all selected list items by one level.
+   * Updates each block's depth and triggers re-render.
+   */
+  private async outdentSelectedListItems(): Promise<void> {
+    const { BlockSelection, BlockManager } = this.Blok;
+    const selectedBlocks = BlockSelection.selectedBlocks;
+
+    // Sort blocks by index to process in document order
+    const sortedBlocks = [...selectedBlocks].sort((a, b) => {
+      const indexA = BlockManager.getBlockIndex(a) ?? 0;
+      const indexB = BlockManager.getBlockIndex(b) ?? 0;
+
+      return indexA - indexB;
+    });
+
+    for (const block of sortedBlocks) {
+      const currentDepth = this.getListBlockDepth(block);
+      const newDepth = Math.max(0, currentDepth - 1);
+
+      // Get current block data and update depth
+      const savedData = await block.save();
+
+      await this.Blok.BlockManager.update(block, {
+        ...savedData,
+        depth: newDepth,
+      });
+
+      // Re-select the block after update
+      block.selected = true;
+    }
+
+    BlockSelection.clearCache();
+  }
+
+  /**
+   * Handles Tab/Shift+Tab for multi-selected list items.
+   * @param event - keyboard event
+   * @returns true if the event was handled, false to fall through to default behavior
+   */
+  private handleSelectedBlocksIndent(event: KeyboardEvent): boolean {
+    const { BlockSelection } = this.Blok;
+
+    // Only handle when blocks are selected
+    if (!BlockSelection.anyBlockSelected) {
+      return false;
+    }
+
+    // Only handle if all selected blocks are list items
+    if (!this.areAllSelectedBlocksListItems()) {
+      return false;
+    }
+
+    const isOutdent = event.shiftKey;
+
+    if (isOutdent) {
+      // Check if all items can be outdented
+      if (!this.canOutdentSelectedListItems()) {
+        event.preventDefault();
+
+        return true; // Handled (by doing nothing)
+      }
+
+      event.preventDefault();
+      void this.outdentSelectedListItems();
+
+      return true;
+    } else {
+      // Check if all items can be indented
+      if (!this.canIndentSelectedListItems()) {
+        event.preventDefault();
+
+        return true; // Handled (by doing nothing)
+      }
+
+      event.preventDefault();
+      void this.indentSelectedListItems();
+
+      return true;
+    }
+  }
+
+  /**
    * All keydowns on Block
    * @param {KeyboardEvent} event - keydown
    */

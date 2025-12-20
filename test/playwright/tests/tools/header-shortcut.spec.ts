@@ -98,9 +98,8 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
       }
 
       // Use BlokOriginal (without default tools) when useOriginal is true
-      const BlokClass = useOriginal
-        ? (window as unknown as { BlokOriginal: typeof Blok }).BlokOriginal
-        : window.Blok;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const BlokClass = useOriginal ? (window as any).BlokOriginal : window.Blok;
       const blok = new BlokClass(blokConfig);
 
       window.blokInstance = blok;

@@ -617,10 +617,49 @@ export class UI extends Module<UINodes> {
         this.escapePressed(event);
         break;
 
+      case 'Tab':
+        this.tabPressed(event);
+        break;
+
       default:
         this.defaultBehaviour(event);
         break;
     }
+  }
+
+  /**
+   * Handle Tab key press at document level for multi-select indent/outdent
+   * @param {KeyboardEvent} event - keyboard event
+   */
+  private tabPressed(event: KeyboardEvent): void {
+    const { BlockSelection } = this.Blok;
+
+    /**
+     * Only handle Tab when blocks are selected (for multi-select indent)
+     * Otherwise, let the default behavior handle it (e.g., toolbar navigation)
+     */
+    if (!BlockSelection.anyBlockSelected) {
+      this.defaultBehaviour(event);
+
+      return;
+    }
+
+    /**
+     * Forward to BlockEvents to handle the multi-select indent/outdent.
+     * BlockEvents.keydown will call preventDefault if needed.
+     */
+    this.Blok.BlockEvents.keydown(event);
+
+    /**
+     * When blocks are selected, always prevent default Tab behavior (focus navigation)
+     * even if the indent operation couldn't be performed (e.g., mixed block types).
+     * This ensures Tab doesn't unexpectedly move focus or trigger single-block indent.
+     * We call preventDefault AFTER BlockEvents.keydown so that check for defaultPrevented passes.
+     * We also stop propagation to prevent the event from reaching block-level handlers
+     * (like ListItem's handleKeyDown) which might try to handle the Tab independently.
+     */
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   /**

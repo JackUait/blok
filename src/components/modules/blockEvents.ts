@@ -464,6 +464,13 @@ export class BlockEvents extends Module {
   private static readonly UNORDERED_LIST_PATTERN = /^[-*]\s([\s\S]*)$/;
 
   /**
+   * Regex pattern for detecting header shortcuts.
+   * Matches patterns like "# ", "## ", "### " etc. at the start of text (1-6 hashes)
+   * Captures remaining content after the shortcut in group 2
+   */
+  private static readonly HEADER_PATTERN = /^(#{1,6})\s([\s\S]*)$/;
+
+  /**
    * Input event handler for Block
    * Detects markdown-like shortcuts for auto-converting to lists
    * @param {InputEvent} event - input event

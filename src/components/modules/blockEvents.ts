@@ -223,33 +223,26 @@ export class BlockEvents extends Module {
       return false;
     }
 
+    event.preventDefault();
+
     const isOutdent = event.shiftKey;
 
-    if (isOutdent) {
-      // Check if all items can be outdented
-      if (!this.canOutdentSelectedListItems()) {
-        event.preventDefault();
-
-        return true; // Handled (by doing nothing)
-      }
-
-      event.preventDefault();
+    // Handle outdent (Shift+Tab)
+    if (isOutdent && this.canOutdentSelectedListItems()) {
       void this.outdentSelectedListItems();
 
       return true;
-    } else {
-      // Check if all items can be indented
-      if (!this.canIndentSelectedListItems()) {
-        event.preventDefault();
+    }
 
-        return true; // Handled (by doing nothing)
-      }
-
-      event.preventDefault();
+    // Handle indent (Tab)
+    if (!isOutdent && this.canIndentSelectedListItems()) {
       void this.indentSelectedListItems();
 
       return true;
     }
+
+    // Handled but couldn't perform action (blocked at boundaries)
+    return true;
   }
 
   /**
@@ -318,6 +311,9 @@ export class BlockEvents extends Module {
         break;
 
       case keyCodes.TAB:
+        if (this.handleSelectedBlocksIndent(event)) {
+          return;
+        }
         this.tabPressed(event);
         break;
     }

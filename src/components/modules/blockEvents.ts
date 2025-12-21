@@ -668,30 +668,51 @@ export class BlockEvents extends Module {
     }
 
     const textContent = currentInput.textContent || '';
-    const headerMatch = BlockEvents.HEADER_PATTERN.exec(textContent);
+    const { levels, shortcuts } = headerTool.settings as { levels?: number[]; shortcuts?: Record<number, string> };
+    const match = shortcuts === undefined
+      ? this.matchDefaultHeaderShortcut(textContent)
+      : this.matchCustomHeaderShortcut(textContent, shortcuts);
 
-    if (!headerMatch) {
+    if (!match || (levels && !levels.includes(match.level))) {
       return;
     }
 
-    const level = headerMatch[1].length;
-    const headerSettings = headerTool.settings as { levels?: number[] };
-    const allowedLevels = headerSettings.levels;
-
-    if (allowedLevels && !allowedLevels.includes(level)) {
-      return;
-    }
-
-    const shortcutLength = level + 1;
-    const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
-    const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
+    const remainingHtml = this.extractRemainingHtml(currentInput, match.shortcutLength);
+    const caretOffset = this.getCaretOffset(currentInput) - match.shortcutLength;
 
     const newBlock = BlockManager.replace(currentBlock, BlockEvents.HEADER_TOOL_NAME, {
       text: remainingHtml,
-      level,
+      level: match.level,
     });
 
     this.setCaretAfterConversion(newBlock, caretOffset);
+  }
+
+  private matchDefaultHeaderShortcut(text: string): { level: number; shortcutLength: number } | null {
+    const match = BlockEvents.HEADER_PATTERN.exec(text);
+
+    return match ? { level: match[1].length, shortcutLength: match[1].length + 1 } : null;
+  }
+
+  private matchCustomHeaderShortcut(
+    text: string,
+    shortcuts: Record<number, string>
+  ): { level: number; shortcutLength: number } | null {
+    // Sort by prefix length descending to match longer prefixes first (e.g., "!!" before "!")
+    for (const [levelStr, prefix] of Object.entries(shortcuts).sort((a, b) => b[1].length - a[1].length)) {
+      if (text.length <= prefix.length || !text.startsWith(prefix)) {
+        continue;
+      }
+
+      const charAfterPrefix = text.charCodeAt(prefix.length);
+
+      // 32 = regular space, 160 = non-breaking space (contenteditable uses nbsp)
+      if (charAfterPrefix === 32 || charAfterPrefix === 160) {
+        return { level: parseInt(levelStr, 10), shortcutLength: prefix.length + 1 };
+      }
+    }
+
+    return null;
   }
 
   /**

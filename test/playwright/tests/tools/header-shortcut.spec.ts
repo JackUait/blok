@@ -533,4 +533,170 @@ test.describe('header shortcuts', () => {
       expect(savedData?.blocks[0].data.level).toBe(6);
     });
   });
+
+  test.describe('custom shortcuts', () => {
+    test('uses custom shortcut when configured', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'BlokHeader',
+            config: {
+              shortcuts: { 1: '!' },
+            },
+          },
+          paragraph: {
+            className: 'BlokParagraph',
+          },
+        },
+        data: {
+          blocks: [{ id: 'test-para', type: 'paragraph', data: { text: '' } }],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      await paragraph.click();
+
+      await page.keyboard.type('! Custom Heading');
+
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.level).toBe(1);
+      expect(savedData?.blocks[0].data.text).toBe('Custom Heading');
+    });
+
+    test('default markdown shortcuts do not work when custom shortcuts are configured', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'BlokHeader',
+            config: {
+              shortcuts: { 1: '!' }, // Only ! is configured, # should not work
+            },
+          },
+          paragraph: {
+            className: 'BlokParagraph',
+          },
+        },
+        data: {
+          blocks: [{ id: 'test-para', type: 'paragraph', data: { text: '' } }],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      await paragraph.click();
+
+      await page.keyboard.type('# Should Not Convert');
+
+      // Should remain a paragraph since # is not in custom shortcuts
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(0);
+    });
+
+    test('disables all shortcuts when empty object is configured', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'BlokHeader',
+            config: {
+              shortcuts: {}, // Empty = no shortcuts
+            },
+          },
+          paragraph: {
+            className: 'BlokParagraph',
+          },
+        },
+        data: {
+          blocks: [{ id: 'test-para', type: 'paragraph', data: { text: '' } }],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      await paragraph.click();
+
+      await page.keyboard.type('# Should Not Convert');
+
+      // Should remain a paragraph
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(0);
+    });
+
+    test('uses H3 shortcut from multi-level config', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'BlokHeader',
+            config: {
+              shortcuts: { 1: '!', 2: '!!', 3: '!!!' },
+            },
+          },
+          paragraph: {
+            className: 'BlokParagraph',
+          },
+        },
+        data: {
+          blocks: [{ id: 'test-para', type: 'paragraph', data: { text: '' } }],
+        },
+      });
+
+      await page.locator(PARAGRAPH_BLOCK_SELECTOR).first().click();
+      await page.keyboard.type('!!! H3');
+
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.level).toBe(3);
+    });
+
+    test('omitted levels have no shortcut', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'BlokHeader',
+            config: {
+              shortcuts: { 2: '##' }, // Only H2 has a shortcut
+            },
+          },
+          paragraph: {
+            className: 'BlokParagraph',
+          },
+        },
+        data: {
+          blocks: [
+            { id: 'para-1', type: 'paragraph', data: { text: '' } },
+            { id: 'para-2', type: 'paragraph', data: { text: '' } },
+          ],
+        },
+      });
+
+      // Try default markdown H1 shortcut (not configured since shortcuts is defined)
+      await page.locator(PARAGRAPH_BLOCK_SELECTOR).first().click();
+      await page.keyboard.type('# Should Stay Paragraph');
+
+      // Should remain paragraph (default # shortcut doesn't work with custom shortcuts)
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(2);
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(0);
+
+      // Try H2 shortcut (configured as ##)
+      await page.locator(PARAGRAPH_BLOCK_SELECTOR).nth(1).click();
+      await page.keyboard.type('## H2');
+
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      // First block should be paragraph with "# Should Stay Paragraph"
+      expect(savedData?.blocks[0].type).toBe('paragraph');
+      // Second block should be H2
+      expect(savedData?.blocks[1].data.level).toBe(2);
+    });
+  });
 });

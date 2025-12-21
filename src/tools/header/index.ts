@@ -61,6 +61,8 @@ export interface HeaderConfig {
   defaultLevel?: number;
   /** Level-specific overrides keyed by level number (1-6) */
   levelOverrides?: Record<number, HeaderLevelConfig>;
+  /** Custom shortcuts per level. If undefined, uses default markdown (#, ##, etc). If empty {}, disables all shortcuts. */
+  shortcuts?: Record<number, string>;
   /**
    * @internal Injected by BlockToolAdapter - merged toolbox entries.
    * When present, renderSettings() will use these entries instead of the default levels.

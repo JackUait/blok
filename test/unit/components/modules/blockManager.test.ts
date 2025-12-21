@@ -54,6 +54,7 @@ const createBlockStub = (options: {
     holder,
     call: vi.fn(),
     destroy: vi.fn(),
+    unwatchBlockMutations: vi.fn(),
     tool: {
       name: options.name ?? 'paragraph',
       sanitizeConfig: {},
@@ -135,6 +136,9 @@ const createBlocksStub = (initialBlocks: Block[] = []): BlocksStub => {
       blocks.splice(toIndex, 0, movedBlock);
     }),
     remove: vi.fn((index: number) => {
+      const blockToRemove = blocks[index];
+
+      blockToRemove?.destroy?.();
       blocks.splice(index, 1);
     }),
     indexOf: vi.fn((block: Block) => blocks.indexOf(block)),

@@ -141,6 +141,7 @@ describe('Toolbox', () => {
         convert: vi.fn(),
         composeBlockData: vi.fn(async () => ({})),
         insert: vi.fn(() => blockAPI),
+        stopBlockMutationWatching: vi.fn(),
       },
       caret: {
         setToBlock: vi.fn(),

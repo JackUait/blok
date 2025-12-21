@@ -38,6 +38,20 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
+   * English title for multilingual search fallback
+   */
+  public get englishTitle(): string | undefined {
+    return this.params.englishTitle;
+  }
+
+  /**
+   * Additional search terms for this item
+   */
+  public get searchTerms(): string[] | undefined {
+    return this.params.searchTerms;
+  }
+
+  /**
    * True if confirmation state is enabled for popover item
    */
   public get isConfirmationStateEnabled(): boolean {

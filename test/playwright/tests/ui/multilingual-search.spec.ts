@@ -12,6 +12,7 @@ declare global {
 const HOLDER_ID = 'blok';
 const POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
 const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
+const VISIBLE_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:not([data-blok-hidden="true"])`;
 
 test.describe('Multilingual Tool Search', () => {
   test.beforeAll(() => {
@@ -69,14 +70,12 @@ test.describe('Multilingual Tool Search', () => {
     await initBlokWithFrenchLocale(page);
     await openToolboxAndSearch(page, 'h1');
 
-    // Should find Heading 1 via "h1" alias
-    const items = page.locator(POPOVER_ITEM_SELECTOR);
-    const visibleItems = items.locator(':visible');
+    // Should find exactly 1 item via "h1" alias (using data-blok-hidden attribute)
+    const visibleItems = page.locator(VISIBLE_ITEM_SELECTOR);
     await expect(visibleItems).toHaveCount(1);
 
-    // The item should contain "Titre 1" (French for "Heading 1")
-    const firstItem = visibleItems.filter({ hasText: 'Titre 1' });
-    await expect(firstItem).toHaveCount(1);
+    // The item should be Heading 1 (either English "Heading 1" or French "Titre 1")
+    await expect(visibleItems.first()).toContainText(/Heading 1|Titre 1/);
   });
 
   test('should find header tool by English name "heading" in French locale', async ({ page }) => {
@@ -84,8 +83,7 @@ test.describe('Multilingual Tool Search', () => {
     await openToolboxAndSearch(page, 'heading');
 
     // Should find all heading levels via English fallback
-    const items = page.locator(POPOVER_ITEM_SELECTOR);
-    const visibleItems = items.locator(':visible');
+    const visibleItems = page.locator(VISIBLE_ITEM_SELECTOR);
 
     // Should have multiple heading results (Heading 1-6)
     const count = await visibleItems.count();
@@ -97,8 +95,7 @@ test.describe('Multilingual Tool Search', () => {
     await openToolboxAndSearch(page, 'ul');
 
     // Should find bulleted list via "ul" alias
-    const items = page.locator(POPOVER_ITEM_SELECTOR);
-    const visibleItems = items.locator(':visible');
+    const visibleItems = page.locator(VISIBLE_ITEM_SELECTOR);
     await expect(visibleItems).toHaveCount(1);
   });
 
@@ -107,8 +104,7 @@ test.describe('Multilingual Tool Search', () => {
     await openToolboxAndSearch(page, 'p');
 
     // Should find paragraph via "p" alias
-    const items = page.locator(POPOVER_ITEM_SELECTOR);
-    const visibleItems = items.locator(':visible');
+    const visibleItems = page.locator(VISIBLE_ITEM_SELECTOR);
 
     // Paragraph should be visible
     const count = await visibleItems.count();

@@ -620,10 +620,9 @@ export class PopoverDesktop extends PopoverAbstract {
     const lowerQuery = query.toLowerCase();
 
     const matchingItems = this.itemsDefault.filter(item => {
-      const searchableItem = item as unknown as SearchableItem;
-      const title = searchableItem.title?.toLowerCase() ?? '';
-      const englishTitle = searchableItem.englishTitle?.toLowerCase() ?? '';
-      const searchTerms = searchableItem.searchTerms ?? [];
+      const title = item.title?.toLowerCase() ?? '';
+      const englishTitle = item.englishTitle?.toLowerCase() ?? '';
+      const searchTerms = item.searchTerms ?? [];
 
       return (
         title.includes(lowerQuery) ||
@@ -634,7 +633,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.onSearch({
       query,
-      items: matchingItems,
+      items: matchingItems as unknown as SearchableItem[],
     });
   }
 
@@ -648,12 +647,15 @@ export class PopoverDesktop extends PopoverAbstract {
     const isEmptyQuery = data.query === '';
     const isNothingFound = data.items.length === 0;
 
+    // Cast data.items to PopoverItemDefault[] since we know that's what filterItems passes
+    const matchingItems = data.items as unknown as PopoverItemDefault[];
+
     this.items
       .forEach((item) => {
         const isDefaultItem = item instanceof PopoverItemDefault;
         const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
         const isHidden = isDefaultItem
-          ? !data.items.includes(item)
+          ? !matchingItems.includes(item as PopoverItemDefault)
           : isSeparatorOrHtml && (isNothingFound || !isEmptyQuery);
 
         item.toggleHidden(isHidden);

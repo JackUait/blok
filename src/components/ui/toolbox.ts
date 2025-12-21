@@ -295,6 +295,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         search: this.i18nLabels.filter,
       },
       items: this.toolboxItemsToBeDisplayed,
+      handleContentEditableNavigation: true,
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);

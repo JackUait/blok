@@ -39,6 +39,13 @@ export interface PopoverParams {
   flipper?: Flipper;
 
   /**
+   * Allow keyboard navigation from contenteditable elements.
+   * When true, arrow keys will navigate the popover even when focus is in a contenteditable.
+   * False by default.
+   */
+  handleContentEditableNavigation?: boolean;
+
+  /**
    * Popover texts overrides
    */
   messages?: PopoverMessages

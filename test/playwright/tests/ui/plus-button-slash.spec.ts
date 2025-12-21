@@ -341,6 +341,11 @@ test.describe('plus button inserts slash paragraph', () => {
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
     await expect(visibleItems).toHaveCount(6);
+
+    // First filtered item should be focused
+    const focusedItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name][data-blok-focused]');
+
+    await expect(focusedItem).toHaveCount(1);
   });
 
   test('backspace updates filter', async ({ page }) => {
@@ -381,6 +386,11 @@ test.describe('plus button inserts slash paragraph', () => {
 
     // Now all items should be visible again
     await expect(allVisibleItems).toHaveCount(initialCount);
+
+    // First item should still be focused after clearing the filter
+    const focusedItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name][data-blok-focused]');
+
+    await expect(focusedItem).toHaveCount(1);
   });
 
   test('deleting "/" closes the toolbox', async ({ page }) => {
@@ -406,6 +416,72 @@ test.describe('plus button inserts slash paragraph', () => {
 
     // Toolbox should now be closed
     await expect(toolbox).toBeHidden();
+  });
+
+  test('arrow keys navigate toolbox items', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: '' } },
+    ]);
+
+    const block = page.locator(BLOCK_SELECTOR);
+
+    await block.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await plusButton.click();
+
+    // Toolbox should be open
+    const toolbox = page.locator(TOOLBOX_POPOVER_SELECTOR);
+
+    await expect(toolbox).toBeVisible();
+
+    // Press ArrowDown to focus first item
+    await page.keyboard.press('ArrowDown');
+
+    // Check that an item is focused (has the focused class)
+    const focusedItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name][data-blok-focused]');
+
+    await expect(focusedItem).toHaveCount(1);
+
+    // Press ArrowDown again to move to next item
+    await page.keyboard.press('ArrowDown');
+
+    // Still should have exactly one focused item
+    await expect(focusedItem).toHaveCount(1);
+  });
+
+  test('enter key selects focused toolbox item', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: '' } },
+    ]);
+
+    const block = page.locator(BLOCK_SELECTOR);
+
+    await block.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await plusButton.click();
+
+    // Type to filter to headings
+    await page.keyboard.type('head');
+
+    // Wait for filter to apply
+    const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
+
+    await expect(visibleItems).toHaveCount(6);
+
+    // Press ArrowDown to focus first heading item
+    await page.keyboard.press('ArrowDown');
+
+    // Press Enter to select the focused item
+    await page.keyboard.press('Enter');
+
+    // Block should now be a header
+    const headerBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`);
+
+    await expect(headerBlock).toBeVisible();
   });
 
   test('selecting filtered item creates the correct block type', async ({ page }) => {

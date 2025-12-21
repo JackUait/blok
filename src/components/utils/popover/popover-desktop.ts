@@ -117,6 +117,7 @@ export class PopoverDesktop extends PopoverAbstract {
           keyCodes.LEFT,
         ],
         onArrowLeft: params.onNavigateBack,
+        handleContentEditableTargets: params.handleContentEditableNavigation,
       });
     }
 
@@ -651,12 +652,19 @@ export class PopoverDesktop extends PopoverAbstract {
     this.toggleNothingFoundMessage(isNothingFound);
 
     /** List of elements available for keyboard navigation considering search query applied */
-    const flippableElements = data.query === '' ? this.flippableElements : data.items.map(item => (item as PopoverItem).getElement());
+    const flippableElements = isEmptyQuery ? this.flippableElements : data.items.map(item => (item as PopoverItem).getElement());
 
-    if (this.flipper?.isActivated) {
-      /** Update flipper items with only visible */
-      this.flipper.deactivate();
-      this.flipper.activate(flippableElements as HTMLElement[]);
+    if (!this.flipper?.isActivated) {
+      return;
+    }
+
+    /** Update flipper items with only visible */
+    this.flipper.deactivate();
+    this.flipper.activate(flippableElements as HTMLElement[]);
+
+    /** Focus first item after filtering (user is typing to filter) */
+    if (flippableElements.length > 0) {
+      this.flipper.focusItem(0, { skipNextTab: false });
     }
   };
 }

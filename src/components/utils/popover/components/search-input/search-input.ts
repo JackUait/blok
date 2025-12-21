@@ -169,13 +169,25 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
   }
 
   /**
-   * Contains logic for checking whether passed item conforms the search query
+   * Contains logic for checking whether passed item conforms the search query.
+   * Matches against: displayed title, English title, and search term aliases.
    * @param item - item to be checked
    */
   private checkItem(item: SearchableItem): boolean {
-    const text = item.title?.toLowerCase() || '';
     const query = this.searchQuery?.toLowerCase();
 
-    return query !== undefined ? text.includes(query) : false;
+    if (query === undefined) {
+      return false;
+    }
+
+    const title = item.title?.toLowerCase() ?? '';
+    const englishTitle = item.englishTitle?.toLowerCase() ?? '';
+    const searchTerms = item.searchTerms ?? [];
+
+    return (
+      title.includes(query) ||
+      englishTitle.includes(query) ||
+      searchTerms.some(term => term.toLowerCase().includes(query))
+    );
   }
 }

@@ -881,21 +881,27 @@ export class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
-    // Reuse empty paragraph, or create new one below hovered block
+    // Determine target block: reuse empty/slash paragraph, or create new one
     const hoveredBlock = this.hoveredBlock;
-    const isEmptyParagraph = hoveredBlock?.isEmpty && hoveredBlock.name === 'paragraph';
+    const isParagraph = hoveredBlock?.name === 'paragraph';
+    const startsWithSlash = isParagraph && hoveredBlock.pluginsContent.textContent?.startsWith('/');
+    const isEmptyParagraph = isParagraph && hoveredBlock.isEmpty;
 
     const insertIndex = hoveredBlock !== null
       ? BlockManager.getBlockIndex(hoveredBlock) + 1
       : BlockManager.currentBlockIndex + 1;
 
-    const targetBlock = isEmptyParagraph
+    const targetBlock = isEmptyParagraph || startsWithSlash
       ? hoveredBlock
       : BlockManager.insertDefaultBlockAtIndex(insertIndex, true);
 
-    // Insert "/" and open toolbox
-    Caret.setToBlock(targetBlock, Caret.positions.START);
-    Caret.insertContentAtCaretPosition('/');
+    // Insert "/" or position caret after existing one
+    if (startsWithSlash) {
+      Caret.setToBlock(targetBlock, Caret.positions.DEFAULT, 1);
+    } else {
+      Caret.setToBlock(targetBlock, Caret.positions.START);
+      Caret.insertContentAtCaretPosition('/');
+    }
     this.moveAndOpen(targetBlock);
     this.toolbox.open();
   }

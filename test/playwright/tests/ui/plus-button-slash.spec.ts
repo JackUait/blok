@@ -141,4 +141,77 @@ test.describe('plus button inserts slash paragraph', () => {
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
   });
+
+  test('clicking plus button on paragraph with "/" does not add another "/"', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: '/' } },
+    ]);
+
+    const block = page.locator(PARAGRAPH_SELECTOR, { hasText: '/' });
+
+    await block.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    // Should still have 1 block (reuses paragraph with "/")
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
+
+    // Block should still contain just "/" (not "//")
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await expect(paragraph).toHaveText('/');
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+  });
+
+  test('clicking plus button on paragraph starting with "/" does not add another "/"', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: '/head' } },
+    ]);
+
+    const block = page.locator(PARAGRAPH_SELECTOR, { hasText: '/head' });
+
+    await block.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    // Should still have 1 block (reuses paragraph with "/head")
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
+
+    // Block should still contain "/head" (not "//head")
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await expect(paragraph).toHaveText('/head');
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+  });
+
+  test('caret is positioned after "/" when paragraph already has one', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: '/' } },
+    ]);
+
+    const block = page.locator(PARAGRAPH_SELECTOR, { hasText: '/' });
+
+    await block.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await plusButton.click();
+
+    // Type something - it should appear after the "/"
+    await page.keyboard.type('test');
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await expect(paragraph).toHaveText('/test');
+  });
 });

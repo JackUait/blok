@@ -406,6 +406,7 @@ export class Paragraph implements BlockTool {
       icon: IconText,
       title: 'Text',
       titleKey: 'text',
+      searchTerms: ['p', 'paragraph', 'plain'],
     };
   }
 }

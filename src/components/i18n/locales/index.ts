@@ -223,3 +223,9 @@ export const buildRegistry = async (codes: readonly SupportedLocale[]): Promise<
   return registry;
 };
 
+/**
+ * English messages dictionary - always available for fallback search.
+ * @internal
+ */
+export { enMessages };
+

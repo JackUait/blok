@@ -6,6 +6,7 @@ import {
   loadLocale,
   getDirection,
   ALL_LOCALE_CODES,
+  enMessages,
 } from '../i18n/locales';
 import { LightweightI18n } from '../i18n/lightweight-i18n';
 import type { I18nextInitResult } from '../i18n/i18next-loader';
@@ -80,6 +81,17 @@ export class I18n extends Module {
     }
 
     return this.lightweightI18n.t(key, vars);
+  }
+
+  /**
+   * Get the English translation for a key.
+   * Used for multilingual search - always searches against English terms.
+   *
+   * @param key - Translation key (e.g., 'toolNames.heading')
+   * @returns English translation string, or empty string if not found
+   */
+  public getEnglishTranslation(key: string): string {
+    return (enMessages as I18nDictionary)[key] ?? '';
   }
 
   /**

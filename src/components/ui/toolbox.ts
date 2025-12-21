@@ -362,6 +362,18 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * Maps tool data to popover item structure
      */
     const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemParams => {
+      // Get English title for search fallback
+      const titleKey = toolboxItem.titleKey;
+      const englishTitleKey = titleKey ? `toolNames.${titleKey}` : undefined;
+      const englishTitle = englishTitleKey
+        ? this.api.i18n.getEnglishTranslation(englishTitleKey)
+        : toolboxItem.title;
+
+      // Merge library searchTerms with user-provided searchTerms
+      const librarySearchTerms = toolboxItem.searchTerms ?? [];
+      const userSearchTerms = tool.searchTerms ?? [];
+      const mergedSearchTerms = [...new Set([...librarySearchTerms, ...userSearchTerms])];
+
       return {
         icon: toolboxItem.icon,
         title: translateToolTitle(this.i18n, toolboxItem, capitalize(tool.name)),
@@ -370,6 +382,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
           void this.toolButtonActivated(tool.name, toolboxItem.data);
         },
         secondaryLabel: (tool.shortcut && displaySecondaryLabel) ? beautifyShortcut(tool.shortcut) : '',
+        englishTitle,
+        searchTerms: mergedSearchTerms.length > 0 ? mergedSearchTerms : undefined,
       };
     };
 

@@ -184,6 +184,18 @@ export interface PopoverItemDefaultBaseParams {
   dataset?: Record<string, string>;
 
   /**
+   * English title for multilingual search.
+   * Used to search against English terms even when UI is in another language.
+   */
+  englishTitle?: string;
+
+  /**
+   * Additional search terms for this item.
+   * Used to match alternative names or keywords.
+   */
+  searchTerms?: string[];
+
+  /**
    * Popover item activation handler
    *
    * @param item - activated item

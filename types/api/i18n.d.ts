@@ -18,4 +18,13 @@ export interface I18n {
    * @returns True if translation exists, false otherwise
    */
   has(dictKey: string): boolean;
+
+  /**
+   * Get the English translation for a key.
+   * Used for multilingual search - always searches against English terms.
+   *
+   * @param key - Translation key (e.g., 'toolNames.heading')
+   * @returns English translation string, or empty string if not found
+   */
+  getEnglishTranslation(key: string): string;
 }

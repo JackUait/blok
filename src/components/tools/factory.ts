@@ -109,6 +109,10 @@ export class ToolsFactory {
 
         return baseApi.i18n.has(namespacedKey) || baseApi.i18n.has(dictKey);
       },
+
+      getEnglishTranslation: (key: string): string => {
+        return baseApi.i18n.getEnglishTranslation(key);
+      },
     };
 
     return {

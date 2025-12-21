@@ -333,7 +333,8 @@ test.describe('blok i18n', () => {
       await block.click();
       await page.locator(PLUS_BUTTON_SELECTOR).click();
 
-      const headerItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
+      // Note: item name is 'header' (tool name) since toolbox entry has no 'name' property
+      const headerItem = page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="header"]`);
 
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(translatedHeading);
@@ -603,7 +604,7 @@ test.describe('blok i18n', () => {
       await convertToButton.click();
 
       // Check item in convert to menu is internationalized
-      const headerItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-nested="true"] [data-blok-item-name="header-2"]`);
+      const headerItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-nested="true"] [data-blok-item-name="header"]`);
 
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(translatedHeading);
@@ -924,7 +925,7 @@ test.describe('blok i18n', () => {
       // The hint tooltip cannot be verified here because tooltips are suppressed when popovers are open
       // The "Convert to" translation is verified indirectly - if the i18n config is applied correctly,
       // the nested popover will open and show the conversion options
-      const headerOption = nestedPopover.locator('[data-blok-item-name="header-2"]');
+      const headerOption = nestedPopover.locator('[data-blok-item-name="header"]');
 
       await expect(headerOption).toBeVisible();
     });
@@ -1109,7 +1110,7 @@ test.describe('blok i18n', () => {
 
       await expect(nestedPopover).toHaveCount(1);
 
-      const headerItem = nestedPopover.locator('[data-blok-item-name="header-2"]');
+      const headerItem = nestedPopover.locator('[data-blok-item-name="header"]');
 
       await expect(headerItem).toHaveCount(1);
       await expect(headerItem).toBeVisible();

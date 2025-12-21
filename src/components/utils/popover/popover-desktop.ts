@@ -202,6 +202,7 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Focuses the initial element when popover is shown.
    * Focuses search field if present, otherwise first menu item.
+   * Skips the first Tab press so it just "enters" the menu rather than advancing.
    */
   private focusInitialElement(): void {
     if (this.search) {
@@ -210,7 +211,7 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
-    this.flipper?.focusFirst();
+    this.flipper?.focusItem(0, { skipNextTab: true });
   }
 
   /**
@@ -660,9 +661,14 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper.deactivate();
     this.flipper.activate(flippableElements as HTMLElement[]);
 
-    /** Focus first item after filtering (user is typing to filter) */
+    /**
+     * Focus first item after filtering.
+     * When query is empty (initial "/" open), skip the first Tab press so it just
+     * "enters" the menu rather than advancing to second item.
+     * When query is non-empty (user is typing to filter), don't skip Tab.
+     */
     if (flippableElements.length > 0) {
-      this.flipper.focusItem(0, { skipNextTab: false });
+      this.flipper.focusItem(0, { skipNextTab: isEmptyQuery });
     }
   };
 }

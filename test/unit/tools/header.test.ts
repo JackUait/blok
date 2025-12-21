@@ -17,6 +17,7 @@ const createMockAPI = (): API => ({
   },
   i18n: {
     t: (key: string) => key,
+    has: () => false,
   },
 } as unknown as API);
 

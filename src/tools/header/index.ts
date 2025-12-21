@@ -9,6 +9,7 @@ import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../
 import { twMerge } from '../../components/utils/tw';
 import { DATA_ATTR } from '../../components/constants';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { translateToolTitle } from '../../components/utils/tools';
 import type {
   API,
   BlockTool,
@@ -274,26 +275,14 @@ export class Header implements BlockTool {
   }
 
   /**
-   * Resolves the title for a toolbox entry.
-   * Priority: custom title > i18n key translation > fallback
+   * Resolves the title for a toolbox entry using the shared translation utility.
    *
    * @param entry - Toolbox entry
    * @param fallback - Fallback title if no custom title or translation found
    * @returns Resolved title string
    */
   private resolveToolboxEntryTitle(entry: ToolboxConfigEntry, fallback: string): string {
-    if (entry.title !== undefined) {
-      return entry.title;
-    }
-
-    if (entry.titleKey === undefined) {
-      return fallback;
-    }
-
-    const namespacedKey = `toolNames.${entry.titleKey}`;
-    const translated = this.api.i18n.t(namespacedKey);
-
-    return translated !== namespacedKey ? translated : fallback;
+    return translateToolTitle(this.api.i18n, entry, fallback);
   }
 
   /**

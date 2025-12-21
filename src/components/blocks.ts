@@ -164,8 +164,16 @@ export class Blocks {
     const insertIndex = index > this.length ? this.length : index;
 
     if (replace) {
-      this.blocks[insertIndex].holder.remove();
-      this.blocks[insertIndex].call(BlockToolAPI.REMOVED);
+      const blockToReplace = this.blocks[insertIndex];
+
+      /**
+       * Call REMOVED lifecycle hook first, then destroy to unsubscribe from
+       * mutation events, then remove DOM element. This prevents spurious
+       * 'block-changed' events from being fired when the DOM element is removed.
+       */
+      blockToReplace.call(BlockToolAPI.REMOVED);
+      blockToReplace.destroy();
+      blockToReplace.holder.remove();
     }
 
     const deleteCount = replace ? 1 : 0;
@@ -260,10 +268,16 @@ export class Blocks {
    */
   public remove(index: number): void {
     const removeIndex = isNaN(index) ? this.length - 1 : index;
+    const blockToRemove = this.blocks[removeIndex];
 
-    this.blocks[removeIndex].holder.remove();
-
-    this.blocks[removeIndex].call(BlockToolAPI.REMOVED);
+    /**
+     * Call REMOVED lifecycle hook first, then destroy to unsubscribe from
+     * mutation events, then remove DOM element. This prevents spurious
+     * 'block-changed' events from being fired when the DOM element is removed.
+     */
+    blockToRemove.call(BlockToolAPI.REMOVED);
+    blockToRemove.destroy();
+    blockToRemove.holder.remove();
 
     this.blocks.splice(removeIndex, 1);
   }

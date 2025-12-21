@@ -663,12 +663,14 @@ export class PopoverDesktop extends PopoverAbstract {
 
     /**
      * Focus first item after filtering.
-     * When query is empty (initial "/" open), skip the first Tab press so it just
-     * "enters" the menu rather than advancing to second item.
-     * When query is non-empty (user is typing to filter), don't skip Tab.
+     * Always skip the first Tab press so it just "enters" the menu rather than
+     * advancing to second item. This applies regardless of whether the query is
+     * empty (initial "/" open) or non-empty (user is typing to filter), because
+     * the user's keyboard focus is still in the search input - pressing Tab
+     * should enter the list at item 0, not advance from 0 to 1.
      */
     if (flippableElements.length > 0) {
-      this.flipper.focusItem(0, { skipNextTab: isEmptyQuery });
+      this.flipper.focusItem(0, { skipNextTab: true });
     }
   };
 }

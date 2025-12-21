@@ -133,4 +133,12 @@ export interface Blocks {
    * @throws Error if conversion is not possible
    */
   convert(id: string, newType: string, dataOverrides?: BlockToolData): Promise<BlockAPI>;
+
+  /**
+   * Stops mutation watching on a block at the specified index.
+   * This is used to prevent spurious block-changed events during block replacement.
+   *
+   * @param index - index of the block to stop watching
+   */
+  stopBlockMutationWatching(index: number): void;
 }

@@ -34,6 +34,7 @@ export class BlocksAPI extends Module {
       update: this.update,
       composeBlockData: this.composeBlockData,
       convert: this.convert,
+      stopBlockMutationWatching: (index: number): void => this.stopBlockMutationWatching(index),
     };
   }
 
@@ -342,6 +343,19 @@ export class BlocksAPI extends Module {
 
     return blocksToInsert.map((block) => new BlockAPI(block));
   };
+
+  /**
+   * Stops mutation watching on a block at the specified index.
+   * This is used to prevent spurious block-changed events during block replacement.
+   * @param index - index of the block to stop watching
+   */
+  private stopBlockMutationWatching(index: number): void {
+    const block = this.Blok.BlockManager.getBlockByIndex(index);
+
+    if (block !== undefined) {
+      block.unwatchBlockMutations();
+    }
+  }
 
   /**
    * Validated block index and throws an error if it's invalid

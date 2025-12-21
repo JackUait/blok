@@ -1362,9 +1362,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
-   * Remove redactor dom change event listener
+   * Remove redactor dom change event listener.
+   * Can be called to stop watching mutations before destroying the block.
    */
-  private unwatchBlockMutations(): void {
+  public unwatchBlockMutations(): void {
     this.blokEventBus?.off(RedactorDomChanged, this.redactorDomChangedCallback);
   }
 

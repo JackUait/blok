@@ -308,6 +308,15 @@ export class BlockManager extends Module {
     tunes?: {[name: string]: BlockTuneData};
   } = {}): Block {
     const targetIndex = index ?? this.currentBlockIndex + (replace ? 0 : 1);
+
+    /**
+     * If we're replacing a block, stop watching for mutations immediately to prevent
+     * spurious block-changed events from DOM manipulations (like focus restoration)
+     * that may occur before the block is fully replaced.
+     */
+    if (replace) {
+      this.getBlockByIndex(targetIndex)?.unwatchBlockMutations();
+    }
     const toolName = tool ?? this.config.defaultBlock;
 
     if (toolName === undefined) {
@@ -608,7 +617,6 @@ export class BlockManager extends Module {
       }
 
       this.blocksStore.remove(index);
-      block.destroy();
 
       /**
        * Force call of didMutated event on Block removal

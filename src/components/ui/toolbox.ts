@@ -247,6 +247,15 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       return;
     }
 
+    /**
+     * Stop mutation watching on the current block when toolbox opens.
+     * This prevents spurious block-changed events from DOM manipulations
+     * that may occur during toolbox interactions (focus changes, etc).
+     */
+    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
+
+    this.api.blocks.stopBlockMutationWatching(currentBlockIndex);
+
     this.popover?.show();
     this.opened = true;
     this.emit(ToolboxEvent.Opened);

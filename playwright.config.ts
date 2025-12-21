@@ -107,6 +107,7 @@ const LOGIC_TESTS = [
   '**/ui/plus-block-tunes.spec.ts',
   '**/ui/selection-with-link-input.spec.ts',
   '**/ui/inline-toolbar-nested-popover.spec.ts',
+  '**/ui/multilingual-search.spec.ts',
 ] as const;
 
 // Generate cross-browser projects programmatically

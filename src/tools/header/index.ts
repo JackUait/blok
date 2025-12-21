@@ -639,16 +639,18 @@ export class Header implements BlockTool {
 
   /**
    * Get Tool toolbox settings
-   * icon - Tool icon's SVG
-   * title - title to show in toolbox
+   * Returns an array of all 6 heading levels, each with its own icon and title.
+   * The BlockToolAdapter will filter these based on the `levels` config if specified.
    *
-   * @returns ToolboxConfig
+   * @returns ToolboxConfig array with entries for H1-H6
    */
   public static get toolbox(): ToolboxConfig {
-    return {
-      icon: IconHeading,
-      title: 'Heading',
-      titleKey: 'heading',
-    };
+    return Header.DEFAULT_LEVELS.map(level => ({
+      icon: level.icon,
+      title: level.name,
+      titleKey: level.nameKey.replace('tools.header.', ''),
+      name: `header-${level.number}`,
+      data: { level: level.number },
+    }));
   }
 }

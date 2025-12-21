@@ -407,7 +407,7 @@ test.describe('ui.block-tunes', () => {
       await convertToOption.click();
 
       await expect(
-        page.locator(`[data-blok-nested="true"] [data-blok-item-name="header"]`)
+        page.locator(`[data-blok-nested="true"] [data-blok-item-name="header-2"]`)
       ).toBeVisible();
     });
 
@@ -527,7 +527,7 @@ test.describe('ui.block-tunes', () => {
 
       await convertToOption.click();
       await page
-        .locator(`[data-blok-nested="true"] [data-blok-item-name="header"]`)
+        .locator(`[data-blok-nested="true"] [data-blok-item-name="header-2"]`)
         .click();
 
       const headerBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`);
@@ -858,7 +858,7 @@ test.describe('ui.block-tunes', () => {
       await expect(nestedPopover).toBeVisible();
 
       // Navigate to header option and select it
-      const headerOption = nestedPopover.locator('[data-blok-item-name="header"]');
+      const headerOption = nestedPopover.locator('[data-blok-item-name="header-2"]');
 
       await expect(headerOption).toBeVisible();
 

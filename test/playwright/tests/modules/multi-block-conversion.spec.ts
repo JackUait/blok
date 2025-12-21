@@ -334,7 +334,7 @@ test.describe('multi-block conversion', () => {
 
       await convertToOption.click();
 
-      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`);
+      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
       await expect(headerOption).toBeVisible();
       await headerOption.click();
@@ -406,7 +406,7 @@ test.describe('multi-block conversion', () => {
 
       await convertToOption.click();
 
-      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`);
+      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
       await headerOption.click();
 
@@ -441,7 +441,7 @@ test.describe('multi-block conversion', () => {
 
       await convertToOption.click();
 
-      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`);
+      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
       await headerOption.click();
 
@@ -467,7 +467,7 @@ test.describe('multi-block conversion', () => {
 
       await convertToOption.click();
 
-      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`);
+      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
       await headerOption.click();
 
@@ -664,7 +664,7 @@ test.describe('multi-block conversion', () => {
       await expect(paragraphOption).toHaveCount(0);
 
       // But header should be available
-      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`);
+      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
       await expect(headerOption).toBeVisible();
     });
@@ -697,7 +697,7 @@ test.describe('multi-block conversion', () => {
       await expect(nestedPopover).toBeVisible();
 
       // Select header option
-      const headerOption = nestedPopover.locator('[data-blok-item-name="header"]');
+      const headerOption = nestedPopover.locator('[data-blok-item-name="header-2"]');
 
       while (!await headerOption.getAttribute('data-blok-focused')) {
         await page.keyboard.press('ArrowDown');
@@ -893,7 +893,7 @@ test.describe('multi-block conversion', () => {
       await convertToOption.click();
 
       // Select header option
-      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header"]`);
+      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
       await expect(headerOption).toBeVisible();
       await headerOption.click();

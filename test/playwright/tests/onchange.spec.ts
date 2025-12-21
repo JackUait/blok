@@ -500,7 +500,7 @@ test.describe('onChange callback', () => {
 
     await plusButton.click();
 
-    const headerOption = page.getByTestId('toolbox-popover').locator('[data-blok-testid="popover-item"][data-blok-item-name=header]');
+    const headerOption = page.getByTestId('toolbox-popover').locator('[data-blok-testid="popover-item"][data-blok-item-name="header-2"]');
 
     await headerOption.click();
 

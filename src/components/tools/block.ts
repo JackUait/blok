@@ -112,8 +112,9 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
     }
 
     const mergedEntries = this.mergeToolboxSettings(toolToolboxSettings, userToolboxSettings);
+    const filteredByStyles = this.filterToolboxEntriesByStyles(mergedEntries);
 
-    return this.filterToolboxEntriesByStyles(mergedEntries);
+    return this.filterToolboxEntriesByLevels(filteredByStyles);
   }
 
   /**
@@ -192,6 +193,28 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
       }
 
       return toolboxStyles.includes(entryData.style);
+    });
+  }
+
+  /**
+   * Filters toolbox entries based on levels config if specified.
+   * This allows tools like Header to show only configured heading levels in the toolbox.
+   */
+  private filterToolboxEntriesByLevels(entries: ToolboxConfigEntry[]): ToolboxConfigEntry[] {
+    const levels = this.settings.levels as number[] | undefined;
+
+    if (!levels || !Array.isArray(levels) || levels.length === 0) {
+      return entries;
+    }
+
+    return entries.filter(entry => {
+      const entryData = entry.data as { level?: number } | undefined;
+
+      if (!entryData || entryData.level === undefined) {
+        return true; // Keep entries without level data
+      }
+
+      return levels.includes(entryData.level);
     });
   }
 

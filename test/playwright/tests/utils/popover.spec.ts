@@ -1237,7 +1237,7 @@ test.describe('popover', () => {
       await page.locator('[data-blok-item-name=convert-to]').click();
 
       // Click Header item in nested popover
-      await page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"] [data-blok-item-name="header"]`).click();
+      await page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"] [data-blok-item-name="header-2"]`).click();
 
       // Check block converted
       const header = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`);

@@ -96,7 +96,7 @@ export class ConvertInlineTool implements InlineTool {
         result.push({
           icon: toolboxItem.icon,
           title: translateToolTitle(this.i18nInstance, toolboxItem, tool.name),
-          name: tool.name,
+          name: toolboxItem.name ?? tool.name,
           closeOnActivate: true,
           onActivate: async () => {
             const newBlock = await this.blocksAPI.convert(currentBlock.id, tool.name, toolboxItem.data);

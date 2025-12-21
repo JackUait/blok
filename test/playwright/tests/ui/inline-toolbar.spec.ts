@@ -583,7 +583,7 @@ test.describe('inline toolbar', () => {
       await expect(nestedPopover).toBeVisible();
 
       // Navigate to header in nested popover - need to press Tab first to focus on nested popover items
-      const headerOption = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-item-name="header"]`);
+      const headerOption = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-item-name="header-2"]`);
 
       await expect(headerOption).toBeVisible();
 
@@ -1028,7 +1028,7 @@ test.describe('inline toolbar', () => {
     await expect(nestedPopover).toBeVisible();
 
     // Click header option in the nested popover
-    await page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"] [data-blok-item-name="header"]`).click();
+    await page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"] [data-blok-item-name="header-2"]`).click();
 
     await expect(page.locator(HEADER_SELECTOR)).toHaveText('Some text');
 

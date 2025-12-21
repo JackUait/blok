@@ -248,6 +248,14 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * User-provided search terms from tool settings.
+   * These are merged with library-defined searchTerms in the toolbox config.
+   */
+  public get searchTerms(): string[] | undefined {
+    return this.settings.searchTerms;
+  }
+
+  /**
    * Returns Tool paste configuration
    */
   public get pasteConfig(): PasteConfig {

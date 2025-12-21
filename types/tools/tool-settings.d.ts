@@ -93,6 +93,13 @@ export interface ExternalToolSettings<Config extends object = any> {
    * It will be hidden from Toolbox when false is specified.
    */
   toolbox?: ToolboxConfig | false;
+
+  /**
+   * Additional search terms for finding this tool in the toolbox.
+   * Merged with any searchTerms defined in the tool's toolbox config.
+   * Useful for adding locale-specific search terms.
+   */
+  searchTerms?: string[];
 }
 
 /**

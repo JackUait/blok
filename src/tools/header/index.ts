@@ -651,6 +651,7 @@ export class Header implements BlockTool {
       titleKey: level.nameKey.replace('tools.header.', ''),
       name: `header-${level.number}`,
       data: { level: level.number },
+      searchTerms: [`h${level.number}`, 'title', 'header', 'heading'],
     }));
   }
 }

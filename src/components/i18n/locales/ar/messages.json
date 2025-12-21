@@ -26,6 +26,7 @@
   "tools.header.heading5": "عنوان 5",
   "tools.header.heading6": "عنوان 6",
   "tools.list.placeholder": "قائمة",
+  "tools.paragraph.placeholder": "اكتب شيئاً أو اضغط / لاختيار أداة",
   "blockSettings.delete": "حذف",
   "a11y.dragHandle": "اسحب لتحريك الكتلة أو انقر للقائمة",
   "a11y.dragHandleRole": "مقبض السحب",

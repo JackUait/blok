@@ -99,10 +99,10 @@ export class Paragraph implements BlockTool {
   /**
    * Default placeholder for Paragraph Tool
    *
-   * @returns empty string
+   * @returns translation key for the default placeholder
    */
   public static get DEFAULT_PLACEHOLDER(): string {
-    return '';
+    return 'tools.paragraph.placeholder';
   }
 
   /**

@@ -40,5 +40,6 @@
   "a11y.movedUp": "بلاک پورته موقعیت {position} له {total} ته ولاړ",
   "a11y.movedDown": "بلاک ښکته موقعیت {position} له {total} ته ولاړ",
   "a11y.atTop": "بلاک په سر کې دی، پورته نشي تللی",
-  "a11y.atBottom": "بلاک په پای کې دی، ښکته نشي تللی"
+  "a11y.atBottom": "بلاک په پای کې دی، ښکته نشي تللی",
+  "tools.paragraph.placeholder": "یو delaysی ولdelaysئ یا / فشار ورdelays د delaysdelays لپاره"
 }

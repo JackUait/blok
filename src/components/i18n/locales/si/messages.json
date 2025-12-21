@@ -40,5 +40,6 @@
   "a11y.movedUp": "කොටස {total}න් {position} ස්ථානයට ඉහළට ගෙන යන ලදී",
   "a11y.movedDown": "කොටස {total}න් {position} ස්ථානයට පහළට ගෙන යන ලදී",
   "a11y.atTop": "කොටස ඉහළමයි, ඉහළට ගෙනයා නොහැක",
-  "a11y.atBottom": "කොටස පහළමයි, පහළට ගෙනයා නොහැක"
+  "a11y.atBottom": "කොටස පහළමයි, පහළට ගෙනයා නොහැක",
+  "tools.paragraph.placeholder": "යdelays ලdelays / delaysdelays delaysණdelays"
 }

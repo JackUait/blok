@@ -26,6 +26,7 @@
   "tools.header.heading5": "Heading 5",
   "tools.header.heading6": "Heading 6",
   "tools.list.placeholder": "List",
+  "tools.paragraph.placeholder": "Write something or press / to select a tool",
   "blockSettings.delete": "Delete",
   "a11y.dragHandle": "Drag to move block or click for menu",
   "a11y.dragHandleRole": "drag handle",

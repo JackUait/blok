@@ -26,6 +26,7 @@
   "tools.header.heading5": "Overskrift 5",
   "tools.header.heading6": "Overskrift 6",
   "tools.list.placeholder": "Liste",
+  "tools.paragraph.placeholder": "Skriv noget eller tryk / for at vælge",
   "blockSettings.delete": "Slet",
   "a11y.dragHandle": "Træk for at flytte blok eller klik for menu",
   "a11y.dragHandleRole": "trækhåndtag",

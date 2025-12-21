@@ -26,6 +26,7 @@
   "tools.header.heading5": "Naslov 5",
   "tools.header.heading6": "Naslov 6",
   "tools.list.placeholder": "Lista",
+  "tools.paragraph.placeholder": "Napišite nešto ili pritisnite / za odabir",
   "blockSettings.delete": "Obriši",
   "a11y.dragHandle": "Prevucite za premještanje bloka ili kliknite za meni",
   "a11y.dragHandleRole": "ručka za povlačenje",

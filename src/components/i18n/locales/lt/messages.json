@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blokas perkeltas aukštyn į poziciją {position} iš {total}",
   "a11y.movedDown": "Blokas perkeltas žemyn į poziciją {position} iš {total}",
   "a11y.atTop": "Blokas yra viršuje, negalima perkelti aukštyn",
-  "a11y.atBottom": "Blokas yra apačioje, negalima perkelti žemyn"
+  "a11y.atBottom": "Blokas yra apačioje, negalima perkelti žemyn",
+  "tools.paragraph.placeholder": "Rašykite ką nors arba spauskite / pasirinkimui"
 }

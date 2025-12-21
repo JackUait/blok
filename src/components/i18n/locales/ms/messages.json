@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blok dialih ke atas ke kedudukan {position} daripada {total}",
   "a11y.movedDown": "Blok dialih ke bawah ke kedudukan {position} daripada {total}",
   "a11y.atTop": "Blok di atas sekali, tidak boleh dialih ke atas",
-  "a11y.atBottom": "Blok di bawah sekali, tidak boleh dialih ke bawah"
+  "a11y.atBottom": "Blok di bawah sekali, tidak boleh dialih ke bawah",
+  "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih"
 }

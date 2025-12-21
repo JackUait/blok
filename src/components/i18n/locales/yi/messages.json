@@ -40,5 +40,6 @@
   "a11y.movedUp": "בלאָק באַוועגט אַרויף צו פּאָזיציע {position} פֿון {total}",
   "a11y.movedDown": "בלאָק באַוועגט אַראָפּ צו פּאָזיציע {position} פֿון {total}",
   "a11y.atTop": "בלאָק איז אויבן, קען נישט אַרויפֿגיין",
-  "a11y.atBottom": "בלאָק איז אונטן, קען נישט אַראָפּגיין"
+  "a11y.atBottom": "בלאָק איז אונטן, קען נישט אַראָפּגיין",
+  "tools.paragraph.placeholder": "שreibn עפעס אdelayער דרdelay / צו delaysיבdelays"
 }

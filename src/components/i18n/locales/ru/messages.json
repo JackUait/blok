@@ -26,6 +26,7 @@
   "tools.header.heading5": "Заголовок 5",
   "tools.header.heading6": "Заголовок 6",
   "tools.list.placeholder": "Список",
+  "tools.paragraph.placeholder": "Напишите что-нибудь или нажмите / для выбора блока",
   "blockSettings.delete": "Удалить",
   "a11y.dragHandle": "Перетащите или нажмите для меню",
   "a11y.dragHandleRole": "управление блоком",

@@ -26,6 +26,7 @@
   "tools.header.heading5": "五级标题",
   "tools.header.heading6": "六级标题",
   "tools.list.placeholder": "列表",
+  "tools.paragraph.placeholder": "输入内容或按 / 选择工具",
   "blockSettings.delete": "删除",
   "a11y.dragHandle": "拖动移动或点击打开菜单",
   "a11y.dragHandleRole": "拖动控件",

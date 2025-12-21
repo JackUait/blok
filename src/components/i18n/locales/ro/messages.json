@@ -40,5 +40,6 @@
   "a11y.movedUp": "Bloc mutat în sus la poziția {position} din {total}",
   "a11y.movedDown": "Bloc mutat în jos la poziția {position} din {total}",
   "a11y.atTop": "Blocul este la început, nu poate fi mutat mai sus",
-  "a11y.atBottom": "Blocul este la sfârșit, nu poate fi mutat mai jos"
+  "a11y.atBottom": "Blocul este la sfârșit, nu poate fi mutat mai jos",
+  "tools.paragraph.placeholder": "Scrie ceva sau apasă / pentru a selecta"
 }

@@ -40,5 +40,6 @@
   "a11y.movedUp": "Блок переміщено вгору, позиція {position} з {total}",
   "a11y.movedDown": "Блок переміщено вниз, позиція {position} з {total}",
   "a11y.atTop": "Блок вже вгорі",
-  "a11y.atBottom": "Блок вже внизу"
+  "a11y.atBottom": "Блок вже внизу",
+  "tools.paragraph.placeholder": "Напишіть щось або натисніть / для вибору"
 }

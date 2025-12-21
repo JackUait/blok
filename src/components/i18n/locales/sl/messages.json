@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blok premaknjen gor na položaj {position} od {total}",
   "a11y.movedDown": "Blok premaknjen dol na položaj {position} od {total}",
   "a11y.atTop": "Blok je na vrhu, ne more se premakniti gor",
-  "a11y.atBottom": "Blok je na dnu, ne more se premakniti dol"
+  "a11y.atBottom": "Blok je na dnu, ne more se premakniti dol",
+  "tools.paragraph.placeholder": "Napišite nekaj ali pritisnite / za izbiro"
 }

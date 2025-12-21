@@ -40,5 +40,6 @@
   "a11y.movedUp": "بۆلەك ئۈستىگە ئورۇن {position} دىن {total} غا يۆتكەلدى",
   "a11y.movedDown": "بۆلەك ئاستىغا ئورۇن {position} دىن {total} غا يۆتكەلدى",
   "a11y.atTop": "بۆلەك ئەڭ ئۈستىدە، ئۈستىگە يۆتكىگىلى بولمايدۇ",
-  "a11y.atBottom": "بۆلەك ئەڭ ئاستىدا، ئاستىغا يۆتكىگىلى بولمايدۇ"
+  "a11y.atBottom": "بۆلەك ئەڭ ئاستىدا، ئاستىغا يۆتكىگىلى بولمايدۇ",
+  "tools.paragraph.placeholder": "نdelays يdelays ياكى / delaysdelaysdelay تال delaysش"
 }

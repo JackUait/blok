@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blokk flyttet opp til posisjon {position} av {total}",
   "a11y.movedDown": "Blokk flyttet ned til posisjon {position} av {total}",
   "a11y.atTop": "Blokken er øverst, kan ikke flyttes opp",
-  "a11y.atBottom": "Blokken er nederst, kan ikke flyttes ned"
+  "a11y.atBottom": "Blokken er nederst, kan ikke flyttes ned",
+  "tools.paragraph.placeholder": "Skriv noe eller trykk / for å velge"
 }

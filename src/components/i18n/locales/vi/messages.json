@@ -40,5 +40,6 @@
   "a11y.movedUp": "Khối đã di chuyển lên, vị trí {position} trên {total}",
   "a11y.movedDown": "Khối đã di chuyển xuống, vị trí {position} trên {total}",
   "a11y.atTop": "Khối đang ở trên cùng, không thể di chuyển lên",
-  "a11y.atBottom": "Khối đang ở dưới cùng, không thể di chuyển xuống"
+  "a11y.atBottom": "Khối đang ở dưới cùng, không thể di chuyển xuống",
+  "tools.paragraph.placeholder": "Viết gì đó hoặc nhấn / để chọn"
 }

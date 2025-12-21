@@ -26,6 +26,7 @@
   "tools.header.heading5": "Titre 5",
   "tools.header.heading6": "Titre 6",
   "tools.list.placeholder": "Liste",
+  "tools.paragraph.placeholder": "Écrivez quelque chose ou appuyez sur / pour choisir",
   "blockSettings.delete": "Supprimer",
   "a11y.dragHandle": "Glisser pour déplacer ou cliquer pour le menu",
   "a11y.dragHandleRole": "poignée de glissement",

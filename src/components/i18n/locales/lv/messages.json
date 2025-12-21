@@ -40,5 +40,6 @@
   "a11y.movedUp": "Bloks pārvietots augšup uz pozīciju {position} no {total}",
   "a11y.movedDown": "Bloks pārvietots lejup uz pozīciju {position} no {total}",
   "a11y.atTop": "Bloks ir augšā, nevar pārvietot augšup",
-  "a11y.atBottom": "Bloks ir apakšā, nevar pārvietot lejup"
+  "a11y.atBottom": "Bloks ir apakšā, nevar pārvietot lejup",
+  "tools.paragraph.placeholder": "Rakstiet kaut ko vai nospiediet / lai izvēlētos"
 }

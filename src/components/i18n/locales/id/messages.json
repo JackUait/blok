@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blok dipindahkan ke atas, posisi {position} dari {total}",
   "a11y.movedDown": "Blok dipindahkan ke bawah, posisi {position} dari {total}",
   "a11y.atTop": "Blok sudah di paling atas, tidak bisa dipindahkan ke atas",
-  "a11y.atBottom": "Blok sudah di paling bawah, tidak bisa dipindahkan ke bawah"
+  "a11y.atBottom": "Blok sudah di paling bawah, tidak bisa dipindahkan ke bawah",
+  "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih"
 }

@@ -212,8 +212,15 @@ describe('Plus button interactions', () => {
       },
       BlockManager: {
         currentBlock: null,
+        currentBlockIndex: 0,
         blocks: [],
         length: 0,
+        getBlockIndex: vi.fn(() => 0),
+        insertDefaultBlockAtIndex: vi.fn(() => ({
+          name: 'paragraph',
+          isEmpty: true,
+          pluginsContent: { textContent: '' },
+        })),
       },
       BlockSelection: {
         anyBlockSelected: true,
@@ -224,6 +231,11 @@ describe('Plus button interactions', () => {
       },
       ReadOnly: {
         isEnabled: false,
+      },
+      Caret: {
+        setToBlock: vi.fn(),
+        insertContentAtCaretPosition: vi.fn(),
+        positions: { START: 'start', DEFAULT: 'default' },
       },
     } as unknown as Toolbar['Blok'];
 
@@ -250,6 +262,12 @@ describe('Plus button interactions', () => {
       toggle: vi.fn(),
       hasFocus: vi.fn(),
     };
+
+    // Mock hoveredBlock to null so test flow uses BlockManager.insertDefaultBlockAtIndex
+    (toolbar as unknown as { hoveredBlock: null }).hoveredBlock = null;
+
+    // Mock moveAndOpen since it's called in the new implementation
+    (toolbar as unknown as { moveAndOpen: () => void }).moveAndOpen = vi.fn();
   });
 
   afterEach(() => {
@@ -259,13 +277,13 @@ describe('Plus button interactions', () => {
   it('clears block selection when plus button is clicked with blocks selected', () => {
     const plusButtonClicked = (toolbar as unknown as { plusButtonClicked: () => void }).plusButtonClicked;
     const clearSelectionSpy = getBlok().BlockSelection.clearSelection;
-    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { toggle: () => void } }).toolboxInstance;
-    const toggleSpy = vi.spyOn(toolboxInstance, 'toggle');
+    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { open: () => void } }).toolboxInstance;
+    const openSpy = vi.spyOn(toolboxInstance, 'open');
 
     plusButtonClicked.call(toolbar);
 
     expect(clearSelectionSpy).toHaveBeenCalled();
-    expect(toggleSpy).toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalled();
   });
 
   it('does not clear selection when no blocks are selected', () => {
@@ -273,12 +291,12 @@ describe('Plus button interactions', () => {
 
     const plusButtonClicked = (toolbar as unknown as { plusButtonClicked: () => void }).plusButtonClicked;
     const clearSelectionSpy = getBlok().BlockSelection.clearSelection;
-    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { toggle: () => void } }).toolboxInstance;
-    const toggleSpy = vi.spyOn(toolboxInstance, 'toggle');
+    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { open: () => void } }).toolboxInstance;
+    const openSpy = vi.spyOn(toolboxInstance, 'open');
 
     plusButtonClicked.call(toolbar);
 
     expect(clearSelectionSpy).not.toHaveBeenCalled();
-    expect(toggleSpy).toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalled();
   });
 });

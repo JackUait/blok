@@ -1,24 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-/**
- * Filter logic for multilingual search.
- * This is the logic that will be used in PopoverDesktop.filterItems()
- */
-const matchesSearchQuery = (
-  item: { title?: string; englishTitle?: string; searchTerms?: string[] },
-  query: string
-): boolean => {
-  const lowerQuery = query.toLowerCase();
-  const title = item.title?.toLowerCase() ?? '';
-  const englishTitle = item.englishTitle?.toLowerCase() ?? '';
-  const searchTerms = item.searchTerms ?? [];
-
-  return (
-    title.includes(lowerQuery) ||
-    englishTitle.includes(lowerQuery) ||
-    searchTerms.some(term => term.toLowerCase().includes(lowerQuery))
-  );
-};
+import { matchesSearchQuery } from '../../../../../src/components/utils/popover/components/search-input';
 
 describe('Multilingual Search Filter', () => {
   const headingItem = {
@@ -71,7 +52,7 @@ describe('Multilingual Search Filter', () => {
 
   describe('edge cases', () => {
     it('should handle empty query', () => {
-      // Empty query should match nothing via includes (empty string matches all)
+      // Empty query matches all via includes (empty string is found in any string)
       expect(matchesSearchQuery(headingItem, '')).toBe(true);
     });
 

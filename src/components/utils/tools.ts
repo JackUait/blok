@@ -26,14 +26,19 @@ export const isToolConvertable = (tool: BlockToolAdapter, direction: 'export' | 
 };
 
 /**
- * Try to translate a key in the toolNames namespace.
+ * Try to translate a key, supporting both full keys and toolNames namespace.
+ *
+ * If the key contains a dot (e.g., 'tools.header.heading1'), it's treated as a full key.
+ * Otherwise, it's prefixed with 'toolNames.' (e.g., 'text' → 'toolNames.text').
  *
  * @param i18n - I18n instance
- * @param key - The key to look up (without the toolNames prefix)
+ * @param key - The key to look up (full key or short key without toolNames prefix)
  * @returns The translated string or undefined if not found
  */
 const tryTranslate = (i18n: I18nInstance, key: string): string | undefined => {
-  const fullKey = `toolNames.${key}`;
+  // If key contains a dot, treat it as a full key (e.g., 'tools.header.heading1')
+  // Otherwise, prefix with 'toolNames.' (e.g., 'text' → 'toolNames.text')
+  const fullKey = key.includes('.') ? key : `toolNames.${key}`;
 
   return i18n.has(fullKey) ? i18n.t(fullKey) : undefined;
 };

@@ -18,6 +18,25 @@ export interface SearchableItem {
   searchTerms?: string[];
 }
 
+/**
+ * Checks if an item matches a search query.
+ * Matches against: displayed title, English title, and search term aliases.
+ * @param item - item to check
+ * @param query - search query (case-insensitive)
+ * @returns true if the item matches the query
+ */
+export const matchesSearchQuery = (item: SearchableItem, query: string): boolean => {
+  const lowerQuery = query.toLowerCase();
+  const title = item.title?.toLowerCase() ?? '';
+  const englishTitle = item.englishTitle?.toLowerCase() ?? '';
+  const searchTerms = item.searchTerms ?? [];
+
+  return (
+    title.includes(lowerQuery) ||
+    englishTitle.includes(lowerQuery) ||
+    searchTerms.some(term => term.toLowerCase().includes(lowerQuery))
+  );
+};
 
 /**
  * Event that can be triggered by the Search Input

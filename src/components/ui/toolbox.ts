@@ -383,7 +383,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         },
         secondaryLabel: (tool.shortcut && displaySecondaryLabel) ? beautifyShortcut(tool.shortcut) : '',
         englishTitle,
-        searchTerms: mergedSearchTerms.length > 0 ? mergedSearchTerms : undefined,
+        searchTerms: mergedSearchTerms,
       };
     };
 

@@ -648,7 +648,7 @@ export class Header implements BlockTool {
     return Header.DEFAULT_LEVELS.map(level => ({
       icon: level.icon,
       title: level.name,
-      titleKey: level.nameKey.replace('tools.header.', ''),
+      titleKey: level.nameKey,
       name: `header-${level.number}`,
       data: { level: level.number },
       searchTerms: [`h${level.number}`, 'title', 'header', 'heading'],

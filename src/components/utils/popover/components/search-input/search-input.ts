@@ -2,7 +2,7 @@ import { Dom } from '../../../../dom';
 import { Listeners } from '../../../listeners';
 import { IconSearch } from '../../../../icons';
 import type { SearchInputEventMap, SearchableItem } from './search-input.types';
-import { SearchInputEvent } from './search-input.types';
+import { SearchInputEvent, matchesSearchQuery } from './search-input.types';
 import { css } from './search-input.const';
 import { EventsDispatcher } from '../../../events';
 
@@ -170,24 +170,9 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
 
   /**
    * Contains logic for checking whether passed item conforms the search query.
-   * Matches against: displayed title, English title, and search term aliases.
    * @param item - item to be checked
    */
   private checkItem(item: SearchableItem): boolean {
-    const query = this.searchQuery?.toLowerCase();
-
-    if (query === undefined) {
-      return false;
-    }
-
-    const title = item.title?.toLowerCase() ?? '';
-    const englishTitle = item.englishTitle?.toLowerCase() ?? '';
-    const searchTerms = item.searchTerms ?? [];
-
-    return (
-      title.includes(query) ||
-      englishTitle.includes(query) ||
-      searchTerms.some(term => term.toLowerCase().includes(query))
-    );
+    return matchesSearchQuery(item, this.searchQuery);
   }
 }

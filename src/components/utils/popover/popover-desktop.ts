@@ -8,7 +8,7 @@ import { keyCodes } from '../../utils';
 import { CSSVariables } from './popover.const';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import type { SearchableItem } from './components/search-input';
-import { SearchInput, SearchInputEvent } from './components/search-input';
+import { SearchInput, SearchInputEvent, matchesSearchQuery } from './components/search-input';
 import { PopoverItemDefault } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 
@@ -612,24 +612,11 @@ export class PopoverDesktop extends PopoverAbstract {
 
   /**
    * Filters popover items by query string.
-   * Matches against: displayed title, English title, and search term aliases.
    * Used for inline slash search where typing happens in the block, not in a search input.
    * @param query - search query text
    */
   public override filterItems(query: string): void {
-    const lowerQuery = query.toLowerCase();
-
-    const matchingItems = this.itemsDefault.filter(item => {
-      const title = item.title?.toLowerCase() ?? '';
-      const englishTitle = item.englishTitle?.toLowerCase() ?? '';
-      const searchTerms = item.searchTerms ?? [];
-
-      return (
-        title.includes(lowerQuery) ||
-        englishTitle.includes(lowerQuery) ||
-        searchTerms.some((term: string) => term.toLowerCase().includes(lowerQuery))
-      );
-    });
+    const matchingItems = this.itemsDefault.filter(item => matchesSearchQuery(item, query));
 
     this.onSearch({
       query,

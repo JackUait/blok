@@ -153,6 +153,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Filters popover items by query string.
+   * Base implementation is a no-op. Override in subclasses that support filtering.
+   * @param _query - search query text
+   */
+  public filterItems(_query: string): void {
+    // No-op in base class. PopoverDesktop overrides this.
+  }
+
+  /**
    * Looks for the item by name and imitates click on it
    * @param name - name of the item to activate
    */

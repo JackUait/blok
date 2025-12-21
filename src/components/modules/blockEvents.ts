@@ -1499,16 +1499,24 @@ export class BlockEvents extends Module {
     const flippingToolbarItems = isTab;
 
     /**
+     * When Toolbox is open, allow typing for inline slash search filtering.
+     * Only close on Enter (to select item) or Tab (to navigate).
+     */
+    const toolboxOpenForInlineSearch = this.Blok.Toolbar.toolbox.opened && !isEnter && !isTab;
+
+    /**
      * Do not close Toolbar in cases:
      * 1. ShiftKey pressed (or combination with shiftKey)
      * 2. When Toolbar is opened and Tab leafs its Tools
      * 3. When Toolbar's component is opened and some its item selected
+     * 4. When Toolbox is open for inline slash search (allow typing to filter)
      */
     return !(event.shiftKey ||
       flippingToolbarItems ||
       toolboxItemSelected ||
       blockSettingsItemSelected ||
-      inlineToolbarItemSelected
+      inlineToolbarItemSelected ||
+      toolboxOpenForInlineSearch
     );
   }
 

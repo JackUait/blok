@@ -610,6 +610,25 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Filters popover items by query string.
+   * Used for inline slash search where typing happens in the block, not in a search input.
+   * @param query - search query text
+   */
+  public override filterItems(query: string): void {
+    const lowerQuery = query.toLowerCase();
+    const matchingItems = this.itemsDefault.filter(item => {
+      const title = item.title?.toLowerCase() || '';
+
+      return title.includes(lowerQuery);
+    });
+
+    this.onSearch({
+      query,
+      items: matchingItems,
+    });
+  }
+
+  /**
    * Handles input inside search field
    * @param data - search input event data
    * @param data.query - search query text

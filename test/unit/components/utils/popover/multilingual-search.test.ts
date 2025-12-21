@@ -4,10 +4,10 @@ import { describe, it, expect } from 'vitest';
  * Filter logic for multilingual search.
  * This is the logic that will be used in PopoverDesktop.filterItems()
  */
-function matchesSearchQuery(
+const matchesSearchQuery = (
   item: { title?: string; englishTitle?: string; searchTerms?: string[] },
   query: string
-): boolean {
+): boolean => {
   const lowerQuery = query.toLowerCase();
   const title = item.title?.toLowerCase() ?? '';
   const englishTitle = item.englishTitle?.toLowerCase() ?? '';
@@ -18,7 +18,7 @@ function matchesSearchQuery(
     englishTitle.includes(lowerQuery) ||
     searchTerms.some(term => term.toLowerCase().includes(lowerQuery))
   );
-}
+};
 
 describe('Multilingual Search Filter', () => {
   const headingItem = {

@@ -14,7 +14,7 @@ const POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
 const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
 const VISIBLE_ITEM_SELECTOR = `${POPOVER_ITEM_SELECTOR}:not([data-blok-hidden="true"])`;
 
-test.describe('Multilingual Tool Search', () => {
+test.describe('multilingual tool search', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
@@ -75,7 +75,7 @@ test.describe('Multilingual Tool Search', () => {
     await expect(visibleItems).toHaveCount(1);
 
     // The item should be Heading 1 (either English "Heading 1" or French "Titre 1")
-    await expect(visibleItems.first()).toContainText(/Heading 1|Titre 1/);
+    await expect(visibleItems).toContainText(/Heading 1|Titre 1/);
   });
 
   test('should find header tool by English name "heading" in French locale', async ({ page }) => {

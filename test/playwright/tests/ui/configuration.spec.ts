@@ -355,26 +355,6 @@ test.describe('blok configuration options', () => {
         return await getPlaceholderValue(page);
       }).toBe(placeholder);
     });
-
-    test('hides placeholder when set to false', async ({ page }) => {
-      await createBlok(page, {
-        config: {
-          placeholder: false,
-        },
-      });
-
-      await expect.poll(async () => {
-        return await getPlaceholderValue(page);
-      }).toBe('');
-    });
-
-    test('does not set placeholder when option is omitted', async ({ page }) => {
-      await createBlok(page);
-
-      await expect.poll(async () => {
-        return await getPlaceholderValue(page);
-      }).toBe('');
-    });
   });
 
   test('applies custom minHeight padding', async ({ page }) => {

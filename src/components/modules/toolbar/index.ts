@@ -702,7 +702,15 @@ export class Toolbar extends Module<ToolbarNodes> {
           return;
         }
 
-        this.plusButtonClicked();
+        /**
+         * Check for modifier key to determine insert direction:
+         * - Option/Alt on Mac, Ctrl on Windows → insert above
+         * - No modifier → insert below (default)
+         */
+        const userOS = getUserOS();
+        const insertAbove = userOS.win ? mouseUpEvent.ctrlKey : mouseUpEvent.altKey;
+
+        this.plusButtonClicked(insertAbove);
       };
 
       document.addEventListener('mouseup', onMouseUp, true);
@@ -861,8 +869,9 @@ export class Toolbar extends Module<ToolbarNodes> {
   /**
    * Handler for Plus Button.
    * Inserts "/" into target block and opens toolbox, or toggles toolbox closed if already open.
+   * @param insertAbove - if true, insert above the current block instead of below
    */
-  private plusButtonClicked(): void {
+  private plusButtonClicked(insertAbove = false): void {
     const { BlockManager, BlockSettings, BlockSelection, Caret } = this.Blok;
 
     // Close other menus and clear selections
@@ -887,9 +896,11 @@ export class Toolbar extends Module<ToolbarNodes> {
     const startsWithSlash = isParagraph && hoveredBlock.pluginsContent.textContent?.startsWith('/');
     const isEmptyParagraph = isParagraph && hoveredBlock.isEmpty;
 
-    const insertIndex = hoveredBlock !== null
-      ? BlockManager.getBlockIndex(hoveredBlock) + 1
-      : BlockManager.currentBlockIndex + 1;
+    // Calculate insert index based on direction
+    const hoveredBlockIndex = hoveredBlock !== null
+      ? BlockManager.getBlockIndex(hoveredBlock)
+      : BlockManager.currentBlockIndex;
+    const insertIndex = insertAbove ? hoveredBlockIndex : hoveredBlockIndex + 1;
 
     const targetBlock = isEmptyParagraph || startsWithSlash
       ? hoveredBlock

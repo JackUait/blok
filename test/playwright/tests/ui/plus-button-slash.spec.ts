@@ -214,4 +214,99 @@ test.describe('plus button inserts slash paragraph', () => {
 
     await expect(paragraph).toHaveText('/test');
   });
+
+  test('alt+clicking plus button inserts paragraph with "/" above current block', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: 'First block' } },
+      { type: 'paragraph', data: { text: 'Second block' } },
+    ]);
+
+    // Hover over the second block
+    const secondBlock = page.locator(PARAGRAPH_SELECTOR, { hasText: 'Second block' });
+
+    await secondBlock.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+
+    // Alt+click to insert above - dispatch events directly with altKey modifier
+    await plusButton.dispatchEvent('mousedown', { bubbles: true, cancelable: true });
+    await plusButton.dispatchEvent('mouseup', { bubbles: true, cancelable: true, altKey: true });
+
+    // Should have 3 blocks now
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(3);
+
+    // Verify the new paragraph with "/" was inserted between First and Second blocks
+    // by checking the output data order
+    const outputData = await page.evaluate(() => window.blokInstance?.save());
+    const blockTexts = outputData?.blocks.map((b: { data: { text: string } }) => b.data.text);
+
+    expect(blockTexts).toStrictEqual(['First block', '/', 'Second block']);
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+  });
+
+  test('alt+clicking plus button on first block inserts paragraph at the very top', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: 'Only block' } },
+    ]);
+
+    const block = page.locator(PARAGRAPH_SELECTOR, { hasText: 'Only block' });
+
+    await block.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+
+    // Alt+click to insert above - dispatch events directly with altKey modifier
+    await plusButton.dispatchEvent('mousedown', { bubbles: true, cancelable: true });
+    await plusButton.dispatchEvent('mouseup', { bubbles: true, cancelable: true, altKey: true });
+
+    // Should have 2 blocks now
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
+
+    // Verify the new paragraph with "/" was inserted at the top
+    const outputData = await page.evaluate(() => window.blokInstance?.save());
+    const blockTexts = outputData?.blocks.map((b: { data: { text: string } }) => b.data.text);
+
+    expect(blockTexts).toStrictEqual(['/', 'Only block']);
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+  });
+
+  test('alt+clicking plus button on empty paragraph still reuses it', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: 'First block' } },
+      { type: 'paragraph', data: { text: '' } },
+    ]);
+
+    // Hover over the empty second block (use filter to find the empty one)
+    const emptyBlock = page.locator(BLOCK_SELECTOR).filter({ hasText: /^$/ });
+
+    await emptyBlock.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+
+    // Alt+click - dispatch events directly with altKey modifier
+    await plusButton.dispatchEvent('mousedown', { bubbles: true, cancelable: true });
+    await plusButton.dispatchEvent('mouseup', { bubbles: true, cancelable: true, altKey: true });
+
+    // Should still have 2 blocks (empty paragraph was reused)
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
+
+    // Verify the second block now contains "/"
+    const outputData = await page.evaluate(() => window.blokInstance?.save());
+    const blockTexts = outputData?.blocks.map((b: { data: { text: string } }) => b.data.text);
+
+    expect(blockTexts).toStrictEqual(['First block', '/']);
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+  });
 });

@@ -3,9 +3,19 @@
  */
 export interface SearchableItem {
   /**
-   * Items title
+   * Items title (displayed, possibly translated)
    */
   title?: string;
+
+  /**
+   * English title for fallback search (always matches English input)
+   */
+  englishTitle?: string;
+
+  /**
+   * Additional search terms/aliases (e.g., ['h1', 'title'])
+   */
+  searchTerms?: string[];
 }
 
 

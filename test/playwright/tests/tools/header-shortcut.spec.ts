@@ -98,8 +98,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
       }
 
       // Use BlokOriginal (without default tools) when useOriginal is true
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const BlokClass = useOriginal ? (window as any).BlokOriginal : window.Blok;
+      const BlokClass = useOriginal ? (window as unknown as Window & { BlokOriginal: typeof window.Blok }).BlokOriginal : window.Blok;
       const blok = new BlokClass(blokConfig);
 
       window.blokInstance = blok;
@@ -151,7 +150,7 @@ test.describe('header shortcuts', () => {
       });
 
       // Click on the paragraph
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       // Type the shortcut followed by some content
@@ -180,7 +179,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('## Heading');
@@ -202,7 +201,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('### Heading');
@@ -224,7 +223,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('#### Heading');
@@ -246,7 +245,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('##### Heading');
@@ -268,7 +267,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('###### Heading');
@@ -380,7 +379,7 @@ test.describe('header shortcuts', () => {
         tools: defaultTools,
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       // Type 7 hashes - should NOT convert
@@ -433,7 +432,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('## ');
@@ -464,7 +463,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       // Type H3 shortcut (allowed) with text
@@ -496,7 +495,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       // Type H1 shortcut (not allowed)
@@ -519,7 +518,7 @@ test.describe('header shortcuts', () => {
       });
 
       // Test H6 (if this works, all levels work since regex limits to 1-6)
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('###### Heading');
@@ -553,7 +552,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('! Custom Heading');
@@ -586,7 +585,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('# Should Not Convert');
@@ -614,7 +613,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
       await paragraph.click();
 
       await page.keyboard.type('# Should Not Convert');
@@ -642,7 +641,7 @@ test.describe('header shortcuts', () => {
         },
       });
 
-      await page.locator(PARAGRAPH_BLOCK_SELECTOR).first().click();
+      await page.locator(PARAGRAPH_BLOCK_SELECTOR).click();
       await page.keyboard.type('!!! H3');
 
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
@@ -675,8 +674,12 @@ test.describe('header shortcuts', () => {
         },
       });
 
+      // Get both paragraphs - we know there are exactly 2 from the test setup
+      const paragraphs = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+
       // Try default markdown H1 shortcut (not configured since shortcuts is defined)
-      await page.locator(PARAGRAPH_BLOCK_SELECTOR).first().click();
+      // eslint-disable-next-line playwright/no-nth-methods
+      await paragraphs.nth(0).click();
       await page.keyboard.type('# Should Stay Paragraph');
 
       // Should remain paragraph (default # shortcut doesn't work with custom shortcuts)
@@ -684,7 +687,8 @@ test.describe('header shortcuts', () => {
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(0);
 
       // Try H2 shortcut (configured as ##)
-      await page.locator(PARAGRAPH_BLOCK_SELECTOR).nth(1).click();
+      // eslint-disable-next-line playwright/no-nth-methods
+      await paragraphs.nth(1).click();
       await page.keyboard.type('## H2');
 
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);

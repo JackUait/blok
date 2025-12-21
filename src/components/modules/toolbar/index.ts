@@ -859,40 +859,45 @@ export class Toolbar extends Module<ToolbarNodes> {
 
 
   /**
-   * Handler for Plus Button
+   * Handler for Plus Button.
+   * Inserts "/" into target block and opens toolbox, or toggles toolbox closed if already open.
    */
   private plusButtonClicked(): void {
-    /**
-     * We need to update Current Block because user can click on the Plus Button (thanks to appearing by hover) without any clicks on blok
-     * In this case currentBlock will point last block
-     */
-    if (this.hoveredBlock) {
-      this.Blok.BlockManager.currentBlock = this.hoveredBlock;
-    }
+    const { BlockManager, BlockSettings, BlockSelection, Caret } = this.Blok;
 
-    /**
-     * Close Block Settings if opened, similar to how settings toggler closes toolbox
-     */
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
+    // Close other menus and clear selections
+    if (BlockSettings.opened) {
+      BlockSettings.close();
     }
-
-    /**
-     * Clear block selection when plus button is clicked
-     * This allows users to add new blocks even when multiple blocks are selected
-     */
-    if (this.Blok.BlockSelection.anyBlockSelected) {
-      this.Blok.BlockSelection.clearSelection();
+    if (BlockSelection.anyBlockSelected) {
+      BlockSelection.clearSelection();
     }
-
-    /**
-     * Remove native text selection that may have been created during cross-block selection
-     * This needs to happen regardless of anyBlockSelected state, as cross-block selection
-     * via Shift+Arrow creates native text selection that spans multiple blocks
-     */
     SelectionUtils.get()?.removeAllRanges();
 
-    this.toolboxInstance?.toggle();
+    // Toggle closed if already open
+    if (this.toolbox.opened) {
+      this.toolbox.close();
+
+      return;
+    }
+
+    // Reuse empty paragraph, or create new one below hovered block
+    const hoveredBlock = this.hoveredBlock;
+    const isEmptyParagraph = hoveredBlock?.isEmpty && hoveredBlock.name === 'paragraph';
+
+    const insertIndex = hoveredBlock !== null
+      ? BlockManager.getBlockIndex(hoveredBlock) + 1
+      : BlockManager.currentBlockIndex + 1;
+
+    const targetBlock = isEmptyParagraph
+      ? hoveredBlock
+      : BlockManager.insertDefaultBlockAtIndex(insertIndex, true);
+
+    // Insert "/" and open toolbox
+    Caret.setToBlock(targetBlock, Caret.positions.START);
+    Caret.insertContentAtCaretPosition('/');
+    this.moveAndOpen(targetBlock);
+    this.toolbox.open();
   }
 
   /**

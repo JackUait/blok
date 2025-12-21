@@ -45,6 +45,13 @@ export interface ToolboxConfigEntry {
    * Useful when a tool has multiple toolbox entries (e.g., list with ordered/unordered/checklist variants).
    */
   name?: string;
+
+  /**
+   * Additional search terms for the tool (e.g., ['h1', 'title', 'header']).
+   * Users can search by these aliases in addition to the displayed title.
+   * Terms are matched case-insensitively.
+   */
+  searchTerms?: string[];
 }
 
 /**

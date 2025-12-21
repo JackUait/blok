@@ -60,6 +60,7 @@ const CROSS_BROWSER_TESTS = [
 
   // UI interactions requiring cross-browser validation
   '**/ui/plus-block-tunes-interaction.spec.ts',
+  '**/ui/plus-button-slash.spec.ts',
   '**/ui/inline-toolbar-nested-popover-keyboard.spec.ts',
 
   // Keyboard shortcuts (contenteditable + keyboard behavior varies)

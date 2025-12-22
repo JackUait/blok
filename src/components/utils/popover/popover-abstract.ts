@@ -399,7 +399,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     popover.setAttribute('data-blok-testid', 'popover');
 
     // Set CSS variables
-    popover.style.setProperty('--width', '324px');
+    popover.style.setProperty('--width', '280px');
     popover.style.setProperty('--item-padding', '3px');
     popover.style.setProperty('--item-height', 'calc(1.25rem + 2 * var(--item-padding))');
     popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');

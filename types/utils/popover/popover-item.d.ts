@@ -45,6 +45,12 @@ export interface PopoverItemChildren {
    * Useful for items like link tool that render custom content instead of a dropdown list.
    */
   hideChevron?: boolean;
+
+  /**
+   * Width of the nested popover. Defaults to '280px'.
+   * Use 'auto' to fit content width.
+   */
+  width?: string;
 }
 
 /**

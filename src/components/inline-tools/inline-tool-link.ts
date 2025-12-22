@@ -133,6 +133,7 @@ export class LinkInlineTool implements InlineTool {
       isActive: () => !!this.selection.findParentTag('A'),
       children: {
         hideChevron: true,
+        width: '200px',
         items: [
           {
             type: PopoverItemType.Html,

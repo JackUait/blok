@@ -159,6 +159,17 @@ export abstract class PopoverItem {
   }
 
   /**
+   * Returns the width for children popover, if specified
+   */
+  public get childrenWidth(): string | undefined {
+    if (this.params === undefined || !('children' in this.params)) {
+      return undefined;
+    }
+
+    return this.params.children?.width;
+  }
+
+  /**
    * True if popover should close once item is activated
    */
   public get closeOnActivate(): boolean | undefined {

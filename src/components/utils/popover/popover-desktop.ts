@@ -401,6 +401,7 @@ export class PopoverDesktop extends PopoverAbstract {
       flippable: item.isChildrenFlippable,
       messages: this.messages,
       onNavigateBack: this.destroyNestedPopoverIfExists.bind(this),
+      width: item.childrenWidth,
     });
 
     item.onChildrenOpen();

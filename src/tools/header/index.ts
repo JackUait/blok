@@ -641,6 +641,7 @@ export class Header implements BlockTool {
       name: `header-${level.number}`,
       data: { level: level.number },
       searchTerms: [`h${level.number}`, 'title', 'header', 'heading'],
+      shortcut: '#'.repeat(level.number),
     }));
   }
 }

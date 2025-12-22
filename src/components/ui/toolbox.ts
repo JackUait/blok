@@ -383,6 +383,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       const userSearchTerms = tool.searchTerms ?? [];
       const mergedSearchTerms = [...new Set([...librarySearchTerms, ...userSearchTerms])];
 
+      // Use entry-level shortcut if available, otherwise fall back to tool-level shortcut (for first entry only)
+      const shortcut = toolboxItem.shortcut ?? (displaySecondaryLabel ? tool.shortcut : undefined);
+
       return {
         icon: toolboxItem.icon,
         title: translateToolTitle(this.i18n, toolboxItem, capitalize(tool.name)),
@@ -390,7 +393,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);
         },
-        secondaryLabel: (tool.shortcut && displaySecondaryLabel) ? beautifyShortcut(tool.shortcut) : '',
+        secondaryLabel: shortcut ? beautifyShortcut(shortcut) : '',
         englishTitle,
         searchTerms: mergedSearchTerms,
       };

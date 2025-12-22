@@ -52,6 +52,13 @@ export interface ToolboxConfigEntry {
    * Terms are matched case-insensitively.
    */
   searchTerms?: string[];
+
+  /**
+   * Shortcut hint to display in the toolbox (e.g., '#', '##', '-', '1.', '[]').
+   * This is displayed as a secondary label next to the tool title.
+   * Unlike tool-level shortcuts, these are per-entry hints for tools with multiple variants.
+   */
+  shortcut?: string;
 }
 
 /**

@@ -1797,6 +1797,7 @@ export class ListItem implements BlockTool {
         data: { style: 'unordered' },
         name: 'bulleted-list',
         searchTerms: ['ul', 'bullet', 'unordered', 'list'],
+        shortcut: '-',
       },
       {
         icon: IconListNumbered,
@@ -1805,6 +1806,7 @@ export class ListItem implements BlockTool {
         data: { style: 'ordered' },
         name: 'numbered-list',
         searchTerms: ['ol', 'ordered', 'number', 'list'],
+        shortcut: '1.',
       },
       {
         icon: IconListChecklist,
@@ -1813,6 +1815,7 @@ export class ListItem implements BlockTool {
         data: { style: 'checklist' },
         name: 'check-list',
         searchTerms: ['checkbox', 'task', 'todo', 'check', 'list'],
+        shortcut: '[]',
       },
     ];
   }

@@ -123,6 +123,7 @@ export class ConvertInlineTool implements InlineTool {
       },
       children: {
         items: convertToItems,
+        width: 'auto',
         onOpen: () => {
           if (isDesktop) {
             this.selectionAPI.setFakeBackground();

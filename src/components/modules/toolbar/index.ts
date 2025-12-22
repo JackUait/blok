@@ -110,18 +110,6 @@ export class Toolbar extends Module<ToolbarNodes> {
   private toolboxInstance: Toolbox | null = null;
 
   /**
-   * Mouse position when mousedown occurred on settings toggler
-   * Used to distinguish between click and drag
-   */
-  private settingsTogglerMouseDownPosition: { x: number; y: number } | null = null;
-
-  /**
-   * Mouse position when mousedown occurred on plus button
-   * Used to distinguish between click and drag
-   */
-  private plusButtonMouseDownPosition: { x: number; y: number } | null = null;
-
-  /**
    * Last calculated toolbar Y position
    * Used to avoid unnecessary repositioning when the position hasn't changed
    */
@@ -132,6 +120,12 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Prevents the settings menu from opening when the cursor is over the toggler after drop
    */
   private ignoreNextSettingsMouseUp = false;
+
+  /**
+   * Set of pending document-level mouseup listeners that need cleanup on destroy.
+   * Each listener is added on mousedown and removed after mouseup fires.
+   */
+  private pendingMouseUpListeners: Set<(e: MouseEvent) => void> = new Set();
 
   /**
    * @class
@@ -218,7 +212,6 @@ export class Toolbar extends Module<ToolbarNodes> {
         'not-mobile:w-6'
       ),
       settingsTogglerHidden: 'hidden',
-      settingsTogglerOpened: '',
     };
   }
 
@@ -660,60 +653,25 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Plus button mousedown handler
-     * Stores the initial mouse position and sets up a document-level mouseup listener.
-     * Using document-level mouseup ensures we catch the event even if the mouse
-     * moves slightly off the button element during the click.
+     * Uses click-vs-drag detection to distinguish clicks from drags.
      */
     this.readOnlyMutableListeners.on(plusButton, 'mousedown', (e) => {
       hide();
 
-      const mouseEvent = e as MouseEvent;
+      this.setupClickVsDrag(
+        e as MouseEvent,
+        (mouseUpEvent) => {
+          /**
+           * Check for modifier key to determine insert direction:
+           * - Option/Alt on Mac, Ctrl on Windows → insert above
+           * - No modifier → insert below (default)
+           */
+          const userOS = getUserOS();
+          const insertAbove = userOS.win ? mouseUpEvent.ctrlKey : mouseUpEvent.altKey;
 
-      /**
-       * Store the mouse position when mousedown occurs
-       * This will be used to determine if the user dragged or clicked
-       */
-      this.plusButtonMouseDownPosition = {
-        x: mouseEvent.clientX,
-        y: mouseEvent.clientY,
-      };
-
-      /**
-       * Add document-level mouseup listener to catch the event even if mouse
-       * moves slightly off the button. This is removed after firing once.
-       */
-      const onMouseUp = (mouseUpEvent: MouseEvent): void => {
-        document.removeEventListener('mouseup', onMouseUp, true);
-
-        const mouseDownPos = this.plusButtonMouseDownPosition;
-
-        this.plusButtonMouseDownPosition = null;
-
-        if (mouseDownPos === null) {
-          return;
+          this.plusButtonClicked(insertAbove);
         }
-
-        const wasDragged = (
-          Math.abs(mouseUpEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
-          Math.abs(mouseUpEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
-        );
-
-        if (wasDragged) {
-          return;
-        }
-
-        /**
-         * Check for modifier key to determine insert direction:
-         * - Option/Alt on Mac, Ctrl on Windows → insert above
-         * - No modifier → insert below (default)
-         */
-        const userOS = getUserOS();
-        const insertAbove = userOS.win ? mouseUpEvent.ctrlKey : mouseUpEvent.altKey;
-
-        this.plusButtonClicked(insertAbove);
-      };
-
-      document.addEventListener('mouseup', onMouseUp, true);
+      );
     }, true);
 
     /**
@@ -931,66 +889,35 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (settingsToggler) {
       /**
        * Settings toggler mousedown handler
-       * Stores the initial mouse position and sets up a document-level mouseup listener.
-       * Using document-level mouseup ensures we catch the event even if the mouse
-       * moves slightly off the toggler element during the click.
+       * Uses click-vs-drag detection to distinguish clicks from drags.
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
         hide();
 
-        const mouseEvent = e as MouseEvent;
+        this.setupClickVsDrag(
+          e as MouseEvent,
+          () => {
+            this.settingsTogglerClicked();
 
-        /**
-         * Store the mouse position when mousedown occurs
-         * This will be used to determine if the user dragged or clicked
-         */
-        this.settingsTogglerMouseDownPosition = {
-          x: mouseEvent.clientX,
-          y: mouseEvent.clientY,
-        };
+            if (this.toolboxInstance?.opened) {
+              this.toolboxInstance.close();
+            }
+          },
+          {
+            /**
+             * Check if we should ignore this mouseup (e.g., after a block drop)
+             */
+            beforeCallback: () => {
+              if (this.ignoreNextSettingsMouseUp) {
+                this.ignoreNextSettingsMouseUp = false;
 
-        /**
-         * Add document-level mouseup listener to catch the event even if mouse
-         * moves slightly off the toggler. This is removed after firing once.
-         */
-        const onMouseUp = (mouseUpEvent: MouseEvent): void => {
-          document.removeEventListener('mouseup', onMouseUp, true);
+                return false;
+              }
 
-          /**
-           * Ignore mouseup after a block drop to prevent settings menu from opening
-           */
-          if (this.ignoreNextSettingsMouseUp) {
-            this.ignoreNextSettingsMouseUp = false;
-            this.settingsTogglerMouseDownPosition = null;
-
-            return;
+              return true;
+            },
           }
-
-          const mouseDownPos = this.settingsTogglerMouseDownPosition;
-
-          this.settingsTogglerMouseDownPosition = null;
-
-          if (mouseDownPos === null) {
-            return;
-          }
-
-          const wasDragged = (
-            Math.abs(mouseUpEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
-            Math.abs(mouseUpEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
-          );
-
-          if (wasDragged) {
-            return;
-          }
-
-          this.settingsTogglerClicked();
-
-          if (this.toolboxInstance?.opened) {
-            this.toolboxInstance.close();
-          }
-        };
-
-        document.addEventListener('mouseup', onMouseUp, true);
+        );
       }, true);
     }
 
@@ -1303,6 +1230,50 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * Sets up a click-vs-drag detection pattern on an element.
+   * Tracks mousedown position and fires callback only if mouse didn't move beyond threshold.
+   * Uses document-level mouseup to catch events even if mouse moves off element.
+   * @param element - Element to attach mousedown listener to
+   * @param mouseEvent - The mousedown event
+   * @param onClickCallback - Callback to fire if it was a click (not a drag)
+   * @param options - Optional configuration
+   * @param options.beforeCallback - Function called before click callback, return false to abort
+   */
+  private setupClickVsDrag(
+    mouseEvent: MouseEvent,
+    onClickCallback: (mouseUpEvent: MouseEvent) => void,
+    options?: { beforeCallback?: () => boolean }
+  ): void {
+    const startPosition = {
+      x: mouseEvent.clientX,
+      y: mouseEvent.clientY,
+    };
+
+    const onMouseUp = (mouseUpEvent: MouseEvent): void => {
+      document.removeEventListener('mouseup', onMouseUp, true);
+      this.pendingMouseUpListeners.delete(onMouseUp);
+
+      if (options?.beforeCallback && !options.beforeCallback()) {
+        return;
+      }
+
+      const wasDragged = (
+        Math.abs(mouseUpEvent.clientX - startPosition.x) > DRAG_THRESHOLD ||
+        Math.abs(mouseUpEvent.clientY - startPosition.y) > DRAG_THRESHOLD
+      );
+
+      if (wasDragged) {
+        return;
+      }
+
+      onClickCallback(mouseUpEvent);
+    };
+
+    this.pendingMouseUpListeners.add(onMouseUp);
+    document.addEventListener('mouseup', onMouseUp, true);
+  }
+
+  /**
    * Removes all created and saved HTMLElements
    * It is used in Read-Only mode
    */
@@ -1311,5 +1282,15 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (this.toolboxInstance) {
       this.toolboxInstance.destroy();
     }
+
+    /**
+     * Clean up any pending document-level mouseup listeners.
+     * These are added on mousedown and normally removed on mouseup,
+     * but if the component is destroyed mid-click, they need manual cleanup.
+     */
+    for (const listener of this.pendingMouseUpListeners) {
+      document.removeEventListener('mouseup', listener, true);
+    }
+    this.pendingMouseUpListeners.clear();
   }
 }

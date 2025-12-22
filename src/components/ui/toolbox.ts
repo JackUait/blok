@@ -146,6 +146,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private currentBlockForSearch: HTMLElement | null = null;
 
   /**
+   * Cached contentEditable element for the current block being searched.
+   * Avoids repeated DOM queries on each input event.
+   */
+  private currentContentEditable: Element | null = null;
+
+  /**
    * Toolbox constructor
    * @param options - available parameters
    * @param options.api - Blok API methods
@@ -548,6 +554,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     this.currentBlockForSearch = currentBlock.holder;
+    this.currentContentEditable = this.currentBlockForSearch.querySelector('[contenteditable="true"]');
     this.listeners.on(this.currentBlockForSearch, 'input', this.handleBlockInput);
   }
 
@@ -558,6 +565,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     if (this.currentBlockForSearch !== null) {
       this.listeners.off(this.currentBlockForSearch, 'input', this.handleBlockInput);
       this.currentBlockForSearch = null;
+      this.currentContentEditable = null;
     }
 
     this.popover?.filterItems('');
@@ -568,13 +576,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Extracts text after "/" and applies it as a filter query.
    */
   private handleBlockInput = (): void => {
-    if (this.currentBlockForSearch === null) {
+    if (this.currentContentEditable === null) {
       return;
     }
 
-    // Get text from the contenteditable element inside the block
-    const contentEditable = this.currentBlockForSearch.querySelector('[contenteditable="true"]');
-    const text = contentEditable?.textContent || '';
+    const text = this.currentContentEditable.textContent || '';
     const slashIndex = text.lastIndexOf('/');
 
     if (slashIndex === -1) {

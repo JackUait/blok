@@ -468,7 +468,7 @@ export class UI extends Module<UINodes> {
     };
 
     const handleBlockHovered = (event: Event): void => {
-      if (!(event instanceof MouseEvent)) {
+      if (typeof MouseEvent === 'undefined' || !(event instanceof MouseEvent)) {
         return;
       }
 

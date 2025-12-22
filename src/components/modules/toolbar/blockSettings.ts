@@ -164,7 +164,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
     const popoverParams: PopoverParams & { flipper?: Flipper } = {
-      searchable: true,
+      searchable: false,
       trigger: trigger || this.nodes.wrapper,
       items: await this.getTunesItems(block, commonTunes, toolTunes),
       scopeElement: this.Blok.API.methods.ui.nodes.redactor,

@@ -696,14 +696,10 @@ test.describe('multi-block conversion', () => {
 
       await expect(nestedPopover).toBeVisible();
 
-      // Select header option
+      // Click header option directly (keyboard navigation is tested elsewhere)
       const headerOption = nestedPopover.locator('[data-blok-item-name="header-2"]');
 
-      while (!await headerOption.getAttribute('data-blok-focused')) {
-        await page.keyboard.press('ArrowDown');
-      }
-
-      await page.keyboard.press('Enter');
+      await headerOption.click();
 
       // Verify conversion
       const headers = page.locator(HEADER_SELECTOR);

@@ -1669,7 +1669,11 @@ export class ListItem implements BlockTool {
     return {
       text: {
         br: true,
-        a: true,
+        a: {
+          href: true,
+          target: '_blank',
+          rel: 'nofollow',
+        },
         b: true,
         i: true,
         mark: true,

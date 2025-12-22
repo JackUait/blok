@@ -565,6 +565,89 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks[1].data.text).toBe('Child');
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
+
+    test('preserves links in list items after save', async ({ page }) => {
+      // This test reproduces the bug where links added to list items were stripped
+      // during save because the List tool's sanitize config had `a: true` which
+      // caused the href attribute to be removed by the sanitizer.
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              id: 'list-with-link',
+              type: 'list',
+              data: {
+                text: 'Item with <a href="https://example.com" target="_blank" rel="nofollow">link</a> inside',
+                style: 'unordered',
+              },
+            },
+          ],
+        },
+      });
+
+      // Verify the link is rendered
+      const listItem = page.locator(LIST_BLOCK_SELECTOR);
+      await expect(listItem.getByRole('link', { name: 'link' })).toBeVisible();
+
+      // Save and verify the link is preserved with href attribute
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks).toHaveLength(1);
+      expect(savedData?.blocks[0].data.text).toContain('<a href="https://example.com"');
+      expect(savedData?.blocks[0].data.text).toContain('target="_blank"');
+      expect(savedData?.blocks[0].data.text).toContain('rel="nofollow"');
+      expect(savedData?.blocks[0].data.text).toContain('>link</a>');
+    });
+
+    test('preserves links after readonly toggle', async ({ page }) => {
+      // This reproduces the exact bug scenario: links in list items were lost
+      // when toggling readonly mode because readonly triggers save + re-render.
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              id: 'list-link-readonly',
+              type: 'list',
+              data: {
+                text: 'Click <a href="https://google.com" target="_blank" rel="nofollow">here</a> for more',
+                style: 'unordered',
+              },
+            },
+          ],
+        },
+      });
+
+      // Verify link exists before toggle
+      const listItem = page.locator(LIST_BLOCK_SELECTOR);
+      await expect(listItem.getByRole('link', { name: 'here' })).toBeVisible();
+
+      // Toggle readonly on
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle(true);
+      });
+
+      // Verify link still exists after readonly toggle
+      await expect(listItem.getByRole('link', { name: 'here' })).toBeVisible();
+
+      // Toggle readonly off
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle(false);
+      });
+
+      // Verify link still exists after toggling back
+      await expect(listItem.getByRole('link', { name: 'here' })).toBeVisible();
+
+      // Save and verify the href is preserved
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.text).toContain('href="https://google.com"');
+    });
   });
 
   test.describe('focus management', () => {

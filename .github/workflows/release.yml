@@ -64,46 +64,31 @@ jobs:
           path: dist/
           retention-days: 1
 
-      - name: Track bundle size
-        run: |
-          echo "📊 Tracking bundle sizes..."
-          node scripts/track-bundle-size.mjs --verbose --with-variants --output=bundle-size-report.md
-          echo ""
-          echo "Bundle size report:"
-          cat bundle-size-report.md
-
-      - name: Download previous bundle size history
+      - name: Download bundle size history from CI
         id: download-history
         uses: dawidd6/action-download-artifact@v6
         with:
-          workflow: release.yml
+          workflow: ci.yml
+          branch: master
           name: bundle-size-history
           path: .
           if_no_artifact_found: warn
         continue-on-error: true
 
-      - name: Compare bundle sizes
-        id: compare-sizes
+      - name: Generate bundle size report
         run: |
+          echo "📊 Generating bundle size report..."
           if [ -f .bundle-size-history.json ]; then
-            echo "Found previous bundle size history"
-            node scripts/track-bundle-size.mjs --verbose --with-variants --output=bundle-size-comparison.md --threshold=10
+            echo "Found CI history, comparing against baseline"
+            node scripts/track-bundle-size.mjs --verbose --with-variants --compare-only --output=bundle-size-report.md --threshold=10
           else
-            echo "No previous bundle size history found, creating initial baseline"
-            node scripts/track-bundle-size.mjs --verbose --with-variants --output=bundle-size-comparison.md
+            echo "No CI history found, generating standalone report"
+            node scripts/track-bundle-size.mjs --verbose --with-variants --compare-only --output=bundle-size-report.md
           fi
 
-          # Set output for PR comment
-          if [ -f bundle-size-comparison.md ]; then
-            echo "has_report=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload bundle size history
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-size-history
-          path: .bundle-size-history.json
-          retention-days: 90
+          echo ""
+          echo "Bundle size report:"
+          cat bundle-size-report.md
 
       - name: Upload bundle size report
         uses: actions/upload-artifact@v4

@@ -51,11 +51,6 @@ jobs:
       - name: Build bundle variants
         run: node scripts/build-bundle-variants.mjs --verbose
 
-      - name: Get PR bundle sizes
-        run: |
-          echo "📊 Analyzing PR bundle sizes..."
-          node scripts/track-bundle-size.mjs --verbose --with-variants
-
       - name: Download base branch bundle size history
         id: download-base-history
         uses: dawidd6/action-download-artifact@v6
@@ -72,7 +67,7 @@ jobs:
         run: |
           if [ -f .bundle-size-history.json ]; then
             echo "📈 Comparing with base branch history..."
-            node scripts/track-bundle-size.mjs --verbose --with-variants --output=bundle-size-comparison.md --threshold=5
+            node scripts/track-bundle-size.mjs --verbose --with-variants --compare-only --output=bundle-size-comparison.md --threshold=5
 
             # Read the comparison report
             if [ -f bundle-size-comparison.md ]; then
@@ -103,7 +98,6 @@ jobs:
         if: always()
         with:
           script: |
-            const fs = require('fs');
             const report = `${{ steps.compare.outputs.REPORT }}`;
 
             // Find ALL existing bundle size report comments
@@ -128,13 +122,11 @@ jobs:
             }
 
             // Create new comment with latest report
-            const commentBody = `${report}`;
-
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: commentBody
+              body: report
             });
 
       - name: Upload PR bundle size data
@@ -143,6 +135,5 @@ jobs:
           name: pr-bundle-size-report
           path: |
             bundle-size-*.md
-            .bundle-size-history.json
             .bundle-variants.json
           retention-days: 7

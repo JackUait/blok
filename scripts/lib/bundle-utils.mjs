@@ -7,15 +7,17 @@ import { gzipSync } from 'zlib';
 
 /**
  * Format bytes to human-readable string
- * @param {number} bytes - Number of bytes
+ * @param {number} bytes - Number of bytes (can be negative for size decreases)
  * @returns {string} Formatted string
  */
 export function formatBytes(bytes) {
   if (bytes === 0) return '0 B';
+  const sign = bytes < 0 ? '-' : '';
+  const absBytes = Math.abs(bytes);
   const k = 1024;
   const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  const i = Math.floor(Math.log(absBytes) / Math.log(k));
+  return sign + parseFloat((absBytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 /**

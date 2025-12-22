@@ -247,9 +247,10 @@ async function loadVariants(variantsFile) {
  * @param {object} current - Current bundle sizes
  * @param {object|null} variants - Bundle variants data (minimum/normal/maximum)
  * @param {object|null} previousVariants - Previous variants for comparison
+ * @param {number} threshold - Percentage threshold for significant changes
  * @returns {string} Markdown report
  */
-function generateMarkdownReport(comparison, _current, variants = null, previousVariants = null) {
+function generateMarkdownReport(comparison, _current, variants = null, previousVariants = null, threshold = 10) {
   const lines = [];
 
   lines.push('## Bundle Size Report\n');
@@ -296,9 +297,9 @@ function generateMarkdownReport(comparison, _current, variants = null, previousV
   }
 
   if (comparison.hasSignificantChange) {
-    lines.push('> ⚠️ Significant size changes detected (>10% threshold)');
+    lines.push(`> ⚠️ Significant size changes detected (>${threshold}% threshold)`);
   } else {
-    lines.push('> ✅ No significant size changes detected');
+    lines.push(`> ✅ No significant size changes (threshold: ${threshold}%)`);
   }
 
   return lines.join('\n');
@@ -311,6 +312,7 @@ async function trackBundleSize() {
   const args = process.argv.slice(2);
   const verbose = args.includes('--verbose') || args.includes('-v');
   const withVariants = args.includes('--with-variants');
+  const compareOnly = args.includes('--compare-only');
   const outputFile = args.find(arg => arg.startsWith('--output='))?.split('=')[1];
   const threshold = parseInt(args.find(arg => arg.startsWith('--threshold='))?.split('=')[1] || '10');
   const maxEntries = parseInt(args.find(arg => arg.startsWith('--max-entries='))?.split('=')[1] || '100');
@@ -369,39 +371,42 @@ async function trackBundleSize() {
     console.log('');
   }
 
-  // Create new entry
-  const newEntry = {
-    timestamp: new Date().toISOString(),
-    commit: process.env.GITHUB_SHA || 'local',
-    version: process.env.PACKAGE_VERSION || 'unknown',
-    bundles: currentSizes,
-    variants: variants || undefined,
-    comparison: {
-      hasSignificantChange: comparison.hasSignificantChange,
-      totalChange: comparison.totalChange,
-      alerts: comparison.alerts
+  // Only update history if not in compare-only mode
+  if (!compareOnly) {
+    // Create new entry
+    const newEntry = {
+      timestamp: new Date().toISOString(),
+      commit: process.env.GITHUB_SHA || 'local',
+      version: process.env.PACKAGE_VERSION || 'unknown',
+      bundles: currentSizes,
+      variants: variants || undefined,
+      comparison: {
+        hasSignificantChange: comparison.hasSignificantChange,
+        totalChange: comparison.totalChange,
+        alerts: comparison.alerts
+      }
+    };
+
+    // Add to history
+    history.push(newEntry);
+
+    // Trim history to max entries
+    if (history.length > maxEntries) {
+      history.splice(0, history.length - maxEntries);
     }
-  };
 
-  // Add to history
-  history.push(newEntry);
+    // Save history
+    await saveHistory(historyFile, history);
 
-  // Trim history to max entries
-  if (history.length > maxEntries) {
-    history.splice(0, history.length - maxEntries);
-  }
-
-  // Save history
-  await saveHistory(historyFile, history);
-
-  if (verbose) {
-    console.log(`✓ Bundle size history saved (${history.length} entries)`);
-    console.log(`  History file: ${historyFile}\n`);
+    if (verbose) {
+      console.log(`✓ Bundle size history saved (${history.length} entries)`);
+      console.log(`  History file: ${historyFile}\n`);
+    }
   }
 
   // Generate and save markdown report if requested
   if (outputFile) {
-    const report = generateMarkdownReport(comparison, currentSizes, variants, previousVariants);
+    const report = generateMarkdownReport(comparison, currentSizes, variants, previousVariants, threshold);
     await writeFile(outputFile, report, 'utf8');
     console.log(`✓ Report saved to: ${outputFile}\n`);
   }

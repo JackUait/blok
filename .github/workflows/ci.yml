@@ -367,12 +367,27 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Download previous bundle size history
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          branch: master
+          name: bundle-size-history
+          path: .
+          if_no_artifact_found: warn
+        continue-on-error: true
+
       - name: Build bundle variants
         run: node scripts/build-bundle-variants.mjs --verbose
 
       - name: Track bundle size
         run: |
           echo "📊 Tracking bundle sizes for master branch..."
+          if [ -f .bundle-size-history.json ]; then
+            echo "📈 Found previous history, will append to it"
+          else
+            echo "📝 No previous history found, starting fresh"
+          fi
           node scripts/track-bundle-size.mjs --verbose --with-variants
 
       - name: Upload bundle size history

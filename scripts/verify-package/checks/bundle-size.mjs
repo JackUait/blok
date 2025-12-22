@@ -1,18 +1,6 @@
 import { stat, readdir } from 'fs/promises';
 import { join } from 'path';
-
-/**
- * Format bytes to human-readable string
- * @param {number} bytes - Number of bytes
- * @returns {string} Formatted string
- */
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
+import { formatBytes } from '../../lib/bundle-utils.mjs';
 
 /**
  * Verify bundle sizes are within expected ranges

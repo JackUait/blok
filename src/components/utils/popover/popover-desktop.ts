@@ -453,14 +453,19 @@ export class PopoverDesktop extends PopoverAbstract {
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
 
+    // Get parent width - use computed width if --width is 'auto'
+    const parentWidth = this.params.width === 'auto'
+      ? `${this.nodes.popoverContainer.offsetWidth}px`
+      : 'var(--width)';
+
     // Calculate --popover-left based on nesting level and parent open direction
     // Set on the actual popover element to override its default value
     if (isParentOpenLeft) {
       // Position to the left
-      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * (var(--nesting-level) + 1) * var(--width) + 100%)');
+      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(-1 * (var(--nesting-level) + 1) * ${parentWidth} + 100%)`);
     } else {
       // Position to the right
-      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, 'calc(var(--nesting-level) * (var(--width) - var(--nested-popover-overlap)))');
+      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(var(--nesting-level) * (${parentWidth} - var(--nested-popover-overlap)))`);
     }
 
     // Calculate top position based on parent open direction

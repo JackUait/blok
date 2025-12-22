@@ -38,6 +38,20 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
+   * English title for multilingual search fallback
+   */
+  public get englishTitle(): string | undefined {
+    return this.params.englishTitle;
+  }
+
+  /**
+   * Additional search terms for this item
+   */
+  public get searchTerms(): string[] | undefined {
+    return this.params.searchTerms;
+  }
+
+  /**
    * True if confirmation state is enabled for popover item
    */
   public get isConfirmationStateEnabled(): boolean {
@@ -251,7 +265,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'whitespace-nowrap pr-1.5 text-xs -tracking-widest text-text-secondary opacity-60';
+      secondaryEl.className = 'whitespace-nowrap pr-1.5 text-xs font-light tracking-[0.25px] text-text-secondary opacity-60';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.textContent = params.secondaryLabel;

@@ -1026,7 +1026,10 @@ test.describe('sanitizing', () => {
         const blok = new window.Blok({
           holder: holder,
           tools: {
-            custom: CustomTool,
+            custom: {
+              class: CustomTool,
+              inlineToolbar: false, // Disable inline tools to use only the tool's sanitize config
+            },
           },
           data: {
             blocks: [

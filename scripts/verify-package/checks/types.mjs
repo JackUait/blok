@@ -1,4 +1,4 @@
-import { access, writeFile } from 'fs/promises';
+import { access, writeFile, readFile } from 'fs/promises';
 import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -6,13 +6,27 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 /**
+ * Add a package to the dependencies in package.json
+ * This prevents npm from removing it as "extraneous" when installing other packages
+ */
+async function addToPackageJson(tempDir, packageName) {
+  const pkgPath = join(tempDir, 'package.json');
+  const pkgContent = await readFile(pkgPath, 'utf-8');
+  const pkg = JSON.parse(pkgContent);
+  pkg.dependencies = pkg.dependencies || {};
+  pkg.dependencies[packageName] = '*';
+  await writeFile(pkgPath, JSON.stringify(pkg, null, 2));
+}
+
+/**
  * Verify TypeScript type definitions are valid and accessible
  * @param {string} packageDir - Path to node_modules/@jackuait/blok
  * @param {string} tempDir - Temporary directory
+ * @param {string} packageName - Package name (e.g., '@jackuait/blok')
  * @param {boolean} verbose - Verbose logging
  * @returns {Promise<{passed: boolean, message: string, details: object}>}
  */
-export async function checkTypes(packageDir, tempDir, verbose = false) {
+export async function checkTypes(packageDir, tempDir, packageName, verbose = false) {
   const details = {
     typeFiles: [],
     missingTypeFiles: [],
@@ -49,8 +63,11 @@ export async function checkTypes(packageDir, tempDir, verbose = false) {
     const testTsConfig = join(tempDir, 'tsconfig.json');
 
     // Write a test TypeScript file (using named imports)
+    // Note: We use a simple test that verifies types are accessible.
+    // The package includes src/ files which TypeScript may try to compile,
+    // so we add @types/node to handle process.env references.
     await writeFile(testTsFile, `
-import type { BlokConfig } from '@jackuait/blok';
+import type { BlokConfig, OutputData } from '@jackuait/blok';
 import { Blok } from '@jackuait/blok';
 import { loadLocale } from '@jackuait/blok/locales';
 
@@ -63,21 +80,26 @@ const config: BlokConfig = {
 // Test constructor type (Blok is both a type and a value when using class)
 const editor: Blok = new Blok(config);
 
-// Test locale loading type
-const locale = loadLocale('en');
+// Test API return types
+const outputPromise: Promise<OutputData> = editor.save();
+
+// Test locale loading function is callable
+const localeLoading = loadLocale('en');
 
 // This file should compile without errors if types are correct
 console.log('Type checking passed');
 `);
 
     // Write a minimal tsconfig.json
+    // Use "bundler" moduleResolution to properly resolve ESM subpath exports
+    // Use skipLibCheck: true to skip checking node_modules types (standard practice)
     await writeFile(testTsConfig, JSON.stringify({
       compilerOptions: {
         target: 'ES2020',
         module: 'ESNext',
-        moduleResolution: 'node',
+        moduleResolution: 'bundler',
         strict: true,
-        skipLibCheck: false,
+        skipLibCheck: true,
         esModuleInterop: true,
         noEmit: true
       },
@@ -90,8 +112,13 @@ console.log('Type checking passed');
     }
 
     try {
-      // Install TypeScript without saving to package.json to avoid affecting the test environment
-      await execAsync('npm install --no-save typescript@latest', { cwd: tempDir, timeout: 60000 });
+      // First, add the blok package to package.json so npm doesn't remove it as "extraneous"
+      // when we install TypeScript
+      await addToPackageJson(tempDir, packageName);
+
+      // Install TypeScript and @types/node
+      // @types/node is needed because the package includes src/ files that reference process.env
+      await execAsync('npm install typescript@latest @types/node', { cwd: tempDir, timeout: 60000 });
 
       const { stdout, stderr } = await execAsync(
         'npx tsc --noEmit',

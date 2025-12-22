@@ -40,6 +40,7 @@ export const DATA_ATTR: {
   readonly toolbar: 'data-blok-toolbar';
   readonly settingsToggler: 'data-blok-settings-toggler';
   readonly toolboxOpened: 'data-blok-toolbox-opened';
+  readonly blockSettingsOpened: 'data-blok-block-settings-opened';
   readonly opened: 'data-blok-opened';
 
   // Popover Container

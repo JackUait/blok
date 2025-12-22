@@ -27,6 +27,7 @@ describe('Blocks', () => {
       name,
       holder,
       call: vi.fn(),
+      destroy: vi.fn(),
       tool: {
         name,
       },

@@ -39,11 +39,6 @@ export interface TooltipOptions {
    * Timout before showing
    */
   delay?: number;
-
-  /**
-   * Timout before hiding
-   */
-  hidingDelay?: number;
 }
 
 const DEFAULT_OFFSET = 10;
@@ -141,16 +136,6 @@ class Tooltip {
   private showingTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
-   * How many milliseconds need to wait before hiding
-   */
-  private hidingDelay: number = 0;
-
-  /**
-   * Store timeout before hiding
-   */
-  private hidingTimeout: ReturnType<typeof setTimeout> | null = null;
-
-  /**
    * MutationObserver for watching tooltip visibility changes
    */
   private ariaObserver: MutationObserver | null = null;
@@ -191,11 +176,6 @@ class Tooltip {
       this.prepare();
     }
 
-    if (this.hidingTimeout) {
-      clearTimeout(this.hidingTimeout);
-      this.hidingTimeout = null;
-    }
-
     const basicOptions = {
       placement: 'bottom',
       marginTop: 0,
@@ -203,13 +183,8 @@ class Tooltip {
       marginRight: 0,
       marginBottom: 0,
       delay: 70,
-      hidingDelay: 0,
     };
     const showingOptions = Object.assign(basicOptions, options);
-
-    if (showingOptions.hidingDelay) {
-      this.hidingDelay = showingOptions.hidingDelay;
-    }
 
     if (!this.nodes.content) {
       return;
@@ -288,21 +263,15 @@ class Tooltip {
 
   /**
    * Hide toolbox tooltip and clean content
-   * @param {boolean} skipDelay - forces hiding immediately
    */
-  public hide(skipDelay: boolean = false): void {
-    const shouldDelay = Boolean(this.hidingDelay) && !skipDelay;
-
-    if (shouldDelay && this.hidingTimeout) {
-      clearTimeout(this.hidingTimeout);
-    }
-
-    if (shouldDelay) {
-      this.hidingTimeout = setTimeout(() => {
-        this.hide(true);
-      }, this.hidingDelay);
-
-      return;
+  public hide(): void {
+    /**
+     * Cancel any pending show timeout when hiding.
+     * This prevents the tooltip from appearing after the user has already left the element.
+     */
+    if (this.showingTimeout) {
+      clearTimeout(this.showingTimeout);
+      this.showingTimeout = null;
     }
 
     if (this.nodes.wrapper) {
@@ -312,11 +281,6 @@ class Tooltip {
       this.updateTooltipVisibility();
     }
     this.showed = false;
-
-    if (this.showingTimeout) {
-      clearTimeout(this.showingTimeout);
-      this.showingTimeout = null;
-    }
   }
 
   /**
@@ -367,7 +331,7 @@ class Tooltip {
    */
   private handleWindowScroll = (): void => {
     if (this.showed) {
-      this.hide(true);
+      this.hide();
     }
   };
 
@@ -583,20 +547,6 @@ class Tooltip {
     }
   }
 
-  /**
-   * Append element or a couple to the beginning of the parent elements
-   * @param {Element} parent - where to append
-   * @param {Element|Element[]} elements - element or elements list
-   */
-  private prepend(parent: Element, elements: Element | Element[]): void {
-    if (Array.isArray(elements)) {
-      const reversed = elements.reverse();
-
-      reversed.forEach((el) => parent.prepend(el));
-    } else {
-      parent.prepend(elements);
-    }
-  }
 }
 
 /**
@@ -618,10 +568,9 @@ export const show = (element: HTMLElement, content: TooltipContent, options?: To
 
 /**
  * Hide tooltip
- * @param {boolean} skipHidingDelay - forces hiding immediately
  */
-export const hide = (skipHidingDelay = false): void => {
-  getTooltip().hide(skipHidingDelay);
+export const hide = (): void => {
+  getTooltip().hide();
 };
 
 /**

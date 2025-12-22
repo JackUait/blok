@@ -6,6 +6,7 @@ import {
   loadLocale,
   getDirection,
   ALL_LOCALE_CODES,
+  enMessages,
 } from '../i18n/locales';
 import { LightweightI18n } from '../i18n/lightweight-i18n';
 import type { I18nextInitResult } from '../i18n/i18next-loader';
@@ -80,6 +81,17 @@ export class I18n extends Module {
     }
 
     return this.lightweightI18n.t(key, vars);
+  }
+
+  /**
+   * Get the English translation for a key.
+   * Used for multilingual search - always searches against English terms.
+   *
+   * @param key - Translation key (e.g., 'toolNames.heading')
+   * @returns English translation string, or empty string if not found
+   */
+  public getEnglishTranslation(key: string): string {
+    return (enMessages as I18nDictionary)[key] ?? '';
   }
 
   /**
@@ -204,23 +216,18 @@ export class I18n extends Module {
     // Set default locale if configured
     this.applyDefaultLocale(i18nConfig?.defaultLocale);
 
-    // Handle custom messages (highest priority)
-    if (i18nConfig?.messages !== undefined) {
-      // For custom messages, use lightweight implementation with overrides
-      this.lightweightI18n.setDictionary(i18nConfig.messages);
-      this.usingI18next = false;
-      // Set direction from config or default to 'ltr' for custom messages
-      this.updateConfigDirection(i18nConfig.direction ?? 'ltr');
-
-      return;
-    }
-
+    // Load base translations first
     const requestedLocale = i18nConfig?.locale;
 
     if (requestedLocale === undefined || requestedLocale === 'auto') {
       await this.detectAndSetLocale();
     } else {
       await this.setLocale(requestedLocale);
+    }
+
+    // Merge custom messages on top of base translations (if provided)
+    if (i18nConfig?.messages !== undefined) {
+      this.setDictionary(i18nConfig.messages);
     }
 
     // Update config.i18n.direction so other modules can access it via isRtl getter

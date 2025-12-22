@@ -40,16 +40,17 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(element.getAttribute('data-blok-placeholder-active')).toBe('Start typing...');
     });
 
-    it('uses empty placeholder when not provided', () => {
+    it('uses default placeholder translation key when not provided', () => {
       const options = createParagraphOptions({}, {});
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('data-blok-placeholder-active')).toBe('');
+      // The mock API returns the key as-is, so we expect the translation key
+      expect(element.getAttribute('data-blok-placeholder-active')).toBe('tools.paragraph.placeholder');
     });
 
     it('uses DEFAULT_PLACEHOLDER static value when config is undefined', () => {
-      expect(Paragraph.DEFAULT_PLACEHOLDER).toBe('');
+      expect(Paragraph.DEFAULT_PLACEHOLDER).toBe('tools.paragraph.placeholder');
     });
   });
 

@@ -957,6 +957,104 @@ test('removeI18nMessages does not change content without i18n', () => {
 });
 
 // ============================================================================
+// Blok Default Import → Named Import Tests
+// ============================================================================
+
+console.log('\n🔄 Blok Default Import → Named Import Transformations\n');
+
+test('transforms Blok default import to named import', () => {
+  const input = `import Blok from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `import { Blok } from '@jackuait/blok';`);
+});
+
+test('transforms aliased Blok default import to named import with alias', () => {
+  const input = `import Editor from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `import { Blok as Editor } from '@jackuait/blok';`);
+});
+
+test('transforms combined Blok default + named import', () => {
+  const input = `import Blok, { BlokConfig } from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `import { Blok, BlokConfig } from '@jackuait/blok';`);
+});
+
+test('transforms aliased combined Blok default + named import', () => {
+  const input = `import Editor, { BlokConfig } from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `import { Blok as Editor, BlokConfig } from '@jackuait/blok';`);
+});
+
+test('transforms type-only Blok default import', () => {
+  const input = `import type Blok from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `import type { Blok } from '@jackuait/blok';`);
+});
+
+test('transforms type-only aliased Blok default import', () => {
+  const input = `import type Editor from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `import type { Blok as Editor } from '@jackuait/blok';`);
+});
+
+test('transforms namespace import from @jackuait/blok', () => {
+  const input = `import * as Blok from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `import { Blok } from '@jackuait/blok';`);
+});
+
+test('transforms aliased namespace import from @jackuait/blok', () => {
+  const input = `import * as Editor from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `import { Blok as Editor } from '@jackuait/blok';`);
+});
+
+test('transforms destructured dynamic import from @jackuait/blok', () => {
+  const input = `const { default: Editor } = await import('@jackuait/blok');`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `const { Blok: Editor } = await import('@jackuait/blok');`);
+});
+
+test('transforms require().default from @jackuait/blok', () => {
+  const input = `const Blok = require('@jackuait/blok').default;`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `const Blok = require('@jackuait/blok').Blok;`);
+});
+
+test('transforms destructured require default from @jackuait/blok', () => {
+  const input = `const { default: Editor } = require('@jackuait/blok');`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `const { Blok: Editor } = require('@jackuait/blok');`);
+});
+
+test('transforms re-export default as named from @jackuait/blok', () => {
+  const input = `export { default as Editor } from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `export { Blok as Editor } from '@jackuait/blok';`);
+});
+
+test('transforms re-export default from @jackuait/blok', () => {
+  const input = `export { default } from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  assertEqual(result, `export { Blok } from '@jackuait/blok';`);
+});
+
+test('does not transform subpath imports from @jackuait/blok/tools', () => {
+  const input = `import Header from '@jackuait/blok/tools';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  // Should not match because of the /tools path
+  assertEqual(result, input);
+});
+
+test('does not transform named imports from @jackuait/blok', () => {
+  const input = `import { Blok, BlokConfig } from '@jackuait/blok';`;
+  const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
+  // Named imports should not be transformed by the default import transforms
+  assertEqual(result, input);
+});
+
+// ============================================================================
 // Modular Import Tests (Strategy 5)
 // ============================================================================
 

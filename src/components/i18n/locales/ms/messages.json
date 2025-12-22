@@ -25,7 +25,7 @@
   "tools.header.heading4": "Tajuk 4",
   "tools.header.heading5": "Tajuk 5",
   "tools.header.heading6": "Tajuk 6",
-  "tools.list.list": "Senarai",
+  "tools.list.placeholder": "Senarai",
   "blockSettings.delete": "Padam",
   "a11y.dragHandle": "Seret untuk alih blok atau klik untuk menu",
   "a11y.dragHandleRole": "pemegang seret",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blok dialih ke atas ke kedudukan {position} daripada {total}",
   "a11y.movedDown": "Blok dialih ke bawah ke kedudukan {position} daripada {total}",
   "a11y.atTop": "Blok di atas sekali, tidak boleh dialih ke atas",
-  "a11y.atBottom": "Blok di bawah sekali, tidak boleh dialih ke bawah"
+  "a11y.atBottom": "Blok di bawah sekali, tidak boleh dialih ke bawah",
+  "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih"
 }

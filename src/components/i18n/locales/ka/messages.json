@@ -25,7 +25,7 @@
   "tools.header.heading4": "სათაური 4",
   "tools.header.heading5": "სათაური 5",
   "tools.header.heading6": "სათაური 6",
-  "tools.list.list": "სია",
+  "tools.list.placeholder": "სია",
   "blockSettings.delete": "წაშლა",
   "a11y.dragHandle": "გადაიტანეთ ბლოკის გადასატანად ან დააწკაპუნეთ მენიუსთვის",
   "a11y.dragHandleRole": "გადატანის სახელური",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "ბლოკი გადატანილია ზემოთ პოზიციაზე {position} {total}-დან",
   "a11y.movedDown": "ბლოკი გადატანილია ქვემოთ პოზიციაზე {position} {total}-დან",
   "a11y.atTop": "ბლოკი ზედა პოზიციაზეა, ზემოთ გადატანა შეუძლებელია",
-  "a11y.atBottom": "ბლოკი ქვედა პოზიციაზეა, ქვემოთ გადატანა შეუძლებელია"
+  "a11y.atBottom": "ბლოკი ქვედა პოზიციაზეა, ქვემოთ გადატანა შეუძლებელია",
+  "tools.paragraph.placeholder": "დაწერეთ რამე ან დააჭირეთ / ასარჩევად"
 }

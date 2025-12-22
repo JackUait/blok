@@ -17,6 +17,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
   on: vi.fn(),
   off: vi.fn(),
   hasFocus: vi.fn(() => false),
+  filterItems: vi.fn(),
 }));
 
 vi.mock('../../../src/components/dom', () => ({
@@ -41,6 +42,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public on = mockPopoverInstance.on;
       public off = mockPopoverInstance.off;
       public hasFocus = mockPopoverInstance.hasFocus;
+      public filterItems = mockPopoverInstance.filterItems;
     },
     PopoverMobile: class MockPopoverMobile {
       public show = mockPopoverInstance.show;
@@ -50,6 +52,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public on = mockPopoverInstance.on;
       public off = mockPopoverInstance.off;
       public hasFocus = mockPopoverInstance.hasFocus;
+      public filterItems = mockPopoverInstance.filterItems;
     },
   };
 });
@@ -100,10 +103,18 @@ describe('Toolbox', () => {
     vi.clearAllMocks();
 
     // Mock BlockAPI
+    const holderElement = document.createElement('div');
+    const contentEditableElement = document.createElement('div');
+
+    contentEditableElement.setAttribute('contenteditable', 'true');
+    contentEditableElement.textContent = '';
+    holderElement.appendChild(contentEditableElement);
+
     const blockAPI = {
       id: 'test-block-id',
       isEmpty: true,
       call: vi.fn(),
+      holder: holderElement,
     } as unknown as BlockAPI;
 
     // Mock BlockToolAdapter
@@ -130,6 +141,7 @@ describe('Toolbox', () => {
         convert: vi.fn(),
         composeBlockData: vi.fn(async () => ({})),
         insert: vi.fn(() => blockAPI),
+        stopBlockMutationWatching: vi.fn(),
       },
       caret: {
         setToBlock: vi.fn(),

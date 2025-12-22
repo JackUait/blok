@@ -221,7 +221,7 @@ test.describe('block ids', () => {
     const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
 
     await plusButton.click();
-    await page.locator(TOOLBOX_ITEM_SELECTOR('header')).click();
+    await page.locator(TOOLBOX_ITEM_SELECTOR('header-2')).click();
 
     const headerBlockId = await getLastBlockId(page);
     const headerBlock = page.locator(

@@ -25,7 +25,7 @@
   "tools.header.heading4": "Overskrift 4",
   "tools.header.heading5": "Overskrift 5",
   "tools.header.heading6": "Overskrift 6",
-  "tools.list.list": "Liste",
+  "tools.list.placeholder": "Liste",
   "blockSettings.delete": "Slett",
   "a11y.dragHandle": "Dra for å flytte blokk eller klikk for meny",
   "a11y.dragHandleRole": "drahåndtak",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blokk flyttet opp til posisjon {position} av {total}",
   "a11y.movedDown": "Blokk flyttet ned til posisjon {position} av {total}",
   "a11y.atTop": "Blokken er øverst, kan ikke flyttes opp",
-  "a11y.atBottom": "Blokken er nederst, kan ikke flyttes ned"
+  "a11y.atBottom": "Blokken er nederst, kan ikke flyttes ned",
+  "tools.paragraph.placeholder": "Skriv noe eller trykk / for å velge"
 }

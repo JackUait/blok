@@ -448,11 +448,27 @@ export class Flipper {
   }
 
   /**
+   * Scrolls the given element into view using the best available method
+   * @param element - element to scroll into view
+   */
+  private scrollElementIntoView(element: HTMLElement): void {
+    const el = element as HTMLElement & { scrollIntoViewIfNeeded?: (centerIfNeeded?: boolean) => void };
+
+    if (typeof el.scrollIntoViewIfNeeded === 'function') {
+      el.scrollIntoViewIfNeeded();
+
+      return;
+    }
+
+    el.scrollIntoView({ block: 'nearest' });
+  }
+
+  /**
    * Fired after flipping in any direction
    */
   private flipCallback(): void {
     if (this.iterator?.currentItem) {
-      this.iterator.currentItem.scrollIntoViewIfNeeded?.();
+      this.scrollElementIntoView(this.iterator.currentItem);
     }
 
     this.flipCallbacks.forEach(cb => cb());

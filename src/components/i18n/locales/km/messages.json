@@ -25,7 +25,7 @@
   "tools.header.heading4": "ចំណងជើង ៤",
   "tools.header.heading5": "ចំណងជើង ៥",
   "tools.header.heading6": "ចំណងជើង ៦",
-  "tools.list.list": "បញ្ជី",
+  "tools.list.placeholder": "បញ្ជី",
   "blockSettings.delete": "លុប",
   "a11y.dragHandle": "អូសដើម្បីផ្លាស់ទីប្លុក ឬចុចសម្រាប់ម៉ឺនុយ",
   "a11y.dragHandleRole": "ចំណុចទាញ",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "ប្លុកបានផ្លាស់ទីឡើងលើទៅទីតាំង {position} នៃ {total}",
   "a11y.movedDown": "ប្លុកបានផ្លាស់ទីចុះក្រោមទៅទីតាំង {position} នៃ {total}",
   "a11y.atTop": "ប្លុកនៅផ្នែកខាងលើ មិនអាចផ្លាស់ទីឡើងលើបានទេ",
-  "a11y.atBottom": "ប្លុកនៅផ្នែកខាងក្រោម មិនអាចផ្លាស់ទីចុះក្រោមបានទេ"
+  "a11y.atBottom": "ប្លុកនៅផ្នែកខាងក្រោម មិនអាចផ្លាស់ទីចុះក្រោមបានទេ",
+  "tools.paragraph.placeholder": "សរសេរអ្វីមួយ ឬចុច / ដើម្បីជ្រើសរើស"
 }

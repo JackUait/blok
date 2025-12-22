@@ -739,4 +739,410 @@ test.describe('modules/selection', () => {
     // Verify fake background elements are removed
     await expect(page.locator(FAKE_BACKGROUND_SELECTOR)).toHaveCount(0);
   });
+
+  test('rubber band selection works when starting from page margin outside editor', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Third block',
+        },
+      },
+    ]);
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+
+    const firstBox = await getRequiredBoundingBox(firstBlock);
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+
+    // Start drag from left margin (x=10), at the Y position of first block
+    const startX = 10;
+    const startY = firstBox.y + firstBox.height / 2;
+
+    // End drag still in margin, but at Y position of second block
+    const endX = 10;
+    const endY = secondBox.y + secondBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(endX, endY, { steps: 10 });
+    await page.mouse.up();
+
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).not.toHaveAttribute('data-blok-selected', 'true');
+  });
+
+  test('shift+drag adds to existing selection instead of replacing', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Third block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Fourth block',
+        },
+      },
+    ]);
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+    const thirdBlock = getBlockByIndex(page, 2);
+    const fourthBlock = getBlockByIndex(page, 3);
+
+    // First, select blocks 0-1 via rubber band
+    const firstBox = await getRequiredBoundingBox(firstBlock);
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+
+    await page.mouse.move(10, firstBox.y + firstBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(10, secondBox.y + secondBox.height / 2, { steps: 5 });
+    await page.mouse.up();
+
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 3)).not.toHaveAttribute('data-blok-selected', 'true');
+
+    // Now Shift+drag to add blocks 2-3
+    const thirdBox = await getRequiredBoundingBox(thirdBlock);
+    const fourthBox = await getRequiredBoundingBox(fourthBlock);
+
+    await page.keyboard.down('Shift');
+    await page.mouse.move(10, thirdBox.y + thirdBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(10, fourthBox.y + fourthBox.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await page.keyboard.up('Shift');
+
+    // All four blocks should now be selected
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 3)).toHaveAttribute('data-blok-selected', 'true');
+  });
+
+  test('rubber band selection does not select blocks until rectangle intersects them horizontally', async ({ page }) => {
+    // Create a centered editor with margins to test horizontal intersection
+    await page.evaluate(({ holder }) => {
+      const existingHolder = document.getElementById(holder);
+
+      if (existingHolder) {
+        existingHolder.remove();
+      }
+
+      const container = document.createElement('div');
+
+      container.id = holder;
+      container.setAttribute('data-blok-testid', holder);
+      // Center the editor with a fixed width to create left/right margins
+      container.style.width = '400px';
+      container.style.margin = '0 auto';
+      container.style.border = '1px dotted #388AE5';
+
+      document.body.appendChild(container);
+    }, { holder: HOLDER_ID });
+
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({
+        holder: holder,
+        data: {
+          blocks: [
+            { type: 'paragraph', data: { text: 'First block' } },
+            { type: 'paragraph', data: { text: 'Second block' } },
+          ],
+        },
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+    const firstBox = await getRequiredBoundingBox(firstBlock);
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+
+    // Start drag from far left margin (x=10), well outside the centered editor
+    // Position Y in the middle of first block
+    const startX = 10;
+    const startY = firstBox.y + firstBox.height / 2;
+
+    // Drag down to second block's Y position, but stay in the left margin (x=10)
+    const endY = secondBox.y + secondBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX, endY, { steps: 10 });
+
+    // Blocks should NOT be selected because rectangle hasn't reached them horizontally
+    await expect(getBlockByIndex(page, 0)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).not.toHaveAttribute('data-blok-selected', 'true');
+
+    // Now continue dragging horizontally until we reach the block holder
+    const reachBlockX = firstBox.x + 10; // Just inside the block holder
+
+    await page.mouse.move(reachBlockX, endY, { steps: 10 });
+
+    // Now both blocks should be selected because rectangle intersects them
+    await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+
+    await page.mouse.up();
+  });
+
+  test('toolbar is hidden during rubber band selection', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+    ]);
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+    const firstBox = await getRequiredBoundingBox(firstBlock);
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+
+    // Click on first block to make toolbar visible
+    await firstBlock.click();
+
+    // Wait for toolbar to open (check for data-blok-opened attribute)
+    const toolbar = page.locator('[data-blok-toolbar]');
+
+    await expect(toolbar).toHaveAttribute('data-blok-opened', 'true');
+
+    // Start rubber band selection from left margin
+    const startX = 10;
+    const startY = firstBox.y + firstBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+
+    // Drag down through blocks
+    const endY = secondBox.y + secondBox.height / 2;
+
+    await page.mouse.move(startX, endY, { steps: 10 });
+
+    // Toolbar should be closed during rubber band selection (no data-blok-opened attribute)
+    await expect(toolbar).not.toHaveAttribute('data-blok-opened', 'true');
+
+    await page.mouse.up();
+  });
+
+  test('blocks are not selected when hovering after closing toolbox with plus button click', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Third block',
+        },
+      },
+    ]);
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+    const thirdBlock = getBlockByIndex(page, 2);
+
+    // Click first block to show toolbar
+    await firstBlock.click();
+
+    // Wait for toolbar to appear
+    const toolbar = page.locator('[data-blok-toolbar]');
+
+    await expect(toolbar).toHaveAttribute('data-blok-opened', 'true');
+
+    // Click plus button to open toolbox
+    const plusButton = page.getByTestId('plus-button');
+
+    await plusButton.click();
+
+    // Wait for toolbox to open
+    const toolbox = page.locator('[data-blok-testid="toolbox-popover"]');
+
+    await expect(toolbox).toHaveAttribute('data-blok-popover-opened', 'true');
+
+    // Click plus button again to close toolbox
+    await plusButton.click();
+
+    // Wait for toolbox to close
+    await expect(toolbox).not.toHaveAttribute('data-blok-popover-opened', 'true');
+
+    // Now hover over blocks - they should NOT become selected
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+    const thirdBox = await getRequiredBoundingBox(thirdBlock);
+
+    await page.mouse.move(secondBox.x + secondBox.width / 2, secondBox.y + secondBox.height / 2);
+    await page.mouse.move(thirdBox.x + thirdBox.width / 2, thirdBox.y + thirdBox.height / 2);
+
+    // None of the blocks should be selected
+    await expect(getBlockByIndex(page, 0)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).not.toHaveAttribute('data-blok-selected', 'true');
+  });
+
+  test('blocks are not selected when hovering while toolbox is open', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Third block',
+        },
+      },
+    ]);
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+    const thirdBlock = getBlockByIndex(page, 2);
+
+    // Click first block to show toolbar
+    await firstBlock.click();
+
+    // Wait for toolbar to appear
+    const toolbar = page.locator('[data-blok-toolbar]');
+
+    await expect(toolbar).toHaveAttribute('data-blok-opened', 'true');
+
+    // Click plus button to open toolbox
+    const plusButton = page.getByTestId('plus-button');
+
+    await plusButton.click();
+
+    // Wait for toolbox to open
+    const toolbox = page.locator('[data-blok-testid="toolbox-popover"]');
+
+    await expect(toolbox).toHaveAttribute('data-blok-popover-opened', 'true');
+
+    // Hover over blocks while toolbox is open
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+    const thirdBox = await getRequiredBoundingBox(thirdBlock);
+
+    await page.mouse.move(secondBox.x + secondBox.width / 2, secondBox.y + secondBox.height / 2);
+    await page.mouse.move(thirdBox.x + thirdBox.width / 2, thirdBox.y + thirdBox.height / 2);
+
+    // None of the blocks should be selected
+    await expect(getBlockByIndex(page, 0)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 1)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).not.toHaveAttribute('data-blok-selected', 'true');
+  });
+
+  test('blocks are not selected when hovering while block settings is open', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Third block',
+        },
+      },
+    ]);
+
+    const firstBlock = getBlockByIndex(page, 0);
+    const secondBlock = getBlockByIndex(page, 1);
+    const thirdBlock = getBlockByIndex(page, 2);
+
+    // Click first block to show toolbar
+    await firstBlock.click();
+
+    // Wait for toolbar to appear
+    const toolbar = page.locator('[data-blok-toolbar]');
+
+    await expect(toolbar).toHaveAttribute('data-blok-opened', 'true');
+
+    // Click settings toggler to open block settings
+    const settingsToggler = page.getByTestId('settings-toggler');
+
+    await settingsToggler.click();
+
+    // Wait for block settings to open
+    const blockSettings = page.locator('[data-blok-testid="block-tunes-popover"]');
+
+    await expect(blockSettings).toHaveAttribute('data-blok-popover-opened', 'true');
+
+    // Note: First block may be selected when opening block settings (expected behavior)
+    // We're testing that ADDITIONAL blocks don't get selected when hovering
+
+    // Hover over other blocks while block settings is open
+    const secondBox = await getRequiredBoundingBox(secondBlock);
+    const thirdBox = await getRequiredBoundingBox(thirdBlock);
+
+    await page.mouse.move(secondBox.x + secondBox.width / 2, secondBox.y + secondBox.height / 2);
+    await page.mouse.move(thirdBox.x + thirdBox.width / 2, thirdBox.y + thirdBox.height / 2);
+
+    // Second and third blocks should NOT be selected from hovering
+    await expect(getBlockByIndex(page, 1)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(getBlockByIndex(page, 2)).not.toHaveAttribute('data-blok-selected', 'true');
+  });
 });

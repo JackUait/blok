@@ -153,6 +153,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Filters popover items by query string.
+   * Base implementation is a no-op. Override in subclasses that support filtering.
+   * @param _query - search query text
+   */
+  public filterItems(_query: string): void {
+    // No-op in base class. PopoverDesktop overrides this.
+  }
+
+  /**
    * Looks for the item by name and imitates click on it
    * @param name - name of the item to activate
    */
@@ -390,7 +399,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     popover.setAttribute('data-blok-testid', 'popover');
 
     // Set CSS variables
-    popover.style.setProperty('--width', '200px');
+    popover.style.setProperty('--width', this.params.width ?? '280px');
     popover.style.setProperty('--item-padding', '3px');
     popover.style.setProperty('--item-height', 'calc(1.25rem + 2 * var(--item-padding))');
     popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');

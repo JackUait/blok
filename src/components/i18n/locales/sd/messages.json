@@ -25,7 +25,7 @@
   "tools.header.heading4": "عنوان 4",
   "tools.header.heading5": "عنوان 5",
   "tools.header.heading6": "عنوان 6",
-  "tools.list.list": "لسٽ",
+  "tools.list.placeholder": "لسٽ",
   "blockSettings.delete": "ختم ڪريو",
   "a11y.dragHandle": "بلاڪ منتقل ڪرڻ لاءِ ڇڪيو يا مينيو لاءِ ڪلڪ ڪريو",
   "a11y.dragHandleRole": "ڇڪڻ جو هينڊل",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "بلاڪ مٿي پوزيشن {position} مان {total} تي ويو",
   "a11y.movedDown": "بلاڪ ھيٺ پوزيشن {position} مان {total} تي ويو",
   "a11y.atTop": "بلاڪ مٿي آھي، مٿي نٿو وڃي سگھي",
-  "a11y.atBottom": "بلاڪ ھيٺ آھي، ھيٺ نٿو وڃي سگھي"
+  "a11y.atBottom": "بلاڪ ھيٺ آھي، ھيٺ نٿو وڃي سگھي",
+  "tools.paragraph.placeholder": "ڪجھ لdelaysو يا چdelay / دٻاdelay"
 }

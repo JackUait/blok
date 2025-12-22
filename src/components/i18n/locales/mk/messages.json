@@ -25,7 +25,7 @@
   "tools.header.heading4": "Наслов 4",
   "tools.header.heading5": "Наслов 5",
   "tools.header.heading6": "Наслов 6",
-  "tools.list.list": "Список",
+  "tools.list.placeholder": "Список",
   "blockSettings.delete": "Избриши",
   "a11y.dragHandle": "Повлечете за преместување на блок или кликнете за мени",
   "a11y.dragHandleRole": "рачка за влечење",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Блокот е преместен нагоре на позиција {position} од {total}",
   "a11y.movedDown": "Блокот е преместен надолу на позиција {position} од {total}",
   "a11y.atTop": "Блокот е на врвот, не може да се премести нагоре",
-  "a11y.atBottom": "Блокот е на дното, не може да се премести надолу"
+  "a11y.atBottom": "Блокот е на дното, не може да се премести надолу",
+  "tools.paragraph.placeholder": "Напишете нешто или притиснете / за избор"
 }

@@ -25,7 +25,7 @@
   "tools.header.heading4": "Kichwa 4",
   "tools.header.heading5": "Kichwa 5",
   "tools.header.heading6": "Kichwa 6",
-  "tools.list.list": "Orodha",
+  "tools.list.placeholder": "Orodha",
   "blockSettings.delete": "Futa",
   "a11y.dragHandle": "Buruta ili kusogeza kizuizi au bofya kwa menyu",
   "a11y.dragHandleRole": "kishikio cha kuburuta",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Kizuizi kimesogezwa juu hadi nafasi {position} ya {total}",
   "a11y.movedDown": "Kizuizi kimesogezwa chini hadi nafasi {position} ya {total}",
   "a11y.atTop": "Kizuizi kiko juu, hakiwezi kusogezwa juu",
-  "a11y.atBottom": "Kizuizi kiko chini, hakiwezi kusogezwa chini"
+  "a11y.atBottom": "Kizuizi kiko chini, hakiwezi kusogezwa chini",
+  "tools.paragraph.placeholder": "Andika kitu au bonyeza / kuchagua"
 }

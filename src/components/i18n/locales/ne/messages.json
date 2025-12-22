@@ -25,7 +25,7 @@
   "tools.header.heading4": "शीर्षक ४",
   "tools.header.heading5": "शीर्षक ५",
   "tools.header.heading6": "शीर्षक ६",
-  "tools.list.list": "सूची",
+  "tools.list.placeholder": "सूची",
   "blockSettings.delete": "मेटाउनुहोस्",
   "a11y.dragHandle": "ब्लक सार्न तान्नुहोस् वा मेनुको लागि क्लिक गर्नुहोस्",
   "a11y.dragHandleRole": "ड्र्याग ह्यान्डल",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "ब्लक {total} मध्ये स्थान {position} मा माथि सारियो",
   "a11y.movedDown": "ब्लक {total} मध्ये स्थान {position} मा तल सारियो",
   "a11y.atTop": "ब्लक शीर्षमा छ, माथि सार्न सकिँदैन",
-  "a11y.atBottom": "ब्लक तलमा छ, तल सार्न सकिँदैन"
+  "a11y.atBottom": "ब्लक तलमा छ, तल सार्न सकिँदैन",
+  "tools.paragraph.placeholder": "केही लेख्नुहोस् वा छान्न / थिच्नुहोस्"
 }

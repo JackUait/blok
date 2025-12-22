@@ -8,7 +8,7 @@ import { keyCodes } from '../../utils';
 import { CSSVariables } from './popover.const';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import type { SearchableItem } from './components/search-input';
-import { SearchInput, SearchInputEvent } from './components/search-input';
+import { SearchInput, SearchInputEvent, matchesSearchQuery } from './components/search-input';
 import { PopoverItemDefault } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 
@@ -117,6 +117,7 @@ export class PopoverDesktop extends PopoverAbstract {
           keyCodes.LEFT,
         ],
         onArrowLeft: params.onNavigateBack,
+        handleContentEditableTargets: params.handleContentEditableNavigation,
       });
     }
 
@@ -201,6 +202,7 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Focuses the initial element when popover is shown.
    * Focuses search field if present, otherwise first menu item.
+   * Skips the first Tab press so it just "enters" the menu rather than advancing.
    */
   private focusInitialElement(): void {
     if (this.search) {
@@ -209,7 +211,7 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
-    this.flipper?.focusFirst();
+    this.flipper?.focusItem(0, { skipNextTab: true });
   }
 
   /**
@@ -399,6 +401,7 @@ export class PopoverDesktop extends PopoverAbstract {
       flippable: item.isChildrenFlippable,
       messages: this.messages,
       onNavigateBack: this.destroyNestedPopoverIfExists.bind(this),
+      width: item.childrenWidth,
     });
 
     item.onChildrenOpen();
@@ -450,14 +453,19 @@ export class PopoverDesktop extends PopoverAbstract {
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
 
+    // Get parent width - use computed width if --width is 'auto'
+    const parentWidth = this.params.width === 'auto'
+      ? `${this.nodes.popoverContainer.offsetWidth}px`
+      : 'var(--width)';
+
     // Calculate --popover-left based on nesting level and parent open direction
     // Set on the actual popover element to override its default value
     if (isParentOpenLeft) {
       // Position to the left
-      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * (var(--nesting-level) + 1) * var(--width) + 100%)');
+      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(-1 * (var(--nesting-level) + 1) * ${parentWidth} + 100%)`);
     } else {
       // Position to the right
-      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, 'calc(var(--nesting-level) * (var(--width) - var(--nested-popover-overlap)))');
+      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(var(--nesting-level) * (${parentWidth} - var(--nested-popover-overlap)))`);
     }
 
     // Calculate top position based on parent open direction
@@ -610,6 +618,20 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Filters popover items by query string.
+   * Used for inline slash search where typing happens in the block, not in a search input.
+   * @param query - search query text
+   */
+  public override filterItems(query: string): void {
+    const matchingItems = this.itemsDefault.filter(item => matchesSearchQuery(item, query));
+
+    this.onSearch({
+      query,
+      items: matchingItems as unknown as SearchableItem[],
+    });
+  }
+
+  /**
    * Handles input inside search field
    * @param data - search input event data
    * @param data.query - search query text
@@ -619,12 +641,15 @@ export class PopoverDesktop extends PopoverAbstract {
     const isEmptyQuery = data.query === '';
     const isNothingFound = data.items.length === 0;
 
+    // Cast data.items to PopoverItemDefault[] since we know that's what filterItems passes
+    const matchingItems = data.items as unknown as PopoverItemDefault[];
+
     this.items
       .forEach((item) => {
         const isDefaultItem = item instanceof PopoverItemDefault;
         const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
         const isHidden = isDefaultItem
-          ? !data.items.includes(item)
+          ? !matchingItems.includes(item as PopoverItemDefault)
           : isSeparatorOrHtml && (isNothingFound || !isEmptyQuery);
 
         item.toggleHidden(isHidden);
@@ -632,12 +657,26 @@ export class PopoverDesktop extends PopoverAbstract {
     this.toggleNothingFoundMessage(isNothingFound);
 
     /** List of elements available for keyboard navigation considering search query applied */
-    const flippableElements = data.query === '' ? this.flippableElements : data.items.map(item => (item as PopoverItem).getElement());
+    const flippableElements = isEmptyQuery ? this.flippableElements : data.items.map(item => (item as PopoverItem).getElement());
 
-    if (this.flipper?.isActivated) {
-      /** Update flipper items with only visible */
-      this.flipper.deactivate();
-      this.flipper.activate(flippableElements as HTMLElement[]);
+    if (!this.flipper?.isActivated) {
+      return;
+    }
+
+    /** Update flipper items with only visible */
+    this.flipper.deactivate();
+    this.flipper.activate(flippableElements as HTMLElement[]);
+
+    /**
+     * Focus first item after filtering.
+     * Always skip the first Tab press so it just "enters" the menu rather than
+     * advancing to second item. This applies regardless of whether the query is
+     * empty (initial "/" open) or non-empty (user is typing to filter), because
+     * the user's keyboard focus is still in the search input - pressing Tab
+     * should enter the list at item 0, not advance from 0 to 1.
+     */
+    if (flippableElements.length > 0) {
+      this.flipper.focusItem(0, { skipNextTab: true });
     }
   };
 }

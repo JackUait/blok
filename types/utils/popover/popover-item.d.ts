@@ -45,6 +45,12 @@ export interface PopoverItemChildren {
    * Useful for items like link tool that render custom content instead of a dropdown list.
    */
   hideChevron?: boolean;
+
+  /**
+   * Width of the nested popover. Defaults to '280px'.
+   * Use 'auto' to fit content width.
+   */
+  width?: string;
 }
 
 /**
@@ -182,6 +188,18 @@ export interface PopoverItemDefaultBaseParams {
    * Keys should be in camelCase (e.g., 'headerLevel' becomes 'data-header-level')
    */
   dataset?: Record<string, string>;
+
+  /**
+   * English title for multilingual search.
+   * Used to search against English terms even when UI is in another language.
+   */
+  englishTitle?: string;
+
+  /**
+   * Additional search terms for this item.
+   * Used to match alternative names or keywords.
+   */
+  searchTerms?: string[];
 
   /**
    * Popover item activation handler

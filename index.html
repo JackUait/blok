@@ -34,7 +34,7 @@
     <div class="flex flex-wrap items-center h-[50px] leading-[50px] px-[30px] max-md:px-5 mb-[30px] border-b border-[#e8e8eb]">
       <a class="font-bold text-inherit no-underline" href="https://github.com/JackUait/blok">Blok</a>
     </div>
-    <div class="thin-mode-content max-w-[1100px] mx-auto antialiased max-md:px-5">
+    <div class="thin-mode-content max-w-content mx-auto antialiased max-md:px-5">
       <div id="blok"></div>
       <div class="flex items-center fixed bottom-0 left-0 right-0 bg-white rounded-t-lg border-t border-[#e8e8eb] shadow-sm text-[13px] px-4 py-2 z-[1] select-none max-md:hidden">
         <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
@@ -101,27 +101,22 @@
       tools: {
         /**
          * Each Tool is a Plugin. Pass them via 'class' option with necessary settings {@link docs/tools.md}
+         * Tool options can be flat (no nested config: {}) - Blok extracts known keys automatically.
+         * inlineToolbar defaults to true for block tools.
          */
         paragraph: {
           class: Paragraph,
-          inlineToolbar: true,
+          preserveBlank: true,
         },
         header: {
           class: Header,
-          inlineToolbar: ['link'],
-          config: {
-            placeholder: 'Header'
-          },
-          shortcut: 'CMD+SHIFT+H'
+          placeholder: 'Header',
         },
-        list: {
-          class: List,
-          inlineToolbar: true,
-        },
+        list: List,
         // Inline tools
-        bold: { class: Bold },
-        italic: { class: Italic },
-        link: { class: Link },
+        bold: Bold,
+        italic: Italic,
+        link: Link,
       },
 
       /**
@@ -129,7 +124,6 @@
        */
       // defaultBlock: 'paragraph',
 
-      placeholder: 'Write something or press / to select a tool',
       autofocus: true,
 
       /**

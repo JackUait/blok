@@ -1,6 +1,6 @@
 /* eslint-disable playwright/no-nth-methods */
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
@@ -564,6 +564,89 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
       expect(savedData?.blocks[1].data.text).toBe('Child');
       expect(savedData?.blocks[1].data.depth).toBe(1);
+    });
+
+    test('preserves links in list items after save', async ({ page }) => {
+      // This test reproduces the bug where links added to list items were stripped
+      // during save because the List tool's sanitize config had `a: true` which
+      // caused the href attribute to be removed by the sanitizer.
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              id: 'list-with-link',
+              type: 'list',
+              data: {
+                text: 'Item with <a href="https://example.com" target="_blank" rel="nofollow">link</a> inside',
+                style: 'unordered',
+              },
+            },
+          ],
+        },
+      });
+
+      // Verify the link is rendered
+      const listItem = page.locator(LIST_BLOCK_SELECTOR);
+      await expect(listItem.getByRole('link', { name: 'link' })).toBeVisible();
+
+      // Save and verify the link is preserved with href attribute
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks).toHaveLength(1);
+      expect(savedData?.blocks[0].data.text).toContain('<a href="https://example.com"');
+      expect(savedData?.blocks[0].data.text).toContain('target="_blank"');
+      expect(savedData?.blocks[0].data.text).toContain('rel="nofollow"');
+      expect(savedData?.blocks[0].data.text).toContain('>link</a>');
+    });
+
+    test('preserves links after readonly toggle', async ({ page }) => {
+      // This reproduces the exact bug scenario: links in list items were lost
+      // when toggling readonly mode because readonly triggers save + re-render.
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              id: 'list-link-readonly',
+              type: 'list',
+              data: {
+                text: 'Click <a href="https://google.com" target="_blank" rel="nofollow">here</a> for more',
+                style: 'unordered',
+              },
+            },
+          ],
+        },
+      });
+
+      // Verify link exists before toggle
+      const listItem = page.locator(LIST_BLOCK_SELECTOR);
+      await expect(listItem.getByRole('link', { name: 'here' })).toBeVisible();
+
+      // Toggle readonly on
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle(true);
+      });
+
+      // Verify link still exists after readonly toggle
+      await expect(listItem.getByRole('link', { name: 'here' })).toBeVisible();
+
+      // Toggle readonly off
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle(false);
+      });
+
+      // Verify link still exists after toggling back
+      await expect(listItem.getByRole('link', { name: 'here' })).toBeVisible();
+
+      // Save and verify the href is preserved
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.text).toContain('href="https://google.com"');
     });
   });
 
@@ -1627,6 +1710,208 @@ test.describe('list tool (ListItem)', () => {
       });
 
       expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+    });
+  });
+
+  test.describe('multi-select indent/outdent', () => {
+    /**
+     * Helper to place caret at end of an element
+     */
+    const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
+      await locator.evaluate((element: HTMLElement) => {
+        const selection = window.getSelection();
+        const range = document.createRange();
+
+        range.selectNodeContents(element);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      });
+    };
+
+    /**
+     * Helper to select multiple blocks by their indices using Shift+ArrowDown.
+     * Clicks on the first block, places caret at end, then uses Shift+Down to extend selection.
+     */
+    const selectBlocksRange = async (page: Page, startIndex: number, endIndex: number): Promise<void> => {
+      const startBlock = page.locator(LIST_BLOCK_SELECTOR).nth(startIndex).locator('[contenteditable="true"]');
+
+      await startBlock.click();
+      await placeCaretAtEnd(startBlock);
+
+      await page.keyboard.down('Shift');
+
+      const stepsDown = endIndex - startIndex;
+
+      for (let i = 0; i < stepsDown; i++) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await page.keyboard.up('Shift');
+    };
+
+    test('tab indents all selected list items when all are at valid depth', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+          { text: 'Third item' },
+        ]),
+      });
+
+      // Select second and third items
+      await selectBlocksRange(page, 1, 2);
+
+      // Verify blocks are selected (check on block wrapper, not tool element)
+      const secondBlockWrapper = page.locator('[data-blok-testid="block-wrapper"]').nth(1);
+      const thirdBlockWrapper = page.locator('[data-blok-testid="block-wrapper"]').nth(2);
+
+      await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
+      await expect(thirdBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+
+      // Wait for the DOM to update with new depth
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(1)).toHaveAttribute('data-list-depth', '1');
+      await expect(page.locator(LIST_BLOCK_SELECTOR).nth(2)).toHaveAttribute('data-list-depth', '1');
+
+      // Verify both items are now at depth 1
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[1].data.depth).toBe(1);
+      expect(savedData?.blocks[2].data.depth).toBe(1);
+    });
+
+    test('shift+tab outdents all selected list items', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item', depth: 1 },
+          { text: 'Third item', depth: 1 },
+        ]),
+      });
+
+      // Select second and third items (both at depth 1)
+      await selectBlocksRange(page, 1, 2);
+
+      // Press Shift+Tab to outdent
+      await page.keyboard.press('Shift+Tab');
+
+      // Verify both items are now at depth 0
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[2].data.depth ?? 0).toBe(0);
+    });
+
+    test('tab does nothing when any selected item cannot be indented', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+          { text: 'Third item' },
+        ]),
+      });
+
+      // Select first and second items (first cannot be indented - no previous list item)
+      await selectBlocksRange(page, 0, 1);
+
+      // Press Tab - should do nothing because first item can't indent
+      await page.keyboard.press('Tab');
+
+      // Verify neither item was indented
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
+    });
+
+    test('shift+tab does nothing when any selected item is at depth 0', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item', depth: 1 },
+          { text: 'Third item' },  // depth 0
+        ]),
+      });
+
+      // Select second and third items (third is at depth 0)
+      await selectBlocksRange(page, 1, 2);
+
+      // Press Shift+Tab - should do nothing because third item can't outdent
+      await page.keyboard.press('Shift+Tab');
+
+      // Verify neither item changed
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[1].data.depth).toBe(1);
+      expect(savedData?.blocks[2].data.depth ?? 0).toBe(0);
+    });
+
+    test('tab does nothing when selection includes non-list blocks', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            { id: 'list-1', type: 'list', data: { text: 'List item', style: 'unordered' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Paragraph' } },
+          ],
+        },
+      });
+
+      // Select both blocks (mixed types)
+      const listItem = page.locator(LIST_BLOCK_SELECTOR).first().locator('[contenteditable="true"]');
+      await listItem.click();
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.press('Shift+ArrowDown');
+
+      // Press Tab - should do nothing because selection includes paragraph
+      await page.keyboard.press('Tab');
+
+      // Verify list item was not indented
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+    });
+
+    test('selection is preserved after indent', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([
+          { text: 'First item' },
+          { text: 'Second item' },
+          { text: 'Third item' },
+        ]),
+      });
+
+      // Select second and third items
+      await selectBlocksRange(page, 1, 2);
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+
+      // Verify blocks are still selected (data-blok-selected is on block wrapper, not tool element)
+      const secondBlockWrapper = page.locator('[data-blok-testid="block-wrapper"]').nth(1);
+      const thirdBlockWrapper = page.locator('[data-blok-testid="block-wrapper"]').nth(2);
+
+      await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
+      await expect(thirdBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
     });
   });
 });

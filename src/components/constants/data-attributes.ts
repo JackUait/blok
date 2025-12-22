@@ -87,6 +87,8 @@ export const DATA_ATTR = {
   settingsToggler: 'data-blok-settings-toggler',
   /** Toolbox is open */
   toolboxOpened: 'data-blok-toolbox-opened',
+  /** Block settings is open */
+  blockSettingsOpened: 'data-blok-block-settings-opened',
   /** Element is opened (generic) */
   opened: 'data-blok-opened',
 

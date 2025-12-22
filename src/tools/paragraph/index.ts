@@ -99,10 +99,10 @@ export class Paragraph implements BlockTool {
   /**
    * Default placeholder for Paragraph Tool
    *
-   * @returns empty string
+   * @returns translation key for the default placeholder
    */
   public static get DEFAULT_PLACEHOLDER(): string {
-    return '';
+    return 'tools.paragraph.placeholder';
   }
 
   /**
@@ -406,6 +406,7 @@ export class Paragraph implements BlockTool {
       icon: IconText,
       title: 'Text',
       titleKey: 'text',
+      searchTerms: ['p', 'paragraph', 'plain'],
     };
   }
 }

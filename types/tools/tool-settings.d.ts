@@ -2,6 +2,12 @@ import { ToolConfig } from './tool-config';
 import { ToolConstructable, BlockToolData, MenuConfig, MenuConfigItem } from './index';
 
 /**
+ * Permissive type for tool class - accepts any constructor.
+ * Runtime validation ensures the tool has required methods.
+ */
+export type ToolClass = new (...args: any[]) => any;
+
+/**
  * Tool may specify its toolbox configuration
  * It may include several entries as well
  */
@@ -39,6 +45,20 @@ export interface ToolboxConfigEntry {
    * Useful when a tool has multiple toolbox entries (e.g., list with ordered/unordered/checklist variants).
    */
   name?: string;
+
+  /**
+   * Additional search terms for the tool (e.g., ['h1', 'title', 'header']).
+   * Users can search by these aliases in addition to the displayed title.
+   * Terms are matched case-insensitively.
+   */
+  searchTerms?: string[];
+
+  /**
+   * Shortcut hint to display in the toolbox (e.g., '#', '##', '-', '1.', '[]').
+   * This is displayed as a secondary label next to the tool title.
+   * Unlike tool-level shortcuts, these are per-entry hints for tools with multiple variants.
+   */
+  shortcut?: string;
 }
 
 /**
@@ -49,9 +69,9 @@ export interface ToolboxConfigEntry {
 export interface ExternalToolSettings<Config extends object = any> {
 
   /**
-   * Tool's class
+   * Tool's class - accepts any constructor, validated at runtime
    */
-  class: ToolConstructable;
+  class: ToolConstructable | ToolClass;
 
   /**
    * User configuration object that will be passed to the Tool's constructor
@@ -80,6 +100,13 @@ export interface ExternalToolSettings<Config extends object = any> {
    * It will be hidden from Toolbox when false is specified.
    */
   toolbox?: ToolboxConfig | false;
+
+  /**
+   * Additional search terms for finding this tool in the toolbox.
+   * Merged with any searchTerms defined in the tool's toolbox config.
+   * Useful for adding locale-specific search terms.
+   */
+  searchTerms?: string[];
 }
 
 /**
@@ -88,6 +115,58 @@ export interface ExternalToolSettings<Config extends object = any> {
 export type InternalToolSettings<Config extends object = any> = Omit<ExternalToolSettings<Config>, 'class'> & Partial<Pick<ExternalToolSettings<Config>, 'class'>>;
 
 /**
- * Union of external and internal Tools settings
+ * Keys that Blok extracts from tool settings (not passed to tool constructor)
  */
-export type ToolSettings<Config extends object = any> = InternalToolSettings<Config> | ExternalToolSettings<Config>;
+export type BlokToolSettingsKeys = 'class' | 'inlineToolbar' | 'tunes' | 'shortcut' | 'toolbox' | 'config';
+
+/**
+ * Flat tool settings - tool-specific options at top level.
+ * Blok extracts known keys and passes the rest as `config` to the tool.
+ */
+export interface FlatToolSettings<Config extends object = any> {
+  /**
+   * Tool's class
+   */
+  class: ToolConstructable | ToolClass;
+
+  /**
+   * Is need to show Inline Toolbar.
+   * Defaults to true for block tools.
+   */
+  inlineToolbar?: boolean | string[];
+
+  /**
+   * BlockTunes for Tool
+   */
+  tunes?: boolean | string[];
+
+  /**
+   * Define shortcut that will render Tool
+   */
+  shortcut?: string;
+
+  /**
+   * Tool's Toolbox settings
+   */
+  toolbox?: ToolboxConfig | false;
+
+  /**
+   * Legacy nested config - merged with top-level tool options
+   * @deprecated Use flat config instead
+   */
+  config?: ToolConfig<Config>;
+
+  /**
+   * Tool-specific options (placeholder, levels, etc.)
+   * These are passed to the tool constructor as `config`
+   */
+  [key: string]: unknown;
+}
+
+/**
+ * Union of all tool settings formats
+ */
+export type ToolSettings<Config extends object = any> =
+  | InternalToolSettings<Config>
+  | ExternalToolSettings<Config>
+  | FlatToolSettings<Config>;

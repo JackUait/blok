@@ -25,7 +25,7 @@
   "tools.header.heading4": "Naslov 4",
   "tools.header.heading5": "Naslov 5",
   "tools.header.heading6": "Naslov 6",
-  "tools.list.list": "Seznam",
+  "tools.list.placeholder": "Seznam",
   "blockSettings.delete": "Izbriši",
   "a11y.dragHandle": "Povlecite za premik bloka ali kliknite za meni",
   "a11y.dragHandleRole": "ročaj za vlečenje",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blok premaknjen gor na položaj {position} od {total}",
   "a11y.movedDown": "Blok premaknjen dol na položaj {position} od {total}",
   "a11y.atTop": "Blok je na vrhu, ne more se premakniti gor",
-  "a11y.atBottom": "Blok je na dnu, ne more se premakniti dol"
+  "a11y.atBottom": "Blok je na dnu, ne more se premakniti dol",
+  "tools.paragraph.placeholder": "Napišite nekaj ali pritisnite / za izbiro"
 }

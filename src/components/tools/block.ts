@@ -51,13 +51,22 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * @param readOnly - True if Blok is in read-only mode
    */
   public create(data: BlockToolData, block: BlockAPI, readOnly: boolean): IBlockTool {
+    const toolboxEntries = this.toolbox;
+
+    /**
+     * Inject merged toolbox entries into config so tools can use them in renderSettings().
+     * This allows tools like Header to show the same options in block settings as in the toolbox.
+     */
+    const configWithToolbox = toolboxEntries !== undefined
+      ? { ...this.settings, _toolboxEntries: toolboxEntries }
+      : this.settings;
 
     return new this.constructable({
       data,
       block,
       readOnly,
       api: this.api,
-      config: this.settings,
+      config: configWithToolbox,
     }) as IBlockTool;
   }
 
@@ -103,8 +112,9 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
     }
 
     const mergedEntries = this.mergeToolboxSettings(toolToolboxSettings, userToolboxSettings);
+    const filteredByStyles = this.filterToolboxEntriesByStyles(mergedEntries);
 
-    return this.filterToolboxEntriesByStyles(mergedEntries);
+    return this.filterToolboxEntriesByLevels(filteredByStyles);
   }
 
   /**
@@ -187,6 +197,28 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * Filters toolbox entries based on levels config if specified.
+   * This allows tools like Header to show only configured heading levels in the toolbox.
+   */
+  private filterToolboxEntriesByLevels(entries: ToolboxConfigEntry[]): ToolboxConfigEntry[] {
+    const levels = this.settings.levels as number[] | undefined;
+
+    if (!levels || !Array.isArray(levels) || levels.length === 0) {
+      return entries;
+    }
+
+    return entries.filter(entry => {
+      const entryData = entry.data as { level?: number } | undefined;
+
+      if (!entryData || entryData.level === undefined) {
+        return true; // Keep entries without level data
+      }
+
+      return levels.includes(entryData.level);
+    });
+  }
+
+  /**
    * Returns Tool conversion configuration
    */
   public get conversionConfig(): ConversionConfig | undefined {
@@ -194,10 +226,18 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
-   * Returns enabled inline tools for Tool
+   * Returns enabled inline tools for Tool.
+   * Defaults to true (all inline tools) unless explicitly set to false or array.
    */
   public get enabledInlineTools(): boolean | string[] {
-    return this.config[UserSettings.EnabledInlineTools] || false;
+    const setting = this.config[UserSettings.EnabledInlineTools];
+
+    // Default to true if not specified
+    if (setting === undefined) {
+      return true;
+    }
+
+    return setting;
   }
 
   /**
@@ -205,6 +245,14 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    */
   public get enabledBlockTunes(): boolean | string[] | undefined {
     return this.config[UserSettings.EnabledBlockTunes];
+  }
+
+  /**
+   * User-provided search terms from tool settings.
+   * These are merged with library-defined searchTerms in the toolbox config.
+   */
+  public get searchTerms(): string[] | undefined {
+    return this.settings.searchTerms;
   }
 
   /**

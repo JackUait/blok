@@ -161,7 +161,6 @@ test.describe('tooltip API', () => {
         if (element && blok?.tooltip) {
           blok.tooltip.show(element, 'Tooltip with options', {
             placement: 'top',
-            hidingDelay: 100,
           });
         }
       }, { elementId: testElement.id });
@@ -319,15 +318,12 @@ test.describe('tooltip API', () => {
         };
       }, { holder: HOLDER_ID });
 
-      // Show tooltip with hiding delay
       await page.evaluate(({ elementId }) => {
         const blok = window.blokInstance;
         const element = document.getElementById(elementId);
 
         if (element && blok?.tooltip) {
-          blok.tooltip.show(element, 'Tooltip with delay', {
-            hidingDelay: 1000,
-          });
+          blok.tooltip.show(element, 'Tooltip with delay');
         }
       }, { elementId: testElement.id });
 
@@ -348,45 +344,6 @@ test.describe('tooltip API', () => {
       await waitForTooltipToHide(page);
     });
 
-    test('should bypass hiding delay when hide(true) is called', async ({ page }) => {
-      const testElement = await page.evaluate(({ holder }) => {
-        const container = document.getElementById(holder);
-        const element = document.createElement('span');
-
-        element.textContent = 'Skip delay element';
-        element.id = 'skip-delay';
-        container?.appendChild(element);
-
-        return {
-          id: element.id,
-        };
-      }, { holder: HOLDER_ID });
-
-      await page.evaluate(({ elementId }) => {
-        const blok = window.blokInstance;
-        const element = document.getElementById(elementId);
-
-        if (element && blok?.tooltip) {
-          blok.tooltip.show(element, 'Delayed tooltip', {
-            hidingDelay: 1000,
-          });
-        }
-      }, { elementId: testElement.id });
-
-      const tooltipBeforeHide = await waitForTooltip(page);
-
-      await expect(tooltipBeforeHide).toBeVisible();
-
-      await page.evaluate(() => {
-        const blok = window.blokInstance;
-
-        if (blok?.tooltip) {
-          (blok.tooltip as unknown as { hide(skipDelay?: boolean): void }).hide(true);
-        }
-      });
-
-      await waitForTooltipToHide(page);
-    });
 
     test('should handle hide() when no tooltip is visible', async ({ page }) => {
       // Calling hide() when no tooltip is visible should not throw

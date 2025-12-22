@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Header, type HeaderConfig, type HeaderData } from '../../../src/tools/header';
-import type { API, BlockToolConstructorOptions } from '../../../types';
+import type { API, BlockToolConstructorOptions, ToolboxConfigEntry } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 
 const createMockAPI = (): API => ({
@@ -17,6 +17,7 @@ const createMockAPI = (): API => ({
   },
   i18n: {
     t: (key: string) => key,
+    has: () => false,
   },
 } as unknown as API);
 
@@ -327,6 +328,170 @@ describe('Header Tool - Custom Configurations', () => {
       const element = header.render();
 
       expect(element.getAttribute('data-blok-tool')).toBe('header');
+    });
+  });
+
+  describe('_toolboxEntries configuration', () => {
+    it('uses custom toolbox entries when _toolboxEntries is provided', () => {
+      const toolboxEntries: ToolboxConfigEntry[] = [
+        { icon: '<svg>H2</svg>', title: 'Big Heading', data: { level: 2 } },
+        { icon: '<svg>H3</svg>', title: 'Medium Heading', data: { level: 3 } },
+        { icon: '<svg>H4</svg>', title: 'Small Heading', data: { level: 4 } },
+      ];
+      const options = createHeaderOptions(
+        { text: 'Test', level: 2 },
+        { _toolboxEntries: toolboxEntries }
+      );
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings).toHaveLength(3);
+      expect(settings[0].title).toBe('Big Heading');
+      expect(settings[0].icon).toBe('<svg>H2</svg>');
+      expect(settings[1].title).toBe('Medium Heading');
+      expect(settings[2].title).toBe('Small Heading');
+    });
+
+    it('shows correct levels based on toolbox entry data', () => {
+      const toolboxEntries: ToolboxConfigEntry[] = [
+        { title: 'H2', data: { level: 2 } },
+        { title: 'H4', data: { level: 4 } },
+      ];
+      const options = createHeaderOptions({}, { _toolboxEntries: toolboxEntries });
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings).toHaveLength(2);
+      expect(settings.map(s => s.dataset as Record<string, string> | undefined)).toEqual([
+        { 'blok-header-level': '2' },
+        { 'blok-header-level': '4' },
+      ]);
+    });
+
+    it('falls back to levels config when _toolboxEntries is not provided', () => {
+      const options = createHeaderOptions({}, { levels: [1, 2, 3] });
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings).toHaveLength(3);
+    });
+
+    it('falls back to all levels when neither _toolboxEntries nor levels is provided', () => {
+      const options = createHeaderOptions({}, {});
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings).toHaveLength(6);
+    });
+
+    it('marks correct level as active with custom toolbox entries', () => {
+      const toolboxEntries: ToolboxConfigEntry[] = [
+        { title: 'H2', data: { level: 2 } },
+        { title: 'H3', data: { level: 3 } },
+      ];
+      const options = createHeaderOptions(
+        { text: 'Test', level: 3 },
+        { _toolboxEntries: toolboxEntries }
+      );
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings[0].isActive).toBe(false);
+      expect(settings[1].isActive).toBe(true);
+    });
+
+    it('uses default icon when not provided in toolbox entry', () => {
+      const toolboxEntries: ToolboxConfigEntry[] = [
+        { title: 'Custom H2', data: { level: 2 } },
+      ];
+      const options = createHeaderOptions(
+        { text: 'Test', level: 2 },
+        { _toolboxEntries: toolboxEntries }
+      );
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings[0].title).toBe('Custom H2');
+      expect(settings[0].icon).toBeDefined();
+      expect(typeof settings[0].icon).toBe('string');
+      expect((settings[0].icon as string).length).toBeGreaterThan(0);
+    });
+
+    it('uses default title when not provided in toolbox entry', () => {
+      const toolboxEntries: ToolboxConfigEntry[] = [
+        { icon: '<svg>custom</svg>', data: { level: 2 } },
+      ];
+      const options = createHeaderOptions({}, { _toolboxEntries: toolboxEntries });
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings[0].title).toBe('Heading 2');
+      expect(settings[0].icon).toBe('<svg>custom</svg>');
+    });
+
+    it('uses default level when data.level is not provided in toolbox entry', () => {
+      const toolboxEntries: ToolboxConfigEntry[] = [
+        { title: 'Default Level' },
+      ];
+      const options = createHeaderOptions({}, { _toolboxEntries: toolboxEntries, defaultLevel: 3 });
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings).toHaveLength(1);
+      expect(settings[0].dataset).toEqual({ 'blok-header-level': '3' });
+    });
+
+    it('ignores levels config when _toolboxEntries is provided', () => {
+      const toolboxEntries: ToolboxConfigEntry[] = [
+        { title: 'Only H2', data: { level: 2 } },
+      ];
+      const options = createHeaderOptions(
+        {},
+        {
+          _toolboxEntries: toolboxEntries,
+          levels: [1, 2, 3, 4, 5, 6],
+        }
+      );
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings).toHaveLength(1);
+      expect(settings[0].title).toBe('Only H2');
+    });
+
+    it('handles empty _toolboxEntries array by falling back to levels config', () => {
+      const options = createHeaderOptions(
+        {},
+        {
+          _toolboxEntries: [],
+          levels: [1, 2],
+        }
+      );
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      expect(settings).toHaveLength(2);
+    });
+
+    it('calls setLevel with correct level when onActivate is triggered', () => {
+      const toolboxEntries: ToolboxConfigEntry[] = [
+        { title: 'H3', data: { level: 3 } },
+      ];
+      const options = createHeaderOptions(
+        { text: 'Test', level: 2 },
+        { _toolboxEntries: toolboxEntries }
+      );
+      const header = new Header(options);
+      const settings = toMenuArray(header.renderSettings());
+
+      const onActivate = settings[0].onActivate as () => void;
+
+      onActivate();
+
+      // Check data.level changed (element replacement only happens when in DOM)
+      const savedData = header.save(header.render());
+
+      expect(savedData.level).toBe(3);
     });
   });
 });

@@ -25,7 +25,7 @@
   "tools.header.heading4": "Nadpis 4",
   "tools.header.heading5": "Nadpis 5",
   "tools.header.heading6": "Nadpis 6",
-  "tools.list.list": "Zoznam",
+  "tools.list.placeholder": "Zoznam",
   "blockSettings.delete": "Odstrániť",
   "a11y.dragHandle": "Potiahnutím presuniete blok alebo kliknutím otvoríte ponuku",
   "a11y.dragHandleRole": "úchyt na presun",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blok presunutý nahor na pozíciu {position} z {total}",
   "a11y.movedDown": "Blok presunutý nadol na pozíciu {position} z {total}",
   "a11y.atTop": "Blok je na vrchu, nedá sa presunúť nahor",
-  "a11y.atBottom": "Blok je na spodku, nedá sa presunúť nadol"
+  "a11y.atBottom": "Blok je na spodku, nedá sa presunúť nadol",
+  "tools.paragraph.placeholder": "Napíšte niečo alebo stlačte / pre výber"
 }

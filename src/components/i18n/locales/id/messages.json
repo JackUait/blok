@@ -25,7 +25,7 @@
   "tools.header.heading4": "Judul 4",
   "tools.header.heading5": "Judul 5",
   "tools.header.heading6": "Judul 6",
-  "tools.list.list": "Daftar",
+  "tools.list.placeholder": "Daftar",
   "blockSettings.delete": "Hapus",
   "a11y.dragHandle": "Seret untuk memindahkan blok atau klik untuk menu",
   "a11y.dragHandleRole": "pegangan seret",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blok dipindahkan ke atas, posisi {position} dari {total}",
   "a11y.movedDown": "Blok dipindahkan ke bawah, posisi {position} dari {total}",
   "a11y.atTop": "Blok sudah di paling atas, tidak bisa dipindahkan ke atas",
-  "a11y.atBottom": "Blok sudah di paling bawah, tidak bisa dipindahkan ke bawah"
+  "a11y.atBottom": "Blok sudah di paling bawah, tidak bisa dipindahkan ke bawah",
+  "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih"
 }

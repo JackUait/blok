@@ -63,10 +63,10 @@ describe('List Tool - i18n', () => {
       expect(dictionary).toHaveProperty('toolNames.todoList');
     });
 
-    it('has tools.list.list key for List placeholder', () => {
+    it('has tools.list.placeholder key for List placeholder', () => {
       const dictionary = defaultDictionary as I18nDictionary;
 
-      expect(dictionary).toHaveProperty('tools.list.list');
+      expect(dictionary).toHaveProperty('tools.list.placeholder');
     });
   });
 

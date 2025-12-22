@@ -5,6 +5,7 @@ import { BlockTuneAdapter } from './tune';
 import { BlockToolAdapter } from './block';
 import type { API as ApiModule } from '../modules/api';
 import type { BlokConfig } from '../../../types/configs';
+import type { API as ApiMethods, I18n } from '../../../types';
 
 type ToolConstructor = typeof InlineToolAdapter | typeof BlockToolAdapter | typeof BlockTuneAdapter;
 
@@ -56,16 +57,68 @@ export class ToolsFactory {
     }
 
     const Constructor = this.getConstructor(constructable);
+    const toolApi = this.createToolApi(name);
 
     return new Constructor({
       name,
       constructable,
       config,
-      api: this.api.methods,
+      api: toolApi,
       isDefault: name === this.blokConfig.defaultBlock,
       defaultPlaceholder: this.blokConfig.placeholder,
       isInternal,
     });
+  }
+
+  /**
+   * Creates a tool-specific API with namespaced i18n.
+   *
+   * EditorJS tools expect `api.i18n.t('key')` to automatically look up
+   * `tools.{toolName}.key`. This wrapper provides that behavior while
+   * falling back to direct key lookup for Blok internal tools that use
+   * fully-qualified keys like `tools.stub.error`.
+   *
+   * @param toolName - Name of the tool
+   * @returns API object with tool-namespaced i18n
+   */
+  private createToolApi(toolName: string): ApiMethods {
+    const baseApi = this.api.methods;
+    const namespace = `tools.${toolName}`;
+
+    const namespacedI18n: I18n = {
+      t: (dictKey: string): string => {
+        /**
+         * Try namespaced key first for EditorJS compatibility.
+         * External tools call t('Add row') expecting lookup of 'tools.table.Add row'.
+         */
+        const namespacedKey = `${namespace}.${dictKey}`;
+
+        if (baseApi.i18n.has(namespacedKey)) {
+          return baseApi.i18n.t(namespacedKey);
+        }
+
+        /**
+         * Fall back to direct key lookup for Blok internal tools.
+         * Internal tools use fully-qualified keys like 'tools.stub.error'.
+         */
+        return baseApi.i18n.t(dictKey);
+      },
+
+      has: (dictKey: string): boolean => {
+        const namespacedKey = `${namespace}.${dictKey}`;
+
+        return baseApi.i18n.has(namespacedKey) || baseApi.i18n.has(dictKey);
+      },
+
+      getEnglishTranslation: (key: string): string => {
+        return baseApi.i18n.getEnglishTranslation(key);
+      },
+    };
+
+    return {
+      ...baseApi,
+      i18n: namespacedI18n,
+    };
   }
 
   /**

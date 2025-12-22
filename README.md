@@ -45,11 +45,11 @@ import { Header, Paragraph, List, Bold, Italic, Link } from '@jackuait/blok/tool
 const editor = new Blok({
   holder: 'editor',
   tools: {
-    header: Header,
-    paragraph: { class: Paragraph, inlineToolbar: true },
-    list: { class: List, inlineToolbar: true },
-  },
-  inlineTools: {
+    // Block tools - inlineToolbar is enabled by default
+    paragraph: Paragraph,
+    header: { class: Header, placeholder: 'Enter a heading' },
+    list: List,
+    // Inline tools
     bold: Bold,
     italic: Italic,
     link: Link,
@@ -59,6 +59,8 @@ const editor = new Blok({
 // Save content as JSON
 const data = await editor.save();
 ```
+
+Tool configuration is flat—no need for nested `config: {}`. Blok automatically extracts known settings (`class`, `inlineToolbar`, `shortcut`, etc.) and passes the rest to the tool.
 
 ### Entry Points
 

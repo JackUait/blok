@@ -9,7 +9,14 @@ import { debounce, getValidUrl, isEmpty, openTab, throttle } from '../utils';
 
 import { SelectionUtils as Selection } from '../selection';
 import { Flipper } from '../flipper';
+import type { Block } from '../block';
 import { mobileScreenBreakpoint } from '../utils';
+
+/**
+ * Horizontal distance from the content edge where block hover is still detected.
+ * Extends to the left for LTR layouts, to the right for RTL.
+ */
+const HOVER_ZONE_SIZE = 100;
 
 import styles from '../../styles/main.css?inline';
 import { BlockHovered } from '../events/BlockHovered';
@@ -453,23 +460,47 @@ export class UI extends Module<UINodes> {
    */
   private watchBlockHoveredEvents(): void {
     /**
-     * Used to not emit the same block multiple times to the 'block-hovered' event on every mousemove
+     * Used to not emit the same block multiple times to the 'block-hovered' event on every mousemove.
+     * Stores block ID to ensure consistent comparison regardless of how the block was detected.
      */
-    const blockHoveredState: { lastHovered: Element | null } = {
-      lastHovered: null,
+    const blockHoveredState: { lastHoveredBlockId: string | null } = {
+      lastHoveredBlockId: null,
     };
 
     const handleBlockHovered = (event: Event): void => {
-      const isMouseEvent = typeof MouseEvent !== 'undefined' && event instanceof MouseEvent;
-      const isTouchEvent = typeof TouchEvent !== 'undefined' && event instanceof TouchEvent;
-
-      if (!isMouseEvent && !isTouchEvent) {
+      if (typeof MouseEvent === 'undefined' || !(event instanceof MouseEvent)) {
         return;
       }
 
-      const hoveredBlock = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
+      const hoveredBlockElement = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
-      if (!hoveredBlock) {
+      /**
+       * If no block element found directly, try the extended hover zone
+       */
+      const zoneBlock = !hoveredBlockElement
+        ? this.findBlockInHoverZone(event.clientX, event.clientY)
+        : null;
+
+      if (zoneBlock !== null && blockHoveredState.lastHoveredBlockId !== zoneBlock.id) {
+        blockHoveredState.lastHoveredBlockId = zoneBlock.id;
+
+        this.eventsDispatcher.emit(BlockHovered, {
+          block: zoneBlock,
+          target: zoneBlock.holder,
+        });
+      }
+
+      if (zoneBlock !== null) {
+        return;
+      }
+
+      if (!hoveredBlockElement) {
+        return;
+      }
+
+      const block = this.Blok.BlockManager.getBlockByChildNode(hoveredBlockElement);
+
+      if (!block) {
         return;
       }
 
@@ -477,18 +508,11 @@ export class UI extends Module<UINodes> {
        * For multi-block selection, still emit 'block-hovered' event so toolbar can follow the hovered block.
        * The toolbar module will handle the logic of whether to move or not.
        */
-
-      if (blockHoveredState.lastHovered === hoveredBlock) {
+      if (blockHoveredState.lastHoveredBlockId === block.id) {
         return;
       }
 
-      blockHoveredState.lastHovered = hoveredBlock;
-
-      const block = this.Blok.BlockManager.getBlockByChildNode(hoveredBlock);
-
-      if (!block) {
-        return;
-      }
+      blockHoveredState.lastHoveredBlockId = block.id;
 
       this.eventsDispatcher.emit(BlockHovered, {
         block,
@@ -502,11 +526,52 @@ export class UI extends Module<UINodes> {
       20
     );
 
-    this.readOnlyMutableListeners.on(this.nodes.redactor, 'mousemove', (event: Event) => {
+    /**
+     * Listen on document to detect hover in the extended zone
+     * which is outside the wrapper's bounds.
+     * We filter events to only process those over the editor or in the hover zone.
+     */
+    this.readOnlyMutableListeners.on(document, 'mousemove', (event: Event) => {
       throttledHandleBlockHovered(event);
     }, {
       passive: true,
     });
+  }
+
+  /**
+   * Finds a block by vertical position when cursor is in the extended hover zone.
+   * The zone extends HOVER_ZONE_SIZE pixels from the content edge (left for LTR, right for RTL).
+   * @param clientX - Cursor X position
+   * @param clientY - Cursor Y position
+   * @returns Block at the vertical position, or null if not in hover zone or no block found
+   */
+  private findBlockInHoverZone(clientX: number, clientY: number): Block | null {
+    const contentRect = this.contentRect;
+
+    /**
+     * For LTR: check if cursor is within hover zone to the left of content
+     * For RTL: check if cursor is within hover zone to the right of content
+     */
+    const isInHoverZone = this.isRtl
+      ? clientX > contentRect.right && clientX <= contentRect.right + HOVER_ZONE_SIZE
+      : clientX < contentRect.left && clientX >= contentRect.left - HOVER_ZONE_SIZE;
+
+    if (!isInHoverZone) {
+      return null;
+    }
+
+    /**
+     * Find block by Y position
+     */
+    for (const block of this.Blok.BlockManager.blocks) {
+      const rect = block.holder.getBoundingClientRect();
+
+      if (clientY >= rect.top && clientY <= rect.bottom) {
+        return block;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -552,10 +617,49 @@ export class UI extends Module<UINodes> {
         this.escapePressed(event);
         break;
 
+      case 'Tab':
+        this.tabPressed(event);
+        break;
+
       default:
         this.defaultBehaviour(event);
         break;
     }
+  }
+
+  /**
+   * Handle Tab key press at document level for multi-select indent/outdent
+   * @param {KeyboardEvent} event - keyboard event
+   */
+  private tabPressed(event: KeyboardEvent): void {
+    const { BlockSelection } = this.Blok;
+
+    /**
+     * Only handle Tab when blocks are selected (for multi-select indent)
+     * Otherwise, let the default behavior handle it (e.g., toolbar navigation)
+     */
+    if (!BlockSelection.anyBlockSelected) {
+      this.defaultBehaviour(event);
+
+      return;
+    }
+
+    /**
+     * Forward to BlockEvents to handle the multi-select indent/outdent.
+     * BlockEvents.keydown will call preventDefault if needed.
+     */
+    this.Blok.BlockEvents.keydown(event);
+
+    /**
+     * When blocks are selected, always prevent default Tab behavior (focus navigation)
+     * even if the indent operation couldn't be performed (e.g., mixed block types).
+     * This ensures Tab doesn't unexpectedly move focus or trigger single-block indent.
+     * We call preventDefault AFTER BlockEvents.keydown so that check for defaultPrevented passes.
+     * We also stop propagation to prevent the event from reaching block-level handlers
+     * (like ListItem's handleKeyDown) which might try to handle the Tab independently.
+     */
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   /**
@@ -686,6 +790,16 @@ export class UI extends Module<UINodes> {
     }
 
     /**
+     * Close BlockSettings first if it's open, regardless of selection state.
+     * This prevents navigation mode from being enabled when the user closes block tunes with Escape.
+     */
+    if (this.Blok.BlockSettings.opened) {
+      this.Blok.BlockSettings.close();
+
+      return;
+    }
+
+    /**
      * Clear blocks selection by ESC (but not when entering navigation mode)
      */
     if (this.Blok.BlockSelection.anyBlockSelected) {
@@ -698,12 +812,6 @@ export class UI extends Module<UINodes> {
       this.Blok.Toolbar.toolbox.close();
       this.Blok.BlockManager.currentBlock &&
         this.Blok.Caret.setToBlock(this.Blok.BlockManager.currentBlock, this.Blok.Caret.positions.END);
-
-      return;
-    }
-
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
 
       return;
     }

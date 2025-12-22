@@ -192,7 +192,26 @@ describe('RectangleSelection', () => {
       rectangleSelection,
       blockSelection,
       blokWrapper,
+      modules,
     } = createRectangleSelection();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Mock editor bounds to allow selection at pageY=240
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 500,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 500,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
 
     const internal = rectangleSelection as unknown as {
       stackOfSelected: number[];
@@ -255,30 +274,42 @@ describe('RectangleSelection', () => {
     elementFromPointSpy.mockRestore();
   });
 
-  it('ignores selection attempts outside of selectable area', () => {
+  it('ignores selection attempts on block content or selectors to avoid', () => {
     const {
       rectangleSelection,
       blokWrapper,
+      modules,
     } = createRectangleSelection();
 
+    rectangleSelection.prepare();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Mock editor to have valid vertical bounds
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 1000,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
     const internal = rectangleSelection as unknown as { mousedown: boolean };
-
-    const outsideNode = document.createElement('div');
-
-    document.body.appendChild(outsideNode);
-
-    const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(outsideNode);
-
-    rectangleSelection.startSelection(10, 15);
-
-    expect(internal.mousedown).toBe(false);
 
     const blockContent = document.createElement('div');
 
     blockContent.setAttribute('data-blok-testid', 'block-content');
     blockContent.setAttribute('data-blok-element-content', '');
     blokWrapper.appendChild(blockContent);
-    elementFromPointSpy.mockReturnValue(blockContent);
+
+    const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(blockContent);
 
     rectangleSelection.startSelection(20, 25);
 
@@ -352,12 +383,13 @@ describe('RectangleSelection', () => {
       button: 0,
       pageX: 150,
       pageY: 200,
+      shiftKey: false,
       target: document.createElement('div'),
     } as unknown as MouseEvent;
 
     internal.processMouseDown(primaryEvent);
 
-    expect(startSelectionSpy).toHaveBeenCalledWith(150, 200);
+    expect(startSelectionSpy).toHaveBeenCalledWith(150, 200, false);
 
     startSelectionSpy.mockClear();
 
@@ -365,6 +397,7 @@ describe('RectangleSelection', () => {
       button: 1,
       pageX: 150,
       pageY: 200,
+      shiftKey: false,
       target: document.createElement('div'),
     } as unknown as MouseEvent;
 
@@ -843,5 +876,209 @@ describe('RectangleSelection', () => {
     expect(internal.stackOfSelected).toEqual([0, 1]);
     expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(3);
     expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(2);
+  });
+
+  it('attaches mousedown listener to document.body instead of container', () => {
+    const {
+      rectangleSelection,
+    } = createRectangleSelection();
+
+    const documentAddListenerSpy = vi.spyOn(document.body, 'addEventListener');
+
+    rectangleSelection.prepare();
+
+    const mousedownCalls = documentAddListenerSpy.mock.calls.filter(
+      (call) => call[0] === 'mousedown'
+    );
+
+    expect(mousedownCalls.length).toBeGreaterThan(0);
+
+    documentAddListenerSpy.mockRestore();
+  });
+
+  it('starts selection when pointer Y is within editor vertical bounds', () => {
+    const {
+      rectangleSelection,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Mock editor bounds: top=100, bottom=500
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      bottom: 500,
+      left: 200,
+      right: 600,
+      width: 400,
+      height: 400,
+      x: 200,
+      y: 100,
+      toJSON: () => ({}),
+    });
+
+    // Point outside editor horizontally (x=50) but within vertical range (y=300)
+    const outsideElement = document.createElement('div');
+    document.body.appendChild(outsideElement);
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(outsideElement);
+
+    const internal = rectangleSelection as unknown as { mousedown: boolean };
+
+    // pageY=300 is within editor's vertical range (100-500)
+    rectangleSelection.startSelection(50, 300);
+
+    expect(internal.mousedown).toBe(true);
+  });
+
+  it('ignores selection when pointer Y is outside editor vertical bounds', () => {
+    const {
+      rectangleSelection,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Mock editor bounds: top=100, bottom=500
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      bottom: 500,
+      left: 200,
+      right: 600,
+      width: 400,
+      height: 400,
+      x: 200,
+      y: 100,
+      toJSON: () => ({}),
+    });
+
+    const outsideElement = document.createElement('div');
+    document.body.appendChild(outsideElement);
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(outsideElement);
+
+    const internal = rectangleSelection as unknown as { mousedown: boolean };
+
+    // pageY=50 is above editor's vertical range (100-500)
+    rectangleSelection.startSelection(50, 50);
+
+    expect(internal.mousedown).toBe(false);
+
+    // pageY=600 is below editor's vertical range
+    rectangleSelection.startSelection(50, 600);
+
+    expect(internal.mousedown).toBe(false);
+  });
+
+  it('preserves existing selection when Shift key is held during selection start', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Mock editor bounds
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 1000,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const internal = rectangleSelection as unknown as {
+      stackOfSelected: number[];
+      mousedown: boolean;
+    };
+
+    // Pre-populate selection stack
+    internal.stackOfSelected = [0, 1];
+    blockSelection.allBlocksSelected = true;
+
+    const startTarget = document.createElement('div');
+    blokWrapper.appendChild(startTarget);
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+
+    // Start selection with Shift key
+    rectangleSelection.startSelection(120, 240, true);
+
+    // stackOfSelected should NOT be cleared
+    expect(internal.stackOfSelected).toEqual([0, 1]);
+    // allBlocksSelected should NOT be reset
+    expect(blockSelection.allBlocksSelected).toBe(true);
+    expect(internal.mousedown).toBe(true);
+  });
+
+  it('clears existing selection when Shift key is not held', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Mock editor bounds
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 1000,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const internal = rectangleSelection as unknown as {
+      stackOfSelected: number[];
+      mousedown: boolean;
+    };
+
+    // Pre-populate selection stack
+    internal.stackOfSelected = [0, 1];
+    blockSelection.allBlocksSelected = true;
+
+    const startTarget = document.createElement('div');
+    blokWrapper.appendChild(startTarget);
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+
+    // Start selection without Shift key
+    rectangleSelection.startSelection(120, 240, false);
+
+    // stackOfSelected should be cleared
+    expect(internal.stackOfSelected).toEqual([]);
+    // allBlocksSelected should be reset
+    expect(blockSelection.allBlocksSelected).toBe(false);
+    expect(internal.mousedown).toBe(true);
   });
 });

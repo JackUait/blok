@@ -39,6 +39,13 @@ export interface PopoverParams {
   flipper?: Flipper;
 
   /**
+   * Allow keyboard navigation from contenteditable elements.
+   * When true, arrow keys will navigate the popover even when focus is in a contenteditable.
+   * False by default.
+   */
+  handleContentEditableNavigation?: boolean;
+
+  /**
    * Popover texts overrides
    */
   messages?: PopoverMessages
@@ -58,6 +65,12 @@ export interface PopoverParams {
    * Used to close nested popover and return focus to parent.
    */
   onNavigateBack?: () => void;
+
+  /**
+   * Width of the popover. Defaults to '280px'.
+   * Use 'auto' to fit content width.
+   */
+  width?: string;
 }
 
 

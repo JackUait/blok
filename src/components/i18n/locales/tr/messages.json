@@ -25,7 +25,7 @@
   "tools.header.heading4": "Başlık 4",
   "tools.header.heading5": "Başlık 5",
   "tools.header.heading6": "Başlık 6",
-  "tools.list.list": "Liste",
+  "tools.list.placeholder": "Liste",
   "blockSettings.delete": "Sil",
   "a11y.dragHandle": "Taşımak için sürükle veya menü için tıkla",
   "a11y.dragHandleRole": "sürükleme tutamacı",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blok yukarı taşındı ({total} içinden {position}.)",
   "a11y.movedDown": "Blok aşağı taşındı ({total} içinden {position}.)",
   "a11y.atTop": "Blok en üstte, yukarı taşınamaz",
-  "a11y.atBottom": "Blok en altta, aşağı taşınamaz"
+  "a11y.atBottom": "Blok en altta, aşağı taşınamaz",
+  "tools.paragraph.placeholder": "Bir şeyler yazın veya seçmek için / tuşuna basın"
 }

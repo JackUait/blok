@@ -1352,6 +1352,8 @@ test.describe('api.blocks', () => {
       const convertToMenu = await openConvertToMenu(page);
 
       // Check that both header and quote tools are available
+      // Note: item names come from toolboxItem.name ?? tool.name
+      // Since these test tools don't have a 'name' property on their toolbox, they use the tool name
       await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
       await expect(convertToMenu.locator('[data-blok-item-name="quote"]')).toBeVisible();
     });
@@ -1549,6 +1551,7 @@ test.describe('api.blocks', () => {
       const convertToMenu = await openConvertToMenu(page);
 
       // Check that header tool is available
+      // Note: item name is 'header' (tool name) since toolbox entry has no 'name' property
       await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
 
       // Check that tool without import config is NOT shown
@@ -1635,6 +1638,7 @@ test.describe('api.blocks', () => {
 
       const convertToMenu = await openConvertToMenu(page);
 
+      // Note: item name is 'header' (tool name) since toolbox entries have no 'name' property
       const headerItems = convertToMenu.locator('[data-blok-item-name="header"]');
       const firstHeaderItem = convertToMenu.locator(':nth-match([data-blok-item-name="header"], 1)');
 
@@ -1718,6 +1722,7 @@ test.describe('api.blocks', () => {
 
       // Header tool should be available, but H1 option should be filtered out (same data)
       // H2 should still be available
+      // Note: item name is 'header' (tool name) since toolbox entries have no 'name' property
       await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
     });
 
@@ -1816,6 +1821,7 @@ test.describe('api.blocks', () => {
       const convertToMenu = await openConvertToMenu(page);
 
       // Check that header tool is available
+      // Note: item name is 'header' (tool name) since toolbox entry has no 'name' property
       await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
 
       // Check that tool without toolbox is NOT shown
@@ -1889,6 +1895,7 @@ test.describe('api.blocks', () => {
       const convertToMenu = await openConvertToMenu(page);
 
       // Only the item with icon should be available
+      // Note: item name is 'header' (tool name) since toolbox entries have no 'name' property
       await expect(convertToMenu.locator('[data-blok-item-name="header"]')).toBeVisible();
     });
   });

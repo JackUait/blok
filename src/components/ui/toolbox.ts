@@ -141,6 +141,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private triggerElement?: HTMLElement;
 
   /**
+   * The block element currently being listened to for inline slash search
+   */
+  private currentBlockForSearch: HTMLElement | null = null;
+
+  /**
+   * Cached contentEditable element for the current block being searched.
+   * Avoids repeated DOM queries on each input event.
+   */
+  private currentContentEditable: Element | null = null;
+
+  /**
    * Toolbox constructor
    * @param options - available parameters
    * @param options.api - Blok API methods
@@ -242,9 +253,19 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       return;
     }
 
+    /**
+     * Stop mutation watching on the current block when toolbox opens.
+     * This prevents spurious block-changed events from DOM manipulations
+     * that may occur during toolbox interactions (focus changes, etc).
+     */
+    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
+
+    this.api.blocks.stopBlockMutationWatching(currentBlockIndex);
+
     this.popover?.show();
     this.opened = true;
     this.emit(ToolboxEvent.Opened);
+    this.startListeningToBlockInput();
   }
 
   /**
@@ -289,6 +310,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         search: this.i18nLabels.filter,
       },
       items: this.toolboxItemsToBeDisplayed,
+      handleContentEditableNavigation: true,
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
@@ -315,6 +337,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Handles popover close event
    */
   private onPopoverClose = (): void => {
+    this.stopListeningToBlockInput();
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
   };
@@ -354,6 +377,21 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * Maps tool data to popover item structure
      */
     const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemParams => {
+      // Get English title for search fallback
+      const titleKey = toolboxItem.titleKey;
+      const englishTitleKey = titleKey ? `toolNames.${titleKey}` : undefined;
+      const englishTitle = englishTitleKey
+        ? this.api.i18n.getEnglishTranslation(englishTitleKey)
+        : toolboxItem.title;
+
+      // Merge library searchTerms with user-provided searchTerms
+      const librarySearchTerms = toolboxItem.searchTerms ?? [];
+      const userSearchTerms = tool.searchTerms ?? [];
+      const mergedSearchTerms = [...new Set([...librarySearchTerms, ...userSearchTerms])];
+
+      // Use entry-level shortcut if available, otherwise fall back to tool-level shortcut (for first entry only)
+      const shortcut = toolboxItem.shortcut ?? (displaySecondaryLabel ? tool.shortcut : undefined);
+
       return {
         icon: toolboxItem.icon,
         title: translateToolTitle(this.i18n, toolboxItem, capitalize(tool.name)),
@@ -361,7 +399,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);
         },
-        secondaryLabel: (tool.shortcut && displaySecondaryLabel) ? beautifyShortcut(tool.shortcut) : '',
+        secondaryLabel: shortcut ? beautifyShortcut(shortcut) : '',
+        englishTitle,
+        searchTerms: mergedSearchTerms,
       };
     };
 
@@ -463,10 +503,16 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     /**
+     * Check if the block contains only slash search text (e.g., "/head").
+     * If so, treat it as empty and replace it with the new block.
+     */
+    const shouldReplaceBlock = currentBlock.isEmpty || this.isBlockSlashSearchOnly(currentBlock.holder);
+
+    /**
      * On mobile version, we see the Plus Button even near non-empty blocks,
      * so if current block is not empty, add the new block below the current
      */
-    const index = currentBlock.isEmpty ? currentBlockIndex : currentBlockIndex + 1;
+    const index = shouldReplaceBlock ? currentBlockIndex : currentBlockIndex + 1;
 
     const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides as Record<string, unknown>).length > 0;
 
@@ -480,7 +526,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       undefined,
       index,
       undefined,
-      currentBlock.isEmpty
+      shouldReplaceBlock
     );
 
     this.api.caret.setToBlock(index);
@@ -493,5 +539,72 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * close toolbar when node is changed
      */
     this.api.toolbar.close();
+  }
+
+  /**
+   * Starts listening to input events on the current block for inline slash search.
+   * When the user types after "/", the toolbox filters based on the typed text.
+   */
+  private startListeningToBlockInput(): void {
+    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
+    const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
+
+    if (!currentBlock) {
+      return;
+    }
+
+    this.currentBlockForSearch = currentBlock.holder;
+    this.currentContentEditable = this.currentBlockForSearch.querySelector('[contenteditable="true"]');
+    this.listeners.on(this.currentBlockForSearch, 'input', this.handleBlockInput);
+  }
+
+  /**
+   * Stops listening to block input events and resets the filter.
+   */
+  private stopListeningToBlockInput(): void {
+    if (this.currentBlockForSearch !== null) {
+      this.listeners.off(this.currentBlockForSearch, 'input', this.handleBlockInput);
+      this.currentBlockForSearch = null;
+      this.currentContentEditable = null;
+    }
+
+    this.popover?.filterItems('');
+  }
+
+  /**
+   * Handles input events on the block to filter the toolbox.
+   * Extracts text after "/" and applies it as a filter query.
+   */
+  private handleBlockInput = (): void => {
+    if (this.currentContentEditable === null) {
+      return;
+    }
+
+    const text = this.currentContentEditable.textContent || '';
+    const slashIndex = text.lastIndexOf('/');
+
+    if (slashIndex === -1) {
+      this.close();
+
+      return;
+    }
+
+    const query = text.slice(slashIndex + 1);
+
+    this.popover?.filterItems(query);
+  };
+
+  /**
+   * Checks if a block contains only slash search text (e.g., "/head").
+   * A block is considered "slash search only" if its text starts with "/" and contains no other content before it.
+   * @param blockHolder - the block's holder element
+   * @returns true if the block only contains slash search text
+   */
+  private isBlockSlashSearchOnly(blockHolder: HTMLElement): boolean {
+    const contentEditable = blockHolder.querySelector('[contenteditable="true"]');
+    const text = contentEditable?.textContent?.trim() || '';
+
+    // Block must start with "/" to be considered slash search only
+    return text.startsWith('/');
   }
 }

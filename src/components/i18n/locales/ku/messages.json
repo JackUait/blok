@@ -25,7 +25,7 @@
   "tools.header.heading4": "سەردێڕ ٤",
   "tools.header.heading5": "سەردێڕ ٥",
   "tools.header.heading6": "سەردێڕ ٦",
-  "tools.list.list": "لیست",
+  "tools.list.placeholder": "لیست",
   "blockSettings.delete": "سڕینەوە",
   "a11y.dragHandle": "ڕاکێشە بۆ گواستنەوەی بلۆک یان کلیک بکە بۆ مێنیو",
   "a11y.dragHandleRole": "دەستگیرەی ڕاکێشان",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "بلۆک چووە سەرەوە بۆ شوێن {position} لە {total}",
   "a11y.movedDown": "بلۆک چووە خوارەوە بۆ شوێن {position} لە {total}",
   "a11y.atTop": "بلۆک لە سەرەوەیە، ناتوانێت بچێتە سەرەوە",
-  "a11y.atBottom": "بلۆک لە خوارەوەیە، ناتوانێت بچێتە خوارەوە"
+  "a11y.atBottom": "بلۆک لە خوارەوەیە، ناتوانێت بچێتە خوارەوە",
+  "tools.paragraph.placeholder": "شتیک بنووسه یان / داگرے بو هەلبژاردن"
 }

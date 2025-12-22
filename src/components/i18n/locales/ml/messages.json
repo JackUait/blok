@@ -25,7 +25,7 @@
   "tools.header.heading4": "തലക്കെട്ട് 4",
   "tools.header.heading5": "തലക്കെട്ട് 5",
   "tools.header.heading6": "തലക്കെട്ട് 6",
-  "tools.list.list": "ലിസ്റ്റ്",
+  "tools.list.placeholder": "ലിസ്റ്റ്",
   "blockSettings.delete": "ഇല്ലാതാക്കുക",
   "a11y.dragHandle": "ബ്ലോക്ക് നീക്കാൻ വലിച്ചിടുക അല്ലെങ്കിൽ മെനുവിന് ക്ലിക്ക് ചെയ്യുക",
   "a11y.dragHandleRole": "വലിച്ചിടൽ ഹാൻഡിൽ",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "ബ്ലോക്ക് {total} ൽ {position} സ്ഥാനത്തേക്ക് മുകളിലേക്ക് നീക്കി",
   "a11y.movedDown": "ബ്ലോക്ക് {total} ൽ {position} സ്ഥാനത്തേക്ക് താഴേക്ക് നീക്കി",
   "a11y.atTop": "ബ്ലോക്ക് മുകളിലാണ്, മുകളിലേക്ക് നീക്കാൻ കഴിയില്ല",
-  "a11y.atBottom": "ബ്ലോക്ക് താഴെയാണ്, താഴേക്ക് നീക്കാൻ കഴിയില്ല"
+  "a11y.atBottom": "ബ്ലോക്ക് താഴെയാണ്, താഴേക്ക് നീക്കാൻ കഴിയില്ല",
+  "tools.paragraph.placeholder": "എന്തെങ്കിലും എഴുdelays / delaysdelay"
 }

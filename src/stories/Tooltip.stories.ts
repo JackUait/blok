@@ -157,7 +157,7 @@ export const TooltipStates: Story = {
         await showAndClone(placement);
       }
 
-      hide(true);
+      hide();
     });
   },
 };

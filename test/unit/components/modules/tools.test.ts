@@ -503,5 +503,143 @@ describe('tools module', () => {
       expect(ThrowingBlockTool.wasResetCalled).toBe(true);
     });
   });
+
+  describe('flat config normalization', () => {
+    it('extracts tool-specific options from flat config into nested config', async () => {
+      class HeaderTool {
+        public static receivedConfig: unknown;
+
+        public static prepare(data: { config: unknown }): void {
+          HeaderTool.receivedConfig = data.config;
+        }
+      }
+
+      const module = createModule({
+        defaultBlock: 'header',
+        tools: {
+          header: {
+            class: HeaderTool as unknown as ToolConstructable,
+            inlineToolbar: true,
+            // Flat tool-specific options
+            placeholder: 'Enter heading',
+            levels: [1, 2, 3],
+            defaultLevel: 2,
+          },
+        },
+      });
+
+      HeaderTool.receivedConfig = undefined;
+      await module.prepare();
+
+      expect(HeaderTool.receivedConfig).toMatchObject({
+        placeholder: 'Enter heading',
+        levels: [1, 2, 3],
+        defaultLevel: 2,
+      });
+    });
+
+    it('merges nested config with flat options (flat takes precedence)', async () => {
+      class MergeTool {
+        public static receivedConfig: unknown;
+
+        public static prepare(data: { config: unknown }): void {
+          MergeTool.receivedConfig = data.config;
+        }
+      }
+
+      const module = createModule({
+        defaultBlock: 'merge',
+        tools: {
+          merge: {
+            class: MergeTool as unknown as ToolConstructable,
+            // Nested (legacy)
+            config: {
+              placeholder: 'Old placeholder',
+              keepThis: 'value',
+            },
+            // Flat (takes precedence)
+            placeholder: 'New placeholder',
+            newOption: 'added',
+          },
+        },
+      });
+
+      MergeTool.receivedConfig = undefined;
+      await module.prepare();
+
+      expect(MergeTool.receivedConfig).toMatchObject({
+        placeholder: 'New placeholder',
+        keepThis: 'value',
+        newOption: 'added',
+      });
+    });
+
+    it('defaults inlineToolbar to true for block tools', async () => {
+      class BlockToolNoSettings {
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+        public save(): void {}
+      }
+
+      class InlineTool {
+        public static isInline = true;
+        public render(): object {
+          return {};
+        }
+      }
+
+      const module = createModule({
+        defaultBlock: 'myBlock',
+        tools: {
+          myBlock: BlockToolNoSettings as unknown as ToolConstructable,
+          bold: InlineTool as unknown as ToolConstructable,
+        },
+        inlineToolbar: ['bold'],
+      });
+
+      await module.prepare();
+
+      const blockTool = module.blockTools.get('myBlock');
+
+      // Should have inline tools because inlineToolbar defaults to true
+      expect(blockTool?.inlineTools.has('bold')).toBe(true);
+    });
+
+    it('respects explicit inlineToolbar: false', async () => {
+      class BlockToolNoInline {
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+        public save(): void {}
+      }
+
+      class InlineTool {
+        public static isInline = true;
+        public render(): object {
+          return {};
+        }
+      }
+
+      const module = createModule({
+        defaultBlock: 'noInline',
+        tools: {
+          noInline: {
+            class: BlockToolNoInline as unknown as ToolConstructable,
+            inlineToolbar: false,
+          },
+          bold: InlineTool as unknown as ToolConstructable,
+        },
+        inlineToolbar: ['bold'],
+      });
+
+      await module.prepare();
+
+      const blockTool = module.blockTools.get('noInline');
+
+      // Should NOT have inline tools because explicitly disabled
+      expect(blockTool?.inlineTools.has('bold')).toBe(false);
+    });
+  });
 });
 

@@ -6,10 +6,16 @@
  * // Import specific tools
  * import { Paragraph, Header, List, Bold, Italic, Link } from '@jackuait/blok/tools';
  *
- * // Use in Blok configuration
+ * // Use in Blok configuration (flat config style)
  * new Blok({
- *   tools: { paragraph: Paragraph, header: Header, list: List },
- *   inlineTools: { bold: Bold, italic: Italic, link: Link }
+ *   tools: {
+ *     paragraph: Paragraph,
+ *     header: { class: Header, levels: [1, 2, 3] },
+ *     list: List,
+ *     bold: Bold,
+ *     italic: Italic,
+ *     link: Link,
+ *   }
  * });
  */
 
@@ -25,10 +31,11 @@ export { LinkInlineTool as Link } from '../components/inline-tools/inline-tool-l
 export { ConvertInlineTool as Convert } from '../components/inline-tools/inline-tool-convert';
 
 // Default tools configuration for convenience
+// Note: inlineToolbar defaults to true, so it doesn't need to be specified
 export const defaultBlockTools = {
-  paragraph: { inlineToolbar: true, config: { preserveBlank: true } },
-  header: { inlineToolbar: true },
-  list: { inlineToolbar: true },
+  paragraph: { preserveBlank: true },
+  header: {},
+  list: {},
 } as const;
 
 export const defaultInlineTools = {

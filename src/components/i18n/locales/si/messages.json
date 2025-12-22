@@ -25,7 +25,7 @@
   "tools.header.heading4": "ශීර්ෂය 4",
   "tools.header.heading5": "ශීර්ෂය 5",
   "tools.header.heading6": "ශීර්ෂය 6",
-  "tools.list.list": "ලැයිස්තුව",
+  "tools.list.placeholder": "ලැයිස්තුව",
   "blockSettings.delete": "මකන්න",
   "a11y.dragHandle": "කොටස ගෙනයාමට අදින්න හෝ මෙනුව සඳහා ක්ලික් කරන්න",
   "a11y.dragHandleRole": "ඇදීමේ හසුරුව",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "කොටස {total}න් {position} ස්ථානයට ඉහළට ගෙන යන ලදී",
   "a11y.movedDown": "කොටස {total}න් {position} ස්ථානයට පහළට ගෙන යන ලදී",
   "a11y.atTop": "කොටස ඉහළමයි, ඉහළට ගෙනයා නොහැක",
-  "a11y.atBottom": "කොටස පහළමයි, පහළට ගෙනයා නොහැක"
+  "a11y.atBottom": "කොටස පහළමයි, පහළට ගෙනයා නොහැක",
+  "tools.paragraph.placeholder": "යdelays ලdelays / delaysdelays delaysණdelays"
 }

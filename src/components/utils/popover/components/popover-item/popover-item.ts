@@ -82,7 +82,6 @@ export abstract class PopoverItem {
 
     onHover(itemElement, content.getElement(), {
       placement: hintData.position,
-      hidingDelay: 100,
     });
   }
 
@@ -157,6 +156,17 @@ export abstract class PopoverItem {
    */
   public get isChildrenSearchable(): boolean {
     return this.params !== undefined && 'children' in this.params && this.params.children?.searchable === true;
+  }
+
+  /**
+   * Returns the width for children popover, if specified
+   */
+  public get childrenWidth(): string | undefined {
+    if (this.params === undefined || !('children' in this.params)) {
+      return undefined;
+    }
+
+    return this.params.children?.width;
   }
 
   /**

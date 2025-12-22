@@ -25,7 +25,7 @@
   "tools.header.heading4": "Antraštė 4",
   "tools.header.heading5": "Antraštė 5",
   "tools.header.heading6": "Antraštė 6",
-  "tools.list.list": "Sąrašas",
+  "tools.list.placeholder": "Sąrašas",
   "blockSettings.delete": "Ištrinti",
   "a11y.dragHandle": "Vilkite norėdami perkelti bloką arba spustelėkite meniu",
   "a11y.dragHandleRole": "vilkimo rankena",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blokas perkeltas aukštyn į poziciją {position} iš {total}",
   "a11y.movedDown": "Blokas perkeltas žemyn į poziciją {position} iš {total}",
   "a11y.atTop": "Blokas yra viršuje, negalima perkelti aukštyn",
-  "a11y.atBottom": "Blokas yra apačioje, negalima perkelti žemyn"
+  "a11y.atBottom": "Blokas yra apačioje, negalima perkelti žemyn",
+  "tools.paragraph.placeholder": "Rašykite ką nors arba spauskite / pasirinkimui"
 }

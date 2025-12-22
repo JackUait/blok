@@ -14,7 +14,6 @@ const HOLDER_ID = 'blok';
 const HEADER_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`;
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
-const SEARCH_INPUT_SELECTOR = `${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-search-input"]`;
 const POPOVER_ITEM_SELECTOR = '[data-blok-testid="popover-item"]';
 const NESTED_POPOVER_SELECTOR = '[data-blok-testid="popover"][data-blok-nested="true"]';
 const DEFAULT_WAIT_TIMEOUT = 5_000;
@@ -365,47 +364,6 @@ test.describe('header Tool', () => {
     });
   });
 
-  test.describe('filter functionality', () => {
-    test('filters heading options when typing in search', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createHeaderData('Test Header', 2),
-      });
-      await openBlockTunesViaToolbar(page);
-
-      const searchInput = page.locator(SEARCH_INPUT_SELECTOR);
-
-      await searchInput.fill('1');
-
-      const h1Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 1' });
-
-      await expect(h1Option).toBeVisible();
-
-      // Other heading options should be hidden
-      const h2Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 2' });
-
-      await expect(h2Option).toHaveAttribute('data-blok-hidden', 'true');
-    });
-
-    test('shows all options when filter is cleared', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: createHeaderData('Test Header', 2),
-      });
-      await openBlockTunesViaToolbar(page);
-
-      const searchInput = page.locator(SEARCH_INPUT_SELECTOR);
-
-      await searchInput.fill('1');
-      await searchInput.clear();
-
-      const h1Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 1' });
-      const h2Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 2' });
-
-      await expect(h1Option).not.toHaveAttribute('data-blok-hidden', 'true');
-      await expect(h2Option).not.toHaveAttribute('data-blok-hidden', 'true');
-    });
-  });
 
   test.describe('convert to functionality', () => {
     test('shows convert to option in tune menu', async ({ page }) => {

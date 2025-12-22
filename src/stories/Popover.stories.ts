@@ -21,7 +21,6 @@ const POPOVER_ITEM_TESTID = '[data-blok-testid="popover-item"]';
 const POPOVER_OPENED_SELECTOR = '[data-blok-popover-opened="true"]';
 const ITEM_FOCUSED_SELECTOR = '[data-blok-focused=\"true\"]';
 const CONFIRMATION_SELECTOR = '[data-blok-popover-item-confirmation="true"]';
-const NOTHING_FOUND_SELECTOR = '[data-blok-nothing-found-displayed="true"]';
 const DELETE_BUTTON_SELECTOR = '[data-blok-item-name="delete"]';
 const CONVERT_TO_SELECTOR = '[data-blok-item-name="convert-to"]';
 const NESTED_POPOVER_SELECTOR = '[data-blok-nested="true"]';
@@ -444,90 +443,6 @@ export const SearchFiltering: Story = {
           const popover = document.querySelector(POPOVER_OPENED_SELECTOR);
 
           expect(popover).toBeInTheDocument();
-        },
-        TIMEOUT_ACTION
-      );
-    });
-  },
-};
-
-/**
- * Popover nothing found message (in block settings).
- */
-export const NothingFoundMessage: Story = {
-  args: {
-    data: sampleData,
-  },
-  play: async ({ canvasElement, step }) => {
-    await step('Wait for editor and toolbar to initialize', async () => {
-      await waitFor(
-        () => {
-          const block = canvasElement.querySelector(BLOCK_TESTID);
-
-          expect(block).toBeInTheDocument();
-        },
-        TIMEOUT_INIT
-      );
-      // Wait for toolbar to be created (happens in requestIdleCallback)
-      await waitForToolbar(canvasElement);
-    });
-
-    await step('Click block to show toolbar', async () => {
-      const block = canvasElement.querySelector(BLOCK_TESTID);
-
-      if (block) {
-        simulateClick(block);
-      }
-
-      await waitFor(
-        () => {
-          const toolbar = canvasElement.querySelector(TOOLBAR_TESTID);
-
-          expect(toolbar).toHaveAttribute('data-blok-opened', 'true');
-        },
-        TIMEOUT_ACTION
-      );
-    });
-
-    await step('Open block settings', async () => {
-      const settingsButton = canvasElement.querySelector(SETTINGS_BUTTON_TESTID);
-
-      if (settingsButton) {
-        await userEvent.click(settingsButton);
-      }
-
-      await waitFor(
-        () => {
-          // Block tunes popover is appended to document.body
-          const blockTunesPopover = document.querySelector(BLOCK_TUNES_POPOVER_TESTID);
-
-          expect(blockTunesPopover).toBeInTheDocument();
-        },
-        TIMEOUT_ACTION
-      );
-    });
-
-    await step('Search for non-existent item', async () => {
-      // Wait for popover to be fully rendered and search input to be available
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Find and focus the search input inside the popover
-      const searchInput = document.querySelector('[data-blok-testid="popover-search-input"]') as HTMLInputElement;
-
-      if (searchInput) {
-        searchInput.focus();
-        // Type directly into the input
-        searchInput.value = 'xyznonexistent';
-        // Trigger input event to notify the search handler
-        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-
-      await waitFor(
-        () => {
-          // Nothing found message is inside the popover which is in document.body
-          const nothingFound = document.querySelector(NOTHING_FOUND_SELECTOR);
-
-          expect(nothingFound).toBeInTheDocument();
         },
         TIMEOUT_ACTION
       );

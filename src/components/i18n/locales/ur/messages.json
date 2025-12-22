@@ -25,7 +25,7 @@
   "tools.header.heading4": "عنوان 4",
   "tools.header.heading5": "عنوان 5",
   "tools.header.heading6": "عنوان 6",
-  "tools.list.list": "فہرست",
+  "tools.list.placeholder": "فہرست",
   "blockSettings.delete": "حذف کریں",
   "a11y.dragHandle": "بلاک منتقل کرنے کے لیے گھسیٹیں یا مینو کے لیے کلک کریں",
   "a11y.dragHandleRole": "گھسیٹنے کا ہینڈل",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "بلاک اوپر پوزیشن {position} از {total} پر گیا",
   "a11y.movedDown": "بلاک نیچے پوزیشن {position} از {total} پر گیا",
   "a11y.atTop": "بلاک سب سے اوپر ہے، اوپر نہیں جا سکتا",
-  "a11y.atBottom": "بلاک سب سے نیچے ہے، نیچے نہیں جا سکتا"
+  "a11y.atBottom": "بلاک سب سے نیچے ہے، نیچے نہیں جا سکتا",
+  "tools.paragraph.placeholder": "کچھ لکھیں یا منتخب کرنے کیلئے / دبائیں"
 }

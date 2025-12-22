@@ -388,6 +388,98 @@ function removeI18nMessages(content) {
 
 // Import transformations
 const IMPORT_TRANSFORMS = [
+  // ============================================================================
+  // Blok default import → named import transformations
+  // These handle cases where users incorrectly use default imports with Blok
+  // (Blok only exports named exports, not a default export)
+  // ============================================================================
+
+  // Combined default + named imports from @jackuait/blok: import Blok, { BlokConfig } from '@jackuait/blok'
+  // → import { Blok, BlokConfig } from '@jackuait/blok'
+  // IMPORTANT: Must come before regular default import patterns to avoid partial matching
+  {
+    pattern: /import\s+Blok\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"]@jackuait\/blok['"]/g,
+    replacement: "import { Blok, $1 } from '@jackuait/blok'",
+    note: 'Converted combined default + named import to named import',
+  },
+  // Aliased combined: import Editor, { BlokConfig } from '@jackuait/blok'
+  {
+    pattern: /import\s+(\w+)\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"]@jackuait\/blok['"]/g,
+    replacement: "import { Blok as $1, $2 } from '@jackuait/blok'",
+    note: 'Converted aliased combined default + named import to named import',
+  },
+  // Default import: import Blok from '@jackuait/blok' → import { Blok } from '@jackuait/blok'
+  {
+    pattern: /import\s+Blok\s+from\s+['"]@jackuait\/blok['"]/g,
+    replacement: "import { Blok } from '@jackuait/blok'",
+    note: 'Converted default import to named import',
+  },
+  // Aliased default import: import Editor from '@jackuait/blok' → import { Blok as Editor } from '@jackuait/blok'
+  // Must check it's not followed by /tools or /types to avoid matching subpath imports
+  {
+    pattern: /import\s+(\w+)\s+from\s+['"]@jackuait\/blok['"](?!\/)/g,
+    replacement: "import { Blok as $1 } from '@jackuait/blok'",
+    note: 'Converted aliased default import to named import',
+  },
+  // Type-only default import: import type Blok from '@jackuait/blok'
+  {
+    pattern: /import\s+type\s+Blok\s+from\s+['"]@jackuait\/blok['"]/g,
+    replacement: "import type { Blok } from '@jackuait/blok'",
+    note: 'Converted type-only default import to named import',
+  },
+  // Type-only aliased default import: import type Editor from '@jackuait/blok'
+  {
+    pattern: /import\s+type\s+(\w+)\s+from\s+['"]@jackuait\/blok['"](?!\/)/g,
+    replacement: "import type { Blok as $1 } from '@jackuait/blok'",
+    note: 'Converted type-only aliased default import to named import',
+  },
+  // Namespace import: import * as Blok from '@jackuait/blok' → import { Blok } from '@jackuait/blok'
+  {
+    pattern: /import\s+\*\s+as\s+Blok\s+from\s+['"]@jackuait\/blok['"]/g,
+    replacement: "import { Blok } from '@jackuait/blok'",
+    note: 'Converted namespace import to named import',
+  },
+  // Aliased namespace import: import * as Editor from '@jackuait/blok'
+  {
+    pattern: /import\s+\*\s+as\s+(\w+)\s+from\s+['"]@jackuait\/blok['"](?!\/)/g,
+    replacement: "import { Blok as $1 } from '@jackuait/blok'",
+    note: 'Converted namespace import to named import with alias',
+  },
+  // Dynamic import with destructuring: const { default: Editor } = await import('@jackuait/blok')
+  {
+    pattern: /\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*await\s+import\s*\(\s*['"]@jackuait\/blok['"]\s*\)/g,
+    replacement: "{ Blok: $1 } = await import('@jackuait/blok')",
+    note: 'Converted destructured dynamic import',
+  },
+  // Re-export default as named: export { default as Editor } from '@jackuait/blok'
+  {
+    pattern: /export\s+\{\s*default\s+as\s+(\w+)\s*\}\s*from\s+['"]@jackuait\/blok['"]/g,
+    replacement: "export { Blok as $1 } from '@jackuait/blok'",
+    note: 'Converted default re-export to named export',
+  },
+  // Re-export default: export { default } from '@jackuait/blok'
+  {
+    pattern: /export\s+\{\s*default\s*\}\s*from\s+['"]@jackuait\/blok['"]/g,
+    replacement: "export { Blok } from '@jackuait/blok'",
+    note: 'Converted default re-export',
+  },
+  // Require with .default access: require('@jackuait/blok').default
+  {
+    pattern: /require\s*\(\s*['"]@jackuait\/blok['"]\s*\)\.default/g,
+    replacement: "require('@jackuait/blok').Blok",
+    note: 'Converted require().default to require().Blok',
+  },
+  // Destructured require with default: const { default: Editor } = require('@jackuait/blok')
+  {
+    pattern: /const\s+\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*require\s*\(\s*['"]@jackuait\/blok['"]\s*\)/g,
+    replacement: "const { Blok: $1 } = require('@jackuait/blok')",
+    note: 'Converted destructured default require to named require',
+  },
+
+  // ============================================================================
+  // EditorJS → Blok transformations
+  // ============================================================================
+
   // EditorJS subpath imports (e.g., @editorjs/editorjs/types -> @jackuait/blok/types)
   {
     pattern: /from\s+['"]@editorjs\/editorjs\/([^'"]+)['"]/g,

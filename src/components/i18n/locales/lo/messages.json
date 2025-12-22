@@ -25,7 +25,7 @@
   "tools.header.heading4": "ຫົວຂໍ້ 4",
   "tools.header.heading5": "ຫົວຂໍ້ 5",
   "tools.header.heading6": "ຫົວຂໍ້ 6",
-  "tools.list.list": "ລາຍການ",
+  "tools.list.placeholder": "ລາຍການ",
   "blockSettings.delete": "ລຶບ",
   "a11y.dragHandle": "ລາກເພື່ອຍ້າຍບລັອກ ຫຼື ຄລິກເພື່ອເປີດເມນູ",
   "a11y.dragHandleRole": "ບ່ອນຈັບລາກ",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "ບລັອກຍ້າຍຂຶ້ນໄປຕຳແໜ່ງ {position} ຈາກ {total}",
   "a11y.movedDown": "ບລັອກຍ້າຍລົງໄປຕຳແໜ່ງ {position} ຈາກ {total}",
   "a11y.atTop": "ບລັອກຢູ່ເທິງສຸດ, ບໍ່ສາມາດຍ້າຍຂຶ້ນໄດ້",
-  "a11y.atBottom": "ບລັອກຢູ່ລຸ່ມສຸດ, ບໍ່ສາມາດຍ້າຍລົງໄດ້"
+  "a11y.atBottom": "ບລັອກຢູ່ລຸ່ມສຸດ, ບໍ່ສາມາດຍ້າຍລົງໄດ້",
+  "tools.paragraph.placeholder": "ຂียນບາງອย່າງ ຫຼື ກົດ / ເພdelay"
 }

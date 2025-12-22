@@ -352,7 +352,7 @@ test.describe('paragraph tool', () => {
 
       await convertToOption.click();
 
-      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} ${POPOVER_ITEM_SELECTOR}`).filter({ hasText: 'Heading' });
+      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} ${POPOVER_ITEM_SELECTOR}`).filter({ hasText: 'Heading 1' });
 
       await headerOption.click();
 

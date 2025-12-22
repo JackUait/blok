@@ -321,7 +321,7 @@ describe('BlockToolAdapter', () => {
       expect(tool.pasteConfig).toEqual({});
     });
 
-    it('returns enabled inline tools or false by default', () => {
+    it('returns enabled inline tools or true by default', () => {
       const { tool, options } = createBlockTool();
 
       expect(tool.enabledInlineTools).toEqual(options.config.inlineToolbar);
@@ -332,7 +332,8 @@ describe('BlockToolAdapter', () => {
         },
       });
 
-      expect(fallbackTool.enabledInlineTools).toBe(false);
+      // Defaults to true when not specified
+      expect(fallbackTool.enabledInlineTools).toBe(true);
     });
 
     it('returns enabled block tunes from config', () => {
@@ -570,7 +571,11 @@ describe('BlockToolAdapter', () => {
       expect((instance as unknown as { block: unknown }).block).toEqual(blockAPI);
       expect((instance as unknown as { readonly: boolean }).readonly).toBe(false);
       expect((instance as unknown as { api: unknown }).api).toEqual(options.api);
-      expect((instance as unknown as { config: unknown }).config).toEqual(options.config.config);
+      // Config should include original settings plus injected _toolboxEntries
+      const instanceConfig = (instance as unknown as { config: unknown }).config;
+
+      expect(instanceConfig).toMatchObject(options.config.config as object);
+      expect(instanceConfig).toHaveProperty('_toolboxEntries');
     });
   });
 });

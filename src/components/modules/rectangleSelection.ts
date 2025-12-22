@@ -116,11 +116,29 @@ export class RectangleSelection extends Module {
    * Init rect params
    * @param {number} pageX - X coord of mouse
    * @param {number} pageY - Y coord of mouse
+   * @param {boolean} shiftKey - whether Shift key is held for additive selection
    */
-  public startSelection(pageX: number, pageY: number): void {
-    const scrollLeft = this.getScrollLeft();
+  public startSelection(pageX: number, pageY: number, shiftKey = false): void {
+    const { UI } = this.Blok;
+    const redactor = UI.nodes.redactor;
+
+    if (!redactor) {
+      return;
+    }
+
+    const editorRect = redactor.getBoundingClientRect();
     const scrollTop = this.getScrollTop();
-    const elemWhereSelectionStart = document.elementFromPoint(pageX - scrollLeft, pageY - scrollTop);
+    const pointerY = pageY - scrollTop;
+
+    // Check if pointer is within editor's vertical bounds
+    const withinEditorVertically = pointerY >= editorRect.top && pointerY <= editorRect.bottom;
+
+    if (!withinEditorVertically) {
+      return;
+    }
+
+    const scrollLeft = this.getScrollLeft();
+    const elemWhereSelectionStart = document.elementFromPoint(pageX - scrollLeft, pointerY);
 
     if (!elemWhereSelectionStart) {
       return;
@@ -132,7 +150,11 @@ export class RectangleSelection extends Module {
      */
     const startsInsideToolbar = elemWhereSelectionStart.closest(createSelector(DATA_ATTR.toolbar));
 
-    if (!startsInsideToolbar) {
+    /**
+     * When Shift is held, preserve existing selection for additive behavior.
+     * Otherwise, clear selection state.
+     */
+    if (!startsInsideToolbar && !shiftKey) {
       this.Blok.BlockSelection.allBlocksSelected = false;
       this.clearSelection();
       this.stackOfSelected = [];
@@ -141,16 +163,16 @@ export class RectangleSelection extends Module {
     const selectorsToAvoid = [
       createSelector(DATA_ATTR.elementContent),
       createSelector(DATA_ATTR.toolbar),
+      createSelector(DATA_ATTR.popover),
       INLINE_TOOLBAR_INTERFACE_SELECTOR,
     ];
 
-    const startsInsideBlok = elemWhereSelectionStart.closest(createSelector(DATA_ATTR.editor));
     const startsInSelectorToAvoid = selectorsToAvoid.some((selector) => !!elemWhereSelectionStart.closest(selector));
 
     /**
-     * If selection starts outside of the blok or inside the blocks or on Blok UI elements, do not handle it
+     * If selection starts inside the blocks content or on Blok UI elements, do not handle it
      */
-    if (!startsInsideBlok || startsInSelectorToAvoid) {
+    if (startsInSelectorToAvoid) {
       return;
     }
 
@@ -194,9 +216,9 @@ export class RectangleSelection extends Module {
    * Sets Module necessary event handlers
    */
   private enableModuleBindings(): void {
-    const { container } = this.genHTML();
+    this.genHTML();
 
-    this.listeners.on(container, 'mousedown', (event: Event) => {
+    this.listeners.on(document.body, 'mousedown', (event: Event) => {
       this.processMouseDown(event as MouseEvent);
     }, false);
 
@@ -245,7 +267,7 @@ export class RectangleSelection extends Module {
     const startedFromContentEditable = (mouseEvent.target as Element).closest($.allInputsSelector) !== null;
 
     if (!startedFromContentEditable) {
-      this.startSelection(mouseEvent.pageX, mouseEvent.pageY);
+      this.startSelection(mouseEvent.pageX, mouseEvent.pageY, mouseEvent.shiftKey);
     }
   }
 
@@ -402,19 +424,36 @@ export class RectangleSelection extends Module {
       this.mouseY = event.pageY;
     }
 
-    const { rightPos, leftPos, index } = this.genInfoForMouseSelection();
-    // There is not new block in selection
-
-    const rectIsOnRighSideOfredactor = this.startX > rightPos && this.mouseX > rightPos;
-    const rectISOnLeftSideOfRedactor = this.startX < leftPos && this.mouseX < leftPos;
-
-    this.rectCrossesBlocks = !(rectIsOnRighSideOfredactor || rectISOnLeftSideOfRedactor);
-
     if (!this.isRectSelectionActivated) {
-      this.rectCrossesBlocks = false;
       this.isRectSelectionActivated = true;
       this.shrinkRectangleToPoint();
       overlayRectangle.style.display = 'block';
+    }
+
+    const { index } = this.genInfoForMouseSelection();
+
+    /**
+     * Check if the selection rectangle intersects the block holder horizontally.
+     * For page-wide selection, we need to verify the rectangle actually reaches the block,
+     * not just that the mouse Y position is at the same height as a block.
+     */
+    this.rectCrossesBlocks = false;
+    const block = index !== undefined ? this.Blok.BlockManager.getBlockByIndex(index) : undefined;
+
+    if (block) {
+      const holderRect = block.holder.getBoundingClientRect();
+      const scrollLeft = this.getScrollLeft();
+
+      // Selection rectangle horizontal bounds (in page coordinates)
+      const rectLeft = Math.min(this.startX, this.mouseX);
+      const rectRight = Math.max(this.startX, this.mouseX);
+
+      // Block holder horizontal bounds (convert from viewport to page coordinates)
+      const holderLeft = holderRect.left + scrollLeft;
+      const holderRight = holderRect.right + scrollLeft;
+
+      // Check for horizontal intersection
+      this.rectCrossesBlocks = rectRight >= holderLeft && rectLeft <= holderRight;
     }
 
     this.updateRectangleSize();
@@ -517,6 +556,7 @@ export class RectangleSelection extends Module {
 
   /**
    * Collects information needed to determine the behavior of the rectangle
+   * For page-wide selection, we check blocks at the center X position but at the actual mouse Y position
    * @returns {object} index - index next Block, leftPos - start of left border of Block, rightPos - right border
    */
   private genInfoForMouseSelection(): {index: number | undefined; leftPos: number; rightPos: number} {
@@ -524,6 +564,9 @@ export class RectangleSelection extends Module {
     const centerOfRedactor = widthOfRedactor / 2;
     const scrollTop = this.getScrollTop();
     const y = this.mouseY - scrollTop;
+
+    // For page-wide selection: check what block is at the center X, but at the mouse's Y position
+    // This allows selection to work even when mouse is in the left/right margins
     const elementUnderMouse = document.elementFromPoint(centerOfRedactor, y);
     const lastBlockHolder = this.Blok.BlockManager.lastBlock?.holder;
     const contentElement = lastBlockHolder?.querySelector(createSelector(DATA_ATTR.elementContent));

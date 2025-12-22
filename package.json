@@ -4,6 +4,19 @@
   "description": "Blok — headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch",
   "module": "dist/blok.mjs",
   "types": "./types/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "tools": [
+        "./types/tools-entry.d.ts"
+      ],
+      "full": [
+        "./types/full.d.ts"
+      ],
+      "locales": [
+        "./types/locales.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
@@ -133,7 +146,6 @@
     "husky": "^9.1.7",
     "jscpd": "4.0.5",
     "jsdom": "27.2.0",
-    "nanoid": "5.1.6",
     "playwright": "1.57.0",
     "postcss": "8.5.6",
     "rollup-plugin-license": "3.6.0",
@@ -149,6 +161,7 @@
     "yaml": "2.8.1"
   },
   "dependencies": {
-    "i18next": "^25.7.3"
+    "i18next": "^25.7.3",
+    "nanoid": "^5.1.6"
   }
 }

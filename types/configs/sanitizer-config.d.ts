@@ -4,7 +4,7 @@
  */
 export type TagConfig = boolean | { [attr: string]: boolean | string };
 
-export type SanitizerRule = TagConfig | ((el: Element) => TagConfig)
+export type SanitizerRule = TagConfig | ((el: Element) => TagConfig);
 
 export interface SanitizerConfig {
   /**
@@ -40,4 +40,28 @@ export interface SanitizerConfig {
    * }
    */
   [key: string]: SanitizerRule;
+}
+
+/**
+ * Sanitizer config for Block Tools that supports field-specific tag rules.
+ * Use this when your tool's data has multiple fields that each need different sanitization.
+ *
+ * @example Field-specific sanitization
+ * ```typescript
+ * static get sanitize(): ToolSanitizerConfig {
+ *   return {
+ *     text: {
+ *       br: true,
+ *       a: { href: true, target: '_blank', rel: 'nofollow' }
+ *     },
+ *     caption: {
+ *       b: true,
+ *       i: true
+ *     }
+ *   };
+ * }
+ * ```
+ */
+export interface ToolSanitizerConfig {
+  [key: string]: SanitizerRule | SanitizerConfig;
 }

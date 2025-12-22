@@ -37,9 +37,11 @@ interface ToolbarNodes {
 }
 
 /**
- * Threshold in pixels to distinguish between a click and a drag
+ * Threshold in pixels to distinguish between a click and a drag.
+ * Should be higher than DragManager's dragThreshold (5px) so that
+ * clicks with slight mouse movement still open the menu.
  */
-const DRAG_THRESHOLD = 1000;
+const DRAG_THRESHOLD = 10;
 /**
  *
  *«Toolbar» is the node that moves up/down over current block
@@ -108,18 +110,6 @@ export class Toolbar extends Module<ToolbarNodes> {
   private toolboxInstance: Toolbox | null = null;
 
   /**
-   * Mouse position when mousedown occurred on settings toggler
-   * Used to distinguish between click and drag
-   */
-  private settingsTogglerMouseDownPosition: { x: number; y: number } | null = null;
-
-  /**
-   * Mouse position when mousedown occurred on plus button
-   * Used to distinguish between click and drag
-   */
-  private plusButtonMouseDownPosition: { x: number; y: number } | null = null;
-
-  /**
    * Last calculated toolbar Y position
    * Used to avoid unnecessary repositioning when the position hasn't changed
    */
@@ -130,6 +120,12 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Prevents the settings menu from opening when the cursor is over the toggler after drop
    */
   private ignoreNextSettingsMouseUp = false;
+
+  /**
+   * Set of pending document-level mouseup listeners that need cleanup on destroy.
+   * Each listener is added on mousedown and removed after mouseup fires.
+   */
+  private pendingMouseUpListeners: Set<(e: MouseEvent) => void> = new Set();
 
   /**
    * @class
@@ -178,6 +174,8 @@ export class Toolbar extends Module<ToolbarNodes> {
         '[&_svg]:h-6 [&_svg]:w-6',
         // Hover (can-hover)
         'can-hover:hover:bg-bg-light',
+        // Keep hover background when toolbox is open
+        'group-data-[blok-toolbox-opened=true]:bg-bg-light',
         // Mobile styles (static positioning with overlay-pane appearance)
         'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
@@ -204,6 +202,9 @@ export class Toolbar extends Module<ToolbarNodes> {
         'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
         // When toolbox is opened, use pointer cursor on hover
         'group-data-[blok-toolbox-opened=true]:can-hover:hover:cursor-pointer',
+        // When block settings is opened, show hover background and pointer cursor
+        'group-data-[blok-block-settings-opened=true]:bg-bg-light',
+        'group-data-[blok-block-settings-opened=true]:can-hover:hover:cursor-pointer',
         // Mobile styles (static positioning with overlay-pane appearance)
         'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
@@ -211,10 +212,6 @@ export class Toolbar extends Module<ToolbarNodes> {
         'not-mobile:w-6'
       ),
       settingsTogglerHidden: 'hidden',
-      settingsTogglerOpened: twJoin(
-        // When opened, override hover cursor
-        'can-hover:hover:cursor-pointer'
-      ),
     };
   }
 
@@ -656,61 +653,25 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Plus button mousedown handler
-     * Stores the initial mouse position to distinguish between click and drag
+     * Uses click-vs-drag detection to distinguish clicks from drags.
      */
     this.readOnlyMutableListeners.on(plusButton, 'mousedown', (e) => {
-      const mouseEvent = e as MouseEvent;
+      hide();
 
-      /**
-       * Store the mouse position when mousedown occurs
-       * This will be used to determine if the user dragged or clicked
-       */
-      this.plusButtonMouseDownPosition = {
-        x: mouseEvent.clientX,
-        y: mouseEvent.clientY,
-      };
-    }, true);
+      this.setupClickVsDrag(
+        e as MouseEvent,
+        (mouseUpEvent) => {
+          /**
+           * Check for modifier key to determine insert direction:
+           * - Option/Alt on Mac, Ctrl on Windows → insert above
+           * - No modifier → insert below (default)
+           */
+          const userOS = getUserOS();
+          const insertAbove = userOS.win ? mouseUpEvent.ctrlKey : mouseUpEvent.altKey;
 
-    /**
-     * Plus button mouseup handler
-     * Only opens the toolbox if the mouse didn't move significantly (i.e., it was a click, not a drag)
-     *
-     * We use mouseup instead of click because when multiple blocks are selected,
-     * the browser may not generate a click event due to focus/selection changes
-     * during the mousedown phase.
-     */
-    this.readOnlyMutableListeners.on(plusButton, 'mouseup', (e) => {
-      e.stopPropagation();
-
-      const mouseEvent = e as MouseEvent;
-
-      /**
-       * Check if this was a drag or a click by comparing mouse positions
-       * If the mouse moved more than the threshold, it was a drag - don't open toolbox
-       */
-      const mouseDownPos = this.plusButtonMouseDownPosition;
-
-      this.plusButtonMouseDownPosition = null;
-
-      /**
-       * If mouseDownPos is null, it means mousedown didn't happen on this element
-       * (e.g., user started drag from elsewhere), so ignore this mouseup
-       */
-      if (mouseDownPos === null) {
-        return;
-      }
-
-      const wasDragged = (
-        Math.abs(mouseEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
-        Math.abs(mouseEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
+          this.plusButtonClicked(insertAbove);
+        }
       );
-
-      if (wasDragged) {
-        return;
-      }
-
-      hide(true);
-      this.plusButtonClicked();
     }, true);
 
     /**
@@ -727,7 +688,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     ]);
 
     onHover(plusButton, tooltipContent, {
-      hidingDelay: 400,
+      delay: 500,
     });
 
     /**
@@ -772,7 +733,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     ]);
 
     onHover(settingsToggler, blockTunesTooltip, {
-      hidingDelay: 400,
+      delay: 500,
     });
 
     /**
@@ -864,40 +825,54 @@ export class Toolbar extends Module<ToolbarNodes> {
 
 
   /**
-   * Handler for Plus Button
+   * Handler for Plus Button.
+   * Inserts "/" into target block and opens toolbox, or toggles toolbox closed if already open.
+   * @param insertAbove - if true, insert above the current block instead of below
    */
-  private plusButtonClicked(): void {
-    /**
-     * We need to update Current Block because user can click on the Plus Button (thanks to appearing by hover) without any clicks on blok
-     * In this case currentBlock will point last block
-     */
-    if (this.hoveredBlock) {
-      this.Blok.BlockManager.currentBlock = this.hoveredBlock;
-    }
+  private plusButtonClicked(insertAbove = false): void {
+    const { BlockManager, BlockSettings, BlockSelection, Caret } = this.Blok;
 
-    /**
-     * Close Block Settings if opened, similar to how settings toggler closes toolbox
-     */
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
+    // Close other menus and clear selections
+    if (BlockSettings.opened) {
+      BlockSettings.close();
     }
-
-    /**
-     * Clear block selection when plus button is clicked
-     * This allows users to add new blocks even when multiple blocks are selected
-     */
-    if (this.Blok.BlockSelection.anyBlockSelected) {
-      this.Blok.BlockSelection.clearSelection();
+    if (BlockSelection.anyBlockSelected) {
+      BlockSelection.clearSelection();
     }
-
-    /**
-     * Remove native text selection that may have been created during cross-block selection
-     * This needs to happen regardless of anyBlockSelected state, as cross-block selection
-     * via Shift+Arrow creates native text selection that spans multiple blocks
-     */
     SelectionUtils.get()?.removeAllRanges();
 
-    this.toolboxInstance?.toggle();
+    // Toggle closed if already open
+    if (this.toolbox.opened) {
+      this.toolbox.close();
+
+      return;
+    }
+
+    // Determine target block: reuse empty/slash paragraph, or create new one
+    const hoveredBlock = this.hoveredBlock;
+    const isParagraph = hoveredBlock?.name === 'paragraph';
+    const startsWithSlash = isParagraph && hoveredBlock.pluginsContent.textContent?.startsWith('/');
+    const isEmptyParagraph = isParagraph && hoveredBlock.isEmpty;
+
+    // Calculate insert index based on direction
+    const hoveredBlockIndex = hoveredBlock !== null
+      ? BlockManager.getBlockIndex(hoveredBlock)
+      : BlockManager.currentBlockIndex;
+    const insertIndex = insertAbove ? hoveredBlockIndex : hoveredBlockIndex + 1;
+
+    const targetBlock = isEmptyParagraph || startsWithSlash
+      ? hoveredBlock
+      : BlockManager.insertDefaultBlockAtIndex(insertIndex, true);
+
+    // Insert "/" or position caret after existing one
+    if (startsWithSlash) {
+      Caret.setToBlock(targetBlock, Caret.positions.DEFAULT, 1);
+    } else {
+      Caret.setToBlock(targetBlock, Caret.positions.START);
+      Caret.insertContentAtCaretPosition('/');
+    }
+    this.moveAndOpen(targetBlock);
+    this.toolbox.open();
   }
 
   /**
@@ -914,77 +889,35 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (settingsToggler) {
       /**
        * Settings toggler mousedown handler
-       * Stores the initial mouse position to distinguish between click and drag
+       * Uses click-vs-drag detection to distinguish clicks from drags.
        */
       this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
-        hide(true);
+        hide();
 
-        const mouseEvent = e as MouseEvent;
+        this.setupClickVsDrag(
+          e as MouseEvent,
+          () => {
+            this.settingsTogglerClicked();
 
-        /**
-         * Store the mouse position when mousedown occurs
-         * This will be used to determine if the user dragged or clicked
-         */
-        this.settingsTogglerMouseDownPosition = {
-          x: mouseEvent.clientX,
-          y: mouseEvent.clientY,
-        };
-      }, true);
+            if (this.toolboxInstance?.opened) {
+              this.toolboxInstance.close();
+            }
+          },
+          {
+            /**
+             * Check if we should ignore this mouseup (e.g., after a block drop)
+             */
+            beforeCallback: () => {
+              if (this.ignoreNextSettingsMouseUp) {
+                this.ignoreNextSettingsMouseUp = false;
 
-      /**
-       * Settings toggler mouseup handler
-       * Only opens the menu if the mouse didn't move significantly (i.e., it was a click, not a drag)
-       *
-       * We use mouseup instead of click because SortableJS (used for drag-and-drop) calls
-       * removeAllRanges() during drag preparation, which causes the activeElement to change
-       * from the contenteditable DIV to BODY. When the activeElement changes between mousedown
-       * and mouseup, the browser doesn't generate a click event. By using mouseup, we can
-       * still detect clicks even when SortableJS interferes.
-       */
-      this.readOnlyMutableListeners.on(settingsToggler, 'mouseup', (e) => {
-        e.stopPropagation();
+                return false;
+              }
 
-        /**
-         * Ignore mouseup after a block drop to prevent settings menu from opening
-         */
-        if (this.ignoreNextSettingsMouseUp) {
-          this.ignoreNextSettingsMouseUp = false;
-
-          return;
-        }
-
-        const mouseEvent = e as MouseEvent;
-
-        /**
-         * Check if this was a drag or a click by comparing mouse positions
-         * If the mouse moved more than the threshold, it was a drag - don't open menu
-         */
-        const mouseDownPos = this.settingsTogglerMouseDownPosition;
-
-        this.settingsTogglerMouseDownPosition = null;
-
-        /**
-         * If mouseDownPos is null, it means mousedown didn't happen on this element
-         * (e.g., user started drag from elsewhere), so ignore this mouseup
-         */
-        if (mouseDownPos === null) {
-          return;
-        }
-
-        const wasDragged = (
-          Math.abs(mouseEvent.clientX - mouseDownPos.x) > DRAG_THRESHOLD ||
-          Math.abs(mouseEvent.clientY - mouseDownPos.y) > DRAG_THRESHOLD
+              return true;
+            },
+          }
         );
-
-        if (wasDragged) {
-          return;
-        }
-
-        this.settingsTogglerClicked();
-
-        if (this.toolboxInstance?.opened) {
-          this.toolboxInstance.close();
-        }
       }, true);
     }
 
@@ -998,9 +931,9 @@ export class Toolbar extends Module<ToolbarNodes> {
        */
       this.eventsDispatcher.on(BlockHovered, (data) => {
         /**
-         * Do not move toolbar during drag operations
+         * Do not move toolbar during drag or rectangle selection operations
          */
-        if (this.Blok.DragManager.isDragging) {
+        if (this.Blok.DragManager.isDragging || this.Blok.RectangleSelection.isRectActivated()) {
           return;
         }
 
@@ -1071,16 +1004,14 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Handler for BlockSettingsOpened event
    */
   private onBlockSettingsOpen = (): void => {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    this.nodes.settingsToggler?.classList.add(this.CSS.settingsTogglerOpened);
+    this.Blok.UI.nodes.wrapper.setAttribute(DATA_ATTR.blockSettingsOpened, 'true');
   };
 
   /**
    * Handler for BlockSettingsClosed event
    */
   private onBlockSettingsClose = (): void => {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    this.nodes.settingsToggler?.classList.remove(this.CSS.settingsTogglerOpened);
+    this.Blok.UI.nodes.wrapper.removeAttribute(DATA_ATTR.blockSettingsOpened);
   };
 
   /**
@@ -1299,6 +1230,50 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * Sets up a click-vs-drag detection pattern on an element.
+   * Tracks mousedown position and fires callback only if mouse didn't move beyond threshold.
+   * Uses document-level mouseup to catch events even if mouse moves off element.
+   * @param element - Element to attach mousedown listener to
+   * @param mouseEvent - The mousedown event
+   * @param onClickCallback - Callback to fire if it was a click (not a drag)
+   * @param options - Optional configuration
+   * @param options.beforeCallback - Function called before click callback, return false to abort
+   */
+  private setupClickVsDrag(
+    mouseEvent: MouseEvent,
+    onClickCallback: (mouseUpEvent: MouseEvent) => void,
+    options?: { beforeCallback?: () => boolean }
+  ): void {
+    const startPosition = {
+      x: mouseEvent.clientX,
+      y: mouseEvent.clientY,
+    };
+
+    const onMouseUp = (mouseUpEvent: MouseEvent): void => {
+      document.removeEventListener('mouseup', onMouseUp, true);
+      this.pendingMouseUpListeners.delete(onMouseUp);
+
+      if (options?.beforeCallback && !options.beforeCallback()) {
+        return;
+      }
+
+      const wasDragged = (
+        Math.abs(mouseUpEvent.clientX - startPosition.x) > DRAG_THRESHOLD ||
+        Math.abs(mouseUpEvent.clientY - startPosition.y) > DRAG_THRESHOLD
+      );
+
+      if (wasDragged) {
+        return;
+      }
+
+      onClickCallback(mouseUpEvent);
+    };
+
+    this.pendingMouseUpListeners.add(onMouseUp);
+    document.addEventListener('mouseup', onMouseUp, true);
+  }
+
+  /**
    * Removes all created and saved HTMLElements
    * It is used in Read-Only mode
    */
@@ -1307,5 +1282,15 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (this.toolboxInstance) {
       this.toolboxInstance.destroy();
     }
+
+    /**
+     * Clean up any pending document-level mouseup listeners.
+     * These are added on mousedown and normally removed on mouseup,
+     * but if the component is destroyed mid-click, they need manual cleanup.
+     */
+    for (const listener of this.pendingMouseUpListeners) {
+      document.removeEventListener('mouseup', listener, true);
+    }
+    this.pendingMouseUpListeners.clear();
   }
 }

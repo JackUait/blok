@@ -25,7 +25,7 @@
   "tools.header.heading4": "Titull 4",
   "tools.header.heading5": "Titull 5",
   "tools.header.heading6": "Titull 6",
-  "tools.list.list": "Listë",
+  "tools.list.placeholder": "Listë",
   "blockSettings.delete": "Fshi",
   "a11y.dragHandle": "Tërhiq për të lëvizur bllokun ose kliko për menynë",
   "a11y.dragHandleRole": "doreza e tërheqjes",
@@ -40,5 +40,6 @@
   "a11y.movedUp": "Blloku u lëviz lart në pozicionin {position} nga {total}",
   "a11y.movedDown": "Blloku u lëviz poshtë në pozicionin {position} nga {total}",
   "a11y.atTop": "Blloku është në krye, nuk mund të lëvizet lart",
-  "a11y.atBottom": "Blloku është në fund, nuk mund të lëvizet poshtë"
+  "a11y.atBottom": "Blloku është në fund, nuk mund të lëvizet poshtë",
+  "tools.paragraph.placeholder": "Shkruaj diçka ose shtyp / për të zgjedhur"
 }

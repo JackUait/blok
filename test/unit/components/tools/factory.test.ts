@@ -307,10 +307,162 @@ describe('ToolsFactory', () => {
           config: {},
         },
       },
-      api: apiStub.methods,
       isDefault: true,
       defaultPlaceholder: placeholder,
       isInternal: true,
+    });
+
+    /**
+     * Verify the API object is not the raw stub but a wrapped version.
+     * The wrapped API spreads the base API and overrides i18n.
+     */
+    expect(instantiatedOptions?.api).not.toBe(apiStub.methods);
+  });
+
+  describe('i18n namespace wrapping', () => {
+    /**
+     * Creates an API stub with mock i18n.t() and has() functions that track calls
+     * and return translations based on a provided dictionary.
+     */
+    const createI18nApiStub = (translations: Record<string, string>): ApiStub => {
+      const i18n = {
+        t: vi.fn((key: string): string => {
+          return translations[key] ?? key;
+        }),
+        has: vi.fn((key: string): boolean => {
+          return key in translations;
+        }),
+      };
+
+      const methods = {
+        name: 'methods',
+        i18n,
+        blocks: {},
+        caret: {},
+        tools: {},
+        events: {},
+        history: {},
+        listeners: {},
+        notifier: {},
+        sanitizer: {},
+        saver: {},
+        selection: {},
+        styles: {},
+        toolbar: {},
+        inlineToolbar: {},
+        tooltip: {},
+        readOnly: {},
+        ui: {},
+      };
+
+      return {
+        api: { methods } as unknown as ApiModule,
+        methods,
+      };
+    };
+
+    it('wraps i18n.t() to try namespaced key first for EditorJS compatibility', () => {
+      const toolName = 'table';
+      const translations = {
+        'tools.table.Add row': 'Добавить строку',
+      };
+      const apiStub = createI18nApiStub(translations);
+
+      const toolsConfig = {
+        [toolName]: createToolConfig(),
+      };
+      const { factory } = createFactory(toolsConfig, {}, apiStub);
+
+      factory.get(toolName);
+
+      const instanceApi = blockAdapterMockControl.instances.at(-1)?.options.api as {
+        i18n: { t: (key: string) => string };
+      };
+
+      /**
+       * External EditorJS tools call t('Add row') and expect automatic namespacing.
+       */
+      const result = instanceApi.i18n.t('Add row');
+
+      expect(result).toBe('Добавить строку');
+      expect((apiStub.methods as { i18n: { t: ReturnType<typeof vi.fn> } }).i18n.t).toHaveBeenCalledWith('tools.table.Add row');
+    });
+
+    it('falls back to direct key when namespaced key not found', () => {
+      const toolName = 'stub';
+      const translations = {
+        'tools.stub.error': 'Ошибка',
+      };
+      const apiStub = createI18nApiStub(translations);
+
+      const toolsConfig = {
+        [toolName]: createToolConfig(),
+      };
+      const { factory } = createFactory(toolsConfig, {}, apiStub);
+
+      factory.get(toolName);
+
+      const instanceApi = blockAdapterMockControl.instances.at(-1)?.options.api as {
+        i18n: { t: (key: string) => string };
+      };
+
+      /**
+       * Internal Blok tools use fully-qualified keys like 'tools.stub.error'.
+       */
+      const result = instanceApi.i18n.t('tools.stub.error');
+
+      expect(result).toBe('Ошибка');
+    });
+
+    it('returns original key when no translation exists at all', () => {
+      const toolName = 'paragraph';
+      const translations = {};
+      const apiStub = createI18nApiStub(translations);
+
+      const toolsConfig = {
+        [toolName]: createToolConfig(),
+      };
+      const { factory } = createFactory(toolsConfig, {}, apiStub);
+
+      factory.get(toolName);
+
+      const instanceApi = blockAdapterMockControl.instances.at(-1)?.options.api as {
+        i18n: { t: (key: string) => string };
+      };
+
+      const result = instanceApi.i18n.t('Unknown key');
+
+      expect(result).toBe('Unknown key');
+    });
+
+    it('creates unique i18n wrapper per tool with correct namespace', () => {
+      const translations = {
+        'tools.table.Add row': 'Table: Add row',
+        'tools.list.Add item': 'List: Add item',
+      };
+      const apiStub = createI18nApiStub(translations);
+
+      const toolsConfig = {
+        table: createToolConfig(),
+        list: createToolConfig(),
+      };
+      const { factory } = createFactory(toolsConfig, {}, apiStub);
+
+      factory.get('table');
+      factory.get('list');
+
+      const tableApi = blockAdapterMockControl.instances[0]?.options.api as {
+        i18n: { t: (key: string) => string };
+      };
+      const listApi = blockAdapterMockControl.instances[1]?.options.api as {
+        i18n: { t: (key: string) => string };
+      };
+
+      /**
+       * Each tool gets its own namespace prefix.
+       */
+      expect(tableApi.i18n.t('Add row')).toBe('Table: Add row');
+      expect(listApi.i18n.t('Add item')).toBe('List: Add item');
     });
   });
 });

@@ -790,6 +790,16 @@ export class UI extends Module<UINodes> {
     }
 
     /**
+     * Close BlockSettings first if it's open, regardless of selection state.
+     * This prevents navigation mode from being enabled when the user closes block tunes with Escape.
+     */
+    if (this.Blok.BlockSettings.opened) {
+      this.Blok.BlockSettings.close();
+
+      return;
+    }
+
+    /**
      * Clear blocks selection by ESC (but not when entering navigation mode)
      */
     if (this.Blok.BlockSelection.anyBlockSelected) {
@@ -802,12 +812,6 @@ export class UI extends Module<UINodes> {
       this.Blok.Toolbar.toolbox.close();
       this.Blok.BlockManager.currentBlock &&
         this.Blok.Caret.setToBlock(this.Blok.BlockManager.currentBlock, this.Blok.Caret.positions.END);
-
-      return;
-    }
-
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
 
       return;
     }

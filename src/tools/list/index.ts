@@ -17,7 +17,7 @@ import type {
   PasteEvent,
   ToolboxConfig,
   ConversionConfig,
-  SanitizerConfig,
+  ToolSanitizerConfig,
   PasteConfig,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
@@ -183,7 +183,7 @@ export class ListItem implements BlockTool {
    */
   private static pendingMarkerUpdate = false;
 
-  sanitize?: SanitizerConfig | undefined;
+  sanitize?: ToolSanitizerConfig | undefined;
 
   private normalizeData(data: ListItemData | Record<string, never>): ListItemData {
     const defaultStyle = this._settings.defaultStyle || 'unordered';
@@ -1665,7 +1665,7 @@ export class ListItem implements BlockTool {
     };
   }
 
-  public static get sanitize(): SanitizerConfig {
+  public static get sanitize(): ToolSanitizerConfig {
     return {
       text: {
         br: true,

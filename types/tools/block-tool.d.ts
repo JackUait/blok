@@ -1,4 +1,4 @@
-import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
+import { ConversionConfig, PasteConfig, ToolSanitizerConfig } from '../configs';
 import { BlockToolData } from './block-tool-data';
 import { BaseTool, BaseToolConstructable, BaseToolConstructorOptions } from './tool';
 import { ToolConfig } from './tool-config';
@@ -15,7 +15,7 @@ export interface BlockTool extends BaseTool {
   /**
    * Sanitizer rules description
    */
-  sanitize?: SanitizerConfig;
+  sanitize?: ToolSanitizerConfig;
 
   /**
    * Process Tool's element in DOM and return raw data

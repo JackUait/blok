@@ -185,6 +185,13 @@ export class ListItem implements BlockTool {
 
   sanitize?: ToolSanitizerConfig | undefined;
 
+  /**
+   * Legacy list item structure for backward compatibility
+   */
+  private static isLegacyFormat(data: unknown): data is { items: Array<{ content: string; checked?: boolean }>, style?: ListItemStyle, start?: number } {
+    return typeof data === 'object' && data !== null && 'items' in data && Array.isArray((data as { items: unknown }).items);
+  }
+
   private normalizeData(data: ListItemData | Record<string, never>): ListItemData {
     const defaultStyle = this._settings.defaultStyle || 'unordered';
 
@@ -194,6 +201,22 @@ export class ListItem implements BlockTool {
         style: defaultStyle,
         checked: false,
         depth: 0,
+      };
+    }
+
+    // Handle legacy format with items[] array - extract first item's content
+    // This provides backward compatibility when legacy data is passed directly to the tool
+    if (ListItem.isLegacyFormat(data)) {
+      const firstItem = data.items[0];
+      const text = firstItem?.content || '';
+      const checked = firstItem?.checked || false;
+
+      return {
+        text,
+        style: data.style || defaultStyle,
+        checked: Boolean(checked),
+        depth: 0,
+        ...(data.start !== undefined && data.start !== 1 ? { start: data.start } : {}),
       };
     }
 

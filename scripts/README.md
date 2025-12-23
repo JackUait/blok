@@ -4,47 +4,23 @@ This directory contains scripts for building, verifying, and releasing the Blok 
 
 ## Bundle Size Tracking
 
-### [`track-bundle-size.mjs`](./track-bundle-size.mjs)
-
-Tracks bundle sizes over time and alerts on significant changes.
+Bundle size is tracked using [size-limit](https://github.com/ai/size-limit).
 
 **Usage:**
 ```bash
-# Track current bundle size
-yarn bundle:track
+# Check current bundle sizes
+yarn size
 
-# With custom options
-node scripts/track-bundle-size.mjs --verbose --output=report.md --threshold=10
+# Analyze what's contributing to size
+yarn size:why
 ```
 
-**Options:**
-- `--verbose, -v` - Show detailed output
-- `--output=FILE` - Generate markdown report
-- `--threshold=N` - Alert threshold percentage (default: 10)
-- `--max-entries=N` - Max history entries to keep (default: 100)
+Configuration is in `package.json` under the `size-limit` key. Three tiers are tracked:
+- **Minimum**: Core editor only (no bundled tools, no locales)
+- **Normal**: Standard build (bundled tools + English locale)
+- **Maximum**: All tools + all 68 locales bundled
 
-**See:** [Bundle Size Tracking Documentation](../docs/bundle-size-tracking.md)
-
-### [`view-bundle-trends.mjs`](./view-bundle-trends.mjs)
-
-View historical bundle size data and trends.
-
-**Usage:**
-```bash
-# View recent history
-yarn bundle:history
-
-# View with trend analysis
-yarn bundle:trends
-
-# Export to CSV
-node scripts/view-bundle-trends.mjs --csv=sizes.csv
-```
-
-**Options:**
-- `--trends, -t` - Show trend analysis (first vs last)
-- `--limit=N` - Show last N entries (default: 10)
-- `--csv=FILE` - Export data to CSV file
+On PRs, the size-limit GitHub Action compares bundle sizes against the base branch and posts a comment with the diff.
 
 ## Performance Tracking
 
@@ -176,8 +152,6 @@ scripts/
 ├── README.md                           # This file
 ├── analyze-performance.mjs            # Performance metrics analyzer
 ├── generate-performance-dashboard.mjs # Performance dashboard generator
-├── track-bundle-size.mjs              # Bundle size tracking
-├── view-bundle-trends.mjs             # Historical trend viewer
 ├── verify-published-package.mjs       # Package verification
 ├── verify-version.mjs                 # Version consistency check
 ├── unpublish-package.mjs              # Package unpublishing
@@ -210,37 +184,19 @@ These scripts are integrated into GitHub Actions workflows:
   - Generates historical dashboard
 
 - **Release workflow** ([`.github/workflows/release.yml`](../.github/workflows/release.yml))
-  - Tracks bundle sizes
   - Verifies package before/after publish
   - Handles automatic rollback on failure
 
-- **Bundle size check** ([`.github/workflows/bundle-size-check.yml`](../.github/workflows/bundle-size-check.yml))
+- **Bundle size check** ([`.github/workflows/size-limit.yml`](../.github/workflows/size-limit.yml))
   - Runs on PRs
   - Compares with base branch
   - Posts comparison as PR comment
 
 ## Development
 
-All scripts are ES modules (`.mjs`) and can be imported:
-
-```javascript
-import { trackBundleSize } from './scripts/track-bundle-size.mjs';
-import { loadHistory, displayTrends } from './scripts/view-bundle-trends.mjs';
-
-// Use programmatically
-await trackBundleSize();
-const history = await loadHistory('.bundle-size-history.json');
-```
+All scripts are ES modules (`.mjs`) and can be imported for programmatic use.
 
 ## Troubleshooting
-
-### "No history file found"
-
-Run a build and track first:
-```bash
-yarn build
-yarn bundle:track
-```
 
 ### "Package not found"
 

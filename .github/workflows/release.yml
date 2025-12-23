@@ -54,48 +54,12 @@ jobs:
       - name: Build
         run: yarn build
 
-      - name: Build bundle variants
-        run: node scripts/build-bundle-variants.mjs --verbose
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
           retention-days: 1
-
-      - name: Download bundle size history from CI
-        id: download-history
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          workflow: ci.yml
-          branch: master
-          name: bundle-size-history
-          path: .
-          if_no_artifact_found: warn
-        continue-on-error: true
-
-      - name: Generate bundle size report
-        run: |
-          echo "📊 Generating bundle size report..."
-          if [ -f .bundle-size-history.json ]; then
-            echo "Found CI history, comparing against baseline"
-            node scripts/track-bundle-size.mjs --verbose --with-variants --compare-only --output=bundle-size-report.md --threshold=10
-          else
-            echo "No CI history found, generating standalone report"
-            node scripts/track-bundle-size.mjs --verbose --with-variants --compare-only --output=bundle-size-report.md
-          fi
-
-          echo ""
-          echo "Bundle size report:"
-          cat bundle-size-report.md
-
-      - name: Upload bundle size report
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-size-report
-          path: bundle-size-*.md
-          retention-days: 30
 
   e2e-tests:
     name: E2E Tests

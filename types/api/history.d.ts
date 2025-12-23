@@ -37,4 +37,31 @@ export interface History {
    * @returns Promise that resolves when the initial state is captured
    */
   captureInitialState(): Promise<void>;
+
+  /**
+   * Executes a function as a transaction, grouping all mutations into a single undo step.
+   *
+   * This is a convenience wrapper around the internal batch API that ensures
+   * proper cleanup even if the function throws an error.
+   *
+   * @param fn - The function to execute as a transaction. Can be sync or async.
+   * @returns Promise resolving to the result of the function
+   *
+   * @example
+   * ```typescript
+   * // Sync example
+   * const result = await editor.history.transaction(() => {
+   *   editor.blocks.move(0, 2);
+   *   editor.blocks.move(1, 3);
+   *   return 'done';
+   * });
+   *
+   * // Async example
+   * await editor.history.transaction(async () => {
+   *   await editor.blocks.insert({ type: 'paragraph', data: { text: 'Hello' } });
+   *   await editor.blocks.insert({ type: 'paragraph', data: { text: 'World' } });
+   * });
+   * ```
+   */
+  transaction<T>(fn: () => T | Promise<T>): Promise<T>;
 }

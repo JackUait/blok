@@ -21,6 +21,7 @@ export class HistoryAPI extends Module {
       canRedo: (): boolean => this.canRedo(),
       clear: (): void => this.clear(),
       captureInitialState: (): Promise<void> => this.captureInitialState(),
+      transaction: <T>(fn: () => T | Promise<T>): Promise<T> => this.transaction(fn),
     };
   }
 
@@ -69,5 +70,14 @@ export class HistoryAPI extends Module {
    */
   private async captureInitialState(): Promise<void> {
     return this.Blok.History.captureInitialState();
+  }
+
+  /**
+   * Executes a function as a transaction
+   * @param fn - The function to execute as a transaction
+   * @returns Promise resolving to the result of the function
+   */
+  private async transaction<T>(fn: () => T | Promise<T>): Promise<T> {
+    return this.Blok.History.transaction(fn);
   }
 }

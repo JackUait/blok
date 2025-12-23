@@ -23,10 +23,26 @@ const DEFAULT_MAX_HISTORY_LENGTH = 30;
 const DEFAULT_DEBOUNCE_TIME = 300;
 
 /**
+ * Default new group delay (ms)
+ * If user pauses typing for this duration, a checkpoint is created
+ */
+const DEFAULT_NEW_GROUP_DELAY = 500;
+
+/**
  * Time to wait after restore before accepting new changes (ms)
  * This prevents late-firing events from corrupting history
  */
 const RESTORE_COOLDOWN_TIME = 100;
+
+/**
+ * Configuration interface for History module
+ */
+interface HistoryConfig {
+  maxHistoryLength?: number;
+  historyDebounceTime?: number;
+  newGroupDelay?: number;
+  globalUndoRedo?: boolean;
+}
 
 /**
  * Represents caret position for restoration after undo/redo
@@ -130,6 +146,11 @@ export class History extends Module {
   private currentActionType: ActionType = 'insert';
 
   /**
+   * Current inserted character being tracked (for word boundary detection)
+   */
+  private currentInsertedText: string | undefined = undefined;
+
+  /**
    * Keydown handler reference for cleanup
    */
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
@@ -165,24 +186,45 @@ export class History extends Module {
   private batchHasMutations = false;
 
   /**
+   * Timestamp of the last mutation.
+   * Used for pause detection to create checkpoints when user pauses typing.
+   */
+  private lastMutationTime: number | null = null;
+
+  /**
    * Maximum number of entries in history stack
    */
   private get maxHistoryLength(): number {
-    return (this.config as { maxHistoryLength?: number }).maxHistoryLength ?? DEFAULT_MAX_HISTORY_LENGTH;
+    const historyConfig = this.config as HistoryConfig;
+
+    return historyConfig.maxHistoryLength ?? DEFAULT_MAX_HISTORY_LENGTH;
   }
 
   /**
    * Debounce time for batching changes
    */
   private get debounceTime(): number {
-    return (this.config as { historyDebounceTime?: number }).historyDebounceTime ?? DEFAULT_DEBOUNCE_TIME;
+    const historyConfig = this.config as HistoryConfig;
+
+    return historyConfig.historyDebounceTime ?? DEFAULT_DEBOUNCE_TIME;
+  }
+
+  /**
+   * New group delay - pause duration that creates a checkpoint
+   */
+  private get newGroupDelay(): number {
+    const historyConfig = this.config as HistoryConfig;
+
+    return historyConfig.newGroupDelay ?? DEFAULT_NEW_GROUP_DELAY;
   }
 
   /**
    * Whether to use document-level shortcuts for undo/redo
    */
   private get globalUndoRedo(): boolean {
-    return (this.config as { globalUndoRedo?: boolean }).globalUndoRedo ?? true;
+    const historyConfig = this.config as HistoryConfig;
+
+    return historyConfig.globalUndoRedo ?? true;
   }
 
   /**
@@ -361,6 +403,7 @@ export class History extends Module {
     this.undoStack = [];
     this.redoStack = [];
     this.initialStateCaptured = false;
+    this.lastMutationTime = null;
     this.smartGrouping.clearContext();
     this.emitStateChanged();
   }
@@ -390,6 +433,8 @@ export class History extends Module {
     if (this.batchDepth === 0) {
       this.pendingCaretPosition = this.getCaretPosition();
       this.batchHasMutations = false;
+      // Reset to prevent stale pause detection after batch completes
+      this.lastMutationTime = null;
       // Clear any pending debounce to ensure clean state before batch
       this.clearDebounce();
     }
@@ -423,6 +468,40 @@ export class History extends Module {
    */
   public isInBatch(): boolean {
     return this.batchDepth > 0;
+  }
+
+  /**
+   * Executes a function as a transaction, grouping all mutations into a single undo step.
+   *
+   * This is a convenience wrapper around startBatch()/endBatch() that ensures
+   * proper cleanup even if the function throws an error.
+   *
+   * @param fn - The function to execute as a transaction. Can be sync or async.
+   * @returns The result of the function
+   *
+   * @example
+   * ```typescript
+   * // Sync example
+   * const result = await history.transaction(() => {
+   *   blockManager.move(0, 2);
+   *   blockManager.move(1, 3);
+   *   return 'done';
+   * });
+   *
+   * // Async example
+   * await history.transaction(async () => {
+   *   await blockManager.insert({ tool: 'paragraph', data: { text: 'Hello' } });
+   *   await blockManager.insert({ tool: 'paragraph', data: { text: 'World' } });
+   * });
+   * ```
+   */
+  public async transaction<T>(fn: () => T | Promise<T>): Promise<T> {
+    this.startBatch();
+    try {
+      return await fn();
+    } finally {
+      this.endBatch();
+    }
   }
 
   /**
@@ -593,12 +672,14 @@ export class History extends Module {
         // Detect action type from key press
         if (e.key === 'Backspace') {
           this.currentActionType = 'delete-back';
+          this.currentInsertedText = undefined;
 
           return;
         }
 
         if (e.key === 'Delete') {
           this.currentActionType = 'delete-fwd';
+          this.currentInsertedText = undefined;
 
           return;
         }
@@ -606,6 +687,8 @@ export class History extends Module {
         // Single character key (typing)
         if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
           this.currentActionType = 'insert';
+          // Capture the character for word boundary detection
+          this.currentInsertedText = e.key;
         }
       };
 
@@ -668,6 +751,7 @@ export class History extends Module {
   /**
    * Handles block mutation events
    * Uses smart grouping to create checkpoints when action type changes
+   * Also creates checkpoints when user pauses typing (newGroupDelay)
    */
   private handleBlockMutation(event: BlockMutationEvent): void {
     // Mark this instance as active for global shortcuts
@@ -696,16 +780,31 @@ export class History extends Module {
     // Get block ID from event
     const blockId = event.detail.target.id;
 
+    // Check for pause detection (newGroupDelay)
+    // If the user paused for longer than newGroupDelay, create a checkpoint
+    const currentTime = Date.now();
+    const shouldCheckpointFromPause = this.lastMutationTime !== null &&
+      (currentTime - this.lastMutationTime) > this.newGroupDelay;
+
+    // Update last mutation time
+    this.lastMutationTime = currentTime;
+
     // Check if we should create a checkpoint before this action
     const shouldCheckpoint = this.smartGrouping.shouldCreateCheckpoint(
-      { actionType: this.currentActionType },
+      {
+        actionType: this.currentActionType,
+        insertedText: this.currentInsertedText,
+      },
       blockId
     );
+
+    // Clear the inserted text after use to avoid reusing it for the next action
+    this.currentInsertedText = undefined;
 
     // Check if this is an immediate checkpoint action
     const isImmediate = this.smartGrouping.isImmediateCheckpoint(this.currentActionType);
 
-    if (shouldCheckpoint || isImmediate) {
+    if (shouldCheckpoint || isImmediate || shouldCheckpointFromPause) {
       // Create checkpoint immediately (flush pending debounce)
       this.clearDebounce();
       void this.recordState().then(() => {

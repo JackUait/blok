@@ -22,12 +22,18 @@ const IMMEDIATE_CHECKPOINT_ACTIONS: ActionType[] = [
 const ACTION_CHANGE_THRESHOLD = 3;
 
 /**
+ * Word boundary characters that trigger checkpoints
+ */
+const WORD_BOUNDARY_CHARS = [' ', '.', ',', ';', ':', '!', '?', '\n'];
+
+/**
  * Determines when to create history checkpoints based on action patterns
  *
  * Creates checkpoints when:
  * - Action type changes (e.g., typing → deleting)
  * - Block changes
  * - Immediate actions (format, structural, paste, cut)
+ * - Word boundaries (space, punctuation) during insert actions
  */
 export class SmartGrouping {
   /**
@@ -65,6 +71,18 @@ export class SmartGrouping {
       return true;
     }
 
+    // Check for word boundary during insert actions
+    // Only apply to 'insert' actions, not deletes
+    // If we're typing (context is insert) and hit a word boundary, checkpoint
+    if (
+      actionType === 'insert' &&
+      metadata.insertedText &&
+      this.currentContext.type === 'insert' &&
+      this.isWordBoundary(metadata.insertedText)
+    ) {
+      return true;
+    }
+
     const actionMatchesContext = this.currentContext.type === actionType;
 
     // If we're tracking a transition and action matches context, continue counting
@@ -93,6 +111,15 @@ export class SmartGrouping {
     this.pendingActionCount = 1;
 
     return false;
+  }
+
+  /**
+   * Checks if the inserted text is a word boundary character
+   * @param insertedText - the text that was inserted
+   * @returns true if the text is a word boundary (space, punctuation, etc.)
+   */
+  public isWordBoundary(insertedText: string): boolean {
+    return WORD_BOUNDARY_CHARS.includes(insertedText);
   }
 
   /**

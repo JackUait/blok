@@ -148,6 +148,184 @@ describe('SmartGrouping', () => {
     });
   });
 
+  describe('word boundary detection', () => {
+    describe('isWordBoundary', () => {
+      it('should return true for space character', () => {
+        expect(grouping.isWordBoundary(' ')).toBe(true);
+      });
+
+      it('should return true for period', () => {
+        expect(grouping.isWordBoundary('.')).toBe(true);
+      });
+
+      it('should return true for comma', () => {
+        expect(grouping.isWordBoundary(',')).toBe(true);
+      });
+
+      it('should return true for semicolon', () => {
+        expect(grouping.isWordBoundary(';')).toBe(true);
+      });
+
+      it('should return true for colon', () => {
+        expect(grouping.isWordBoundary(':')).toBe(true);
+      });
+
+      it('should return true for exclamation mark', () => {
+        expect(grouping.isWordBoundary('!')).toBe(true);
+      });
+
+      it('should return true for question mark', () => {
+        expect(grouping.isWordBoundary('?')).toBe(true);
+      });
+
+      it('should return true for newline', () => {
+        expect(grouping.isWordBoundary('\n')).toBe(true);
+      });
+
+      it('should return false for regular characters', () => {
+        expect(grouping.isWordBoundary('a')).toBe(false);
+        expect(grouping.isWordBoundary('Z')).toBe(false);
+        expect(grouping.isWordBoundary('5')).toBe(false);
+      });
+
+      it('should return false for non-boundary punctuation', () => {
+        expect(grouping.isWordBoundary('-')).toBe(false);
+        expect(grouping.isWordBoundary('_')).toBe(false);
+        expect(grouping.isWordBoundary("'")).toBe(false);
+      });
+    });
+
+    describe('checkpoint on word boundary during insert', () => {
+      it('should create checkpoint when space is typed during insert action', () => {
+        grouping.updateContext('insert', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: ' ' },
+          'block-1'
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should create checkpoint when period is typed during insert action', () => {
+        grouping.updateContext('insert', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: '.' },
+          'block-1'
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should create checkpoint when comma is typed during insert action', () => {
+        grouping.updateContext('insert', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: ',' },
+          'block-1'
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should create checkpoint when exclamation is typed during insert action', () => {
+        grouping.updateContext('insert', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: '!' },
+          'block-1'
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should create checkpoint when question mark is typed during insert action', () => {
+        grouping.updateContext('insert', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: '?' },
+          'block-1'
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should create checkpoint when newline is typed during insert action', () => {
+        grouping.updateContext('insert', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: '\n' },
+          'block-1'
+        );
+
+        expect(result).toBe(true);
+      });
+
+      it('should not create checkpoint for regular character during insert action', () => {
+        grouping.updateContext('insert', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: 'a' },
+          'block-1'
+        );
+
+        expect(result).toBe(false);
+      });
+
+      it('should not create checkpoint for word boundary during delete-back action', () => {
+        grouping.updateContext('delete-back', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'delete-back', insertedText: ' ' },
+          'block-1'
+        );
+
+        expect(result).toBe(false);
+      });
+
+      it('should not create checkpoint for word boundary during delete-fwd action', () => {
+        grouping.updateContext('delete-fwd', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'delete-fwd', insertedText: '.' },
+          'block-1'
+        );
+
+        expect(result).toBe(false);
+      });
+
+      it('should not create checkpoint when insertedText is undefined', () => {
+        grouping.updateContext('insert', 'block-1');
+        const result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert' },
+          'block-1'
+        );
+
+        expect(result).toBe(false);
+      });
+
+      it('should create checkpoint when transitioning from regular typing to space', () => {
+        grouping.updateContext('insert', 'block-1');
+
+        // Type some regular characters - no checkpoint
+        let result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: 'h' },
+          'block-1'
+        );
+
+        expect(result).toBe(false);
+
+        // Continue typing - still no checkpoint
+        result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: 'e' },
+          'block-1'
+        );
+
+        expect(result).toBe(false);
+
+        // Type space - should checkpoint
+        result = grouping.shouldCreateCheckpoint(
+          { actionType: 'insert', insertedText: ' ' },
+          'block-1'
+        );
+
+        expect(result).toBe(true);
+      });
+    });
+  });
+
   describe('action change threshold', () => {
     it('should not create checkpoint on first action type change', () => {
       const smartGrouping = new SmartGrouping();

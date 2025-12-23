@@ -74,6 +74,14 @@ export interface BlokConfig {
   historyDebounceTime?: number;
 
   /**
+   * Time in milliseconds that determines if a pause between keystrokes creates a new undo group.
+   * If the user pauses for longer than this duration, a checkpoint is created.
+   * This groups typing into "thought chunks" separated by pauses.
+   * @default 500
+   */
+  newGroupDelay?: number;
+
+  /**
    * Enable document-level undo/redo shortcuts.
    * When true, Cmd+Z / Ctrl+Z and Cmd+Shift+Z / Ctrl+Shift+Z work even when
    * the editor is not focused (e.g., after dragging a block).

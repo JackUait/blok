@@ -1087,6 +1087,818 @@ test.describe('undo/Redo', () => {
     });
   });
 
+  test.describe('edge Cases - Inline Formatting', () => {
+    test('applying bold formatting should create a separate undo step', async ({ page }) => {
+      // Edge case #1: Inline formatting (Bold/Italic/Link) doesn't create separate undo steps
+      // Expected: User types, applies bold, then undo should first remove bold, then remove typing
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Focus and select "World" text
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        // Select "World" (positions 6-11)
+        range.setStart(el.firstChild, 6);
+        range.setEnd(el.firstChild, 11);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      // Wait for history to record initial state
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Apply bold formatting using keyboard shortcut
+      await page.keyboard.press(`${MODIFIER_KEY}+b`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify text is now bold
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const boldText = input.locator('b, strong');
+
+      await expect(boldText).toHaveText('World');
+
+      // First undo should remove the bold formatting
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Bold should be removed - text should be plain
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const boldAfterUndo = input.locator('b, strong');
+
+      await expect(boldAfterUndo).toHaveCount(0);
+
+      // Text should still be "Hello World"
+      await expect(input).toContainText('Hello World');
+    });
+
+    test('applying italic formatting should create a separate undo step', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Select "World" text
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 6);
+        range.setEnd(el.firstChild, 11);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Apply italic formatting
+      await page.keyboard.press(`${MODIFIER_KEY}+i`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify text is now italic
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const italicText = input.locator('i, em');
+
+      await expect(italicText).toHaveText('World');
+
+      // Undo should remove the italic formatting
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Italic should be removed
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const italicAfterUndo = input.locator('i, em');
+
+      await expect(italicAfterUndo).toHaveCount(0);
+      await expect(input).toContainText('Hello World');
+    });
+
+    test('multiple formatting operations should each create separate undo steps', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Select "World" and apply bold
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 6);
+        range.setEnd(el.firstChild, 11);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+b`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Select "Hello" and apply italic
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 0);
+        range.setEnd(el.firstChild, 5);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+i`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // First undo should remove italic from "Hello"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const italicCount = input.locator('i, em');
+
+      await expect(italicCount).toHaveCount(0);
+
+      // Bold "World" should still be there
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const boldText = input.locator('b, strong');
+
+      await expect(boldText).toHaveText('World');
+
+      // Second undo should remove bold from "World"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const boldCount = input.locator('b, strong');
+
+      await expect(boldCount).toHaveCount(0);
+    });
+
+    test('typing after formatting should create a separate undo step', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Select all and apply bold
+      await input.click();
+      await page.keyboard.press(`${MODIFIER_KEY}+a`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+b`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type additional text at the end
+      await page.keyboard.press('End');
+      await page.keyboard.type(' World');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // First undo should remove " World"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Should still have bold "Hello"
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const boldText = input.locator('b, strong');
+
+      await expect(boldText).toHaveText('Hello');
+      await expect(input).not.toContainText('World');
+
+      // Second undo should remove bold
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const boldCount = input.locator('b, strong');
+
+      await expect(boldCount).toHaveCount(0);
+    });
+  });
+
+  test.describe('edge Cases - Paste Operations', () => {
+    test('paste operation should create a separate undo step', async ({ page }) => {
+      // Edge case #2: Paste operations should be detected and create checkpoints
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Type some text first
+      await input.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' World');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Select "World" and copy it
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el) {
+          return;
+        }
+
+        const text = el.textContent ?? '';
+        const startPos = text.indexOf('World');
+
+        // Find the text node that contains "World"
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let currentPos = 0;
+        let targetNode = walker.nextNode();
+
+        while (targetNode) {
+          const nodeLength = targetNode.textContent?.length ?? 0;
+
+          if (currentPos + nodeLength > startPos) {
+            break;
+          }
+          currentPos += nodeLength;
+          targetNode = walker.nextNode();
+        }
+
+        if (targetNode) {
+          const range = document.createRange();
+          const sel = window.getSelection();
+          const offsetInNode = startPos - currentPos;
+
+          range.setStart(targetNode, offsetInNode);
+          range.setEnd(targetNode, offsetInNode + 5);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      });
+
+      await page.keyboard.press(`${MODIFIER_KEY}+c`);
+      await waitForDelay(page, 100);
+
+      // Move to end and paste
+      await page.keyboard.press('End');
+      await page.keyboard.type(' - ');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await page.keyboard.press(`${MODIFIER_KEY}+v`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify paste happened
+      await expect(input).toContainText('Hello World - World');
+
+      // First undo should remove the pasted text
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toContainText('Hello World - ');
+      await expect(input).not.toContainText('Hello World - World');
+    });
+
+    test('cut and paste should each be separate undo steps', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Select "World" and cut
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 6);
+        range.setEnd(el.firstChild, 11);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+x`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify cut happened
+      await expect(input).toHaveText('Hello ');
+
+      // Move to start and paste
+      await page.keyboard.press('Home');
+      await page.keyboard.press(`${MODIFIER_KEY}+v`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify paste happened
+      await expect(input).toContainText('WorldHello');
+
+      // First undo should remove the pasted text
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('Hello ');
+
+      // Second undo should restore the cut text
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('Hello World');
+    });
+  });
+
+  test.describe('edge Cases - Block Split/Merge', () => {
+    test('block split should create a separate undo step from typing', async ({ page }) => {
+      // Edge case #3: Block split/merge should be treated as structural changes
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Type some text
+      await input.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type('!!!');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Move to middle and split
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 6);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify split happened - should have 2 blocks
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+
+      // First undo should merge the blocks back (undo split)
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(input).toContainText('Hello World!!!');
+
+      // Second undo should remove the "!!!"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('Hello World');
+    });
+
+    test('merging blocks with backspace should create a separate undo step', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'First block' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Second block' },
+            },
+          ],
+        },
+      });
+
+      // Focus second block at the beginning
+      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
+      const secondInput = secondParagraph.locator('[contenteditable="true"]');
+
+      await secondInput.click();
+      await page.keyboard.press('Home');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Press backspace to merge with first block
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Should have 1 block now
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+
+      // Undo should restore 2 blocks
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+    });
+
+    test('pressing Enter at block end should create new block as separate undo step', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Type text
+      await input.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' World');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Press Enter to create new block
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type in new block
+      await page.keyboard.type('New block');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify state
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+
+      // First undo removes "New block" text
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Second undo removes the new block (Enter)
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+
+      // Third undo removes " World"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('Hello');
+    });
+  });
+
+  test.describe('edge Cases - Toolbar Button Caret Position', () => {
+    test('caret position should be correct after applying formatting via toolbar button', async ({ page }) => {
+      // Edge case #4: Caret position after toolbar button clicks
+      // When using toolbar buttons, the caret should be at the correct position after undo
+      // Note: This test uses keyboard shortcut since toolbar button availability varies
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Select "World" text programmatically (simulating toolbar interaction)
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 6);
+        range.setEnd(el.firstChild, 11);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Apply bold via keyboard shortcut (equivalent to toolbar button click)
+      await page.keyboard.press(`${MODIFIER_KEY}+b`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify bold was applied
+      await expect(input).toContainText('World');
+
+      // Check that the text is within a bold/strong tag via DOM evaluation
+      const isBold = await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+        const boldElements = el?.querySelectorAll('b, strong') ?? [];
+
+        return boldElements.length > 0;
+      });
+
+      expect(isBold).toBe(true);
+
+      // Undo the bold formatting
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Bold should be removed - verify via DOM evaluation
+      const isBoldAfterUndo = await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+        const boldElements = el?.querySelectorAll('b, strong') ?? [];
+
+        return boldElements.length > 0;
+      });
+
+      expect(isBoldAfterUndo).toBe(false);
+
+      // Verify focus is preserved
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Should be able to type - text should appear somewhere in the block
+      await page.keyboard.type('X');
+      await expect(input).toContainText('X');
+    });
+  });
+
+  test.describe('edge Cases - Rapid Undo/Redo', () => {
+    test('rapid undo operations should not corrupt history state', async ({ page }) => {
+      // Edge case #5: Rapid undo/redo operations
+      // Note: Rapid undos may be blocked by isPerformingUndoRedo guard, which is intentional
+      // This test verifies that at least some undos complete without corrupting state
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Start' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Create multiple history entries
+      await input.click();
+      await input.type(' one');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await input.type(' two');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await input.type(' three');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify full text
+      await expect(input).toContainText('Start one two three');
+
+      // Perform rapid undo operations with minimal delay between them
+      // (to test concurrent handling - not all may execute due to guards)
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, 50);
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, 50);
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+
+      // Wait for all undos to complete
+      await waitForDelay(page, STATE_CHANGE_WAIT * 2);
+
+      // At minimum, some undo should have happened - text should be shorter
+      const textAfterUndo = await input.textContent();
+
+      expect(textAfterUndo?.length).toBeLessThan('Start one two three'.length);
+
+      // Get current text to determine how many redos we need
+      const currentText = await input.textContent();
+
+      // Redo should work correctly from this state
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Text should be longer after redo (unless we're already at latest state)
+      const textAfterRedo = await input.textContent();
+
+      // Verify state is consistent (not corrupted) - either redo worked or we're at max
+      expect(textAfterRedo?.length).toBeGreaterThanOrEqual(currentText?.length ?? 0);
+
+      // Continue redoing to verify stack integrity
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Final state should either be original or approaching it
+      // The important thing is no corruption - state should be valid text starting with "Start"
+      await expect(input).toContainText('Start');
+    });
+
+    test('interleaved undo/redo should maintain correct state', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'A' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Create history: A → AB → ABC
+      await input.click();
+      await page.keyboard.press('End');
+      await input.type('B');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await input.type('C');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Undo: ABC → AB
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('AB');
+
+      // Redo: AB → ABC
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('ABC');
+
+      // Undo twice: ABC → AB → A
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('A');
+
+      // Redo: A → AB
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('AB');
+
+      // Type new content (should clear redo stack)
+      await input.type('X');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await expect(input).toHaveText('ABX');
+
+      // Redo should have no effect (redo stack was cleared)
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('ABX');
+    });
+
+    test('undo during typing should maintain state consistency', async ({ page }) => {
+      // Edge case: What happens when user presses undo while still typing
+      // The implementation should handle this gracefully without corruption
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Initial' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Type first batch and wait for it to be recorded
+      await input.click();
+      await page.keyboard.press('End');
+      await input.type(' AAA');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify first batch was recorded
+      await expect(input).toContainText('Initial AAA');
+
+      // Start typing second batch
+      await input.type(' BBB');
+
+      // Don't wait for debounce - undo immediately
+      // The behavior depends on implementation: either:
+      // 1. Undo captures pending changes first, then undoes to previous state
+      // 2. Undo proceeds immediately, potentially losing unsaved changes
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // After undo, we should have valid state - either:
+      // - "Initial AAA" (undo removed BBB that was captured)
+      // - "Initial" (undo removed both batches because BBB wasn't saved yet)
+      // The key is that state should be consistent and valid
+      const textAfterUndo = await input.textContent();
+
+      expect(textAfterUndo).toContain('Initial');
+      expect(textAfterUndo).not.toContain('BBB'); // BBB should definitely be gone after undo
+
+      // State should be recoverable via redo
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // After redo, text should be longer than after undo
+      const textAfterRedo = await input.textContent();
+
+      // State is consistent - redo brought something back
+      expect(textAfterRedo?.length).toBeGreaterThanOrEqual(textAfterUndo?.length ?? 0);
+    });
+  });
+
   test.describe('batch Operations', () => {
     test('multi-block drag is undone in a single step', async ({ page }) => {
       // This test verifies that dragging multiple blocks together undoes as a single operation

@@ -41,6 +41,13 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
    * Omit if block has no children.
    */
   content?: BlockId[];
+
+  /**
+   * Slot index within parent container (e.g., which column in a columns block).
+   * Used for container blocks that have multiple slots like columns.
+   * Omit if block doesn't need slot assignment.
+   */
+  slot?: number;
 }
 
 export interface OutputData {

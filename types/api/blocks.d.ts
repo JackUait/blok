@@ -72,6 +72,21 @@ export interface Blocks {
   getBlockByElement(element: HTMLElement): BlockAPI | undefined;
 
   /**
+   * Returns all child blocks of a parent container block
+   *
+   * @param parentId - id of the parent block
+   */
+  getChildren(parentId: string): BlockAPI[];
+
+  /**
+   * Returns child blocks of a parent container block in a specific slot
+   *
+   * @param parentId - id of the parent block
+   * @param slot - slot index (e.g., column index for columns block)
+   */
+  getChildrenInSlot(parentId: string, slot: number): BlockAPI[];
+
+  /**
    * Returns Blocks count
    * @return {number}
    */

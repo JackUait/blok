@@ -235,6 +235,7 @@ export class BlockManager extends Module {
    * @param {BlockToolData} [options.data] - constructor params
    * @param {string} [options.parentId] - parent block id for hierarchical structure
    * @param {string[]} [options.contentIds] - array of child block ids
+   * @param {number} [options.slot] - slot index within parent container
    * @returns {Block}
    */
   public composeBlock({
@@ -244,6 +245,7 @@ export class BlockManager extends Module {
     tunes: tunesData = {},
     parentId,
     contentIds,
+    slot,
   }: {
     tool: string;
     id?: string;
@@ -251,6 +253,7 @@ export class BlockManager extends Module {
     tunes?: {[name: string]: BlockTuneData};
     parentId?: string;
     contentIds?: string[];
+    slot?: number;
   }): Block {
     const readOnly = this.Blok.ReadOnly.isEnabled;
     const tool = this.Blok.Tools.blockTools.get(name);
@@ -268,6 +271,7 @@ export class BlockManager extends Module {
       tunesData,
       parentId,
       contentIds,
+      slot,
     }, this.eventsDispatcher);
 
     if (!readOnly) {

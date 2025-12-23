@@ -79,6 +79,12 @@ interface BlockConstructorOptions {
    * References blocks that are children of this block.
    */
   contentIds?: string[];
+
+  /**
+   * Slot index within parent container (e.g., which column in a columns block).
+   * Used to organize children into specific slots for container blocks.
+   */
+  slot?: number;
 }
 
 /**
@@ -141,6 +147,12 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Empty array if block has no children.
    */
   public contentIds: string[];
+
+  /**
+   * Slot index within parent container (e.g., which column in a columns block).
+   * Null if this block is not assigned to a specific slot.
+   */
+  public slot: number | null;
 
   /**
    * Block Tool`s name
@@ -259,6 +271,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param options.readOnly - Read-Only flag
    * @param [options.parentId] - parent block id for hierarchical structure
    * @param [options.contentIds] - array of child block ids
+   * @param [options.slot] - slot index within parent container
    * @param [eventBus] - Blok common event bus. Allows to subscribe on some Blok events. Could be omitted when "virtual" Block is created. See BlocksAPI@composeBlockData.
    */
   constructor({
@@ -269,6 +282,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     tunesData,
     parentId,
     contentIds,
+    slot,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
     this.ready = new Promise((resolve) => {
@@ -278,6 +292,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.id = id;
     this.parentId = parentId ?? null;
     this.contentIds = contentIds ?? [];
+    this.slot = slot ?? null;
     this.settings = tool.settings;
     this.config = this.settings;
     this.blokEventBus = eventBus || null;

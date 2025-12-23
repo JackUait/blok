@@ -575,6 +575,14 @@ export class History extends Module {
     // Capture caret position along with state
     const caretPosition = this.getCaretPosition();
 
+    // Check if this state is identical to the last entry (avoid duplicates)
+    const lastEntry = this.undoStack[this.undoStack.length - 1];
+
+    if (lastEntry && this.areStatesEqual(lastEntry.state, state)) {
+      // State hasn't changed, no need to record
+      return;
+    }
+
     // Clear redo stack when new changes are made
     this.redoStack = [];
 
@@ -643,6 +651,44 @@ export class History extends Module {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Compares two states for equality (ignoring timestamps)
+   * @param a - first state
+   * @param b - second state
+   * @returns true if the block content is identical
+   */
+  private areStatesEqual(a: OutputData, b: OutputData): boolean {
+    // Quick check: different number of blocks
+    if (a.blocks.length !== b.blocks.length) {
+      return false;
+    }
+
+    // Compare each block using every() for functional approach
+    return a.blocks.every((blockA, i) => {
+      const blockB = b.blocks[i];
+
+      // Check ID and type
+      if (blockA.id !== blockB.id || blockA.type !== blockB.type) {
+        return false;
+      }
+
+      // Compare data (deep comparison via JSON)
+      if (JSON.stringify(blockA.data) !== JSON.stringify(blockB.data)) {
+        return false;
+      }
+
+      // Compare tunes if present
+      const tunesA = JSON.stringify(blockA.tunes ?? {});
+      const tunesB = JSON.stringify(blockB.tunes ?? {});
+
+      if (tunesA !== tunesB) {
+        return false;
+      }
+
+      return true;
+    });
   }
 
   /**

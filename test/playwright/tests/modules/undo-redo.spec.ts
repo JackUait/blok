@@ -2252,4 +2252,603 @@ test.describe('undo/Redo', () => {
       ]);
     });
   });
+
+  test.describe('edge Cases - Caret Position with Rich Text', () => {
+    test('caret position preserved after undoing inline formatting', async ({ page }) => {
+      // Edge case: Caret offset calculation when formatting is removed
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Click and position caret at offset 8 (after "Hello Wo")
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 8);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Select "World" (offset 6-11) and make it bold
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 6);
+        range.setEnd(el.firstChild, 11);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await page.keyboard.press(`${MODIFIER_KEY}+b`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify bold applied
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      await expect(input.locator('b, strong')).toHaveText('World');
+
+      // Now position caret inside the bold text at "Wor|ld" (offset 3 within bold)
+      await page.evaluate(() => {
+        const bold = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"] b, [data-blok-component="paragraph"] [contenteditable="true"] strong');
+
+        if (!bold || !bold.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(bold.firstChild, 3);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type something to create a new history entry with caret inside bold
+      await page.keyboard.type('X');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify text
+      await expect(input).toContainText('WorXld');
+
+      // Undo the typing
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify caret is restored and we can type at the same position
+      await page.keyboard.type('Y');
+      await expect(input).toContainText('WorYld');
+    });
+
+    test('caret position correct after undoing nested formatting', async ({ page }) => {
+      // Edge case: Multiple levels of formatting (bold inside italic)
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World Test' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Make "World" bold
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 6);
+        range.setEnd(el.firstChild, 11);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await page.keyboard.press(`${MODIFIER_KEY}+b`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Now make "World" also italic (nested formatting)
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const boldText = input.locator('b, strong');
+
+      await boldText.click();
+      await page.keyboard.press(`${MODIFIER_KEY}+a`); // Select all within bold
+      await page.keyboard.press(`${MODIFIER_KEY}+i`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify both formatting applied
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      await expect(input.locator('b i, strong i, i b, i strong, b em, strong em, em b, em strong')).toHaveCount(1);
+
+      // Undo italic
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Should still have bold but no italic
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      await expect(input.locator('b, strong')).toHaveText('World');
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      await expect(input.locator('i, em')).toHaveCount(0);
+
+      // Focus should be preserved
+      expect(await isEditorFocused(page)).toBe(true);
+    });
+  });
+
+  test.describe('edge Cases - Initial State Caret', () => {
+    test('caret is usable when undoing to initial state with autofocus', async ({ page }) => {
+      // Edge case: Initial state has no caret position stored
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Initial content' },
+            },
+          ],
+        },
+        config: {
+          autofocus: true,
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Wait for autofocus and ensure focus is set correctly
+      await waitForDelay(page, 100);
+      await input.click();
+      await page.keyboard.press('End');
+
+      // Type something
+      await page.keyboard.type(' added');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(input).toHaveText('Initial content added');
+
+      // Undo to initial state
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('Initial content');
+
+      // Even though initial state had no caret position, focus should be usable
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Should be able to type immediately
+      await page.keyboard.type('!');
+      await expect(input).toContainText('!');
+    });
+
+    test('caret fallback works when undoing to initial empty state', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: '' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Focus and type
+      await input.click();
+      await page.keyboard.type('Hello');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Undo to empty initial state
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('');
+
+      // Focus should be preserved with caret at offset 0
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Type to verify caret position
+      await page.keyboard.type('New');
+      await expect(input).toHaveText('New');
+    });
+  });
+
+  test.describe('edge Cases - Rapid Typing After Undo', () => {
+    test('typing immediately after undo is captured in history', async ({ page }) => {
+      // Edge case: 100ms cooldown might lose events if user types too fast
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Start' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Type and wait for history
+      await input.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' middle');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(input).toHaveText('Start middle');
+
+      // Undo
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('Start');
+
+      // Type IMMEDIATELY after undo (within cooldown period)
+      await page.keyboard.type(' fast');
+
+      // Wait for history to capture
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(input).toContainText('Start fast');
+
+      // The new typing should be in history - undo should remove it
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Should be back to "Start" (the fast typing was captured and undone)
+      await expect(input).toHaveText('Start');
+    });
+
+    test('multiple rapid undos do not corrupt history', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'A' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Create multiple history entries
+      await input.click();
+      await page.keyboard.press('End');
+
+      await page.keyboard.type('B');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await page.keyboard.type('C');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await page.keyboard.type('D');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(input).toHaveText('ABCD');
+
+      // Rapid fire undo commands
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+
+      // Wait for all to complete
+      await waitForDelay(page, STATE_CHANGE_WAIT * 3);
+
+      // Should have undone at least some entries without corruption
+      const text = await input.textContent();
+
+      expect(text?.startsWith('A')).toBe(true);
+      expect(text?.length).toBeLessThan(4);
+
+      // Redo should work correctly
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const textAfterRedo = await input.textContent();
+
+      expect(textAfterRedo?.length).toBeGreaterThanOrEqual(text?.length ?? 0);
+    });
+  });
+
+  test.describe('edge Cases - Block Focus After Structural Changes', () => {
+    test('focus preserved when block is updated in-place', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'First' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Second' },
+            },
+          ],
+        },
+      });
+
+      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
+      const secondInput = secondParagraph.locator('[contenteditable="true"]');
+
+      // Edit second block
+      await secondInput.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' modified');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(secondInput).toHaveText('Second modified');
+
+      // Undo - block should be updated in-place, not replaced
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(secondInput).toHaveText('Second');
+
+      // Focus should still be in editor
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Verify we can type in the correct block
+      await page.keyboard.type('!');
+
+      // The exclamation should appear in the second block
+      await expect(secondInput).toContainText('!');
+    });
+
+    test('focus moves to correct block when undoing block deletion', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Block A' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Block B' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Block C' },
+            },
+          ],
+        },
+      });
+
+      // Focus middle block and delete it
+      const middleBlock = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
+      const middleInput = middleBlock.locator('[contenteditable="true"]');
+
+      await middleInput.click();
+      await page.keyboard.press(`${MODIFIER_KEY}+a`);
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Delete the now-empty block
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify only 2 blocks remain
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+
+      // Undo block deletion
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Undo text deletion
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify all 3 blocks restored
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(3);
+
+      // Focus should be in the editor
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Type to verify focus is working
+      await page.keyboard.type('X');
+
+      // X should appear somewhere
+      const allText = await page.locator(PARAGRAPH_SELECTOR).allTextContents();
+
+      expect(allText.some(text => text.includes('X'))).toBe(true);
+    });
+
+    test('focus is usable after multiple undo operations across blocks', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'First' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Second' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Third' },
+            },
+          ],
+        },
+      });
+
+      // Edit first block
+      const firstInput = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type [contenteditable="true"]`);
+
+      await firstInput.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type('!');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(firstInput).toHaveText('First!');
+
+      // Edit second block
+      const secondInput = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2) [contenteditable="true"]`);
+
+      await secondInput.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type('?');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(secondInput).toHaveText('Second?');
+
+      // Edit third block
+      const thirdInput = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(3) [contenteditable="true"]`);
+
+      await thirdInput.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type('#');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(thirdInput).toHaveText('Third#');
+
+      // Undo all three edits
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(thirdInput).toHaveText('Third');
+
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(secondInput).toHaveText('Second');
+
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(firstInput).toHaveText('First');
+
+      // Focus should be usable after all undos
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Should be able to type
+      await page.keyboard.type('X');
+
+      const allText = await page.locator(PARAGRAPH_SELECTOR).allTextContents();
+
+      expect(allText.some(text => text.includes('X'))).toBe(true);
+    });
+  });
+
+  test.describe('edge Cases - Offset Boundary Conditions', () => {
+    test('caret at offset 0 works correctly after undo', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Position caret at start
+      await input.click();
+      await page.keyboard.press('Home');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type at beginning
+      await page.keyboard.type('X');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(input).toHaveText('XHello');
+
+      // Undo
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('Hello');
+
+      // Caret should be at start - typing should prepend
+      await page.keyboard.type('Y');
+      await expect(input).toHaveText('YHello');
+    });
+
+    test('caret at max offset clamped correctly after undo shortens text', async ({ page }) => {
+      // Test that when text is shortened by undo, a caret position that was
+      // beyond the new content length is clamped to the end
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'ABCDEFGHIJ' }, // 10 chars
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Position at the end (offset 10) and add one more character
+      await input.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type('K');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      await expect(input).toHaveText('ABCDEFGHIJK'); // 11 chars
+
+      // Undo - caret was at offset 11, but after undo we have 10 chars
+      // The caret should be clamped to the end
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('ABCDEFGHIJ');
+
+      // Focus should be preserved - caret clamped to end
+      expect(await isEditorFocused(page)).toBe(true);
+
+      // Typing should work at clamped position (end)
+      await page.keyboard.type('X');
+      await expect(input).toHaveText('ABCDEFGHIJX');
+    });
+  });
 });

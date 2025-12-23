@@ -1485,6 +1485,203 @@ test.describe('undo/Redo', () => {
     });
   });
 
+  test.describe('edge Cases - Action Change Threshold', () => {
+    test('quick correction (type, delete <3, type) stays grouped', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: '' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Type "hello"
+      await input.click();
+      await page.keyboard.type('hello');
+
+      // Quick correction: delete 2 chars (below threshold)
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+
+      // Continue typing
+      await page.keyboard.type('p me');
+
+      // Wait for debounce
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify final text
+      await expect(input).toHaveText('help me');
+
+      // Single undo should restore empty state (all grouped together)
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('');
+    });
+
+    test('intentional deletion (type, delete 3+) creates separate entries', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: '' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Type "hello world"
+      await input.click();
+      await page.keyboard.type('hello world');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Delete 3 characters (hits threshold on 3rd)
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify current text ("hello world" minus "rld" = "hello wo")
+      await expect(input).toHaveText('hello wo');
+
+      // First undo should restore "hello world" (undo the deletion batch)
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('hello world');
+
+      // Second undo should restore empty state (undo the typing)
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(input).toHaveText('');
+    });
+
+    test('threshold resets after checkpoint is created', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: '' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Type "abcdef"
+      await input.click();
+      await page.keyboard.type('abcdef');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Delete 3 chars (hits threshold) -> "abc"
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type "123"
+      await page.keyboard.type('123');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Delete 3 chars again (hits threshold, counter was reset) -> "abc"
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Current: "abc"
+      await expect(input).toHaveText('abc');
+
+      // Undo 1: restore "abc123"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('abc123');
+
+      // Undo 2: restore "abc"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('abc');
+
+      // Undo 3: restore "abcdef"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('abcdef');
+
+      // Undo 4: restore empty
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await expect(input).toHaveText('');
+    });
+
+    test('format action creates separate undo step from preceding edits', async ({ page }) => {
+      // Test that formatting creates a separate undo entry from typing
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'hello world' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Select "world" and apply bold
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        // Select "world" (positions 6-11)
+        range.setStart(el.firstChild, 6);
+        range.setEnd(el.firstChild, 11);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+b`);
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify bold applied
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const boldText = input.locator('b, strong');
+      await expect(boldText).toHaveText('world');
+
+      // Undo should remove bold
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // eslint-disable-next-line internal-playwright/no-css-selectors
+      const boldAfterUndo = input.locator('b, strong');
+      await expect(boldAfterUndo).toHaveCount(0);
+      await expect(input).toHaveText('hello world');
+    });
+  });
+
   test.describe('edge Cases - Block Split/Merge', () => {
     test('block split should create a separate undo step from typing', async ({ page }) => {
       // Edge case #3: Block split/merge should be treated as structural changes

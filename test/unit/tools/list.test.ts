@@ -463,6 +463,52 @@ describe('Data Model Transform - List Compatibility', () => {
       expect(expanded[0].data.checked).toBe(true);
       expect(expanded[1].data.checked).toBe(false);
     });
+
+    it('expands legacy list with plain string items', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'list1',
+          type: 'list',
+          data: {
+            style: 'unordered',
+            items: ['Item 1', 'Item 2', 'Item 3'],
+          },
+        },
+      ];
+
+      const expanded = expandToHierarchical(blocks);
+
+      expect(expanded).toHaveLength(3);
+      expect(expanded[0].type).toBe('list');
+      expect(expanded[0].data.text).toBe('Item 1');
+      expect(expanded[0].data.style).toBe('unordered');
+      expect(expanded[1].data.text).toBe('Item 2');
+      expect(expanded[2].data.text).toBe('Item 3');
+    });
+
+    it('expands old checklist format with text property', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'list1',
+          type: 'list',
+          data: {
+            style: 'checklist',
+            items: [
+              { text: 'Task 1', checked: true },
+              { text: 'Task 2', checked: false },
+            ],
+          },
+        },
+      ];
+
+      const expanded = expandToHierarchical(blocks);
+
+      expect(expanded).toHaveLength(2);
+      expect(expanded[0].data.text).toBe('Task 1');
+      expect(expanded[0].data.checked).toBe(true);
+      expect(expanded[1].data.text).toBe('Task 2');
+      expect(expanded[1].data.checked).toBe(false);
+    });
   });
 
   describe('collapseToLegacy', () => {

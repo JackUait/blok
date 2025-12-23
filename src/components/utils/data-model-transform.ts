@@ -8,18 +8,30 @@ import type { OutputBlockData, BlockId } from '../../../types';
 import { generateBlockId } from '../utils';
 
 /**
- * Legacy list item structure for data model transformation.
- * Used internally for transforming legacy nested list data to the hierarchical model.
+ * Legacy list item as object with content property
  */
-interface LegacyListItem {
+interface LegacyListItemObject {
   content: string;
   checked?: boolean;
   items?: LegacyListItem[];
 }
 
 /**
+ * Old checklist item format (uses 'text' instead of 'content')
+ */
+interface OldChecklistItem {
+  text: string;
+  checked?: boolean;
+}
+
+/**
+ * Legacy list item structure for data model transformation.
+ * Can be: object with content, object with text (old checklist), or plain string.
+ */
+type LegacyListItem = LegacyListItemObject | OldChecklistItem | string;
+
+/**
  * Legacy list data structure for data model transformation.
- * Used internally for transforming legacy nested list data to the hierarchical model.
  */
 interface LegacyListData {
   style: 'unordered' | 'ordered' | 'checklist';
@@ -42,10 +54,36 @@ export interface DataFormatAnalysis {
 }
 
 /**
+ * Check if item is old checklist format (has 'text' instead of 'content')
+ */
+const isOldChecklistItem = (item: LegacyListItem): item is OldChecklistItem => {
+  return typeof item === 'object' && 'text' in item && !('content' in item);
+};
+
+/**
+ * Normalize a legacy list item to object format
+ */
+const normalizeListItem = (item: LegacyListItem): LegacyListItemObject => {
+  if (typeof item === 'string') {
+    return { content: item };
+  }
+
+  if (isOldChecklistItem(item)) {
+    return { content: item.text, checked: item.checked };
+  }
+
+  return item;
+};
+
+/**
  * Recursively check if any list item has nested items (for hasHierarchy flag)
  */
 const hasNestedListItems = (items: LegacyListItem[]): boolean => {
-  return items.some(item => item.items !== undefined && item.items.length > 0);
+  return items.some(item => {
+    const normalized = normalizeListItem(item);
+
+    return normalized.items !== undefined && normalized.items.length > 0;
+  });
 };
 
 /**
@@ -114,7 +152,9 @@ const expandListItems = (
 ): BlockId[] => {
   const childIds: BlockId[] = [];
 
-  items.forEach((item, index) => {
+  items.forEach((rawItem, index) => {
+    // Normalize item to handle both string and object formats
+    const item = normalizeListItem(rawItem);
     const itemId = generateBlockId();
 
     childIds.push(itemId);

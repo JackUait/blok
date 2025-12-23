@@ -20,7 +20,7 @@ const DEFAULT_MAX_HISTORY_LENGTH = 30;
 /**
  * Default debounce time for content changes (ms)
  */
-const DEFAULT_DEBOUNCE_TIME = 200;
+const DEFAULT_DEBOUNCE_TIME = 300;
 
 /**
  * Time to wait after restore before accepting new changes (ms)

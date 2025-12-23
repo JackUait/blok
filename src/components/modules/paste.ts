@@ -270,14 +270,10 @@ export class Paste extends Module {
     const normalizedHtmlData = rawHtmlData;
 
     /**
-     * If Blok json is passed, insert it
+     * If Blok json is passed, check if we should try pattern matching first
      */
-    if (blokData) {
-      try {
-        this.insertBlokData(JSON.parse(blokData));
-
-        return;
-      } catch (_e) { } // Do nothing and continue execution as usual if error appears
+    if (blokData && await this.handleBlokDataPaste(blokData, plainData)) {
+      return;
     }
 
     /** Add all tags that can be substituted to sanitizer configuration */
@@ -305,6 +301,50 @@ export class Paste extends Module {
     } else {
       await this.processText(cleanData, true);
     }
+  }
+
+  /**
+   * Handles pasting of Blok JSON data, with pattern matching priority.
+   * For plain text that might match a pattern (like URLs), tries pattern matching first.
+   * This handles the case where text is cut and pasted within the same editor -
+   * we want pattern matching to still work for things like embed URLs.
+   * @param blokData - serialized Blok JSON data
+   * @param plainData - plain text content from clipboard
+   * @returns true if paste was handled, false otherwise
+   */
+  private async handleBlokDataPaste(blokData: string, plainData: string): Promise<boolean> {
+    try {
+      const parsedBlokData = JSON.parse(blokData) as Pick<SavedData, 'id' | 'data' | 'tool'>[];
+      const shouldTryPatternMatch = plainData && this.toolsPatterns.length > 0;
+      const patternResult = shouldTryPatternMatch ? await this.processPattern(plainData) : undefined;
+
+      if (patternResult) {
+        await this.insertPatternMatch(patternResult);
+
+        return true;
+      }
+
+      this.insertBlokData(parsedBlokData);
+
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  /**
+   * Inserts a matched pattern as a new block
+   * @param patternResult - the matched pattern with tool and event
+   */
+  private async insertPatternMatch(patternResult: { event: PasteEvent; tool: string }): Promise<void> {
+    const { BlockManager, Caret } = this.Blok;
+    const needToReplaceCurrentBlock = BlockManager.currentBlock &&
+      BlockManager.currentBlock.tool.isDefault &&
+      BlockManager.currentBlock.isEmpty;
+
+    const insertedBlock = await BlockManager.paste(patternResult.tool, patternResult.event, needToReplaceCurrentBlock);
+
+    Caret.setToBlock(insertedBlock, Caret.positions.END);
   }
 
   /**

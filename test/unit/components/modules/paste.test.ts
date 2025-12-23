@@ -593,6 +593,224 @@ describe('Paste module', () => {
     expect(mocks.Caret.setToBlock).toHaveBeenNthCalledWith(2, { id: 'paragraph-id' }, mocks.Caret.positions.END);
   });
 
+  it('checks patterns when pasting Blok data containing pattern-matching text', async () => {
+    const { paste, mocks } = createPaste();
+
+    const patternTool = {
+      name: 'embed',
+      pasteConfig: {},
+      baseSanitizeConfig: {},
+    } as unknown as BlockToolAdapter;
+
+    // Register a URL pattern
+    (paste as unknown as {
+      toolsPatterns: Array<{
+        key: string;
+        pattern: RegExp;
+        tool: BlockToolAdapter;
+      }>;
+    }).toolsPatterns = [
+      {
+        key: 'url',
+        pattern: /^https:\/\/example\.com$/,
+        tool: patternTool,
+      },
+    ];
+
+    mocks.BlockManager.currentBlock = {
+      tool: {
+        isDefault: true,
+        baseSanitizeConfig: {},
+      },
+      isEmpty: true,
+      name: 'paragraph',
+      currentInput: document.createElement('div'),
+    };
+
+    mocks.BlockManager.paste.mockReturnValue({ id: 'embed-block' });
+
+    // Simulate pasting Blok data that contains a URL (cut/paste scenario)
+    const dataTransfer = {
+      getData: (type: string): string => {
+        if (type === 'application/x-blok') {
+          return JSON.stringify([
+            {
+              id: '1',
+              tool: 'paragraph',
+              data: { text: 'https://example.com' },
+            },
+          ]);
+        }
+        if (type === 'text/plain') {
+          return 'https://example.com';
+        }
+        return '';
+      },
+      types: ['application/x-blok', 'text/plain', 'text/html'],
+      files: { length: 0 } as FileList,
+    } as unknown as DataTransfer;
+
+    await paste.processDataTransfer(dataTransfer);
+
+    // Should trigger pattern paste, not direct Blok data insertion
+    expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+    const [tool, event] = mocks.BlockManager.paste.mock.calls[0];
+
+    expect(tool).toBe('embed');
+    expect(event).toBeInstanceOf(CustomEvent);
+    expect(event.type).toBe('pattern');
+    expect(event.detail.data).toBe('https://example.com');
+  });
+
+  it('uses Blok data directly when no pattern matches', async () => {
+    const { paste, mocks } = createPaste();
+
+    const patternTool = {
+      name: 'embed',
+      pasteConfig: {},
+      baseSanitizeConfig: {},
+    } as unknown as BlockToolAdapter;
+
+    // Register a URL pattern that won't match
+    (paste as unknown as {
+      toolsPatterns: Array<{
+        key: string;
+        pattern: RegExp;
+        tool: BlockToolAdapter;
+      }>;
+    }).toolsPatterns = [
+      {
+        key: 'youtube',
+        pattern: /^https:\/\/www\.youtube\.com\/watch/,
+        tool: patternTool,
+      },
+    ];
+
+    mocks.BlockManager.currentBlock = {
+      tool: {
+        isDefault: true,
+      },
+      isEmpty: true,
+    };
+
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
+      {
+        tool: 'paragraph',
+        data: { text: 'Hello world' },
+      },
+    ]);
+
+    mocks.BlockManager.insert.mockReturnValue({ id: 'paragraph-id' });
+
+    // Plain text doesn't match the youtube pattern
+    const dataTransfer = {
+      getData: (type: string): string => {
+        if (type === 'application/x-blok') {
+          return JSON.stringify([
+            {
+              id: '1',
+              tool: 'paragraph',
+              data: { text: 'Hello world' },
+            },
+          ]);
+        }
+        if (type === 'text/plain') {
+          return 'Hello world';
+        }
+        return '';
+      },
+      types: ['application/x-blok', 'text/plain', 'text/html'],
+      files: { length: 0 } as FileList,
+    } as unknown as DataTransfer;
+
+    await paste.processDataTransfer(dataTransfer);
+
+    // Should use insertBlokData since pattern doesn't match
+    expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+    expect(mocks.BlockManager.insert).toHaveBeenCalledWith({
+      tool: 'paragraph',
+      data: { text: 'Hello world' },
+      replace: true,
+    });
+  });
+
+  it('uses Blok data when plain text does not match any pattern', async () => {
+    const { paste, mocks } = createPaste();
+
+    const patternTool = {
+      name: 'embed',
+      pasteConfig: {},
+      baseSanitizeConfig: {},
+    } as unknown as BlockToolAdapter;
+
+    // Register a URL pattern
+    (paste as unknown as {
+      toolsPatterns: Array<{
+        key: string;
+        pattern: RegExp;
+        tool: BlockToolAdapter;
+      }>;
+    }).toolsPatterns = [
+      {
+        key: 'url',
+        pattern: /^https:\/\/example\.com$/,
+        tool: patternTool,
+      },
+    ];
+
+    mocks.BlockManager.currentBlock = {
+      tool: {
+        isDefault: true,
+      },
+      isEmpty: true,
+    };
+
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
+      {
+        tool: 'paragraph',
+        data: { text: 'First block' },
+      },
+      {
+        tool: 'paragraph',
+        data: { text: 'Second block' },
+      },
+    ]);
+
+    mocks.BlockManager.insert.mockReturnValue({ id: 'block-id' });
+
+    // Multi-block paste - plain text doesn't match the URL pattern, so Blok data is used
+    const dataTransfer = {
+      getData: (type: string): string => {
+        if (type === 'application/x-blok') {
+          return JSON.stringify([
+            {
+              id: '1',
+              tool: 'paragraph',
+              data: { text: 'First block' },
+            },
+            {
+              id: '2',
+              tool: 'paragraph',
+              data: { text: 'Second block' },
+            },
+          ]);
+        }
+        if (type === 'text/plain') {
+          return 'First block\n\nSecond block';
+        }
+        return '';
+      },
+      types: ['application/x-blok', 'text/plain', 'text/html'],
+      files: { length: 0 } as FileList,
+    } as unknown as DataTransfer;
+
+    await paste.processDataTransfer(dataTransfer);
+
+    // Should use insertBlokData for multi-block paste
+    expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+    expect(mocks.BlockManager.insert).toHaveBeenCalledTimes(2);
+  });
+
   it('splits plain text by new lines and creates PasteData entries', () => {
     const { paste } = createPaste({ defaultBlock: 'paragraph' });
 

@@ -620,6 +620,156 @@ test.describe('undo/Redo', () => {
   });
 
   test.describe('caret Positioning', () => {
+    test('caret restores to split position after undoing block split', async ({ page }) => {
+      // This test verifies the fix for the bug where caret was restored to the wrong position
+      // after undoing a block split. The caret should be at the position where Enter was pressed,
+      // not at the position captured when the previous history state was recorded.
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Focus and move to end of text first
+      await input.click();
+      await page.keyboard.press('End');
+
+      // Wait for history debounce to ensure state is captured with caret at end (position 11)
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Now move caret to middle of text (after "Hello ") - position 6
+      await input.click();
+
+      // Use evaluate to set precise caret position
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        // Set caret at position 6 (after "Hello ")
+        range.setStart(el.firstChild, 6);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      // Short wait to ensure caret position is set
+      await waitForDelay(page, 50);
+
+      // Press Enter to split the block at position 6
+      await page.keyboard.press('Enter');
+
+      // Wait for history to record the split
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we now have 2 blocks
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+
+      // Verify the split happened correctly
+      await expect(page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(1) [contenteditable="true"]`)).toHaveText('Hello ');
+      await expect(page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2) [contenteditable="true"]`)).toHaveText('World');
+
+      // Undo the split
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify we're back to 1 block with original text
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(input).toHaveText('Hello World');
+
+      // Type immediately to verify caret position
+      // If the bug is fixed, typing here should insert at position 6 (after "Hello ")
+      // If the bug exists, typing would insert at position 11 (end of text) or 0 (start)
+      await page.keyboard.type('X');
+
+      // The text should be "Hello XWorld" if caret was correctly restored to position 6
+      await expect(input).toHaveText('Hello XWorld');
+    });
+
+    test('caret restores to correct block after undoing new block creation', async ({ page }) => {
+      // This test verifies the fix for the bug where pressing Enter at the end of a paragraph
+      // to create a new empty block, then undoing, would restore the caret to a different block.
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'First paragraph' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Second paragraph' },
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Third paragraph' },
+            },
+          ],
+        },
+      });
+
+      // Focus the second paragraph and move to end
+      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
+      const secondInput = secondParagraph.locator('[contenteditable="true"]');
+
+      await secondInput.click();
+
+      // Use evaluate to set precise caret position at end
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"]:nth-of-type(2) [contenteditable="true"]');
+
+        if (!el || !el.lastChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.selectNodeContents(el);
+        range.collapse(false); // collapse to end
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      // Wait for history debounce
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Press Enter to create a new empty block after the second paragraph
+      await page.keyboard.press('Enter');
+
+      // Wait for history to record
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we now have 4 blocks
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(4);
+
+      // Undo the block creation
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify we're back to 3 blocks
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(3);
+
+      // Type to verify caret position - should be at end of second paragraph
+      await page.keyboard.type('X');
+
+      // The second paragraph should now end with "X"
+      await expect(secondInput).toHaveText('Second paragraphX');
+    });
+
     test('caret is positioned correctly after undo when offset becomes 0', async ({ page }) => {
       await createBlok(page, {
         data: {

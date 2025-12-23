@@ -135,6 +135,23 @@ export class History extends Module {
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
   /**
+   * Selection change handler reference for cleanup
+   */
+  private selectionChangeHandler: (() => void) | null = null;
+
+  /**
+   * Pending caret position - captured on keydown (before mutation) or selection change (fallback)
+   * This ensures we always have the caret position from BEFORE any mutation
+   */
+  private pendingCaretPosition: CaretPosition | undefined = undefined;
+
+  /**
+   * Flag indicating whether keydown already captured the position for the current action.
+   * This prevents selectionchange from overwriting the correct pre-mutation position.
+   */
+  private keydownCapturedPosition = false;
+
+  /**
    * Maximum number of entries in history stack
    */
   private get maxHistoryLength(): number {
@@ -163,11 +180,16 @@ export class History extends Module {
     this.setupEventListeners();
     this.setupKeyboardShortcuts();
     this.setupActionTypeTracking();
+    this.setupSelectionTracking();
   }
 
   /**
    * Captures the initial document state
    * Should be called after rendering is complete
+   *
+   * Note: We don't capture caret position for the initial state.
+   * The caret position will be set when the first action is recorded,
+   * ensuring we restore to where the caret was before that first action.
    */
   public async captureInitialState(): Promise<void> {
     if (this.initialStateCaptured) {
@@ -177,12 +199,10 @@ export class History extends Module {
     const state = await this.getCurrentState();
 
     if (state) {
-      const caretPosition = this.getCaretPosition();
-
       this.undoStack = [{
         state,
         timestamp: Date.now(),
-        caretPosition,
+        // Note: No caretPosition here - it will be set when the next state is recorded
       }];
       this.initialStateCaptured = true;
       this.emitStateChanged();
@@ -453,7 +473,12 @@ export class History extends Module {
   }
 
   /**
-   * Sets up keydown tracking for action type detection
+   * Sets up keydown tracking for action type detection and caret position capture
+   *
+   * IMPORTANT: We capture the caret position on keydown because this fires BEFORE
+   * any DOM mutation happens. The selectionchange event fires AFTER mutations,
+   * which means the caret has already moved to a new position (e.g., to a newly
+   * created block after pressing Enter).
    */
   private setupActionTypeTracking(): void {
     // Wait for UI to be ready
@@ -465,6 +490,33 @@ export class History extends Module {
       }
 
       this.keydownHandler = (e: KeyboardEvent): void => {
+        // Skip modifier-only keys and shortcuts that won't cause mutations
+        if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') {
+          return;
+        }
+
+        // Skip undo/redo shortcuts - we don't want to capture position for these
+        if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')) {
+          return;
+        }
+
+        // Detect action type from key press and determine if this key causes mutations
+        const isMutationKey = e.key === 'Backspace' ||
+          e.key === 'Delete' ||
+          e.key === 'Enter' ||
+          (e.key.length === 1 && !e.ctrlKey && !e.metaKey);
+
+        // Only capture caret position for keys that will cause mutations.
+        // For navigation keys (arrows, Home, End, etc.), we let selectionchange
+        // update the position after the caret moves.
+        if (isMutationKey) {
+          // Capture caret position BEFORE any mutation happens
+          // This is critical for correct undo behavior - we want to restore
+          // to where the caret was when the user initiated the action
+          this.pendingCaretPosition = this.getCaretPosition();
+          this.keydownCapturedPosition = true;
+        }
+
         // Detect action type from key press
         if (e.key === 'Backspace') {
           this.currentActionType = 'delete-back';
@@ -484,7 +536,59 @@ export class History extends Module {
         }
       };
 
-      redactor.addEventListener('keydown', this.keydownHandler);
+      // Use capture phase to ensure we capture the caret position BEFORE
+      // BlockEvents.enter() (which runs on block.holder's bubble phase) moves the caret
+      redactor.addEventListener('keydown', this.keydownHandler, { capture: true });
+    }, 0);
+  }
+
+  /**
+   * Sets up selection change tracking as a backup for capturing caret position
+   *
+   * This serves as a fallback for non-keyboard actions (like paste via context menu,
+   * drag-and-drop, etc.). For keyboard actions, the keydown handler captures the
+   * position more reliably since it fires BEFORE any DOM mutation.
+   *
+   * Note: selectionchange fires AFTER DOM mutations, so for keyboard actions that
+   * create new blocks (like Enter), this would capture the wrong position.
+   * That's why keydown is the primary capture mechanism.
+   */
+  private setupSelectionTracking(): void {
+    // Wait for UI to be ready
+    setTimeout(() => {
+      const redactor = this.Blok.UI?.nodes?.redactor;
+
+      if (!redactor) {
+        return;
+      }
+
+      this.selectionChangeHandler = (): void => {
+        // If keydown already captured the position for this action, don't overwrite it.
+        // selectionchange fires AFTER DOM mutations, so it would capture the wrong position
+        // for actions like Enter that create new blocks.
+        if (this.keydownCapturedPosition) {
+          return;
+        }
+
+        // Only capture if selection is within the editor
+        const selection = window.getSelection();
+
+        if (!selection || selection.rangeCount === 0) {
+          return;
+        }
+
+        const range = selection.getRangeAt(0);
+
+        if (!redactor.contains(range.startContainer)) {
+          return;
+        }
+
+        // Capture the current caret position as fallback for non-keyboard actions
+        // (e.g., context menu paste, drag-and-drop)
+        this.pendingCaretPosition = this.getCaretPosition();
+      };
+
+      document.addEventListener('selectionchange', this.selectionChangeHandler);
     }, 0);
   }
 
@@ -548,6 +652,20 @@ export class History extends Module {
 
   /**
    * Records the current state to history
+   *
+   * IMPORTANT: To fix caret restoration on undo, we capture the caret position
+   * and store it on the PREVIOUS entry (not the new entry). This is because:
+   *
+   * 1. When undoing, we want to restore to where the caret was BEFORE the action
+   * 2. The previous entry represents the state we'll restore to
+   * 3. The caret might have moved since the previous entry was recorded (without content changes)
+   *
+   * Example flow:
+   * - User types "hello" → state recorded with caret at end of "hello"
+   * - User moves caret to position 2 (no content change, no state recorded)
+   * - User presses Enter to split block
+   * - NEW state is recorded, but we update PREVIOUS entry's caret to position 2
+   * - On undo: we restore to "hello" with caret at position 2 (where Enter was pressed)
    */
   private async recordState(): Promise<void> {
     // Double-check we're not in undo/redo mode
@@ -572,25 +690,39 @@ export class History extends Module {
       return;
     }
 
-    // Capture caret position along with state
-    const caretPosition = this.getCaretPosition();
+    // Use the pending caret position (captured on keydown or selection change BEFORE the mutation)
+    // This ensures we get the caret position from before the action, not after
+    const caretPosition = this.pendingCaretPosition;
+
+    // Reset the keydown capture flag now that we've used the position
+    this.keydownCapturedPosition = false;
 
     // Check if this state is identical to the last entry (avoid duplicates)
     const lastEntry = this.undoStack[this.undoStack.length - 1];
 
+    // Always update the last entry's caret position to where the caret WAS
+    // (captured before this action via selection change tracking).
+    // This ensures that when we undo back to the previous state,
+    // we restore to where the caret was when the action started.
+    if (lastEntry && caretPosition) {
+      lastEntry.caretPosition = caretPosition;
+    }
+
+    // If state hasn't changed, we're done (caret was already updated above)
     if (lastEntry && this.areStatesEqual(lastEntry.state, state)) {
-      // State hasn't changed, no need to record
       return;
     }
 
     // Clear redo stack when new changes are made
     this.redoStack = [];
 
-    // Add new entry
+    // Add new entry (without caret position - it will be set when the NEXT state is recorded)
     this.undoStack.push({
       state,
       timestamp: Date.now(),
-      caretPosition,
+      // Note: We intentionally don't set caretPosition here.
+      // It will be set when the next state is recorded, capturing where the
+      // caret was just before that action. This ensures correct undo behavior.
     });
 
     // Trim stack if exceeds max length
@@ -881,28 +1013,52 @@ export class History extends Module {
 
   /**
    * Captures current caret position for later restoration
+   *
+   * IMPORTANT: This method determines the block from the actual DOM selection,
+   * not from BlockManager.currentBlock. This is necessary because:
+   * 1. BlockManager.currentBlock might be stale if the user moved the caret
+   *    programmatically or via selection without triggering the UI events
+   * 2. We need the most accurate position at the moment of capture
+   *
    * @returns CaretPosition or undefined if caret is not in the editor
    */
   private getCaretPosition(): CaretPosition | undefined {
     const { BlockManager } = this.Blok;
-    const currentBlock = BlockManager.currentBlock;
 
-    if (!currentBlock) {
+    // Get the current selection
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
       return undefined;
     }
 
-    const currentInput = currentBlock.currentInput;
+    const range = selection.getRangeAt(0);
+    const anchorNode = range.startContainer;
 
-    if (!currentInput) {
+    // Find the block containing the selection by traversing up the DOM
+    // This is more reliable than using BlockManager.currentBlock which might be stale
+    const block = BlockManager.getBlockByChildNode(anchorNode);
+
+    if (!block) {
       return undefined;
     }
 
-    const inputIndex = currentBlock.inputs.indexOf(currentInput);
-    const offset = this.getCaretOffset(currentInput);
-    const blockIndex = BlockManager.currentBlockIndex;
+    // Find the input element containing the selection
+    const inputElement = anchorNode instanceof HTMLElement
+      ? anchorNode.closest('[contenteditable="true"]') as HTMLElement | null
+      : anchorNode.parentElement?.closest('[contenteditable="true"]') as HTMLElement | null;
+
+    if (!inputElement) {
+      return undefined;
+    }
+
+    // Get block index from the blocks array
+    const blockIndex = BlockManager.getBlockIndex(block);
+    const inputIndex = block.inputs.indexOf(inputElement);
+    const offset = this.getCaretOffset(inputElement);
 
     return {
-      blockId: currentBlock.id,
+      blockId: block.id,
       blockIndex: blockIndex >= 0 ? blockIndex : 0,
       inputIndex: inputIndex >= 0 ? inputIndex : 0,
       offset,
@@ -1215,13 +1371,20 @@ export class History extends Module {
     }
     this.registeredShortcuts = [];
 
-    // Remove keydown handler
+    // Remove keydown handler (must use capture: true to match registration)
     const redactor = this.Blok.UI?.nodes?.redactor;
 
     if (this.keydownHandler && redactor) {
-      redactor.removeEventListener('keydown', this.keydownHandler);
+      redactor.removeEventListener('keydown', this.keydownHandler, { capture: true });
     }
     this.keydownHandler = null;
+
+    // Remove selection change handler
+    if (this.selectionChangeHandler) {
+      document.removeEventListener('selectionchange', this.selectionChangeHandler);
+    }
+    this.selectionChangeHandler = null;
+    this.pendingCaretPosition = undefined;
 
     // Clear active instance if it's this one
     if (History.activeInstance === this) {

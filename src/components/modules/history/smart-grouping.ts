@@ -113,7 +113,6 @@ export class SmartGrouping {
     this.currentContext = {
       type: actionType,
       blockId,
-      timestamp: Date.now(),
     };
   }
 

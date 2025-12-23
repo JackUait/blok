@@ -111,7 +111,6 @@ describe('SmartGrouping', () => {
       expect(context).toBeDefined();
       expect(context?.type).toBe('insert');
       expect(context?.blockId).toBe('block-1');
-      expect(context?.timestamp).toBeGreaterThan(0);
     });
 
     it('should overwrite previous context', () => {

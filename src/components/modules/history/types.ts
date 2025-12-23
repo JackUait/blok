@@ -48,9 +48,4 @@ export interface ActionContext {
    * ID of the block being edited
    */
   blockId: string;
-
-  /**
-   * Timestamp when this context started
-   */
-  timestamp: number;
 }

@@ -72,11 +72,8 @@ export class SmartGrouping {
     if (actionMatchesContext && this.pendingActionCount > 0) {
       this.pendingActionCount++;
 
-      if (this.pendingActionCount >= ACTION_CHANGE_THRESHOLD) {
-        return true;
-      }
-
-      return false;
+      // Checkpoint when threshold reached
+      return this.pendingActionCount >= ACTION_CHANGE_THRESHOLD;
     }
 
     // Same action as context with no pending transition - stable state

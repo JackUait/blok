@@ -58,15 +58,42 @@ export class SmartGrouping {
       return false;
     }
 
-    // Block changed - create checkpoint
+    // Block changed - create checkpoint immediately
     if (this.currentContext.blockId !== blockId) {
+      this.pendingActionCount = 0;
+
       return true;
     }
 
-    // Action type changed (e.g., typing → deleting) - create checkpoint
-    if (this.currentContext.type !== actionType) {
-      return true;
+    const actionMatchesContext = this.currentContext.type === actionType;
+
+    // If we're tracking a transition and action matches context, continue counting
+    // (Context was updated to the new action type by caller)
+    if (actionMatchesContext && this.pendingActionCount > 0) {
+      this.pendingActionCount++;
+
+      if (this.pendingActionCount >= ACTION_CHANGE_THRESHOLD) {
+        return true;
+      }
+
+      return false;
     }
+
+    // Same action as context with no pending transition - stable state
+    if (actionMatchesContext) {
+      return false;
+    }
+
+    // Action differs from context
+    if (this.pendingActionCount > 0) {
+      // Was tracking different action, now switching again - reset
+      this.pendingActionCount = 0;
+
+      return false;
+    }
+
+    // Start tracking new action type
+    this.pendingActionCount = 1;
 
     return false;
   }

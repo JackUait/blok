@@ -22,25 +22,25 @@ describe('SmartGrouping', () => {
       expect(result).toBe(true);
     });
 
-    it('should return true when action type changes from insert to delete-back', () => {
+    it('should not create checkpoint immediately when action type changes from insert to delete-back', () => {
       grouping.updateContext('insert', 'block-1');
       const result = grouping.shouldCreateCheckpoint({ actionType: 'delete-back' }, 'block-1');
 
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
 
-    it('should return true when action type changes from delete-back to insert', () => {
+    it('should not create checkpoint immediately when action type changes from delete-back to insert', () => {
       grouping.updateContext('delete-back', 'block-1');
       const result = grouping.shouldCreateCheckpoint({ actionType: 'insert' }, 'block-1');
 
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
 
-    it('should return true when action type changes from delete-back to delete-fwd', () => {
+    it('should not create checkpoint immediately when action type changes from delete-back to delete-fwd', () => {
       grouping.updateContext('delete-back', 'block-1');
       const result = grouping.shouldCreateCheckpoint({ actionType: 'delete-fwd' }, 'block-1');
 
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
 
     it('should return false for same action type and same block', () => {
@@ -64,12 +64,12 @@ describe('SmartGrouping', () => {
       expect(result).toBe(false);
     });
 
-    it('should create checkpoint when switching from insert to delete with default', () => {
+    it('should not create checkpoint immediately when switching from delete to insert with default', () => {
       grouping.updateContext('delete-back', 'block-1');
       // No actionType defaults to 'insert'
       const result = grouping.shouldCreateCheckpoint({}, 'block-1');
 
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
   });
 

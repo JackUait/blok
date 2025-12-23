@@ -506,8 +506,6 @@ export class BlockManager extends Module {
    * Insert new default block at passed index
    * @param {number} index - index where Block should be inserted
    * @param {boolean} needToFocus - if true, updates current Block index
-   *
-   * TODO: Remove method and use insert() with index instead (?)
    * @returns {Block} inserted Block
    */
   public insertDefaultBlockAtIndex(index: number, needToFocus = false): Block {
@@ -603,7 +601,7 @@ export class BlockManager extends Module {
   /**
    * Remove passed Block
    * @param block - Block to remove
-   * @param addLastBlock - if true, adds new default block at the end. @todo remove this logic and use event-bus instead
+   * @param addLastBlock - if true, inserts a new default block when the last block is removed
    */
   public removeBlock(block: Block, addLastBlock = true): Promise<void> {
     return new Promise((resolve) => {
@@ -655,7 +653,7 @@ export class BlockManager extends Module {
    * and returns first Block index where started removing...
    * @returns {number|undefined}
    */
-  public removeSelectedBlocks(): number | undefined {
+  private removeSelectedBlocks(): number | undefined {
     const selectedBlockEntries = this.blocks
       .map((block, index) => ({
         block,

@@ -466,7 +466,7 @@ describe('BlockManager', () => {
       .spyOn(blockManager as unknown as { removeBlock: BlockManager['removeBlock'] }, 'removeBlock')
       .mockResolvedValue();
 
-    const firstRemovedIndex = blockManager.removeSelectedBlocks();
+    const firstRemovedIndex = (blockManager as unknown as { removeSelectedBlocks: () => number | undefined }).removeSelectedBlocks();
 
     expect(removeSpy).toHaveBeenNthCalledWith(1, blocks[2], false);
     expect(removeSpy).toHaveBeenNthCalledWith(2, blocks[1], false);

@@ -9,6 +9,8 @@ import { BlockChanged, HistoryStateChanged } from '../events';
 import type { BlockMutationEvent } from '../../../types/events/block';
 import { Shortcuts } from '../utils/shortcuts';
 import type { Block } from '../block';
+import { SmartGrouping } from './history/smart-grouping';
+import type { ActionType } from './history/types';
 
 /**
  * Default maximum history stack size
@@ -118,6 +120,21 @@ export class History extends Module {
   private initialStateCaptured = false;
 
   /**
+   * Smart grouping logic for determining when to create checkpoints
+   */
+  private smartGrouping = new SmartGrouping();
+
+  /**
+   * Current action type being tracked (for detecting action type changes)
+   */
+  private currentActionType: ActionType = 'insert';
+
+  /**
+   * Keydown handler reference for cleanup
+   */
+  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
+
+  /**
    * Maximum number of entries in history stack
    */
   private get maxHistoryLength(): number {
@@ -145,6 +162,7 @@ export class History extends Module {
   public async prepare(): Promise<void> {
     this.setupEventListeners();
     this.setupKeyboardShortcuts();
+    this.setupActionTypeTracking();
   }
 
   /**
@@ -310,6 +328,7 @@ export class History extends Module {
     this.undoStack = [];
     this.redoStack = [];
     this.initialStateCaptured = false;
+    this.smartGrouping.clearContext();
     this.emitStateChanged();
   }
 
@@ -434,10 +453,46 @@ export class History extends Module {
   }
 
   /**
-   * Handles block mutation events
-   * Debounces rapid changes and records state snapshots
+   * Sets up keydown tracking for action type detection
    */
-  private handleBlockMutation(_event: BlockMutationEvent): void {
+  private setupActionTypeTracking(): void {
+    // Wait for UI to be ready
+    setTimeout(() => {
+      const redactor = this.Blok.UI?.nodes?.redactor;
+
+      if (!redactor) {
+        return;
+      }
+
+      this.keydownHandler = (e: KeyboardEvent): void => {
+        // Detect action type from key press
+        if (e.key === 'Backspace') {
+          this.currentActionType = 'delete-back';
+
+          return;
+        }
+
+        if (e.key === 'Delete') {
+          this.currentActionType = 'delete-fwd';
+
+          return;
+        }
+
+        // Single character key (typing)
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+          this.currentActionType = 'insert';
+        }
+      };
+
+      redactor.addEventListener('keydown', this.keydownHandler);
+    }, 0);
+  }
+
+  /**
+   * Handles block mutation events
+   * Uses smart grouping to create checkpoints when action type changes
+   */
+  private handleBlockMutation(event: BlockMutationEvent): void {
     // Mark this instance as active for global shortcuts
     History.activeInstance = this;
 
@@ -453,10 +508,39 @@ export class History extends Module {
       return;
     }
 
-    // Clear existing debounce timeout
-    this.clearDebounce();
+    // Get block ID from event
+    const blockId = event.detail.target.id;
 
-    // Debounce to batch rapid changes
+    // Check if we should create a checkpoint before this action
+    const shouldCheckpoint = this.smartGrouping.shouldCreateCheckpoint(
+      { actionType: this.currentActionType },
+      blockId
+    );
+
+    // Check if this is an immediate checkpoint action
+    const isImmediate = this.smartGrouping.isImmediateCheckpoint(this.currentActionType);
+
+    if (shouldCheckpoint || isImmediate) {
+      // Create checkpoint immediately (flush pending debounce)
+      this.clearDebounce();
+      void this.recordState().then(() => {
+        // Update context after recording
+        this.smartGrouping.updateContext(this.currentActionType, blockId);
+        // Start new debounce for continued editing
+        this.startDebounce();
+      });
+    } else {
+      // Update context and debounce normally
+      this.smartGrouping.updateContext(this.currentActionType, blockId);
+      this.clearDebounce();
+      this.startDebounce();
+    }
+  }
+
+  /**
+   * Starts the debounce timer for recording state
+   */
+  private startDebounce(): void {
     this.debounceTimeout = setTimeout(() => {
       void this.recordState();
     }, this.debounceTime);
@@ -1085,14 +1169,23 @@ export class History extends Module {
     }
     this.registeredShortcuts = [];
 
+    // Remove keydown handler
+    const redactor = this.Blok.UI?.nodes?.redactor;
+
+    if (this.keydownHandler && redactor) {
+      redactor.removeEventListener('keydown', this.keydownHandler);
+    }
+    this.keydownHandler = null;
+
     // Clear active instance if it's this one
     if (History.activeInstance === this) {
       History.activeInstance = null;
     }
 
-    // Clear stacks
+    // Clear stacks and smart grouping
     this.undoStack = [];
     this.redoStack = [];
     this.initialStateCaptured = false;
+    this.smartGrouping.clearContext();
   }
 }

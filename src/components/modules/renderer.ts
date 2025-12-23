@@ -52,7 +52,7 @@ export class Renderer extends Module {
          * Create Blocks instances
          */
         const blocks = processedBlocks.map((blockData: OutputBlockData) => {
-          const { tunes, id, parent, content, slot } = blockData;
+          const { tunes, id, parent, content } = blockData;
           const originalTool = blockData.type;
           const availabilityResult = (() => {
             if (Tools.available.has(originalTool)) {
@@ -79,7 +79,6 @@ export class Renderer extends Module {
                 tunes,
                 parentId: parent,
                 contentIds: content,
-                slot,
               });
             } catch (error) {
               log(`Block «${tool}» skipped because of plugins error`, 'error', {
@@ -99,7 +98,6 @@ export class Renderer extends Module {
                 tunes,
                 parentId: parent,
                 contentIds: content,
-                slot,
               });
             }
           };

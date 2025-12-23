@@ -30,7 +30,6 @@ export class BlocksAPI extends Module {
       getBlocksCount: (): number => this.getBlocksCount(),
       getBlockByElement: (element: HTMLElement) => this.getBlockByElement(element),
       getChildren: (parentId: string): BlockAPIInterface[] => this.getChildren(parentId),
-      getChildrenInSlot: (parentId: string, slot: number): BlockAPIInterface[] => this.getChildrenInSlot(parentId, slot),
       insert: this.insert,
       insertMany: this.insertMany,
       update: this.update,
@@ -132,18 +131,6 @@ export class BlocksAPI extends Module {
     return children.map((block) => new BlockAPI(block));
   }
 
-  /**
-   * Returns child blocks of a parent container block in a specific slot
-   * @param parentId - id of the parent block
-   * @param slot - slot index (e.g., column index for columns block)
-   */
-  public getChildrenInSlot(parentId: string, slot: number): BlockAPIInterface[] {
-    const children = this.Blok.BlockManager.blocks.filter(
-      (block) => block.parentId === parentId && block.slot === slot
-    );
-
-    return children.map((block) => new BlockAPI(block));
-  }
 
   /**
    * Move block from one index to another

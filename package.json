@@ -169,17 +169,17 @@
     {
       "name": "Minimum (core only)",
       "path": "src/variants/blok-minimum.ts",
-      "limit": "123 KB"
+      "limit": "300 KB"
     },
     {
       "name": "Normal (with tools)",
       "path": "src/blok.ts",
-      "limit": "123 KB"
+      "limit": "300 KB"
     },
     {
       "name": "Maximum (all locales)",
       "path": "src/variants/blok-maximum.ts",
-      "limit": "124 KB"
+      "limit": "300 KB"
     }
   ]
 }

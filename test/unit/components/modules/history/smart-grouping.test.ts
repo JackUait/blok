@@ -148,4 +148,105 @@ describe('SmartGrouping', () => {
       expect(() => grouping.clearContext()).not.toThrow();
     });
   });
+
+  describe('action change threshold', () => {
+    it('should not create checkpoint on first action type change', () => {
+      const smartGrouping = new SmartGrouping();
+
+      // Set up initial context with 'insert' action
+      smartGrouping.updateContext('insert', 'block-1');
+
+      // First backspace - should NOT checkpoint (count = 1)
+      const shouldCheckpoint = smartGrouping.shouldCreateCheckpoint(
+        { actionType: 'delete-back' },
+        'block-1'
+      );
+
+      expect(shouldCheckpoint).toBe(false);
+    });
+
+    it('should not create checkpoint on second action of new type', () => {
+      const smartGrouping = new SmartGrouping();
+
+      smartGrouping.updateContext('insert', 'block-1');
+
+      // First backspace
+      smartGrouping.shouldCreateCheckpoint({ actionType: 'delete-back' }, 'block-1');
+      smartGrouping.updateContext('delete-back', 'block-1');
+
+      // Second backspace - should NOT checkpoint (count = 2)
+      const shouldCheckpoint = smartGrouping.shouldCreateCheckpoint(
+        { actionType: 'delete-back' },
+        'block-1'
+      );
+
+      expect(shouldCheckpoint).toBe(false);
+    });
+
+    it('should create checkpoint on third action of new type', () => {
+      const smartGrouping = new SmartGrouping();
+
+      smartGrouping.updateContext('insert', 'block-1');
+
+      // Simulate two backspaces without checkpointing
+      smartGrouping.shouldCreateCheckpoint({ actionType: 'delete-back' }, 'block-1');
+      smartGrouping.updateContext('delete-back', 'block-1');
+      smartGrouping.shouldCreateCheckpoint({ actionType: 'delete-back' }, 'block-1');
+      smartGrouping.updateContext('delete-back', 'block-1');
+
+      // Third backspace - should checkpoint (count = 3)
+      const shouldCheckpoint = smartGrouping.shouldCreateCheckpoint(
+        { actionType: 'delete-back' },
+        'block-1'
+      );
+
+      expect(shouldCheckpoint).toBe(true);
+    });
+
+    it('should reset pending count when switching back before threshold', () => {
+      const smartGrouping = new SmartGrouping();
+
+      smartGrouping.updateContext('insert', 'block-1');
+
+      // One backspace
+      smartGrouping.shouldCreateCheckpoint({ actionType: 'delete-back' }, 'block-1');
+      smartGrouping.updateContext('delete-back', 'block-1');
+
+      // Switch back to insert - should reset pending count
+      smartGrouping.shouldCreateCheckpoint({ actionType: 'insert' }, 'block-1');
+      smartGrouping.updateContext('insert', 'block-1');
+
+      // Another backspace - count should start from 1 again
+      const shouldCheckpoint = smartGrouping.shouldCreateCheckpoint(
+        { actionType: 'delete-back' },
+        'block-1'
+      );
+
+      expect(shouldCheckpoint).toBe(false);
+    });
+
+    it('should reset pending count after checkpoint is created', () => {
+      const smartGrouping = new SmartGrouping();
+
+      smartGrouping.updateContext('insert', 'block-1');
+
+      // Three backspaces to trigger checkpoint
+      smartGrouping.shouldCreateCheckpoint({ actionType: 'delete-back' }, 'block-1');
+      smartGrouping.updateContext('delete-back', 'block-1');
+      smartGrouping.shouldCreateCheckpoint({ actionType: 'delete-back' }, 'block-1');
+      smartGrouping.updateContext('delete-back', 'block-1');
+      smartGrouping.shouldCreateCheckpoint({ actionType: 'delete-back' }, 'block-1');
+      // Reset after checkpoint
+      smartGrouping.resetPendingActionCount();
+      smartGrouping.updateContext('delete-back', 'block-1');
+
+      // Now switch to insert - should start counting from 1
+      const shouldCheckpoint = smartGrouping.shouldCreateCheckpoint(
+        { actionType: 'insert' },
+        'block-1'
+      );
+
+      expect(shouldCheckpoint).toBe(false);
+    });
+  });
 });

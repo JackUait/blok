@@ -16,6 +16,12 @@ const IMMEDIATE_CHECKPOINT_ACTIONS: ActionType[] = [
 ];
 
 /**
+ * Threshold for action type changes before creating a checkpoint.
+ * Quick corrections (< threshold) stay grouped with previous actions.
+ */
+const ACTION_CHANGE_THRESHOLD = 3;
+
+/**
  * Determines when to create history checkpoints based on action patterns
  *
  * Creates checkpoints when:
@@ -28,6 +34,12 @@ export class SmartGrouping {
    * Current action context
    */
   private currentContext: ActionContext | undefined;
+
+  /**
+   * Count of actions since last action type change.
+   * Used to implement threshold-based checkpointing.
+   */
+  private pendingActionCount = 0;
 
   /**
    * Determines if a checkpoint should be created before recording this mutation
@@ -94,5 +106,13 @@ export class SmartGrouping {
    */
   public clearContext(): void {
     this.currentContext = undefined;
+  }
+
+  /**
+   * Resets the pending action count.
+   * Call this after a checkpoint is created.
+   */
+  public resetPendingActionCount(): void {
+    this.pendingActionCount = 0;
   }
 }

@@ -709,6 +709,8 @@ export class History extends Module {
       // Create checkpoint immediately (flush pending debounce)
       this.clearDebounce();
       void this.recordState().then(() => {
+        // Reset pending action count after checkpoint
+        this.smartGrouping.resetPendingActionCount();
         // Update context after recording
         this.smartGrouping.updateContext(this.currentActionType, blockId);
         // Start new debounce for continued editing
@@ -727,6 +729,8 @@ export class History extends Module {
    */
   private startDebounce(): void {
     this.debounceTimeout = setTimeout(() => {
+      // Reset pending action count - debounce expiry acts as a checkpoint
+      this.smartGrouping.resetPendingActionCount();
       void this.recordState();
     }, this.debounceTime);
   }

@@ -1,6 +1,18 @@
 import { stat, readdir } from 'fs/promises';
 import { join } from 'path';
-import { formatBytes } from '../../lib/bundle-utils.mjs';
+
+/**
+ * Format bytes to human readable string
+ * @param {number} bytes
+ * @returns {string}
+ */
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
 
 /**
  * Verify bundle sizes are within expected ranges
@@ -16,7 +28,6 @@ export async function checkBundleSize(packageDir, verbose = false) {
   };
 
   // Bundle size reference values (informational, not enforced)
-  // For trend-based tracking, see: scripts/track-bundle-size.mjs
   const limits = {
     'blok.mjs': 5 * 1024,      // 5KB (entry point, reference)
     total: 3 * 1024 * 1024     // 3MB total package (reference)

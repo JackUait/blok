@@ -152,6 +152,19 @@ export class History extends Module {
   private keydownCapturedPosition = false;
 
   /**
+   * Batch depth counter for grouping multiple operations into a single undo step.
+   * When > 0, mutations are accumulated but not recorded until batch ends.
+   * Supports nested batches - only the outermost batch triggers recording.
+   */
+  private batchDepth = 0;
+
+  /**
+   * Flag indicating whether any mutations occurred during the current batch.
+   * Used to determine if state should be recorded when batch ends.
+   */
+  private batchHasMutations = false;
+
+  /**
    * Maximum number of entries in history stack
    */
   private get maxHistoryLength(): number {
@@ -350,6 +363,66 @@ export class History extends Module {
     this.initialStateCaptured = false;
     this.smartGrouping.clearContext();
     this.emitStateChanged();
+  }
+
+  /**
+   * Starts a batch operation that groups multiple mutations into a single undo step.
+   *
+   * Use this when performing multiple related operations that should be undone together,
+   * such as moving multiple blocks during a drag-and-drop operation.
+   *
+   * Batches can be nested - only the outermost batch triggers state recording.
+   *
+   * @example
+   * ```typescript
+   * history.startBatch();
+   * try {
+   *   // Multiple operations here...
+   *   blockManager.move(0, 2);
+   *   blockManager.move(1, 3);
+   * } finally {
+   *   history.endBatch();
+   * }
+   * ```
+   */
+  public startBatch(): void {
+    // If this is the first batch level, capture caret position before any mutations
+    if (this.batchDepth === 0) {
+      this.pendingCaretPosition = this.getCaretPosition();
+      this.batchHasMutations = false;
+      // Clear any pending debounce to ensure clean state before batch
+      this.clearDebounce();
+    }
+
+    this.batchDepth++;
+  }
+
+  /**
+   * Ends a batch operation and records the final state if mutations occurred.
+   *
+   * Must be called once for each corresponding `startBatch()` call.
+   * Only the outermost `endBatch()` triggers state recording.
+   */
+  public endBatch(): void {
+    if (this.batchDepth === 0) {
+      // Mismatched endBatch call - ignore
+      return;
+    }
+
+    this.batchDepth--;
+
+    // Only record state when the outermost batch ends
+    if (this.batchDepth === 0 && this.batchHasMutations) {
+      void this.recordState();
+      this.batchHasMutations = false;
+    }
+  }
+
+  /**
+   * Returns whether a batch operation is currently in progress
+   */
+  public isInBatch(): boolean {
+    return this.batchDepth > 0;
   }
 
   /**
@@ -608,6 +681,14 @@ export class History extends Module {
     // Ensure initial state is captured
     if (!this.initialStateCaptured) {
       void this.captureInitialState();
+
+      return;
+    }
+
+    // If in a batch, just mark that mutations occurred and skip normal processing.
+    // State will be recorded when the batch ends.
+    if (this.batchDepth > 0) {
+      this.batchHasMutations = true;
 
       return;
     }

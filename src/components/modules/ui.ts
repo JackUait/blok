@@ -750,17 +750,12 @@ export class UI extends Module<UINodes> {
       return;
     }
 
-    const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
-    if (selectionPositionIndex === undefined) {
-      return;
+    if (insertedBlock) {
+      Caret.setToBlock(insertedBlock, Caret.positions.START);
     }
 
-    const newBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
-
-    Caret.setToBlock(newBlock, Caret.positions.START);
-
-    /** Clear selection */
     BlockSelection.clearSelection(event);
 
     /**

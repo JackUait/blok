@@ -914,11 +914,18 @@ export class DragManager extends Module {
     const firstBlockIndex = manager.getBlockIndex(sortedBlocks[0]);
     const movingDown = insertIndex > firstBlockIndex;
 
-    // Execute the move based on direction
-    if (movingDown) {
-      this.moveBlocksDown(sortedBlocks, insertIndex);
-    } else {
-      this.moveBlocksUp(sortedBlocks, insertIndex);
+    // Batch all block moves into a single undo step
+    this.Blok.History.startBatch();
+
+    try {
+      // Execute the move based on direction
+      if (movingDown) {
+        this.moveBlocksDown(sortedBlocks, insertIndex);
+      } else {
+        this.moveBlocksUp(sortedBlocks, insertIndex);
+      }
+    } finally {
+      this.Blok.History.endBatch();
     }
 
     // Clear selection first, then re-select all moved blocks

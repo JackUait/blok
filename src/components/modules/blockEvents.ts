@@ -284,11 +284,9 @@ export class BlockEvents extends Module {
       return false;
     }
 
-    const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
-    if (selectionPositionIndex !== undefined) {
-      const insertedBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
-
+    if (insertedBlock) {
       Caret.setToBlock(insertedBlock, Caret.positions.START);
     }
 
@@ -862,18 +860,12 @@ export class BlockEvents extends Module {
     }
 
     BlockSelection.copySelectedBlocks(event).then(() => {
-      const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+      const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
-      /**
-       * Insert default block in place of removed ones
-       */
-      if (selectionPositionIndex !== undefined) {
-        const insertedBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
-
+      if (insertedBlock) {
         Caret.setToBlock(insertedBlock, Caret.positions.START);
       }
 
-      /** Clear selection */
       BlockSelection.clearSelection(event);
     })
       .catch(() => {

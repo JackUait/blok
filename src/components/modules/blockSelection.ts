@@ -679,18 +679,11 @@ export class BlockSelection extends Module {
    */
   private replaceSelectedBlocksWithPrintableKey(event: KeyboardEvent): void {
     const { BlockManager, Caret } = this.Blok;
-    const indexToInsert = BlockManager.removeSelectedBlocks();
 
-    if (indexToInsert === undefined) {
-      return;
-    }
+    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
-    BlockManager.insertDefaultBlockAtIndex(indexToInsert, true);
-
-    const currentBlock = BlockManager.currentBlock;
-
-    if (currentBlock) {
-      Caret.setToBlock(currentBlock);
+    if (insertedBlock) {
+      Caret.setToBlock(insertedBlock);
     }
 
     delay(() => {

@@ -1086,4 +1086,161 @@ test.describe('undo/Redo', () => {
       await expect(input).toHaveAttribute('data-blok-empty', 'true');
     });
   });
+
+  test.describe('batch Operations', () => {
+    test('multi-block drag is undone in a single step', async ({ page }) => {
+      // This test verifies that dragging multiple blocks together undoes as a single operation
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { type: 'paragraph', data: { text: 'Block 0' } },
+            { type: 'paragraph', data: { text: 'Block 1' } },
+            { type: 'paragraph', data: { text: 'Block 2' } },
+            { type: 'paragraph', data: { text: 'Block 3' } },
+            { type: 'paragraph', data: { text: 'Block 4' } },
+          ],
+        },
+      });
+
+      // Wait for history to capture initial state
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Select blocks 1, 2, 3 using the BlockSelection API
+      await page.evaluate(() => {
+        const blok = window.blokInstance;
+
+        if (!blok) {
+          throw new Error('Blok instance not found');
+        }
+
+        const blockSelection = (blok as unknown as {
+          module: {
+            blockSelection: { selectBlockByIndex: (index: number) => void };
+          };
+        }).module.blockSelection;
+
+        blockSelection.selectBlockByIndex(1);
+        blockSelection.selectBlockByIndex(2);
+        blockSelection.selectBlockByIndex(3);
+      });
+
+      // Hover over block 2 to show settings button
+      const block2 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 2' });
+
+      await block2.hover();
+
+      const settingsButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Perform drag to the bottom of block 4
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Block 4' });
+
+      const sourceBox = await settingsButton.boundingBox();
+      const targetBox = await targetBlock.boundingBox();
+
+      expect(sourceBox).not.toBeNull();
+      expect(targetBox).not.toBeNull();
+
+      // Perform pointer-based drag
+      await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
+      await page.mouse.down();
+      await waitForDelay(page, 50);
+      await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height - 1, { steps: 15 });
+      await waitForDelay(page, 50);
+      await page.mouse.up();
+      await waitForDelay(page, 100);
+
+      // Verify the blocks moved - new order: Block 0, Block 4, Block 1, Block 2, Block 3
+      await expect(page.getByTestId('block-wrapper')).toHaveText([
+        'Block 0',
+        'Block 4',
+        'Block 1',
+        'Block 2',
+        'Block 3',
+      ]);
+
+      // Wait for history to record the move
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Undo once - all three blocks should return to their original positions
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify the original order is restored in a single undo
+      await expect(page.getByTestId('block-wrapper')).toHaveText([
+        'Block 0',
+        'Block 1',
+        'Block 2',
+        'Block 3',
+        'Block 4',
+      ]);
+    });
+
+    test('multi-block deletion is undone in a single step', async ({ page }) => {
+      // This test verifies that deleting multiple selected blocks undoes as a single operation
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { type: 'paragraph', data: { text: 'Block 0' } },
+            { type: 'paragraph', data: { text: 'Block 1' } },
+            { type: 'paragraph', data: { text: 'Block 2' } },
+            { type: 'paragraph', data: { text: 'Block 3' } },
+            { type: 'paragraph', data: { text: 'Block 4' } },
+          ],
+        },
+      });
+
+      // Wait for history to capture initial state
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Select blocks 1, 2, 3 using the BlockSelection API
+      await page.evaluate(() => {
+        const blok = window.blokInstance;
+
+        if (!blok) {
+          throw new Error('Blok instance not found');
+        }
+
+        const blockSelection = (blok as unknown as {
+          module: {
+            blockSelection: { selectBlockByIndex: (index: number) => void };
+          };
+        }).module.blockSelection;
+
+        blockSelection.selectBlockByIndex(1);
+        blockSelection.selectBlockByIndex(2);
+        blockSelection.selectBlockByIndex(3);
+      });
+
+      // Wait for selection to be applied
+      await waitForDelay(page, 50);
+
+      // Delete the selected blocks
+      await page.keyboard.press('Backspace');
+
+      // Wait for history to record the deletion
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify blocks 1, 2, 3 are deleted (an empty block is inserted in their place)
+      await expect(page.getByTestId('block-wrapper')).toHaveText([
+        'Block 0',
+        '', // Empty block inserted after deletion
+        'Block 4',
+      ]);
+
+      // Undo once - all three blocks should be restored
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify all blocks are restored in a single undo
+      await expect(page.getByTestId('block-wrapper')).toHaveText([
+        'Block 0',
+        'Block 1',
+        'Block 2',
+        'Block 3',
+        'Block 4',
+      ]);
+    });
+  });
 });

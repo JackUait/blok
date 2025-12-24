@@ -173,6 +173,17 @@ export class History extends Module {
   private keydownCapturedPosition = false;
 
   /**
+   * Flag indicating whether we've already captured the caret position for the current action group.
+   * This ensures we only capture the position from the FIRST mutation in a group,
+   * not from subsequent mutations that are grouped together by debouncing.
+   *
+   * Without this, when deleting multiple characters (e.g., "Привет" → "При"),
+   * each backspace would update pendingCaretPosition, and the last position (4)
+   * would be stored instead of the first position (6, end of "Привет").
+   */
+  private hasCapturedGroupPosition = false;
+
+  /**
    * Batch depth counter for grouping multiple operations into a single undo step.
    * When > 0, mutations are accumulated but not recorded until batch ends.
    * Supports nested batches - only the outermost batch triggers recording.
@@ -661,11 +672,17 @@ export class History extends Module {
         // Only capture caret position for keys that will cause mutations.
         // For navigation keys (arrows, Home, End, etc.), we let selectionchange
         // update the position after the caret moves.
-        if (isMutationKey) {
-          // Capture caret position BEFORE any mutation happens
-          // This is critical for correct undo behavior - we want to restore
-          // to where the caret was when the user initiated the action
+        //
+        // Only capture caret position for the FIRST mutation key in a group.
+        // This ensures that when multiple actions are grouped (e.g., deleting "вет"),
+        // we preserve the position from BEFORE the first action (end of "Привет"),
+        // not from before the last action in the group.
+        if (isMutationKey && !this.hasCapturedGroupPosition) {
           this.pendingCaretPosition = this.getCaretPosition();
+          this.hasCapturedGroupPosition = true;
+        }
+
+        if (isMutationKey) {
           this.keydownCapturedPosition = true;
         }
 
@@ -781,9 +798,10 @@ export class History extends Module {
     const blockId = event.detail.target.id;
 
     // Check for pause detection (newGroupDelay)
-    // If the user paused for longer than newGroupDelay, create a checkpoint
+    // If the user paused for longer than newGroupDelay, we need to treat the last
+    // recorded state as a checkpoint (don't record current state which is AFTER mutation)
     const currentTime = Date.now();
-    const shouldCheckpointFromPause = this.lastMutationTime !== null &&
+    const pauseDetected = this.lastMutationTime !== null &&
       (currentTime - this.lastMutationTime) > this.newGroupDelay;
 
     // Update last mutation time
@@ -804,7 +822,27 @@ export class History extends Module {
     // Check if this is an immediate checkpoint action
     const isImmediate = this.smartGrouping.isImmediateCheckpoint(this.currentActionType);
 
-    if (shouldCheckpoint || isImmediate || shouldCheckpointFromPause) {
+    // When a pause is detected (user paused longer than newGroupDelay), we treat
+    // the last recorded state as a checkpoint boundary. We do NOT record the current
+    // state because:
+    // 1. The DOM has already changed (mutation happened before this handler)
+    // 2. Recording now would capture the post-mutation state, not pre-mutation
+    // 3. The previous state in the stack is already the correct checkpoint
+    //
+    // Instead, we just reset the smart grouping context and start fresh debouncing.
+    if (pauseDetected) {
+      this.clearDebounce();
+      this.smartGrouping.resetPendingActionCount();
+      this.smartGrouping.updateContext(this.currentActionType, blockId);
+      // NOTE: We do NOT reset hasCapturedGroupPosition here because the keydown
+      // handler already captured the correct caret position BEFORE the first mutation.
+      // Resetting it would cause the next keydown to overwrite the correct position.
+      this.startDebounce();
+
+      return;
+    }
+
+    if (shouldCheckpoint || isImmediate) {
       // Create checkpoint immediately (flush pending debounce)
       this.clearDebounce();
       void this.recordState().then(() => {
@@ -878,8 +916,10 @@ export class History extends Module {
     // This ensures we get the caret position from before the action, not after
     const caretPosition = this.pendingCaretPosition;
 
-    // Reset the keydown capture flag now that we've used the position
+    // Reset capture flags now that we've used the position.
+    // This allows the next action group to capture a fresh position.
     this.keydownCapturedPosition = false;
+    this.hasCapturedGroupPosition = false;
 
     // Check if this state is identical to the last entry (avoid duplicates)
     const lastEntry = this.undoStack[this.undoStack.length - 1];
@@ -1569,6 +1609,7 @@ export class History extends Module {
     }
     this.selectionChangeHandler = null;
     this.pendingCaretPosition = undefined;
+    this.hasCapturedGroupPosition = false;
 
     // Clear active instance if it's this one
     if (History.activeInstance === this) {

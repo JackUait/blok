@@ -846,6 +846,131 @@ test.describe('undo/Redo', () => {
       await page.keyboard.type('!');
       await expect(input).toContainText('Hello World!');
     });
+
+    test('caret position preserved after undoing grouped backspace deletions', async ({ page }) => {
+      // This test verifies the fix for the bug where caret was restored to the wrong position
+      // after undoing grouped backspace deletions. The caret should be at the position
+      // BEFORE the first deletion (end of "Привет"), not at position 3 (end of "При").
+      //
+      // Scenario: Type "Привет", delete "вет" with 3 backspaces, then undo.
+      // Undo restores "При" → "Привет", caret should be at position 6 (end of "Привет").
+      // Without the fix, caret would be at position 3.
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: '' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Focus and type "Привет" (6 characters)
+      await input.click();
+      await page.keyboard.type('Привет');
+
+      // Wait for history to record the typing
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify the text was typed
+      await expect(input).toHaveText('Привет');
+
+      // Delete "вет" with 3 backspaces (leaving "При")
+      // These deletions are grouped together as a single undo step
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+
+      // Wait for history to record the deletions
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify the deletions
+      await expect(input).toHaveText('При');
+
+      // Undo the grouped deletions - restores to "Привет"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify undo restored "Привет"
+      await expect(input).toHaveText('Привет');
+
+      // Now type a character to verify caret position
+      // If the fix works, caret should be at position 6 (end of "Привет")
+      // If the bug exists, caret would be at position 3 (end of "При" before undo)
+      await page.keyboard.type('!');
+
+      // The text should be "Привет!" if caret was correctly restored to position 6 (end)
+      await expect(input).toHaveText('Привет!');
+    });
+
+    test('caret position preserved after undoing forward deletion', async ({ page }) => {
+      // Similar test but for forward delete (Delete key) instead of backspace
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: '' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Focus and type "Hello World"
+      await input.click();
+      await page.keyboard.type('Hello World');
+
+      // Wait for history to record
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Move caret to position 6 (after "Hello ")
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        range.setStart(el.firstChild, 6);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, 50);
+
+      // Delete 1 character forward with Delete key (removes "W", leaving "Hello orld")
+      await page.keyboard.press('Delete');
+
+      // Wait for history to record the deletion
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify the deletion
+      await expect(input).toHaveText('Hello orld');
+
+      // Undo the deletion
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify the text was restored
+      await expect(input).toHaveText('Hello World');
+
+      // Type to verify caret position - should be at position 6 (after "Hello ")
+      await page.keyboard.type('X');
+
+      // The text should be "Hello XWorld" if caret was correctly restored
+      await expect(input).toHaveText('Hello XWorld');
+    });
   });
 
   test.describe('history Stack Management', () => {

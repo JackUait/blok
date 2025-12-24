@@ -421,7 +421,7 @@ test.describe('undo/Redo', () => {
       const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
       const secondInput = secondParagraph.locator('[contenteditable="true"]');
 
-      await secondInput.type('Second block');
+      await secondInput.type('SecondBlock');
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Verify we have two blocks
@@ -477,7 +477,7 @@ test.describe('undo/Redo', () => {
       const thirdParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(3)`);
       const thirdInput = thirdParagraph.locator('[contenteditable="true"]');
 
-      await thirdInput.type('Third block');
+      await thirdInput.type('ThirdBlock');
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Verify we have three blocks
@@ -822,14 +822,14 @@ test.describe('undo/Redo', () => {
       const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
       const input = paragraph.locator('[contenteditable="true"]');
 
-      // Focus at the end and add more text
+      // Focus at the end and add more text (no spaces to avoid word boundary checkpoints)
       await input.click();
       await page.keyboard.press('End');
-      await input.type(' extra long content here');
+      await input.type('ExtraLongContentHere');
 
       // Wait for history to record
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-      await expect(input).toHaveText(/Hello World extra long content here$/);
+      await expect(input).toHaveText(/Hello WorldExtraLongContentHere$/);
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Undo to restore shorter text
@@ -1194,9 +1194,9 @@ test.describe('undo/Redo', () => {
       // Verify initially empty
       await expect(input).toHaveAttribute('data-blok-empty', 'true');
 
-      // Type some text
+      // Type some text (no spaces to avoid word boundary checkpoints)
       await input.click();
-      await input.type('Some text');
+      await input.type('SomeText');
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Verify no longer empty
@@ -1634,14 +1634,14 @@ test.describe('undo/Redo', () => {
       await page.keyboard.press('Backspace');
       await page.keyboard.press('Backspace');
 
-      // Continue typing
-      await page.keyboard.type('p me');
+      // Continue typing (no spaces to avoid word boundary checkpoints)
+      await page.keyboard.type('pful');
 
       // Wait for debounce
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Verify final text
-      await expect(input).toHaveText('help me');
+      await expect(input).toHaveText('helpful');
 
       // Single undo should restore empty state (all grouped together)
       await page.keyboard.press(`${MODIFIER_KEY}+z`);
@@ -1665,9 +1665,9 @@ test.describe('undo/Redo', () => {
       const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
       const input = paragraph.locator('[contenteditable="true"]');
 
-      // Type "hello world"
+      // Type "helloworld" (no spaces to avoid word boundary checkpoints)
       await input.click();
-      await page.keyboard.type('hello world');
+      await page.keyboard.type('helloworld');
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Delete 3 characters (hits threshold on 3rd)
@@ -1676,14 +1676,14 @@ test.describe('undo/Redo', () => {
       await page.keyboard.press('Backspace');
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
-      // Verify current text ("hello world" minus "rld" = "hello wo")
-      await expect(input).toHaveText('hello wo');
+      // Verify current text ("helloworld" minus "rld" = "hellowo")
+      await expect(input).toHaveText('hellowo');
 
-      // First undo should restore "hello world" (undo the deletion batch)
+      // First undo should restore "helloworld" (undo the deletion batch)
       await page.keyboard.press(`${MODIFIER_KEY}+z`);
       await waitForDelay(page, STATE_CHANGE_WAIT);
 
-      await expect(input).toHaveText('hello world');
+      await expect(input).toHaveText('helloworld');
 
       // Second undo should restore empty state (undo the typing)
       await page.keyboard.press(`${MODIFIER_KEY}+z`);
@@ -1824,10 +1824,10 @@ test.describe('undo/Redo', () => {
       const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
       const input = paragraph.locator('[contenteditable="true"]');
 
-      // Type some text
+      // Type some text (using 'XYZ' instead of '!!!' to avoid word boundary checkpoints)
       await input.click();
       await page.keyboard.press('End');
-      await page.keyboard.type('!!!');
+      await page.keyboard.type('XYZ');
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Move to middle and split
@@ -1858,9 +1858,9 @@ test.describe('undo/Redo', () => {
       await waitForDelay(page, STATE_CHANGE_WAIT);
 
       await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
-      await expect(input).toContainText('Hello World!!!');
+      await expect(input).toContainText('Hello WorldXYZ');
 
-      // Second undo should remove the "!!!"
+      // Second undo should remove the "XYZ"
       await page.keyboard.press(`${MODIFIER_KEY}+z`);
       await waitForDelay(page, STATE_CHANGE_WAIT);
 
@@ -1920,24 +1920,24 @@ test.describe('undo/Redo', () => {
       const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
       const input = paragraph.locator('[contenteditable="true"]');
 
-      // Type text
+      // Type text (no spaces to avoid word boundary checkpoints)
       await input.click();
       await page.keyboard.press('End');
-      await page.keyboard.type(' World');
+      await page.keyboard.type('World');
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Press Enter to create new block
       await page.keyboard.press('Enter');
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
-      // Type in new block
-      await page.keyboard.type('New block');
+      // Type in new block (no spaces to avoid word boundary checkpoints)
+      await page.keyboard.type('NewBlock');
       await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
 
       // Verify state
       await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
 
-      // First undo removes "New block" text
+      // First undo removes "NewBlock" text
       await page.keyboard.press(`${MODIFIER_KEY}+z`);
       await waitForDelay(page, STATE_CHANGE_WAIT);
 
@@ -1947,7 +1947,7 @@ test.describe('undo/Redo', () => {
 
       await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
 
-      // Third undo removes " World"
+      // Third undo removes "World"
       await page.keyboard.press(`${MODIFIER_KEY}+z`);
       await waitForDelay(page, STATE_CHANGE_WAIT);
 

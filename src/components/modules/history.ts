@@ -11,6 +11,7 @@ import { Shortcuts } from '../utils/shortcuts';
 import type { Block } from '../block';
 import { SmartGrouping } from './history/smart-grouping';
 import type { ActionType } from './history/types';
+import { Dom as $ } from '../dom';
 
 /**
  * Default maximum history stack size
@@ -65,9 +66,15 @@ interface CaretPosition {
   inputIndex: number;
 
   /**
-   * Character offset within the input
+   * Character offset within the input (start of selection or cursor position)
    */
   offset: number;
+
+  /**
+   * End offset of the selection within the input.
+   * If undefined or equal to offset, the selection is collapsed (just a cursor).
+   */
+  endOffset?: number;
 }
 
 /**
@@ -1327,22 +1334,26 @@ export class History extends Module {
     // Get block index from the blocks array
     const blockIndex = BlockManager.getBlockIndex(block);
     const inputIndex = block.inputs.indexOf(inputElement);
-    const offset = this.getCaretOffset(inputElement);
+    const offset = this.getCaretOffset(inputElement, false);
+    const endOffset = this.getCaretOffset(inputElement, true);
 
     return {
       blockId: block.id,
       blockIndex: blockIndex >= 0 ? blockIndex : 0,
       inputIndex: inputIndex >= 0 ? inputIndex : 0,
       offset,
+      // Only include endOffset if selection is not collapsed
+      ...(endOffset !== offset ? { endOffset } : {}),
     };
   }
 
   /**
    * Gets caret offset within an input element
    * @param input - the input element
+   * @param useEnd - if true, get the end offset of the selection; if false, get the start offset
    * @returns character offset
    */
-  private getCaretOffset(input: HTMLElement): number {
+  private getCaretOffset(input: HTMLElement, useEnd = false): number {
     const selection = window.getSelection();
 
     if (!selection || selection.rangeCount === 0) {
@@ -1356,9 +1367,9 @@ export class History extends Module {
       return 0;
     }
 
-    // For native inputs, use selectionStart
+    // For native inputs, use selectionStart/selectionEnd
     if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
-      return input.selectionStart ?? 0;
+      return (useEnd ? input.selectionEnd : input.selectionStart) ?? 0;
     }
 
     // For contenteditable, calculate offset by creating a range from start to caret
@@ -1366,7 +1377,12 @@ export class History extends Module {
       const preCaretRange = document.createRange();
 
       preCaretRange.selectNodeContents(input);
-      preCaretRange.setEnd(range.startContainer, range.startOffset);
+
+      if (useEnd) {
+        preCaretRange.setEnd(range.endContainer, range.endOffset);
+      } else {
+        preCaretRange.setEnd(range.startContainer, range.startOffset);
+      }
 
       return preCaretRange.toString().length;
     } catch {
@@ -1575,16 +1591,71 @@ export class History extends Module {
         return;
       }
 
-      // Set current block and let Caret.setToInput handle the input assignment
+      // Set current block
       BlockManager.currentBlock = block;
 
-      // Try to set exact offset, fall back to end if offset is out of bounds
-      try {
-        Caret.setToInput(targetInput, Caret.positions.DEFAULT, caretPosition.offset);
-      } catch {
-        Caret.setToInput(targetInput, Caret.positions.END);
+      // Check if we need to restore a selection range (not just a cursor)
+      const hasSelection = caretPosition.endOffset !== undefined && caretPosition.endOffset !== caretPosition.offset;
+
+      if (hasSelection && caretPosition.endOffset !== undefined) {
+        // Restore selection range
+        this.setSelectionRange(targetInput, caretPosition.offset, caretPosition.endOffset);
+      } else {
+        // Try to set exact offset, fall back to end if offset is out of bounds
+        try {
+          Caret.setToInput(targetInput, Caret.positions.DEFAULT, caretPosition.offset);
+        } catch {
+          Caret.setToInput(targetInput, Caret.positions.END);
+        }
       }
     });
+  }
+
+  /**
+   * Sets a selection range within an input element
+   * @param input - the input element
+   * @param startOffset - start offset in text characters
+   * @param endOffset - end offset in text characters
+   */
+  private setSelectionRange(input: HTMLElement, startOffset: number, endOffset: number): void {
+    // Focus the input first
+    input.focus();
+
+    // For native inputs, use setSelectionRange
+    if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+      const maxLength = input.value.length;
+      const clampedStart = Math.min(startOffset, maxLength);
+      const clampedEnd = Math.min(endOffset, maxLength);
+
+      input.setSelectionRange(clampedStart, clampedEnd);
+
+      return;
+    }
+
+    // For contenteditable, we need to find the nodes at the given offsets
+    try {
+      const startNodeInfo = $.getNodeByOffset(input, startOffset);
+      const endNodeInfo = $.getNodeByOffset(input, endOffset);
+
+      if (!startNodeInfo.node || !endNodeInfo.node) {
+        return;
+      }
+
+      const range = document.createRange();
+
+      range.setStart(startNodeInfo.node, startNodeInfo.offset);
+      range.setEnd(endNodeInfo.node, endNodeInfo.offset);
+
+      const selection = window.getSelection();
+
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    } catch {
+      // If setting range fails, just focus the input
+      input.focus();
+    }
   }
 
   /**

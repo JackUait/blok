@@ -3182,26 +3182,22 @@ test.describe('undo/Redo', () => {
       // Undo multiple times until we get back to a paragraph with "1."
       // The exact number of undos depends on checkpoint timing, but we should
       // eventually be able to get back to the "1." state
-      let foundOriginalState = false;
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
 
-      for (let i = 0; i < 5; i++) {
-        await page.keyboard.press(`${MODIFIER_KEY}+z`);
-        await waitForDelay(page, STATE_CHANGE_WAIT);
+      // After multiple undos, we should be back to the original paragraph state
+      const paragraphAfterUndo = page.locator(`${PARAGRAPH_SELECTOR}`);
 
-        const paragraphAfterUndo = page.locator(`${PARAGRAPH_SELECTOR}`);
-        const isVisible = await paragraphAfterUndo.isVisible();
-
-        if (isVisible) {
-          const textAfterUndo = await paragraphAfterUndo.locator('[contenteditable="true"]').textContent();
-
-          if (textAfterUndo === '1.') {
-            foundOriginalState = true;
-            break;
-          }
-        }
-      }
-
-      expect(foundOriginalState).toBe(true);
+      await expect(paragraphAfterUndo).toBeVisible();
+      await expect(paragraphAfterUndo.locator('[contenteditable="true"]')).toHaveText('1.');
     });
 
     test('redo works after undoing list conversion', async ({ page }) => {
@@ -3237,6 +3233,205 @@ test.describe('undo/Redo', () => {
       await waitForDelay(page, STATE_CHANGE_WAIT);
 
       await expect(listBlock).toBeVisible();
+    });
+  });
+
+  test.describe('selection Preservation', () => {
+    test('selection is preserved after undoing deletion of selected text', async ({ page }) => {
+      // When user selects text, deletes it, then undoes, the text should be restored WITH the selection
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Focus and select "World" text (positions 6-11)
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        // Select "World" (positions 6-11)
+        range.setStart(el.firstChild, 6);
+        range.setEnd(el.firstChild, 11);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      // Short wait for selection to be captured
+      await waitForDelay(page, 50);
+
+      // Delete the selected text
+      await page.keyboard.press('Backspace');
+
+      // Wait for history to record the deletion
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify "World" was deleted
+      await expect(input).toHaveText('Hello ');
+
+      // Undo the deletion
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify text is restored
+      await expect(input).toHaveText('Hello World');
+
+      // Check that the selection is restored
+      const selectionInfo = await page.evaluate(() => {
+        const sel = window.getSelection();
+
+        if (!sel || sel.rangeCount === 0) {
+          return { hasSelection: false, selectedText: '' };
+        }
+
+        return {
+          hasSelection: !sel.isCollapsed,
+          selectedText: sel.toString(),
+        };
+      });
+
+      expect(selectionInfo.hasSelection).toBe(true);
+      expect(selectionInfo.selectedText).toBe('World');
+    });
+
+    test('selection is preserved after undoing deletion at start of text', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Hello World' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Focus and select "Hello" text (positions 0-5)
+      await input.click();
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (!el || !el.firstChild) {
+          return;
+        }
+
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        // Select "Hello" (positions 0-5)
+        range.setStart(el.firstChild, 0);
+        range.setEnd(el.firstChild, 5);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      await waitForDelay(page, 50);
+
+      // Delete the selected text
+      await page.keyboard.press('Delete');
+
+      // Wait for history to record
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify "Hello" was deleted
+      await expect(input).toHaveText(' World');
+
+      // Undo the deletion
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify text is restored
+      await expect(input).toHaveText('Hello World');
+
+      // Check that the selection is restored
+      const selectionInfo = await page.evaluate(() => {
+        const sel = window.getSelection();
+
+        if (!sel || sel.rangeCount === 0) {
+          return { hasSelection: false, selectedText: '' };
+        }
+
+        return {
+          hasSelection: !sel.isCollapsed,
+          selectedText: sel.toString(),
+        };
+      });
+
+      expect(selectionInfo.hasSelection).toBe(true);
+      expect(selectionInfo.selectedText).toBe('Hello');
+    });
+
+    test('selection across entire block is preserved after undo', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Complete text' },
+            },
+          ],
+        },
+      });
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Focus and select all text using Cmd+A
+      await input.click();
+      await page.keyboard.press(`${MODIFIER_KEY}+a`);
+
+      await waitForDelay(page, 50);
+
+      // Delete the selected text
+      await page.keyboard.press('Backspace');
+
+      // Wait for history to record
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify text was deleted
+      await expect(input).toHaveText('');
+
+      // Undo the deletion
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Verify text is restored
+      await expect(input).toHaveText('Complete text');
+
+      // Check that the selection is restored (entire text should be selected)
+      const selectionInfo = await page.evaluate(() => {
+        const sel = window.getSelection();
+
+        if (!sel || sel.rangeCount === 0) {
+          return { hasSelection: false, selectedText: '' };
+        }
+
+        return {
+          hasSelection: !sel.isCollapsed,
+          selectedText: sel.toString(),
+        };
+      });
+
+      expect(selectionInfo.hasSelection).toBe(true);
+      expect(selectionInfo.selectedText).toBe('Complete text');
     });
   });
 });

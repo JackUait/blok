@@ -197,6 +197,13 @@ export class History extends Module {
   private batchHasMutations = false;
 
   /**
+   * Generation counter for batches.
+   * Incremented when a batch completes. Used to detect stale recordState() calls
+   * that were scheduled before a batch started but run after it ended.
+   */
+  private batchGeneration = 0;
+
+  /**
    * Timestamp of the last mutation.
    * Used for pause detection to create checkpoints when user pauses typing.
    */
@@ -467,11 +474,22 @@ export class History extends Module {
 
     this.batchDepth--;
 
-    // Only record state when the outermost batch ends
-    if (this.batchDepth === 0 && this.batchHasMutations) {
-      void this.recordState();
-      this.batchHasMutations = false;
+    // Only process when the outermost batch ends
+    if (this.batchDepth !== 0) {
+      return;
     }
+
+    // Increment the batch generation to invalidate any pending recordState() calls
+    // that were scheduled before this batch started.
+    this.batchGeneration++;
+
+    if (!this.batchHasMutations) {
+      return;
+    }
+
+    // Don't pass scheduledGeneration - this is a fresh call from endBatch
+    void this.recordState();
+    this.batchHasMutations = false;
   }
 
   /**
@@ -845,7 +863,11 @@ export class History extends Module {
     if (shouldCheckpoint || isImmediate) {
       // Create checkpoint immediately (flush pending debounce)
       this.clearDebounce();
-      void this.recordState().then(() => {
+      // Capture the batch generation at the time of scheduling.
+      // This allows recordState to detect if a batch occurred between scheduling and execution.
+      const generationAtSchedule = this.batchGeneration;
+
+      void this.recordState(generationAtSchedule).then(() => {
         // Reset pending action count after checkpoint
         this.smartGrouping.resetPendingActionCount();
         // Update context after recording
@@ -865,10 +887,13 @@ export class History extends Module {
    * Starts the debounce timer for recording state
    */
   private startDebounce(): void {
+    // Capture the batch generation at the time of scheduling.
+    const generationAtSchedule = this.batchGeneration;
+
     this.debounceTimeout = setTimeout(() => {
       // Reset pending action count - debounce expiry acts as a checkpoint
       this.smartGrouping.resetPendingActionCount();
-      void this.recordState();
+      void this.recordState(generationAtSchedule);
     }, this.debounceTime);
   }
 
@@ -888,10 +913,33 @@ export class History extends Module {
    * - User presses Enter to split block
    * - NEW state is recorded, but we update PREVIOUS entry's caret to position 2
    * - On undo: we restore to "hello" with caret at position 2 (where Enter was pressed)
+   *
+   * @param scheduledGeneration - Optional batch generation at the time this call was scheduled.
+   *                              If provided and doesn't match current generation, the call is skipped.
+   *                              This prevents stale recordState() calls that were scheduled before
+   *                              a batch started from running after the batch ends.
    */
-  private async recordState(): Promise<void> {
+  private async recordState(scheduledGeneration?: number): Promise<void> {
     // Double-check we're not in undo/redo mode
     if (this.isPerformingUndoRedo) {
+      return;
+    }
+
+    // Skip if we're in a batch - the batch will record state when it ends.
+    // This prevents race conditions where a pending recordState() from before
+    // the batch started captures the wrong state (after batch mutations).
+    if (this.batchDepth > 0) {
+      return;
+    }
+
+    // Skip if a batch occurred between when this call was scheduled and now.
+    // This prevents stale recordState() calls from recording incorrect states.
+    // For example, when typing "1. " triggers a list conversion:
+    // - The space mutation schedules recordState() before the batch starts
+    // - The batch runs (list conversion) and increments batchGeneration
+    // - This stale recordState() runs after the batch but would capture the list state
+    // By checking the generation, we skip this stale call.
+    if (scheduledGeneration !== undefined && scheduledGeneration !== this.batchGeneration) {
       return;
     }
 

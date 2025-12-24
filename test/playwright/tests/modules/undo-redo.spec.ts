@@ -2976,4 +2976,267 @@ test.describe('undo/Redo', () => {
       await expect(input).toHaveText('ABCDEFGHIJX');
     });
   });
+
+  test.describe('shortcut Conversions', () => {
+    test('ordered list shortcut conversion can be fully undone', async ({ page }) => {
+      // Test that typing "1. " to create an ordered list can be undone step by step
+      // This was a bug where the second undo did nothing (stayed at "1.")
+      await createBlok(page);
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      // Focus and type "1." slowly to trigger word boundary checkpoints
+      await input.click();
+      await page.keyboard.type('1', { delay: 50 });
+      await page.keyboard.type('.', { delay: 50 });
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Now type space to trigger list conversion
+      await page.keyboard.type(' ');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we have a list
+      const listBlock = page.locator('[data-blok-component="list"]');
+
+      await expect(listBlock).toBeVisible();
+
+      // First undo - should convert back to paragraph with "1."
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      // Should be back to paragraph
+      const paragraphAfterUndo1 = page.locator(`${PARAGRAPH_SELECTOR}`);
+
+      await expect(paragraphAfterUndo1).toBeVisible();
+
+      const textAfterUndo1 = paragraphAfterUndo1.locator('[contenteditable="true"]');
+
+      await expect(textAfterUndo1).toHaveText('1.');
+
+      // Second undo - should NOT stay at "1." (this was the bug)
+      // It should either go to "1" or empty depending on checkpoint timing
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const textAfterUndo2 = await paragraphAfterUndo1.locator('[contenteditable="true"]').textContent();
+
+      // The text should be shorter than "1." (either "1" or empty)
+      expect(textAfterUndo2?.length).toBeLessThan(2);
+    });
+
+    test('unordered list shortcut conversion can be fully undone', async ({ page }) => {
+      // Test that typing "- " to create a bulleted list can be undone
+      await createBlok(page);
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      await input.click();
+      await page.keyboard.type('-', { delay: 50 });
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type space to trigger list conversion
+      await page.keyboard.type(' ');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we have a list
+      const listBlock = page.locator('[data-blok-component="list"]');
+
+      await expect(listBlock).toBeVisible();
+
+      // First undo - should convert back to paragraph with "-"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const paragraphAfterUndo = page.locator(`${PARAGRAPH_SELECTOR}`);
+
+      await expect(paragraphAfterUndo).toBeVisible();
+
+      const textAfterUndo1 = paragraphAfterUndo.locator('[contenteditable="true"]');
+
+      await expect(textAfterUndo1).toHaveText('-');
+
+      // Second undo - should go to empty
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const textAfterUndo2 = paragraphAfterUndo.locator('[contenteditable="true"]');
+
+      await expect(textAfterUndo2).toHaveText('');
+    });
+
+    test('checklist shortcut conversion can be fully undone', async ({ page }) => {
+      // Test that typing "[] " to create a checklist can be undone
+      await createBlok(page);
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      await input.click();
+      await page.keyboard.type('[', { delay: 50 });
+      await page.keyboard.type(']', { delay: 50 });
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type space to trigger checklist conversion
+      await page.keyboard.type(' ');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we have a list (checklist is rendered as list component)
+      const listBlock = page.locator('[data-blok-component="list"]');
+
+      await expect(listBlock).toBeVisible();
+
+      // First undo - should convert back to paragraph with "[]"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const paragraphAfterUndo = page.locator(`${PARAGRAPH_SELECTOR}`);
+
+      await expect(paragraphAfterUndo).toBeVisible();
+
+      const textAfterUndo1 = paragraphAfterUndo.locator('[contenteditable="true"]');
+
+      await expect(textAfterUndo1).toHaveText('[]');
+
+      // Second undo - should reduce text
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const textAfterUndo2 = await paragraphAfterUndo.locator('[contenteditable="true"]').textContent();
+
+      expect(textAfterUndo2?.length).toBeLessThan(2);
+    });
+
+    test('header shortcut conversion can be fully undone', async ({ page }) => {
+      // Test that typing "# " to create a header can be undone
+      // Note: Header tool uses default bundled tools configuration
+      await createBlok(page);
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      await input.click();
+      await page.keyboard.type('#', { delay: 50 });
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type space to trigger header conversion
+      await page.keyboard.type(' ');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we have a header
+      const headerBlock = page.locator('[data-blok-component="header"]');
+
+      await expect(headerBlock).toBeVisible();
+
+      // First undo - should convert back to paragraph with "#"
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const paragraphAfterUndo = page.locator(`${PARAGRAPH_SELECTOR}`);
+
+      await expect(paragraphAfterUndo).toBeVisible();
+
+      const textAfterUndo1 = paragraphAfterUndo.locator('[contenteditable="true"]');
+
+      await expect(textAfterUndo1).toHaveText('#');
+
+      // Second undo - should go to empty
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const textAfterUndo2 = paragraphAfterUndo.locator('[contenteditable="true"]');
+
+      await expect(textAfterUndo2).toHaveText('');
+    });
+
+    test('list conversion with existing text preserves undo chain', async ({ page }) => {
+      // Test that converting "1. some text" preserves proper undo states
+      // and that we can eventually undo back to the original "1." state
+      await createBlok(page);
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      await input.click();
+      await page.keyboard.type('1.', { delay: 50 });
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type space to trigger conversion, then wait, then type text
+      await page.keyboard.type(' ');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Now type some text in the list
+      await page.keyboard.type('hello');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we have a list with "hello"
+      const listBlock = page.locator('[data-blok-component="list"]');
+
+      await expect(listBlock).toBeVisible();
+
+      const listText = listBlock.locator('[contenteditable="true"]');
+
+      await expect(listText).toHaveText('hello');
+
+      // Undo multiple times until we get back to a paragraph with "1."
+      // The exact number of undos depends on checkpoint timing, but we should
+      // eventually be able to get back to the "1." state
+      let foundOriginalState = false;
+
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press(`${MODIFIER_KEY}+z`);
+        await waitForDelay(page, STATE_CHANGE_WAIT);
+
+        const paragraphAfterUndo = page.locator(`${PARAGRAPH_SELECTOR}`);
+        const isVisible = await paragraphAfterUndo.isVisible();
+
+        if (isVisible) {
+          const textAfterUndo = await paragraphAfterUndo.locator('[contenteditable="true"]').textContent();
+
+          if (textAfterUndo === '1.') {
+            foundOriginalState = true;
+            break;
+          }
+        }
+      }
+
+      expect(foundOriginalState).toBe(true);
+    });
+
+    test('redo works after undoing list conversion', async ({ page }) => {
+      // Test that redo properly restores the list after undo
+      await createBlok(page);
+
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
+      const input = paragraph.locator('[contenteditable="true"]');
+
+      await input.click();
+      await page.keyboard.type('1.', { delay: 50 });
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Type space to trigger list conversion
+      await page.keyboard.type(' ');
+      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+
+      // Verify we have a list
+      const listBlock = page.locator('[data-blok-component="list"]');
+
+      await expect(listBlock).toBeVisible();
+
+      // Undo - should convert back to paragraph
+      await page.keyboard.press(`${MODIFIER_KEY}+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      const paragraphAfterUndo = page.locator(`${PARAGRAPH_SELECTOR}`);
+
+      await expect(paragraphAfterUndo).toBeVisible();
+
+      // Redo - should restore the list
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
+      await waitForDelay(page, STATE_CHANGE_WAIT);
+
+      await expect(listBlock).toBeVisible();
+    });
+  });
 });

@@ -673,25 +673,16 @@ export class BlockManager extends Module {
 
   /**
    * Delete all selected blocks and insert a replacement block at their position.
-   * The entire operation (deletion + insertion) is batched into a single undo step.
    * @returns The inserted replacement block, or undefined if no blocks were selected
    */
   public deleteSelectedBlocksAndInsertReplacement(): Block | undefined {
-    const { History } = this.Blok;
+    const insertionIndex = this.removeSelectedBlocks();
 
-    History.startBatch();
-
-    try {
-      const insertionIndex = this.removeSelectedBlocks();
-
-      if (insertionIndex === undefined) {
-        return undefined;
-      }
-
-      return this.insertDefaultBlockAtIndex(insertionIndex, true);
-    } finally {
-      History.endBatch();
+    if (insertionIndex === undefined) {
+      return undefined;
     }
+
+    return this.insertDefaultBlockAtIndex(insertionIndex, true);
   }
 
   /**

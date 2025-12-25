@@ -40,7 +40,6 @@ const apiMethodsStub: ToolApiMethods = {
   caret: {} as ToolApiMethods['caret'],
   tools: {} as ToolApiMethods['tools'],
   events: {} as ToolApiMethods['events'],
-  history: {} as ToolApiMethods['history'],
   listeners: {} as ToolApiMethods['listeners'],
   notifier: {} as ToolApiMethods['notifier'],
   sanitizer: {} as ToolApiMethods['sanitizer'],

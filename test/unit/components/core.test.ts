@@ -33,8 +33,6 @@ const mockRegistry = vi.hoisted(() => ({
     modificationsObserverEnable: vi.fn(),
     caretPrepare: vi.fn(),
     caretSetToBlock: vi.fn(),
-    historyPrepare: vi.fn(),
-    historyCaptureInitialState: vi.fn(() => Promise.resolve()),
   },
 }));
 
@@ -175,15 +173,6 @@ vi.mock('../../../src/components/modules', () => {
     }
   }
 
-  /**
-   * Minimal History module stub used in Core tests.
-   */
-  class MockHistory {
-    public state?: BlokModules;
-    public prepare = mockRegistry.modules.historyPrepare;
-    public captureInitialState = mockRegistry.modules.historyCaptureInitialState;
-  }
-
   return {
     __esModule: true,
     Modules: {
@@ -199,7 +188,6 @@ vi.mock('../../../src/components/modules', () => {
       Renderer: MockRenderer,
       ModificationsObserver: MockModificationsObserver,
       Caret: MockCaret,
-      History: MockHistory,
     },
   };
 });
@@ -225,8 +213,6 @@ const {
   rendererRender: mockRendererRender,
   modificationsObserverEnable: mockModificationsObserverEnable,
   caretSetToBlock: mockCaretSetToBlock,
-  historyPrepare: mockHistoryPrepare,
-  historyCaptureInitialState: mockHistoryCaptureInitialState,
 } = moduleMocks;
 
 // Import Core after mocks are configured
@@ -362,7 +348,6 @@ describe('Core', () => {
       expect(mockRectangleSelectionPrepare).toHaveBeenCalled();
       expect(mockCrossBlockSelectionPrepare).toHaveBeenCalled();
       expect(mockReadOnlyPrepare).toHaveBeenCalled();
-      expect(mockHistoryPrepare).toHaveBeenCalled();
     });
 
     it('logs warning when non-critical module fails to prepare', async () => {
@@ -437,7 +422,6 @@ describe('Core', () => {
 
       expect(mockUICheckEmptiness).toHaveBeenCalledTimes(1);
       expect(mockModificationsObserverEnable).toHaveBeenCalledTimes(1);
-      expect(mockHistoryCaptureInitialState).toHaveBeenCalledTimes(1);
       expect(mockCaretSetToBlock).toHaveBeenCalledWith(
         core.moduleInstances.BlockManager.blocks[0],
         'start'

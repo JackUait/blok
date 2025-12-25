@@ -497,7 +497,7 @@ export class BlockEvents extends Module {
    * Preserves HTML content and maintains caret position.
    */
   private handleListShortcut(): void {
-    const { BlockManager, History, Tools } = this.Blok;
+    const { BlockManager, Tools } = this.Blok;
     const currentBlock = BlockManager.currentBlock;
 
     if (!currentBlock) {
@@ -558,12 +558,6 @@ export class BlockEvents extends Module {
       const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
       const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
-      /**
-       * Wrap conversion in a History batch to group paragraph removal + list creation
-       * into a single undo step. This prevents intermediate states from being recorded.
-       */
-      History.startBatch();
-
       const newBlock = BlockManager.replace(currentBlock, 'list', {
         text: remainingHtml,
         style: 'checklist',
@@ -572,8 +566,6 @@ export class BlockEvents extends Module {
       });
 
       this.setCaretAfterConversion(newBlock, caretOffset);
-
-      History.endBatch();
 
       return;
     }
@@ -592,12 +584,6 @@ export class BlockEvents extends Module {
       const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
       const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
-      /**
-       * Wrap conversion in a History batch to group paragraph removal + list creation
-       * into a single undo step. This prevents intermediate states from being recorded.
-       */
-      History.startBatch();
-
       const newBlock = BlockManager.replace(currentBlock, 'list', {
         text: remainingHtml,
         style: 'unordered',
@@ -606,8 +592,6 @@ export class BlockEvents extends Module {
       });
 
       this.setCaretAfterConversion(newBlock, caretOffset);
-
-      History.endBatch();
 
       return;
     }
@@ -653,24 +637,16 @@ export class BlockEvents extends Module {
       listData.depth = depth;
     }
 
-    /**
-     * Wrap conversion in a History batch to group paragraph removal + list creation
-     * into a single undo step. This prevents intermediate states from being recorded.
-     */
-    History.startBatch();
-
     const newBlock = BlockManager.replace(currentBlock, 'list', listData);
 
     this.setCaretAfterConversion(newBlock, caretOffset);
-
-    History.endBatch();
   }
 
   /**
    * Check if current block matches a header shortcut pattern and convert it.
    */
   private handleHeaderShortcut(): void {
-    const { BlockManager, History, Tools } = this.Blok;
+    const { BlockManager, Tools } = this.Blok;
     const currentBlock = BlockManager.currentBlock;
 
     if (!currentBlock?.tool.isDefault) {
@@ -702,20 +678,12 @@ export class BlockEvents extends Module {
     const remainingHtml = this.extractRemainingHtml(currentInput, match.shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - match.shortcutLength;
 
-    /**
-     * Wrap conversion in a History batch to group paragraph removal + header creation
-     * into a single undo step. This prevents intermediate states from being recorded.
-     */
-    History.startBatch();
-
     const newBlock = BlockManager.replace(currentBlock, BlockEvents.HEADER_TOOL_NAME, {
       text: remainingHtml,
       level: match.level,
     });
 
     this.setCaretAfterConversion(newBlock, caretOffset);
-
-    History.endBatch();
   }
 
   private matchDefaultHeaderShortcut(text: string): { level: number; shortcutLength: number } | null {

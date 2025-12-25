@@ -265,4 +265,71 @@ describe('YjsManager', () => {
       expect(manager.canUndo()).toBe(false);
     });
   });
+
+  describe('change observation', () => {
+    it('should emit event when block is added', () => {
+      const callback = vi.fn();
+
+      manager.onBlocksChanged(callback);
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
+
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'add', blockId: 'block1' })
+      );
+    });
+
+    it('should emit event when block is removed', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'Test' } },
+      ]);
+
+      const callback = vi.fn();
+
+      manager.onBlocksChanged(callback);
+      manager.removeBlock('block1');
+
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'remove', blockId: 'block1' })
+      );
+    });
+
+    it('should emit event when block data changes', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'Original' } },
+      ]);
+
+      const callback = vi.fn();
+
+      manager.onBlocksChanged(callback);
+      manager.updateBlockData('block1', 'text', 'Updated');
+
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'update', blockId: 'block1' })
+      );
+    });
+
+    it('should include origin in event', () => {
+      const callback = vi.fn();
+
+      manager.onBlocksChanged(callback);
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
+
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ origin: 'local' })
+      );
+    });
+
+    it('should emit undo origin when undoing', () => {
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
+
+      const callback = vi.fn();
+
+      manager.onBlocksChanged(callback);
+      manager.undo();
+
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ origin: 'undo' })
+      );
+    });
+  });
 });

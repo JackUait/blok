@@ -3,6 +3,17 @@ import { Module } from '../__module';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
 
 /**
+ * Event emitted when blocks change
+ */
+export interface BlockChangeEvent {
+  type: 'add' | 'remove' | 'update' | 'move';
+  blockId: string;
+  origin: 'local' | 'undo' | 'redo' | 'load' | 'remote';
+}
+
+type BlockChangeCallback = (event: BlockChangeEvent) => void;
+
+/**
  * @class YjsManager
  * @classdesc Manages Yjs document and block synchronization
  * @module YjsManager
@@ -25,6 +36,167 @@ export class YjsManager extends Module {
     captureTimeout: 500,
     trackedOrigins: new Set(['local']),
   });
+
+  /**
+   * Callbacks for block changes
+   */
+  private changeCallbacks: BlockChangeCallback[] = [];
+
+  /**
+   * Constructor - sets up change observers
+   */
+  constructor(params: ConstructorParameters<typeof Module>[0]) {
+    super(params);
+    this.setupObservers();
+  }
+
+  /**
+   * Set up Yjs observers for change tracking
+   */
+  private setupObservers(): void {
+    this.yblocks.observeDeep((events, transaction) => {
+      const origin = this.mapTransactionOrigin(transaction.origin);
+
+      for (const event of events) {
+        this.handleYjsEvent(event, origin);
+      }
+    });
+  }
+
+  /**
+   * Handle a single Yjs event
+   */
+  private handleYjsEvent(event: Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>, origin: BlockChangeEvent['origin']): void {
+    if (event.target === this.yblocks) {
+      this.handleArrayEvent(event as Y.YArrayEvent<Y.Map<unknown>>, origin);
+
+      return;
+    }
+
+    if (event.target instanceof Y.Map) {
+      this.handleMapEvent(event.target, origin);
+    }
+  }
+
+  /**
+   * Handle array-level changes (add/remove)
+   */
+  private handleArrayEvent(yArrayEvent: Y.YArrayEvent<Y.Map<unknown>>, origin: BlockChangeEvent['origin']): void {
+    yArrayEvent.changes.added.forEach((item) => {
+      const yblock = item.content.getContent()[0] as Y.Map<unknown>;
+
+      this.emitChange({
+        type: 'add',
+        blockId: yblock.get('id') as string,
+        origin,
+      });
+    });
+
+    yArrayEvent.changes.deleted.forEach((item) => {
+      const blockId = this.extractBlockIdFromDeletedItem(item);
+
+      if (blockId === undefined) {
+        return;
+      }
+
+      this.emitChange({
+        type: 'remove',
+        blockId,
+        origin,
+      });
+    });
+  }
+
+  /**
+   * Extract block id from a deleted Y.Map item
+   */
+  private extractBlockIdFromDeletedItem(item: Y.Item): string | undefined {
+    const content = item.content.getContent();
+
+    if (content.length === 0) {
+      return undefined;
+    }
+
+    const yblock = content[0] as Y.Map<unknown>;
+    // Access the internal _map to get the id since the Y.Map is deleted
+    const idEntry = yblock._map.get('id');
+
+    return idEntry?.content?.getContent()[0] as string | undefined;
+  }
+
+  /**
+   * Handle map-level changes (data update)
+   */
+  private handleMapEvent(ymap: Y.Map<unknown>, origin: BlockChangeEvent['origin']): void {
+    const yblock = this.findParentBlock(ymap);
+
+    if (yblock === undefined) {
+      return;
+    }
+
+    this.emitChange({
+      type: 'update',
+      blockId: yblock.get('id') as string,
+      origin,
+    });
+  }
+
+  /**
+   * Map transaction origin to event origin
+   */
+  private mapTransactionOrigin(origin: unknown): BlockChangeEvent['origin'] {
+    if (origin === 'local') {
+      return 'local';
+    }
+
+    if (origin === 'load') {
+      return 'load';
+    }
+
+    if (origin === this.undoManager) {
+      return this.undoManager.undoing ? 'undo' : 'redo';
+    }
+
+    return 'remote';
+  }
+
+  /**
+   * Find the parent block Y.Map for a nested Y.Map (data or tunes)
+   */
+  private findParentBlock(ymap: Y.Map<unknown>): Y.Map<unknown> | undefined {
+    return this.yblocks.toArray().find((yblock) => {
+      const ydata = yblock.get('data');
+      const ytunes = yblock.get('tunes');
+
+      return ydata === ymap || ytunes === ymap;
+    });
+  }
+
+  /**
+   * Register callback for block changes
+   * @param callback - Function to call on changes
+   * @returns Unsubscribe function
+   */
+  public onBlocksChanged(callback: BlockChangeCallback): () => void {
+    this.changeCallbacks.push(callback);
+
+    return (): void => {
+      const index = this.changeCallbacks.indexOf(callback);
+
+      if (index !== -1) {
+        this.changeCallbacks.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Emit change event to all callbacks
+   */
+  private emitChange(event: BlockChangeEvent): void {
+    for (const callback of this.changeCallbacks) {
+      callback(event);
+    }
+  }
 
   /**
    * Load blocks from JSON data

@@ -981,6 +981,9 @@ export class BlockEvents extends Module {
       return;
     }
 
+    // Force new undo group for block creation
+    this.Blok.YjsManager.stopCapturing();
+
     /**
      * If enter has been pressed at the start of the text, just insert paragraph Block above
      */

@@ -48,6 +48,9 @@ export class BlockManager extends Module {
    * @param {number} newIndex - index of Block to set as current
    */
   public set currentBlockIndex(newIndex: number) {
+    if (this._currentBlockIndex !== newIndex) {
+      this.Blok.YjsManager?.stopCapturing();
+    }
     this._currentBlockIndex = newIndex;
   }
 

@@ -35,23 +35,7 @@ export class YjsManager extends Module {
       this.yblocks.delete(0, this.yblocks.length);
 
       for (const block of blocks) {
-        const yblock = new Y.Map<unknown>();
-
-        yblock.set('id', block.id);
-        yblock.set('type', block.type);
-        yblock.set('data', this.objectToYMap(block.data));
-
-        if (block.tunes !== undefined) {
-          yblock.set('tunes', this.objectToYMap(block.tunes));
-        }
-
-        if (block.parent !== undefined) {
-          yblock.set('parentId', block.parent);
-        }
-
-        if (block.content !== undefined) {
-          yblock.set('contentIds', Y.Array.from(block.content));
-        }
+        const yblock = this.outputDataToYBlock(block);
 
         this.yblocks.push([yblock]);
       }
@@ -63,38 +47,7 @@ export class YjsManager extends Module {
    * @returns Array of block data
    */
   public toJSON(): OutputBlockData[] {
-    const blocks: OutputBlockData[] = [];
-
-    for (let i = 0; i < this.yblocks.length; i++) {
-      const yblock = this.yblocks.get(i);
-      const block: OutputBlockData = {
-        id: yblock.get('id') as string,
-        type: yblock.get('type') as string,
-        data: this.yMapToObject(yblock.get('data') as Y.Map<unknown>),
-      };
-
-      const tunes = yblock.get('tunes') as Y.Map<unknown> | undefined;
-
-      if (tunes !== undefined && tunes.size > 0) {
-        block.tunes = this.yMapToObject(tunes);
-      }
-
-      const parentId = yblock.get('parentId') as string | undefined;
-
-      if (parentId !== undefined) {
-        block.parent = parentId;
-      }
-
-      const contentIds = yblock.get('contentIds') as Y.Array<string> | undefined;
-
-      if (contentIds !== undefined && contentIds.length > 0) {
-        block.content = contentIds.toArray();
-      }
-
-      blocks.push(block);
-    }
-
-    return blocks;
+    return this.yblocks.toArray().map((yblock) => this.yBlockToOutputData(yblock));
   }
 
   /**
@@ -104,21 +57,9 @@ export class YjsManager extends Module {
    * @returns The created Y.Map
    */
   public addBlock(blockData: OutputBlockData, index?: number): Y.Map<unknown> {
-    const yblock = new Y.Map<unknown>();
+    const yblock = this.outputDataToYBlock(blockData);
 
     this.ydoc.transact(() => {
-      yblock.set('id', blockData.id);
-      yblock.set('type', blockData.type);
-      yblock.set('data', this.objectToYMap(blockData.data));
-
-      if (blockData.tunes !== undefined) {
-        yblock.set('tunes', this.objectToYMap(blockData.tunes));
-      }
-
-      if (blockData.parent !== undefined) {
-        yblock.set('parentId', blockData.parent);
-      }
-
       const insertIndex = index ?? this.yblocks.length;
 
       this.yblocks.insert(insertIndex, [yblock]);
@@ -166,26 +107,35 @@ export class YjsManager extends Module {
       const adjustedIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
 
       // Create a new Y.Map with the cloned data
-      const newYblock = new Y.Map<unknown>();
-
-      newYblock.set('id', blockData.id);
-      newYblock.set('type', blockData.type);
-      newYblock.set('data', this.objectToYMap(blockData.data));
-
-      if (blockData.tunes !== undefined) {
-        newYblock.set('tunes', this.objectToYMap(blockData.tunes));
-      }
-
-      if (blockData.parent !== undefined) {
-        newYblock.set('parentId', blockData.parent);
-      }
-
-      if (blockData.content !== undefined) {
-        newYblock.set('contentIds', Y.Array.from(blockData.content));
-      }
+      const newYblock = this.outputDataToYBlock(blockData);
 
       this.yblocks.insert(adjustedIndex, [newYblock]);
     }, 'local');
+  }
+
+  /**
+   * Convert OutputBlockData to Y.Map
+   */
+  private outputDataToYBlock(blockData: OutputBlockData): Y.Map<unknown> {
+    const yblock = new Y.Map<unknown>();
+
+    yblock.set('id', blockData.id);
+    yblock.set('type', blockData.type);
+    yblock.set('data', this.objectToYMap(blockData.data));
+
+    if (blockData.tunes !== undefined) {
+      yblock.set('tunes', this.objectToYMap(blockData.tunes));
+    }
+
+    if (blockData.parent !== undefined) {
+      yblock.set('parentId', blockData.parent);
+    }
+
+    if (blockData.content !== undefined) {
+      yblock.set('contentIds', Y.Array.from(blockData.content));
+    }
+
+    return yblock;
   }
 
   /**
@@ -258,13 +208,7 @@ export class YjsManager extends Module {
    * Find block index by id
    */
   private findBlockIndex(id: string): number {
-    for (let i = 0; i < this.yblocks.length; i++) {
-      if (this.yblocks.get(i).get('id') === id) {
-        return i;
-      }
-    }
-
-    return -1;
+    return this.yblocks.toArray().findIndex((yblock) => yblock.get('id') === id);
   }
 
   /**

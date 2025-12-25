@@ -192,4 +192,77 @@ describe('YjsManager', () => {
       expect(yblock).toBeUndefined();
     });
   });
+
+  describe('undo/redo', () => {
+    it('should undo block addition', () => {
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
+
+      expect(manager.toJSON()).toHaveLength(1);
+
+      manager.undo();
+
+      expect(manager.toJSON()).toHaveLength(0);
+    });
+
+    it('should redo undone block addition', () => {
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
+      manager.undo();
+
+      expect(manager.toJSON()).toHaveLength(0);
+
+      manager.redo();
+
+      expect(manager.toJSON()).toHaveLength(1);
+    });
+
+    it('should undo block removal', () => {
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
+      manager.stopCapturing(); // Force new undo group
+      manager.removeBlock('block1');
+
+      expect(manager.toJSON()).toHaveLength(0);
+
+      manager.undo();
+
+      expect(manager.toJSON()).toHaveLength(1);
+    });
+
+    it('should undo data update', () => {
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Original' } });
+      manager.stopCapturing();
+      manager.updateBlockData('block1', 'text', 'Updated');
+
+      expect(manager.toJSON()[0].data.text).toBe('Updated');
+
+      manager.undo();
+
+      expect(manager.toJSON()[0].data.text).toBe('Original');
+    });
+
+    it('should report canUndo correctly', () => {
+      expect(manager.canUndo()).toBe(false);
+
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
+
+      expect(manager.canUndo()).toBe(true);
+    });
+
+    it('should report canRedo correctly', () => {
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
+
+      expect(manager.canRedo()).toBe(false);
+
+      manager.undo();
+
+      expect(manager.canRedo()).toBe(true);
+    });
+
+    it('should not undo fromJSON operations (origin: load)', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'Loaded' } },
+      ]);
+
+      expect(manager.canUndo()).toBe(false);
+    });
+  });
 });

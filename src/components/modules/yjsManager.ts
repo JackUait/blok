@@ -212,6 +212,42 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Undo the last operation
+   */
+  public undo(): void {
+    this.undoManager.undo();
+  }
+
+  /**
+   * Redo the last undone operation
+   */
+  public redo(): void {
+    this.undoManager.redo();
+  }
+
+  /**
+   * Check if undo is available
+   */
+  public canUndo(): boolean {
+    return this.undoManager.undoStack.length > 0;
+  }
+
+  /**
+   * Check if redo is available
+   */
+  public canRedo(): boolean {
+    return this.undoManager.redoStack.length > 0;
+  }
+
+  /**
+   * Stop capturing changes into current undo group
+   * Call this to force next change into a new undo entry
+   */
+  public stopCapturing(): void {
+    this.undoManager.stopCapturing();
+  }
+
+  /**
    * Convert plain object to Y.Map
    */
   private objectToYMap(obj: Record<string, unknown>): Y.Map<unknown> {

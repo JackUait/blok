@@ -441,6 +441,13 @@ export class BlockManager extends Module {
       index: blockIndex,
     });
 
+    // Sync to Yjs
+    const mergedData = Object.assign({}, existingData, data ?? {});
+
+    for (const [key, value] of Object.entries(mergedData)) {
+      this.Blok.YjsManager.updateBlockData(block.id, key, value);
+    }
+
     return newBlock;
   }
 
@@ -1016,6 +1023,9 @@ export class BlockManager extends Module {
       fromIndex,
       toIndex,
     });
+
+    // Sync to Yjs
+    this.Blok.YjsManager.moveBlock(movedBlock.id, toIndex);
   }
 
   /**

@@ -621,6 +621,11 @@ export class UI extends Module<UINodes> {
         this.tabPressed(event);
         break;
 
+      case 'z':
+      case 'Z':
+        this.undoRedoPressed(event);
+        break;
+
       default:
         this.defaultBehaviour(event);
         break;
@@ -850,6 +855,28 @@ export class UI extends Module<UINodes> {
     }
 
     this.Blok.Toolbar.close();
+  }
+
+  /**
+   * Handle Cmd/Ctrl+Z (undo) and Cmd/Ctrl+Shift+Z (redo)
+   * @param {KeyboardEvent} event - keyboard event
+   */
+  private undoRedoPressed(event: KeyboardEvent): void {
+    const isMeta = event.metaKey || event.ctrlKey;
+
+    if (!isMeta) {
+      this.defaultBehaviour(event);
+
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.shiftKey) {
+      this.Blok.YjsManager.redo();
+    } else {
+      this.Blok.YjsManager.undo();
+    }
   }
 
   /**

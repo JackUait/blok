@@ -220,6 +220,41 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Get block Y.Map by id
+   * @param id - Block id
+   * @returns Y.Map or undefined if not found
+   */
+  public getBlockById(id: string): Y.Map<unknown> | undefined {
+    const index = this.findBlockIndex(id);
+
+    if (index === -1) {
+      return undefined;
+    }
+
+    return this.yblocks.get(index);
+  }
+
+  /**
+   * Update a property in block data
+   * @param id - Block id
+   * @param key - Data property key
+   * @param value - New value
+   */
+  public updateBlockData(id: string, key: string, value: unknown): void {
+    const yblock = this.getBlockById(id);
+
+    if (yblock === undefined) {
+      return;
+    }
+
+    this.ydoc.transact(() => {
+      const ydata = yblock.get('data') as Y.Map<unknown>;
+
+      ydata.set(key, value);
+    }, 'local');
+  }
+
+  /**
    * Find block index by id
    */
   private findBlockIndex(id: string): number {

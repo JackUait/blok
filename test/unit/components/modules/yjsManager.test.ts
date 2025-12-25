@@ -137,4 +137,59 @@ describe('YjsManager', () => {
       expect(result[2].id).toBe('block2');
     });
   });
+
+  describe('updateBlockData', () => {
+    it('should update a single property in block data', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'Original' } },
+      ]);
+
+      manager.updateBlockData('block1', 'text', 'Updated');
+
+      const result = manager.toJSON();
+
+      expect(result[0].data.text).toBe('Updated');
+    });
+
+    it('should add new property to block data', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'header', data: { text: 'Title' } },
+      ]);
+
+      manager.updateBlockData('block1', 'level', 2);
+
+      const result = manager.toJSON();
+
+      expect(result[0].data.level).toBe(2);
+    });
+
+    it('should do nothing if block not found', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'Original' } },
+      ]);
+
+      manager.updateBlockData('nonexistent', 'text', 'Updated');
+
+      expect(manager.toJSON()[0].data.text).toBe('Original');
+    });
+  });
+
+  describe('getBlockById', () => {
+    it('should return Y.Map for existing block', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'Test' } },
+      ]);
+
+      const yblock = manager.getBlockById('block1');
+
+      expect(yblock).toBeDefined();
+      expect(yblock?.get('id')).toBe('block1');
+    });
+
+    it('should return undefined for nonexistent block', () => {
+      const yblock = manager.getBlockById('nonexistent');
+
+      expect(yblock).toBeUndefined();
+    });
+  });
 });

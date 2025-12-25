@@ -23,6 +23,7 @@ import { InlineToolbar } from './toolbar/inline';
 
 /** . */
 import { I18n } from './i18n';
+import { YjsManager } from './yjsManager';
 import { BlockEvents } from './blockEvents';
 import { BlockManager } from './blockManager';
 import { BlockSelection } from './blockSelection';
@@ -83,6 +84,7 @@ export {
   Saver,
   Tools,
   UI,
+  YjsManager,
 };
 
 /**
@@ -129,4 +131,5 @@ export const Modules = {
   Saver,
   Tools,
   UI,
+  YjsManager,
 };

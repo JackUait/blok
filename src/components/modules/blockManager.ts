@@ -371,6 +371,16 @@ export class BlockManager extends Module {
       index: targetIndex,
     });
 
+    /**
+     * Sync to Yjs data layer
+     */
+    this.Blok.YjsManager.addBlock({
+      id: block.id,
+      type: block.name,
+      data: block.preservedData,
+      parent: block.parentId ?? undefined,
+    }, targetIndex);
+
     if (needToFocus) {
       this.currentBlockIndex = targetIndex;
     }
@@ -622,6 +632,11 @@ export class BlockManager extends Module {
       this.blockDidMutated(BlockRemovedMutationType, block, {
         index,
       });
+
+      /**
+       * Sync to Yjs data layer
+       */
+      this.Blok.YjsManager.removeBlock(block.id);
 
       if (this.currentBlockIndex >= index) {
         this.currentBlockIndex--;

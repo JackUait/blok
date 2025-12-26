@@ -822,4 +822,317 @@ test.describe('yjs undo/redo', () => {
     });
 
   });
+
+  test.describe('inline formatting', () => {
+    const INLINE_TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
+
+    /**
+     * Select text within a contenteditable element
+     */
+    const selectText = async (locator: Locator, text: string): Promise<void> => {
+      await locator.evaluate((element, targetText) => {
+        const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let textNode: Node | null = null;
+        let start = -1;
+
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          const content = node.textContent ?? '';
+          const idx = content.indexOf(targetText);
+
+          if (idx !== -1) {
+            textNode = node;
+            start = idx;
+            break;
+          }
+        }
+
+        if (!textNode || start === -1) {
+          throw new Error(`Text "${targetText}" was not found in element`);
+        }
+
+        const range = element.ownerDocument.createRange();
+
+        range.setStart(textNode, start);
+        range.setEnd(textNode, start + targetText.length);
+
+        const selection = element.ownerDocument.getSelection();
+
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        element.ownerDocument.dispatchEvent(new Event('selectionchange'));
+      }, text);
+    };
+
+    test('undo removes bold formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Hello world',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Select "Hello" and apply bold
+      await selectText(paragraphInput, 'Hello');
+
+      // Click bold button
+      const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
+
+      await expect(boldButton).toBeVisible();
+      await boldButton.click();
+
+      // Wait for Yjs to capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify bold was applied
+      const html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify bold was removed
+      const htmlAfterUndo = await paragraphInput.innerHTML();
+
+      expect(htmlAfterUndo).not.toMatch(/<strong>/);
+      expect(htmlAfterUndo).toBe('Hello world');
+    });
+
+    test('redo restores bold formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Hello world',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Select "Hello" and apply bold
+      await selectText(paragraphInput, 'Hello');
+
+      const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
+
+      await expect(boldButton).toBeVisible();
+      await boldButton.click();
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify bold was applied
+      let html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify bold was removed
+      html = await paragraphInput.innerHTML();
+      expect(html).not.toMatch(/<strong>/);
+
+      // Redo
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify bold is back
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+    });
+
+    test('undo removes italic formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Hello world',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Select "world" and apply italic
+      await selectText(paragraphInput, 'world');
+
+      const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
+
+      await expect(italicButton).toBeVisible();
+      await italicButton.click();
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify italic was applied (browser uses <i> tag)
+      let html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<(i|em)>world<\/(i|em)>/);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify italic was removed
+      html = await paragraphInput.innerHTML();
+      expect(html).not.toMatch(/<(i|em)>/);
+      expect(html).toBe('Hello world');
+    });
+
+    test('undo removes link formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Click here for more',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Select "here" and apply link
+      await selectText(paragraphInput, 'here');
+
+      const linkButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`);
+
+      await expect(linkButton).toBeVisible();
+      await linkButton.click();
+
+      // Enter the URL
+      const linkInput = page.locator('[data-blok-link-tool-input-opened="true"]');
+
+      await expect(linkInput).toBeVisible();
+      await linkInput.fill('https://example.com');
+      await linkInput.press('Enter');
+
+      // Wait for link input to close
+      await linkInput.waitFor({ state: 'hidden' });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify link was applied
+      let html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<a[^>]*href="https:\/\/example\.com"[^>]*>here<\/a>/);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify link was removed
+      html = await paragraphInput.innerHTML();
+      expect(html).not.toMatch(/<a /);
+      expect(html).toBe('Click here for more');
+    });
+
+    test('multiple inline format changes can be undone sequentially', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Hello world',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // First: make "Hello" bold
+      await selectText(paragraphInput, 'Hello');
+      const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
+
+      await expect(boldButton).toBeVisible();
+      await boldButton.click();
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify bold applied
+      let html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+
+      // Second: make "world" italic
+      await selectText(paragraphInput, 'world');
+      const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
+
+      await expect(italicButton).toBeVisible();
+      await italicButton.click();
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify both formats applied
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+      expect(html).toMatch(/<(i|em)>world<\/(i|em)>/);
+
+      // First undo: removes italic from "world"
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+      expect(html).not.toMatch(/<(i|em)>/);
+
+      // Second undo: removes bold from "Hello"
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      html = await paragraphInput.innerHTML();
+      expect(html).not.toMatch(/<strong>/);
+      expect(html).not.toMatch(/<(i|em)>/);
+      expect(html).toBe('Hello world');
+    });
+
+    test('undo works with existing bold formatting', async ({ page }) => {
+      // Start with pre-existing bold text
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: '<strong>Bold</strong> and normal',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Verify initial state
+      let html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<strong>Bold<\/strong>/);
+
+      // Select "normal" and make it italic
+      await selectText(paragraphInput, 'normal');
+      const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
+
+      await expect(italicButton).toBeVisible();
+      await italicButton.click();
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify italic applied
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Bold<\/strong>/);
+      expect(html).toMatch(/<(i|em)>normal<\/(i|em)>/);
+
+      // Undo: removes italic, but bold should remain
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Bold<\/strong>/);
+      expect(html).not.toMatch(/<(i|em)>/);
+    });
+  });
 });

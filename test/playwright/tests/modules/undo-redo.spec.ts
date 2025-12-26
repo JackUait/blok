@@ -2446,4 +2446,282 @@ test.describe('yjs undo/redo', () => {
       expect(savedData.blocks[3].data.text).toBe('Delta');
     });
   });
+
+  test.describe('drag-and-drop reorder', () => {
+    const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+
+    /**
+     * Helper function to get bounding box and throw if it doesn't exist.
+     */
+    const getBoundingBox = async (
+      locator: Locator
+    ): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const box = await locator.boundingBox();
+
+      if (!box) {
+        throw new Error('Could not get bounding box for element');
+      }
+
+      return box;
+    };
+
+    /**
+     * Helper function to perform drag and drop using pointer-based mouse events.
+     */
+    const performDragDrop = async (
+      page: Page,
+      sourceLocator: Locator,
+      targetLocator: Locator,
+      targetVerticalPosition: 'top' | 'bottom'
+    ): Promise<void> => {
+      const sourceBox = await getBoundingBox(sourceLocator);
+      const targetBox = await getBoundingBox(targetLocator);
+
+      const sourceX = sourceBox.x + sourceBox.width / 2;
+      const sourceY = sourceBox.y + sourceBox.height / 2;
+      const targetX = targetBox.x + targetBox.width / 2;
+      const targetY = targetVerticalPosition === 'top'
+        ? targetBox.y + 1
+        : targetBox.y + targetBox.height - 1;
+
+      await page.mouse.move(sourceX, sourceY);
+      await page.mouse.down();
+      await waitForDelay(page, 50);
+      await page.mouse.move(targetX, targetY, { steps: 15 });
+      await waitForDelay(page, 50);
+      await page.mouse.up();
+      await waitForDelay(page, 100);
+    };
+
+    test('undo after drag-drop reorder restores original position', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+        { type: 'paragraph', data: { text: 'Third block' } },
+      ]);
+
+      // Verify initial order
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First block');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third block');
+
+      // Hover over first block to show settings button (drag handle)
+      const firstBlock = getParagraphByIndex(page, 0);
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag first block to after third block
+      const targetBlock = getParagraphByIndex(page, 2);
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Wait for Yjs capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify reordered: Second, Third, First
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Third block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('First block');
+
+      // Undo should restore original order
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original order is restored: First, Second, Third
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First block');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third block');
+
+      // Block count should remain the same
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+    });
+
+    test('redo after undoing drag-drop reorder restores moved position', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Alpha' } },
+        { type: 'paragraph', data: { text: 'Beta' } },
+        { type: 'paragraph', data: { text: 'Gamma' } },
+      ]);
+
+      // Drag last block to first position
+      const lastBlock = getParagraphByIndex(page, 2);
+
+      await lastBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = getParagraphByIndex(page, 0);
+
+      await performDragDrop(page, settingsButton, targetBlock, 'top');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify reordered: Gamma, Alpha, Beta
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Beta');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original: Alpha, Beta, Gamma
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Beta');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Gamma');
+
+      // Redo
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify moved order is restored: Gamma, Alpha, Beta
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Beta');
+    });
+
+    test('drag-drop reorder requires single undo (atomic transaction)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'One' } },
+        { type: 'paragraph', data: { text: 'Two' } },
+        { type: 'paragraph', data: { text: 'Three' } },
+        { type: 'paragraph', data: { text: 'Four' } },
+      ]);
+
+      // Drag second block to the end
+      const secondBlock = getParagraphByIndex(page, 1);
+
+      await secondBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = getParagraphByIndex(page, 3);
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify reordered: One, Three, Four, Two
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('One');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Three');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Four');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Two');
+
+      // Single undo should restore original order
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original order: One, Two, Three, Four
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('One');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Two');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Three');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Four');
+
+      // Second undo should NOT change order (proves move was atomic)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Order should still be: One, Two, Three, Four
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('One');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Two');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Three');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Four');
+    });
+
+    test('undo/redo cycle with drag-drop preserves data integrity', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First' } },
+        { type: 'paragraph', data: { text: 'Second' } },
+        { type: 'paragraph', data: { text: 'Third' } },
+      ]);
+
+      // Drag middle block to end
+      await getParagraphByIndex(page, 1).hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Multiple undo/redo cycles
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, 200);
+        await page.keyboard.press(REDO_SHORTCUT);
+        await waitForDelay(page, 200);
+      }
+
+      // Final undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify data integrity via save
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(3);
+      expect(savedData.blocks[0].data.text).toBe('First');
+      expect(savedData.blocks[1].data.text).toBe('Second');
+      expect(savedData.blocks[2].data.text).toBe('Third');
+    });
+
+    test('undo after multi-block drag-drop restores all blocks to original positions', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block 0' } },
+        { type: 'paragraph', data: { text: 'Block 1' } },
+        { type: 'paragraph', data: { text: 'Block 2' } },
+        { type: 'paragraph', data: { text: 'Block 3' } },
+        { type: 'paragraph', data: { text: 'Block 4' } },
+      ]);
+
+      // Select blocks 1, 2, 3 using BlockSelection API
+      await page.evaluate(() => {
+        const blok = window.blokInstance;
+
+        if (!blok) {
+          throw new Error('Blok instance not found');
+        }
+        const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+        blockSelection.selectBlockByIndex(1);
+        blockSelection.selectBlockByIndex(2);
+        blockSelection.selectBlockByIndex(3);
+      });
+
+      // Hover over block 2 to show settings button
+      await getParagraphByIndex(page, 2).hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to bottom of block 4
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 4), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify reordered: Block 0, Block 4, Block 1, Block 2, Block 3
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block 0');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block 4');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block 1');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Block 2');
+      await expect(getParagraphByIndex(page, 4).locator('[contenteditable="true"]')).toContainText('Block 3');
+
+      // Undo should restore original order
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original order: Block 0, Block 1, Block 2, Block 3, Block 4
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block 0');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block 1');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block 2');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Block 3');
+      await expect(getParagraphByIndex(page, 4).locator('[contenteditable="true"]')).toContainText('Block 4');
+    });
+  });
 });

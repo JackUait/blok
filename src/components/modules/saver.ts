@@ -6,7 +6,6 @@
  */
 import { Module } from '../__module';
 import type { BlockToolData, OutputData, SanitizerConfig } from '../../../types';
-import type { OutputBlockData } from '../../../types/data-formats/output-data';
 import type { SavedData, ValidatedData } from '../../../types/data-formats';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { Block } from '../block';
@@ -280,14 +279,5 @@ export class Saver extends Module {
       ...( isEmpty(preservedTunes) ? {} : { tunes: preservedTunes }),
       time: 0,
     };
-  }
-
-  /**
-   * Get raw blocks data from Yjs (without validation/sanitization)
-   * Useful for debugging or quick access
-   * @returns Array of block data from Yjs
-   */
-  public getRawData(): OutputBlockData[] {
-    return this.Blok.YjsManager.toJSON();
   }
 }

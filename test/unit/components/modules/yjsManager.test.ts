@@ -239,30 +239,16 @@ describe('YjsManager', () => {
       expect(manager.toJSON()[0].data.text).toBe('Original');
     });
 
-    it('should report canUndo correctly', () => {
-      expect(manager.canUndo()).toBe(false);
-
-      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
-
-      expect(manager.canUndo()).toBe(true);
-    });
-
-    it('should report canRedo correctly', () => {
-      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
-
-      expect(manager.canRedo()).toBe(false);
-
-      manager.undo();
-
-      expect(manager.canRedo()).toBe(true);
-    });
-
     it('should not undo fromJSON operations (origin: load)', () => {
       manager.fromJSON([
         { id: 'block1', type: 'paragraph', data: { text: 'Loaded' } },
       ]);
 
-      expect(manager.canUndo()).toBe(false);
+      // Undo should have no effect since fromJSON uses 'load' origin
+      manager.undo();
+
+      expect(manager.toJSON()).toHaveLength(1);
+      expect(manager.toJSON()[0].data.text).toBe('Loaded');
     });
   });
 

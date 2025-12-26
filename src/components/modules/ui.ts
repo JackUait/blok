@@ -236,6 +236,7 @@ export class UI extends Module<UINodes> {
     this.nodes.holder.innerHTML = '';
 
     this.unbindReadOnlyInsensitiveListeners();
+    this.unbindReadOnlySensitiveListeners();
 
     // Clean up accessibility announcer
     destroyAnnouncer();
@@ -858,6 +859,11 @@ export class UI extends Module<UINodes> {
   }
 
   /**
+   * Timestamp of last undo/redo call to prevent double-firing
+   */
+  private lastUndoRedoTime = 0;
+
+  /**
    * Handle Cmd/Ctrl+Z (undo) and Cmd/Ctrl+Shift+Z (redo)
    * @param {KeyboardEvent} event - keyboard event
    */
@@ -870,7 +876,18 @@ export class UI extends Module<UINodes> {
       return;
     }
 
+    // Prevent double-firing within 50ms
+    const now = Date.now();
+
+    if (now - this.lastUndoRedoTime < 50) {
+      event.preventDefault();
+
+      return;
+    }
+    this.lastUndoRedoTime = now;
+
     event.preventDefault();
+    event.stopPropagation();
 
     if (event.shiftKey) {
       this.Blok.YjsManager.redo();

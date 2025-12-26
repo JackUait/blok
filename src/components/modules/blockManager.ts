@@ -176,6 +176,11 @@ export class BlockManager extends Module {
   private _blocks: BlocksStore | null = null;
 
   /**
+   * Flag to track when syncing from Yjs (undo/redo) to prevent re-syncing back
+   */
+  private isSyncingFromYjs = false;
+
+  /**
    * Registered keyboard shortcut names for cleanup
    */
   private registeredShortcuts: string[] = [];
@@ -406,11 +411,23 @@ export class BlockManager extends Module {
 
   /**
    * Inserts several blocks at once
+   * Used during initial rendering of the editor
    * @param blocks - blocks to insert
    * @param index - index where to insert
    */
   public insertMany(blocks: Block[], index = 0): void {
     this.blocksStore.insertMany(blocks, index);
+
+    // Load blocks into Yjs with 'load' origin (not tracked by undo manager)
+    const blockDataArray = blocks.map(block => ({
+      id: block.id,
+      type: block.name,
+      data: block.preservedData,
+      parent: block.parentId ?? undefined,
+      content: block.contentIds.length > 0 ? block.contentIds : undefined,
+    }));
+
+    this.Blok.YjsManager.fromJSON(blockDataArray);
 
     // Apply indentation for blocks with parentId (hierarchical structure)
     blocks.forEach(block => {
@@ -1347,15 +1364,109 @@ export class BlockManager extends Module {
    * @param changeType - the type of change (add, remove, update)
    */
   private syncBlockFromYjs(blockId: string, changeType: BlockChangeEvent['type']): void {
+    if (changeType === 'update') {
+      this.handleYjsUpdate(blockId);
+
+      return;
+    }
+
+    if (changeType === 'add') {
+      this.handleYjsAdd(blockId);
+
+      return;
+    }
+
+    if (changeType === 'remove') {
+      this.handleYjsRemove(blockId);
+    }
+  }
+
+  /**
+   * Handle block update from Yjs (undo/redo)
+   */
+  private handleYjsUpdate(blockId: string): void {
     const block = this.getBlockById(blockId);
     const yblock = this.Blok.YjsManager.getBlockById(blockId);
 
-    if (changeType === 'update' && block !== undefined && yblock !== undefined) {
-      const data = this.Blok.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
-
-      void block.setData(data);
+    if (block === undefined || yblock === undefined) {
+      return;
     }
-    // add/remove changes are handled by re-rendering the editor
+
+    const data = this.Blok.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
+
+    // Set flag to prevent syncing back to Yjs during undo/redo
+    this.isSyncingFromYjs = true;
+    void block.setData(data).finally(() => {
+      this.isSyncingFromYjs = false;
+    });
+  }
+
+  /**
+   * Handle block add from Yjs (undo/redo - restoring a removed block)
+   */
+  private handleYjsAdd(blockId: string): void {
+    // Block already exists in DOM, no need to add
+    if (this.getBlockById(blockId) !== undefined) {
+      return;
+    }
+
+    const yblock = this.Blok.YjsManager.getBlockById(blockId);
+
+    if (yblock === undefined) {
+      return;
+    }
+
+    const toolName = yblock.get('type') as string;
+    const data = this.Blok.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
+    const parentId = yblock.get('parentId') as string | undefined;
+
+    // Find the index of this block in Yjs to insert at correct position
+    const yjsBlocks = this.Blok.YjsManager.toJSON();
+    const targetIndex = yjsBlocks.findIndex((b) => b.id === blockId);
+
+    if (targetIndex === -1) {
+      return;
+    }
+
+    // Create the block
+    const block = this.composeBlock({
+      id: blockId,
+      tool: toolName,
+      data,
+      parentId: parentId ?? undefined,
+    });
+
+    // Insert into blocks store at correct position
+    this.blocksStore.insert(targetIndex, block);
+
+    // Apply indentation if needed
+    if (parentId !== undefined) {
+      this.updateBlockIndentation(block);
+    }
+  }
+
+  /**
+   * Handle block remove from Yjs (undo/redo - removing a previously added block)
+   */
+  private handleYjsRemove(blockId: string): void {
+    const block = this.getBlockById(blockId);
+
+    if (block === undefined) {
+      return;
+    }
+
+    const index = this.getBlockIndex(block);
+
+    if (index === -1) {
+      return;
+    }
+
+    this.blocksStore.remove(index);
+
+    // If all blocks removed, insert a default block
+    if (this.blocksStore.length === 0) {
+      this.insert();
+    }
   }
 
   /**
@@ -1412,7 +1523,30 @@ export class BlockManager extends Module {
       event: event as BlockMutationEventMap[Type],
     });
 
+    // Sync content changes to Yjs for undo/redo support
+    // Skip if we're currently syncing from Yjs (undo/redo) to avoid corrupting the undo stack
+    if (mutationType === BlockChangedMutationType && !this.isSyncingFromYjs) {
+      void this.syncBlockDataToYjs(block);
+    }
+
     return block;
+  }
+
+  /**
+   * Sync block data to Yjs after DOM mutation
+   * Extracts current data from block and updates Yjs document
+   * @param block - the block whose data should be synced
+   */
+  private async syncBlockDataToYjs(block: Block): Promise<void> {
+    const savedData = await block.save();
+
+    if (savedData === undefined) {
+      return;
+    }
+
+    for (const [key, value] of Object.entries(savedData.data)) {
+      this.Blok.YjsManager.updateBlockData(block.id, key, value);
+    }
   }
 }
 

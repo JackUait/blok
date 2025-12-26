@@ -6,7 +6,7 @@ import type { OutputBlockData } from '../../../types/data-formats/output-data';
  * Event emitted when blocks change
  */
 export interface BlockChangeEvent {
-  type: 'add' | 'remove' | 'update' | 'move';
+  type: 'add' | 'remove' | 'update';
   blockId: string;
   origin: 'local' | 'undo' | 'redo' | 'load' | 'remote';
 }
@@ -395,20 +395,6 @@ export class YjsManager extends Module {
    */
   public redo(): void {
     this.undoManager.redo();
-  }
-
-  /**
-   * Check if undo is available
-   */
-  public canUndo(): boolean {
-    return this.undoManager.undoStack.length > 0;
-  }
-
-  /**
-   * Check if redo is available
-   */
-  public canRedo(): boolean {
-    return this.undoManager.redoStack.length > 0;
   }
 
   /**

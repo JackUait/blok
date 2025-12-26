@@ -93,6 +93,9 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     Tools: {
       blockTools: new Map(),
     } as unknown as BlokModules['Tools'],
+    YjsManager: {
+      stopCapturing: vi.fn(),
+    } as unknown as BlokModules['YjsManager'],
   };
 
   const mergedState: Partial<BlokModules> = { ...defaults };

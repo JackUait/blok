@@ -48,6 +48,9 @@ export class Renderer extends Module {
           ? expandToHierarchical(blocksData)
           : blocksData;
 
+        // Load blocks into Yjs data layer
+        this.Blok.YjsManager.fromJSON(processedBlocks);
+
         /**
          * Create Blocks instances
          */

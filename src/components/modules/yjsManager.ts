@@ -439,7 +439,7 @@ export class YjsManager extends Module {
   /**
    * Convert Y.Map to plain object
    */
-  private yMapToObject(ymap: Y.Map<unknown>): Record<string, unknown> {
+  public yMapToObject(ymap: Y.Map<unknown>): Record<string, unknown> {
     const obj: Record<string, unknown> = {};
 
     ymap.forEach((value, key) => {

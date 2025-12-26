@@ -24,6 +24,8 @@ import { PromiseQueue } from '../utils/promise-queue';
 import { DATA_ATTR, createSelector } from '../constants';
 import { Shortcuts } from '../utils/shortcuts';
 import { announce } from '../utils/announcer';
+import type { BlockChangeEvent } from './yjsManager';
+import type { Map as YMap } from 'yjs';
 
 type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
@@ -210,6 +212,13 @@ export class BlockManager extends Module {
     );
 
     this.setupKeyboardShortcuts();
+
+    // Subscribe to Yjs changes for undo/redo DOM synchronization
+    this.Blok.YjsManager.onBlocksChanged((event: BlockChangeEvent) => {
+      if (event.origin === 'undo' || event.origin === 'redo') {
+        this.syncBlockFromYjs(event.blockId, event.type);
+      }
+    });
   }
 
   /**
@@ -1330,6 +1339,23 @@ export class BlockManager extends Module {
     this.blocks.forEach((block: Block) => {
       this.bindBlockEvents(block);
     });
+  }
+
+  /**
+   * Sync a block from Yjs data after undo/redo
+   * @param blockId - the id of the block to sync
+   * @param changeType - the type of change (add, remove, update)
+   */
+  private syncBlockFromYjs(blockId: string, changeType: BlockChangeEvent['type']): void {
+    const block = this.getBlockById(blockId);
+    const yblock = this.Blok.YjsManager.getBlockById(blockId);
+
+    if (changeType === 'update' && block !== undefined && yblock !== undefined) {
+      const data = this.Blok.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
+
+      void block.setData(data);
+    }
+    // add/remove changes are handled by re-rendering the editor
   }
 
   /**

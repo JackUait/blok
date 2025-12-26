@@ -2190,4 +2190,260 @@ test.describe('yjs undo/redo', () => {
       await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
     });
   });
+
+  test.describe('multi-block selection delete', () => {
+    const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
+
+    const getBlockByIndex = (page: Page, index: number): Locator => {
+      return page.locator(`:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`);
+    };
+
+    const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
+      await locator.evaluate((element) => {
+        const doc = element.ownerDocument;
+        const selection = doc.getSelection();
+
+        if (!selection) {
+          return;
+        }
+
+        const range = doc.createRange();
+        const walker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let lastTextNode: Text | null = null;
+
+        while (walker.nextNode()) {
+          lastTextNode = walker.currentNode as Text;
+        }
+
+        if (lastTextNode) {
+          range.setStart(lastTextNode, lastTextNode.textContent?.length ?? 0);
+        } else {
+          range.selectNodeContents(element);
+          range.collapse(false);
+        }
+
+        selection.removeAllRanges();
+        selection.addRange(range);
+        doc.dispatchEvent(new Event('selectionchange'));
+      });
+    };
+
+    test('undo restores multiple blocks deleted via cross-block selection', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+        { type: 'paragraph', data: { text: 'Third block' } },
+        { type: 'paragraph', data: { text: 'Fourth block' } },
+      ]);
+
+      // Verify initial state
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const firstInput = firstParagraph.locator('[contenteditable="true"]');
+
+      // Select blocks 1-3 using Shift+ArrowDown
+      await firstInput.click();
+      await placeCaretAtEnd(firstInput);
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.up('Shift');
+
+      // Verify blocks are selected
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
+
+      // Delete selected blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify deletion: should have 2 blocks (empty replacement + Fourth block)
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Fourth block');
+
+      // Undo should restore all deleted blocks
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify all blocks are restored
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First block');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third block');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Fourth block');
+    });
+
+    test('redo after undoing multi-block delete removes blocks again', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block A' } },
+        { type: 'paragraph', data: { text: 'Block B' } },
+        { type: 'paragraph', data: { text: 'Block C' } },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const firstInput = firstParagraph.locator('[contenteditable="true"]');
+
+      // Select all blocks using Shift+ArrowDown
+      await firstInput.click();
+      await placeCaretAtEnd(firstInput);
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.up('Shift');
+
+      // Delete all selected blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should have 1 empty replacement block
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('');
+
+      // Undo restores blocks
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      // Redo deletes them again
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('');
+    });
+
+    test('undo restores blocks deleted via Cmd/Ctrl+A then Backspace', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First content' } },
+        { type: 'paragraph', data: { text: 'Second content' } },
+        { type: 'paragraph', data: { text: 'Third content' } },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+
+      // Focus on first block and select all blocks with Cmd/Ctrl+A twice
+      await firstParagraph.click();
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
+
+      // Verify all blocks are selected
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
+
+      // Delete all blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should have 1 empty block
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Undo should restore all blocks
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First content');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second content');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third content');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(3);
+      expect(savedData.blocks[0].data.text).toBe('First content');
+      expect(savedData.blocks[1].data.text).toBe('Second content');
+      expect(savedData.blocks[2].data.text).toBe('Third content');
+    });
+
+    test('multi-block delete requires single undo (atomic operation)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block 1' } },
+        { type: 'paragraph', data: { text: 'Block 2' } },
+        { type: 'paragraph', data: { text: 'Block 3' } },
+      ]);
+
+      const firstInput = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      // Select blocks 1-2
+      await firstInput.click();
+      await placeCaretAtEnd(firstInput);
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.up('Shift');
+
+      // Delete selected blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should have 2 blocks (empty + Block 3)
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Single undo should restore both deleted blocks (not require two undos)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block 1');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block 2');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block 3');
+
+      // Second undo should NOT affect the restored state (proves delete was atomic)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Block count should still be 3 (no further undo available for this operation)
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+    });
+
+    test('undo/redo cycle with multi-block delete preserves data integrity', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Alpha' } },
+        { type: 'paragraph', data: { text: 'Beta' } },
+        { type: 'paragraph', data: { text: 'Gamma' } },
+        { type: 'paragraph', data: { text: 'Delta' } },
+      ]);
+
+      // Select middle two blocks (Beta and Gamma)
+      await getParagraphByIndex(page, 1).locator('[contenteditable="true"]').click();
+      await page.keyboard.press('Home');
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.up('Shift');
+
+      // Delete selected blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify: Alpha, empty, Delta
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      // Multiple undo/redo cycles
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Final verification of data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(4);
+      expect(savedData.blocks[0].data.text).toBe('Alpha');
+      expect(savedData.blocks[1].data.text).toBe('Beta');
+      expect(savedData.blocks[2].data.text).toBe('Gamma');
+      expect(savedData.blocks[3].data.text).toBe('Delta');
+    });
+  });
 });

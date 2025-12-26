@@ -1355,4 +1355,253 @@ test.describe('yjs undo/redo', () => {
       expect(savedData.blocks[0].tunes?.exampleTune).toBe('value-1');
     });
   });
+
+  test.describe('rapid operations', () => {
+    // Small delay between rapid keyboard presses to ensure events are processed
+    // 50ms is fast enough to feel "rapid" but allows browser to process events
+    const RAPID_DELAY = 50;
+
+    test('handles many rapid undos without data corruption', async ({ page }) => {
+      // Create editor with multiple blocks
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block 1' } },
+        { type: 'paragraph', data: { text: 'Block 2' } },
+        { type: 'paragraph', data: { text: 'Block 3' } },
+      ]);
+
+      // Make multiple changes with delays between them to create separate undo entries
+      const paragraph1 = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      await paragraph1.click();
+      await page.keyboard.type(' edited');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      const paragraph2 = getParagraphByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await paragraph2.click();
+      await page.keyboard.type(' modified');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      const paragraph3 = getParagraphByIndex(page, 2).locator('[contenteditable="true"]');
+
+      await paragraph3.click();
+      await page.keyboard.type(' changed');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify all edits were applied
+      await expect(paragraph1).toContainText('Block 1 edited');
+      await expect(paragraph2).toContainText('Block 2 modified');
+      await expect(paragraph3).toContainText('Block 3 changed');
+
+      // Fire multiple undos in rapid succession
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      // Wait for all undos to complete processing
+      await waitForDelay(page, 200);
+
+      // Verify all changes were undone correctly
+      await expect(paragraph1).toHaveText('Block 1');
+      await expect(paragraph2).toHaveText('Block 2');
+      await expect(paragraph3).toHaveText('Block 3');
+
+      // Verify data integrity via save
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(3);
+      expect(savedData.blocks[0].data.text).toBe('Block 1');
+      expect(savedData.blocks[1].data.text).toBe('Block 2');
+      expect(savedData.blocks[2].data.text).toBe('Block 3');
+    });
+
+    test('handles many rapid redos without data corruption', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Original' } },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      // Create 5 separate undo entries
+      for (let i = 1; i <= 5; i++) {
+        await paragraph.click();
+        await paragraph.selectText();
+        await page.keyboard.type(`Version ${i}`);
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      }
+
+      await expect(paragraph).toHaveText('Version 5');
+
+      // Undo all changes
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+      await expect(paragraph).toHaveText('Original');
+
+      // Now redo rapidly
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press(REDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      // Should be back to final version
+      await expect(paragraph).toHaveText('Version 5');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].data.text).toBe('Version 5');
+    });
+
+    test('handles rapid interleaved undo/redo without corruption', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Start' } },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      // Create some undo entries
+      await paragraph.click();
+      await paragraph.selectText();
+      await page.keyboard.type('Step 1');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      await paragraph.selectText();
+      await page.keyboard.type('Step 2');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      await paragraph.selectText();
+      await page.keyboard.type('Step 3');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Rapidly interleave undo/redo (simulates user rapidly pressing undo then changing mind)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(REDO_SHORTCUT);
+
+      await waitForDelay(page, 200);
+
+      // After: undo undo redo undo redo redo
+      // Starting at Step 3:
+      // undo -> Step 2, undo -> Step 1, redo -> Step 2, undo -> Step 1, redo -> Step 2, redo -> Step 3
+      await expect(paragraph).toHaveText('Step 3');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].data.text).toBe('Step 3');
+    });
+
+    test('handles rapid block deletions and undos', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block A' } },
+        { type: 'paragraph', data: { text: 'Block B' } },
+        { type: 'paragraph', data: { text: 'Block C' } },
+        { type: 'paragraph', data: { text: 'Block D' } },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+
+      // Delete blocks via API with delays to create separate undo entries
+      for (let i = 0; i < 3; i++) {
+        await page.evaluate(async () => {
+          await window.blokInstance?.blocks.delete(0);
+        });
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      }
+
+      // Should have only Block D left
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Block D');
+
+      // Rapidly undo all deletions
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      // All blocks should be restored
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Block A');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toHaveText('Block B');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toHaveText('Block C');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toHaveText('Block D');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(4);
+    });
+
+    test('undo stack remains stable after 20+ rapid operations', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: '' } },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      await paragraph.click();
+
+      // Create 10 separate undo entries with distinct content
+      for (let i = 1; i <= 10; i++) {
+        await paragraph.selectText();
+        await page.keyboard.type(`Entry ${i}`);
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      }
+
+      await expect(paragraph).toHaveText('Entry 10');
+
+      // Rapidly undo 10 times
+      for (let i = 0; i < 10; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      // Should be back to empty
+      await expect(paragraph).toHaveText('');
+
+      // Rapidly redo 5 times
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press(REDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      await expect(paragraph).toHaveText('Entry 5');
+
+      // Rapidly undo 3 times
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      await expect(paragraph).toHaveText('Entry 2');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].data.text).toBe('Entry 2');
+    });
+  });
 });

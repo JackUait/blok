@@ -9,7 +9,7 @@ import { Module } from '../__module';
 import { Dom as $ } from '../dom';
 import { isEmpty, isObject, isString, log, generateBlockId } from '../utils';
 import { Blocks } from '../blocks';
-import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../types';
+import type { BlockToolData, OutputBlockData, PasteEvent, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import { BlockAPI } from '../block/api';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../types/events/block';
@@ -436,13 +436,18 @@ export class BlockManager extends Module {
     this.blocksStore.insertMany(blocks, index);
 
     // Load blocks into Yjs with 'load' origin (not tracked by undo manager)
-    const blockDataArray = blocks.map(block => ({
-      id: block.id,
-      type: block.name,
-      data: block.preservedData,
-      parent: block.parentId ?? undefined,
-      content: block.contentIds.length > 0 ? block.contentIds : undefined,
-    }));
+    const blockDataArray: OutputBlockData[] = blocks.map(block => {
+      const tunes = block.preservedTunes;
+
+      return {
+        id: block.id,
+        type: block.name,
+        data: block.preservedData,
+        ...(Object.keys(tunes).length > 0 && { tunes }),
+        ...(block.parentId !== null && { parent: block.parentId }),
+        ...(block.contentIds.length > 0 && { content: block.contentIds }),
+      };
+    });
 
     this.Blok.YjsManager.fromJSON(blockDataArray);
 
@@ -492,6 +497,13 @@ export class BlockManager extends Module {
     if (data !== undefined) {
       for (const [key, value] of Object.entries(data)) {
         this.Blok.YjsManager.updateBlockData(block.id, key, value);
+      }
+    }
+
+    // Sync changed tunes to Yjs
+    if (tunes !== undefined) {
+      for (const [tuneName, tuneData] of Object.entries(tunes)) {
+        this.Blok.YjsManager.updateBlockTune(block.id, tuneName, tuneData);
       }
     }
 
@@ -1563,12 +1575,43 @@ export class BlockManager extends Module {
     }
 
     const data = this.Blok.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
+    const ytunes = yblock.get('tunes') as YMap<unknown> | undefined;
+    const tunes = ytunes !== undefined ? this.Blok.YjsManager.yMapToObject(ytunes) : {};
 
-    // Increment counter to prevent syncing back to Yjs during undo/redo
-    this.yjsSyncCount++;
-    void block.setData(data).finally(() => {
-      this.yjsSyncCount--;
-    });
+    // Check if tunes have changed - if so, we need to recreate the block
+    // because tunes are instantiated during block construction
+    const currentTunes = block.preservedTunes;
+    const tuneKeys = Object.keys(tunes);
+    const currentKeys = Object.keys(currentTunes);
+    const tunesChanged = tuneKeys.length !== currentKeys.length ||
+      tuneKeys.some(key => tunes[key] !== currentTunes[key]);
+
+    if (tunesChanged) {
+      // Recreate block with updated tunes
+      const blockIndex = this.getBlockIndex(block);
+      const newBlock = this.composeBlock({
+        id: block.id,
+        tool: block.name,
+        data,
+        tunes,
+        bindEventsImmediately: true,
+      });
+
+      // Increment counter to prevent syncing back to Yjs during undo/redo
+      this.yjsSyncCount++;
+      try {
+        this.blocksStore.replace(blockIndex, newBlock);
+      } finally {
+        this.yjsSyncCount--;
+      }
+    } else {
+      // Just update data
+      // Increment counter to prevent syncing back to Yjs during undo/redo
+      this.yjsSyncCount++;
+      void block.setData(data).finally(() => {
+        this.yjsSyncCount--;
+      });
+    }
   }
 
   /**

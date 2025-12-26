@@ -427,6 +427,45 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Update a tune in block tunes
+   * @param id - Block id
+   * @param tuneName - Tune name
+   * @param tuneData - Tune data value
+   */
+  public updateBlockTune(id: string, tuneName: string, tuneData: unknown): void {
+    const yblock = this.getBlockById(id);
+
+    if (yblock === undefined) {
+      return;
+    }
+
+    this.ydoc.transact(() => {
+      const ytunes = this.getOrCreateTunesMap(yblock);
+
+      ytunes.set(tuneName, tuneData);
+    }, 'local');
+  }
+
+  /**
+   * Get existing tunes Y.Map or create a new one
+   * @param yblock - The block Y.Map
+   * @returns The tunes Y.Map
+   */
+  private getOrCreateTunesMap(yblock: Y.Map<unknown>): Y.Map<unknown> {
+    const existing = yblock.get('tunes') as Y.Map<unknown> | undefined;
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const newTunes = new Y.Map<unknown>();
+
+    yblock.set('tunes', newTunes);
+
+    return newTunes;
+  }
+
+  /**
    * Find block index by id
    */
   private findBlockIndex(id: string): number {

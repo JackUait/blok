@@ -1135,4 +1135,224 @@ test.describe('yjs undo/redo', () => {
       expect(html).not.toMatch(/<(i|em)>/);
     });
   });
+
+  test.describe('tune changes', () => {
+    /**
+     * Example Tune Class that saves its data
+     */
+    const EXAMPLE_TUNE_SOURCE = `class ExampleTune {
+      constructor({ data }) {
+        this.data = data;
+      }
+
+      static get isTune() {
+        return true;
+      }
+
+      static get CSS() {
+        return {};
+      }
+
+      render() {
+        return document.createElement('div');
+      }
+
+      save() {
+        return this.data ?? '';
+      }
+    }`;
+
+    const createBlokWithTune = async (
+      page: Page,
+      blocks: OutputData['blocks']
+    ): Promise<void> => {
+      await resetBlok(page);
+      await page.evaluate(
+        async ({ holder, blocks: blokBlocks, tuneSource }) => {
+          // Use Function constructor instead of eval for slightly better security
+          const TuneClass = new Function(`return ${tuneSource}`)();
+
+          const blok = new window.Blok({
+            holder: holder,
+            data: { blocks: blokBlocks },
+            tools: {
+              exampleTune: {
+                class: TuneClass,
+              },
+            },
+            tunes: ['exampleTune'],
+          });
+
+          window.blokInstance = blok;
+          await blok.isReady;
+        },
+        { holder: HOLDER_ID, blocks, tuneSource: EXAMPLE_TUNE_SOURCE }
+      );
+    };
+
+    test('undoes tune data change with Cmd+Z', async ({ page }) => {
+      await createBlokWithTune(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Test paragraph' },
+          tunes: {
+            exampleTune: 'original-value',
+          },
+        },
+      ]);
+
+      // Verify initial tune data
+      let savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('original-value');
+
+      // Update tune via API
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'updated-value',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify tune was updated
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('updated-value');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify tune reverted to original
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('original-value');
+    });
+
+    test('redoes tune data change with Cmd+Shift+Z', async ({ page }) => {
+      await createBlokWithTune(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Test paragraph' },
+          tunes: {
+            exampleTune: 'original-value',
+          },
+        },
+      ]);
+
+      // Update tune via API
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'updated-value',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify undo worked
+      let savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('original-value');
+
+      // Redo
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify redo restored the update
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('updated-value');
+    });
+
+    test('undoes multiple tune changes in sequence', async ({ page }) => {
+      await createBlokWithTune(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Test paragraph' },
+          tunes: {
+            exampleTune: 'value-1',
+          },
+        },
+      ]);
+
+      // First tune update
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'value-2',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Second tune update
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'value-3',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify final state
+      let savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('value-3');
+
+      // Undo to value-2
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('value-2');
+
+      // Undo to value-1
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('value-1');
+    });
+  });
 });

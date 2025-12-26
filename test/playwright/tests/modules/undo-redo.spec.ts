@@ -1356,6 +1356,361 @@ test.describe('yjs undo/redo', () => {
     });
   });
 
+  test.describe('paste operations', () => {
+    /**
+     * Simulates a paste event with the given data
+     */
+    const paste = async (locator: Locator, data: Record<string, string>): Promise<void> => {
+      await locator.evaluate((element: HTMLElement, pasteData: Record<string, string>) => {
+        const pasteEvent = Object.assign(new Event('paste', {
+          bubbles: true,
+          cancelable: true,
+        }), {
+          clipboardData: {
+            getData: (type: string): string => pasteData[type] ?? '',
+            types: Object.keys(pasteData),
+          },
+        });
+
+        element.dispatchEvent(pasteEvent);
+      }, data);
+    };
+
+    test('undo removes pasted plain text', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Initial content' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Click at end and paste
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': ' pasted text',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify paste worked
+      await expect(paragraphInput).toContainText('Initial content pasted text');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify pasted text was removed
+      await expect(paragraphInput).toHaveText('Initial content');
+    });
+
+    test('redo restores pasted plain text', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Initial' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Click at end and paste
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': ' pasted',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify paste worked
+      await expect(paragraphInput).toContainText('Initial pasted');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Initial');
+
+      // Redo
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify redo restored pasted text
+      await expect(paragraphInput).toContainText('Initial pasted');
+    });
+
+    test('undo removes pasted HTML with formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Start' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Click at end and paste HTML
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/html': '<strong>bold</strong> and <em>italic</em>',
+        'text/plain': 'bold and italic',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify paste worked with formatting
+      const html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<strong>bold<\/strong>/);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify pasted HTML was removed
+      const htmlAfterUndo = await paragraphInput.innerHTML();
+
+      expect(htmlAfterUndo).not.toMatch(/<strong>/);
+      expect(htmlAfterUndo).toBe('Start');
+    });
+
+    test('undo removes multiple blocks created from paste (requires multiple undos)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Existing' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Verify initial state
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Paste text with newlines (creates multiple blocks)
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': '\n\nSecond block\n\nThird block',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify multiple blocks were created
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Existing');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third block');
+
+      // Note: Multi-block paste creates separate undo entries per block
+      // First undo removes third block
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Second undo removes second block
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Existing');
+    });
+
+    test('undo removes blocks pasted from application/x-blok format (requires multiple undos)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Original' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Paste using Blok's internal format
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'application/x-blok': JSON.stringify([
+          { tool: 'paragraph', data: { text: 'Pasted block 1' } },
+          { tool: 'paragraph', data: { text: 'Pasted block 2' } },
+        ]),
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify blocks were created
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      // Note: Multi-block paste creates separate undo entries per block
+      // First undo removes second pasted block
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Second undo removes first pasted block
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify all pasted blocks removed
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Original');
+    });
+
+    test('paste into empty block can be undone', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Paste into empty block
+      await paragraphInput.click();
+      await paste(paragraphInput, {
+        'text/plain': 'Content for empty block',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify paste worked
+      await expect(paragraphInput).toHaveText('Content for empty block');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify block is empty again
+      await expect(paragraphInput).toHaveText('');
+    });
+
+    test('paste replacing selection can be undone', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Hello world' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Select all text
+      await paragraphInput.click();
+      await page.keyboard.press(`${process.platform === 'darwin' ? 'Meta' : 'Control'}+a`);
+
+      // Paste to replace selection
+      await paste(paragraphInput, {
+        'text/plain': 'Replaced',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify paste replaced the content
+      await expect(paragraphInput).toHaveText('Replaced');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original content is restored
+      await expect(paragraphInput).toHaveText('Hello world');
+    });
+
+    test('multiple paste operations can be undone sequentially', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Base' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // First paste
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': ' first',
+      });
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Second paste
+      await paste(paragraphInput, {
+        'text/plain': ' second',
+      });
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify both pastes
+      await expect(paragraphInput).toContainText('Base first second');
+
+      // First undo removes second paste
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toContainText('Base first');
+      await expect(paragraphInput).not.toContainText('second');
+
+      // Second undo removes first paste
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Base');
+    });
+
+    test('paste and redo cycle preserves data integrity', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Start' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Paste
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': ' pasted content',
+      });
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo, redo, undo, redo cycle
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Start');
+
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toContainText('Start pasted content');
+
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Start');
+
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toContainText('Start pasted content');
+
+      // Verify data integrity via save
+      const savedData = await saveBlok(page);
+
+      expect((savedData.blocks[0]?.data as { text?: string }).text).toBe('Start pasted content');
+    });
+  });
+
   test.describe('rapid operations', () => {
     // Small delay between rapid keyboard presses to ensure events are processed
     // 50ms is fast enough to feel "rapid" but allows browser to process events

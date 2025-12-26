@@ -7,6 +7,11 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
+const HEADER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`;
+const LIST_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`;
+const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
+  `[data-blok-testid="popover-item"][data-blok-item-name="${itemName}"]`;
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 
@@ -1957,6 +1962,232 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks[0].data.text).toBe('Entry 2');
+    });
+  });
+
+  test.describe('toolbox insertions', () => {
+    test('undo after inserting Header via toolbox removes the header', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Existing paragraph' },
+        },
+      ]);
+
+      // Hover on the paragraph to show the toolbar, then click plus
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      await paragraph.hover();
+
+      // Click plus button to open toolbox
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Wait for toolbox item to be available and click it
+      const headerOption = page.locator(TOOLBOX_ITEM_SELECTOR('header-2'));
+      await expect(headerOption).toBeVisible();
+      await headerOption.click();
+
+      // Wait for header to be inserted
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should remove the header
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Check that header is gone and only the original paragraph remains
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(paragraph).toContainText('Existing paragraph');
+    });
+
+    test('undo after inserting Bulleted List via toolbox removes the list', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Existing paragraph' },
+        },
+      ]);
+
+      // Hover on the paragraph to show the toolbar
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      await paragraph.hover();
+
+      // Click plus button to open toolbox
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Type to filter to list and click on Bulleted List option
+      await page.keyboard.type('bullet');
+      await waitForDelay(page, 100);
+
+      const listOption = page.locator(TOOLBOX_ITEM_SELECTOR('bulleted-list'));
+      await expect(listOption).toBeVisible();
+      await listOption.click();
+
+      // Wait for list to be inserted
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should remove the list
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Check that list is gone and only original paragraph remains
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(paragraph).toContainText('Existing paragraph');
+    });
+
+    test('redo after undoing toolbox header insertion restores the header', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Existing paragraph' },
+        },
+      ]);
+
+      // Hover on the paragraph to show the toolbar
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      await paragraph.hover();
+
+      // Click plus button to open toolbox
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Wait for toolbox item and click header
+      const headerOption = page.locator(TOOLBOX_ITEM_SELECTOR('header-2'));
+      await expect(headerOption).toBeVisible();
+      await headerOption.click();
+
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo removes the header
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+
+      // Redo should restore the header
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+    });
+
+    test('inserting Header 3 via toolbox and undo works correctly', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Some content' },
+        },
+      ]);
+
+      // Hover on the paragraph to show the toolbar
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      await paragraph.hover();
+
+      // Click plus button to open toolbox
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Click on Header 3
+      const header3Option = page.locator(TOOLBOX_ITEM_SELECTOR('header-3'));
+      await expect(header3Option).toBeVisible();
+      await header3Option.click();
+
+      // Should have a header now
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Type some content in the header
+      await page.keyboard.type('My Heading');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Save and verify the header level
+      const savedData = await saveBlok(page);
+      const headerBlock = savedData.blocks.find(b => b.type === 'header');
+      expect(headerBlock).toBeDefined();
+      expect(headerBlock?.data.level).toBe(3);
+      expect(headerBlock?.data.text).toBe('My Heading');
+
+      // Undo the typing
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Undo the block creation
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should be back to just the original paragraph
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(paragraph).toContainText('Some content');
+    });
+
+    test('undo/redo cycle with sequential toolbox insertions', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'First paragraph' },
+        },
+      ]);
+
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+      // Hover on paragraph to show toolbar and insert header via toolbox
+      // eslint-disable-next-line playwright/no-nth-methods
+      const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+      await paragraph.hover();
+
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Click header option
+      const headerOption = page.locator(TOOLBOX_ITEM_SELECTOR('header-2'));
+      await expect(headerOption).toBeVisible();
+      await headerOption.click();
+
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Now insert a list via toolbox (hover on header)
+      const header = page.locator(HEADER_SELECTOR);
+      await header.hover();
+
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Type to filter and click list option
+      await page.keyboard.type('bullet');
+      await waitForDelay(page, 100);
+      const listOption = page.locator(TOOLBOX_ITEM_SELECTOR('bulleted-list'));
+      await expect(listOption).toBeVisible();
+      await listOption.click();
+
+      // Now we have header + list (plus original paragraph may or may not be there)
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should remove the list
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+
+      // Redo should restore list
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
     });
   });
 });

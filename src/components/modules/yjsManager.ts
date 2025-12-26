@@ -6,7 +6,7 @@ import type { OutputBlockData } from '../../../types/data-formats/output-data';
  * Event emitted when blocks change
  */
 export interface BlockChangeEvent {
-  type: 'add' | 'remove' | 'update';
+  type: 'add' | 'remove' | 'update' | 'move';
   blockId: string;
   origin: 'local' | 'undo' | 'redo' | 'load' | 'remote';
 }
@@ -33,7 +33,7 @@ export class YjsManager extends Module {
    * Undo manager for history operations
    */
   private undoManager: Y.UndoManager = new Y.UndoManager(this.yblocks, {
-    captureTimeout: 500,
+    captureTimeout: 300,
     trackedOrigins: new Set(['local']),
   });
 
@@ -79,32 +79,64 @@ export class YjsManager extends Module {
   }
 
   /**
-   * Handle array-level changes (add/remove)
+   * Handle array-level changes (add/remove/move)
+   * Detects moves by finding block IDs that appear in both adds and removes
    */
   private handleArrayEvent(yArrayEvent: Y.YArrayEvent<Y.Map<unknown>>, origin: BlockChangeEvent['origin']): void {
-    yArrayEvent.changes.added.forEach((item) => {
-      const yblock = item.content.getContent()[0] as Y.Map<unknown>;
+    // Collect added and removed block IDs
+    const adds: string[] = [];
+    const removes: string[] = [];
 
-      this.emitChange({
-        type: 'add',
-        blockId: yblock.get('id') as string,
-        origin,
-      });
+    // Extract IDs from added items
+    yArrayEvent.changes.added.forEach((item) => {
+      const content = item.content.getContent();
+
+      for (const yblock of content) {
+        if (!(yblock instanceof Y.Map)) {
+          continue;
+        }
+
+        const id = yblock.get('id');
+
+        if (typeof id === 'string') {
+          adds.push(id);
+        }
+      }
     });
 
+    // Extract IDs from deleted items
     yArrayEvent.changes.deleted.forEach((item) => {
       const blockId = this.extractBlockIdFromDeletedItem(item);
 
-      if (blockId === undefined) {
-        return;
+      if (blockId !== undefined) {
+        removes.push(blockId);
       }
-
-      this.emitChange({
-        type: 'remove',
-        blockId,
-        origin,
-      });
     });
+
+    // Use Set for O(1) lookups
+    const addSet = new Set(adds);
+    const removeSet = new Set(removes);
+
+    // Detect moves: same ID appears in both adds and removes
+    const moveIds = adds.filter(id => removeSet.has(id));
+    const pureAdds = adds.filter(id => !removeSet.has(id));
+    const pureRemoves = removes.filter(id => !addSet.has(id));
+
+    // Emit move events first (so DOM can reposition before other changes)
+    // Note: We emit one event per move, but handleYjsMove batches them via microtask
+    for (const blockId of moveIds) {
+      this.emitChange({ type: 'move', blockId, origin });
+    }
+
+    // Emit pure adds
+    for (const blockId of pureAdds) {
+      this.emitChange({ type: 'add', blockId, origin });
+    }
+
+    // Emit pure removes
+    for (const blockId of pureRemoves) {
+      this.emitChange({ type: 'remove', blockId, origin });
+    }
   }
 
   /**
@@ -293,7 +325,11 @@ export class YjsManager extends Module {
 
     yblock.set('id', blockData.id);
     yblock.set('type', blockData.type);
-    yblock.set('data', this.objectToYMap(blockData.data));
+
+    // Normalize empty paragraph data to { text: '' } for consistent undo/redo behavior
+    const normalizedData = this.normalizeBlockData(blockData.type, blockData.data);
+
+    yblock.set('data', this.objectToYMap(normalizedData));
 
     if (blockData.tunes !== undefined) {
       yblock.set('tunes', this.objectToYMap(blockData.tunes));
@@ -308,6 +344,20 @@ export class YjsManager extends Module {
     }
 
     return yblock;
+  }
+
+  /**
+   * Normalize block data for consistent undo/redo behavior.
+   * Empty paragraph data {} is normalized to { text: '' } so undo reverts to
+   * a state with an explicit text property rather than an empty object.
+   */
+  private normalizeBlockData(type: string, data: Record<string, unknown>): Record<string, unknown> {
+    // Only normalize paragraph blocks with empty data
+    if (type === 'paragraph' && Object.keys(data).length === 0) {
+      return { text: '' };
+    }
+
+    return data;
   }
 
   /**
@@ -403,6 +453,15 @@ export class YjsManager extends Module {
    */
   public stopCapturing(): void {
     this.undoManager.stopCapturing();
+  }
+
+  /**
+   * Execute multiple Yjs operations as a single atomic transaction
+   * All operations within the callback will be grouped into one undo entry
+   * @param fn - Function containing Yjs operations to execute atomically
+   */
+  public transact(fn: () => void): void {
+    this.ydoc.transact(fn, 'local');
   }
 
   /**

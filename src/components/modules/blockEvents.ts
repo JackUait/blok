@@ -981,33 +981,10 @@ export class BlockEvents extends Module {
       return;
     }
 
-    // Force new undo group for block creation
+    // Force new undo group so block creation is separate from previous typing
     this.Blok.YjsManager.stopCapturing();
 
-    /**
-     * If enter has been pressed at the start of the text, just insert paragraph Block above
-     */
-    const blockToFocus = (() => {
-      if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
-        this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
-
-        return currentBlock;
-      }
-
-      /**
-       * If caret is at very end of the block, just append the new block without splitting
-       * to prevent unnecessary dom mutation observing
-       */
-      if (currentBlock.currentInput && isCaretAtEndOfInput(currentBlock.currentInput)) {
-        return this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
-      }
-
-      /**
-       * Split the Current Block into two blocks
-       * Renew local current node after split
-       */
-      return this.Blok.BlockManager.split();
-    })();
+    const blockToFocus = this.createBlockOnEnter(currentBlock);
 
     this.Blok.Caret.setToBlock(blockToFocus);
 
@@ -1017,6 +994,42 @@ export class BlockEvents extends Module {
     this.Blok.Toolbar.moveAndOpen(blockToFocus);
 
     event.preventDefault();
+  }
+
+  /**
+   * Determines which block to create when Enter is pressed and returns the block to focus.
+   * Handles three cases:
+   * 1. Caret at start of block → insert empty block above, focus stays on current
+   * 2. Caret at end of block → insert empty block below, focus moves to new block
+   * 3. Caret in middle → split block, focus moves to new block
+   *
+   * @param currentBlock - the block where Enter was pressed
+   * @returns the block that should receive focus after the operation
+   */
+  private createBlockOnEnter(currentBlock: Block): Block {
+    // Case 1: Caret at start - insert block above
+    if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
+      this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
+
+      // Force new undo group so typing in the new block is separate from block creation
+      this.Blok.YjsManager.stopCapturing();
+
+      return currentBlock;
+    }
+
+    // Case 2: Caret at end - insert block below
+    if (currentBlock.currentInput && isCaretAtEndOfInput(currentBlock.currentInput)) {
+      const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
+
+      // Force new undo group so typing in the new block is separate from block creation
+      this.Blok.YjsManager.stopCapturing();
+
+      return newBlock;
+    }
+
+    // Case 3: Caret in middle - split block
+    // Note: split() uses transact() internally, so it's already atomic - no stopCapturing needed
+    return this.Blok.BlockManager.split();
   }
 
   /**

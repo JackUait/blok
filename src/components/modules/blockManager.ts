@@ -7,7 +7,7 @@
 import { Block, BlockToolAPI } from '../block';
 import { Module } from '../__module';
 import { Dom as $ } from '../dom';
-import { isEmpty, isObject, isString, log } from '../utils';
+import { isEmpty, isObject, isString, log, generateBlockId } from '../utils';
 import { Blocks } from '../blocks';
 import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
@@ -20,7 +20,6 @@ import { BlockChangedMutationType } from '../../../types/events/block/BlockChang
 import { BlockChanged } from '../events';
 import { clean, composeSanitizerConfig, sanitizeBlocks } from '../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../utils/blocks';
-import { PromiseQueue } from '../utils/promise-queue';
 import { DATA_ATTR, createSelector } from '../constants';
 import { Shortcuts } from '../utils/shortcuts';
 import { announce } from '../utils/announcer';
@@ -50,7 +49,7 @@ export class BlockManager extends Module {
    * @param {number} newIndex - index of Block to set as current
    */
   public set currentBlockIndex(newIndex: number) {
-    if (this._currentBlockIndex !== newIndex) {
+    if (this._currentBlockIndex !== newIndex && !this.suppressStopCapturing) {
       this.Blok.YjsManager?.stopCapturing();
     }
     this._currentBlockIndex = newIndex;
@@ -176,9 +175,23 @@ export class BlockManager extends Module {
   private _blocks: BlocksStore | null = null;
 
   /**
-   * Flag to track when syncing from Yjs (undo/redo) to prevent re-syncing back
+   * Counter to track active Yjs sync operations (undo/redo) to prevent re-syncing back.
+   * Uses a counter instead of boolean to handle overlapping async operations safely.
    */
-  private isSyncingFromYjs = false;
+  private yjsSyncCount = 0;
+
+  /**
+   * Returns true if any Yjs sync operation is in progress
+   */
+  private get isSyncingFromYjs(): boolean {
+    return this.yjsSyncCount > 0;
+  }
+
+  /**
+   * Flag to suppress stopCapturing during atomic operations (like split)
+   * This prevents breaking undo grouping when currentBlockIndex changes
+   */
+  private suppressStopCapturing = false;
 
   /**
    * Registered keyboard shortcut names for cleanup
@@ -221,7 +234,7 @@ export class BlockManager extends Module {
     // Subscribe to Yjs changes for undo/redo DOM synchronization
     this.Blok.YjsManager.onBlocksChanged((event: BlockChangeEvent) => {
       if (event.origin === 'undo' || event.origin === 'redo') {
-        this.syncBlockFromYjs(event.blockId, event.type);
+        this.syncBlockFromYjs(event);
       }
     });
   }
@@ -261,6 +274,7 @@ export class BlockManager extends Module {
     tunes: tunesData = {},
     parentId,
     contentIds,
+    bindEventsImmediately = false,
   }: {
     tool: string;
     id?: string;
@@ -268,6 +282,11 @@ export class BlockManager extends Module {
     tunes?: {[name: string]: BlockTuneData};
     parentId?: string;
     contentIds?: string[];
+    /**
+     * When true, bind all events immediately instead of deferring via requestIdleCallback.
+     * This controls both Block-internal events (MutationObserver) and module-level events (keyboard handlers).
+     */
+    bindEventsImmediately?: boolean;
   }): Block {
     const readOnly = this.Blok.ReadOnly.isEnabled;
     const tool = this.Blok.Tools.blockTools.get(name);
@@ -285,9 +304,16 @@ export class BlockManager extends Module {
       tunesData,
       parentId,
       contentIds,
+      bindMutationWatchersImmediately: bindEventsImmediately,
     }, this.eventsDispatcher);
 
-    if (!readOnly) {
+    if (readOnly) {
+      return block;
+    }
+
+    if (bindEventsImmediately) {
+      this.bindBlockEvents(block);
+    } else {
       window.requestIdleCallback(() => {
         this.bindBlockEvents(block);
       }, { timeout: 2000 });
@@ -305,6 +331,7 @@ export class BlockManager extends Module {
    * @param {number} [options.index] - index where to insert new Block
    * @param {boolean} [options.needToFocus] - flag shows if needed to update current Block index
    * @param {boolean} [options.replace] - flag shows if block by passed index should be replaced with inserted one
+   * @param {boolean} [options.skipYjsSync] - if true, skip syncing to Yjs (caller handles sync separately)
    * @returns {Block}
    */
   public insert({
@@ -315,6 +342,7 @@ export class BlockManager extends Module {
     needToFocus = true,
     replace = false,
     tunes,
+    skipYjsSync = false,
   }: {
     id?: string;
     tool?: string;
@@ -323,6 +351,7 @@ export class BlockManager extends Module {
     needToFocus?: boolean;
     replace?: boolean;
     tunes?: {[name: string]: BlockTuneData};
+    skipYjsSync?: boolean;
   } = {}): Block {
     const targetIndex = index ?? this.currentBlockIndex + (replace ? 0 : 1);
 
@@ -340,28 +369,14 @@ export class BlockManager extends Module {
       throw new Error('Could not insert Block. Tool name is not specified.');
     }
 
-    const composeOptions: {
-      tool: string;
-      id?: string;
-      data?: BlockToolData;
-      tunes?: {[name: string]: BlockTuneData};
-    } = {
+    // Bind events immediately for user-created blocks so mutations are tracked right away
+    const block = this.composeBlock({
       tool: toolName,
-    };
-
-    if (id !== undefined) {
-      composeOptions.id = id;
-    }
-
-    if (data !== undefined) {
-      composeOptions.data = data;
-    }
-
-    if (tunes !== undefined) {
-      composeOptions.tunes = tunes;
-    }
-
-    const block = this.composeBlock(composeOptions);
+      bindEventsImmediately: true,
+      ...(id !== undefined && { id }),
+      ...(data !== undefined && { data }),
+      ...(tunes !== undefined && { tunes }),
+    });
 
     /**
      * In case of block replacing (Converting OR from Toolbox or Shortcut on empty block OR on-paste to empty block)
@@ -389,14 +404,16 @@ export class BlockManager extends Module {
     });
 
     /**
-     * Sync to Yjs data layer
+     * Sync to Yjs data layer (unless caller is handling sync separately)
      */
-    this.Blok.YjsManager.addBlock({
-      id: block.id,
-      type: block.name,
-      data: block.preservedData,
-      parent: block.parentId ?? undefined,
-    }, targetIndex);
+    if (!skipYjsSync) {
+      this.Blok.YjsManager.addBlock({
+        id: block.id,
+        type: block.name,
+        data: block.preservedData,
+        parent: block.parentId ?? undefined,
+      }, targetIndex);
+    }
 
     if (needToFocus) {
       this.currentBlockIndex = targetIndex;
@@ -460,6 +477,7 @@ export class BlockManager extends Module {
       tool: block.name,
       data: Object.assign({}, existingData, data ?? {}),
       tunes: tunes ?? block.tunes,
+      bindEventsImmediately: true,
     });
 
     const blockIndex = this.getBlockIndex(block);
@@ -488,12 +506,26 @@ export class BlockManager extends Module {
    */
   public replace(block: Block, newTool: string, data: BlockToolData): Block {
     const blockIndex = this.getBlockIndex(block);
+    const newBlockId = generateBlockId();
 
+    // Atomic transaction: remove old block + add new block as single undo entry
+    this.Blok.YjsManager.transact(() => {
+      this.Blok.YjsManager.removeBlock(block.id);
+      this.Blok.YjsManager.addBlock({
+        id: newBlockId,
+        type: newTool,
+        data,
+      }, blockIndex);
+    });
+
+    // DOM update (skip Yjs sync — already done above)
     return this.insert({
+      id: newBlockId,
       tool: newTool,
       data,
       index: blockIndex,
       replace: true,
+      skipYjsSync: true,
     });
   }
 
@@ -511,6 +543,7 @@ export class BlockManager extends Module {
 
   /**
    * Insert pasted content. Call onPaste callback after insert.
+   * Syncs final state to Yjs as single operation to ensure single undo entry.
    * @param {string} toolName - name of Tool to insert
    * @param {PasteEvent} pasteEvent - pasted data
    * @param {boolean} replace - should replace current block
@@ -520,10 +553,15 @@ export class BlockManager extends Module {
     pasteEvent: PasteEvent,
     replace = false
   ): Promise<Block> {
+    // Insert block without syncing to Yjs yet (we'll sync final state after onPaste)
     const block = this.insert({
       tool: toolName,
       replace,
+      skipYjsSync: true,
     });
+
+    // Suppress auto-sync during paste processing
+    this.yjsSyncCount++;
 
     try {
       /**
@@ -543,6 +581,19 @@ export class BlockManager extends Module {
       block.refreshToolRootElement();
     } catch (e) {
       log(`${toolName}: onPaste callback call is failed`, 'error', e);
+    } finally {
+      this.yjsSyncCount--;
+    }
+
+    // Sync final state to Yjs as single operation
+    const savedData = await block.save();
+
+    if (savedData !== undefined) {
+      this.Blok.YjsManager.addBlock({
+        id: block.id,
+        type: block.name,
+        data: savedData.data,
+      }, this.getBlockIndex(block));
     }
 
     return block;
@@ -552,9 +603,10 @@ export class BlockManager extends Module {
    * Insert new default block at passed index
    * @param {number} index - index where Block should be inserted
    * @param {boolean} needToFocus - if true, updates current Block index
+   * @param {boolean} skipYjsSync - if true, skip syncing to Yjs (caller handles sync separately)
    * @returns {Block} inserted Block
    */
-  public insertDefaultBlockAtIndex(index: number, needToFocus = false): Block {
+  public insertDefaultBlockAtIndex(index: number, needToFocus = false, skipYjsSync = false): Block {
     const defaultTool = this.config.defaultBlock;
 
     if (defaultTool === undefined) {
@@ -565,6 +617,7 @@ export class BlockManager extends Module {
       tool: defaultTool,
       index,
       needToFocus,
+      skipYjsSync,
     });
   }
 
@@ -591,9 +644,32 @@ export class BlockManager extends Module {
    * @returns {Promise} - the sequence that can be continued
    */
   public async mergeBlocks(targetBlock: Block, blockToMerge: Block): Promise<void> {
-    const completeMerge = async (data: BlockToolData): Promise<void> => {
-      await targetBlock.mergeWith(data);
-      await this.removeBlock(blockToMerge);
+    /**
+     * Complete the merge operation with the prepared data
+     * Syncs to Yjs atomically, then updates DOM without re-syncing
+     */
+    const completeMerge = async (mergeData: BlockToolData): Promise<void> => {
+      // Get current target data to compute merged result for Yjs
+      const targetData = await targetBlock.data;
+      const mergedData = { ...targetData, ...mergeData };
+
+      // Sync to Yjs atomically: update target + remove source as single undo entry
+      this.Blok.YjsManager.transact(() => {
+        for (const [key, value] of Object.entries(mergedData)) {
+          this.Blok.YjsManager.updateBlockData(targetBlock.id, key, value);
+        }
+        this.Blok.YjsManager.removeBlock(blockToMerge.id);
+      });
+
+      // DOM updates (skip Yjs sync — already done above)
+      this.yjsSyncCount++;
+      try {
+        await targetBlock.mergeWith(mergeData);
+        await this.removeBlock(blockToMerge, true, true);
+      } finally {
+        this.yjsSyncCount--;
+      }
+
       this.currentBlockIndex = this.blocksStore.indexOf(targetBlock);
     };
 
@@ -648,8 +724,9 @@ export class BlockManager extends Module {
    * Remove passed Block
    * @param block - Block to remove
    * @param addLastBlock - if true, inserts a new default block when the last block is removed
+   * @param skipYjsSync - if true, skip syncing to Yjs (caller handles sync separately)
    */
-  public removeBlock(block: Block, addLastBlock = true): Promise<void> {
+  public removeBlock(block: Block, addLastBlock = true, skipYjsSync = false): Promise<void> {
     return new Promise((resolve) => {
       const index = this.blocksStore.indexOf(block);
 
@@ -670,9 +747,11 @@ export class BlockManager extends Module {
       });
 
       /**
-       * Sync to Yjs data layer
+       * Sync to Yjs data layer (unless caller is handling sync separately)
        */
-      this.Blok.YjsManager.removeBlock(block.id);
+      if (!skipYjsSync) {
+        this.Blok.YjsManager.removeBlock(block.id);
+      }
 
       if (this.currentBlockIndex >= index) {
         this.currentBlockIndex--;
@@ -700,40 +779,59 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Remove only selected Blocks
-   * and returns first Block index where started removing...
-   * @returns {number|undefined}
-   */
-  private removeSelectedBlocks(): number | undefined {
-    const selectedBlockEntries = this.blocks
-      .map((block, index) => ({
-        block,
-        index,
-      }))
-      .filter(({ block }) => block.selected)
-      .sort((first, second) => second.index - first.index);
-
-    selectedBlockEntries.forEach(({ block }) => {
-      void this.removeBlock(block, false);
-    });
-
-    return selectedBlockEntries.length > 0
-      ? selectedBlockEntries[selectedBlockEntries.length - 1].index
-      : undefined;
-  }
-
-  /**
    * Delete all selected blocks and insert a replacement block at their position.
    * @returns The inserted replacement block, or undefined if no blocks were selected
    */
   public deleteSelectedBlocksAndInsertReplacement(): Block | undefined {
-    const insertionIndex = this.removeSelectedBlocks();
+    // Collect selected blocks with their indices (sorted by index descending for safe removal)
+    const selectedBlockEntries = this.blocks
+      .map((block, index) => ({ block, index }))
+      .filter(({ block }) => block.selected)
+      .sort((a, b) => b.index - a.index);
 
-    if (insertionIndex === undefined) {
+    if (selectedBlockEntries.length === 0) {
       return undefined;
     }
 
-    return this.insertDefaultBlockAtIndex(insertionIndex, true);
+    // Get insertion index (minimum index among selected blocks)
+    const insertionIndex = selectedBlockEntries[selectedBlockEntries.length - 1].index;
+    const blockIds = selectedBlockEntries.map(({ block }) => block.id);
+
+    const defaultToolName = this.config.defaultBlock;
+
+    if (defaultToolName === undefined) {
+      throw new Error('Could not insert default Block. Default block tool is not defined in the configuration.');
+    }
+
+    // Generate new block ID upfront for the transaction
+    const newBlockId = generateBlockId();
+
+    // Single Yjs transaction for all removals + insertion (single undo entry)
+    this.Blok.YjsManager.transact(() => {
+      for (const id of blockIds) {
+        this.Blok.YjsManager.removeBlock(id);
+      }
+      this.Blok.YjsManager.addBlock({
+        id: newBlockId,
+        type: defaultToolName,
+        data: {},
+      }, insertionIndex);
+    });
+
+    // DOM cleanup - remove selected blocks (skip Yjs sync since we handled it above)
+    // Iterate in reverse order (highest index first) to avoid index shifting issues
+    for (const { block } of selectedBlockEntries) {
+      void this.removeBlock(block, false, true);
+    }
+
+    // Insert replacement block (skip Yjs sync since we handled it above)
+    return this.insert({
+      id: newBlockId,
+      tool: defaultToolName,
+      index: insertionIndex,
+      needToFocus: true,
+      skipYjsSync: true,
+    });
   }
 
   /**
@@ -742,16 +840,21 @@ export class BlockManager extends Module {
    * Removes all blocks
    */
   public removeAllBlocks(): void {
-    const removeBlockByIndex = (index: number): void => {
-      if (index < 0) {
-        return;
+    // Create a copy of the blocks array
+    const blocksToRemove = [ ...this.blocks ];
+    const blockIds = blocksToRemove.map(block => block.id);
+
+    // Single Yjs transaction for all removals (single undo entry)
+    this.Blok.YjsManager.transact(() => {
+      for (const id of blockIds) {
+        this.Blok.YjsManager.removeBlock(id);
       }
+    });
 
-      this.blocksStore.remove(index);
-      removeBlockByIndex(index - 1);
-    };
-
-    removeBlockByIndex(this.blocksStore.length - 1);
+    // DOM cleanup - remove all blocks (from end to avoid index shifting)
+    while (this.blocksStore.length > 0) {
+      this.blocksStore.remove(this.blocksStore.length - 1);
+    }
 
     this.unsetCurrentBlock();
     this.insert();
@@ -767,26 +870,59 @@ export class BlockManager extends Module {
    * Split current Block
    * 1. Extract content from Caret position to the Block`s end
    * 2. Insert a new Block below current one with extracted content
+   *
+   * Uses atomic Yjs transaction to ensure split is a single undo entry.
    * @returns {Block}
    */
   public split(): Block {
-    const extractedFragment = this.Blok.Caret.extractFragmentFromCaretPosition();
-    const wrapper = $.make('div');
+    const currentBlock = this.currentBlock;
 
-    wrapper.appendChild(extractedFragment as DocumentFragment);
+    if (currentBlock === undefined) {
+      throw new Error('Cannot split: no current block');
+    }
 
-    /**
-     * @todo make object in accordance with Tool
-     */
-    const data = {
-      text: $.isEmpty(wrapper) ? '' : wrapper.innerHTML,
-    };
+    // Generate new block ID upfront for the transaction
+    const newBlockId = generateBlockId();
+    const insertIndex = this.currentBlockIndex + 1;
 
-    /**
-     * Renew current Block
-     * @type {Block}
-     */
-    return this.insert({ data });
+    // Suppress auto-sync and stopCapturing during split to keep it atomic
+    this.yjsSyncCount++;
+    this.suppressStopCapturing = true;
+
+    try {
+      // Extract fragment (mutates DOM - removes text after caret)
+      const extractedFragment = this.Blok.Caret.extractFragmentFromCaretPosition();
+      const wrapper = $.make('div');
+
+      wrapper.appendChild(extractedFragment as DocumentFragment);
+
+      const extractedText = $.isEmpty(wrapper) ? '' : wrapper.innerHTML;
+
+      // Get truncated text (what remains in original block after extraction)
+      const truncatedText = currentBlock.holder
+        .querySelector('[contenteditable="true"]')?.innerHTML ?? '';
+
+      // Atomic Yjs transaction: update original + add new (single undo entry)
+      this.Blok.YjsManager.transact(() => {
+        this.Blok.YjsManager.updateBlockData(currentBlock.id, 'text', truncatedText);
+        this.Blok.YjsManager.addBlock({
+          id: newBlockId,
+          type: currentBlock.name,
+          data: { text: extractedText },
+        }, insertIndex);
+      });
+
+      // Insert DOM block (skip Yjs sync - already done above)
+      return this.insert({
+        id: newBlockId,
+        tool: currentBlock.name,
+        data: { text: extractedText },
+        skipYjsSync: true,
+      });
+    } finally {
+      this.yjsSyncCount--;
+      this.suppressStopCapturing = false;
+    }
   }
 
   /**
@@ -1034,27 +1170,33 @@ export class BlockManager extends Module {
       return;
     }
 
-    /** Move up current Block */
-    this.blocksStore.move(toIndex, fromIndex, skipDOM);
+    // Suppress stopCapturing to keep DOM + Yjs move as single undo entry
+    this.suppressStopCapturing = true;
+    try {
+      /** Move up current Block */
+      this.blocksStore.move(toIndex, fromIndex, skipDOM);
 
-    /** Now actual block moved so that current block index changed */
-    this.currentBlockIndex = toIndex;
-    const movedBlock = this.currentBlock;
+      /** Now actual block moved so that current block index changed */
+      this.currentBlockIndex = toIndex;
+      const movedBlock = this.currentBlock;
 
-    if (movedBlock === undefined) {
-      throw new Error(`Could not move Block. Block at index ${toIndex} is not available.`);
+      if (movedBlock === undefined) {
+        throw new Error(`Could not move Block. Block at index ${toIndex} is not available.`);
+      }
+
+      /**
+       * Force call of didMutated event on Block movement
+       */
+      this.blockDidMutated(BlockMovedMutationType, movedBlock, {
+        fromIndex,
+        toIndex,
+      });
+
+      // Sync to Yjs
+      this.Blok.YjsManager.moveBlock(movedBlock.id, toIndex);
+    } finally {
+      this.suppressStopCapturing = false;
     }
-
-    /**
-     * Force call of didMutated event on Block movement
-     */
-    this.blockDidMutated(BlockMovedMutationType, movedBlock, {
-      fromIndex,
-      toIndex,
-    });
-
-    // Sync to Yjs
-    this.Blok.YjsManager.moveBlock(movedBlock.id, toIndex);
   }
 
   /**
@@ -1130,23 +1272,44 @@ export class BlockManager extends Module {
    *                                        2) in api.blocks.clear we should add empty block
    */
   public async clear(needToAddDefaultBlock = false): Promise<void> {
-    const queue = new PromiseQueue();
-
     // Create a copy of the blocks array to avoid issues with array modification during iteration
     const blocksToRemove = [ ...this.blocks ];
+    const blockIds = blocksToRemove.map(block => block.id);
 
-    blocksToRemove.forEach((block) => {
-      void queue.add(async () => {
-        await this.removeBlock(block, false);
-      });
+    // Generate ID for default block if needed (so we can include it in the transaction)
+    const defaultBlockId = needToAddDefaultBlock ? generateBlockId() : undefined;
+    const defaultToolName = this.config.defaultBlock;
+
+    // Single Yjs transaction for all removals + default block add (single undo entry)
+    this.Blok.YjsManager.transact(() => {
+      for (const id of blockIds) {
+        this.Blok.YjsManager.removeBlock(id);
+      }
+
+      // Include default block in transaction so undo removes it along with restoring original blocks
+      if (needToAddDefaultBlock && defaultBlockId !== undefined && defaultToolName !== undefined) {
+        this.Blok.YjsManager.addBlock({
+          id: defaultBlockId,
+          type: defaultToolName,
+          data: {},
+        }, 0);
+      }
     });
 
-    await queue.completed;
+    // DOM cleanup (skip Yjs sync — already done above)
+    for (const block of blocksToRemove) {
+      const index = this.getBlockIndex(block);
+
+      if (index !== -1) {
+        this.blocksStore.remove(index);
+      }
+    }
 
     this.unsetCurrentBlock();
 
-    if (needToAddDefaultBlock) {
-      this.insert();
+    if (needToAddDefaultBlock && defaultBlockId !== undefined) {
+      // Insert with skipYjsSync since we already synced in the transaction above
+      this.insert({ id: defaultBlockId, skipYjsSync: true });
     }
 
     /**
@@ -1360,12 +1523,19 @@ export class BlockManager extends Module {
 
   /**
    * Sync a block from Yjs data after undo/redo
-   * @param blockId - the id of the block to sync
-   * @param changeType - the type of change (add, remove, update)
+   * @param event - the block change event from YjsManager
    */
-  private syncBlockFromYjs(blockId: string, changeType: BlockChangeEvent['type']): void {
+  private syncBlockFromYjs(event: BlockChangeEvent): void {
+    const { blockId, type: changeType } = event;
+
     if (changeType === 'update') {
       this.handleYjsUpdate(blockId);
+
+      return;
+    }
+
+    if (changeType === 'move') {
+      this.handleYjsMove();
 
       return;
     }
@@ -1394,10 +1564,10 @@ export class BlockManager extends Module {
 
     const data = this.Blok.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
 
-    // Set flag to prevent syncing back to Yjs during undo/redo
-    this.isSyncingFromYjs = true;
+    // Increment counter to prevent syncing back to Yjs during undo/redo
+    this.yjsSyncCount++;
     void block.setData(data).finally(() => {
-      this.isSyncingFromYjs = false;
+      this.yjsSyncCount--;
     });
   }
 
@@ -1428,12 +1598,13 @@ export class BlockManager extends Module {
       return;
     }
 
-    // Create the block
+    // Create the block with immediate event binding for undo/redo responsiveness
     const block = this.composeBlock({
       id: blockId,
       tool: toolName,
       data,
       parentId: parentId ?? undefined,
+      bindEventsImmediately: true,
     });
 
     // Insert into blocks store at correct position
@@ -1464,9 +1635,71 @@ export class BlockManager extends Module {
     this.blocksStore.remove(index);
 
     // If all blocks removed, insert a default block
+    // Use skipYjsSync to prevent corrupting undo stack during undo/redo
     if (this.blocksStore.length === 0) {
-      this.insert();
+      this.insert({ skipYjsSync: true });
     }
+  }
+
+  /**
+   * Flag to prevent multiple move syncs in the same event batch
+   */
+  private moveSyncScheduled = false;
+
+  /**
+   * Handle block move from Yjs (undo/redo - repositioning a moved block)
+   * Uses microtask scheduling to batch multiple move events into a single sync
+   */
+  private handleYjsMove(): void {
+    // Only schedule one sync per microtask to handle batched move events
+    if (this.moveSyncScheduled) {
+      return;
+    }
+
+    this.moveSyncScheduled = true;
+
+    // Use queueMicrotask to defer sync until all move events are processed
+    queueMicrotask(() => {
+      this.moveSyncScheduled = false;
+      this.syncBlockOrderFromYjs();
+    });
+  }
+
+  /**
+   * Re-syncs the entire block order from Yjs to handle multiple simultaneous moves correctly
+   */
+  private syncBlockOrderFromYjs(): void {
+    // Get the authoritative order from Yjs
+    const yjsBlocks = this.Blok.YjsManager.toJSON();
+
+    // Build id→block map for O(1) lookups instead of O(n) getBlockById calls
+    const blockById = new Map<string, Block>();
+
+    for (const block of this.blocks) {
+      blockById.set(block.id, block);
+    }
+
+    // Reorder DOM blocks to match Yjs order
+    // Process each Yjs block and ensure it's at the correct position
+    yjsBlocks.forEach((yjsBlock, targetIndex) => {
+      const blockId = yjsBlock.id;
+
+      if (blockId === undefined) {
+        return;
+      }
+
+      const block = blockById.get(blockId);
+
+      if (block === undefined) {
+        return;
+      }
+
+      const currentIndex = this.getBlockIndex(block);
+
+      if (currentIndex !== targetIndex) {
+        this.blocksStore.move(targetIndex, currentIndex);
+      }
+    });
   }
 
   /**

@@ -2723,5 +2723,117 @@ test.describe('yjs undo/redo', () => {
       await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Block 3');
       await expect(getParagraphByIndex(page, 4).locator('[contenteditable="true"]')).toContainText('Block 4');
     });
+
+    test('consecutive drag-drop operations undo correctly in reverse order', async ({ page }) => {
+      // This test verifies that multiple consecutive drag-drop operations can be
+      // undone correctly, with each undo restoring the previous state.
+      // This was a bug where Yjs delete+insert didn't undo correctly for moves.
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block A' } },
+        { type: 'paragraph', data: { text: 'Block B' } },
+        { type: 'paragraph', data: { text: 'Block C' } },
+      ]);
+
+      // Verify initial order: A, B, C
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block A');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block B');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block C');
+
+      // Move 1: Drag Block A to the end (after Block C)
+      // Initial: A, B, C -> After: B, C, A
+      await getParagraphByIndex(page, 0).hover();
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify after Move 1: B, C, A
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block B');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block C');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block A');
+
+      // Move 2: Drag Block B (now at index 0) to the end (after Block A)
+      // Current: B, C, A -> After: C, A, B
+      await getParagraphByIndex(page, 0).hover();
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify after Move 2: C, A, B
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block C');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block A');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block B');
+
+      // Undo 1: Should restore state before Move 2 (B, C, A)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block B');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block C');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block A');
+
+      // Undo 2: Should restore original state (A, B, C)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block A');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block B');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block C');
+    });
+
+    test('consecutive drag-drop operations redo correctly after undo', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Alpha' } },
+        { type: 'paragraph', data: { text: 'Beta' } },
+        { type: 'paragraph', data: { text: 'Gamma' } },
+      ]);
+
+      // Move 1: Drag Alpha to end -> Beta, Gamma, Alpha
+      await getParagraphByIndex(page, 0).hover();
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Move 2: Drag Beta to end -> Gamma, Alpha, Beta
+      await getParagraphByIndex(page, 0).hover();
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify: Gamma, Alpha, Beta
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Beta');
+
+      // Undo both moves
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify back to original: Alpha, Beta, Gamma
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Beta');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Gamma');
+
+      // Redo 1: Should restore Move 1 (Beta, Gamma, Alpha)
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Beta');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Alpha');
+
+      // Redo 2: Should restore Move 2 (Gamma, Alpha, Beta)
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Beta');
+    });
   });
 });

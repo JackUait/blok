@@ -305,6 +305,70 @@ describe('Block', () => {
     });
   });
 
+  describe('setData', () => {
+    it('clears contenteditable content when called with empty object on paragraph block', async () => {
+      const { block, renderElement } = createBlock({ data: { text: 'initial content' } });
+
+      renderElement.innerHTML = 'hello';
+
+      const result = await block.setData({});
+
+      expect(result).toBe(true);
+      expect(renderElement.innerHTML).toBe('');
+    });
+
+    it('updates contenteditable content when called with text property', async () => {
+      const { block, renderElement } = createBlock({ data: { text: 'initial content' } });
+
+      renderElement.innerHTML = 'old text';
+
+      const result = await block.setData({ text: 'new text' });
+
+      expect(result).toBe(true);
+      expect(renderElement.innerHTML).toBe('new text');
+    });
+
+    it('returns false for non-paragraph blocks with empty data', async () => {
+      const renderElement = document.createElement('div');
+
+      renderElement.setAttribute('contenteditable', 'true');
+
+      const toolInstance = {
+        render: vi.fn((): HTMLElement => renderElement),
+        save: vi.fn(async (): Promise<BlockToolData> => ({ src: 'image.png' })),
+        validate: vi.fn(async (): Promise<boolean> => true),
+      };
+
+      const toolAdapter = {
+        name: 'image', // Not a paragraph
+        settings: { config: {} },
+        create: vi.fn(() => toolInstance as unknown as object),
+        tunes: new ToolsCollection<BlockTuneAdapter>(),
+        sanitizeConfig: {},
+        inlineTools: new ToolsCollection(),
+        conversionConfig: undefined,
+      } as unknown as BlockToolAdapter;
+
+      const block = new Block({
+        id: 'test-image-block',
+        data: { src: 'image.png' },
+        tool: toolAdapter,
+        readOnly: false,
+        tunesData: {},
+        api: {} as ApiModules,
+      });
+
+      renderElement.innerHTML = 'caption text';
+
+      const result = await block.setData({});
+
+      // Should return false because it's not a paragraph block
+      expect(result).toBe(false);
+      // Content should remain unchanged
+      expect(renderElement.innerHTML).toBe('caption text');
+    });
+  });
+
   describe('block state helpers', () => {
     it('detects empty state based on text and media content', () => {
       const { block } = createBlock();

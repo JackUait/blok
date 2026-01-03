@@ -1,0 +1,1 @@
+Review the code and identify any parts that do not directly contribute to solving the stated task. Remove unused logic, redundant abstractions, dead code, premature optimizations, and unnecessary configuration. Preserve only what is required for correctness, clarity, and maintainability. Do not change behavior

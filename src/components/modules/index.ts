@@ -16,8 +16,6 @@ import { StylesAPI } from './api/styles';
 import { ToolbarAPI } from './api/toolbar';
 import { TooltipAPI } from './api/tooltip';
 import { UiAPI } from './api/ui';
-import { HistoryAPI } from './api/history';
-
 /** ./toolbar */
 import { BlockSettings } from './toolbar/blockSettings';
 import { Toolbar } from './toolbar/index';
@@ -25,6 +23,7 @@ import { InlineToolbar } from './toolbar/inline';
 
 /** . */
 import { I18n } from './i18n';
+import { YjsManager } from './yjsManager';
 import { BlockEvents } from './blockEvents';
 import { BlockManager } from './blockManager';
 import { BlockSelection } from './blockSelection';
@@ -39,7 +38,6 @@ import { Renderer } from './renderer';
 import { Saver } from './saver';
 import { Tools } from './tools';
 import { UI } from './ui';
-import { History } from './history';
 
 /**
  * Named exports for better tree-shaking.
@@ -64,7 +62,6 @@ export {
   ToolbarAPI,
   TooltipAPI,
   UiAPI,
-  HistoryAPI,
 
   // Toolbar Modules
   BlockSettings,
@@ -87,7 +84,7 @@ export {
   Saver,
   Tools,
   UI,
-  History,
+  YjsManager,
 };
 
 /**
@@ -112,7 +109,6 @@ export const Modules = {
   ToolbarAPI,
   TooltipAPI,
   UiAPI,
-  HistoryAPI,
 
   // Toolbar Modules
   BlockSettings,
@@ -135,5 +131,5 @@ export const Modules = {
   Saver,
   Tools,
   UI,
-  History,
+  YjsManager,
 };

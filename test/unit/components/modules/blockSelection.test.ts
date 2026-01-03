@@ -83,6 +83,7 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     getBlock: vi.fn((element: HTMLElement) => blocks.find((block) => block.holder === element) ?? null),
     removeSelectedBlocks: vi.fn(() => 0),
     insertDefaultBlockAtIndex: vi.fn(),
+    deleteSelectedBlocksAndInsertReplacement: vi.fn(),
   };
 
   const defaults: ModuleOverrides = {
@@ -543,9 +544,7 @@ describe('BlockSelection', () => {
     it('inserts new block and types printable character', () => {
       const { blockSelection, modules } = createBlockSelection();
       const blockManager = modules.BlockManager as unknown as {
-        removeSelectedBlocks: ReturnType<typeof vi.fn>;
-        insertDefaultBlockAtIndex: ReturnType<typeof vi.fn>;
-        currentBlock: Block | null;
+        deleteSelectedBlocksAndInsertReplacement: ReturnType<typeof vi.fn>;
       };
       const caret = modules.Caret as unknown as {
         setToBlock: ReturnType<typeof vi.fn>;
@@ -556,11 +555,7 @@ describe('BlockSelection', () => {
         return () => fn();
       });
 
-      blockManager.currentBlock = null;
-      blockManager.removeSelectedBlocks = vi.fn().mockReturnValue(1);
-      blockManager.insertDefaultBlockAtIndex = vi.fn().mockImplementation(() => {
-        blockManager.currentBlock = insertedBlock;
-      });
+      blockManager.deleteSelectedBlocksAndInsertReplacement = vi.fn().mockReturnValue(insertedBlock);
 
       const host = blockSelection as unknown as {
         replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
@@ -568,8 +563,7 @@ describe('BlockSelection', () => {
 
       host.replaceSelectedBlocksWithPrintableKey({ key: 'x' } as KeyboardEvent);
 
-      expect(blockManager.removeSelectedBlocks).toHaveBeenCalledTimes(1);
-      expect(blockManager.insertDefaultBlockAtIndex).toHaveBeenCalledWith(1, true);
+      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
       expect(caret.setToBlock).toHaveBeenCalledWith(insertedBlock);
       expect(caret.insertContentAtCaretPosition).toHaveBeenCalledWith('x');
       expect(delaySpy).toHaveBeenCalledTimes(1);
@@ -578,9 +572,7 @@ describe('BlockSelection', () => {
     it('inserts empty string for non-printable keys', () => {
       const { blockSelection, modules } = createBlockSelection();
       const blockManager = modules.BlockManager as unknown as {
-        removeSelectedBlocks: ReturnType<typeof vi.fn>;
-        insertDefaultBlockAtIndex: ReturnType<typeof vi.fn>;
-        currentBlock: Block | null;
+        deleteSelectedBlocksAndInsertReplacement: ReturnType<typeof vi.fn>;
       };
       const caret = modules.Caret as unknown as {
         setToBlock: ReturnType<typeof vi.fn>;
@@ -592,11 +584,7 @@ describe('BlockSelection', () => {
         return () => fn();
       });
 
-      blockManager.currentBlock = null;
-      blockManager.removeSelectedBlocks = vi.fn().mockReturnValue(2);
-      blockManager.insertDefaultBlockAtIndex = vi.fn().mockImplementation(() => {
-        blockManager.currentBlock = insertedBlock;
-      });
+      blockManager.deleteSelectedBlocksAndInsertReplacement = vi.fn().mockReturnValue(insertedBlock);
 
       const host = blockSelection as unknown as {
         replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
@@ -604,7 +592,7 @@ describe('BlockSelection', () => {
 
       host.replaceSelectedBlocksWithPrintableKey({ key: 'Enter' } as KeyboardEvent);
 
-      expect(blockManager.insertDefaultBlockAtIndex).toHaveBeenCalledWith(2, true);
+      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
       expect(caret.setToBlock).toHaveBeenCalledWith(insertedBlock);
       expect(caret.insertContentAtCaretPosition).toHaveBeenCalledWith('');
     });

@@ -221,6 +221,13 @@ const createBlockManager = (
       },
       checkEmptiness: vi.fn(),
     } as unknown as BlokModules['UI'],
+    YjsManager: {
+      addBlock: vi.fn(),
+      removeBlock: vi.fn(),
+      moveBlock: vi.fn(),
+      updateBlockData: vi.fn(),
+      stopCapturing: vi.fn(),
+    } as unknown as BlokModules['YjsManager'],
   };
 
   blockManager.state = {
@@ -466,7 +473,7 @@ describe('BlockManager', () => {
       .spyOn(blockManager as unknown as { removeBlock: BlockManager['removeBlock'] }, 'removeBlock')
       .mockResolvedValue();
 
-    const firstRemovedIndex = blockManager.removeSelectedBlocks();
+    const firstRemovedIndex = (blockManager as unknown as { removeSelectedBlocks: () => number | undefined }).removeSelectedBlocks();
 
     expect(removeSpy).toHaveBeenNthCalledWith(1, blocks[2], false);
     expect(removeSpy).toHaveBeenNthCalledWith(2, blocks[1], false);

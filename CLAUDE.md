@@ -30,12 +30,15 @@ yarn test:watch     # Watch mode for unit tests
 yarn test:coverage  # Unit tests with coverage report
 
 # E2E tests (Playwright)
-yarn e2e            # Run all E2E tests (all browsers)
-yarn e2e:chrome     # Chromium only
-yarn e2e:firefox    # Firefox only
-yarn e2e:safari     # WebKit/Safari only
-yarn e2e:ui         # Playwright UI mode for debugging tests
-yarn e2e:ui:chrome  # UI mode with Chromium only
+yarn e2e              # Run all E2E tests (all browsers)
+yarn e2e:smoke        # Smoke tests (Chromium, @smoke tagged)
+yarn e2e:chrome       # Chromium only
+yarn e2e:firefox      # Firefox only
+yarn e2e:safari       # WebKit/Safari only
+yarn e2e:ui           # Playwright UI mode for debugging tests
+yarn e2e:ui:chrome    # UI mode with Chromium only
+yarn e2e:ui:firefox   # UI mode with Firefox only
+yarn e2e:ui:safari    # UI mode with Safari only
 ```
 
 **Important**: E2E tests load the actual editor bundle from `dist/`. If you modify core code, run `yarn build:test` before running E2E tests to avoid testing stale code.
@@ -45,11 +48,20 @@ yarn e2e:ui:chrome  # UI mode with Chromium only
 # Single unit test file
 yarn test src/components/utils/dom.test.ts
 
+# Single unit test by name pattern
+yarn test -t "should sanitize HTML"
+
 # Single E2E test file
 yarn e2e test/playwright/tests/modules/blockManager.spec.ts
 
-# Single test by name pattern
-yarn e2e -g "should move block down"
+# Single E2E test by name pattern
+yarn e2e -g "deletes the last block"
+
+# E2E test file
+yarn e2e test/playwright/tests/modules/blockManager.spec.ts
+
+# E2E test file + specific test name
+yarn e2e test/playwright/tests/modules/blockManager.spec.ts -g "deletes the last block"
 ```
 
 ### Storybook
@@ -188,6 +200,18 @@ Architecture:
 The Popover system is reusable - also used by BlockSettings and InlineToolbar.
 
 ## Code Conventions
+
+### Avoid Over-Engineering
+
+Only make changes that are directly requested or clearly necessary. Keep solutions simple and focused:
+
+- Don't add features or make "improvements" beyond what was asked
+- A simple feature doesn't need extra configurability
+- Only add comments where the logic isn't self-evident
+- Use defensive programming strategy, but don't add error handling, fallbacks, or validation for scenarios that can't happen
+- Don't create helpers, utilities, or abstractions for one-time operations, unless it's required to fix a linting problem
+- Don't design for hypothetical future requirements
+- Three similar lines of code is better than a premature abstraction
 
 ### TypeScript Rules
 

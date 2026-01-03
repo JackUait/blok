@@ -72,6 +72,13 @@ export interface Blocks {
   getBlockByElement(element: HTMLElement): BlockAPI | undefined;
 
   /**
+   * Returns all child blocks of a parent container block
+   *
+   * @param parentId - id of the parent block
+   */
+  getChildren(parentId: string): BlockAPI[];
+
+  /**
    * Returns Blocks count
    * @return {number}
    */

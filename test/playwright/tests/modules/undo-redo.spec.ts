@@ -1,52 +1,47 @@
-/**
- * Tests for undo/redo functionality
- * Validates that:
- * 1. Caret position is preserved after undo/redo
- * 2. Focus remains in the editor after undo/redo
- * 3. Blocks are updated in-place without full re-render when possible
- */
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
-import path from 'node:path';
-import type { Blok } from '@/types';
-import type { OutputData } from '@/types';
-import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
+import type { Locator, Page } from '@playwright/test';
+import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
-
-const BLOK_BUNDLE_PATH = path.resolve(__dirname, '../../../../dist/editorjs.umd.js');
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
+const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-
-/**
- * Wait time to allow history debounce to complete
- */
-const HISTORY_DEBOUNCE_WAIT = 500;
-
-/**
- * Short wait time for state changes after undo/redo operations
- */
-const STATE_CHANGE_WAIT = 200;
-
-/**
- * Wait for a specified delay using page.evaluate to avoid lint warnings about page.waitForTimeout
- */
-const waitForDelay = async (page: Page, delayMs: number): Promise<void> => {
-  await page.evaluate(
-    async (timeout) => {
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, timeout);
-      });
-    },
-    delayMs
-  );
-};
+const HEADER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`;
+const LIST_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`;
+const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
+  `[data-blok-testid="popover-item"][data-blok-item-name="${itemName}"]`;
+const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
+const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 
 declare global {
   interface Window {
     blokInstance?: Blok;
   }
 }
+
+const getParagraphSelectorByIndex = (index: number): string => {
+  return `:nth-match(${PARAGRAPH_SELECTOR}, ${index + 1})`;
+};
+
+const getParagraphByIndex = (page: Page, index: number): Locator => {
+  return page.locator(getParagraphSelectorByIndex(index));
+};
+
+const getListBlockByIndex = (page: Page, index: number): Locator => {
+  return page.locator(`:nth-match(${LIST_SELECTOR}, ${index + 1})`);
+};
+
+/**
+ * Helper to assert block depth consistently.
+ * Depth 0 is omitted from saved data, so we use nullish coalescing.
+ */
+const expectDepth = (block: OutputData['blocks'][number] | undefined, expectedDepth: number): void => {
+  const actualDepth = (block?.data as { depth?: number })?.depth ?? 0;
+
+  expect(actualDepth).toBe(expectedDepth);
+};
 
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
@@ -67,72 +62,47 @@ const resetBlok = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const ensureBlokBundleAvailable = async (page: Page): Promise<void> => {
-  const hasGlobal = await page.evaluate(() => typeof window.Blok === 'function');
+const createBlokWithBlocks = async (
+  page: Page,
+  blocks: OutputData['blocks']
+): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    const blok = new window.Blok({
+      holder: holder,
+      data: { blocks: blokBlocks },
+    });
 
-  if (hasGlobal) {
-    return;
-  }
-
-  await page.addScriptTag({ path: BLOK_BUNDLE_PATH });
-  await page.waitForFunction(() => typeof window.Blok === 'function');
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID, blocks });
 };
 
-const createBlok = async (
-  page: Page,
-  options: { data?: OutputData; config?: Record<string, unknown> } = {}
-): Promise<void> => {
-  const {
-    data = null,
-    config = {},
-  } = options;
-
-  await resetBlok(page);
-  await ensureBlokBundleAvailable(page);
-
+const waitForDelay = async (page: Page, delayMs: number): Promise<void> => {
   await page.evaluate(
-    async ({ holder, initialData, config: providedConfig }) => {
-      const blokConfig: Record<string, unknown> = {
-        holder,
-        autofocus: true,
-        ...providedConfig,
-      };
-
-      if (initialData) {
-        blokConfig.data = initialData;
-      }
-
-      const blok = new window.Blok(blokConfig);
-
-      window.blokInstance = blok;
-      await blok.isReady;
+    async (timeout) => {
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, timeout);
+      });
     },
-    {
-      holder: HOLDER_ID,
-      initialData: data,
-      config,
-    }
+    delayMs
   );
 };
 
-/**
- * Helper to check if the editor has focus
- */
-const isEditorFocused = async (page: Page): Promise<boolean> => {
-  return await page.evaluate(() => {
-    const activeElement = document.activeElement;
-
-    if (!activeElement) {
-      return false;
+const saveBlok = async (page: Page): Promise<OutputData> => {
+  return await page.evaluate(async () => {
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
     }
 
-    const editorWrapper = document.querySelector('[data-blok-testid="blok"]');
-
-    return editorWrapper?.contains(activeElement) ?? false;
+    return await window.blokInstance.save();
   });
 };
 
-test.describe('undo/Redo', () => {
+test.describe('yjs undo/redo', () => {
+  // Wait for Yjs captureTimeout (500ms) plus small buffer
+  const YJS_CAPTURE_TIMEOUT = 600;
+
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
@@ -141,799 +111,2964 @@ test.describe('undo/Redo', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test.describe('focus Preservation', () => {
-    test('@smoke editor retains focus after undo', async ({ page }) => {
-      await createBlok(page, {
+  test('undoes text input with Cmd+Z', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
         data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'Initial text' },
-            },
-          ],
+          text: 'Original text',
         },
+      },
+    ]);
+
+    const paragraph = getParagraphByIndex(page, 0);
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+    // Click at the end of the paragraph
+    await paragraphInput.click();
+    await page.keyboard.press('End');
+
+    // Type additional text
+    await paragraphInput.type(' added content');
+
+    // Wait for Yjs to capture the change
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Verify the text was added
+    await expect(paragraphInput).toContainText('Original text added content');
+
+    // Undo
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+
+    // Verify text is back to original
+    await expect(paragraphInput).toContainText('Original text');
+    await expect(paragraphInput).not.toContainText('added content');
+  });
+
+  test('redoes text input with Cmd+Shift+Z', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Original text',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByIndex(page, 0);
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+    // Click at the end of the paragraph
+    await paragraphInput.click();
+    await page.keyboard.press('End');
+
+    // Type additional text
+    await paragraphInput.type(' added');
+
+    // Wait for Yjs to capture the change
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Undo
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+
+    // Verify text is undone
+    await expect(paragraphInput).toContainText('Original text');
+    await expect(paragraphInput).not.toContainText('added');
+
+    // Redo
+    await page.keyboard.press(REDO_SHORTCUT);
+    await waitForDelay(page, 200);
+
+    // Verify text is redone
+    await expect(paragraphInput).toContainText('Original text added');
+  });
+
+  test('undo preserves data correctly after save', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Initial',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByIndex(page, 0);
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+    // Click at end and type
+    await paragraphInput.click();
+    await page.keyboard.press('End');
+    await paragraphInput.type(' modified');
+
+    // Wait for Yjs to capture
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Verify modification
+    let savedData = await saveBlok(page);
+
+    expect((savedData.blocks[0]?.data as { text?: string }).text).toBe('Initial modified');
+
+    // Undo
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+
+    // Verify undo via save
+    savedData = await saveBlok(page);
+    expect((savedData.blocks[0]?.data as { text?: string }).text).toBe('Initial');
+  });
+
+  test('multiple undos work in sequence', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Base',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByIndex(page, 0);
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+    // Make first change
+    await paragraphInput.click();
+    await page.keyboard.press('End');
+    await paragraphInput.type(' first');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Make second change
+    await paragraphInput.type(' second');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Verify final state
+    await expect(paragraphInput).toContainText('Base first second');
+
+    // First undo
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+    await expect(paragraphInput).toContainText('Base first');
+    await expect(paragraphInput).not.toContainText('second');
+
+    // Second undo
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+    await expect(paragraphInput).toContainText('Base');
+    await expect(paragraphInput).not.toContainText('first');
+  });
+
+  test('undo works across different blocks', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'First block',
+        },
+      },
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Second block',
+        },
+      },
+    ]);
+
+    const firstParagraph = getParagraphByIndex(page, 0);
+    const secondParagraph = getParagraphByIndex(page, 1);
+    const firstInput = firstParagraph.locator('[contenteditable="true"]');
+    const secondInput = secondParagraph.locator('[contenteditable="true"]');
+
+    // Modify first block
+    await firstInput.click();
+    await page.keyboard.press('End');
+    await firstInput.type(' modified1');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Modify second block
+    await secondInput.click();
+    await page.keyboard.press('End');
+    await secondInput.type(' modified2');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Verify both modified
+    await expect(firstInput).toContainText('First block modified1');
+    await expect(secondInput).toContainText('Second block modified2');
+
+    // Undo second modification
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+    await expect(secondInput).toContainText('Second block');
+    await expect(secondInput).not.toContainText('modified2');
+
+    // First block should still be modified
+    await expect(firstInput).toContainText('First block modified1');
+
+    // Undo first modification
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+    await expect(firstInput).toContainText('First block');
+    await expect(firstInput).not.toContainText('modified1');
+  });
+
+  test('undo after block insertion removes the block', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Existing block',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByIndex(page, 0);
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+    // Focus at end and press Enter to create new block
+    await paragraphInput.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+
+    // Wait for new block to appear
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Undo should remove the new block
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+
+    // Check that we're back to one block
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+    await expect(paragraphInput).toContainText('Existing block');
+  });
+
+  test('redo after undoing block insertion restores the block', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Existing block',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByIndex(page, 0);
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+    // Focus at end and press Enter to create new block
+    await paragraphInput.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Undo
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+    // Redo should restore the new block
+    await page.keyboard.press(REDO_SHORTCUT);
+    await waitForDelay(page, 200);
+
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+  });
+
+  test('undo after creating block and typing quickly separates block creation from content', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Existing block',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByIndex(page, 0);
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+    // Focus at end and press Enter to create new empty block
+    await paragraphInput.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+
+    // Wait for new block to appear (events are bound synchronously via bindEventsImmediately)
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+    // Type quickly using keyboard (focus is already on new block after Enter)
+    await page.keyboard.type('hello');
+
+    // Wait for Yjs to capture
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Verify state: 2 blocks, second has 'hello'
+    const newBlockInput = getParagraphByIndex(page, 1).locator('[contenteditable="true"]');
+
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+    await expect(newBlockInput).toHaveText('hello');
+
+    // Verify data is saved correctly via API
+    const savedData = await saveBlok(page);
+
+    expect(savedData.blocks).toHaveLength(2);
+    expect((savedData.blocks[1]?.data as { text?: string }).text).toBe('hello');
+
+    // First undo should remove the typed content, leaving empty block
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+
+    // Should still have 2 blocks, but second is empty
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+    await expect(newBlockInput).toHaveText('');
+
+    // Second undo should remove the block
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+
+    // Should be back to 1 block
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+    await expect(paragraphInput).toContainText('Existing block');
+  });
+
+  test.describe('edge cases', () => {
+    const HEADER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`;
+
+    test('undo after move block restores original position', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          id: 'block-1',
+          type: 'paragraph',
+          data: { text: 'First paragraph' },
+        },
+        {
+          id: 'block-2',
+          type: 'paragraph',
+          data: { text: 'Second paragraph' },
+        },
+        {
+          id: 'block-3',
+          type: 'paragraph',
+          data: { text: 'Third paragraph' },
+        },
+      ]);
+
+      // Verify initial order
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const secondParagraph = getParagraphByIndex(page, 1);
+      const thirdParagraph = getParagraphByIndex(page, 2);
+
+      await expect(firstParagraph.locator('[contenteditable="true"]')).toContainText('First paragraph');
+      await expect(secondParagraph.locator('[contenteditable="true"]')).toContainText('Second paragraph');
+      await expect(thirdParagraph.locator('[contenteditable="true"]')).toContainText('Third paragraph');
+
+      // Move second block to the end (index 2)
+      await page.evaluate(async () => {
+        await window.blokInstance?.blocks.move(2, 1);
       });
 
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Focus and type some text
-      await input.click();
-      await input.type(' more content');
+      // Verify moved order: First, Third, Second
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First paragraph');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Third paragraph');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Second paragraph');
 
-      // Wait for history to record the change
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      // Undo should restore original order
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-      // Verify the text was added
-      await expect(input).toContainText('Initial text more content');
+      // Verify original order is restored: First, Second, Third
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First paragraph');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second paragraph');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third paragraph');
 
-      // Perform undo
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-
-      // Wait for state to restore
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Verify the text was undone
-      await expect(input).toContainText('Initial text');
-
-      // Check that focus is still within the editor
-      const focused = await isEditorFocused(page);
-
-      expect(focused).toBe(true);
+      // Block count should remain the same (block should not disappear)
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
     });
 
-    test('editor retains focus after redo', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'Initial text' },
-            },
-          ],
+    test('move block requires single undo (atomic transaction)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          id: 'block-1',
+          type: 'paragraph',
+          data: { text: 'First' },
         },
+        {
+          id: 'block-2',
+          type: 'paragraph',
+          data: { text: 'Second' },
+        },
+        {
+          id: 'block-3',
+          type: 'paragraph',
+          data: { text: 'Third' },
+        },
+      ]);
+
+      // Move second block to the end (index 2)
+      await page.evaluate(async () => {
+        await window.blokInstance?.blocks.move(2, 1);
       });
 
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Focus and type some text
-      await input.click();
-      await input.type(' added');
+      // Verify moved order: First, Third, Second
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Third');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Second');
 
-      // Wait for history to record
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      // Single undo should restore original order (not require two undos)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original order: First, Second, Third
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third');
+
+      // Second undo should NOT change anything (proves move was atomic, not two operations)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Order should still be: First, Second, Third (no change from previous state)
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third');
+    });
+
+    test('undo after block convert restores original block type', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Convert me to header' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      await expect(paragraph.locator('[contenteditable="true"]')).toContainText('Convert me to header');
+
+      // Convert paragraph to header via API
+      await page.evaluate(async () => {
+        const block = window.blokInstance?.blocks.getBlockByIndex(0);
+
+        if (block) {
+          await window.blokInstance?.blocks.convert(block.id, 'header', { text: 'Convert me to header', level: 2 });
+        }
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify it's now a header
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(HEADER_SELECTOR).locator('[contenteditable="true"]')).toContainText('Convert me to header');
+
+      // Single undo should restore to paragraph
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify it's back to paragraph
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(0);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Convert me to header');
+    });
+
+    test('undo after block split rejoins blocks (single undo)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Hello World' },
+        },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Click and position cursor after "Hello" (before the space)
+      await paragraphInput.click();
+
+      // Position cursor after "Hello" using JavaScript for precision
+      await page.evaluate(() => {
+        const paragraph = document.querySelector('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (paragraph) {
+          const textNode = paragraph.firstChild;
+
+          if (textNode) {
+            const range = document.createRange();
+            const sel = window.getSelection();
+
+            // Position after "Hello" (5 characters)
+            range.setStart(textNode, 5);
+            range.setEnd(textNode, 5);
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          }
+        }
+      });
+
+      // Press Enter to split the block
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify split happened: now 2 blocks
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Hello');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toHaveText(' World');
+
+      // Single undo should rejoin the blocks
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify blocks are rejoined: back to 1 block with original text
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Hello World');
+    });
+
+    test('redo after undoing block split re-splits the block', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'First Second' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Position cursor after "First"
+      await page.evaluate(() => {
+        const paragraph = document.querySelector('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable="true"]');
+
+        if (paragraph) {
+          const textNode = paragraph.firstChild;
+
+          if (textNode) {
+            const range = document.createRange();
+            const sel = window.getSelection();
+
+            range.setStart(textNode, 5);
+            range.setEnd(textNode, 5);
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          }
+        }
+      });
+
+      // Split
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
 
       // Undo
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('First Second');
+
+      // Redo should re-split the block
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('First');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toHaveText(' Second');
+    });
+
+    test('undo after block merge separates blocks (single undo)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'First part' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Second part' },
+        },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Click at the beginning of the second block
+      const secondParagraph = getParagraphByIndex(page, 1);
+      const secondInput = secondParagraph.locator('[contenteditable="true"]');
+
+      await secondInput.click();
+      await page.keyboard.press('Home');
+
+      // Press Backspace to merge with previous block
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify merge happened: now 1 block with combined text
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First partSecond part');
+
+      // Single undo should separate the blocks
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify blocks are separated again
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First part');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second part');
+    });
+
+    test('undo after clear restores all blocks', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Block one' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Block two' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Block three' },
+        },
+      ]);
+
+      // Verify initial state
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      // Clear all blocks
+      await page.evaluate(async () => {
+        await window.blokInstance?.blocks.clear();
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify cleared: should have 1 default empty block
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Single undo should restore all 3 blocks (not 4!)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify all blocks restored
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block one');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block two');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block three');
+    });
+
+    test('redo after undoing clear removes blocks again', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Will be cleared' },
+        },
+        {
+          type: 'paragraph',
+          data: { text: 'Also cleared' },
+        },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Clear
+      await page.evaluate(async () => {
+        await window.blokInstance?.blocks.clear();
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Redo should clear again
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+    });
+
+    test('undo/redo cycle after removing last block does not corrupt undo stack', async ({ page }) => {
+      // Start with a single block
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Only block' },
+        },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Only block');
+
+      // Delete the only block via API
+      await page.evaluate(async () => {
+        await window.blokInstance?.blocks.delete(0);
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should have 1 default empty block after deletion
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('');
+
+      // Undo should restore "Only block"
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Only block');
+
+      // Redo should delete it again (leaving default empty block)
+      // This verifies the default block insertion during undo didn't corrupt the stack
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('');
+
+      // Undo again should still work correctly
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Only block');
+    });
+
+  });
+
+  test.describe('inline formatting', () => {
+    const INLINE_TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
+
+    /**
+     * Select text within a contenteditable element
+     */
+    const selectText = async (locator: Locator, text: string): Promise<void> => {
+      await locator.evaluate((element, targetText) => {
+        const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let textNode: Node | null = null;
+        let start = -1;
+
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          const content = node.textContent ?? '';
+          const idx = content.indexOf(targetText);
+
+          if (idx !== -1) {
+            textNode = node;
+            start = idx;
+            break;
+          }
+        }
+
+        if (!textNode || start === -1) {
+          throw new Error(`Text "${targetText}" was not found in element`);
+        }
+
+        const range = element.ownerDocument.createRange();
+
+        range.setStart(textNode, start);
+        range.setEnd(textNode, start + targetText.length);
+
+        const selection = element.ownerDocument.getSelection();
+
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        element.ownerDocument.dispatchEvent(new Event('selectionchange'));
+      }, text);
+    };
+
+    test('undo removes bold formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Hello world',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Select "Hello" and apply bold
+      await selectText(paragraphInput, 'Hello');
+
+      // Click bold button
+      const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
+
+      await expect(boldButton).toBeVisible();
+      await boldButton.click();
+
+      // Wait for Yjs to capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify bold was applied
+      const html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify bold was removed
+      const htmlAfterUndo = await paragraphInput.innerHTML();
+
+      expect(htmlAfterUndo).not.toMatch(/<strong>/);
+      expect(htmlAfterUndo).toBe('Hello world');
+    });
+
+    test('redo restores bold formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Hello world',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Select "Hello" and apply bold
+      await selectText(paragraphInput, 'Hello');
+
+      const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
+
+      await expect(boldButton).toBeVisible();
+      await boldButton.click();
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify bold was applied
+      let html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify bold was removed
+      html = await paragraphInput.innerHTML();
+      expect(html).not.toMatch(/<strong>/);
 
       // Redo
-      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-      // Verify text is restored
-      await expect(input).toContainText('Initial text added');
-
-      // Check focus is maintained
-      const focused = await isEditorFocused(page);
-
-      expect(focused).toBe(true);
+      // Verify bold is back
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
     });
 
-    test('can continue typing after undo without clicking', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'Hello' },
-            },
-          ],
+    test('undo removes italic formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Hello world',
+          },
         },
-      });
+      ]);
 
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
 
-      // Focus and type
-      await input.click();
-      await input.type(' World');
+      // Select "world" and apply italic
+      await selectText(paragraphInput, 'world');
 
-      // Wait for history
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
+
+      await expect(italicButton).toBeVisible();
+      await italicButton.click();
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify italic was applied (browser uses <i> tag)
+      let html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<(i|em)>world<\/(i|em)>/);
 
       // Undo
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-      // Verify undo worked
-      await expect(input).toContainText('Hello');
-
-      // Continue typing without clicking - focus should be preserved and we should be able to type
-      // Note: The caret position after undo may not be at the exact same position as before
-      // but typing should still work without needing to click
-      await page.keyboard.type('!');
-
-      // Wait for DOM to update
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // The text should contain "!" somewhere (focus is preserved even if caret position varies)
-      await expect(input).toContainText('!');
-
-      // Most importantly: verify we're still focused in the editor and can continue editing
-      expect(await isEditorFocused(page)).toBe(true);
+      // Verify italic was removed
+      html = await paragraphInput.innerHTML();
+      expect(html).not.toMatch(/<(i|em)>/);
+      expect(html).toBe('Hello world');
     });
-  });
 
-  test.describe('block Update Behavior', () => {
-    test('block DOM element is preserved during in-place text update', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'Original text' },
-            },
-          ],
+    test('undo removes link formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Click here for more',
+          },
         },
-      });
+      ]);
 
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
 
-      // Get the block's data-blok-id before changes
-      const blockIdBefore = await paragraph.getAttribute('data-blok-id');
+      // Select "here" and apply link
+      await selectText(paragraphInput, 'here');
 
-      // Make a change
-      await input.click();
-      await input.type(' modified');
+      const linkButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`);
 
-      // Wait for history
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await expect(linkButton).toBeVisible();
+      await linkButton.click();
+
+      // Enter the URL
+      const linkInput = page.locator('[data-blok-link-tool-input-opened="true"]');
+
+      await expect(linkInput).toBeVisible();
+      await linkInput.fill('https://example.com');
+      await linkInput.press('Enter');
+
+      // Wait for link input to close
+      await linkInput.waitFor({ state: 'hidden' });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify link was applied
+      let html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<a[^>]*href="https:\/\/example\.com"[^>]*>here<\/a>/);
 
       // Undo
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-      // Get the block's data-blok-id after undo
-      const blockIdAfter = paragraph;
-
-      // The block ID should be the same (block was updated in-place, not replaced)
-      expect(blockIdBefore).not.toBeNull();
-      await expect(blockIdAfter).toHaveAttribute('data-blok-id', blockIdBefore!);
+      // Verify link was removed
+      html = await paragraphInput.innerHTML();
+      expect(html).not.toMatch(/<a /);
+      expect(html).toBe('Click here for more');
     });
 
-    test('handles multiple sequential undos correctly', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'Start' },
-            },
-          ],
+    test('multiple inline format changes can be undone sequentially', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Hello world',
+          },
         },
-      });
+      ]);
 
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
 
-      // Focus
-      await input.click();
+      // First: make "Hello" bold
+      await selectText(paragraphInput, 'Hello');
+      const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
 
-      // Make first change
-      await input.type(' one');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await expect(boldButton).toBeVisible();
+      await boldButton.click();
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Make second change
-      await input.type(' two');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      // Verify bold applied
+      let html = await paragraphInput.innerHTML();
 
-      // Verify current state
-      await expect(input).toContainText('Start one two');
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
 
-      // First undo
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-      await expect(input).toContainText('Start one');
+      // Second: make "world" italic
+      await selectText(paragraphInput, 'world');
+      const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
 
-      // Focus should still be in editor
-      expect(await isEditorFocused(page)).toBe(true);
+      await expect(italicButton).toBeVisible();
+      await italicButton.click();
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Second undo
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-      await expect(input).toContainText('Start');
+      // Verify both formats applied
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+      expect(html).toMatch(/<(i|em)>world<\/(i|em)>/);
 
-      // Focus should still be in editor
-      expect(await isEditorFocused(page)).toBe(true);
-    });
-  });
+      // First undo: removes italic from "world"
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-  test.describe('multi-block scenarios', () => {
-    test('focuses correct block after undo when editing second block', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'First block' },
-            },
-            {
-              type: 'paragraph',
-              data: { text: 'Second block' },
-            },
-          ],
-        },
-      });
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Hello<\/strong>/);
+      expect(html).not.toMatch(/<(i|em)>/);
 
-      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
-      const secondInput = secondParagraph.locator('[contenteditable="true"]');
+      // Second undo: removes bold from "Hello"
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-      // Focus second block and type
-      await secondInput.click();
-      await secondInput.type(' edited');
-
-      // Wait for history
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      // Verify change
-      await expect(secondInput).toContainText('Second block edited');
-
-      // Undo
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Focus should be in the editor
-      expect(await isEditorFocused(page)).toBe(true);
-
-      // The second block should have the original text
-      await expect(secondInput).toContainText('Second block');
-    });
-  });
-
-  test.describe('caret Positioning After Block Removal', () => {
-    test('caret focuses last available block when undo removes a block and saved index is out of bounds', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'First block' },
-            },
-          ],
-        },
-      });
-
-      const firstParagraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const firstInput = firstParagraph.locator('[contenteditable="true"]');
-
-      // Focus first block and press Enter to create a new block
-      await firstInput.click();
-      await page.keyboard.press('End');
-      await page.keyboard.press('Enter');
-
-      // Wait for history to record block creation
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      // Now we have two blocks, type in the second block
-      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
-      const secondInput = secondParagraph.locator('[contenteditable="true"]');
-
-      await secondInput.type('Second block');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      // Verify we have two blocks
-      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
-
-      // Undo typing in second block
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Undo block creation - this should remove the second block
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Verify we're back to one block
-      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
-
-      // Focus should be in the editor (on the last available block, which is the first block)
-      expect(await isEditorFocused(page)).toBe(true);
-
-      // Should be able to type immediately - text appears in the remaining block
-      await page.keyboard.type(' - continued');
-      await expect(firstInput).toContainText('First block - continued');
+      html = await paragraphInput.innerHTML();
+      expect(html).not.toMatch(/<strong>/);
+      expect(html).not.toMatch(/<(i|em)>/);
+      expect(html).toBe('Hello world');
     });
 
-    test('caret focuses block at saved index when undo removes a later block', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'First block' },
-            },
-            {
-              type: 'paragraph',
-              data: { text: 'Second block' },
-            },
-          ],
+    test('undo works with existing bold formatting', async ({ page }) => {
+      // Start with pre-existing bold text
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: '<strong>Bold</strong> and normal',
+          },
         },
-      });
+      ]);
 
-      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
-      const secondInput = secondParagraph.locator('[contenteditable="true"]');
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
 
-      // Focus second block and press Enter to create a third block
-      await secondInput.click();
-      await page.keyboard.press('End');
-      await page.keyboard.press('Enter');
+      // Verify initial state
+      let html = await paragraphInput.innerHTML();
 
-      // Wait for history to record block creation
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      expect(html).toMatch(/<strong>Bold<\/strong>/);
 
-      // Type in the third block
-      const thirdParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(3)`);
-      const thirdInput = thirdParagraph.locator('[contenteditable="true"]');
+      // Select "normal" and make it italic
+      await selectText(paragraphInput, 'normal');
+      const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
 
-      await thirdInput.type('Third block');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      await expect(italicButton).toBeVisible();
+      await italicButton.click();
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Verify we have three blocks
-      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(3);
+      // Verify italic applied
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Bold<\/strong>/);
+      expect(html).toMatch(/<(i|em)>normal<\/(i|em)>/);
 
-      // Undo typing in third block
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
+      // Undo: removes italic, but bold should remain
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-      // Undo block creation - removes the third block
-      // The caret position being restored is from the initial state (before block creation)
-      // which was captured when the second block had focus
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Verify we're back to two blocks
-      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
-
-      // Focus should be in the editor
-      expect(await isEditorFocused(page)).toBe(true);
-
-      // Should be able to type immediately - text should appear in the block that had focus
-      // when the state was captured (the second block, since we clicked it before pressing Enter)
-      await page.keyboard.type(' - edited');
-
-      // Check that at least one block contains the typed text (focus preserved)
-      const allText = await page.locator(PARAGRAPH_SELECTOR).allTextContents();
-
-      expect(allText.some(text => text.includes('- edited'))).toBe(true);
-    });
-
-    test('caret focuses correct block when redo removes a block', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'First block' },
-            },
-            {
-              type: 'paragraph',
-              data: { text: 'Second block' },
-            },
-            {
-              type: 'paragraph',
-              data: { text: 'Third block' },
-            },
-          ],
-        },
-      });
-
-      const secondParagraph = page.locator(`${PARAGRAPH_SELECTOR}:nth-of-type(2)`);
-      const secondInput = secondParagraph.locator('[contenteditable="true"]');
-
-      // Focus second block, select all and delete it
-      await secondInput.click();
-      await page.keyboard.press(`${MODIFIER_KEY}+a`);
-      await page.keyboard.press('Backspace');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      // Delete the now-empty block
-      await page.keyboard.press('Backspace');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      // Verify we have two blocks left
-      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
-
-      // Undo block deletion (brings back empty block)
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Undo text deletion (restores "Second block" text)
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Verify we have three blocks again
-      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(3);
-
-      // Now redo the text deletion
-      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Redo block deletion - removes the second block again
-      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Verify we have two blocks
-      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
-
-      // Focus should be in the editor
-      expect(await isEditorFocused(page)).toBe(true);
-
-      // Should be able to type immediately
-      await page.keyboard.type(' - after redo');
-
-      // Text should appear in one of the remaining blocks
-      const allText = await page.locator(PARAGRAPH_SELECTOR).allTextContents();
-
-      expect(allText.some(text => text.includes('- after redo'))).toBe(true);
-    });
-
-    test('caret position is captured in initial state', async ({ page }) => {
-      // Create editor with initial data - autofocus will place caret
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'Initial content' },
-            },
-          ],
-        },
-      });
-
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
-
-      // Type some text
-      await input.click();
-      await input.type(' - modified');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      // Verify change
-      await expect(input).toContainText('Initial content - modified');
-
-      // Undo to initial state
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Verify undo worked
-      await expect(input).toContainText('Initial content');
-
-      // Focus should be preserved (initial state now captures caret position)
-      expect(await isEditorFocused(page)).toBe(true);
-
-      // Should be able to continue typing
-      await page.keyboard.type('!');
-      await expect(input).toContainText('!');
+      html = await paragraphInput.innerHTML();
+      expect(html).toMatch(/<strong>Bold<\/strong>/);
+      expect(html).not.toMatch(/<(i|em)>/);
     });
   });
 
-  test.describe('caret Positioning', () => {
-    test('caret is positioned correctly after undo when offset becomes 0', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: '' },
-            },
-          ],
-        },
-      });
+  test.describe('tune changes', () => {
+    /**
+     * Example Tune Class that saves its data
+     */
+    const EXAMPLE_TUNE_SOURCE = `class ExampleTune {
+      constructor({ data }) {
+        this.data = data;
+      }
 
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
+      static get isTune() {
+        return true;
+      }
 
-      // Focus and type some text
-      await input.click();
-      await input.type('Hello');
+      static get CSS() {
+        return {};
+      }
 
-      // Wait for history to record
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      render() {
+        return document.createElement('div');
+      }
 
-      // Undo to restore empty state
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
+      save() {
+        return this.data ?? '';
+      }
+    }`;
 
-      // Verify text was undone
-      await expect(input).toHaveText('');
+    const createBlokWithTune = async (
+      page: Page,
+      blocks: OutputData['blocks']
+    ): Promise<void> => {
+      await resetBlok(page);
+      await page.evaluate(
+        async ({ holder, blocks: blokBlocks, tuneSource }) => {
+          // Use Function constructor instead of eval for slightly better security
+          const TuneClass = new Function(`return ${tuneSource}`)();
 
-      // Focus should be preserved and caret should be set (offset 0)
-      expect(await isEditorFocused(page)).toBe(true);
-
-      // Should be able to type immediately without clicking
-      await page.keyboard.type('New text');
-      await expect(input).toContainText('New text');
-    });
-
-    test('caret is clamped to content length when offset exceeds content after undo', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'Hello World' },
-            },
-          ],
-        },
-      });
-
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
-
-      // Focus at the end and add more text
-      await input.click();
-      await page.keyboard.press('End');
-      await input.type(' extra long content here');
-
-      // Wait for history to record
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-      await expect(input).toHaveText(/Hello World extra long content here$/);
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      // Undo to restore shorter text
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Verify text was undone
-      await expect(input).toHaveText('Hello World');
-
-      // Focus should be preserved - caret should be clamped to end of content
-      expect(await isEditorFocused(page)).toBe(true);
-
-      // Should be able to type immediately - text should appear at the end (clamped position)
-      await page.keyboard.type('!');
-      await expect(input).toContainText('Hello World!');
-    });
-  });
-
-  test.describe('history Stack Management', () => {
-    test('clears redo stack when new changes happen after undo', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'Start' },
-            },
-          ],
-        },
-      });
-
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
-
-      await input.click();
-      await input.type(' one');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      await input.type(' two');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      await expect(input).toHaveText('Start one two');
-
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-      await expect(input).toHaveText('Start one');
-
-      await page.keyboard.type(' three');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      await page.keyboard.press(`${MODIFIER_KEY}+Shift+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      await expect(input).toHaveText('Start one three');
-      await expect(input).not.toContainText('two');
-    });
-
-    test('limits undo depth using maxHistoryLength', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'A' },
-            },
-          ],
-        },
-        config: {
-          maxHistoryLength: 2,
-        },
-      });
-
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
-
-      await input.click();
-      await input.type(' B');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      await input.type(' C');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      await expect(input).toHaveText('A B C');
-
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-      await expect(input).toHaveText('A B');
-
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-      await expect(input).toHaveText('A B');
-    });
-  });
-
-  test.describe('global Shortcuts', () => {
-    test('undo uses the last active editor when multiple instances exist', async ({ page }) => {
-      await ensureBlokBundleAvailable(page);
-
-      await page.evaluate(async () => {
-        const createContainer = (id: string): void => {
-          const existing = document.getElementById(id);
-
-          if (existing) {
-            existing.remove();
-          }
-
-          const container = document.createElement('div');
-
-          container.id = id;
-          container.setAttribute('data-blok-testid', id);
-          container.style.border = '1px dotted #388AE5';
-
-          document.body.appendChild(container);
-        };
-
-        const createEditor = async (holder: string, text: string, config: Record<string, unknown> = {}): Promise<void> => {
           const blok = new window.Blok({
-            holder,
-            autofocus: false,
-            ...config,
-            data: {
-              blocks: [
-                {
-                  type: 'paragraph',
-                  data: { text },
-                },
-              ],
+            holder: holder,
+            data: { blocks: blokBlocks },
+            tools: {
+              exampleTune: {
+                class: TuneClass,
+              },
             },
+            tunes: ['exampleTune'],
           });
 
+          window.blokInstance = blok;
           await blok.isReady;
-        };
+        },
+        { holder: HOLDER_ID, blocks, tuneSource: EXAMPLE_TUNE_SOURCE }
+      );
+    };
 
-        createContainer('blok-one');
-        createContainer('blok-two');
+    test('undoes tune data change with Cmd+Z', async ({ page }) => {
+      await createBlokWithTune(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Test paragraph' },
+          tunes: {
+            exampleTune: 'original-value',
+          },
+        },
+      ]);
 
-        await Promise.all([
-          createEditor('blok-one', 'First editor', { globalUndoRedo: false }),
-          createEditor('blok-two', 'Second editor'),
-        ]);
+      // Verify initial tune data
+      let savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('original-value');
+
+      // Update tune via API
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'updated-value',
+        });
       });
 
-      const firstInput = page.locator('[data-blok-testid="blok-one"] [data-blok-component="paragraph"] [contenteditable="true"]');
-      const secondInput = page.locator('[data-blok-testid="blok-two"] [data-blok-component="paragraph"] [contenteditable="true"]');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      await firstInput.click();
-      await firstInput.type(' change');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      // Verify tune was updated
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('updated-value');
 
-      await secondInput.click();
-      await secondInput.type(' change');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-      const firstTextBeforeUndo = (await firstInput.textContent())?.trim();
-      const secondTextBeforeUndo = (await secondInput.textContent())?.trim();
+      // Verify tune reverted to original
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('original-value');
+    });
 
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
+    test('redoes tune data change with Cmd+Shift+Z', async ({ page }) => {
+      await createBlokWithTune(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Test paragraph' },
+          tunes: {
+            exampleTune: 'original-value',
+          },
+        },
+      ]);
 
-      const firstTextAfterUndo = (await firstInput.textContent())?.trim();
-      const secondTextAfterUndo = (await secondInput.textContent())?.trim();
+      // Update tune via API
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
 
-      const firstChanged = firstTextAfterUndo !== firstTextBeforeUndo;
-      const secondChanged = secondTextAfterUndo !== secondTextBeforeUndo;
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
 
-      expect(firstChanged).toBe(false);
-      expect(secondChanged).toBe(true);
-      expect(secondTextAfterUndo).toContain('Second editor');
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'updated-value',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify undo worked
+      let savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('original-value');
+
+      // Redo
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify redo restored the update
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('updated-value');
+    });
+
+    test('undoes multiple tune changes in sequence', async ({ page }) => {
+      await createBlokWithTune(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Test paragraph' },
+          tunes: {
+            exampleTune: 'value-1',
+          },
+        },
+      ]);
+
+      // First tune update
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'value-2',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Second tune update
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'value-3',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify final state
+      let savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('value-3');
+
+      // Undo to value-2
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('value-2');
+
+      // Undo to value-1
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('value-1');
     });
   });
 
-  test.describe('placeholder Visibility', () => {
-    test('placeholder disappears after undoing block deletion and text deletion', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: 'Hello' },
-            },
-          ],
+  test.describe('paste operations', () => {
+    /**
+     * Simulates a paste event with the given data
+     */
+    const paste = async (locator: Locator, data: Record<string, string>): Promise<void> => {
+      await locator.evaluate((element: HTMLElement, pasteData: Record<string, string>) => {
+        const pasteEvent = Object.assign(new Event('paste', {
+          bubbles: true,
+          cancelable: true,
+        }), {
+          clipboardData: {
+            getData: (type: string): string => pasteData[type] ?? '',
+            types: Object.keys(pasteData),
+          },
+        });
+
+        element.dispatchEvent(pasteEvent);
+      }, data);
+    };
+
+    test('undo removes pasted plain text', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Initial content' },
         },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Click at end and paste
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': ' pasted text',
       });
 
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Focus and select all text
-      await input.click();
-      await page.keyboard.press(`${MODIFIER_KEY}+a`);
+      // Verify paste worked
+      await expect(paragraphInput).toContainText('Initial content pasted text');
 
-      // Delete all text
-      await page.keyboard.press('Backspace');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-      // Verify block is now empty (has data-blok-empty=true)
-      await expect(input).toHaveAttribute('data-blok-empty', 'true');
-
-      // Delete the empty block by pressing backspace again
-      await page.keyboard.press('Backspace');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
-
-      // Undo block deletion - block should come back (empty)
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Undo text deletion - text "Hello" should come back
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
-
-      // Get the restored paragraph and input
-      const restoredParagraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const restoredInput = restoredParagraph.locator('[contenteditable="true"]');
-
-      // Verify text is restored
-      await expect(restoredInput).toHaveText('Hello');
-
-      // Verify placeholder is hidden (data-blok-empty should be false)
-      await expect(restoredInput).toHaveAttribute('data-blok-empty', 'false');
+      // Verify pasted text was removed
+      await expect(paragraphInput).toHaveText('Initial content');
     });
 
-    test('placeholder shows correctly when undoing to empty state', async ({ page }) => {
-      await createBlok(page, {
-        data: {
-          blocks: [
-            {
-              type: 'paragraph',
-              data: { text: '' },
-            },
-          ],
+    test('redo restores pasted plain text', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Initial' },
         },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Click at end and paste
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': ' pasted',
       });
 
-      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}:first-of-type`);
-      const input = paragraph.locator('[contenteditable="true"]');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Verify initially empty
-      await expect(input).toHaveAttribute('data-blok-empty', 'true');
+      // Verify paste worked
+      await expect(paragraphInput).toContainText('Initial pasted');
 
-      // Type some text
-      await input.click();
-      await input.type('Some text');
-      await waitForDelay(page, HISTORY_DEBOUNCE_WAIT);
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Initial');
 
-      // Verify no longer empty
-      await expect(input).toHaveAttribute('data-blok-empty', 'false');
+      // Redo
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
 
-      // Undo to restore empty state
-      await page.keyboard.press(`${MODIFIER_KEY}+z`);
-      await waitForDelay(page, STATE_CHANGE_WAIT);
+      // Verify redo restored pasted text
+      await expect(paragraphInput).toContainText('Initial pasted');
+    });
 
-      // Verify text is gone and placeholder should show
-      await expect(input).toHaveText('');
-      await expect(input).toHaveAttribute('data-blok-empty', 'true');
+    test('undo removes pasted HTML with formatting', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Start' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Click at end and paste HTML
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/html': '<strong>bold</strong> and <em>italic</em>',
+        'text/plain': 'bold and italic',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify paste worked with formatting
+      const html = await paragraphInput.innerHTML();
+
+      expect(html).toMatch(/<strong>bold<\/strong>/);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify pasted HTML was removed
+      const htmlAfterUndo = await paragraphInput.innerHTML();
+
+      expect(htmlAfterUndo).not.toMatch(/<strong>/);
+      expect(htmlAfterUndo).toBe('Start');
+    });
+
+    test('undo removes multiple blocks created from paste (requires multiple undos)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Existing' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Verify initial state
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Paste text with newlines (creates multiple blocks)
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': '\n\nSecond block\n\nThird block',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify multiple blocks were created
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Existing');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third block');
+
+      // Note: Multi-block paste creates separate undo entries per block
+      // First undo removes third block
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Second undo removes second block
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Existing');
+    });
+
+    test('undo removes blocks pasted from application/x-blok format (requires multiple undos)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Original' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Paste using Blok's internal format
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'application/x-blok': JSON.stringify([
+          { tool: 'paragraph', data: { text: 'Pasted block 1' } },
+          { tool: 'paragraph', data: { text: 'Pasted block 2' } },
+        ]),
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify blocks were created
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      // Note: Multi-block paste creates separate undo entries per block
+      // First undo removes second pasted block
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Second undo removes first pasted block
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify all pasted blocks removed
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Original');
+    });
+
+    test('paste into empty block can be undone', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Paste into empty block
+      await paragraphInput.click();
+      await paste(paragraphInput, {
+        'text/plain': 'Content for empty block',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify paste worked
+      await expect(paragraphInput).toHaveText('Content for empty block');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify block is empty again
+      await expect(paragraphInput).toHaveText('');
+    });
+
+    test('paste replacing selection can be undone', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Hello world' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Select all text
+      await paragraphInput.click();
+      await page.keyboard.press(`${process.platform === 'darwin' ? 'Meta' : 'Control'}+a`);
+
+      // Paste to replace selection
+      await paste(paragraphInput, {
+        'text/plain': 'Replaced',
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify paste replaced the content
+      await expect(paragraphInput).toHaveText('Replaced');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original content is restored
+      await expect(paragraphInput).toHaveText('Hello world');
+    });
+
+    test('multiple paste operations can be undone sequentially', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Base' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // First paste
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': ' first',
+      });
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Second paste
+      await paste(paragraphInput, {
+        'text/plain': ' second',
+      });
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify both pastes
+      await expect(paragraphInput).toContainText('Base first second');
+
+      // First undo removes second paste
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toContainText('Base first');
+      await expect(paragraphInput).not.toContainText('second');
+
+      // Second undo removes first paste
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Base');
+    });
+
+    test('paste and redo cycle preserves data integrity', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Start' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Paste
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await paste(paragraphInput, {
+        'text/plain': ' pasted content',
+      });
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo, redo, undo, redo cycle
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Start');
+
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toContainText('Start pasted content');
+
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Start');
+
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toContainText('Start pasted content');
+
+      // Verify data integrity via save
+      const savedData = await saveBlok(page);
+
+      expect((savedData.blocks[0]?.data as { text?: string }).text).toBe('Start pasted content');
+    });
+  });
+
+  test.describe('rapid operations', () => {
+    // Small delay between rapid keyboard presses to ensure events are processed
+    // 50ms is fast enough to feel "rapid" but allows browser to process events
+    const RAPID_DELAY = 50;
+
+    test('handles many rapid undos without data corruption', async ({ page }) => {
+      // Create editor with multiple blocks
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block 1' } },
+        { type: 'paragraph', data: { text: 'Block 2' } },
+        { type: 'paragraph', data: { text: 'Block 3' } },
+      ]);
+
+      // Make multiple changes with delays between them to create separate undo entries
+      const paragraph1 = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      await paragraph1.click();
+      await page.keyboard.type(' edited');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      const paragraph2 = getParagraphByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await paragraph2.click();
+      await page.keyboard.type(' modified');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      const paragraph3 = getParagraphByIndex(page, 2).locator('[contenteditable="true"]');
+
+      await paragraph3.click();
+      await page.keyboard.type(' changed');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify all edits were applied
+      await expect(paragraph1).toContainText('Block 1 edited');
+      await expect(paragraph2).toContainText('Block 2 modified');
+      await expect(paragraph3).toContainText('Block 3 changed');
+
+      // Fire multiple undos in rapid succession
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      // Wait for all undos to complete processing
+      await waitForDelay(page, 200);
+
+      // Verify all changes were undone correctly
+      await expect(paragraph1).toHaveText('Block 1');
+      await expect(paragraph2).toHaveText('Block 2');
+      await expect(paragraph3).toHaveText('Block 3');
+
+      // Verify data integrity via save
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(3);
+      expect(savedData.blocks[0].data.text).toBe('Block 1');
+      expect(savedData.blocks[1].data.text).toBe('Block 2');
+      expect(savedData.blocks[2].data.text).toBe('Block 3');
+    });
+
+    test('handles many rapid redos without data corruption', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Original' } },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      // Create 5 separate undo entries
+      for (let i = 1; i <= 5; i++) {
+        await paragraph.click();
+        await paragraph.selectText();
+        await page.keyboard.type(`Version ${i}`);
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      }
+
+      await expect(paragraph).toHaveText('Version 5');
+
+      // Undo all changes
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+      await expect(paragraph).toHaveText('Original');
+
+      // Now redo rapidly
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press(REDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      // Should be back to final version
+      await expect(paragraph).toHaveText('Version 5');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].data.text).toBe('Version 5');
+    });
+
+    test('handles rapid interleaved undo/redo without corruption', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Start' } },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      // Create some undo entries
+      await paragraph.click();
+      await paragraph.selectText();
+      await page.keyboard.type('Step 1');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      await paragraph.selectText();
+      await page.keyboard.type('Step 2');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      await paragraph.selectText();
+      await page.keyboard.type('Step 3');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Rapidly interleave undo/redo (simulates user rapidly pressing undo then changing mind)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, RAPID_DELAY);
+      await page.keyboard.press(REDO_SHORTCUT);
+
+      await waitForDelay(page, 200);
+
+      // After: undo undo redo undo redo redo
+      // Starting at Step 3:
+      // undo -> Step 2, undo -> Step 1, redo -> Step 2, undo -> Step 1, redo -> Step 2, redo -> Step 3
+      await expect(paragraph).toHaveText('Step 3');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].data.text).toBe('Step 3');
+    });
+
+    test('handles rapid block deletions and undos', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block A' } },
+        { type: 'paragraph', data: { text: 'Block B' } },
+        { type: 'paragraph', data: { text: 'Block C' } },
+        { type: 'paragraph', data: { text: 'Block D' } },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+
+      // Delete blocks via API with delays to create separate undo entries
+      for (let i = 0; i < 3; i++) {
+        await page.evaluate(async () => {
+          await window.blokInstance?.blocks.delete(0);
+        });
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      }
+
+      // Should have only Block D left
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Block D');
+
+      // Rapidly undo all deletions
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      // All blocks should be restored
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Block A');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toHaveText('Block B');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toHaveText('Block C');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toHaveText('Block D');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(4);
+    });
+
+    test('undo stack remains stable after 20+ rapid operations', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: '' } },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      await paragraph.click();
+
+      // Create 10 separate undo entries with distinct content
+      for (let i = 1; i <= 10; i++) {
+        await paragraph.selectText();
+        await page.keyboard.type(`Entry ${i}`);
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      }
+
+      await expect(paragraph).toHaveText('Entry 10');
+
+      // Rapidly undo 10 times
+      for (let i = 0; i < 10; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      // Should be back to empty
+      await expect(paragraph).toHaveText('');
+
+      // Rapidly redo 5 times
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press(REDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      await expect(paragraph).toHaveText('Entry 5');
+
+      // Rapidly undo 3 times
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, RAPID_DELAY);
+      }
+
+      await waitForDelay(page, 200);
+
+      await expect(paragraph).toHaveText('Entry 2');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks[0].data.text).toBe('Entry 2');
+    });
+  });
+
+  test.describe('toolbox insertions', () => {
+    test('undo after inserting Header via toolbox removes the header', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Existing paragraph' },
+        },
+      ]);
+
+      // Hover on the paragraph to show the toolbar, then click plus
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      await paragraph.hover();
+
+      // Click plus button to open toolbox
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Wait for toolbox item to be available and click it
+      const headerOption = page.locator(TOOLBOX_ITEM_SELECTOR('header-2'));
+      await expect(headerOption).toBeVisible();
+      await headerOption.click();
+
+      // Wait for header to be inserted
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should remove the header
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Check that header is gone and only the original paragraph remains
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(paragraph).toContainText('Existing paragraph');
+    });
+
+    test('undo after inserting Bulleted List via toolbox removes the list', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Existing paragraph' },
+        },
+      ]);
+
+      // Hover on the paragraph to show the toolbar
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      await paragraph.hover();
+
+      // Click plus button to open toolbox
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Type to filter to list and click on Bulleted List option
+      await page.keyboard.type('bullet');
+      await waitForDelay(page, 100);
+
+      const listOption = page.locator(TOOLBOX_ITEM_SELECTOR('bulleted-list'));
+      await expect(listOption).toBeVisible();
+      await listOption.click();
+
+      // Wait for list to be inserted
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should remove the list
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Check that list is gone and only original paragraph remains
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(paragraph).toContainText('Existing paragraph');
+    });
+
+    test('redo after undoing toolbox header insertion restores the header', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Existing paragraph' },
+        },
+      ]);
+
+      // Hover on the paragraph to show the toolbar
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      await paragraph.hover();
+
+      // Click plus button to open toolbox
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Wait for toolbox item and click header
+      const headerOption = page.locator(TOOLBOX_ITEM_SELECTOR('header-2'));
+      await expect(headerOption).toBeVisible();
+      await headerOption.click();
+
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo removes the header
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+
+      // Redo should restore the header
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+    });
+
+    test('inserting Header 3 via toolbox and undo works correctly', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Some content' },
+        },
+      ]);
+
+      // Hover on the paragraph to show the toolbar
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+      await paragraph.hover();
+
+      // Click plus button to open toolbox
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Click on Header 3
+      const header3Option = page.locator(TOOLBOX_ITEM_SELECTOR('header-3'));
+      await expect(header3Option).toBeVisible();
+      await header3Option.click();
+
+      // Should have a header now
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Type some content in the header
+      await page.keyboard.type('My Heading');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Save and verify the header level
+      const savedData = await saveBlok(page);
+      const headerBlock = savedData.blocks.find(b => b.type === 'header');
+      expect(headerBlock).toBeDefined();
+      expect(headerBlock?.data.level).toBe(3);
+      expect(headerBlock?.data.text).toBe('My Heading');
+
+      // Undo the typing
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Undo the block creation
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should be back to just the original paragraph
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(paragraph).toContainText('Some content');
+    });
+
+    test('undo/redo cycle with sequential toolbox insertions', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'First paragraph' },
+        },
+      ]);
+
+      const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+      // Hover on paragraph to show toolbar and insert header via toolbox
+      // eslint-disable-next-line playwright/no-nth-methods
+      const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+      await paragraph.hover();
+
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Click header option
+      const headerOption = page.locator(TOOLBOX_ITEM_SELECTOR('header-2'));
+      await expect(headerOption).toBeVisible();
+      await headerOption.click();
+
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Now insert a list via toolbox (hover on header)
+      const header = page.locator(HEADER_SELECTOR);
+      await header.hover();
+
+      await expect(plusButton).toBeVisible();
+      await plusButton.click();
+
+      // Type to filter and click list option
+      await page.keyboard.type('bullet');
+      await waitForDelay(page, 100);
+      const listOption = page.locator(TOOLBOX_ITEM_SELECTOR('bulleted-list'));
+      await expect(listOption).toBeVisible();
+      await listOption.click();
+
+      // Now we have header + list (plus original paragraph may or may not be there)
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should remove the list
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+
+      // Redo should restore list
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+    });
+  });
+
+  test.describe('multi-block selection delete', () => {
+    const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
+
+    const getBlockByIndex = (page: Page, index: number): Locator => {
+      return page.locator(`:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`);
+    };
+
+    const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
+      await locator.evaluate((element) => {
+        const doc = element.ownerDocument;
+        const selection = doc.getSelection();
+
+        if (!selection) {
+          return;
+        }
+
+        const range = doc.createRange();
+        const walker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let lastTextNode: Text | null = null;
+
+        while (walker.nextNode()) {
+          lastTextNode = walker.currentNode as Text;
+        }
+
+        if (lastTextNode) {
+          range.setStart(lastTextNode, lastTextNode.textContent?.length ?? 0);
+        } else {
+          range.selectNodeContents(element);
+          range.collapse(false);
+        }
+
+        selection.removeAllRanges();
+        selection.addRange(range);
+        doc.dispatchEvent(new Event('selectionchange'));
+      });
+    };
+
+    test('undo restores multiple blocks deleted via cross-block selection', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+        { type: 'paragraph', data: { text: 'Third block' } },
+        { type: 'paragraph', data: { text: 'Fourth block' } },
+      ]);
+
+      // Verify initial state
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const firstInput = firstParagraph.locator('[contenteditable="true"]');
+
+      // Select blocks 1-3 using Shift+ArrowDown
+      await firstInput.click();
+      await placeCaretAtEnd(firstInput);
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.up('Shift');
+
+      // Verify blocks are selected
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
+
+      // Delete selected blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify deletion: should have 2 blocks (empty replacement + Fourth block)
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Fourth block');
+
+      // Undo should restore all deleted blocks
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify all blocks are restored
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First block');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third block');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Fourth block');
+    });
+
+    test('redo after undoing multi-block delete removes blocks again', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block A' } },
+        { type: 'paragraph', data: { text: 'Block B' } },
+        { type: 'paragraph', data: { text: 'Block C' } },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const firstInput = firstParagraph.locator('[contenteditable="true"]');
+
+      // Select all blocks using Shift+ArrowDown
+      await firstInput.click();
+      await placeCaretAtEnd(firstInput);
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.up('Shift');
+
+      // Delete all selected blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should have 1 empty replacement block
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('');
+
+      // Undo restores blocks
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      // Redo deletes them again
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('');
+    });
+
+    test('undo restores blocks deleted via Cmd/Ctrl+A then Backspace', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First content' } },
+        { type: 'paragraph', data: { text: 'Second content' } },
+        { type: 'paragraph', data: { text: 'Third content' } },
+      ]);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+
+      // Focus on first block and select all blocks with Cmd/Ctrl+A twice
+      await firstParagraph.click();
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
+
+      // Verify all blocks are selected
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
+
+      // Delete all blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should have 1 empty block
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Undo should restore all blocks
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First content');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second content');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third content');
+
+      // Verify data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(3);
+      expect(savedData.blocks[0].data.text).toBe('First content');
+      expect(savedData.blocks[1].data.text).toBe('Second content');
+      expect(savedData.blocks[2].data.text).toBe('Third content');
+    });
+
+    test('multi-block delete requires single undo (atomic operation)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block 1' } },
+        { type: 'paragraph', data: { text: 'Block 2' } },
+        { type: 'paragraph', data: { text: 'Block 3' } },
+      ]);
+
+      const firstInput = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      // Select blocks 1-2
+      await firstInput.click();
+      await placeCaretAtEnd(firstInput);
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.up('Shift');
+
+      // Delete selected blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should have 2 blocks (empty + Block 3)
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Single undo should restore both deleted blocks (not require two undos)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block 1');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block 2');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block 3');
+
+      // Second undo should NOT affect the restored state (proves delete was atomic)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Block count should still be 3 (no further undo available for this operation)
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+    });
+
+    test('undo/redo cycle with multi-block delete preserves data integrity', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Alpha' } },
+        { type: 'paragraph', data: { text: 'Beta' } },
+        { type: 'paragraph', data: { text: 'Gamma' } },
+        { type: 'paragraph', data: { text: 'Delta' } },
+      ]);
+
+      // Select middle two blocks (Beta and Gamma)
+      await getParagraphByIndex(page, 1).locator('[contenteditable="true"]').click();
+      await page.keyboard.press('Home');
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.up('Shift');
+
+      // Delete selected blocks
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify: Alpha, empty, Delta
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      // Multiple undo/redo cycles
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(4);
+
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Final verification of data integrity
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(4);
+      expect(savedData.blocks[0].data.text).toBe('Alpha');
+      expect(savedData.blocks[1].data.text).toBe('Beta');
+      expect(savedData.blocks[2].data.text).toBe('Gamma');
+      expect(savedData.blocks[3].data.text).toBe('Delta');
+    });
+  });
+
+  test.describe('drag-and-drop reorder', () => {
+    const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+
+    /**
+     * Helper function to get bounding box and throw if it doesn't exist.
+     */
+    const getBoundingBox = async (
+      locator: Locator
+    ): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const box = await locator.boundingBox();
+
+      if (!box) {
+        throw new Error('Could not get bounding box for element');
+      }
+
+      return box;
+    };
+
+    /**
+     * Helper function to perform drag and drop using pointer-based mouse events.
+     */
+    const performDragDrop = async (
+      page: Page,
+      sourceLocator: Locator,
+      targetLocator: Locator,
+      targetVerticalPosition: 'top' | 'bottom'
+    ): Promise<void> => {
+      const sourceBox = await getBoundingBox(sourceLocator);
+      const targetBox = await getBoundingBox(targetLocator);
+
+      const sourceX = sourceBox.x + sourceBox.width / 2;
+      const sourceY = sourceBox.y + sourceBox.height / 2;
+      const targetX = targetBox.x + targetBox.width / 2;
+      const targetY = targetVerticalPosition === 'top'
+        ? targetBox.y + 1
+        : targetBox.y + targetBox.height - 1;
+
+      await page.mouse.move(sourceX, sourceY);
+      await page.mouse.down();
+      await waitForDelay(page, 50);
+      await page.mouse.move(targetX, targetY, { steps: 15 });
+      await waitForDelay(page, 50);
+      await page.mouse.up();
+      await waitForDelay(page, 100);
+    };
+
+    test('undo after drag-drop reorder restores original position', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+        { type: 'paragraph', data: { text: 'Third block' } },
+      ]);
+
+      // Verify initial order
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First block');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third block');
+
+      // Hover over first block to show settings button (drag handle)
+      const firstBlock = getParagraphByIndex(page, 0);
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag first block to after third block
+      const targetBlock = getParagraphByIndex(page, 2);
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Wait for Yjs capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify reordered: Second, Third, First
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Third block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('First block');
+
+      // Undo should restore original order
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original order is restored: First, Second, Third
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('First block');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second block');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third block');
+
+      // Block count should remain the same
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+    });
+
+    test('redo after undoing drag-drop reorder restores moved position', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Alpha' } },
+        { type: 'paragraph', data: { text: 'Beta' } },
+        { type: 'paragraph', data: { text: 'Gamma' } },
+      ]);
+
+      // Drag last block to first position
+      const lastBlock = getParagraphByIndex(page, 2);
+
+      await lastBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = getParagraphByIndex(page, 0);
+
+      await performDragDrop(page, settingsButton, targetBlock, 'top');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify reordered: Gamma, Alpha, Beta
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Beta');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original: Alpha, Beta, Gamma
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Beta');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Gamma');
+
+      // Redo
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify moved order is restored: Gamma, Alpha, Beta
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Beta');
+    });
+
+    test('drag-drop reorder requires single undo (atomic transaction)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'One' } },
+        { type: 'paragraph', data: { text: 'Two' } },
+        { type: 'paragraph', data: { text: 'Three' } },
+        { type: 'paragraph', data: { text: 'Four' } },
+      ]);
+
+      // Drag second block to the end
+      const secondBlock = getParagraphByIndex(page, 1);
+
+      await secondBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = getParagraphByIndex(page, 3);
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify reordered: One, Three, Four, Two
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('One');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Three');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Four');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Two');
+
+      // Single undo should restore original order
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original order: One, Two, Three, Four
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('One');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Two');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Three');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Four');
+
+      // Second undo should NOT change order (proves move was atomic)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Order should still be: One, Two, Three, Four
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('One');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Two');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Three');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Four');
+    });
+
+    test('undo/redo cycle with drag-drop preserves data integrity', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First' } },
+        { type: 'paragraph', data: { text: 'Second' } },
+        { type: 'paragraph', data: { text: 'Third' } },
+      ]);
+
+      // Drag middle block to end
+      await getParagraphByIndex(page, 1).hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Multiple undo/redo cycles
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, 200);
+        await page.keyboard.press(REDO_SHORTCUT);
+        await waitForDelay(page, 200);
+      }
+
+      // Final undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify data integrity via save
+      const savedData = await saveBlok(page);
+
+      expect(savedData.blocks).toHaveLength(3);
+      expect(savedData.blocks[0].data.text).toBe('First');
+      expect(savedData.blocks[1].data.text).toBe('Second');
+      expect(savedData.blocks[2].data.text).toBe('Third');
+    });
+
+    test('undo after multi-block drag-drop restores all blocks to original positions', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block 0' } },
+        { type: 'paragraph', data: { text: 'Block 1' } },
+        { type: 'paragraph', data: { text: 'Block 2' } },
+        { type: 'paragraph', data: { text: 'Block 3' } },
+        { type: 'paragraph', data: { text: 'Block 4' } },
+      ]);
+
+      // Select blocks 1, 2, 3 using BlockSelection API
+      await page.evaluate(() => {
+        const blok = window.blokInstance;
+
+        if (!blok) {
+          throw new Error('Blok instance not found');
+        }
+        const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+        blockSelection.selectBlockByIndex(1);
+        blockSelection.selectBlockByIndex(2);
+        blockSelection.selectBlockByIndex(3);
+      });
+
+      // Hover over block 2 to show settings button
+      await getParagraphByIndex(page, 2).hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to bottom of block 4
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 4), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify reordered: Block 0, Block 4, Block 1, Block 2, Block 3
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block 0');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block 4');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block 1');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Block 2');
+      await expect(getParagraphByIndex(page, 4).locator('[contenteditable="true"]')).toContainText('Block 3');
+
+      // Undo should restore original order
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify original order: Block 0, Block 1, Block 2, Block 3, Block 4
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block 0');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block 1');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block 2');
+      await expect(getParagraphByIndex(page, 3).locator('[contenteditable="true"]')).toContainText('Block 3');
+      await expect(getParagraphByIndex(page, 4).locator('[contenteditable="true"]')).toContainText('Block 4');
+    });
+
+    test('consecutive drag-drop operations undo correctly in reverse order', async ({ page }) => {
+      // This test verifies that multiple consecutive drag-drop operations can be
+      // undone correctly, with each undo restoring the previous state.
+      // This was a bug where Yjs delete+insert didn't undo correctly for moves.
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Block A' } },
+        { type: 'paragraph', data: { text: 'Block B' } },
+        { type: 'paragraph', data: { text: 'Block C' } },
+      ]);
+
+      // Verify initial order: A, B, C
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block A');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block B');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block C');
+
+      // Move 1: Drag Block A to the end (after Block C)
+      // Initial: A, B, C -> After: B, C, A
+      await getParagraphByIndex(page, 0).hover();
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify after Move 1: B, C, A
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block B');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block C');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block A');
+
+      // Move 2: Drag Block B (now at index 0) to the end (after Block A)
+      // Current: B, C, A -> After: C, A, B
+      await getParagraphByIndex(page, 0).hover();
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify after Move 2: C, A, B
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block C');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block A');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block B');
+
+      // Undo 1: Should restore state before Move 2 (B, C, A)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block B');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block C');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block A');
+
+      // Undo 2: Should restore original state (A, B, C)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Block A');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Block B');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Block C');
+    });
+
+    test('consecutive drag-drop operations redo correctly after undo', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Alpha' } },
+        { type: 'paragraph', data: { text: 'Beta' } },
+        { type: 'paragraph', data: { text: 'Gamma' } },
+      ]);
+
+      // Move 1: Drag Alpha to end -> Beta, Gamma, Alpha
+      await getParagraphByIndex(page, 0).hover();
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Move 2: Drag Beta to end -> Gamma, Alpha, Beta
+      await getParagraphByIndex(page, 0).hover();
+      await expect(settingsButton).toBeVisible();
+      await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify: Gamma, Alpha, Beta
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Beta');
+
+      // Undo both moves
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify back to original: Alpha, Beta, Gamma
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Beta');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Gamma');
+
+      // Redo 1: Should restore Move 1 (Beta, Gamma, Alpha)
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Beta');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Alpha');
+
+      // Redo 2: Should restore Move 2 (Gamma, Alpha, Beta)
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Gamma');
+      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Alpha');
+      await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Beta');
+    });
+  });
+
+  test.describe('nested list indentation', () => {
+    const createListBlocks = async (
+      page: Page,
+      items: Array<{ text: string; depth?: number }>
+    ): Promise<void> => {
+      await resetBlok(page);
+      await page.evaluate(async ({ holder, items: listItems }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: listItems.map((item, index) => ({
+              id: `list-${index}`,
+              type: 'list',
+              data: {
+                text: item.text,
+                style: 'unordered',
+                checked: false,
+                ...(item.depth !== undefined ? { depth: item.depth } : {}),
+              },
+            })),
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID, items });
+    };
+
+    test('undo after Tab indentation restores original depth', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'First item' },
+        { text: 'Second item' },
+      ]);
+
+      // Click on second item
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await secondItem.click();
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+
+      // Wait for Yjs to capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify depth increased
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[1], 1);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify depth is back to 0
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 0);
+    });
+
+    test('redo after undoing Tab indentation restores indentation', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'First item' },
+        { text: 'Second item' },
+      ]);
+
+      // Click on second item
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await secondItem.click();
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify depth is back to 0
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[1], 0);
+
+      // Redo
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify depth is back to 1
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 1);
+    });
+
+    test('undo after Shift+Tab outdentation restores original depth', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'First item' },
+        { text: 'Nested item', depth: 1 },
+      ]);
+
+      // Click on nested item
+      const nestedItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await nestedItem.click();
+
+      // Verify initial depth is 1
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[1], 1);
+
+      // Press Shift+Tab to outdent
+      await page.keyboard.press('Shift+Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify depth decreased to 0
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 0);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify depth is back to 1
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 1);
+    });
+
+    test('multiple indentation changes can be undone sequentially', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'First item' },
+        { text: 'Second item' },
+        { text: 'Third item' },
+      ]);
+
+      // Click on second item and indent
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await secondItem.click();
+      await page.keyboard.press('Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Click on third item and indent twice
+      const thirdItem = getListBlockByIndex(page, 2).locator('[contenteditable="true"]');
+
+      await thirdItem.click();
+      await page.keyboard.press('Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      await page.keyboard.press('Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify depths: 0, 1, 2
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[0], 0);
+      expectDepth(savedData.blocks[1], 1);
+      expectDepth(savedData.blocks[2], 2);
+
+      // Undo third item's second indent: 0, 1, 1
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[2], 1);
+
+      // Undo third item's first indent: 0, 1, 0
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[2], 0);
+
+      // Undo second item's indent: 0, 0, 0
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 0);
+    });
+
+    test('deeply nested item undo/redo cycle preserves data integrity', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'Root item' },
+        { text: 'Level 1', depth: 1 },
+        { text: 'Level 2', depth: 2 },
+        { text: 'Level 3', depth: 3 },
+      ]);
+
+      // Click on Level 3 item and outdent it twice
+      const level3Item = getListBlockByIndex(page, 3).locator('[contenteditable="true"]');
+
+      await level3Item.click();
+      await page.keyboard.press('Shift+Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      await page.keyboard.press('Shift+Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify depth is now 1
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[3], 1);
+
+      // Undo twice to restore to depth 3
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[3], 3);
+
+      // Redo twice to go back to depth 1
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[3], 1);
+
+      // Verify all other blocks unchanged
+      expectDepth(savedData.blocks[0], 0);
+      expectDepth(savedData.blocks[1], 1);
+      expectDepth(savedData.blocks[2], 2);
     });
   });
 });

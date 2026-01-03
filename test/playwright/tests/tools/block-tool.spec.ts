@@ -141,7 +141,6 @@ const createApiStub = (): API => ({
   caret: {} as API['caret'],
   tools: {} as API['tools'],
   events: {} as API['events'],
-  history: {} as API['history'],
   listeners: {} as API['listeners'],
   notifier: {} as API['notifier'],
   sanitizer: {} as API['sanitizer'],

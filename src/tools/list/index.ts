@@ -688,6 +688,42 @@ export class ListItem implements BlockTool {
   }
 
   /**
+   * Update the marker element when depth changes.
+   * Handles both ordered and unordered list markers.
+   */
+  private updateMarkerForDepth(newDepth: number, style: ListItemStyle): void {
+    const marker = this._element?.querySelector('[aria-hidden="true"]');
+
+    if (!(marker instanceof HTMLElement)) {
+      return;
+    }
+
+    if (style === 'ordered') {
+      const siblingIndex = this.getSiblingIndex();
+      const markerText = this.getOrderedMarkerText(siblingIndex, newDepth);
+
+      marker.textContent = markerText;
+    } else {
+      const bulletChar = this.getBulletCharacter(newDepth);
+
+      marker.textContent = bulletChar;
+    }
+  }
+
+  /**
+   * Update the checkbox state for checklist items.
+   */
+  private updateCheckboxState(checked: boolean): void {
+    const checkbox = this._element?.querySelector('input[type="checkbox"]');
+
+    if (!(checkbox instanceof HTMLInputElement)) {
+      return;
+    }
+
+    checkbox.checked = checked;
+  }
+
+  /**
    * Format an ordered list marker based on the number and depth
    */
   private formatOrderedMarker(number: number, depth: number): string {
@@ -1641,6 +1677,61 @@ export class ListItem implements BlockTool {
     }
 
     return result;
+  }
+
+  /**
+   * Updates the block's data in-place without destroying the DOM element.
+   * Called by Block.setData() during undo/redo operations.
+   *
+   * @param newData - the new data to apply to the block
+   * @returns true if update was performed in-place, false if full re-render needed
+   */
+  public setData(newData: ListItemData): boolean {
+    if (!this._element) {
+      return false;
+    }
+
+    const oldDepth = this._data.depth ?? 0;
+    const newDepth = newData.depth ?? 0;
+    const oldStyle = this._data.style;
+    const newStyle = newData.style;
+
+    // Style changes require full re-render (different DOM structure)
+    if (oldStyle !== newStyle) {
+      return false;
+    }
+
+    // Update internal data
+    this._data = {
+      ...this._data,
+      ...newData,
+    };
+
+    // Update text content
+    const contentEl = this.getContentElement();
+
+    if (contentEl && typeof newData.text === 'string') {
+      contentEl.innerHTML = newData.text;
+    }
+
+    // Update depth if changed
+    const depthChanged = oldDepth !== newDepth;
+
+    if (depthChanged) {
+      this.adjustDepthTo(newDepth);
+      this.updateMarkerForDepth(newDepth, newStyle);
+
+      return true;
+    }
+
+    // Update checkbox state for checklist items
+    const isChecklist = newStyle === 'checklist';
+
+    if (isChecklist) {
+      this.updateCheckboxState(newData.checked ?? false);
+    }
+
+    return true;
   }
 
   public merge(data: ListItemData): void {

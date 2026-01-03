@@ -1182,7 +1182,9 @@ export default defineConfig(
       'playwright/no-nested-step': 'warn',
       // Code quality
       'playwright/no-unused-locators': 'warn',
-      'playwright/expect-expect': 'error',
+      'playwright/expect-expect': ['error', {
+        assertFunctionNames: ['expect', 'expectDepth'],
+      }],
     },
   },
   {

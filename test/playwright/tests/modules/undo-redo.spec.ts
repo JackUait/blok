@@ -29,6 +29,20 @@ const getParagraphByIndex = (page: Page, index: number): Locator => {
   return page.locator(getParagraphSelectorByIndex(index));
 };
 
+const getListBlockByIndex = (page: Page, index: number): Locator => {
+  return page.locator(`:nth-match(${LIST_SELECTOR}, ${index + 1})`);
+};
+
+/**
+ * Helper to assert block depth consistently.
+ * Depth 0 is omitted from saved data, so we use nullish coalescing.
+ */
+const expectDepth = (block: OutputData['blocks'][number] | undefined, expectedDepth: number): void => {
+  const actualDepth = (block?.data as { depth?: number })?.depth ?? 0;
+
+  expect(actualDepth).toBe(expectedDepth);
+};
+
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
     if (window.blokInstance) {
@@ -2834,6 +2848,227 @@ test.describe('yjs undo/redo', () => {
       await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Gamma');
       await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Alpha');
       await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Beta');
+    });
+  });
+
+  test.describe('nested list indentation', () => {
+    const createListBlocks = async (
+      page: Page,
+      items: Array<{ text: string; depth?: number }>
+    ): Promise<void> => {
+      await resetBlok(page);
+      await page.evaluate(async ({ holder, items: listItems }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: listItems.map((item, index) => ({
+              id: `list-${index}`,
+              type: 'list',
+              data: {
+                text: item.text,
+                style: 'unordered',
+                checked: false,
+                ...(item.depth !== undefined ? { depth: item.depth } : {}),
+              },
+            })),
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID, items });
+    };
+
+    test('undo after Tab indentation restores original depth', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'First item' },
+        { text: 'Second item' },
+      ]);
+
+      // Click on second item
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await secondItem.click();
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+
+      // Wait for Yjs to capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify depth increased
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[1], 1);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify depth is back to 0
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 0);
+    });
+
+    test('redo after undoing Tab indentation restores indentation', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'First item' },
+        { text: 'Second item' },
+      ]);
+
+      // Click on second item
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await secondItem.click();
+
+      // Press Tab to indent
+      await page.keyboard.press('Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify depth is back to 0
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[1], 0);
+
+      // Redo
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify depth is back to 1
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 1);
+    });
+
+    test('undo after Shift+Tab outdentation restores original depth', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'First item' },
+        { text: 'Nested item', depth: 1 },
+      ]);
+
+      // Click on nested item
+      const nestedItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await nestedItem.click();
+
+      // Verify initial depth is 1
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[1], 1);
+
+      // Press Shift+Tab to outdent
+      await page.keyboard.press('Shift+Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify depth decreased to 0
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 0);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify depth is back to 1
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 1);
+    });
+
+    test('multiple indentation changes can be undone sequentially', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'First item' },
+        { text: 'Second item' },
+        { text: 'Third item' },
+      ]);
+
+      // Click on second item and indent
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await secondItem.click();
+      await page.keyboard.press('Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Click on third item and indent twice
+      const thirdItem = getListBlockByIndex(page, 2).locator('[contenteditable="true"]');
+
+      await thirdItem.click();
+      await page.keyboard.press('Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      await page.keyboard.press('Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify depths: 0, 1, 2
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[0], 0);
+      expectDepth(savedData.blocks[1], 1);
+      expectDepth(savedData.blocks[2], 2);
+
+      // Undo third item's second indent: 0, 1, 1
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[2], 1);
+
+      // Undo third item's first indent: 0, 1, 0
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[2], 0);
+
+      // Undo second item's indent: 0, 0, 0
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[1], 0);
+    });
+
+    test('deeply nested item undo/redo cycle preserves data integrity', async ({ page }) => {
+      await createListBlocks(page, [
+        { text: 'Root item' },
+        { text: 'Level 1', depth: 1 },
+        { text: 'Level 2', depth: 2 },
+        { text: 'Level 3', depth: 3 },
+      ]);
+
+      // Click on Level 3 item and outdent it twice
+      const level3Item = getListBlockByIndex(page, 3).locator('[contenteditable="true"]');
+
+      await level3Item.click();
+      await page.keyboard.press('Shift+Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      await page.keyboard.press('Shift+Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify depth is now 1
+      let savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks[3], 1);
+
+      // Undo twice to restore to depth 3
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[3], 3);
+
+      // Redo twice to go back to depth 1
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      savedData = await saveBlok(page);
+      expectDepth(savedData.blocks[3], 1);
+
+      // Verify all other blocks unchanged
+      expectDepth(savedData.blocks[0], 0);
+      expectDepth(savedData.blocks[1], 1);
+      expectDepth(savedData.blocks[2], 2);
     });
   });
 });

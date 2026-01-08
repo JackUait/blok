@@ -827,6 +827,13 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
+   * Returns the current input index (for caret restoration)
+   */
+  public get currentInputIndex(): number {
+    return this.inputIndex;
+  }
+
+  /**
    * Set input index to the passed element
    * @param element - HTML Element to set as current input
    */

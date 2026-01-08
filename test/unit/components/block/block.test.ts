@@ -369,6 +369,53 @@ describe('Block', () => {
     });
   });
 
+  describe('currentInputIndex', () => {
+    it('returns the default input index', () => {
+      const { block } = createBlock();
+
+      // Default should be 0
+      expect(block.currentInputIndex).toBe(0);
+    });
+
+    it('returns the updated input index when currentInput is changed', () => {
+      const { block } = createBlock();
+      const content = block.pluginsContent;
+
+      // Add additional inputs to the block (as siblings, not nested)
+      const secondInput = document.createElement('div');
+
+      secondInput.setAttribute('contenteditable', 'true');
+
+      const thirdInput = document.createElement('div');
+
+      thirdInput.setAttribute('contenteditable', 'true');
+
+      // Get the parent of pluginsContent to add siblings
+      const parent = content.parentElement;
+
+      if (parent === null) {
+        throw new Error('Expected parent element');
+      }
+
+      parent.appendChild(secondInput);
+      parent.appendChild(thirdInput);
+
+      // Drop inputs cache to refresh
+      (block as unknown as { dropInputsCache: () => void }).dropInputsCache();
+
+      // Verify we now have 3 inputs
+      expect(block.inputs.length).toBe(3);
+
+      // Set current input to second element
+      block.currentInput = secondInput;
+      expect(block.currentInputIndex).toBe(1);
+
+      // Set current input to third element
+      block.currentInput = thirdInput;
+      expect(block.currentInputIndex).toBe(2);
+    });
+  });
+
   describe('block state helpers', () => {
     it('detects empty state based on text and media content', () => {
       const { block } = createBlock();

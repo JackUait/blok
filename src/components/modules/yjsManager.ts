@@ -31,6 +31,23 @@ interface SingleMoveEntry {
 type MoveHistoryEntry = SingleMoveEntry[];
 
 /**
+ * Represents caret position at a point in time
+ */
+export interface CaretSnapshot {
+  blockId: string;
+  inputIndex: number;
+  offset: number;
+}
+
+/**
+ * Caret state before and after an undoable action
+ */
+interface CaretHistoryEntry {
+  before: CaretSnapshot | null;
+  after: CaretSnapshot | null;
+}
+
+/**
  * @class YjsManager
  * @classdesc Manages Yjs document and block synchronization
  * @module YjsManager
@@ -77,6 +94,28 @@ export class YjsManager extends Module {
    * When not null, moves are collected here instead of pushed to moveUndoStack.
    */
   private pendingMoveGroup: SingleMoveEntry[] | null = null;
+
+  /**
+   * Caret position history stack for undo.
+   * Tracks caret position before/after each undoable action.
+   */
+  private caretUndoStack: CaretHistoryEntry[] = [];
+
+  /**
+   * Caret position history stack for redo.
+   */
+  private caretRedoStack: CaretHistoryEntry[] = [];
+
+  /**
+   * Pending caret snapshot captured before a change starts.
+   * Used because Yjs 'stack-item-added' fires after the change.
+   */
+  private pendingCaretBefore: CaretSnapshot | null = null;
+
+  /**
+   * Flag indicating we have a pending caret snapshot.
+   */
+  private hasPendingCaret = false;
 
   /**
    * Constructor - sets up change observers

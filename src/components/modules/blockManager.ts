@@ -673,7 +673,8 @@ export class BlockManager extends Module {
 
   /**
    * Delete all selected blocks and insert a replacement block at their position.
-   * @returns The inserted replacement block, or undefined if no blocks were selected
+   * Only inserts a replacement block if all blocks were deleted.
+   * @returns The inserted replacement block, or undefined if no blocks were selected or if blocks remain
    */
   public deleteSelectedBlocksAndInsertReplacement(): Block | undefined {
     const insertionIndex = this.removeSelectedBlocks();
@@ -682,7 +683,15 @@ export class BlockManager extends Module {
       return undefined;
     }
 
-    return this.insertDefaultBlockAtIndex(insertionIndex, true);
+    /**
+     * Only insert a replacement block if all blocks were deleted.
+     * If there are remaining blocks, don't insert a replacement.
+     */
+    if (this.blocks.length === 0) {
+      return this.insertDefaultBlockAtIndex(insertionIndex, true);
+    }
+
+    return undefined;
   }
 
   /**

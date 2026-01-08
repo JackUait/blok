@@ -226,7 +226,9 @@ const createBlockManager = (
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(),
+      updateBlockTune: vi.fn(),
       stopCapturing: vi.fn(),
+      transact: vi.fn((fn: () => void) => fn()),
     } as unknown as BlokModules['YjsManager'],
   };
 
@@ -381,6 +383,7 @@ describe('BlockManager', () => {
       tool: 'paragraph',
       data: { text: 'Updated' },
       tunes: { alignment: 'center' },
+      bindEventsImmediately: true,
     });
     expect(blocksStub.replace).toHaveBeenCalledWith(0, newBlock);
     expect(blockDidMutatedSpy).toHaveBeenCalledWith(
@@ -423,7 +426,7 @@ describe('BlockManager', () => {
     expect(result).toBe(defaultBlock);
     expect(blocksStub.blocks[0]).toBe(defaultBlock);
     expect(blockManager.currentBlockIndex).toBe(1);
-    expect(composeBlockSpy).toHaveBeenCalledWith({ tool: 'paragraph' });
+    expect(composeBlockSpy).toHaveBeenCalledWith({ tool: 'paragraph', bindEventsImmediately: true });
     expect(blockDidMutatedSpy).toHaveBeenCalledWith(
       BlockAddedMutationType,
       defaultBlock,
@@ -455,15 +458,14 @@ describe('BlockManager', () => {
     expect(() => blockManager.insertDefaultBlockAtIndex(0)).toThrow('Could not insert default Block. Default block tool is not defined in the configuration.');
   });
 
-  it('removes only selected blocks and returns the first removed index', () => {
+  it('deletes selected blocks and inserts replacement when all blocks are selected', () => {
     const blocks = [
       createBlockStub({ id: 'first' }),
       createBlockStub({ id: 'second' }),
-      createBlockStub({ id: 'third' }),
     ];
 
+    blocks[0].selected = true;
     blocks[1].selected = true;
-    blocks[2].selected = true;
 
     const { blockManager } = createBlockManager({
       initialBlocks: blocks,
@@ -473,11 +475,26 @@ describe('BlockManager', () => {
       .spyOn(blockManager as unknown as { removeBlock: BlockManager['removeBlock'] }, 'removeBlock')
       .mockResolvedValue();
 
-    const firstRemovedIndex = (blockManager as unknown as { removeSelectedBlocks: () => number | undefined }).removeSelectedBlocks();
+    const replacementBlock = createBlockStub({ id: 'replacement' });
+    const insertSpy = vi
+      .spyOn(blockManager as unknown as { insert: BlockManager['insert'] }, 'insert')
+      .mockReturnValue(replacementBlock);
 
-    expect(removeSpy).toHaveBeenNthCalledWith(1, blocks[2], false);
-    expect(removeSpy).toHaveBeenNthCalledWith(2, blocks[1], false);
-    expect(firstRemovedIndex).toBe(1);
+    const result = blockManager.deleteSelectedBlocksAndInsertReplacement();
+
+    // Should remove both selected blocks (in reverse order by index)
+    expect(removeSpy).toHaveBeenNthCalledWith(1, blocks[1], false, true);
+    expect(removeSpy).toHaveBeenNthCalledWith(2, blocks[0], false, true);
+
+    // Should insert replacement block
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'paragraph',
+      index: 0,
+      needToFocus: true,
+      skipYjsSync: true,
+    }));
+
+    expect(result).toBe(replacementBlock);
   });
 
   it('splits the current block using caret fragment contents', () => {
@@ -502,7 +519,11 @@ describe('BlockManager', () => {
     const result = blockManager.split();
 
     expect(caretStub.extractFragmentFromCaretPosition).toHaveBeenCalledTimes(1);
-    expect(insertSpy).toHaveBeenCalledWith({ data: { text: 'Split content' } });
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'paragraph',
+      data: { text: 'Split content' },
+      skipYjsSync: true,
+    }));
     expect(result).toBe(insertedBlock);
   });
 

@@ -806,6 +806,9 @@ export class BlockManager extends Module {
       return undefined;
     }
 
+    // Check if all blocks are being deleted
+    const allBlocksDeleted = selectedBlockEntries.length === this.blocks.length;
+
     // Get insertion index (minimum index among selected blocks)
     const insertionIndex = selectedBlockEntries[selectedBlockEntries.length - 1].index;
     const blockIds = selectedBlockEntries.map(({ block }) => block.id);
@@ -816,19 +819,23 @@ export class BlockManager extends Module {
       throw new Error('Could not insert default Block. Default block tool is not defined in the configuration.');
     }
 
-    // Generate new block ID upfront for the transaction
-    const newBlockId = generateBlockId();
+    // Generate new block ID upfront for the transaction (only if needed)
+    const newBlockId = allBlocksDeleted ? generateBlockId() : undefined;
 
     // Single Yjs transaction for all removals + insertion (single undo entry)
     this.Blok.YjsManager.transact(() => {
       for (const id of blockIds) {
         this.Blok.YjsManager.removeBlock(id);
       }
-      this.Blok.YjsManager.addBlock({
-        id: newBlockId,
-        type: defaultToolName,
-        data: {},
-      }, insertionIndex);
+
+      // Only insert replacement block if all blocks were deleted
+      if (allBlocksDeleted && newBlockId !== undefined) {
+        this.Blok.YjsManager.addBlock({
+          id: newBlockId,
+          type: defaultToolName,
+          data: {},
+        }, insertionIndex);
+      }
     });
 
     // DOM cleanup - remove selected blocks (skip Yjs sync since we handled it above)
@@ -837,14 +844,18 @@ export class BlockManager extends Module {
       void this.removeBlock(block, false, true);
     }
 
-    // Insert replacement block (skip Yjs sync since we handled it above)
-    return this.insert({
-      id: newBlockId,
-      tool: defaultToolName,
-      index: insertionIndex,
-      needToFocus: true,
-      skipYjsSync: true,
-    });
+    // Insert replacement block only if all blocks were deleted (skip Yjs sync since we handled it above)
+    if (allBlocksDeleted && newBlockId !== undefined) {
+      return this.insert({
+        id: newBlockId,
+        tool: defaultToolName,
+        index: insertionIndex,
+        needToFocus: true,
+        skipYjsSync: true,
+      });
+    }
+
+    return undefined;
   }
 
   /**
@@ -1315,6 +1326,11 @@ export class BlockManager extends Module {
 
       if (index !== -1) {
         this.blocksStore.remove(index);
+
+        // Emit BlockRemoved event so onChange gets notified
+        this.blockDidMutated(BlockRemovedMutationType, block, {
+          index,
+        });
       }
     }
 

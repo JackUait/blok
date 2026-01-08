@@ -79,6 +79,14 @@ interface BlockConstructorOptions {
    * References blocks that are children of this block.
    */
   contentIds?: string[];
+
+  /**
+   * When true, bind internal mutation watchers immediately instead of deferring via requestIdleCallback.
+   * Use for user-created blocks where mutations need to be tracked right away.
+   * Note: This controls Block-internal events (MutationObserver, input focus).
+   * Module-level events (keyboard handlers) are controlled separately by BlockManager.
+   */
+  bindMutationWatchersImmediately?: boolean;
 }
 
 /**
@@ -269,6 +277,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     tunesData,
     parentId,
     contentIds,
+    bindMutationWatchersImmediately = false,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
     this.ready = new Promise((resolve) => {
@@ -305,9 +314,11 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.holder = holderElement;
 
     /**
-     * Bind block events in RIC for optimizing of constructing process time
+     * Bind block mutation watchers and input events
+     * - Immediately if bindMutationWatchersImmediately is true (for user-created blocks)
+     * - Deferred via requestIdleCallback otherwise (for initial load optimization)
      */
-    window.requestIdleCallback(() => {
+    const bindEvents = (): void => {
       /**
        * Start watching block mutations
        */
@@ -324,8 +335,13 @@ export class Block extends EventsDispatcher<BlockEvents> {
        * It can be useful for developers, for example for correct placeholder behavior
        */
       this.toggleInputsEmptyMark();
+    };
 
-    });
+    if (bindMutationWatchersImmediately) {
+      bindEvents();
+    } else {
+      window.requestIdleCallback(bindEvents);
+    }
   }
 
   /**
@@ -676,11 +692,16 @@ export class Block extends EventsDispatcher<BlockEvents> {
     }
 
     // Handle simple text-based blocks (like paragraph) with a 'text' property
-    const hasTextProperty = 'text' in newData && typeof newData.text === 'string';
+    // If newData is empty ({}) and the element is contenteditable, treat it as an empty string
+    // Only apply empty-data-as-empty-text logic for the default paragraph tool
     const isContentEditable = pluginsContent.getAttribute('contenteditable') === 'true';
+    const hasTextProperty = typeof newData.text === 'string';
+    const isEmptyParagraphData = Object.keys(newData).length === 0 && this.name === 'paragraph';
 
-    if (hasTextProperty && isContentEditable) {
-      pluginsContent.innerHTML = newData.text as string;
+    if (isContentEditable && (hasTextProperty || isEmptyParagraphData)) {
+      const newText = hasTextProperty ? newData.text : '';
+
+      pluginsContent.innerHTML = newText;
       this.lastSavedData = newData;
       this.dropInputsCache();
       this.toggleInputsEmptyMark();

@@ -37,6 +37,7 @@ import { Tools } from '../components/modules/tools';
 import { UI } from '../components/modules/ui';
 import { ToolsAPI } from '../components/modules/api/tools';
 import { I18n } from '../components/modules/i18n';
+import { YjsManager } from '../components/modules/yjsManager';
 
 export interface BlokModules {
   // API Modules
@@ -79,4 +80,5 @@ export interface BlokModules {
   Saver: Saver,
   Tools: Tools,
   UI: UI,
+  YjsManager: YjsManager,
 }

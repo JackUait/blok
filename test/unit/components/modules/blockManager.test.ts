@@ -221,6 +221,13 @@ const createBlockManager = (
       },
       checkEmptiness: vi.fn(),
     } as unknown as BlokModules['UI'],
+    YjsManager: {
+      addBlock: vi.fn(),
+      removeBlock: vi.fn(),
+      moveBlock: vi.fn(),
+      updateBlockData: vi.fn(),
+      stopCapturing: vi.fn(),
+    } as unknown as BlokModules['YjsManager'],
   };
 
   blockManager.state = {

@@ -55,6 +55,38 @@ export const getCaretNodeAndOffset = (): [Node | null, number] => {
   return [fallbackChild, textContent !== null ? textContent.length : 0];
 };
 
+/**
+ * Get the current caret offset within a contenteditable element.
+ * Returns the number of text characters from the start of the element to the caret.
+ * @param input - Optional input element. If not provided, uses the current selection's container.
+ * @returns Offset in text characters, or 0 if no selection
+ */
+export const getCaretOffset = (input?: HTMLElement): number => {
+  const selection = window.getSelection();
+
+  if (selection === null || selection.rangeCount === 0) {
+    return 0;
+  }
+
+  const range = selection.getRangeAt(0);
+
+  // If no input provided, try to find the contenteditable ancestor
+  const container = input ?? range.startContainer.parentElement?.closest('[contenteditable="true"]');
+
+  if (container === null || container === undefined) {
+    return 0;
+  }
+
+  // Create a range from start of input to current caret position
+  const preCaretRange = document.createRange();
+
+  preCaretRange.selectNodeContents(container);
+  preCaretRange.setEnd(range.startContainer, range.startOffset);
+
+  // Get the text length up to the caret
+  return preCaretRange.toString().length;
+};
+
 const isElementVisuallyEmpty = (element: Element): boolean => {
   if (!(element instanceof HTMLElement)) {
     return false;

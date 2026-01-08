@@ -2273,9 +2273,10 @@ test.describe('yjs undo/redo', () => {
       await page.keyboard.press('Backspace');
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Verify deletion: should have 2 blocks (empty replacement + Fourth block)
-      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
-      await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Fourth block');
+      // Verify deletion: should have 1 block (Fourth block)
+      // No replacement block is inserted when only partial selection is deleted
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+      await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Fourth block');
 
       // Undo should restore all deleted blocks
       await page.keyboard.press(UNDO_SHORTCUT);
@@ -2396,8 +2397,9 @@ test.describe('yjs undo/redo', () => {
       await page.keyboard.press('Backspace');
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Should have 2 blocks (empty + Block 3)
-      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+      // Should have 1 block (Block 3)
+      // No replacement block is inserted when only partial selection is deleted
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
 
       // Single undo should restore both deleted blocks (not require two undos)
       await page.keyboard.press(UNDO_SHORTCUT);

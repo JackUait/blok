@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { YjsManager } from '../../../../src/components/modules/yjsManager';
+import * as caretUtils from '../../../../src/components/utils/caret';
 import type { BlokConfig } from '../../../../types';
 
 const createYjsManager = (): YjsManager => {
@@ -250,6 +251,98 @@ describe('YjsManager', () => {
       expect(manager.toJSON()).toHaveLength(1);
       expect(manager.toJSON()[0].data.text).toBe('Loaded');
     });
+
+    it('clears all history stacks when fromJSON is called', () => {
+      // Build up some history
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'First' } });
+      manager.stopCapturing();
+      manager.addBlock({ id: 'block2', type: 'paragraph', data: { text: 'Second' } });
+
+      // Verify we have undo history
+      expect(manager.toJSON()).toHaveLength(2);
+      manager.undo();
+      expect(manager.toJSON()).toHaveLength(1);
+
+      // Now load new data via fromJSON
+      manager.fromJSON([
+        { id: 'new1', type: 'paragraph', data: { text: 'New content' } },
+      ]);
+
+      // Undo should have no effect - history was cleared
+      manager.undo();
+      expect(manager.toJSON()).toHaveLength(1);
+      expect(manager.toJSON()[0].id).toBe('new1');
+
+      // Redo should also have no effect
+      manager.redo();
+      expect(manager.toJSON()).toHaveLength(1);
+      expect(manager.toJSON()[0].id).toBe('new1');
+    });
+
+    it('restores caret to before position on undo', () => {
+      const beforeSnapshot = { blockId: 'b1', inputIndex: 0, offset: 3 };
+      const afterSnapshot = { blockId: 'b1', inputIndex: 0, offset: 10 };
+
+      // Push a caret entry
+      (manager as any).caretUndoStack.push({ before: beforeSnapshot, after: afterSnapshot });
+
+      // Mock Blok for restoreCaretSnapshot
+      const input = document.createElement('div');
+      const block = { id: 'b1', inputs: [input], focusable: true };
+
+       
+      (manager as any).Blok = {
+        BlockManager: {
+          getBlockById: vi.fn().mockReturnValue(block),
+        },
+        Caret: {
+          setToInput: vi.fn(),
+          positions: { DEFAULT: 'default' },
+        },
+      };
+
+       
+      const restoreSpy = vi.spyOn(manager as any, 'restoreCaretSnapshot');
+
+      manager.undo();
+
+      expect(restoreSpy).toHaveBeenCalledWith(beforeSnapshot);
+       
+      expect((manager as any).caretRedoStack).toContainEqual({ before: beforeSnapshot, after: afterSnapshot });
+    });
+
+    it('restores caret to after position on redo', () => {
+      const beforeSnapshot = { blockId: 'b1', inputIndex: 0, offset: 3 };
+      const afterSnapshot = { blockId: 'b1', inputIndex: 0, offset: 10 };
+
+      // Push a caret entry to redo stack
+       
+      (manager as any).caretRedoStack.push({ before: beforeSnapshot, after: afterSnapshot });
+
+      // Mock Blok for restoreCaretSnapshot
+      const input = document.createElement('div');
+      const block = { id: 'b1', inputs: [input], focusable: true };
+
+       
+      (manager as any).Blok = {
+        BlockManager: {
+          getBlockById: vi.fn().mockReturnValue(block),
+        },
+        Caret: {
+          setToInput: vi.fn(),
+          positions: { DEFAULT: 'default' },
+        },
+      };
+
+       
+      const restoreSpy = vi.spyOn(manager as any, 'restoreCaretSnapshot');
+
+      manager.redo();
+
+      expect(restoreSpy).toHaveBeenCalledWith(afterSnapshot);
+       
+      expect((manager as any).caretUndoStack).toContainEqual({ before: beforeSnapshot, after: afterSnapshot });
+    });
   });
 
   describe('change observation', () => {
@@ -316,6 +409,184 @@ describe('YjsManager', () => {
       expect(callback).toHaveBeenCalledWith(
         expect.objectContaining({ origin: 'undo' })
       );
+    });
+  });
+
+  describe('captureCaretSnapshot', () => {
+    it('returns null when no block is focused', () => {
+      // Mock BlockManager.currentBlock to return undefined
+       
+      (manager as any).Blok = {
+        BlockManager: {
+          currentBlock: undefined,
+        },
+      };
+
+      expect(manager.captureCaretSnapshot()).toBeNull();
+    });
+
+    it('captures block id, input index, and offset', () => {
+      const mockInput = document.createElement('div');
+
+      mockInput.contentEditable = 'true';
+
+      const mockBlock = {
+        id: 'block-123',
+        currentInputIndex: 1,
+        currentInput: mockInput,
+      };
+
+       
+      (manager as any).Blok = {
+        BlockManager: {
+          currentBlock: mockBlock,
+        },
+      };
+
+      // Mock getCaretOffset to return 5
+      vi.spyOn(caretUtils, 'getCaretOffset').mockReturnValue(5);
+
+      const snapshot = manager.captureCaretSnapshot();
+
+      expect(snapshot).toEqual({
+        blockId: 'block-123',
+        inputIndex: 1,
+        offset: 5,
+      });
+    });
+
+    it('returns offset 0 when currentInput is undefined', () => {
+      const mockBlock = {
+        id: 'block-123',
+        currentInputIndex: 0,
+        currentInput: undefined,
+      };
+
+       
+      (manager as any).Blok = {
+        BlockManager: {
+          currentBlock: mockBlock,
+        },
+      };
+
+      const snapshot = manager.captureCaretSnapshot();
+
+      expect(snapshot).toEqual({
+        blockId: 'block-123',
+        inputIndex: 0,
+        offset: 0,
+      });
+    });
+  });
+
+  describe('markCaretBeforeChange', () => {
+    it('captures caret snapshot on first call', () => {
+      const mockSnapshot = { blockId: 'b1', inputIndex: 0, offset: 3 };
+
+      vi.spyOn(manager, 'captureCaretSnapshot').mockReturnValue(mockSnapshot);
+
+      manager.markCaretBeforeChange();
+
+       
+      expect((manager as any).pendingCaretBefore).toEqual(mockSnapshot);
+       
+      expect((manager as any).hasPendingCaret).toBe(true);
+    });
+
+    it('does not overwrite on subsequent calls', () => {
+      const firstSnapshot = { blockId: 'b1', inputIndex: 0, offset: 3 };
+      const secondSnapshot = { blockId: 'b2', inputIndex: 1, offset: 10 };
+
+      vi.spyOn(manager, 'captureCaretSnapshot')
+        .mockReturnValueOnce(firstSnapshot)
+        .mockReturnValueOnce(secondSnapshot);
+
+      manager.markCaretBeforeChange();
+      manager.markCaretBeforeChange();
+
+      // Should still have first snapshot
+       
+      expect((manager as any).pendingCaretBefore).toEqual(firstSnapshot);
+    });
+  });
+
+  describe('restoreCaretSnapshot', () => {
+    it('clears selection when snapshot is null', () => {
+      const removeAllRangesSpy = vi.fn();
+
+      vi.spyOn(window, 'getSelection').mockReturnValue({
+        removeAllRanges: removeAllRangesSpy,
+      } as unknown as Selection);
+
+       
+      (manager as any).restoreCaretSnapshot(null);
+
+      expect(removeAllRangesSpy).toHaveBeenCalled();
+    });
+
+    it('falls back to first block when block not found', () => {
+      const firstBlock = { id: 'first', focusable: true };
+      const setToBlockSpy = vi.fn();
+
+       
+      (manager as any).Blok = {
+        BlockManager: {
+          getBlockById: vi.fn().mockReturnValue(undefined),
+          firstBlock,
+        },
+        Caret: {
+          setToBlock: setToBlockSpy,
+          positions: { START: 'start' },
+        },
+      };
+
+       
+      (manager as any).restoreCaretSnapshot({ blockId: 'deleted', inputIndex: 0, offset: 0 });
+
+      expect(setToBlockSpy).toHaveBeenCalledWith(firstBlock, 'start');
+    });
+
+    it('restores caret to specific input and offset', () => {
+      const input = document.createElement('div');
+      const block = { id: 'b1', inputs: [input], focusable: true };
+      const setToInputSpy = vi.fn();
+
+       
+      (manager as any).Blok = {
+        BlockManager: {
+          getBlockById: vi.fn().mockReturnValue(block),
+        },
+        Caret: {
+          setToInput: setToInputSpy,
+          positions: { DEFAULT: 'default' },
+        },
+      };
+
+       
+      (manager as any).restoreCaretSnapshot({ blockId: 'b1', inputIndex: 0, offset: 5 });
+
+      expect(setToInputSpy).toHaveBeenCalledWith(input, 'default', 5);
+    });
+
+    it('falls back to block start when input index is out of bounds', () => {
+      const block = { id: 'b1', inputs: [], focusable: true };
+      const setToBlockSpy = vi.fn();
+
+       
+      (manager as any).Blok = {
+        BlockManager: {
+          getBlockById: vi.fn().mockReturnValue(block),
+        },
+        Caret: {
+          setToBlock: setToBlockSpy,
+          positions: { START: 'start' },
+        },
+      };
+
+       
+      (manager as any).restoreCaretSnapshot({ blockId: 'b1', inputIndex: 5, offset: 10 });
+
+      expect(setToBlockSpy).toHaveBeenCalledWith(block, 'start');
     });
   });
 });

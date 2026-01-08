@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 import { Module } from '../__module';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
+import { getCaretOffset } from '../utils/caret';
 
 /**
  * Event emitted when blocks change
@@ -118,11 +119,18 @@ export class YjsManager extends Module {
   private hasPendingCaret = false;
 
   /**
+   * Flag to skip caret stack updates during explicit undo/redo operations.
+   * When true, the stack-item-added listener won't modify caret stacks.
+   */
+  private isPerformingUndoRedo = false;
+
+  /**
    * Constructor - sets up change observers
    */
   constructor(params: ConstructorParameters<typeof Module>[0]) {
     super(params);
     this.setupObservers();
+    this.setupCaretTracking();
   }
 
   /**
@@ -135,6 +143,34 @@ export class YjsManager extends Module {
       for (const event of events) {
         this.handleYjsEvent(event, origin);
       }
+    });
+  }
+
+  /**
+   * Set up caret tracking via Yjs UndoManager events.
+   * Captures caret position after each undoable change.
+   */
+  private setupCaretTracking(): void {
+    this.undoManager.on('stack-item-added', (event: { type: 'undo' | 'redo' }) => {
+      // Skip if we're in the middle of an explicit undo/redo operation.
+      // During redo, Yjs fires stack-item-added with type='undo' which would
+      // incorrectly add entries to our caret stack.
+      if (this.isPerformingUndoRedo) {
+        return;
+      }
+
+      if (event.type === 'undo') {
+        // New undo entry was created - record caret positions
+        this.caretUndoStack.push({
+          before: this.pendingCaretBefore,
+          after: this.captureCaretSnapshot(),
+        });
+        // Clear redo stack on new action (standard undo/redo behavior)
+        this.caretRedoStack = [];
+      }
+      // Reset pending state
+      this.hasPendingCaret = false;
+      this.pendingCaretBefore = null;
     });
   }
 
@@ -224,11 +260,17 @@ export class YjsManager extends Module {
       return undefined;
     }
 
-    const yblock = content[0] as Y.Map<unknown>;
+    const yblock = content[0];
+
+    if (!(yblock instanceof Y.Map)) {
+      return undefined;
+    }
+
     // Access the internal _map to get the id since the Y.Map is deleted
     const idEntry = yblock._map.get('id');
+    const idContent = idEntry?.content?.getContent()[0];
 
-    return idEntry?.content?.getContent()[0] as string | undefined;
+    return typeof idContent === 'string' ? idContent : undefined;
   }
 
   /**
@@ -323,8 +365,8 @@ export class YjsManager extends Module {
    * @param blocks - Array of block data to load
    */
   public fromJSON(blocks: OutputBlockData[]): void {
-    // Clear all move history when loading new data
-    this.clearMoveHistory();
+    // Clear all history when loading new data
+    this.clearHistory();
 
     this.ydoc.transact(() => {
       this.yblocks.delete(0, this.yblocks.length);
@@ -352,6 +394,8 @@ export class YjsManager extends Module {
    * @returns The created Y.Map
    */
   public addBlock(blockData: OutputBlockData, index?: number): Y.Map<unknown> {
+    this.markCaretBeforeChange();
+
     const yblock = this.outputDataToYBlock(blockData);
 
     this.ydoc.transact(() => {
@@ -368,6 +412,8 @@ export class YjsManager extends Module {
    * @param id - Block id to remove
    */
   public removeBlock(id: string): void {
+    this.markCaretBeforeChange();
+
     const index = this.findBlockIndex(id);
 
     if (index === -1) {
@@ -399,17 +445,14 @@ export class YjsManager extends Module {
 
     // For user-initiated moves, track in our custom undo stack
     // We store the original fromIndex and the final toIndex for proper undo/redo
-    const shouldTrackMove = origin === 'local';
-    const isGroupedMove = shouldTrackMove && this.pendingMoveGroup !== null;
-    const isSingleMove = shouldTrackMove && this.pendingMoveGroup === null;
-
-    if (isGroupedMove && this.pendingMoveGroup !== null) {
-      // Collect into pending group (will be recorded when group ends)
+    if (origin === 'local' && this.pendingMoveGroup !== null) {
+      // Grouped move: collect into pending group (will be recorded when group ends)
       this.pendingMoveGroup.push({ blockId: id, fromIndex, toIndex });
     }
 
-    if (isSingleMove) {
-      // Single move, record immediately
+    if (origin === 'local' && this.pendingMoveGroup === null) {
+      // Single move: capture caret and record immediately
+      this.markCaretBeforeChange();
       this.recordMoveForUndo([{ blockId: id, fromIndex, toIndex }]);
     }
 
@@ -504,21 +547,21 @@ export class YjsManager extends Module {
       data: this.yMapToObject(data),
     };
 
-    const tunes = yblock.get('tunes') as Y.Map<unknown> | undefined;
+    const tunes = yblock.get('tunes');
 
-    if (tunes !== undefined && tunes.size > 0) {
+    if (tunes instanceof Y.Map && tunes.size > 0) {
       block.tunes = this.yMapToObject(tunes);
     }
 
-    const parentId = yblock.get('parentId') as string | undefined;
+    const parentId = yblock.get('parentId');
 
-    if (parentId !== undefined) {
+    if (typeof parentId === 'string') {
       block.parent = parentId;
     }
 
-    const contentIds = yblock.get('contentIds') as Y.Array<string> | undefined;
+    const contentIds = yblock.get('contentIds');
 
-    if (contentIds !== undefined && contentIds.length > 0) {
+    if (contentIds instanceof Y.Array && contentIds.length > 0) {
       block.content = contentIds.toArray();
     }
 
@@ -547,6 +590,8 @@ export class YjsManager extends Module {
    * @param value - New value
    */
   public updateBlockData(id: string, key: string, value: unknown): void {
+    this.markCaretBeforeChange();
+
     const yblock = this.getBlockById(id);
 
     if (yblock === undefined) {
@@ -609,25 +654,136 @@ export class YjsManager extends Module {
   /**
    * Record a move entry for undo and clear the redo stack.
    * This is the standard undo/redo behavior: new actions invalidate the redo stack.
+   * Also records caret position before/after the move(s).
+   * @param entry - Move history entry to record
+   * @param skipCaretCapture - If true, skip caret capture (used by endMoveGroup which handles it separately)
    */
-  private recordMoveForUndo(entry: MoveHistoryEntry): void {
+  private recordMoveForUndo(entry: MoveHistoryEntry, skipCaretCapture = false): void {
     this.moveUndoStack.push(entry);
     this.moveRedoStack = [];
+
+    // Record caret positions for this move entry (single moves only)
+    // Grouped moves handle caret tracking via startMoveGroup/endMoveGroup
+    if (!skipCaretCapture) {
+      this.finalizeCaretEntry();
+    }
   }
 
   /**
-   * Clear all move history stacks and pending group.
+   * Finalize and record a caret history entry.
+   * Captures the current caret position as the "after" state,
+   * pushes the entry to the undo stack, clears redo stack, and resets pending state.
+   */
+  private finalizeCaretEntry(): void {
+    this.caretUndoStack.push({
+      before: this.pendingCaretBefore,
+      after: this.captureCaretSnapshot(),
+    });
+    this.caretRedoStack = [];
+    this.hasPendingCaret = false;
+    this.pendingCaretBefore = null;
+  }
+
+  /**
+   * Clear all history stacks (move, caret, and Yjs UndoManager) and pending state.
    * Used when loading new data or destroying the manager.
    */
-  private clearMoveHistory(): void {
+  private clearHistory(): void {
     this.moveUndoStack = [];
     this.moveRedoStack = [];
     this.pendingMoveGroup = null;
+    this.caretUndoStack = [];
+    this.caretRedoStack = [];
+    this.pendingCaretBefore = null;
+    this.hasPendingCaret = false;
+    this.isPerformingUndoRedo = false;
+    this.undoManager.clear();
+  }
+
+  /**
+   * Capture the current caret position as a snapshot.
+   * @returns CaretSnapshot or null if no block is focused
+   */
+  public captureCaretSnapshot(): CaretSnapshot | null {
+    // Guard against being called before Blok is fully initialized
+    if (this.Blok === undefined || this.Blok.BlockManager === undefined) {
+      return null;
+    }
+
+    const { BlockManager } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (currentBlock === undefined) {
+      return null;
+    }
+
+    const currentInput = currentBlock.currentInput;
+
+    return {
+      blockId: currentBlock.id,
+      inputIndex: currentBlock.currentInputIndex,
+      offset: currentInput !== undefined ? getCaretOffset(currentInput) : 0,
+    };
+  }
+
+  /**
+   * Mark the caret position before a change starts.
+   * Call this before any operation that might be undoable.
+   * Only captures on first call; subsequent calls are ignored until reset.
+   */
+  public markCaretBeforeChange(): void {
+    if (this.hasPendingCaret) {
+      return;
+    }
+
+    this.pendingCaretBefore = this.captureCaretSnapshot();
+    this.hasPendingCaret = true;
+  }
+
+  /**
+   * Restore caret position from a snapshot.
+   * Handles edge cases: null snapshot, deleted block, invalid input index.
+   * @param snapshot - CaretSnapshot to restore, or null to clear selection
+   */
+  private restoreCaretSnapshot(snapshot: CaretSnapshot | null): void {
+    if (snapshot === null) {
+      window.getSelection()?.removeAllRanges();
+
+      return;
+    }
+
+    const { BlockManager, Caret } = this.Blok;
+    const block = BlockManager.getBlockById(snapshot.blockId);
+
+    // Block no longer exists - focus first block if available
+    if (block === undefined && BlockManager.firstBlock !== undefined) {
+      Caret.setToBlock(BlockManager.firstBlock, Caret.positions.START);
+
+      return;
+    }
+
+    if (block === undefined) {
+      return;
+    }
+
+    // Get the specific input within the block
+    const input = block.inputs[snapshot.inputIndex];
+
+    if (input !== undefined) {
+      Caret.setToInput(input, Caret.positions.DEFAULT, snapshot.offset);
+    } else {
+      // Input doesn't exist anymore, fall back to block start
+      Caret.setToBlock(block, Caret.positions.START);
+    }
   }
 
   /**
    * Undo the last operation.
    * Checks move stack first since moves are handled separately from Yjs UndoManager.
+   * Restores caret position after the undo operation.
+   *
+   * Note: Caret entry is popped AFTER the operation succeeds to prevent
+   * the caret and move/Yjs stacks from drifting out of sync if an operation fails.
    */
   public undo(): void {
     // Check if the last operation was a move (or group of moves)
@@ -643,16 +799,64 @@ export class YjsManager extends Module {
         this.moveBlock(move.blockId, move.fromIndex, 'move-undo');
       });
 
+      // Pop caret entry only after move succeeds
+      const caretEntry = this.caretUndoStack.pop();
+
+      this.pushCaretToRedoAndRestore(caretEntry, 'before');
+
       return;
     }
 
     // No move to undo, delegate to Yjs UndoManager
-    this.undoManager.undo();
+    // Set flag to prevent stack-item-added listener from modifying caret stacks
+    this.isPerformingUndoRedo = true;
+    try {
+      this.undoManager.undo();
+    } finally {
+      this.isPerformingUndoRedo = false;
+    }
+
+    // Pop caret entry only after Yjs undo succeeds
+    const caretEntry = this.caretUndoStack.pop();
+
+    this.pushCaretToRedoAndRestore(caretEntry, 'before');
+  }
+
+  /**
+   * Helper to push caret entry to redo stack and restore caret position.
+   * @param entry - Caret history entry or undefined
+   * @param position - Which position to restore ('before' or 'after')
+   */
+  private pushCaretToRedoAndRestore(entry: CaretHistoryEntry | undefined, position: 'before' | 'after'): void {
+    if (entry === undefined) {
+      return;
+    }
+
+    this.caretRedoStack.push(entry);
+    this.restoreCaretSnapshot(position === 'before' ? entry.before : entry.after);
+  }
+
+  /**
+   * Helper to push caret entry to undo stack and restore caret position.
+   * @param entry - Caret history entry or undefined
+   * @param position - Which position to restore ('before' or 'after')
+   */
+  private pushCaretToUndoAndRestore(entry: CaretHistoryEntry | undefined, position: 'before' | 'after'): void {
+    if (entry === undefined) {
+      return;
+    }
+
+    this.caretUndoStack.push(entry);
+    this.restoreCaretSnapshot(position === 'before' ? entry.before : entry.after);
   }
 
   /**
    * Redo the last undone operation.
    * Checks move stack first since moves are handled separately from Yjs UndoManager.
+   * Restores caret position after the redo operation.
+   *
+   * Note: Caret entry is popped AFTER the operation succeeds to prevent
+   * the caret and move/Yjs stacks from drifting out of sync if an operation fails.
    */
   public redo(): void {
     // Check if the last undone operation was a move (or group of moves)
@@ -667,11 +871,27 @@ export class YjsManager extends Module {
         this.moveBlock(move.blockId, move.toIndex, 'move-redo');
       }
 
+      // Pop caret entry only after move succeeds
+      const caretEntry = this.caretRedoStack.pop();
+
+      this.pushCaretToUndoAndRestore(caretEntry, 'after');
+
       return;
     }
 
     // No move to redo, delegate to Yjs UndoManager
-    this.undoManager.redo();
+    // Set flag to prevent stack-item-added listener from modifying caret stacks
+    this.isPerformingUndoRedo = true;
+    try {
+      this.undoManager.redo();
+    } finally {
+      this.isPerformingUndoRedo = false;
+    }
+
+    // Pop caret entry only after Yjs redo succeeds
+    const caretEntry = this.caretRedoStack.pop();
+
+    this.pushCaretToUndoAndRestore(caretEntry, 'after');
   }
 
   /**
@@ -685,18 +905,23 @@ export class YjsManager extends Module {
   /**
    * Start collecting move operations into a single undo group.
    * All moveBlock calls after this will be collected until endMoveGroup() is called.
+   * Also captures caret position before the group starts.
    */
   private startMoveGroup(): void {
+    this.markCaretBeforeChange();
     this.pendingMoveGroup = [];
   }
 
   /**
    * End the current move group and push all collected moves as a single undo entry.
    * If no moves were collected, nothing is added to the undo stack.
+   * Also captures caret position after the group completes.
    */
   private endMoveGroup(): void {
     if (this.pendingMoveGroup !== null && this.pendingMoveGroup.length > 0) {
-      this.recordMoveForUndo(this.pendingMoveGroup);
+      // Record moves without auto-caret capture (we handle it here)
+      this.recordMoveForUndo(this.pendingMoveGroup, true);
+      this.finalizeCaretEntry();
     }
     this.pendingMoveGroup = null;
   }
@@ -762,7 +987,7 @@ export class YjsManager extends Module {
    * Cleanup on destroy
    */
   public destroy(): void {
-    this.clearMoveHistory();
+    this.clearHistory();
     this.changeCallbacks = [];
     this.undoManager.destroy();
     this.ydoc.destroy();

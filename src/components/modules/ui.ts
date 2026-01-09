@@ -1292,11 +1292,12 @@ export class UI extends Module<UINodes> {
     }
 
     /**
-     * Set current block when entering to Blok by tab key
+     * Always update current block when focus moves to a different block.
+     * This handles Tab key navigation, programmatic focus, and accessibility tools.
+     * Without this, currentBlockIndex would remain stale and caret restoration
+     * during undo/redo would target the wrong block.
      */
-    if (!this.Blok.BlockManager.currentBlock) {
-      this.Blok.BlockManager.setCurrentBlockByChildNode(focusedElement);
-    }
+    this.Blok.BlockManager.setCurrentBlockByChildNode(focusedElement);
 
     void this.Blok.InlineToolbar.tryToShow(true);
   }

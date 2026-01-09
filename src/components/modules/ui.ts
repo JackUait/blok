@@ -444,6 +444,14 @@ export class UI extends Module<UINodes> {
     }, true);
 
     /**
+     * Capture caret position before any input changes the DOM.
+     * This ensures undo/redo restores the caret to the correct position.
+     */
+    this.readOnlyMutableListeners.on(this.nodes.redactor, 'beforeinput', () => {
+      this.Blok.YjsManager.markCaretBeforeChange();
+    }, true);
+
+    /**
      * Start watching 'block-hovered' events that is used by Toolbar for moving
      */
     this.watchBlockHoveredEvents();

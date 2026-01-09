@@ -53,6 +53,12 @@ interface CaretHistoryEntry {
  * @classdesc Manages Yjs document and block synchronization
  * @module YjsManager
  */
+/**
+ * Time in milliseconds to batch consecutive changes into a single undo entry.
+ * Changes occurring within this window are merged together.
+ */
+const CAPTURE_TIMEOUT_MS = 300;
+
 export class YjsManager extends Module {
   /**
    * Yjs document instance
@@ -68,7 +74,7 @@ export class YjsManager extends Module {
    * Undo manager for history operations
    */
   private undoManager: Y.UndoManager = new Y.UndoManager(this.yblocks, {
-    captureTimeout: 300,
+    captureTimeout: CAPTURE_TIMEOUT_MS,
     trackedOrigins: new Set(['local']),
   });
 
@@ -168,10 +174,40 @@ export class YjsManager extends Module {
         // Clear redo stack on new action (standard undo/redo behavior)
         this.caretRedoStack = [];
       }
-      // Reset pending state
-      this.hasPendingCaret = false;
-      this.pendingCaretBefore = null;
+      this.resetPendingCaretState();
     });
+
+    // Listen for stack-item-updated to update the 'after' position when changes
+    // are merged into an existing stack item (due to captureTimeout batching).
+    // This ensures the caret position reflects where the user ends up after
+    // typing multiple characters quickly, not just after the first character.
+    this.undoManager.on('stack-item-updated', (event: { type: 'undo' | 'redo' }) => {
+      if (this.isPerformingUndoRedo) {
+        return;
+      }
+
+      if (event.type === 'undo' && this.caretUndoStack.length > 0) {
+        // Update the 'after' position of the most recent undo entry
+        const lastEntry = this.caretUndoStack[this.caretUndoStack.length - 1];
+
+        lastEntry.after = this.captureCaretSnapshot();
+      }
+
+      // Reset pending state so the next distinct action can capture fresh 'before' position.
+      // Without this, subsequent beforeinput events during batching would overwrite
+      // pendingCaretBefore with intermediate positions (e.g., position 1, 2, 3...)
+      // instead of keeping it clean for the next undo group.
+      this.resetPendingCaretState();
+    });
+  }
+
+  /**
+   * Reset pending caret capture state.
+   * Called after caret positions are recorded or when batching completes.
+   */
+  private resetPendingCaretState(): void {
+    this.hasPendingCaret = false;
+    this.pendingCaretBefore = null;
   }
 
   /**
@@ -680,8 +716,7 @@ export class YjsManager extends Module {
       after: this.captureCaretSnapshot(),
     });
     this.caretRedoStack = [];
-    this.hasPendingCaret = false;
-    this.pendingCaretBefore = null;
+    this.resetPendingCaretState();
   }
 
   /**
@@ -802,52 +837,52 @@ export class YjsManager extends Module {
       // Pop caret entry only after move succeeds
       const caretEntry = this.caretUndoStack.pop();
 
-      this.pushCaretToRedoAndRestore(caretEntry, 'before');
+      this.pushCaretAndRestore(caretEntry, this.caretRedoStack, 'before');
 
       return;
     }
 
     // No move to undo, delegate to Yjs UndoManager
-    // Set flag to prevent stack-item-added listener from modifying caret stacks
-    this.isPerformingUndoRedo = true;
-    try {
-      this.undoManager.undo();
-    } finally {
-      this.isPerformingUndoRedo = false;
-    }
+    this.performYjsUndoRedo(() => this.undoManager.undo());
 
     // Pop caret entry only after Yjs undo succeeds
     const caretEntry = this.caretUndoStack.pop();
 
-    this.pushCaretToRedoAndRestore(caretEntry, 'before');
+    this.pushCaretAndRestore(caretEntry, this.caretRedoStack, 'before');
   }
 
   /**
-   * Helper to push caret entry to redo stack and restore caret position.
+   * Helper to push caret entry to a stack and restore caret position.
    * @param entry - Caret history entry or undefined
+   * @param stack - Target stack to push the entry to
    * @param position - Which position to restore ('before' or 'after')
    */
-  private pushCaretToRedoAndRestore(entry: CaretHistoryEntry | undefined, position: 'before' | 'after'): void {
+  private pushCaretAndRestore(
+    entry: CaretHistoryEntry | undefined,
+    stack: CaretHistoryEntry[],
+    position: 'before' | 'after'
+  ): void {
     if (entry === undefined) {
       return;
     }
 
-    this.caretRedoStack.push(entry);
+    stack.push(entry);
     this.restoreCaretSnapshot(position === 'before' ? entry.before : entry.after);
   }
 
   /**
-   * Helper to push caret entry to undo stack and restore caret position.
-   * @param entry - Caret history entry or undefined
-   * @param position - Which position to restore ('before' or 'after')
+   * Execute a Yjs UndoManager operation with the isPerformingUndoRedo flag set.
+   * This prevents the stack-item-added listener from modifying caret stacks during
+   * explicit undo/redo operations.
+   * @param operation - The undo or redo operation to execute
    */
-  private pushCaretToUndoAndRestore(entry: CaretHistoryEntry | undefined, position: 'before' | 'after'): void {
-    if (entry === undefined) {
-      return;
+  private performYjsUndoRedo(operation: () => void): void {
+    this.isPerformingUndoRedo = true;
+    try {
+      operation();
+    } finally {
+      this.isPerformingUndoRedo = false;
     }
-
-    this.caretUndoStack.push(entry);
-    this.restoreCaretSnapshot(position === 'before' ? entry.before : entry.after);
   }
 
   /**
@@ -874,24 +909,18 @@ export class YjsManager extends Module {
       // Pop caret entry only after move succeeds
       const caretEntry = this.caretRedoStack.pop();
 
-      this.pushCaretToUndoAndRestore(caretEntry, 'after');
+      this.pushCaretAndRestore(caretEntry, this.caretUndoStack, 'after');
 
       return;
     }
 
     // No move to redo, delegate to Yjs UndoManager
-    // Set flag to prevent stack-item-added listener from modifying caret stacks
-    this.isPerformingUndoRedo = true;
-    try {
-      this.undoManager.redo();
-    } finally {
-      this.isPerformingUndoRedo = false;
-    }
+    this.performYjsUndoRedo(() => this.undoManager.redo());
 
     // Pop caret entry only after Yjs redo succeeds
     const caretEntry = this.caretRedoStack.pop();
 
-    this.pushCaretToUndoAndRestore(caretEntry, 'after');
+    this.pushCaretAndRestore(caretEntry, this.caretUndoStack, 'after');
   }
 
   /**

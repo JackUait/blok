@@ -3335,5 +3335,354 @@ test.describe('yjs undo/redo', () => {
       // was set when the move was triggered. We verify the move was undone correctly
       // which is the primary undo functionality.
     });
+
+    test('caret is at end of content after undo (beforeinput capture)', async ({ page }) => {
+      // This test verifies the fix for capturing caret position via beforeinput event.
+      // The caret should be positioned at the end of the resulting content after undo.
+      // Example: "hello" -> type " world" -> "hello world" -> undo -> "hello" with caret after "o"
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'hello',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Position caret at the end of "hello"
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+
+      // Type " world" to make "hello world"
+      await paragraphInput.pressSequentially(' world');
+
+      // Wait for Yjs to capture the change
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify text is "hello world"
+      await expect(paragraphInput).toHaveText('hello world');
+
+      // Undo - should restore to "hello"
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify text is back to "hello"
+      await expect(paragraphInput).toHaveText('hello');
+
+      // Verify caret is at position 5 (after "o" in "hello")
+      const offset = await getCaretOffset(paragraphInput);
+
+      expect(offset).toBe(5); // "hello".length
+    });
+
+    test('caret is at end of content after redo (beforeinput capture)', async ({ page }) => {
+      // This test verifies the fix for capturing caret position via beforeinput event.
+      // The caret should be positioned somewhere in the new content after redo (not at 0).
+      // Example: "hello" -> type " world" -> undo -> redo -> "hello world" with caret past "hello"
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'hello',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Position caret at the end of "hello"
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+
+      // Type " world" to make "hello world"
+      await paragraphInput.pressSequentially(' world');
+
+      // Wait for Yjs to capture the change
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Force capture timeout to finalize
+      await page.evaluate(() => {
+        const blok = window.blokInstance as { module?: { yjsManager?: { stopCapturing?: () => void } } } | undefined;
+
+        blok?.module?.yjsManager?.stopCapturing?.();
+      });
+      await waitForDelay(page, 100);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify text is "hello"
+      await expect(paragraphInput).toHaveText('hello');
+
+      // Redo - should restore to "hello world"
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify text is "hello world"
+      await expect(paragraphInput).toHaveText('hello world');
+
+      // Verify caret is somewhere past the original text (exact position depends on Yjs batching)
+      const offset = await getCaretOffset(paragraphInput);
+
+      expect(offset).toBeGreaterThan(5); // At minimum, past "hello"
+    });
+
+    test('caret position is captured before DOM mutation, not after', async ({ page }) => {
+      // This test ensures the beforeinput event captures caret position BEFORE typing,
+      // not after. Without the fix, both before/after would be the same position.
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'ABC',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Position caret at position 1 (between A and B)
+      await paragraphInput.click();
+      await page.keyboard.press('Home');
+      await page.keyboard.press('ArrowRight'); // Now at position 1
+
+      // Type "X" to make "AXBC"
+      await paragraphInput.pressSequentially('X');
+
+      // Wait for Yjs to capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify text is "AXBC"
+      await expect(paragraphInput).toHaveText('AXBC');
+
+      // Undo - should restore to "ABC" with caret at position 1 (where it was BEFORE typing)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify text is "ABC"
+      await expect(paragraphInput).toHaveText('ABC');
+
+      // Verify caret is at position 1 (between A and B) - this proves beforeinput worked
+      const offset = await getCaretOffset(paragraphInput);
+
+      expect(offset).toBe(1);
+    });
+
+    test('multiple undo/redo cycles maintain correct caret positions', async ({ page }) => {
+      // Test that caret positions are correctly maintained through multiple undo/redo cycles.
+      // The key behavior: undo restores caret to BEFORE position, redo restores to AFTER.
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Start',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Position at end
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+
+      // Type " one"
+      await paragraphInput.pressSequentially(' one');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Force new undo group
+      await page.evaluate(() => {
+        const blok = window.blokInstance as { module?: { yjsManager?: { stopCapturing?: () => void } } } | undefined;
+
+        blok?.module?.yjsManager?.stopCapturing?.();
+      });
+
+      // Type " two"
+      await paragraphInput.pressSequentially(' two');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify full text
+      await expect(paragraphInput).toHaveText('Start one two');
+
+      // First undo - removes " two"
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Start one');
+
+      // Caret should be past "Start" (exact position depends on Yjs batching)
+      let offset = await getCaretOffset(paragraphInput);
+
+      expect(offset).toBeGreaterThan(5); // At least past "Start"
+
+      // Second undo - removes " one"
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Start');
+
+      // KEY TEST: Caret should be at end of "Start" (position 5) - this tests beforeinput capture
+      offset = await getCaretOffset(paragraphInput);
+      expect(offset).toBe(5);
+
+      // Redo - restores " one"
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Start one');
+
+      // Caret should be past "Start" (exact position depends on Yjs batching)
+      offset = await getCaretOffset(paragraphInput);
+      expect(offset).toBeGreaterThan(5);
+
+      // Redo again - restores " two"
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(paragraphInput).toHaveText('Start one two');
+
+      // Caret should be past "Start one" (exact position depends on Yjs batching)
+      offset = await getCaretOffset(paragraphInput);
+      expect(offset).toBeGreaterThan(9);
+    });
+
+    test('caret is at end of long content after undo', async ({ page }) => {
+      // Reproduce user's exact scenario with long text
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'asjdjla ajsldjals ajsdljasdj',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Position caret at the end
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+
+      // Verify initial caret position
+      const initialOffset = await getCaretOffset(paragraphInput);
+
+      expect(initialOffset).toBe(28); // "asjdjla ajsldjals ajsdljasdj".length
+
+      // Type " ajlsdljasldj" (with space at start)
+      await paragraphInput.pressSequentially(' ajlsdljasldj');
+
+      // Wait for Yjs to capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify full text
+      await expect(paragraphInput).toHaveText('asjdjla ajsldjals ajsdljasdj ajlsdljasldj');
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify text is restored
+      await expect(paragraphInput).toHaveText('asjdjla ajsldjals ajsdljasdj');
+
+      // Verify caret is at position 28 (end of remaining content)
+      const offset = await getCaretOffset(paragraphInput);
+
+      expect(offset).toBe(28); // "asjdjla ajsldjals ajsdljasdj".length
+    });
+
+    test('caret restoration with immediate undo (no wait)', async ({ page }) => {
+      // Test scenario where user undoes immediately after typing
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'asjdjla ajsldjals ajsdljasdj',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Position caret at the end
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+
+      // Type and immediately undo WITHOUT waiting for capture timeout
+      await paragraphInput.pressSequentially(' ajlsdljasldj');
+
+      // Immediate undo - this might test the scenario where user undoes mid-batch
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Get the caret position - even with partial undo, should be reasonable
+      const offset = await getCaretOffset(paragraphInput);
+      const text = await paragraphInput.textContent();
+
+      // Log for debugging
+      console.log(`Text after undo: "${text}", caret offset: ${offset}`);
+
+      // The caret should be at a reasonable position within or at the end of text
+      expect(offset).toBeGreaterThan(0);
+      expect(offset).toBeLessThanOrEqual((text ?? '').length);
+    });
+
+    test('caret restoration when typing from empty block', async ({ page }) => {
+      // Test scenario where user types into an initially empty block
+      // This tests the fix for stack-item-updated event handling
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: '',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Click to focus the empty block
+      await paragraphInput.click();
+
+      // Type the first batch of text
+      await paragraphInput.pressSequentially('asjdjla ajsldjals ajsdljasdj');
+
+      // Wait for Yjs to capture this batch
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Force capture timeout to create separate undo groups
+      await page.evaluate(() => {
+        const blok = window.blokInstance as { module?: { yjsManager?: { stopCapturing?: () => void } } } | undefined;
+
+        blok?.module?.yjsManager?.stopCapturing?.();
+      });
+      await waitForDelay(page, 100);
+
+      // Type more text (second batch)
+      await paragraphInput.pressSequentially(' ajlsdljasldj');
+
+      // Wait for Yjs to capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify full text
+      await expect(paragraphInput).toHaveText('asjdjla ajsldjals ajsdljasdj ajlsdljasldj');
+
+      // Undo the last typed portion
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify text is restored
+      await expect(paragraphInput).toHaveText('asjdjla ajsldjals ajsdljasdj');
+
+      // Verify caret is at position 28 (end of remaining content)
+      const offset = await getCaretOffset(paragraphInput);
+
+      expect(offset).toBe(28); // "asjdjla ajsldjals ajsdljasdj".length
+    });
   });
 });

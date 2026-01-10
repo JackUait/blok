@@ -148,4 +148,23 @@ export interface Blocks {
    * @param index - index of the block to stop watching
    */
   stopBlockMutationWatching(index: number): void;
+
+  /**
+   * Atomically splits a block by updating the current block's data and inserting a new block.
+   * Both operations are grouped into a single undo entry.
+   *
+   * @param currentBlockId - id of the block to update
+   * @param currentBlockData - new data for the current block (typically truncated content)
+   * @param newBlockType - tool type for the new block
+   * @param newBlockData - data for the new block (typically extracted content)
+   * @param insertIndex - index where to insert the new block
+   * @returns the newly created block
+   */
+  splitBlock(
+    currentBlockId: string,
+    currentBlockData: Partial<BlockToolData>,
+    newBlockType: string,
+    newBlockData: BlockToolData,
+    insertIndex: number,
+  ): BlockAPI;
 }

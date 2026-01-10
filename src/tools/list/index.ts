@@ -1255,22 +1255,47 @@ export class ListItem implements BlockTool {
       return;
     }
 
-    // Split content and create new block
+    // Split content at cursor position
     const range = selection.getRangeAt(0);
     const { beforeContent, afterContent } = this.splitContentAtCursor(contentEl, range);
 
-    // Update current block with before content
-    contentEl.innerHTML = beforeContent;
-    this._data.text = beforeContent;
+    // Guard: blockId is always provided by Blok when instantiating tools,
+    // but we keep this fallback for defensive programming in case the tool
+    // is instantiated outside the normal Blok flow (e.g., in tests or external usage)
+    if (!this.blockId) {
+      contentEl.innerHTML = beforeContent;
+      this._data.text = beforeContent;
 
-    // Insert new list block after this one, preserving the depth
+      const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
+      const newBlock = this.api.blocks.insert(ListItem.TOOL_NAME, {
+        text: afterContent,
+        style: this._data.style,
+        checked: false,
+        depth: this._data.depth,
+      }, undefined, currentBlockIndex + 1, true);
+
+      this.setCaretToBlockContent(newBlock, 'start');
+
+      return;
+    }
+
+    // Use atomic splitBlock API to ensure undo works correctly
     const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
-    const newBlock = this.api.blocks.insert(ListItem.TOOL_NAME, {
-      text: afterContent,
-      style: this._data.style,
-      checked: false,
-      depth: this._data.depth,
-    }, undefined, currentBlockIndex + 1, true);
+    const newBlock = this.api.blocks.splitBlock(
+      this.blockId,
+      { text: beforeContent },
+      ListItem.TOOL_NAME,
+      {
+        text: afterContent,
+        style: this._data.style,
+        checked: false,
+        depth: this._data.depth,
+      },
+      currentBlockIndex + 1
+    );
+
+    // Update internal state to match the DOM
+    this._data.text = beforeContent;
 
     // Set caret to the start of the new block's content element
     this.setCaretToBlockContent(newBlock, 'start');

@@ -18,6 +18,13 @@ import { mobileScreenBreakpoint } from '../utils';
  */
 const HOVER_ZONE_SIZE = 100;
 
+/**
+ * Keys that require caret capture on keydown before tools can intercept them.
+ * When tools call event.preventDefault() on keydown, beforeinput never fires,
+ * so we capture caret position for these keys in the capture phase.
+ */
+const KEYS_REQUIRING_CARET_CAPTURE = new Set(['Enter', 'Backspace', 'Delete', 'Tab']);
+
 import styles from '../../styles/main.css?inline';
 import { BlockHovered } from '../events/BlockHovered';
 import {
@@ -449,6 +456,21 @@ export class UI extends Module<UINodes> {
      */
     this.readOnlyMutableListeners.on(this.nodes.redactor, 'beforeinput', () => {
       this.Blok.YjsManager.markCaretBeforeChange();
+    }, true);
+
+    /**
+     * Capture caret position on keydown for keys that tools commonly intercept.
+     * Uses capture phase to run before tool handlers.
+     * markCaretBeforeChange() is idempotent - if beforeinput also fires, the second call is ignored.
+     */
+    this.readOnlyMutableListeners.on(this.nodes.redactor, 'keydown', (event: Event) => {
+      if (!(event instanceof KeyboardEvent)) {
+        return;
+      }
+
+      if (KEYS_REQUIRING_CARET_CAPTURE.has(event.key)) {
+        this.Blok.YjsManager.markCaretBeforeChange();
+      }
     }, true);
 
     /**

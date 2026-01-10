@@ -3684,5 +3684,64 @@ test.describe('yjs undo/redo', () => {
 
       expect(offset).toBe(28); // "asjdjla ajsldjals ajsdljasdj".length
     });
+
+    test('list item split undo merges items back together', async ({ page }) => {
+      // Test that splitting a list item with Enter and undoing properly merges it back
+      await createBlokWithBlocks(page, [
+        {
+          id: 'list-1',
+          type: 'list',
+          data: {
+            text: 'Hello World',
+            style: 'unordered',
+          },
+        },
+      ]);
+
+      const listBlock = getListBlockByIndex(page, 0);
+      const listInput = listBlock.locator('[contenteditable="true"]');
+
+      // Click to focus the list item
+      await listInput.click();
+
+      // Place caret between "Hello" and " World" (after "Hello")
+      await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-component="list"] [contenteditable="true"]');
+
+        if (!el) return;
+
+        const textNode = el.firstChild;
+
+        if (!textNode) return;
+
+        const range = document.createRange();
+        const selection = window.getSelection();
+
+        range.setStart(textNode, 5); // After "Hello"
+        range.setEnd(textNode, 5);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      });
+
+      // Press Enter to split the list item
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, 200);
+
+      // Verify we now have 2 list items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // Wait for Yjs to capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should merge them back
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify we're back to 1 list item with the original text
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      const restoredInput = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+
+      await expect(restoredInput).toHaveText('Hello World');
+    });
   });
 });

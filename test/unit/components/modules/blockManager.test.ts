@@ -611,6 +611,76 @@ describe('BlockManager', () => {
     ui.nodes.wrapper.remove();
   });
 
+  it('splits block with provided data and returns new block', () => {
+    const originalBlock = createBlockStub({ id: 'original', name: 'list' });
+
+    originalBlock.holder.innerHTML = '<div contenteditable="true">Hello World</div>';
+
+    const yjsManagerMock = {
+      addBlock: vi.fn(),
+      removeBlock: vi.fn(),
+      moveBlock: vi.fn(),
+      updateBlockData: vi.fn(),
+      updateBlockTune: vi.fn(),
+      stopCapturing: vi.fn(),
+      transact: vi.fn((fn: () => void) => fn()),
+    } as unknown as BlokModules['YjsManager'];
+
+    const { blockManager } = createBlockManager({
+      initialBlocks: [ originalBlock ],
+      blokOverrides: {
+        YjsManager: yjsManagerMock,
+      },
+    });
+
+    const insertedBlock = createBlockStub({ id: 'new-item', name: 'list' });
+    const insertSpy = vi.spyOn(blockManager as unknown as { insert: BlockManager['insert'] }, 'insert').mockReturnValue(insertedBlock);
+
+    const result = blockManager.splitBlockWithData(
+      'original',
+      { text: 'Hello' },
+      'list',
+      { text: ' World', style: 'unordered' },
+      1
+    );
+
+    // Yjs transaction should be called
+    expect(yjsManagerMock.transact).toHaveBeenCalledTimes(1);
+
+    // Should update original block data in Yjs
+    expect(yjsManagerMock.updateBlockData).toHaveBeenCalledWith('original', 'text', 'Hello');
+
+    // Should add new block to Yjs
+    expect(yjsManagerMock.addBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'list',
+        data: { text: ' World', style: 'unordered' },
+      }),
+      1
+    );
+
+    // Should insert DOM block with skipYjsSync
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'list',
+      data: { text: ' World', style: 'unordered' },
+      index: 1,
+      needToFocus: true,
+      skipYjsSync: true,
+    }));
+
+    expect(result).toBe(insertedBlock);
+  });
+
+  it('throws when splitBlockWithData receives unknown block id', () => {
+    const { blockManager } = createBlockManager({
+      initialBlocks: [ createBlockStub({ id: 'existing' }) ],
+    });
+
+    expect(() => {
+      blockManager.splitBlockWithData('unknown', { text: 'a' }, 'paragraph', { text: 'b' }, 1);
+    }).toThrow('Block with id "unknown" not found');
+  });
+
   it('emits enumerable events when blockDidMutated is invoked', () => {
     const block = createBlockStub({ id: 'block-1' });
     const { blockManager } = createBlockManager({

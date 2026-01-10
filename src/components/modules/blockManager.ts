@@ -199,6 +199,28 @@ export class BlockManager extends Module {
   private registeredShortcuts: string[] = [];
 
   /**
+   * Executes a function within an atomic context where:
+   * - Yjs auto-sync is suppressed (DOM changes won't trigger sync back to Yjs)
+   * - stopCapturing is suppressed (block index changes won't break undo grouping)
+   *
+   * Use this for operations that need to update both Yjs and DOM atomically.
+   *
+   * @param fn - Function to execute within the atomic context
+   * @returns The return value of the function
+   */
+  private withAtomicOperation<T>(fn: () => T): T {
+    this.yjsSyncCount++;
+    this.suppressStopCapturing = true;
+
+    try {
+      return fn();
+    } finally {
+      this.yjsSyncCount--;
+      this.suppressStopCapturing = false;
+    }
+  }
+
+  /**
    * Should be called after Blok.UI preparation
    * Define this._blocks property
    */
@@ -909,11 +931,7 @@ export class BlockManager extends Module {
     const newBlockId = generateBlockId();
     const insertIndex = this.currentBlockIndex + 1;
 
-    // Suppress auto-sync and stopCapturing during split to keep it atomic
-    this.yjsSyncCount++;
-    this.suppressStopCapturing = true;
-
-    try {
+    return this.withAtomicOperation(() => {
       // Extract fragment (mutates DOM - removes text after caret)
       const extractedFragment = this.Blok.Caret.extractFragmentFromCaretPosition();
       const wrapper = $.make('div');
@@ -943,10 +961,66 @@ export class BlockManager extends Module {
         data: { text: extractedText },
         skipYjsSync: true,
       });
-    } finally {
-      this.yjsSyncCount--;
-      this.suppressStopCapturing = false;
+    });
+  }
+
+  /**
+   * Splits a block by updating the current block's data and inserting a new block.
+   * Both operations are grouped into a single undo entry.
+   * Used by tools that need to specify exact data for both blocks (e.g., list items).
+   *
+   * @param currentBlockId - id of the block to update
+   * @param currentBlockData - new data for the current block (typically truncated content)
+   * @param newBlockType - tool type for the new block
+   * @param newBlockData - data for the new block (typically extracted content)
+   * @param insertIndex - index where to insert the new block
+   * @returns the newly created block
+   */
+  public splitBlockWithData(
+    currentBlockId: string,
+    currentBlockData: Partial<BlockToolData>,
+    newBlockType: string,
+    newBlockData: BlockToolData,
+    insertIndex: number
+  ): Block {
+    const currentBlock = this.getBlockById(currentBlockId);
+
+    if (currentBlock === undefined) {
+      throw new Error(`Block with id "${currentBlockId}" not found`);
     }
+
+    const newBlockId = generateBlockId();
+
+    return this.withAtomicOperation(() => {
+      // Atomic Yjs transaction: update original + add new (single undo entry)
+      this.Blok.YjsManager.transact(() => {
+        for (const [key, value] of Object.entries(currentBlockData)) {
+          this.Blok.YjsManager.updateBlockData(currentBlockId, key, value);
+        }
+        this.Blok.YjsManager.addBlock({
+          id: newBlockId,
+          type: newBlockType,
+          data: newBlockData,
+        }, insertIndex);
+      });
+
+      // Update DOM for the current block (auto-sync is suppressed by yjsSyncCount)
+      const currentContentEl = currentBlock.holder.querySelector('[contenteditable="true"]');
+
+      if (currentContentEl !== null && typeof currentBlockData.text === 'string') {
+        currentContentEl.innerHTML = currentBlockData.text;
+      }
+
+      // Insert DOM block (skip Yjs sync - already done above)
+      return this.insert({
+        id: newBlockId,
+        tool: newBlockType,
+        data: newBlockData,
+        index: insertIndex,
+        needToFocus: true,
+        skipYjsSync: true,
+      });
+    });
   }
 
   /**

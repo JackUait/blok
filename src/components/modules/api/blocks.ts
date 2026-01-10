@@ -36,6 +36,7 @@ export class BlocksAPI extends Module {
       composeBlockData: this.composeBlockData,
       convert: this.convert,
       stopBlockMutationWatching: (index: number): void => this.stopBlockMutationWatching(index),
+      splitBlock: this.splitBlock,
     };
   }
 
@@ -372,6 +373,35 @@ export class BlocksAPI extends Module {
   }
 
   /**
+   * Atomically splits a block by updating the current block's data and inserting a new block.
+   * Both operations are grouped into a single undo entry.
+   *
+   * @param currentBlockId - id of the block to update
+   * @param currentBlockData - new data for the current block (typically truncated content)
+   * @param newBlockType - tool type for the new block
+   * @param newBlockData - data for the new block (typically extracted content)
+   * @param insertIndex - index where to insert the new block
+   * @returns the newly created block
+   */
+  private splitBlock = (
+    currentBlockId: string,
+    currentBlockData: Partial<BlockToolData>,
+    newBlockType: string,
+    newBlockData: BlockToolData,
+    insertIndex: number
+  ): BlockAPIInterface => {
+    const newBlock = this.Blok.BlockManager.splitBlockWithData(
+      currentBlockId,
+      currentBlockData,
+      newBlockType,
+      newBlockData,
+      insertIndex
+    );
+
+    return new BlockAPI(newBlock);
+  };
+
+  /**
    * Validated block index and throws an error if it's invalid
    * @param index - index to validate
    */
@@ -381,10 +411,6 @@ export class BlocksAPI extends Module {
     }
 
     if (index < 0) {
-      throw new Error(`Index should be greater than or equal to 0`);
-    }
-
-    if (index === null) {
       throw new Error(`Index should be greater than or equal to 0`);
     }
   }

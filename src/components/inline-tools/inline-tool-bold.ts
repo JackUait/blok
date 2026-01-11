@@ -2,6 +2,16 @@ import type { InlineTool, SanitizerConfig } from '../../../types';
 import { IconBold } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector } from '../constants';
+import { CollapsedBoldExitHandler } from './collapsed-bold-exit-handler';
+import {
+  isBoldTag,
+  isBoldElement,
+  isElementEmpty,
+  hasBoldParent,
+  findBoldElement,
+  ensureStrongElement,
+  isNodeWithin,
+} from './utils/bold-dom-utils';
 
 /**
  * Bold Tool
@@ -50,7 +60,7 @@ export class BoldInlineTool implements InlineTool {
     const selector = `${createSelector(DATA_ATTR.interface)} b, ${createSelector(DATA_ATTR.editor)} b`;
 
     document.querySelectorAll(selector).forEach((boldNode) => {
-      BoldInlineTool.ensureStrongElement(boldNode as HTMLElement);
+      ensureStrongElement(boldNode as HTMLElement);
     });
   }
 
@@ -74,11 +84,11 @@ export class BoldInlineTool implements InlineTool {
     }
 
     if (element.tagName === 'B') {
-      BoldInlineTool.ensureStrongElement(element as HTMLElement);
+      ensureStrongElement(element as HTMLElement);
     }
 
     element.querySelectorAll?.('b').forEach((boldNode) => {
-      BoldInlineTool.ensureStrongElement(boldNode as HTMLElement);
+      ensureStrongElement(boldNode as HTMLElement);
     });
   }
 
@@ -87,14 +97,6 @@ export class BoldInlineTool implements InlineTool {
   private static inputListenerRegistered = false;
   private static beforeInputListenerRegistered = false;
   private static readonly globalListenersInitialized = BoldInlineTool.initializeGlobalListeners();
-  private static readonly collapsedExitRecords = new Set<{
-    boundary: Text;
-    boldElement: HTMLElement;
-    allowedLength: number;
-    hasLeadingSpace: boolean;
-    hasTypedContent: boolean;
-    leadingWhitespace: string;
-  }>();
   private static markerSequence = 0;
   private static mutationObserver?: MutationObserver;
   private static isProcessingMutation = false;
@@ -103,7 +105,6 @@ export class BoldInlineTool implements InlineTool {
   private static readonly DATA_ATTR_PREV_LENGTH = 'data-blok-bold-prev-length';
   private static readonly DATA_ATTR_LEADING_WHITESPACE = 'data-blok-bold-leading-ws';
   private static readonly instances = new Set<BoldInlineTool>();
-  private static readonly pendingBoundaryCaretAdjustments = new WeakSet<Text>();
 
   /**
    *
@@ -152,280 +153,13 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Ensure that text typed after exiting a collapsed bold selection stays outside of the bold element
-   */
-  private static maintainCollapsedExitState(): void {
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    for (const record of Array.from(BoldInlineTool.collapsedExitRecords)) {
-      const resolved = BoldInlineTool.resolveBoundary(record);
-
-      if (!resolved) {
-        BoldInlineTool.collapsedExitRecords.delete(record);
-
-        continue;
-      }
-
-      record.boundary = resolved.boundary;
-      record.boldElement = resolved.boldElement;
-
-      const boundary = resolved.boundary;
-      const boldElement = resolved.boldElement;
-      const allowedLength = record.allowedLength;
-      const currentText = boldElement.textContent ?? '';
-
-      if (currentText.length > allowedLength) {
-        const preserved = currentText.slice(0, allowedLength);
-        const extra = currentText.slice(allowedLength);
-
-        boldElement.textContent = preserved;
-        boundary.textContent = (boundary.textContent ?? '') + extra;
-      }
-
-      const boundaryContent = boundary.textContent ?? '';
-
-      if (boundaryContent.length > 1 && boundaryContent.startsWith('\u200B')) {
-        boundary.textContent = boundaryContent.slice(1);
-      }
-
-      const selection = window.getSelection();
-
-      BoldInlineTool.ensureCaretAtBoundary(selection, boundary);
-      BoldInlineTool.scheduleBoundaryCaretAdjustment(boundary);
-
-      const boundaryText = boundary.textContent ?? '';
-      const sanitizedBoundary = boundaryText.replace(/\u200B/g, '');
-      const leadingMatch = sanitizedBoundary.match(/^\s+/);
-      const containsTypedContent = /\S/.test(sanitizedBoundary);
-      const selectionStartsWithZws = boundaryText.startsWith('\u200B');
-
-      if (leadingMatch) {
-        record.hasLeadingSpace = true;
-        record.leadingWhitespace = leadingMatch[0];
-      }
-
-      if (containsTypedContent) {
-        record.hasTypedContent = true;
-      }
-
-      const boundaryHasVisibleLeading = /^\s/.test(sanitizedBoundary);
-      const meetsDeletionCriteria = record.hasTypedContent && !selectionStartsWithZws && (boldElement.textContent ?? '').length <= allowedLength;
-      const shouldRestoreLeadingSpace = record.hasLeadingSpace && record.hasTypedContent && !boundaryHasVisibleLeading;
-
-      if (meetsDeletionCriteria && shouldRestoreLeadingSpace) {
-        const trimmedActual = boundaryText.replace(/^[\u200B\s]+/, '');
-        const leadingWhitespace = record.leadingWhitespace || ' ';
-
-        boundary.textContent = `${leadingWhitespace}${trimmedActual}`;
-        BoldInlineTool.ensureCaretAtBoundary(selection, boundary);
-      }
-
-      if (meetsDeletionCriteria) {
-        BoldInlineTool.collapsedExitRecords.delete(record);
-      }
-    }
-  }
-
-  /**
-   * Ensure the caret remains at the end of the boundary text node when exiting bold
-   * @param selection - Current document selection
-   * @param boundary - Text node following the bold element
-   */
-  private static ensureCaretAtBoundary(selection: Selection | null, boundary: Text): void {
-    if (!selection || !selection.isCollapsed) {
-      return;
-    }
-
-    BoldInlineTool.setCaretToBoundaryEnd(selection, boundary);
-  }
-
-  /**
-   * Ensure the caret remains at the end of the boundary text node after the current microtask queue is flushed
-   * @param boundary - Boundary text node that should keep the caret at its end
-   */
-  private static scheduleBoundaryCaretAdjustment(boundary: Text): void {
-    if (BoldInlineTool.pendingBoundaryCaretAdjustments.has(boundary)) {
-      return;
-    }
-
-    BoldInlineTool.pendingBoundaryCaretAdjustments.add(boundary);
-
-    setTimeout(() => {
-      BoldInlineTool.pendingBoundaryCaretAdjustments.delete(boundary);
-
-      const ownerDocument = boundary.ownerDocument ?? (typeof document !== 'undefined' ? document : null);
-
-      if (!ownerDocument) {
-        return;
-      }
-
-      const selection = ownerDocument.getSelection();
-
-      if (!selection || !selection.isCollapsed || selection.anchorNode !== boundary) {
-        return;
-      }
-
-      const targetOffset = boundary.textContent?.length ?? 0;
-
-      if (selection.anchorOffset === targetOffset) {
-        return;
-      }
-
-      BoldInlineTool.setCaret(selection, boundary, targetOffset);
-    }, 0);
-  }
-
-  /**
-   * Ensure there is a text node immediately following the provided bold element.
-   * Creates one when necessary.
-   * @param boldElement - Bold element that precedes the boundary
-   * @returns The text node following the bold element or null if it cannot be created
-   */
-  private static ensureTextNodeAfter(boldElement: HTMLElement): Text | null {
-    const existingNext = boldElement.nextSibling;
-
-    if (existingNext?.nodeType === Node.TEXT_NODE) {
-      return existingNext as Text;
-    }
-
-    const parent = boldElement.parentNode;
-
-    if (!parent) {
-      return null;
-    }
-
-    const documentRef = boldElement.ownerDocument ?? (typeof document !== 'undefined' ? document : null);
-
-    if (!documentRef) {
-      return null;
-    }
-
-    const newNode = documentRef.createTextNode('');
-
-    parent.insertBefore(newNode, existingNext);
-
-    return newNode;
-  }
-
-  /**
-   * Resolve the boundary text node tracked for a collapsed exit record.
-   * @param record - Collapsed exit tracking record
-   * @returns The aligned boundary text node or null when it cannot be determined
-   */
-  private static resolveBoundary(record: { boundary: Text; boldElement: HTMLElement }): { boundary: Text; boldElement: HTMLElement } | null {
-    if (!record.boldElement.isConnected) {
-      return null;
-    }
-
-    const strong = BoldInlineTool.ensureStrongElement(record.boldElement);
-    const boundary = record.boundary;
-    const isAligned = boundary.isConnected && boundary.previousSibling === strong;
-    const resolvedBoundary = isAligned ? boundary : BoldInlineTool.ensureTextNodeAfter(strong);
-
-    if (!resolvedBoundary) {
-      return null;
-    }
-
-    return {
-      boundary: resolvedBoundary,
-      boldElement: strong,
-    };
-  }
-
-  /**
-   * Move caret to the end of the provided boundary text node
-   * @param selection - Current selection to update
-   * @param boundary - Boundary text node that hosts the caret
-   */
-  private static setCaretToBoundaryEnd(selection: Selection, boundary: Text): void {
-    const range = document.createRange();
-    const caretOffset = boundary.textContent?.length ?? 0;
-
-    range.setStart(boundary, caretOffset);
-    range.collapse(true);
-
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }
-
-  /**
-   * Recursively check if a node or any of its parents is a bold tag (<strong>)
-   * @param node - The node to check
-   */
-  private static hasBoldParent(node: Node | null): boolean {
-    if (!node) {
-      return false;
-    }
-
-    if (node.nodeType === Node.ELEMENT_NODE && BoldInlineTool.isBoldTag(node as Element)) {
-      return true;
-    }
-
-    return BoldInlineTool.hasBoldParent(node.parentNode);
-  }
-
-  /**
-   * Recursively find a bold element (<strong>) in the parent chain
-   * @param node - The node to start searching from
-   */
-  private static findBoldElement(node: Node | null): HTMLElement | null {
-    if (!node) {
-      return null;
-    }
-
-    if (node.nodeType === Node.ELEMENT_NODE && BoldInlineTool.isBoldTag(node as Element)) {
-      return BoldInlineTool.ensureStrongElement(node as HTMLElement);
-    }
-
-    return BoldInlineTool.findBoldElement(node.parentNode);
-  }
-
-  /**
-   * Check if an element is a bold tag (<strong> for conversion)
-   * @param node - The element to check
-   */
-  private static isBoldTag(node: Element): boolean {
-    const tag = node.tagName;
-
-    return tag === 'B' || tag === 'STRONG';
-  }
-
-  /**
-   * Ensure an element is a <strong> tag, converting from <b> if needed
-   * @param element - The element to ensure is a strong tag
-   */
-  private static ensureStrongElement(element: HTMLElement): HTMLElement {
-    if (element.tagName === 'STRONG') {
-      return element;
-    }
-
-    const strong = document.createElement('strong');
-
-    if (element.hasAttributes()) {
-      Array.from(element.attributes).forEach((attr) => {
-        strong.setAttribute(attr.name, attr.value);
-      });
-    }
-
-    while (element.firstChild) {
-      strong.appendChild(element.firstChild);
-    }
-
-    element.replaceWith(strong);
-
-    return strong;
-  }
-
-  /**
    * Merge two strong elements by moving children from right to left
    * @param left - The left strong element to merge into
    * @param right - The right strong element to merge from
    */
   private static mergeStrongNodes(left: HTMLElement, right: HTMLElement): HTMLElement {
-    const leftStrong = BoldInlineTool.ensureStrongElement(left);
-    const rightStrong = BoldInlineTool.ensureStrongElement(right);
+    const leftStrong = ensureStrongElement(left);
+    const rightStrong = ensureStrongElement(right);
 
     while (rightStrong.firstChild) {
       leftStrong.appendChild(rightStrong.firstChild);
@@ -569,7 +303,7 @@ export class BoldInlineTool implements InlineTool {
     selection.addRange(markerRange);
 
     for (; ;) {
-      const currentBold = BoldInlineTool.findBoldElement(marker);
+      const currentBold = findBoldElement(marker);
 
       if (!currentBold) {
         break;
@@ -605,7 +339,7 @@ export class BoldInlineTool implements InlineTool {
     BoldInlineTool.removeEmptyBoldElements(selection);
 
     boldAncestors.forEach((element) => {
-      if (BoldInlineTool.isElementEmpty(element)) {
+      if (isElementEmpty(element)) {
         element.remove();
       }
     });
@@ -724,7 +458,7 @@ export class BoldInlineTool implements InlineTool {
    */
   private isRangeBold(range: Range, options: { ignoreWhitespace: boolean }): boolean {
     if (range.collapsed) {
-      return Boolean(BoldInlineTool.findBoldElement(range.startContainer));
+      return Boolean(findBoldElement(range.startContainer));
     }
 
     const walker = document.createTreeWalker(
@@ -770,10 +504,10 @@ export class BoldInlineTool implements InlineTool {
     }
 
     if (textNodes.length === 0) {
-      return Boolean(BoldInlineTool.findBoldElement(range.startContainer));
+      return Boolean(findBoldElement(range.startContainer));
     }
 
-    return textNodes.every((textNode) => BoldInlineTool.hasBoldParent(textNode));
+    return textNodes.every((textNode) => hasBoldParent(textNode));
   }
 
   /**
@@ -819,23 +553,23 @@ export class BoldInlineTool implements InlineTool {
    */
   private findBoldElementFromRangeOrSelection(insertedRange: Range | undefined, selection: Selection | null): HTMLElement | null {
     if (!insertedRange) {
-      return selection ? BoldInlineTool.findBoldElement(selection.focusNode) : null;
+      return selection ? findBoldElement(selection.focusNode) : null;
     }
 
-    const fromStart = BoldInlineTool.findBoldElement(insertedRange.startContainer);
+    const fromStart = findBoldElement(insertedRange.startContainer);
 
     if (fromStart) {
       return fromStart;
     }
 
-    const fromAncestor = BoldInlineTool.findBoldElement(insertedRange.commonAncestorContainer);
+    const fromAncestor = findBoldElement(insertedRange.commonAncestorContainer);
 
     if (fromAncestor) {
       return fromAncestor;
     }
 
     const isStartContainerBold = insertedRange.startContainer.nodeType === Node.ELEMENT_NODE &&
-      BoldInlineTool.isBoldTag(insertedRange.startContainer as Element);
+      isBoldTag(insertedRange.startContainer as Element);
 
     return isStartContainerBold ? insertedRange.startContainer as HTMLElement : null;
   }
@@ -845,15 +579,15 @@ export class BoldInlineTool implements InlineTool {
    * @param element - The bold element to merge with adjacent elements
    */
   private mergeAdjacentBold(element: HTMLElement): HTMLElement {
-    const initialTarget = BoldInlineTool.ensureStrongElement(element);
+    const initialTarget = ensureStrongElement(element);
 
     const previous = initialTarget.previousSibling;
-    const targetAfterPrevious = previous && previous.nodeType === Node.ELEMENT_NODE && BoldInlineTool.isBoldTag(previous as Element)
+    const targetAfterPrevious = previous && previous.nodeType === Node.ELEMENT_NODE && isBoldTag(previous as Element)
       ? BoldInlineTool.mergeStrongNodes(previous as HTMLElement, initialTarget)
       : initialTarget;
 
     const next = targetAfterPrevious.nextSibling;
-    const finalTarget = next && next.nodeType === Node.ELEMENT_NODE && BoldInlineTool.isBoldTag(next as Element)
+    const finalTarget = next && next.nodeType === Node.ELEMENT_NODE && isBoldTag(next as Element)
       ? BoldInlineTool.mergeStrongNodes(targetAfterPrevious, next as HTMLElement)
       : targetAfterPrevious;
 
@@ -872,17 +606,17 @@ export class BoldInlineTool implements InlineTool {
     }
 
     const range = selection.getRangeAt(0);
-    const insideBold = BoldInlineTool.findBoldElement(range.startContainer);
+    const insideBold = findBoldElement(range.startContainer);
 
     const updatedRange = (() => {
       if (insideBold && insideBold.getAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE) !== 'true') {
-        return BoldInlineTool.exitCollapsedBold(selection, insideBold);
+        return CollapsedBoldExitHandler.getInstance().exitBold(selection, insideBold);
       }
 
       const boundaryBold = insideBold ?? BoldInlineTool.getBoundaryBold(range);
 
       return boundaryBold
-        ? BoldInlineTool.exitCollapsedBold(selection, boundaryBold)
+        ? CollapsedBoldExitHandler.getInstance().exitBold(selection, boundaryBold)
         : this.startCollapsedBold(range);
     })();
 
@@ -1094,44 +828,6 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Restore a selection range from marker elements
-   * @param markerId - The ID of the markers used to mark the selection
-   */
-  private restoreSelectionFromMarkers(markerId: string): Range | undefined {
-    const startMarker = document.querySelector(`[data-blok-bold-marker="${markerId}-start"]`);
-    const endMarker = document.querySelector(`[data-blok-bold-marker="${markerId}-end"]`);
-
-    if (!startMarker || !endMarker) {
-      startMarker?.remove();
-      endMarker?.remove();
-
-      return;
-    }
-
-    const selection = window.getSelection();
-
-    if (!selection) {
-      startMarker.remove();
-      endMarker.remove();
-
-      return;
-    }
-
-    const newRange = document.createRange();
-
-    newRange.setStartAfter(startMarker);
-    newRange.setEndBefore(endMarker);
-
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-
-    startMarker.remove();
-    endMarker.remove();
-
-    return newRange;
-  }
-
-  /**
    * Replace non-breaking spaces with regular spaces within a range
    * @param range - The range to process
    */
@@ -1187,7 +883,7 @@ export class BoldInlineTool implements InlineTool {
 
     // Convert any legacy <b> tags to <strong> tags
     root.querySelectorAll('b').forEach((boldNode) => {
-      BoldInlineTool.ensureStrongElement(boldNode as HTMLElement);
+      ensureStrongElement(boldNode as HTMLElement);
     });
   }
 
@@ -1216,7 +912,7 @@ export class BoldInlineTool implements InlineTool {
     }
 
     block.querySelectorAll('b').forEach((boldNode) => {
-      BoldInlineTool.ensureStrongElement(boldNode as HTMLElement);
+      ensureStrongElement(boldNode as HTMLElement);
     });
   }
 
@@ -1248,7 +944,7 @@ export class BoldInlineTool implements InlineTool {
         return;
       }
 
-      if ((strong.textContent ?? '').length === 0 && !BoldInlineTool.isNodeWithin(focusNode, strong)) {
+      if ((strong.textContent ?? '').length === 0 && !isNodeWithin(focusNode, strong)) {
         strong.remove();
       }
     });
@@ -1318,7 +1014,7 @@ export class BoldInlineTool implements InlineTool {
 
       boldElement.appendChild(updatedTextNode);
 
-      if (!selection?.isCollapsed || !BoldInlineTool.isNodeWithin(selection.focusNode, prevTextNode)) {
+      if (!selection?.isCollapsed || !isNodeWithin(selection.focusNode, prevTextNode)) {
         return;
       }
 
@@ -1348,7 +1044,7 @@ export class BoldInlineTool implements InlineTool {
       return;
     }
 
-    const activePlaceholder = BoldInlineTool.findBoldElement(range.startContainer);
+    const activePlaceholder = findBoldElement(range.startContainer);
 
     if (activePlaceholder?.getAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE) === 'true') {
       return;
@@ -1359,91 +1055,6 @@ export class BoldInlineTool implements InlineTool {
     }
 
     BoldInlineTool.moveCaretFromTextContainer(selection, range);
-  }
-
-  /**
-   * Locate a bold element adjacent to a collapsed range
-   * @param range - Range to inspect
-   */
-  private static getAdjacentBold(range: Range): HTMLElement | null {
-    const container = range.startContainer;
-
-    if (container.nodeType === Node.TEXT_NODE) {
-      return BoldInlineTool.getBoldAdjacentToText(range, container as Text);
-    }
-
-    if (container.nodeType === Node.ELEMENT_NODE) {
-      return BoldInlineTool.getBoldAdjacentToElement(range, container as Element);
-    }
-
-    return null;
-  }
-
-  /**
-   * Get bold element adjacent to a text node container
-   * @param range - Current collapsed range
-   * @param textNode - Text node hosting the caret
-   */
-  private static getBoldAdjacentToText(range: Range, textNode: Text): HTMLElement | null {
-    const textLength = textNode.textContent?.length ?? 0;
-    const previous = textNode.previousSibling;
-
-    if (range.startOffset === 0 && BoldInlineTool.isBoldElement(previous)) {
-      return previous as HTMLElement;
-    }
-
-    if (range.startOffset !== textLength) {
-      return null;
-    }
-
-    const next = textNode.nextSibling;
-
-    return BoldInlineTool.isBoldElement(next) ? next as HTMLElement : null;
-  }
-
-  /**
-   * Get bold element adjacent to an element container
-   * @param range - Current collapsed range
-   * @param element - Element containing the caret
-   */
-  private static getBoldAdjacentToElement(range: Range, element: Element): HTMLElement | null {
-    const previous = range.startOffset > 0 ? element.childNodes[range.startOffset - 1] ?? null : null;
-
-    if (BoldInlineTool.isBoldElement(previous)) {
-      return previous as HTMLElement;
-    }
-
-    const next = element.childNodes[range.startOffset] ?? null;
-
-    return BoldInlineTool.isBoldElement(next) ? next as HTMLElement : null;
-  }
-
-  /**
-   * Exit collapsed bold state when caret no longer resides within bold content
-   * @param selection - Current selection
-   * @param range - Collapsed range after toggling bold
-   */
-  private static exitCollapsedIfNeeded(selection: Selection, range: Range): void {
-    const insideBold = Boolean(BoldInlineTool.findBoldElement(range.startContainer));
-
-    if (insideBold) {
-      return;
-    }
-
-    const boundaryBold = BoldInlineTool.getBoundaryBold(range) ?? BoldInlineTool.getAdjacentBold(range);
-
-    if (!boundaryBold) {
-      return;
-    }
-
-    const caretRange = BoldInlineTool.exitCollapsedBold(selection, boundaryBold);
-
-    if (!caretRange) {
-      return;
-    }
-
-    selection.removeAllRanges();
-    selection.addRange(caretRange);
   }
 
   /**
@@ -1476,7 +1087,7 @@ export class BoldInlineTool implements InlineTool {
   private static moveCaretAfterPreviousBold(selection: Selection, element: Element, offset: number): boolean {
     const beforeNode = offset > 0 ? element.childNodes[offset - 1] ?? null : null;
 
-    if (!BoldInlineTool.isBoldElement(beforeNode)) {
+    if (!isBoldElement(beforeNode)) {
       return false;
     }
 
@@ -1502,7 +1113,7 @@ export class BoldInlineTool implements InlineTool {
   private static moveCaretBeforeNextBold(selection: Selection, element: Element, offset: number): boolean {
     const nextNode = element.childNodes[offset] ?? null;
 
-    if (!BoldInlineTool.isBoldElement(nextNode)) {
+    if (!isBoldElement(nextNode)) {
       return false;
     }
 
@@ -1536,7 +1147,7 @@ export class BoldInlineTool implements InlineTool {
 
     if (
       range.startOffset === 0 &&
-      BoldInlineTool.isBoldElement(previousSibling) &&
+      isBoldElement(previousSibling) &&
       (textContent.length === 0 || startsWithWhitespace)
     ) {
       BoldInlineTool.setCaret(selection, textNode, textContent.length);
@@ -1544,7 +1155,7 @@ export class BoldInlineTool implements InlineTool {
       return;
     }
 
-    const boldElement = BoldInlineTool.findBoldElement(textNode);
+    const boldElement = findBoldElement(textNode);
 
     if (!boldElement || range.startOffset !== (textNode.textContent?.length ?? 0)) {
       return;
@@ -1597,7 +1208,7 @@ export class BoldInlineTool implements InlineTool {
 
     const previousSibling = textNode.previousSibling;
 
-    if (!BoldInlineTool.isBoldElement(previousSibling)) {
+    if (!isBoldElement(previousSibling)) {
       return;
     }
 
@@ -1613,7 +1224,7 @@ export class BoldInlineTool implements InlineTool {
    * @param node - Node to inspect
    */
   private static isBoldElement(node: Node | null): node is Element {
-    return Boolean(node && node.nodeType === Node.ELEMENT_NODE && BoldInlineTool.isBoldTag(node as Element));
+    return Boolean(node && node.nodeType === Node.ELEMENT_NODE && isBoldTag(node as Element));
   }
 
   /**
@@ -1740,7 +1351,7 @@ export class BoldInlineTool implements InlineTool {
         boldEl.removeAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
       }
 
-      if (selection?.isCollapsed && newTextNodeAfterSplit && BoldInlineTool.isNodeWithin(selection.focusNode, boldEl)) {
+      if (selection?.isCollapsed && newTextNodeAfterSplit && isNodeWithin(selection.focusNode, boldEl)) {
         const caretRange = document.createRange();
         const caretOffset = newTextNodeAfterSplit.textContent?.length ?? 0;
 
@@ -1818,7 +1429,7 @@ export class BoldInlineTool implements InlineTool {
     const selection = window.getSelection();
 
     BoldInlineTool.enforceCollapsedBoldLengths(selection);
-    BoldInlineTool.maintainCollapsedExitState();
+    CollapsedBoldExitHandler.getInstance().maintain();
     BoldInlineTool.synchronizeCollapsedBold(selection);
     BoldInlineTool.normalizeBoldTagsWithinBlok(selection);
     BoldInlineTool.removeEmptyBoldElements(selection);
@@ -1898,100 +1509,6 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Attempt to toggle bold via the browser's native command
-   * @param selection - Current selection
-   */
-  /**
-   * Exit a collapsed bold selection by moving the caret outside the bold element
-   * @param selection - The current selection
-   * @param boldElement - The bold element to exit from
-   */
-  private static exitCollapsedBold(selection: Selection, boldElement: HTMLElement): Range | undefined {
-    const normalizedBold = BoldInlineTool.ensureStrongElement(boldElement);
-    const parent = normalizedBold.parentNode;
-
-    if (!parent) {
-      return;
-    }
-
-    if (BoldInlineTool.isElementEmpty(normalizedBold)) {
-      return BoldInlineTool.removeEmptyBoldElement(selection, normalizedBold, parent);
-    }
-
-    return BoldInlineTool.exitCollapsedBoldWithContent(selection, normalizedBold, parent);
-  }
-
-  /**
-   * Remove an empty bold element and place the caret before its position
-   * @param selection - Current selection
-   * @param boldElement - Bold element to remove
-   * @param parent - Parent node that hosts the bold element
-   */
-  private static removeEmptyBoldElement(selection: Selection, boldElement: HTMLElement, parent: ParentNode): Range {
-    const newRange = document.createRange();
-
-    newRange.setStartBefore(boldElement);
-    newRange.collapse(true);
-
-    parent.removeChild(boldElement);
-
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-
-    return newRange;
-  }
-
-  /**
-   * Exit a collapsed bold state when the bold element still contains text
-   * @param selection - Current selection
-   * @param boldElement - Bold element currently wrapping the caret
-   * @param parent - Parent node that hosts the bold element
-   */
-  private static exitCollapsedBoldWithContent(selection: Selection, boldElement: HTMLElement, parent: ParentNode): Range {
-    boldElement.setAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH, (boldElement.textContent?.length ?? 0).toString());
-    boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
-    boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE);
-    boldElement.removeAttribute(BoldInlineTool.DATA_ATTR_LEADING_WHITESPACE);
-
-    const initialNextSibling = boldElement.nextSibling;
-    const needsNewNode = !initialNextSibling || initialNextSibling.nodeType !== Node.TEXT_NODE;
-    const newNode = needsNewNode ? document.createTextNode('\u200B') : null;
-
-    if (newNode) {
-      parent.insertBefore(newNode, initialNextSibling);
-    }
-
-    const boundary = (newNode ?? initialNextSibling) as Text;
-
-    if (!needsNewNode && (boundary.textContent ?? '').length === 0) {
-      boundary.textContent = '\u200B';
-    }
-
-    const newRange = document.createRange();
-    const boundaryContent = boundary.textContent ?? '';
-    const caretOffset = boundaryContent.startsWith('\u200B') ? 1 : 0;
-
-    newRange.setStart(boundary, caretOffset);
-    newRange.collapse(true);
-
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-
-    const trackedBold = BoldInlineTool.ensureStrongElement(boldElement);
-
-    BoldInlineTool.collapsedExitRecords.add({
-      boundary,
-      boldElement: trackedBold,
-      allowedLength: trackedBold.textContent?.length ?? 0,
-      hasLeadingSpace: false,
-      hasTypedContent: false,
-      leadingWhitespace: '',
-    });
-
-    return newRange;
-  }
-
-  /**
    * Get a bold element at the boundary of a collapsed range
    * @param range - The collapsed range to check
    */
@@ -2018,7 +1535,7 @@ export class BoldInlineTool implements InlineTool {
     const length = textNode.textContent?.length ?? 0;
 
     if (range.startOffset === length) {
-      return BoldInlineTool.findBoldElement(textNode);
+      return findBoldElement(textNode);
     }
 
     if (range.startOffset !== 0) {
@@ -2027,7 +1544,7 @@ export class BoldInlineTool implements InlineTool {
 
     const previous = textNode.previousSibling;
 
-    return BoldInlineTool.isBoldElement(previous) ? previous as HTMLElement : null;
+    return isBoldElement(previous) ? previous as HTMLElement : null;
   }
 
   /**
@@ -2042,7 +1559,7 @@ export class BoldInlineTool implements InlineTool {
 
     const previous = element.childNodes[range.startOffset - 1];
 
-    return BoldInlineTool.isBoldElement(previous) ? previous as HTMLElement : null;
+    return isBoldElement(previous) ? previous as HTMLElement : null;
   }
 
   /**
@@ -2201,7 +1718,7 @@ export class BoldInlineTool implements InlineTool {
     );
 
     while (walker.nextNode()) {
-      const boldElement = BoldInlineTool.findBoldElement(walker.currentNode);
+      const boldElement = findBoldElement(walker.currentNode);
 
       if (boldElement) {
         ancestors.add(boldElement);

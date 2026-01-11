@@ -35,7 +35,7 @@ export class InputManager {
 
     const inputs = $.findAllInputs(this.holder);
 
-    if (this.inputIndex > inputs.length - 1) {
+    if (inputs.length > 0 && this.inputIndex > inputs.length - 1) {
       this.inputIndex = inputs.length - 1;
     }
 
@@ -139,13 +139,7 @@ export class InputManager {
         return undefined;
       }
 
-      const closestMatch = this.inputs.find((input) => input === closestEditable);
-
-      if (closestMatch !== undefined) {
-        return closestMatch;
-      }
-
-      return undefined;
+      return this.inputs.find((input) => input === closestEditable);
     };
 
     if ($.isNativeInput(activeElement)) {

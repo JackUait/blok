@@ -254,6 +254,9 @@ type BlokStub = {
   Tools: {
     blockTools: Map<string, { conversionConfig?: { export?: () => unknown; import?: () => unknown } }>;
   };
+  YjsManager: {
+    stopCapturing: ReturnType<typeof vi.fn>;
+  };
   API: Record<string, unknown>;
 };
 
@@ -287,6 +290,9 @@ const createBlokStub = (
     },
     Tools: {
       blockTools: new Map(),
+    },
+    YjsManager: {
+      stopCapturing: vi.fn() as ReturnType<typeof vi.fn>,
     },
     API: {},
   };

@@ -55,10 +55,10 @@ interface CaretHistoryEntry {
  */
 /**
  * Time in milliseconds to batch consecutive changes into a single undo entry.
- * Set to a small value (10ms) because smart grouping logic handles boundaries.
- * This serves as a fallback for rapid consecutive changes within a single keystroke.
+ * This should be long enough to cover normal human typing speed (50-200ms between keystrokes).
+ * Smart grouping logic calls stopCapturing() to force checkpoints at word boundaries.
  */
-const CAPTURE_TIMEOUT_MS = 10;
+const CAPTURE_TIMEOUT_MS = 500;
 
 export class YjsManager extends Module {
   /**
@@ -1044,7 +1044,6 @@ export class YjsManager extends Module {
    */
   public clearBoundary(): void {
     this.pendingBoundary = false;
-    this.boundaryTimestamp = 0;
 
     if (this.boundaryTimeoutId !== null) {
       clearTimeout(this.boundaryTimeoutId);

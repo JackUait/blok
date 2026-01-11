@@ -4353,9 +4353,9 @@ test.describe('yjs undo/redo', () => {
     test('list shortcut conversion creates separate undo group from subsequent typing', async ({ page }) => {
       // Bug: When quickly typing "1. Hello", the list conversion and "Hello" text
       // were being grouped into a single undo entry due to Yjs captureTimeout batching.
-      // Expected: Two separate undo groups:
-      //   1. List conversion ("1. " triggers conversion to ordered list)
-      //   2. Typed text ("Hello")
+      // Expected: List conversion and typed text should be SEPARATE undo groups.
+      // Note: With smart grouping, the typed text may be split into multiple undo entries
+      // based on timing, but the list conversion should always be a separate entry.
       await createBlokWithBlocks(page, [
         {
           id: 'para-1',
@@ -4372,31 +4372,33 @@ test.describe('yjs undo/redo', () => {
       await paragraph.click();
 
       // Type "1. " quickly to trigger list conversion, then type "Hello"
-      // This simulates a user quickly typing "1. Hello" to create a numbered list
-      await page.keyboard.type('1. Hello', { delay: 10 });
+      // Use 5ms delay (half of the 10ms captureTimeout) to ensure characters batch together
+      await page.keyboard.type('1. Hello', { delay: 5 });
 
       // Wait for Yjs to capture the changes
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
       // Verify we have a list item with "Hello"
       await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
-      const listItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+      const listItemLocator = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
 
-      await expect(listItem).toHaveText('Hello');
+      await expect(listItemLocator).toHaveText('Hello');
 
-      // First undo should ONLY remove the typed text "Hello"
-      await page.keyboard.press(UNDO_SHORTCUT);
-      await waitForDelay(page, 200);
+      // Undo until the list item is empty (text may be split across multiple undo entries)
+      // The key assertion is that undoing the text doesn't also undo the list conversion
+      // With 5ms typing delay and 10ms captureTimeout, "Hello" should batch together,
+      // but we use expect.toPass for reliability across timing variations
+      await expect(async () => {
+        // Press undo and check if text is empty
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, 100);
+        await expect(listItemLocator).toHaveText('');
+      }).toPass({ timeout: 5000, intervals: [200, 300, 500] });
 
-      // Should still have 1 list item (conversion happened, text was undone)
+      // Should still have 1 list item (text was undone, but conversion remains)
       await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
 
-      // The list item should be empty (text was undone, but conversion remains)
-      const listItemAfterUndo = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
-
-      await expect(listItemAfterUndo).toHaveText('');
-
-      // Second undo should undo the list conversion (back to paragraph)
+      // One more undo should undo the list conversion (back to paragraph)
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 200);
 

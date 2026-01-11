@@ -8,6 +8,7 @@ import { Flipper } from '../flipper';
 import type { Block } from '../block';
 import { areBlocksMergeable } from '../utils/blocks';
 import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../utils/caret';
+import { YjsManager } from './yjsManager';
 
 const KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP: Record<string, number> = {
   Backspace: keyCodes.BACKSPACE,
@@ -479,8 +480,11 @@ export class BlockEvents extends Module {
    * @param {InputEvent} event - input event
    */
   public input(event: InputEvent): void {
+    // Handle smart grouping for undo
+    this.handleSmartGrouping(event);
+
     /**
-     * Only handle insertText events (typing) that end with a space
+     * Only handle markdown shortcuts for insertText events that end with a space
      */
     if (event.inputType !== 'insertText' || event.data !== ' ') {
       return;
@@ -488,6 +492,37 @@ export class BlockEvents extends Module {
 
     this.handleListShortcut();
     this.handleHeaderShortcut();
+  }
+
+  /**
+   * Handle smart grouping logic for undo based on boundary characters.
+   * Boundary characters (space, punctuation) followed by a pause create undo checkpoints.
+   * @param event - input event
+   */
+  private handleSmartGrouping(event: InputEvent): void {
+    const { YjsManager: yjsManager } = this.Blok;
+
+    // Only handle text input
+    if (event.inputType !== 'insertText' || event.data === null) {
+      return;
+    }
+
+    const char = event.data;
+
+    // Check if previous boundary has timed out (user resumed typing after pause)
+    yjsManager.checkAndHandleBoundary();
+
+    if (YjsManager.isBoundaryCharacter(char)) {
+      // Mark boundary - will create checkpoint if followed by pause
+      yjsManager.markBoundary();
+
+      return;
+    }
+
+    if (yjsManager.hasPendingBoundary()) {
+      // Non-boundary character typed quickly after boundary - clear pending state
+      yjsManager.clearBoundary();
+    }
   }
 
   /**

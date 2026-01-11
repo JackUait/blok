@@ -95,6 +95,10 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     } as unknown as BlokModules['Tools'],
     YjsManager: {
       stopCapturing: vi.fn(),
+      markBoundary: vi.fn(),
+      clearBoundary: vi.fn(),
+      checkAndHandleBoundary: vi.fn(),
+      hasPendingBoundary: vi.fn().mockReturnValue(false),
     } as unknown as BlokModules['YjsManager'],
   };
 
@@ -1196,6 +1200,72 @@ describe('BlockEvents', () => {
       blockEvents.input(event);
 
       expect(handleListShortcutSpy).toHaveBeenCalledTimes(1);
+    });
+
+    describe('smart grouping', () => {
+      it('should call markBoundary when space is typed', () => {
+        const markBoundarySpy = vi.fn();
+        const blockEvents = createBlockEvents({
+          YjsManager: {
+            markBoundary: markBoundarySpy,
+            checkAndHandleBoundary: vi.fn(),
+            hasPendingBoundary: vi.fn().mockReturnValue(false),
+            clearBoundary: vi.fn(),
+          } as unknown as BlokModules['YjsManager'],
+        });
+
+        const event = {
+          inputType: 'insertText',
+          data: ' ',
+        } as InputEvent;
+
+        blockEvents.input(event);
+
+        expect(markBoundarySpy).toHaveBeenCalled();
+      });
+
+      it('should call checkAndHandleBoundary on non-boundary character', () => {
+        const checkAndHandleBoundarySpy = vi.fn();
+        const blockEvents = createBlockEvents({
+          YjsManager: {
+            markBoundary: vi.fn(),
+            checkAndHandleBoundary: checkAndHandleBoundarySpy,
+            hasPendingBoundary: vi.fn().mockReturnValue(false),
+            clearBoundary: vi.fn(),
+          } as unknown as BlokModules['YjsManager'],
+        });
+
+        const event = {
+          inputType: 'insertText',
+          data: 'a',
+        } as InputEvent;
+
+        blockEvents.input(event);
+
+        expect(checkAndHandleBoundarySpy).toHaveBeenCalled();
+      });
+
+      it('should call clearBoundary when non-boundary follows boundary quickly', () => {
+        const clearBoundarySpy = vi.fn();
+        const hasPendingBoundarySpy = vi.fn().mockReturnValue(true);
+        const blockEvents = createBlockEvents({
+          YjsManager: {
+            markBoundary: vi.fn(),
+            checkAndHandleBoundary: vi.fn(),
+            hasPendingBoundary: hasPendingBoundarySpy,
+            clearBoundary: clearBoundarySpy,
+          } as unknown as BlokModules['YjsManager'],
+        });
+
+        const event = {
+          inputType: 'insertText',
+          data: 'a',
+        } as InputEvent;
+
+        blockEvents.input(event);
+
+        expect(clearBoundarySpy).toHaveBeenCalled();
+      });
     });
   });
 

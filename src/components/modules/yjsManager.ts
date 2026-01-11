@@ -626,17 +626,25 @@ export class YjsManager extends Module {
    * @param value - New value
    */
   public updateBlockData(id: string, key: string, value: unknown): void {
-    this.markCaretBeforeChange();
-
     const yblock = this.getBlockById(id);
 
     if (yblock === undefined) {
       return;
     }
 
-    this.ydoc.transact(() => {
-      const ydata = yblock.get('data') as Y.Map<unknown>;
+    const ydata = yblock.get('data') as Y.Map<unknown>;
+    const currentValue = ydata.get(key);
 
+    // Skip if value hasn't changed - this prevents creating unnecessary undo entries
+    // when block data is synced after mutations that don't actually change data
+    // (e.g., marker updates in list items during undo/redo)
+    if (currentValue === value) {
+      return;
+    }
+
+    this.markCaretBeforeChange();
+
+    this.ydoc.transact(() => {
       ydata.set(key, value);
     }, 'local');
   }

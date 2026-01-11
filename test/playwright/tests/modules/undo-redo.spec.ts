@@ -3743,5 +3743,496 @@ test.describe('yjs undo/redo', () => {
 
       await expect(restoredInput).toHaveText('Hello World');
     });
+
+    test('redo after undoing list item deletion restores deleted items', async ({ page }) => {
+      // Create multiple list items
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { id: 'list-1', type: 'list', data: { text: 'First item', style: 'unordered' } },
+              { id: 'list-2', type: 'list', data: { text: 'Second item', style: 'unordered' } },
+              { id: 'list-3', type: 'list', data: { text: 'Third item', style: 'unordered' } },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      // Verify we have 3 list items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+
+      // Select all list items using Cmd/Ctrl+A twice (first selects text, second selects all blocks)
+      const firstItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+      await firstItem.click();
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.press('Meta+a');
+      await waitForDelay(page, 100);
+
+      // Delete them with Backspace
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, 200);
+
+      // Verify list items are deleted (should have a replacement paragraph)
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(0);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo the deletion
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify list items are restored
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+
+      // Now redo - this should delete the list items again
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify list items are deleted again
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(0);
+    });
+
+    test('redo works after deleting list items one by one with Backspace', async ({ page }) => {
+      // Create list items - user deletes them by pressing Backspace at the start of each line
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { id: 'list-1', type: 'list', data: { text: 'First', style: 'unordered' } },
+              { id: 'list-2', type: 'list', data: { text: 'Second', style: 'unordered' } },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      // Verify we have 2 list items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // Focus on second item and delete it by pressing Backspace at start
+      // This should convert second list item to paragraph
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+      await secondItem.click();
+      // Place caret at start
+      await page.keyboard.press('Home');
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, 200);
+
+      // After Backspace, we should have 1 list + 1 paragraph
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo - should restore to 2 list items
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(0);
+
+      // Redo - should convert back to 1 list + 1 paragraph
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+    });
+
+    test('redo works after undoing list item creation via Enter key', async ({ page }) => {
+      // User creates a list with one item, then presses Enter to add more items
+      // Then undoes which removes an item, and redo should restore it
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { id: 'list-1', type: 'list', data: { text: 'First item', style: 'unordered' } },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      // Verify we have 1 list item
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+
+      // Click on the first item and press Enter to create a second item
+      const firstItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+      await firstItem.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, 200);
+
+      // Verify we now have 2 list items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // Type in the new item
+      await page.keyboard.type('Second item');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Press Enter again to create a third item
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, 200);
+
+      // Verify we have 3 list items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+
+      // Type in the third item
+      await page.keyboard.type('Third item');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Now undo - should remove the third item (or its content)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Redo should restore what was undone
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify redo worked - we should still have 3 items with content
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+      const thirdItem = getListBlockByIndex(page, 2).locator('[contenteditable="true"]');
+      await expect(thirdItem).toHaveText('Third item');
+    });
+
+    test('redo works after undoing multiple list item creations', async ({ page }) => {
+      // Start with one list item, then create more via Enter
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { id: 'list-1', type: 'list', data: { text: 'Item 1', style: 'unordered' } },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      // Click on the item and create more items via Enter
+      const firstItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+      await firstItem.click();
+      await page.keyboard.press('End');
+
+      // Create item 2
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('Item 2');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Create item 3
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('Item 3');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify we have 3 list items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+
+      // Undo once - should affect item 3
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Undo again - should affect item 2 or item 3 creation
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Now redo - this is where the bug occurs
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Redo again
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should have 3 items restored
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+    });
+
+    test('redo works after undo removes list item created by Enter on non-empty item', async ({ page }) => {
+      // This tests the splitBlock operation undo/redo
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { id: 'list-1', type: 'list', data: { text: 'Hello World', style: 'unordered' } },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      // Verify we have 1 list item with "Hello World"
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+
+      // Click in the middle of "Hello World" and press Enter to split
+      const firstItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+      await firstItem.click();
+
+      // Position cursor after "Hello " (6 characters)
+      await page.keyboard.press('Home');
+      for (let i = 0; i < 6; i++) {
+        await page.keyboard.press('ArrowRight');
+      }
+
+      // Press Enter to split the list item
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify we now have 2 list items: "Hello " and "World"
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // Undo - should merge the items back
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should have 1 list item again
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+
+      // Redo - should split again
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should have 2 list items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+    });
+
+  });
+
+  test.describe('ordered list marker renumbering', () => {
+    test('redo works after undoing ordered list item deletion', async ({ page }) => {
+      // This test verifies the fix for: when deleting ordered list items via undo,
+      // the marker renumbering (e.g., "3." -> "2.") was triggering block data sync
+      // which created new Yjs undo entries and cleared the redo stack.
+      //
+      // Test scenario: Start with 3 ordered items, delete the third by selecting
+      // all its text and pressing Backspace, then undo/redo should work.
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { id: 'list-1', type: 'list', data: { text: 'First', style: 'ordered' } },
+              { id: 'list-2', type: 'list', data: { text: 'Second', style: 'ordered' } },
+              { id: 'list-3', type: 'list', data: { text: 'Third', style: 'ordered' } },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      // Verify we have 3 ordered list items with correct markers
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+      const marker1 = getListBlockByIndex(page, 0).locator('[data-list-marker]');
+      const marker2 = getListBlockByIndex(page, 1).locator('[data-list-marker]');
+      const marker3 = getListBlockByIndex(page, 2).locator('[data-list-marker]');
+      await expect(marker1).toHaveText('1.');
+      await expect(marker2).toHaveText('2.');
+      await expect(marker3).toHaveText('3.');
+
+      // Delete the third item via Backspace at start position
+      const thirdItem = getListBlockByIndex(page, 2).locator('[contenteditable="true"]');
+      await thirdItem.click();
+      await page.keyboard.press('Home');
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should have 2 items now (third converted to paragraph)
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // Undo - this should restore the third item
+      // The marker renumbering after restoration should NOT clear redo stack
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 300);
+
+      // Should have 3 items again
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+
+      // NOW the key test: redo should work
+      // Before the fix, the marker update from undo would clear the redo stack
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 300);
+
+      // Should be back to 2 items (the deletion is redone)
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+    });
+
+    test('redo works after undoing ordered list item removal via backspace', async ({ page }) => {
+      // This test checks undo/redo after removing an item via Backspace at start
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { id: 'list-1', type: 'list', data: { text: 'Item 1', style: 'ordered' } },
+              { id: 'list-2', type: 'list', data: { text: 'Item 2', style: 'ordered' } },
+              { id: 'list-3', type: 'list', data: { text: 'Item 3', style: 'ordered' } },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      // Verify initial state: 3 items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+
+      // Delete the second item via backspace at start (converts to paragraph)
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+      await secondItem.click();
+      await page.keyboard.press('Home');
+      await page.keyboard.press('Backspace');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should have 2 list items now (one converted to paragraph)
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // Undo - this should restore the second item
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should have 3 list items again
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+
+      // Redo should work - the marker renumbering after undo should NOT have cleared redo stack
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should have 2 list items again
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+    });
+
+    test('multiple undos on ordered list preserve redo stack correctly', async ({ page }) => {
+      // Test that multiple sequential undos that each trigger marker updates
+      // still preserve the full redo stack
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { id: 'list-1', type: 'list', data: { text: 'One', style: 'ordered' } },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      // Create 4 more items
+      const firstItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+      await firstItem.click();
+      await page.keyboard.press('End');
+
+      for (let i = 2; i <= 5; i++) {
+        await page.keyboard.press('Enter');
+        await page.keyboard.type(`Item ${i}`);
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      }
+
+      // Verify we have 5 items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(5);
+
+      // Verify markers
+      for (let i = 0; i < 5; i++) {
+        const marker = getListBlockByIndex(page, i).locator('[data-list-marker]');
+        await expect(marker).toHaveText(`${i + 1}.`);
+      }
+
+      // Undo 3 times - each undo removes an item and triggers marker renumbering
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should have fewer items now
+      const countAfterUndo = await page.locator(LIST_SELECTOR).count();
+      expect(countAfterUndo).toBeLessThan(5);
+
+      // Now redo 3 times - all should work
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should have 5 items restored
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(5);
+    });
+
+    test('redo works with checklist after undo', async ({ page }) => {
+      // Checklists also sync 'checked' state which could trigger the same bug
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { id: 'list-1', type: 'list', data: { text: 'Task 1', style: 'checklist', checked: false } },
+              { id: 'list-2', type: 'list', data: { text: 'Task 2', style: 'checklist', checked: true } },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      // Verify we have 2 checklist items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // Add a third task
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+      await secondItem.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('Task 3');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify 3 items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+
+      // Undo twice
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should be back to 2 items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // Redo should work
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should have 3 items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+    });
   });
 });

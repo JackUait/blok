@@ -898,8 +898,11 @@ export class ListItem implements BlockTool {
     }
 
     // Create marker element (will be updated in rendered() with correct index)
+    // Mark as mutation-free to prevent marker text updates from triggering Yjs changes,
+    // which would corrupt undo/redo stack during block removal renumbering
     const marker = this.createListMarker();
     marker.setAttribute('data-list-marker', 'true');
+    marker.setAttribute('data-blok-mutation-free', 'true');
     item.appendChild(marker);
 
     // Create content container
@@ -1302,7 +1305,6 @@ export class ListItem implements BlockTool {
   }
 
   private async exitListOrOutdent(): Promise<void> {
-    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     const currentDepth = this.getDepth();
 
     // If nested, outdent instead of exiting
@@ -1311,9 +1313,11 @@ export class ListItem implements BlockTool {
       return;
     }
 
-    // At root level, convert to paragraph
-    await this.api.blocks.delete(currentBlockIndex);
-    const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex, true);
+    // At root level, convert to paragraph using convert API for proper undo/redo support
+    if (this.blockId === undefined) {
+      return;
+    }
+    const newBlock = await this.api.blocks.convert(this.blockId, 'paragraph', { text: '' });
     this.setCaretToBlockContent(newBlock, 'start');
   }
 
@@ -1329,7 +1333,6 @@ export class ListItem implements BlockTool {
     // This is critical for preserving data when whole content is selected
     this.syncContentFromDOM();
 
-    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     const currentContent = this._data.text;
     const currentDepth = this.getDepth();
 
@@ -1360,15 +1363,13 @@ export class ListItem implements BlockTool {
 
     event.preventDefault();
 
-    // Convert to paragraph (preserving indentation for nested items)
-    await this.api.blocks.delete(currentBlockIndex);
-    const newBlock = this.api.blocks.insert(
-      'paragraph',
-      { text: currentContent },
-      undefined,
-      currentBlockIndex,
-      true
-    );
+    // Guard against missing blockId
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    // Convert to paragraph using convert API for proper undo/redo support
+    const newBlock = await this.api.blocks.convert(this.blockId, 'paragraph', { text: currentContent });
 
     // Apply indentation to the new paragraph if the list item was nested
     if (currentDepth > 0) {

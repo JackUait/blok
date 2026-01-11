@@ -40,6 +40,7 @@ Stop and reconsider if you think:
 
 ## Preserve
 
+- **Tests** - Never remove tests. Tests verify the task works correctly.
 - Correctness (code must still work)
 - Clarity (code should remain readable)
 - Maintainability (reasonable structure, not spaghetti)

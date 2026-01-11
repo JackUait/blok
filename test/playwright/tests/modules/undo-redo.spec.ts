@@ -4349,5 +4349,60 @@ test.describe('yjs undo/redo', () => {
       // Should be back to 1 list item
       await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
     });
+
+    test('list shortcut conversion creates separate undo group from subsequent typing', async ({ page }) => {
+      // Bug: When quickly typing "1. Hello", the list conversion and "Hello" text
+      // were being grouped into a single undo entry due to Yjs captureTimeout batching.
+      // Expected: Two separate undo groups:
+      //   1. List conversion ("1. " triggers conversion to ordered list)
+      //   2. Typed text ("Hello")
+      await createBlokWithBlocks(page, [
+        {
+          id: 'para-1',
+          type: 'paragraph',
+          data: {
+            text: '',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      // Click to focus the paragraph
+      await paragraph.click();
+
+      // Type "1. " quickly to trigger list conversion, then type "Hello"
+      // This simulates a user quickly typing "1. Hello" to create a numbered list
+      await page.keyboard.type('1. Hello', { delay: 10 });
+
+      // Wait for Yjs to capture the changes
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify we have a list item with "Hello"
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+      const listItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+
+      await expect(listItem).toHaveText('Hello');
+
+      // First undo should ONLY remove the typed text "Hello"
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should still have 1 list item (conversion happened, text was undone)
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+
+      // The list item should be empty (text was undone, but conversion remains)
+      const listItemAfterUndo = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+
+      await expect(listItemAfterUndo).toHaveText('');
+
+      // Second undo should undo the list conversion (back to paragraph)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should be back to a paragraph (no list items)
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+    });
   });
 });

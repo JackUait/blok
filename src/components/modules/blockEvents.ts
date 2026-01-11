@@ -544,6 +544,9 @@ export class BlockEvents extends Module {
     const checklistMatch = BlockEvents.CHECKLIST_PATTERN.exec(textContent);
 
     if (checklistMatch) {
+      // Force new undo group so list conversion is separate from previous typing
+      this.Blok.YjsManager.stopCapturing();
+
       /**
        * Determine if the checkbox should be checked
        * [x] or [X] means checked, [] or [ ] means unchecked
@@ -567,6 +570,9 @@ export class BlockEvents extends Module {
 
       this.setCaretAfterConversion(newBlock, caretOffset);
 
+      // Force new undo group so subsequent typing is separate from list conversion
+      this.Blok.YjsManager.stopCapturing();
+
       return;
     }
 
@@ -576,6 +582,9 @@ export class BlockEvents extends Module {
     const unorderedMatch = BlockEvents.UNORDERED_LIST_PATTERN.exec(textContent);
 
     if (unorderedMatch) {
+      // Force new undo group so list conversion is separate from previous typing
+      this.Blok.YjsManager.stopCapturing();
+
       /**
        * Extract remaining content (group 1) and calculate shortcut length
        * Shortcut length: "-" or "*" + " " = 2 chars
@@ -593,6 +602,9 @@ export class BlockEvents extends Module {
 
       this.setCaretAfterConversion(newBlock, caretOffset);
 
+      // Force new undo group so subsequent typing is separate from list conversion
+      this.Blok.YjsManager.stopCapturing();
+
       return;
     }
 
@@ -604,6 +616,9 @@ export class BlockEvents extends Module {
     if (!orderedMatch) {
       return;
     }
+
+    // Force new undo group so list conversion is separate from previous typing
+    this.Blok.YjsManager.stopCapturing();
 
     /**
      * Extract the starting number from the pattern
@@ -640,6 +655,9 @@ export class BlockEvents extends Module {
     const newBlock = BlockManager.replace(currentBlock, 'list', listData);
 
     this.setCaretAfterConversion(newBlock, caretOffset);
+
+    // Force new undo group so subsequent typing is separate from list conversion
+    this.Blok.YjsManager.stopCapturing();
   }
 
   /**
@@ -675,6 +693,9 @@ export class BlockEvents extends Module {
       return;
     }
 
+    // Force new undo group so header conversion is separate from previous typing
+    this.Blok.YjsManager.stopCapturing();
+
     const remainingHtml = this.extractRemainingHtml(currentInput, match.shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - match.shortcutLength;
 
@@ -684,6 +705,9 @@ export class BlockEvents extends Module {
     });
 
     this.setCaretAfterConversion(newBlock, caretOffset);
+
+    // Force new undo group so subsequent typing is separate from header conversion
+    this.Blok.YjsManager.stopCapturing();
   }
 
   private matchDefaultHeaderShortcut(text: string): { level: number; shortcutLength: number } | null {

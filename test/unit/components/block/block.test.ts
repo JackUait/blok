@@ -465,4 +465,166 @@ describe('Block', () => {
       removeFakeCursorSpy.mockRestore();
     });
   });
+
+  describe('InputManager integration', () => {
+    it('delegates input navigation to InputManager', () => {
+      const { block, renderElement } = createBlock();
+
+      // The render element is contenteditable, so it's an input
+      expect(block.firstInput).toBe(renderElement);
+      expect(block.lastInput).toBe(renderElement);
+      expect(block.currentInput).toBe(renderElement);
+    });
+
+    it('exposes input navigation through Block interface', () => {
+      const { block } = createBlock();
+      const content = block.pluginsContent;
+      const parent = content.parentElement;
+
+      if (parent === null) {
+        throw new Error('Expected parent element');
+      }
+
+      const secondInput = document.createElement('div');
+
+      secondInput.setAttribute('contenteditable', 'true');
+      parent.appendChild(secondInput);
+
+      // Drop cache to pick up new input
+      block.dispatchChange();
+
+      expect(block.inputs).toHaveLength(2);
+      expect(block.firstInput).toBe(content);
+      expect(block.lastInput).toBe(secondInput);
+      expect(block.nextInput).toBe(secondInput);
+      expect(block.previousInput).toBeUndefined();
+
+      block.currentInput = secondInput;
+
+      expect(block.previousInput).toBe(content);
+      expect(block.nextInput).toBeUndefined();
+    });
+
+    it('updateCurrentInput delegates to InputManager', () => {
+      const { block, renderElement } = createBlock();
+
+      // Focus the element to make it active
+      renderElement.focus();
+
+      // Should not throw
+      expect(() => block.updateCurrentInput()).not.toThrow();
+    });
+
+    it('cleans up InputManager on destroy', () => {
+      const { block, renderElement } = createBlock();
+      const removeEventListenerSpy = vi.spyOn(renderElement, 'removeEventListener');
+
+      block.destroy();
+
+      // InputManager should have removed its event listeners
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('focus', expect.any(Function));
+    });
+  });
+
+  describe('MutationHandler integration', () => {
+    it('emits didMutated event on dispatchChange', () => {
+      const { block } = createBlock();
+      const mutationHandler = vi.fn();
+
+      block.on('didMutated', mutationHandler);
+      block.dispatchChange();
+
+      expect(mutationHandler).toHaveBeenCalledWith(block);
+    });
+
+    it('unwatchBlockMutations stops mutation observation', () => {
+      const eventBus = new EventsDispatcher<BlokEventMap>();
+      const offSpy = vi.spyOn(eventBus, 'off');
+      const { block } = createBlock({ eventBus });
+
+      block.unwatchBlockMutations();
+
+      // MutationHandler.unwatch() should have been called, which calls eventBus.off
+      expect(offSpy).toHaveBeenCalled();
+    });
+
+    it('cleans up MutationHandler on destroy', () => {
+      const eventBus = new EventsDispatcher<BlokEventMap>();
+      const offSpy = vi.spyOn(eventBus, 'off');
+      const { block } = createBlock({ eventBus });
+
+      block.destroy();
+
+      // MutationHandler should have cleaned up
+      expect(offSpy).toHaveBeenCalled();
+    });
+
+    it('refreshToolRootElement updates internal reference', () => {
+      const { block, renderElement } = createBlock();
+
+      // Initially pluginsContent should be the render element
+      expect(block.pluginsContent).toBe(renderElement);
+
+      // Simulate tool replacing its content by modifying the content node
+      const contentNode = block.holder.querySelector('[data-blok-element-content]');
+
+      if (contentNode === null) {
+        throw new Error('Expected content node');
+      }
+
+      const newElement = document.createElement('div');
+
+      newElement.textContent = 'new content';
+      contentNode.innerHTML = '';
+      contentNode.appendChild(newElement);
+
+      // Refresh should pick up the new element
+      block.refreshToolRootElement();
+
+      expect(block.pluginsContent).toBe(newElement);
+    });
+  });
+
+  describe('destroy', () => {
+    it('cleans up all components including InputManager and MutationHandler', () => {
+      const eventBus = new EventsDispatcher<BlokEventMap>();
+      const { block, renderElement, toolInstance } = createBlock({
+        eventBus,
+        toolOverrides: {
+          destroy: vi.fn(),
+        },
+      });
+
+      const removeEventListenerSpy = vi.spyOn(renderElement, 'removeEventListener');
+      const eventBusOffSpy = vi.spyOn(eventBus, 'off');
+
+      block.destroy();
+
+      // InputManager cleanup
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('focus', expect.any(Function));
+
+      // MutationHandler cleanup
+      expect(eventBusOffSpy).toHaveBeenCalled();
+
+      // Tool cleanup
+      expect(toolInstance.destroy).toHaveBeenCalled();
+    });
+
+    it('cleans up draggable if set up', () => {
+      const { block } = createBlock();
+      const dragHandle = document.createElement('div');
+
+      // Mock DragManager
+      const mockCleanup = vi.fn();
+      const mockDragManager = {
+        setupDragHandle: vi.fn(() => mockCleanup),
+      };
+
+      block.setupDraggable(dragHandle, mockDragManager as unknown as Parameters<typeof block.setupDraggable>[1]);
+
+      block.destroy();
+
+      expect(mockCleanup).toHaveBeenCalled();
+    });
+  });
 });

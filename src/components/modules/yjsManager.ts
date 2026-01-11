@@ -55,9 +55,10 @@ interface CaretHistoryEntry {
  */
 /**
  * Time in milliseconds to batch consecutive changes into a single undo entry.
- * Changes occurring within this window are merged together.
+ * Set to a small value (10ms) because smart grouping logic handles boundaries.
+ * This serves as a fallback for rapid consecutive changes within a single keystroke.
  */
-const CAPTURE_TIMEOUT_MS = 300;
+const CAPTURE_TIMEOUT_MS = 10;
 
 export class YjsManager extends Module {
   /**

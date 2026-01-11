@@ -3733,7 +3733,7 @@ test.describe('yjs undo/redo', () => {
       // Wait for Yjs to capture
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Undo should merge them back
+      // Undo should merge the items back together
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 200);
 
@@ -4290,6 +4290,64 @@ test.describe('yjs undo/redo', () => {
 
       // Should have 3 items
       await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
+    });
+
+    test('typing IMMEDIATELY after Enter in list item still creates separate undo checkpoints', async ({ page }) => {
+      // Edge case: typing with NO delay after Enter should still create separate checkpoints.
+      // This tests that the stopCapturing logic works even when actions happen as fast as possible.
+      await createBlokWithBlocks(page, [
+        {
+          id: 'list-1',
+          type: 'list',
+          data: {
+            text: 'First item',
+            style: 'unordered',
+          },
+        },
+      ]);
+
+      const firstItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+
+      // Click to focus the list item and go to the end
+      await firstItem.click();
+      await page.keyboard.press('End');
+
+      // Wait for Yjs to capture any initial state
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Press Enter to create a new list item, then IMMEDIATELY type without any delay
+      // This simulates a fast typist or programmatic input
+      await page.keyboard.press('Enter');
+      // NO DELAY HERE - this is the key difference from the previous test
+      await page.keyboard.type('Immediate text');
+
+      // Wait for Yjs to capture the typing
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify we have 2 list items with correct content
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await expect(secondItem).toHaveText('Immediate text');
+
+      // First undo should ONLY remove the typed text
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should still have 2 list items (Enter created the item)
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // The second item should be empty (text was undone, but item remains)
+      const secondItemAfterUndo = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+
+      await expect(secondItemAfterUndo).toHaveText('');
+
+      // Second undo should remove the new list item
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Should be back to 1 list item
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
     });
   });
 });

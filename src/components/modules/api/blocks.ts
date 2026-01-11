@@ -390,6 +390,9 @@ export class BlocksAPI extends Module {
     newBlockData: BlockToolData,
     insertIndex: number
   ): BlockAPIInterface => {
+    // Force new undo group so block split is separate from previous typing.
+    this.Blok.YjsManager.stopCapturing();
+
     const newBlock = this.Blok.BlockManager.splitBlockWithData(
       currentBlockId,
       currentBlockData,
@@ -397,6 +400,13 @@ export class BlocksAPI extends Module {
       newBlockData,
       insertIndex
     );
+
+    // Use requestAnimationFrame to delay stopCapturing until after MutationObserver callbacks
+    // have been processed. This ensures any DOM sync operations from the split complete first,
+    // keeping them in the same undo entry as the split itself.
+    requestAnimationFrame(() => {
+      this.Blok.YjsManager.stopCapturing();
+    });
 
     return new BlockAPI(newBlock);
   };

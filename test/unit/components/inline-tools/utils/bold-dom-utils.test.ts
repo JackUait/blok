@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { isBoldTag, isBoldElement } from '../../../../../src/components/inline-tools/utils/bold-dom-utils';
+import { isBoldTag, isBoldElement, isElementEmpty } from '../../../../../src/components/inline-tools/utils/bold-dom-utils';
 
 describe('bold-dom-utils', () => {
   beforeEach(() => {
@@ -59,6 +59,40 @@ describe('bold-dom-utils', () => {
       const span = document.createElement('span');
 
       expect(isBoldElement(span)).toBe(false);
+    });
+  });
+
+  describe('isElementEmpty', () => {
+    it('returns true for element with no text content', () => {
+      const div = document.createElement('div');
+
+      expect(isElementEmpty(div)).toBe(true);
+    });
+
+    it('returns true for element with empty text content', () => {
+      const div = document.createElement('div');
+
+      div.textContent = '';
+
+      expect(isElementEmpty(div)).toBe(true);
+    });
+
+    it('returns false for element with text content', () => {
+      const div = document.createElement('div');
+
+      div.textContent = 'hello';
+
+      expect(isElementEmpty(div)).toBe(false);
+    });
+
+    it('returns false for element with nested text content', () => {
+      const div = document.createElement('div');
+      const span = document.createElement('span');
+
+      span.textContent = 'nested';
+      div.appendChild(span);
+
+      expect(isElementEmpty(div)).toBe(false);
     });
   });
 });

@@ -15,3 +15,11 @@ export function isBoldTag(node: Element): boolean {
 export function isBoldElement(node: Node | null): node is Element {
   return Boolean(node && node.nodeType === Node.ELEMENT_NODE && isBoldTag(node as Element));
 }
+
+/**
+ * Check if an element has no text content
+ * @param element - The element to check
+ */
+export function isElementEmpty(element: HTMLElement): boolean {
+  return (element.textContent ?? '').length === 0;
+}

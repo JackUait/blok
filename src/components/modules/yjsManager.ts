@@ -1013,6 +1013,20 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Clear the pending boundary state without creating a checkpoint.
+   * Called when the user continues typing before the timeout.
+   */
+  public clearBoundary(): void {
+    this.pendingBoundary = false;
+    this.boundaryTimestamp = 0;
+
+    if (this.boundaryTimeoutId !== null) {
+      clearTimeout(this.boundaryTimeoutId);
+      this.boundaryTimeoutId = null;
+    }
+  }
+
+  /**
    * Start collecting move operations into a single undo group.
    * All moveBlock calls after this will be collected until endMoveGroup() is called.
    * Also captures caret position before the group starts.

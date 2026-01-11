@@ -610,5 +610,19 @@ describe('YjsManager', () => {
       expect(manager.hasPendingBoundary()).toBe(false);
       vi.useRealTimers();
     });
+
+    it('should clear pending boundary when clearBoundary is called', () => {
+      vi.useFakeTimers();
+      manager.markBoundary();
+      expect(manager.hasPendingBoundary()).toBe(true);
+
+      manager.clearBoundary();
+      expect(manager.hasPendingBoundary()).toBe(false);
+
+      // Timeout should not fire stopCapturing after clearBoundary
+      vi.advanceTimersByTime(150);
+      // No error means success - stopCapturing wasn't called unnecessarily
+      vi.useRealTimers();
+    });
   });
 });

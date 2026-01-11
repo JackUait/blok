@@ -61,6 +61,29 @@ const CAPTURE_TIMEOUT_MS = 300;
 
 export class YjsManager extends Module {
   /**
+   * Characters that mark potential undo checkpoint positions.
+   */
+  private static readonly BOUNDARY_CHARACTERS = new Set([
+    ' ',   // space
+    '\t',  // tab
+    '.',   // period
+    '?',   // question mark
+    '!',   // exclamation
+    ',',   // comma
+    ';',   // semicolon
+    ':',   // colon
+  ]);
+
+  /**
+   * Check if a character is a boundary character that can trigger an undo checkpoint.
+   * @param char - Single character to check
+   * @returns true if the character is a boundary character
+   */
+  public static isBoundaryCharacter(char: string): boolean {
+    return YjsManager.BOUNDARY_CHARACTERS.has(char);
+  }
+
+  /**
    * Yjs document instance
    */
   private ydoc: Y.Doc = new Y.Doc();

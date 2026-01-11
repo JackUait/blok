@@ -3,6 +3,7 @@ import {
   createRangeTextWalker,
   findFormattingAncestor,
   hasFormattingAncestor,
+  isRangeFormatted,
 } from '../../../../../src/components/inline-tools/utils/formatting-range-utils';
 
 describe('formatting-range-utils', () => {
@@ -130,6 +131,82 @@ describe('formatting-range-utils', () => {
       const isItalic = (el: Element) => el.tagName === 'EM';
 
       expect(hasFormattingAncestor(null, isItalic)).toBe(false);
+    });
+  });
+
+  describe('isRangeFormatted', () => {
+    const isBold = (el: Element) => el.tagName === 'STRONG' || el.tagName === 'B';
+
+    it('returns true when all text in range is formatted', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<strong>all bold</strong>';
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+      range.selectNodeContents(container.querySelector('strong')!);
+
+      expect(isRangeFormatted(range, isBold)).toBe(true);
+    });
+
+    it('returns false when some text is not formatted', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<strong>bold</strong> and plain';
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+      range.selectNodeContents(container);
+
+      expect(isRangeFormatted(range, isBold)).toBe(false);
+    });
+
+    it('returns true for collapsed range inside formatted element', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<strong>bold</strong>';
+      document.body.appendChild(container);
+
+      const textNode = container.querySelector('strong')!.firstChild as Text;
+      const range = document.createRange();
+      range.setStart(textNode, 2);
+      range.collapse(true);
+
+      expect(isRangeFormatted(range, isBold)).toBe(true);
+    });
+
+    it('returns false for collapsed range outside formatted element', () => {
+      const container = document.createElement('div');
+      container.innerHTML = 'plain <strong>bold</strong>';
+      document.body.appendChild(container);
+
+      const textNode = container.firstChild as Text;
+      const range = document.createRange();
+      range.setStart(textNode, 2);
+      range.collapse(true);
+
+      expect(isRangeFormatted(range, isBold)).toBe(false);
+    });
+
+    it('ignores whitespace-only nodes when option is set', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<strong>bold</strong>   <strong>more bold</strong>';
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+      range.selectNodeContents(container);
+
+      expect(isRangeFormatted(range, isBold, { ignoreWhitespace: true })).toBe(true);
+      expect(isRangeFormatted(range, isBold, { ignoreWhitespace: false })).toBe(false);
+    });
+
+    it('returns true for empty range when start container is formatted', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<strong></strong>';
+      document.body.appendChild(container);
+
+      const strong = container.querySelector('strong')!;
+      const range = document.createRange();
+      range.selectNodeContents(strong);
+
+      expect(isRangeFormatted(range, isBold)).toBe(true);
     });
   });
 });

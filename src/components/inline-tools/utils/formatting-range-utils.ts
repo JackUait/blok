@@ -71,3 +71,51 @@ export const hasFormattingAncestor = (
 ): boolean => {
   return findFormattingAncestor(node, predicate) !== null;
 };
+
+/**
+ * Options for checking if a range is formatted
+ */
+export interface IsRangeFormattedOptions {
+  /** Whether to ignore whitespace-only text nodes */
+  ignoreWhitespace?: boolean;
+}
+
+/**
+ * Check if all text nodes in a range have a matching formatting ancestor
+ * @param range - The range to check
+ * @param predicate - Function to test elements for formatting
+ * @param options - Options for the check
+ */
+export const isRangeFormatted = (
+  range: Range,
+  predicate: (element: Element) => boolean,
+  options: IsRangeFormattedOptions = {}
+): boolean => {
+  if (range.collapsed) {
+    return findFormattingAncestor(range.startContainer, predicate) !== null;
+  }
+
+  const walker = createRangeTextWalker(range);
+  const textNodes: Text[] = [];
+
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode as Text;
+    const value = textNode.textContent ?? '';
+
+    if (options.ignoreWhitespace && value.trim().length === 0) {
+      continue;
+    }
+
+    if (value.length === 0) {
+      continue;
+    }
+
+    textNodes.push(textNode);
+  }
+
+  if (textNodes.length === 0) {
+    return findFormattingAncestor(range.startContainer, predicate) !== null;
+  }
+
+  return textNodes.every((textNode) => hasFormattingAncestor(textNode, predicate));
+};

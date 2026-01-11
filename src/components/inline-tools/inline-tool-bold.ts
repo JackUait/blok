@@ -7,11 +7,14 @@ import {
   isBoldTag,
   isBoldElement,
   isElementEmpty,
-  hasBoldParent,
   findBoldElement,
   ensureStrongElement,
   isNodeWithin,
 } from './utils/bold-dom-utils';
+import {
+  isRangeFormatted,
+  collectFormattingAncestors,
+} from './utils/formatting-range-utils';
 
 /**
  * Bold Tool
@@ -457,57 +460,7 @@ export class BoldInlineTool implements InlineTool {
    * @param options.ignoreWhitespace - Whether to ignore whitespace-only text nodes
    */
   private isRangeBold(range: Range, options: { ignoreWhitespace: boolean }): boolean {
-    if (range.collapsed) {
-      return Boolean(findBoldElement(range.startContainer));
-    }
-
-    const walker = document.createTreeWalker(
-      range.commonAncestorContainer,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          try {
-            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (_error) {
-            /**
-             * Safari might throw if node is detached from DOM.
-             * In that case, fall back to manual comparison by wrapping node into a range.
-             */
-            const nodeRange = document.createRange();
-
-            nodeRange.selectNodeContents(node);
-
-            const startsBeforeEnd = range.compareBoundaryPoints(Range.END_TO_START, nodeRange) > 0;
-            const endsAfterStart = range.compareBoundaryPoints(Range.START_TO_END, nodeRange) < 0;
-
-            return (startsBeforeEnd && endsAfterStart) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          }
-        },
-      }
-    );
-
-    const textNodes: Text[] = [];
-
-    while (walker.nextNode()) {
-      const textNode = walker.currentNode as Text;
-      const value = textNode.textContent ?? '';
-
-      if (options.ignoreWhitespace && value.trim().length === 0) {
-        continue;
-      }
-
-      if (value.length === 0) {
-        continue;
-      }
-
-      textNodes.push(textNode);
-    }
-
-    if (textNodes.length === 0) {
-      return Boolean(findBoldElement(range.startContainer));
-    }
-
-    return textNodes.every((textNode) => hasBoldParent(textNode));
+    return isRangeFormatted(range, isBoldTag, options);
   }
 
   /**
@@ -1695,36 +1648,6 @@ export class BoldInlineTool implements InlineTool {
    * @param range - The range to search for bold ancestors
    */
   private collectBoldAncestors(range: Range): HTMLElement[] {
-    const ancestors = new Set<HTMLElement>();
-    const walker = document.createTreeWalker(
-      range.commonAncestorContainer,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          try {
-            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (_error) {
-            const nodeRange = document.createRange();
-
-            nodeRange.selectNodeContents(node);
-
-            const startsBeforeEnd = range.compareBoundaryPoints(Range.END_TO_START, nodeRange) > 0;
-            const endsAfterStart = range.compareBoundaryPoints(Range.START_TO_END, nodeRange) < 0;
-
-            return (startsBeforeEnd && endsAfterStart) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          }
-        },
-      }
-    );
-
-    while (walker.nextNode()) {
-      const boldElement = findBoldElement(walker.currentNode);
-
-      if (boldElement) {
-        ancestors.add(boldElement);
-      }
-    }
-
-    return Array.from(ancestors);
+    return collectFormattingAncestors(range, isBoldTag);
   }
 }

@@ -5,6 +5,9 @@ import {
   isElementEmpty,
   hasBoldParent,
   findBoldElement,
+  ensureTextNodeAfter,
+  setCaret,
+  setCaretAfterNode,
 } from '../../../../../src/components/inline-tools/utils/bold-dom-utils';
 
 describe('bold-dom-utils', () => {
@@ -179,6 +182,102 @@ describe('bold-dom-utils', () => {
       const result = findBoldElement(text);
 
       expect(result?.tagName).toBe('STRONG');
+    });
+  });
+
+  describe('ensureTextNodeAfter', () => {
+    it('returns existing text node if present', () => {
+      const strong = document.createElement('strong');
+      const text = document.createTextNode('after');
+
+      document.body.appendChild(strong);
+      document.body.appendChild(text);
+
+      expect(ensureTextNodeAfter(strong)).toBe(text);
+    });
+
+    it('creates new text node if none exists', () => {
+      const strong = document.createElement('strong');
+
+      document.body.appendChild(strong);
+
+      const result = ensureTextNodeAfter(strong);
+
+      expect(result).toBeInstanceOf(Text);
+      expect(result?.textContent).toBe('');
+      expect(strong.nextSibling).toBe(result);
+    });
+
+    it('creates text node between bold and element sibling', () => {
+      const strong = document.createElement('strong');
+      const span = document.createElement('span');
+
+      document.body.appendChild(strong);
+      document.body.appendChild(span);
+
+      const result = ensureTextNodeAfter(strong);
+
+      expect(result).toBeInstanceOf(Text);
+      expect(strong.nextSibling).toBe(result);
+      expect(result?.nextSibling).toBe(span);
+    });
+
+    it('returns null if element has no parent', () => {
+      const strong = document.createElement('strong');
+
+      expect(ensureTextNodeAfter(strong)).toBeNull();
+    });
+  });
+
+  describe('setCaret', () => {
+    it('places caret at specified offset in text node', () => {
+      const div = document.createElement('div');
+      const text = document.createTextNode('hello');
+
+      div.appendChild(text);
+      div.contentEditable = 'true';
+      document.body.appendChild(div);
+      div.focus();
+
+      const selection = window.getSelection()!;
+
+      setCaret(selection, text, 2);
+
+      expect(selection.anchorNode).toBe(text);
+      expect(selection.anchorOffset).toBe(2);
+      expect(selection.isCollapsed).toBe(true);
+    });
+  });
+
+  describe('setCaretAfterNode', () => {
+    it('places caret after the specified node', () => {
+      const div = document.createElement('div');
+      const strong = document.createElement('strong');
+      const text = document.createTextNode('after');
+
+      strong.textContent = 'bold';
+      div.appendChild(strong);
+      div.appendChild(text);
+      div.contentEditable = 'true';
+      document.body.appendChild(div);
+      div.focus();
+
+      const selection = window.getSelection()!;
+
+      setCaretAfterNode(selection, strong);
+
+      expect(selection.anchorNode).toBe(div);
+      expect(selection.anchorOffset).toBe(1);
+      expect(selection.isCollapsed).toBe(true);
+    });
+
+    it('does nothing for null node', () => {
+      const selection = window.getSelection()!;
+      const initialRangeCount = selection.rangeCount;
+
+      setCaretAfterNode(selection, null);
+
+      expect(selection.rangeCount).toBe(initialRangeCount);
     });
   });
 });

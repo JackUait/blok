@@ -81,3 +81,69 @@ export function ensureStrongElement(element: HTMLElement): HTMLElement {
 
   return strong;
 }
+
+/**
+ * Ensure there is a text node immediately following the provided bold element
+ * @param boldElement - Bold element that precedes the boundary
+ * @returns The text node following the bold element or null if it cannot be created
+ */
+export function ensureTextNodeAfter(boldElement: HTMLElement): Text | null {
+  const existingNext = boldElement.nextSibling;
+
+  if (existingNext?.nodeType === Node.TEXT_NODE) {
+    return existingNext as Text;
+  }
+
+  const parent = boldElement.parentNode;
+
+  if (!parent) {
+    return null;
+  }
+
+  const documentRef = boldElement.ownerDocument ?? (typeof document !== 'undefined' ? document : null);
+
+  if (!documentRef) {
+    return null;
+  }
+
+  const newNode = documentRef.createTextNode('');
+
+  parent.insertBefore(newNode, existingNext);
+
+  return newNode;
+}
+
+/**
+ * Place caret at the provided offset within a text node
+ * @param selection - Current selection
+ * @param node - Target text node
+ * @param offset - Offset within the text node
+ */
+export function setCaret(selection: Selection, node: Text, offset: number): void {
+  const newRange = document.createRange();
+
+  newRange.setStart(node, offset);
+  newRange.collapse(true);
+
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+}
+
+/**
+ * Position caret immediately after the provided node
+ * @param selection - Current selection
+ * @param node - Reference node
+ */
+export function setCaretAfterNode(selection: Selection, node: Node | null): void {
+  if (!node) {
+    return;
+  }
+
+  const newRange = document.createRange();
+
+  newRange.setStartAfter(node);
+  newRange.collapse(true);
+
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+}

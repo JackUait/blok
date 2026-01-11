@@ -131,6 +131,24 @@ export class YjsManager extends Module {
   private isPerformingUndoRedo = false;
 
   /**
+   * Whether the last typed character was a boundary (space, punctuation).
+   * Used for smart undo grouping.
+   */
+  private pendingBoundary = false;
+
+  /**
+   * Timestamp when the boundary character was typed.
+   * Used to check if 100ms has elapsed.
+   */
+  private boundaryTimestamp = 0;
+
+  /**
+   * Timer ID for the boundary timeout.
+   * Fires stopCapturing() after 100ms idle at a boundary.
+   */
+  private boundaryTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  /**
    * Constructor - sets up change observers
    */
   constructor(params: ConstructorParameters<typeof Module>[0]) {
@@ -955,6 +973,14 @@ export class YjsManager extends Module {
    */
   public stopCapturing(): void {
     this.undoManager.stopCapturing();
+  }
+
+  /**
+   * Check if there is a pending boundary waiting for timeout.
+   * @returns true if a boundary character was typed and hasn't timed out yet
+   */
+  public hasPendingBoundary(): boolean {
+    return this.pendingBoundary;
   }
 
   /**

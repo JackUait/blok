@@ -572,7 +572,7 @@ describe('YjsManager', () => {
       const block = { id: 'b1', inputs: [], focusable: true };
       const setToBlockSpy = vi.fn();
 
-       
+
       (manager as any).Blok = {
         BlockManager: {
           getBlockById: vi.fn().mockReturnValue(block),
@@ -583,10 +583,16 @@ describe('YjsManager', () => {
         },
       };
 
-       
+
       (manager as any).restoreCaretSnapshot({ blockId: 'b1', inputIndex: 5, offset: 10 });
 
       expect(setToBlockSpy).toHaveBeenCalledWith(block, 'start');
+    });
+  });
+
+  describe('smart grouping', () => {
+    it('should initialize with no pending boundary', () => {
+      expect(manager.hasPendingBoundary()).toBe(false);
     });
   });
 });

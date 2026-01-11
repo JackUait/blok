@@ -177,11 +177,14 @@ export class CollapsedBoldExitHandler {
     const containsTypedContent = /\S/.test(sanitizedBoundary);
 
     if (leadingMatch) {
+      // eslint-disable-next-line no-param-reassign
       record.hasLeadingSpace = true;
+      // eslint-disable-next-line no-param-reassign
       record.leadingWhitespace = leadingMatch[0];
     }
 
     if (containsTypedContent) {
+      // eslint-disable-next-line no-param-reassign
       record.hasTypedContent = true;
     }
   }

@@ -8,6 +8,8 @@ import {
   ensureTextNodeAfter,
   setCaret,
   setCaretAfterNode,
+  resolveBoundary,
+  isNodeWithin,
 } from '../../../../../src/components/inline-tools/utils/bold-dom-utils';
 
 describe('bold-dom-utils', () => {
@@ -278,6 +280,82 @@ describe('bold-dom-utils', () => {
       setCaretAfterNode(selection, null);
 
       expect(selection.rangeCount).toBe(initialRangeCount);
+    });
+  });
+
+  describe('resolveBoundary', () => {
+    it('returns aligned boundary when still connected', () => {
+      const strong = document.createElement('strong');
+      const boundary = document.createTextNode('after');
+
+      strong.textContent = 'bold';
+      document.body.appendChild(strong);
+      document.body.appendChild(boundary);
+
+      const result = resolveBoundary({ boundary, boldElement: strong });
+
+      expect(result?.boundary).toBe(boundary);
+      expect(result?.boldElement).toBe(strong);
+    });
+
+    it('returns null when bold element is disconnected', () => {
+      const strong = document.createElement('strong');
+      const boundary = document.createTextNode('after');
+
+      strong.textContent = 'bold';
+      // Not connected to document
+
+      const result = resolveBoundary({ boundary, boldElement: strong });
+
+      expect(result).toBeNull();
+    });
+
+    it('creates new boundary when original is misaligned', () => {
+      const strong = document.createElement('strong');
+      const boundary = document.createTextNode('misaligned');
+
+      strong.textContent = 'bold';
+      document.body.appendChild(strong);
+      document.body.appendChild(document.createElement('span'));
+      document.body.appendChild(boundary);
+
+      const result = resolveBoundary({ boundary, boldElement: strong });
+
+      expect(result?.boundary).not.toBe(boundary);
+      expect(result?.boundary.previousSibling).toBe(strong);
+    });
+  });
+
+  describe('isNodeWithin', () => {
+    it('returns true when target equals container', () => {
+      const div = document.createElement('div');
+
+      expect(isNodeWithin(div, div)).toBe(true);
+    });
+
+    it('returns true when target is descendant of container', () => {
+      const div = document.createElement('div');
+      const span = document.createElement('span');
+      const text = document.createTextNode('hello');
+
+      span.appendChild(text);
+      div.appendChild(span);
+
+      expect(isNodeWithin(text, div)).toBe(true);
+      expect(isNodeWithin(span, div)).toBe(true);
+    });
+
+    it('returns false when target is not within container', () => {
+      const div1 = document.createElement('div');
+      const div2 = document.createElement('div');
+
+      expect(isNodeWithin(div1, div2)).toBe(false);
+    });
+
+    it('returns false for null target', () => {
+      const div = document.createElement('div');
+
+      expect(isNodeWithin(null, div)).toBe(false);
     });
   });
 });

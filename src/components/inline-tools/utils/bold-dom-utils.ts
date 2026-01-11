@@ -147,3 +147,41 @@ export function setCaretAfterNode(selection: Selection, node: Node | null): void
   selection.removeAllRanges();
   selection.addRange(newRange);
 }
+
+/**
+ * Resolve the boundary text node tracked for a collapsed exit record
+ * @param record - Record containing boundary and boldElement
+ * @returns The aligned boundary text node or null when it cannot be determined
+ */
+export function resolveBoundary(record: { boundary: Text; boldElement: HTMLElement }): { boundary: Text; boldElement: HTMLElement } | null {
+  if (!record.boldElement.isConnected) {
+    return null;
+  }
+
+  const strong = ensureStrongElement(record.boldElement);
+  const boundary = record.boundary;
+  const isAligned = boundary.isConnected && boundary.previousSibling === strong;
+  const resolvedBoundary = isAligned ? boundary : ensureTextNodeAfter(strong);
+
+  if (!resolvedBoundary) {
+    return null;
+  }
+
+  return {
+    boundary: resolvedBoundary,
+    boldElement: strong,
+  };
+}
+
+/**
+ * Check if a node is within the provided container
+ * @param target - Node to test
+ * @param container - Potential ancestor container
+ */
+export function isNodeWithin(target: Node | null, container: Node): boolean {
+  if (!target) {
+    return false;
+  }
+
+  return target === container || container.contains(target);
+}

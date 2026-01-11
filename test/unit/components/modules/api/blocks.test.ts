@@ -81,6 +81,7 @@ type BlockManagerMock = {
   clear: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
   convert: ReturnType<typeof vi.fn>;
+  splitBlockWithData: ReturnType<typeof vi.fn>;
 };
 
 const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub() ]): BlockManagerMock => {
@@ -197,6 +198,29 @@ const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub()
       }
 
       return converted;
+    }) as ReturnType<typeof vi.fn>,
+    splitBlockWithData: vi.fn((
+      currentBlockId: string,
+      _currentBlockData: Partial<BlockToolData>,
+      newBlockType: string,
+      newBlockData: BlockToolData,
+      insertIndex: number
+    ) => {
+      const currentBlock = blockManager.blocks.find((b) => b.id === currentBlockId);
+
+      if (!currentBlock) {
+        throw new Error(`Block with id "${currentBlockId}" not found`);
+      }
+
+      const newBlock = createBlockStub({
+        id: `new-${Date.now()}`,
+        name: newBlockType,
+        data: newBlockData,
+      });
+
+      blockManager.blocks.splice(insertIndex, 0, newBlock);
+
+      return newBlock;
     }) as ReturnType<typeof vi.fn>,
   };
 
@@ -733,6 +757,45 @@ describe('BlocksAPI', () => {
       const { blocksApi } = createBlocksApi({ blocks: [] });
 
       await expect(blocksApi.methods.convert('missing', 'header')).rejects.toThrow('Block with id "missing" not found');
+    });
+  });
+
+  describe('block splitting', () => {
+    it('splits block via BlockManager.splitBlockWithData and wraps result', () => {
+      const block = createBlockStub({ id: 'list-1', name: 'list', data: { text: 'Hello World' } });
+      const { blocksApi, blockManager } = createBlocksApi({ blocks: [ block ] });
+
+      blockManager.currentBlockIndex = 0;
+
+      const result = blocksApi.methods.splitBlock(
+        'list-1',
+        { text: 'Hello' },
+        'list',
+        { text: ' World', style: 'unordered' },
+        1
+      );
+
+      expect(blockManager.splitBlockWithData).toHaveBeenCalledWith(
+        'list-1',
+        { text: 'Hello' },
+        'list',
+        { text: ' World', style: 'unordered' },
+        1
+      );
+      expect(blockAPIConstructorSpy).toHaveBeenCalled();
+      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ name: 'list' }) });
+    });
+
+    it('throws when splitBlock receives unknown block id', () => {
+      const { blocksApi, blockManager } = createBlocksApi({ blocks: [] });
+
+      blockManager.splitBlockWithData.mockImplementationOnce(() => {
+        throw new Error('Block with id "missing" not found');
+      });
+
+      expect(() => {
+        blocksApi.methods.splitBlock('missing', { text: 'a' }, 'paragraph', { text: 'b' }, 1);
+      }).toThrow('Block with id "missing" not found');
     });
   });
 });

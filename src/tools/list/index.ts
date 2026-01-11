@@ -688,6 +688,42 @@ export class ListItem implements BlockTool {
   }
 
   /**
+   * Update the marker element when depth changes.
+   * Handles both ordered and unordered list markers.
+   */
+  private updateMarkerForDepth(newDepth: number, style: ListItemStyle): void {
+    const marker = this._element?.querySelector('[aria-hidden="true"]');
+
+    if (!(marker instanceof HTMLElement)) {
+      return;
+    }
+
+    if (style === 'ordered') {
+      const siblingIndex = this.getSiblingIndex();
+      const markerText = this.getOrderedMarkerText(siblingIndex, newDepth);
+
+      marker.textContent = markerText;
+    } else {
+      const bulletChar = this.getBulletCharacter(newDepth);
+
+      marker.textContent = bulletChar;
+    }
+  }
+
+  /**
+   * Update the checkbox state for checklist items.
+   */
+  private updateCheckboxState(checked: boolean): void {
+    const checkbox = this._element?.querySelector('input[type="checkbox"]');
+
+    if (!(checkbox instanceof HTMLInputElement)) {
+      return;
+    }
+
+    checkbox.checked = checked;
+  }
+
+  /**
    * Format an ordered list marker based on the number and depth
    */
   private formatOrderedMarker(number: number, depth: number): string {
@@ -862,8 +898,11 @@ export class ListItem implements BlockTool {
     }
 
     // Create marker element (will be updated in rendered() with correct index)
+    // Mark as mutation-free to prevent marker text updates from triggering Yjs changes,
+    // which would corrupt undo/redo stack during block removal renumbering
     const marker = this.createListMarker();
     marker.setAttribute('data-list-marker', 'true');
+    marker.setAttribute('data-blok-mutation-free', 'true');
     item.appendChild(marker);
 
     // Create content container
@@ -1219,29 +1258,53 @@ export class ListItem implements BlockTool {
       return;
     }
 
-    // Split content and create new block
+    // Split content at cursor position
     const range = selection.getRangeAt(0);
     const { beforeContent, afterContent } = this.splitContentAtCursor(contentEl, range);
 
-    // Update current block with before content
-    contentEl.innerHTML = beforeContent;
-    this._data.text = beforeContent;
+    // Guard: blockId is always provided by Blok when instantiating tools,
+    // but we keep this fallback for defensive programming in case the tool
+    // is instantiated outside the normal Blok flow (e.g., in tests or external usage)
+    if (!this.blockId) {
+      contentEl.innerHTML = beforeContent;
+      this._data.text = beforeContent;
 
-    // Insert new list block after this one, preserving the depth
+      const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
+      const newBlock = this.api.blocks.insert(ListItem.TOOL_NAME, {
+        text: afterContent,
+        style: this._data.style,
+        checked: false,
+        depth: this._data.depth,
+      }, undefined, currentBlockIndex + 1, true);
+
+      this.setCaretToBlockContent(newBlock, 'start');
+
+      return;
+    }
+
+    // Use atomic splitBlock API to ensure undo works correctly
     const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
-    const newBlock = this.api.blocks.insert(ListItem.TOOL_NAME, {
-      text: afterContent,
-      style: this._data.style,
-      checked: false,
-      depth: this._data.depth,
-    }, undefined, currentBlockIndex + 1, true);
+    const newBlock = this.api.blocks.splitBlock(
+      this.blockId,
+      { text: beforeContent },
+      ListItem.TOOL_NAME,
+      {
+        text: afterContent,
+        style: this._data.style,
+        checked: false,
+        depth: this._data.depth,
+      },
+      currentBlockIndex + 1
+    );
+
+    // Update internal state to match the DOM
+    this._data.text = beforeContent;
 
     // Set caret to the start of the new block's content element
     this.setCaretToBlockContent(newBlock, 'start');
   }
 
   private async exitListOrOutdent(): Promise<void> {
-    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     const currentDepth = this.getDepth();
 
     // If nested, outdent instead of exiting
@@ -1250,9 +1313,11 @@ export class ListItem implements BlockTool {
       return;
     }
 
-    // At root level, convert to paragraph
-    await this.api.blocks.delete(currentBlockIndex);
-    const newBlock = this.api.blocks.insert('paragraph', { text: '' }, undefined, currentBlockIndex, true);
+    // At root level, convert to paragraph using convert API for proper undo/redo support
+    if (this.blockId === undefined) {
+      return;
+    }
+    const newBlock = await this.api.blocks.convert(this.blockId, 'paragraph', { text: '' });
     this.setCaretToBlockContent(newBlock, 'start');
   }
 
@@ -1268,7 +1333,6 @@ export class ListItem implements BlockTool {
     // This is critical for preserving data when whole content is selected
     this.syncContentFromDOM();
 
-    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     const currentContent = this._data.text;
     const currentDepth = this.getDepth();
 
@@ -1299,15 +1363,13 @@ export class ListItem implements BlockTool {
 
     event.preventDefault();
 
-    // Convert to paragraph (preserving indentation for nested items)
-    await this.api.blocks.delete(currentBlockIndex);
-    const newBlock = this.api.blocks.insert(
-      'paragraph',
-      { text: currentContent },
-      undefined,
-      currentBlockIndex,
-      true
-    );
+    // Guard against missing blockId
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    // Convert to paragraph using convert API for proper undo/redo support
+    const newBlock = await this.api.blocks.convert(this.blockId, 'paragraph', { text: currentContent });
 
     // Apply indentation to the new paragraph if the list item was nested
     if (currentDepth > 0) {
@@ -1506,6 +1568,9 @@ export class ListItem implements BlockTool {
       if (!contentEl) {
         // Fallback to setToBlock if no content element found
         this.api.caret.setToBlock(block, position);
+        // Update the caret "after" position for undo/redo since we're in requestAnimationFrame
+        this.api.caret.updateLastCaretAfterPosition();
+
         return;
       }
 
@@ -1528,6 +1593,10 @@ export class ListItem implements BlockTool {
 
       selection.removeAllRanges();
       selection.addRange(range);
+
+      // Update the caret "after" position for undo/redo since we moved the caret
+      // asynchronously via requestAnimationFrame after the Yjs transaction committed
+      this.api.caret.updateLastCaretAfterPosition();
     });
   }
 
@@ -1641,6 +1710,61 @@ export class ListItem implements BlockTool {
     }
 
     return result;
+  }
+
+  /**
+   * Updates the block's data in-place without destroying the DOM element.
+   * Called by Block.setData() during undo/redo operations.
+   *
+   * @param newData - the new data to apply to the block
+   * @returns true if update was performed in-place, false if full re-render needed
+   */
+  public setData(newData: ListItemData): boolean {
+    if (!this._element) {
+      return false;
+    }
+
+    const oldDepth = this._data.depth ?? 0;
+    const newDepth = newData.depth ?? 0;
+    const oldStyle = this._data.style;
+    const newStyle = newData.style;
+
+    // Style changes require full re-render (different DOM structure)
+    if (oldStyle !== newStyle) {
+      return false;
+    }
+
+    // Update internal data
+    this._data = {
+      ...this._data,
+      ...newData,
+    };
+
+    // Update text content
+    const contentEl = this.getContentElement();
+
+    if (contentEl && typeof newData.text === 'string') {
+      contentEl.innerHTML = newData.text;
+    }
+
+    // Update depth if changed
+    const depthChanged = oldDepth !== newDepth;
+
+    if (depthChanged) {
+      this.adjustDepthTo(newDepth);
+      this.updateMarkerForDepth(newDepth, newStyle);
+
+      return true;
+    }
+
+    // Update checkbox state for checklist items
+    const isChecklist = newStyle === 'checklist';
+
+    if (isChecklist) {
+      this.updateCheckboxState(newData.checked ?? false);
+    }
+
+    return true;
   }
 
   public merge(data: ListItemData): void {

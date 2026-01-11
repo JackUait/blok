@@ -476,4 +476,99 @@ test.describe('modules/blockManager', () => {
     });
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  test('updates currentBlockIndex when clicking on a different block', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        id: 'block-0',
+        type: 'paragraph',
+        data: { text: 'First block' },
+      },
+      {
+        id: 'block-1',
+        type: 'paragraph',
+        data: { text: 'Second block' },
+      },
+    ]);
+
+    // Click on the first block to establish currentBlockIndex at 0
+    await page.getByText('First block').click();
+
+    const initialIndex = await page.evaluate(() => {
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
+      }
+
+      // Access internal module to check currentBlockIndex
+      const blok = window.blokInstance as unknown as { module: { blockManager: { currentBlockIndex: number } } };
+
+      return blok.module.blockManager.currentBlockIndex;
+    });
+
+    expect(initialIndex).toBe(0);
+
+    // Click on second block to move focus
+    await page.getByText('Second block').click();
+
+    // Verify currentBlockIndex updated to 1
+    const updatedIndex = await page.evaluate(() => {
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
+      }
+
+      const blok = window.blokInstance as unknown as { module: { blockManager: { currentBlockIndex: number } } };
+
+      return blok.module.blockManager.currentBlockIndex;
+    });
+
+    expect(updatedIndex).toBe(1);
+  });
+
+  test('updates currentBlockIndex when navigating blocks with Tab key', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        id: 'tab-block-0',
+        type: 'paragraph',
+        data: { text: 'First block' },
+      },
+      {
+        id: 'tab-block-1',
+        type: 'paragraph',
+        data: { text: 'Second block' },
+      },
+    ]);
+
+    // Click on first block to ensure focus
+    await page.getByText('First block').click();
+
+    const initialIndex = await page.evaluate(() => {
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
+      }
+
+      const blok = window.blokInstance as unknown as { module: { blockManager: { currentBlockIndex: number } } };
+
+      return blok.module.blockManager.currentBlockIndex;
+    });
+
+    expect(initialIndex).toBe(0);
+
+    // Press Tab to move to next block
+    await page.keyboard.press('Tab');
+
+    // Wait for focus change to propagate by polling the index
+    await expect(async () => {
+      const updatedIndex = await page.evaluate(() => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const blok = window.blokInstance as unknown as { module: { blockManager: { currentBlockIndex: number } } };
+
+        return blok.module.blockManager.currentBlockIndex;
+      });
+
+      expect(updatedIndex).toBe(1);
+    }).toPass();
+  });
 });

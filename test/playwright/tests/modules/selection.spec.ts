@@ -519,7 +519,8 @@ test.describe('modules/selection', () => {
 
     const blocks = page.locator(BLOCK_WRAPPER_SELECTOR);
 
-    await expect(blocks).toHaveCount(2);
+    // No replacement block is inserted when only partial selection is deleted
+    await expect(blocks).toHaveCount(1);
 
     const savedData = await page.evaluate<OutputData>(async () => {
       const blok = window.blokInstance;
@@ -531,14 +532,13 @@ test.describe('modules/selection', () => {
       return blok.save();
     });
 
-    expect(savedData.blocks).toHaveLength(2);
+    expect(savedData.blocks).toHaveLength(1);
 
     const blockTexts = savedData.blocks.map((block) => {
       return (block.data as { text?: string }).text ?? '';
     });
 
-    expect(blockTexts[0].trim()).toBe('');
-    expect(blockTexts[1]).toBe('Fourth block');
+    expect(blockTexts[0]).toBe('Fourth block');
   });
 
   test('cross-block selection spans different block types with shift navigation', async ({ page }) => {

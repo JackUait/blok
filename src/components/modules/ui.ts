@@ -18,6 +18,13 @@ import { mobileScreenBreakpoint } from '../utils';
  */
 const HOVER_ZONE_SIZE = 100;
 
+/**
+ * Keys that require caret capture on keydown before tools can intercept them.
+ * When tools call event.preventDefault() on keydown, beforeinput never fires,
+ * so we capture caret position for these keys in the capture phase.
+ */
+const KEYS_REQUIRING_CARET_CAPTURE = new Set(['Enter', 'Backspace', 'Delete', 'Tab']);
+
 import styles from '../../styles/main.css?inline';
 import { BlockHovered } from '../events/BlockHovered';
 import {
@@ -236,6 +243,7 @@ export class UI extends Module<UINodes> {
     this.nodes.holder.innerHTML = '';
 
     this.unbindReadOnlyInsensitiveListeners();
+    this.unbindReadOnlySensitiveListeners();
 
     // Clean up accessibility announcer
     destroyAnnouncer();
@@ -443,6 +451,29 @@ export class UI extends Module<UINodes> {
     }, true);
 
     /**
+     * Capture caret position before any input changes the DOM.
+     * This ensures undo/redo restores the caret to the correct position.
+     */
+    this.readOnlyMutableListeners.on(this.nodes.redactor, 'beforeinput', () => {
+      this.Blok.YjsManager.markCaretBeforeChange();
+    }, true);
+
+    /**
+     * Capture caret position on keydown for keys that tools commonly intercept.
+     * Uses capture phase to run before tool handlers.
+     * markCaretBeforeChange() is idempotent - if beforeinput also fires, the second call is ignored.
+     */
+    this.readOnlyMutableListeners.on(this.nodes.redactor, 'keydown', (event: Event) => {
+      if (!(event instanceof KeyboardEvent)) {
+        return;
+      }
+
+      if (KEYS_REQUIRING_CARET_CAPTURE.has(event.key)) {
+        this.Blok.YjsManager.markCaretBeforeChange();
+      }
+    }, true);
+
+    /**
      * Start watching 'block-hovered' events that is used by Toolbar for moving
      */
     this.watchBlockHoveredEvents();
@@ -621,6 +652,11 @@ export class UI extends Module<UINodes> {
         this.tabPressed(event);
         break;
 
+      case 'z':
+      case 'Z':
+        this.undoRedoPressed(event);
+        break;
+
       default:
         this.defaultBehaviour(event);
         break;
@@ -750,17 +786,12 @@ export class UI extends Module<UINodes> {
       return;
     }
 
-    const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
-    if (selectionPositionIndex === undefined) {
-      return;
+    if (insertedBlock) {
+      Caret.setToBlock(insertedBlock, Caret.positions.START);
     }
 
-    const newBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
-
-    Caret.setToBlock(newBlock, Caret.positions.START);
-
-    /** Clear selection */
     BlockSelection.clearSelection(event);
 
     /**
@@ -855,6 +886,44 @@ export class UI extends Module<UINodes> {
     }
 
     this.Blok.Toolbar.close();
+  }
+
+  /**
+   * Timestamp of last undo/redo call to prevent double-firing
+   */
+  private lastUndoRedoTime = 0;
+
+  /**
+   * Handle Cmd/Ctrl+Z (undo) and Cmd/Ctrl+Shift+Z (redo)
+   * @param {KeyboardEvent} event - keyboard event
+   */
+  private undoRedoPressed(event: KeyboardEvent): void {
+    const isMeta = event.metaKey || event.ctrlKey;
+
+    if (!isMeta) {
+      this.defaultBehaviour(event);
+
+      return;
+    }
+
+    // Prevent double-firing within 50ms
+    const now = Date.now();
+
+    if (now - this.lastUndoRedoTime < 50) {
+      event.preventDefault();
+
+      return;
+    }
+    this.lastUndoRedoTime = now;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.shiftKey) {
+      this.Blok.YjsManager.redo();
+    } else {
+      this.Blok.YjsManager.undo();
+    }
   }
 
   /**
@@ -1253,11 +1322,12 @@ export class UI extends Module<UINodes> {
     }
 
     /**
-     * Set current block when entering to Blok by tab key
+     * Always update current block when focus moves to a different block.
+     * This handles Tab key navigation, programmatic focus, and accessibility tools.
+     * Without this, currentBlockIndex would remain stale and caret restoration
+     * during undo/redo would target the wrong block.
      */
-    if (!this.Blok.BlockManager.currentBlock) {
-      this.Blok.BlockManager.setCurrentBlockByChildNode(focusedElement);
-    }
+    this.Blok.BlockManager.setCurrentBlockByChildNode(focusedElement);
 
     void this.Blok.InlineToolbar.tryToShow(true);
   }

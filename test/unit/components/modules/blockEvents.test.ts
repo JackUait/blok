@@ -93,6 +93,9 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     Tools: {
       blockTools: new Map(),
     } as unknown as BlokModules['Tools'],
+    YjsManager: {
+      stopCapturing: vi.fn(),
+    } as unknown as BlokModules['YjsManager'],
   };
 
   const mergedState: Partial<BlokModules> = { ...defaults };
@@ -221,8 +224,8 @@ describe('BlockEvents', () => {
   describe('handleCommandX', () => {
     it('cuts selected blocks and restores caret position', async () => {
       const copySelectedBlocks = vi.fn().mockResolvedValue(undefined);
-      const removeSelectedBlocks = vi.fn().mockReturnValue(3);
-      const insertDefaultBlockAtIndex = vi.fn().mockReturnValue({} as Block);
+      const insertedBlock = {} as Block;
+      const deleteSelectedBlocksAndInsertReplacement = vi.fn().mockReturnValue(insertedBlock);
       const clearSelection = vi.fn();
       const setToBlock = vi.fn();
 
@@ -233,8 +236,7 @@ describe('BlockEvents', () => {
           clearSelection,
         } as unknown as BlokModules['BlockSelection'],
         BlockManager: {
-          removeSelectedBlocks,
-          insertDefaultBlockAtIndex,
+          deleteSelectedBlocksAndInsertReplacement,
         } as unknown as BlokModules['BlockManager'],
         Caret: {
           setToBlock,
@@ -250,9 +252,8 @@ describe('BlockEvents', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(copySelectedBlocks).toHaveBeenCalledWith(event);
-      expect(removeSelectedBlocks).toHaveBeenCalledTimes(1);
-      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(3, true);
-      expect(setToBlock).toHaveBeenCalledWith(insertDefaultBlockAtIndex.mock.results[0]!.value, 'start-position');
+      expect(deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
+      expect(setToBlock).toHaveBeenCalledWith(insertedBlock, 'start-position');
       expect(clearSelection).toHaveBeenCalledWith(event);
     });
 

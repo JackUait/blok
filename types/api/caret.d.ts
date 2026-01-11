@@ -64,4 +64,14 @@ export interface Caret {
    * @return {boolean}
    */
   focus(atEnd?: boolean): boolean;
+
+  /**
+   * Updates the "after" position of the most recent caret undo entry.
+   * Call this after moving the caret asynchronously (e.g., via requestAnimationFrame)
+   * to ensure redo operations restore the caret to the correct location.
+   *
+   * This is typically used after operations that move the caret via requestAnimationFrame,
+   * such as splitting blocks in list tools.
+   */
+  updateLastCaretAfterPosition(): void;
 }

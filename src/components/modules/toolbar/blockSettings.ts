@@ -360,16 +360,11 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         closeOnActivate: true,
         onActivate: () => {
           const { BlockManager, Caret, Toolbar } = this.Blok;
-          const indexToInsert = BlockManager.removeSelectedBlocks();
 
-          if (indexToInsert !== undefined && BlockManager.blocks.length === 0) {
-            BlockManager.insert();
-          }
+          const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
-          const currentBlock = BlockManager.currentBlock;
-
-          if (currentBlock) {
-            Caret.setToBlock(currentBlock, Caret.positions.END);
+          if (insertedBlock) {
+            Caret.setToBlock(insertedBlock, Caret.positions.END);
           }
 
           Toolbar.close();

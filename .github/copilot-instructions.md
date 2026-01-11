@@ -1,5 +1,33 @@
 # Blok - AI Coding Instructions
 
+## Skills System
+
+<EXTREMELY_IMPORTANT>
+You have access to a skills library at `.github/skills/`. These skills encode proven workflows and prevent common mistakes.
+
+**BEFORE ANY TASK:**
+1. Check which skills apply (see list below)
+2. Read the relevant skill(s) completely
+3. Follow the skill's guidance - it prevents known pitfalls
+4. Announce: "I'm using the [skill-name] skill to [purpose]"
+
+**Available Skills:**
+- **using-skills** - Introduction to the skills system
+- **brainstorming** - Use BEFORE any creative work (features, components, behavior changes)
+- **test-driven-development** - Use when implementing any feature or bugfix
+- **systematic-debugging** - Use when encountering bugs, test failures, unexpected behavior
+- **writing-plans** - Use for multi-step tasks, multi-file changes, or work > 15 minutes
+- **executing-plans** - Use when executing a written plan
+- **verification-before-completion** - Use BEFORE declaring any task complete
+- **code-review** - Use when preparing for review or responding to feedback
+
+**IF A SKILL APPLIES TO YOUR TASK, YOU MUST USE IT. NO EXCEPTIONS.**
+
+To read a skill: Check `.github/skills/[skill-name]/SKILL.md`
+</EXTREMELY_IMPORTANT>
+
+---
+
 ## Project Overview
 
 Blok is a headless, block-based rich text editor. Content is structured as JSON blocks, not raw HTML.

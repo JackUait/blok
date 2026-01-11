@@ -163,7 +163,8 @@
   },
   "dependencies": {
     "i18next": "^25.7.3",
-    "nanoid": "^5.1.6"
+    "nanoid": "^5.1.6",
+    "yjs": "^13.6.28"
   },
   "size-limit": [
     {

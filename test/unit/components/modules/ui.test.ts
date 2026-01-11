@@ -631,6 +631,64 @@ describe('UI module', () => {
       expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
     });
 
+    it('always calls setCurrentBlockByChildNode when focus is in block content, even when currentBlock exists', async () => {
+      const { ui, blok, wrapper } = createUI();
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.setAttribute('data-blok-testid', 'blok-editor');
+      wrapper.appendChild(blockContent);
+
+      // Simulate an existing current block (e.g., set by autofocus on init)
+      blok.BlockManager.currentBlock = {
+        id: 'existing-block',
+        name: 'paragraph',
+        holder: document.createElement('div'),
+      } as unknown as typeof blok.BlockManager.currentBlock;
+
+      mockSelectionAnchor(blockContent);
+      // Mock a non-empty selection to prevent early return
+      mockSelection({ isCollapsed: false } as Selection);
+      vi.spyOn(SelectionUtils, 'text', 'get').mockReturnValue('selected text');
+
+      await (ui as unknown as { selectionChanged: () => Promise<void> }).selectionChanged();
+
+      // Should always call setCurrentBlockByChildNode, even when currentBlock exists
+      // This ensures currentBlockIndex stays in sync when focus moves via Tab/programmatic focus
+      expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(blockContent);
+    });
+
+    it('updates current block when focus moves to a different block via Tab navigation', async () => {
+      const { ui, blok, wrapper } = createUI();
+
+      // Create two block contents to simulate Tab navigation between blocks
+      const firstBlockContent = document.createElement('div');
+      const secondBlockContent = document.createElement('div');
+
+      firstBlockContent.setAttribute('data-blok-testid', 'block-content');
+      secondBlockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.setAttribute('data-blok-testid', 'blok-editor');
+      wrapper.appendChild(firstBlockContent);
+      wrapper.appendChild(secondBlockContent);
+
+      // Start with focus on first block
+      blok.BlockManager.currentBlock = {
+        id: 'first-block',
+        name: 'paragraph',
+        holder: firstBlockContent,
+      } as unknown as typeof blok.BlockManager.currentBlock;
+
+      // Simulate Tab navigation to second block (selectionchange fires, but no mousedown)
+      mockSelectionAnchor(secondBlockContent);
+      mockSelection({ isCollapsed: true } as Selection);
+      vi.spyOn(SelectionUtils, 'text', 'get').mockReturnValue('');
+
+      await (ui as unknown as { selectionChanged: () => Promise<void> }).selectionChanged();
+
+      // Should update current block to where focus actually is
+      expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(secondBlockContent);
+    });
+
     it('does not re-render inline toolbar when already open without nested popover', () => {
       const { ui, blok, wrapper } = createUI();
       const blockContent = document.createElement('div');

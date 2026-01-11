@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   getCaretNodeAndOffset,
+  getCaretOffset,
   checkContenteditableSliceForEmptiness,
   isCaretAtStartOfInput,
   isCaretAtEndOfInput,
@@ -91,6 +92,82 @@ describe('caret utilities', () => {
       node.parentElement.focus?.();
     }
   };
+
+  describe('getCaretOffset', () => {
+    it('should return 0 when no selection exists', () => {
+      window.getSelection()?.removeAllRanges();
+
+      const result = getCaretOffset();
+
+      expect(result).toBe(0);
+    });
+
+    it('should return character offset within contenteditable', () => {
+      const div = document.createElement('div');
+
+      div.contentEditable = 'true';
+      div.innerHTML = 'Hello World';
+      getContainer().appendChild(div);
+
+      const textNode = div.firstChild;
+
+      if (!(textNode instanceof Text)) {
+        throw new Error('Expected text node');
+      }
+
+      // Set caret after "Hello" (offset 5)
+      const range = document.createRange();
+
+      range.setStart(textNode, 5);
+      range.collapse(true);
+
+      const selection = window.getSelection();
+
+      if (selection === null) {
+        throw new Error('Expected selection');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const result = getCaretOffset(div);
+
+      expect(result).toBe(5);
+    });
+
+    it('should return 0 when container is not provided and cannot be found', () => {
+      // Create a selection outside of any contenteditable
+      const div = document.createElement('div');
+
+      div.textContent = 'Test';
+      getContainer().appendChild(div);
+
+      const textNode = div.firstChild;
+
+      if (!(textNode instanceof Text)) {
+        throw new Error('Expected text node');
+      }
+
+      const range = document.createRange();
+
+      range.setStart(textNode, 2);
+      range.collapse(true);
+
+      const selection = window.getSelection();
+
+      if (selection === null) {
+        throw new Error('Expected selection');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // Don't pass a container - should return 0 since no contenteditable found
+      const result = getCaretOffset();
+
+      expect(result).toBe(0);
+    });
+  });
 
   describe('getCaretNodeAndOffset', () => {
     it('should return [null, 0] when selection is null', () => {

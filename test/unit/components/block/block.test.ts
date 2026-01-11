@@ -281,7 +281,8 @@ describe('Block', () => {
 
       expect(block.inputs).toBe(cachedInputs);
 
-      (block as unknown as { dropInputsCache: () => void }).dropInputsCache();
+      // Trigger cache invalidation via dispatchChange
+      block.dispatchChange();
 
       const refreshedInputs = block.inputs;
 
@@ -295,7 +296,8 @@ describe('Block', () => {
 
       expect(block.inputs).toBe(refreshedInputs);
 
-      (block as unknown as { dropInputsCache: () => void }).dropInputsCache();
+      // Trigger cache invalidation via dispatchChange
+      block.dispatchChange();
 
       const refreshedInputsAgain = block.inputs;
 
@@ -400,8 +402,8 @@ describe('Block', () => {
       parent.appendChild(secondInput);
       parent.appendChild(thirdInput);
 
-      // Drop inputs cache to refresh
-      (block as unknown as { dropInputsCache: () => void }).dropInputsCache();
+      // Trigger cache invalidation via dispatchChange
+      block.dispatchChange();
 
       // Verify we now have 3 inputs
       expect(block.inputs.length).toBe(3);

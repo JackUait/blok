@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createRangeTextWalker } from '../../../../../src/components/inline-tools/utils/formatting-range-utils';
+import {
+  createRangeTextWalker,
+  findFormattingAncestor,
+  hasFormattingAncestor,
+} from '../../../../../src/components/inline-tools/utils/formatting-range-utils';
 
 describe('formatting-range-utils', () => {
   beforeEach(() => {
@@ -50,6 +54,82 @@ describe('formatting-range-utils', () => {
 
       expect(textNodes).toHaveLength(1);
       expect(textNodes[0].textContent).toBe('Inside');
+    });
+  });
+
+  describe('findFormattingAncestor', () => {
+    it('finds ancestor matching predicate', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<strong>bold text</strong>';
+      document.body.appendChild(container);
+
+      const textNode = container.querySelector('strong')!.firstChild!;
+      const isBold = (el: Element) => el.tagName === 'STRONG' || el.tagName === 'B';
+
+      const result = findFormattingAncestor(textNode, isBold);
+
+      expect(result).not.toBeNull();
+      expect(result?.tagName).toBe('STRONG');
+    });
+
+    it('returns null when no ancestor matches', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<span>plain text</span>';
+      document.body.appendChild(container);
+
+      const textNode = container.querySelector('span')!.firstChild!;
+      const isBold = (el: Element) => el.tagName === 'STRONG' || el.tagName === 'B';
+
+      const result = findFormattingAncestor(textNode, isBold);
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null for null input', () => {
+      const isBold = (el: Element) => el.tagName === 'STRONG';
+
+      expect(findFormattingAncestor(null, isBold)).toBeNull();
+    });
+
+    it('returns the element itself if it matches predicate', () => {
+      const strong = document.createElement('strong');
+      document.body.appendChild(strong);
+
+      const isBold = (el: Element) => el.tagName === 'STRONG';
+
+      const result = findFormattingAncestor(strong, isBold);
+
+      expect(result).toBe(strong);
+    });
+  });
+
+  describe('hasFormattingAncestor', () => {
+    it('returns true when ancestor matches predicate', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<em>italic text</em>';
+      document.body.appendChild(container);
+
+      const textNode = container.querySelector('em')!.firstChild!;
+      const isItalic = (el: Element) => el.tagName === 'EM' || el.tagName === 'I';
+
+      expect(hasFormattingAncestor(textNode, isItalic)).toBe(true);
+    });
+
+    it('returns false when no ancestor matches', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<span>plain</span>';
+      document.body.appendChild(container);
+
+      const textNode = container.querySelector('span')!.firstChild!;
+      const isItalic = (el: Element) => el.tagName === 'EM' || el.tagName === 'I';
+
+      expect(hasFormattingAncestor(textNode, isItalic)).toBe(false);
+    });
+
+    it('returns false for null input', () => {
+      const isItalic = (el: Element) => el.tagName === 'EM';
+
+      expect(hasFormattingAncestor(null, isItalic)).toBe(false);
     });
   });
 });

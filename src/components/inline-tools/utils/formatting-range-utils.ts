@@ -39,3 +39,35 @@ export const createRangeTextWalker = (range: Range): TreeWalker => {
     }
   );
 };
+
+/**
+ * Find first ancestor element matching the predicate
+ * @param node - The node to start searching from
+ * @param predicate - Function to test elements
+ */
+export const findFormattingAncestor = (
+  node: Node | null,
+  predicate: (element: Element) => boolean
+): HTMLElement | null => {
+  if (!node) {
+    return null;
+  }
+
+  if (node.nodeType === Node.ELEMENT_NODE && predicate(node as Element)) {
+    return node as HTMLElement;
+  }
+
+  return findFormattingAncestor(node.parentNode, predicate);
+};
+
+/**
+ * Check if any ancestor matches the predicate
+ * @param node - The node to check
+ * @param predicate - Function to test elements
+ */
+export const hasFormattingAncestor = (
+  node: Node | null,
+  predicate: (element: Element) => boolean
+): boolean => {
+  return findFormattingAncestor(node, predicate) !== null;
+};

@@ -19,6 +19,7 @@ export class CaretAPI extends Module {
       setToNextBlock: this.setToNextBlock,
       setToBlock: this.setToBlock,
       focus: this.focus,
+      updateLastCaretAfterPosition: this.updateLastCaretAfterPosition,
     };
   }
 
@@ -121,5 +122,14 @@ export class CaretAPI extends Module {
     }
 
     return this.setToFirstBlock(this.Blok.Caret.positions.START);
+  };
+
+  /**
+   * Updates the "after" position of the most recent caret undo entry.
+   * Call this after moving the caret asynchronously (e.g., via requestAnimationFrame)
+   * to ensure redo operations restore the caret to the correct location.
+   */
+  private updateLastCaretAfterPosition = (): void => {
+    this.Blok.YjsManager.updateLastCaretAfterPosition();
   };
 }

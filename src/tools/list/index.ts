@@ -1568,6 +1568,9 @@ export class ListItem implements BlockTool {
       if (!contentEl) {
         // Fallback to setToBlock if no content element found
         this.api.caret.setToBlock(block, position);
+        // Update the caret "after" position for undo/redo since we're in requestAnimationFrame
+        this.api.caret.updateLastCaretAfterPosition();
+
         return;
       }
 
@@ -1590,6 +1593,10 @@ export class ListItem implements BlockTool {
 
       selection.removeAllRanges();
       selection.addRange(range);
+
+      // Update the caret "after" position for undo/redo since we moved the caret
+      // asynchronously via requestAnimationFrame after the Yjs transaction committed
+      this.api.caret.updateLastCaretAfterPosition();
     });
   }
 

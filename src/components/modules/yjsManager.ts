@@ -784,6 +784,24 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Update the "after" position of the most recent caret undo entry.
+   * This is used when the caret is moved asynchronously (e.g., via requestAnimationFrame)
+   * after a Yjs transaction has already captured the initial "after" position.
+   *
+   * Call this after the caret has been moved to its final position to ensure
+   * redo operations restore the caret to the correct location.
+   */
+  public updateLastCaretAfterPosition(): void {
+    if (this.caretUndoStack.length === 0) {
+      return;
+    }
+
+    const lastEntry = this.caretUndoStack[this.caretUndoStack.length - 1];
+
+    lastEntry.after = this.captureCaretSnapshot();
+  }
+
+  /**
    * Restore caret position from a snapshot.
    * Handles edge cases: null snapshot, deleted block, invalid input index.
    * @param snapshot - CaretSnapshot to restore, or null to clear selection

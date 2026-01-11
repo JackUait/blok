@@ -3744,6 +3744,63 @@ test.describe('yjs undo/redo', () => {
       await expect(restoredInput).toHaveText('Hello World');
     });
 
+    test('redo after list item split places caret in the new item', async ({ page }) => {
+      // Regression test: caret should be placed in the newly created item after redo,
+      // not stay at the end of the previous item.
+      // The bug was that the "after" caret position was captured synchronously
+      // before requestAnimationFrame moved the caret to the new block.
+      await createBlokWithBlocks(page, [
+        {
+          id: 'list-1',
+          type: 'list',
+          data: {
+            text: 'First item',
+            style: 'unordered',
+          },
+        },
+      ]);
+
+      const firstItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+
+      // Click to focus the list item and press Enter to create a new item
+      await firstItem.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, 200);
+
+      // Verify we have 2 list items
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // Wait for Yjs to capture
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo - should merge items back
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify we're back to 1 list item
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
+
+      // Redo - should split again and place caret in the new (second) item
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      // Verify we have 2 list items again
+      await expect(page.locator(LIST_SELECTOR)).toHaveCount(2);
+
+      // KEY TEST: The caret should be focused on the second (new) list item, not the first
+      const secondItem = getListBlockByIndex(page, 1).locator('[contenteditable="true"]');
+      const isSecondItemFocused = await isFocused(secondItem);
+
+      expect(isSecondItemFocused).toBe(true);
+
+      // Additionally verify the first item is NOT focused (extra confirmation)
+      const firstItemAfterRedo = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
+      const isFirstItemFocused = await isFocused(firstItemAfterRedo);
+
+      expect(isFirstItemFocused).toBe(false);
+    });
+
     test('redo after undoing list item deletion restores deleted items', async ({ page }) => {
       // Create multiple list items
       await resetBlok(page);

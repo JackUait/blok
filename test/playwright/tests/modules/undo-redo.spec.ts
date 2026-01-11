@@ -4535,5 +4535,60 @@ test.describe('yjs undo/redo', () => {
 
       await expect(paragraphInput).toHaveText('What?');
     });
+
+    test('fast typing batches into single undo group', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type "Hello world" rapidly without pauses - should be single undo group
+      // Using default Playwright typing speed (no delay option)
+      await page.keyboard.type('Hello world');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify full text
+      await expect(paragraphInput).toHaveText('Hello world');
+
+      // Undo should remove entire "Hello world" (no pause = single undo group)
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('');
+    });
+
+    test('multiple words batch when typed fast', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type "The quick brown" rapidly - all three words should batch together
+      await page.keyboard.type('The quick brown');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify full text
+      await expect(paragraphInput).toHaveText('The quick brown');
+
+      // Undo should remove all three words at once
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('');
+    });
   });
 });

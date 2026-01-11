@@ -624,5 +624,31 @@ describe('YjsManager', () => {
       // No error means success - stopCapturing wasn't called unnecessarily
       vi.useRealTimers();
     });
+
+    it('should call stopCapturing when checkAndHandleBoundary is called after timeout elapsed', () => {
+      vi.useFakeTimers();
+      const stopCapturingSpy = vi.spyOn(manager, 'stopCapturing');
+
+      manager.markBoundary();
+      vi.advanceTimersByTime(50); // Only 50ms elapsed
+
+      manager.checkAndHandleBoundary();
+      expect(stopCapturingSpy).not.toHaveBeenCalled(); // Not enough time
+
+      vi.advanceTimersByTime(60); // Now 110ms total
+
+      manager.checkAndHandleBoundary();
+      expect(stopCapturingSpy).toHaveBeenCalledTimes(1);
+      expect(manager.hasPendingBoundary()).toBe(false);
+
+      vi.useRealTimers();
+    });
+
+    it('should not call stopCapturing when no pending boundary', () => {
+      const stopCapturingSpy = vi.spyOn(manager, 'stopCapturing');
+
+      manager.checkAndHandleBoundary();
+      expect(stopCapturingSpy).not.toHaveBeenCalled();
+    });
   });
 });

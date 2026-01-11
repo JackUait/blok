@@ -1027,6 +1027,24 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Check if a pending boundary has timed out and create a checkpoint if so.
+   * Called on each keystroke to handle the case where the user resumes typing
+   * after a pause longer than BOUNDARY_TIMEOUT_MS.
+   */
+  public checkAndHandleBoundary(): void {
+    if (!this.pendingBoundary) {
+      return;
+    }
+
+    const elapsed = Date.now() - this.boundaryTimestamp;
+
+    if (elapsed >= YjsManager.BOUNDARY_TIMEOUT_MS) {
+      this.stopCapturing();
+      this.clearBoundary();
+    }
+  }
+
+  /**
    * Start collecting move operations into a single undo group.
    * All moveBlock calls after this will be collected until endMoveGroup() is called.
    * Also captures caret position before the group starts.

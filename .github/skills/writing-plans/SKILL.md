@@ -1,179 +1,116 @@
 ---
 name: writing-plans
-description: Use when task requires multiple steps, touches multiple files, or takes more than 15 minutes
+description: Use when you have a spec or requirements for a multi-step task, before touching code
 ---
 
 # Writing Plans
 
 ## Overview
 
-Break complex work into bite-sized tasks. Each task should be completable in one focused session.
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
 
-**Core principle:** A good plan makes execution obvious. If you're unsure what to do next, the plan isn't detailed enough.
+Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
 
-## When to Use
+**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-- Multi-file changes
-- New features
-- Refactoring
-- Any task estimated > 15 minutes
-- When user asks for a plan
+**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
 
-**NOT needed for:**
-- Single-file, single-function changes
-- Quick fixes with obvious implementation
-- Tasks you can hold entirely in your head
+**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
 
-## Plan Structure
+## Bite-Sized Task Granularity
 
-### 1. Overview
+**Each step is one action (2-5 minutes):**
+- "Write the failing test" - step
+- "Run it to make sure it fails" - step
+- "Implement the minimal code to make the test pass" - step
+- "Run the tests and make sure they pass" - step
+- "Commit" - step
 
-One paragraph describing:
-- What we're building/changing
-- Why (the problem it solves)
-- High-level approach
+## Plan Document Header
 
-### 2. Prerequisites
-
-What must be true before starting:
-- [ ] Dependencies installed
-- [ ] Required understanding
-- [ ] Existing code reviewed
-
-### 3. Tasks
-
-Each task should be:
-- **Atomic**: Completable in one sitting
-- **Testable**: Clear success criteria
-- **Ordered**: Dependencies explicit
-- **Small**: 15-30 minutes each
-
-Format:
-```markdown
-### Task N: [Verb] [What]
-
-**Files:** `path/to/file.ts`
-
-**Steps:**
-1. [Specific action]
-2. [Specific action]
-3. [Specific action]
-
-**Verification:**
-- [ ] [How to know it's done]
-```
-
-### 4. Verification
-
-How to verify the entire plan succeeded:
-- Tests to run
-- Manual checks
-- User acceptance criteria
-
-## Example Plan
+**Every plan MUST start with this header:**
 
 ```markdown
-# Plan: Add Block Duplication Feature
+# [Feature Name] Implementation Plan
 
-## Overview
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-Add ability to duplicate any block in the editor. User clicks 
-duplicate button, and an exact copy appears below the original.
+**Goal:** [One sentence describing what this builds]
 
-## Prerequisites
+**Architecture:** [2-3 sentences about approach]
 
-- [ ] Understand Block class lifecycle hooks
-- [ ] Review existing block creation in blockManager.ts
-- [ ] Check if duplicate functionality conflicts with existing features
+**Tech Stack:** [Key technologies/libraries]
 
-## Tasks
-
-### Task 1: Add duplicate method to BlockManager
-
-**Files:** `src/components/modules/blockManager.ts`
-
-**Steps:**
-1. Add `duplicate(blockId: string)` method
-2. Get block data via `block.save()`
-3. Create new block with same tool and data
-4. Insert after original block
-
-**Verification:**
-- [ ] Unit test passes: blockManager.duplicate creates copy
-- [ ] No TypeScript errors
-
-### Task 2: Add duplicate button to block toolbar
-
-**Files:** `src/components/modules/ui.ts`
-
-**Steps:**
-1. Add duplicate icon to block toolbar
-2. Wire click handler to call blockManager.duplicate
-3. Add appropriate ARIA label
-
-**Verification:**
-- [ ] Button visible in toolbar
-- [ ] Click creates duplicate block
-
-### Task 3: Write E2E test
-
-**Files:** `test/playwright/tests/block-duplicate.spec.ts`
-
-**Steps:**
-1. Create test that adds block, clicks duplicate
-2. Verify two blocks exist with same content
-3. Verify new block is after original
-
-**Verification:**
-- [ ] E2E test passes in all browsers
-
-## Final Verification
-
-- [ ] `yarn lint` passes
-- [ ] `yarn test` passes  
-- [ ] `yarn e2e` passes
-- [ ] Manual test: can duplicate paragraph, header, list blocks
+---
 ```
 
-## Anti-Patterns
+## Task Structure
 
-| Pattern | Problem |
-|---------|---------|
-| Vague tasks ("implement feature") | Unclear when done |
-| Too large tasks (> 1 hour) | Lose focus, hard to verify |
-| Missing dependencies | Tasks blocked by earlier work |
-| No verification | Don't know if done |
-| Plan not updated as you learn | Reality diverged from plan |
+```markdown
+### Task N: [Component Name]
 
-## Red Flags
+**Files:**
+- Create: `exact/path/to/file.py`
+- Modify: `exact/path/to/existing.py:123-145`
+- Test: `tests/exact/path/to/test.py`
 
-Stop and revise plan if:
+**Step 1: Write the failing test**
 
-- You're unsure what to do next
-- Task is taking much longer than expected
-- You discover missing prerequisites
-- Scope has changed significantly
+```python
+def test_specific_behavior():
+    result = function(input)
+    assert result == expected
+```
 
-## Living Document
+**Step 2: Run test to verify it fails**
 
-The plan should evolve:
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: FAIL with "function not defined"
 
-1. **Before starting**: Write initial plan
-2. **During execution**: Update as you learn
-3. **After each task**: Mark complete, note surprises
-4. **If blocked**: Add new tasks or revise existing
+**Step 3: Write minimal implementation**
 
-A plan that doesn't change probably isn't being used.
+```python
+def function(input):
+    return expected
+```
 
-## Completion Criteria
+**Step 4: Run test to verify it passes**
 
-Plan is complete when:
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: PASS
 
-- [ ] Overview explains what and why
-- [ ] Tasks are atomic (< 30 min each)
-- [ ] Each task has clear verification
-- [ ] Dependencies between tasks are explicit
-- [ ] Final verification defined
-- [ ] User has approved the plan
+**Step 5: Commit**
 
-Now execute using the `executing-plans` skill.
+```bash
+git add tests/path/test.py src/path/file.py
+git commit -m "feat: add specific feature"
+```
+```
+
+## Remember
+- Exact file paths always
+- Complete code in plan (not "add validation")
+- Exact commands with expected output
+- Reference relevant skills with @ syntax
+- DRY, YAGNI, TDD, frequent commits
+
+## Execution Handoff
+
+After saving the plan, offer execution choice:
+
+**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+
+**1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
+
+**2. Parallel Session (separate)** - Open new session with executing-plans, batch execution with checkpoints
+
+**Which approach?"**
+
+**If Subagent-Driven chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- Stay in this session
+- Fresh subagent per task + code review
+
+**If Parallel Session chosen:**
+- Guide them to open new session in worktree
+- **REQUIRED SUB-SKILL:** New session uses superpowers:executing-plans

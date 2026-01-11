@@ -1,143 +1,76 @@
 ---
 name: executing-plans
-description: Use when executing a written plan - one task at a time with verification checkpoints
+description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
 ---
 
 # Executing Plans
 
 ## Overview
 
-Execute plans one task at a time. Verify after each. Never skip ahead.
+Load plan, review critically, execute tasks in batches, report for review between batches.
 
-**Core principle:** A task isn't done until it's verified. Verification isn't optional.
+**Core principle:** Batch execution with checkpoints for architect review.
+
+**Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
 ## The Process
 
-### Before Starting
+### Step 1: Load and Review Plan
+1. Read plan file
+2. Review critically - identify any questions or concerns about the plan
+3. If concerns: Raise them with your human partner before starting
+4. If no concerns: Create TodoWrite and proceed
 
-1. **Review the full plan** - understand the big picture
-2. **Check prerequisites** - all requirements met?
-3. **Identify current task** - which task is next?
+### Step 2: Execute Batch
+**Default: First 3 tasks**
 
-### For Each Task
+For each task:
+1. Mark as in_progress
+2. Follow each step exactly (plan has bite-sized steps)
+3. Run verifications as specified
+4. Mark as completed
 
-1. **Announce the task**
-   > "Starting Task N: [description]"
+### Step 3: Report
+When batch complete:
+- Show what was implemented
+- Show verification output
+- Say: "Ready for feedback."
 
-2. **Execute the steps**
-   - Follow steps as written
-   - If blocked, note it and adapt
-   - Don't jump to later tasks
+### Step 4: Continue
+Based on feedback:
+- Apply changes if needed
+- Execute next batch
+- Repeat until complete
 
-3. **Verify completion**
-   - Check all verification criteria
-   - Run tests mentioned
-   - Document any deviations
+### Step 5: Complete Development
 
-4. **Mark complete**
-   > "Task N complete. [any notes]"
+After all tasks complete and verified:
+- Announce: "I'm using the finishing-a-development-branch skill to complete this work."
+- **REQUIRED SUB-SKILL:** Use superpowers:finishing-a-development-branch
+- Follow that skill to verify tests, present options, execute choice
 
-5. **Move to next task**
+## When to Stop and Ask for Help
 
-### After All Tasks
+**STOP executing immediately when:**
+- Hit a blocker mid-batch (missing dependency, test fails, instruction unclear)
+- Plan has critical gaps preventing starting
+- You don't understand an instruction
+- Verification fails repeatedly
 
-1. **Run final verification** - all criteria from plan
-2. **Summary of changes** - what was done
-3. **Any surprises** - deviations from plan
+**Ask for clarification rather than guessing.**
 
-## Checkpoints
+## When to Revisit Earlier Steps
 
-After each task, ask:
+**Return to Review (Step 1) when:**
+- Partner updates the plan based on your feedback
+- Fundamental approach needs rethinking
 
-- [ ] Did the task succeed?
-- [ ] Are all tests passing?
-- [ ] Is the code in a working state?
-- [ ] Should I commit at this point?
-- [ ] Does the plan need updating?
+**Don't force through blockers** - stop and ask.
 
-If any answer is "no" or "unsure", stop and address before continuing.
-
-## Handling Deviations
-
-**Plan says one thing, reality says another?**
-
-1. **Small deviation**: Note it, proceed
-   > "Note: Used alternative approach because [reason]"
-
-2. **Medium deviation**: Update plan, then proceed
-   > "Updating plan: Task 3 now requires [new steps]"
-
-3. **Large deviation**: Stop, reassess
-   > "Significant issue discovered. Need to revise plan before continuing."
-
-**Never silently deviate** - document everything.
-
-## Anti-Patterns
-
-| Pattern | Problem |
-|---------|---------|
-| Skipping verification | Don't know if actually done |
-| "I'll run tests at the end" | Bugs compound, harder to fix |
-| Jumping ahead to "easy" tasks | Dependencies not met |
-| Not updating plan | Reality diverges from documentation |
-| "It worked when I did it" | No proof for others |
-
-## Red Flags
-
-Stop execution if:
-
-- Two consecutive tasks fail verification
-- You're unsure what the current task means
-- Dependencies from earlier tasks are missing
-- Scope has grown significantly
-
-## Blok-Specific Execution
-
-### Verification Commands
-
-After code changes:
-```bash
-yarn lint        # Must pass - no type errors, no lint errors
-yarn test        # Unit tests
-yarn e2e:chrome  # Quick E2E check
-```
-
-### Commit Points
-
-Good times to commit:
-- After each completed task (if all tests pass)
-- Before starting a risky change
-- After fixing an unexpected issue
-
-### When Stuck
-
-1. Check error messages carefully
-2. Use `systematic-debugging` skill if needed
-3. Review the plan - is the task correctly specified?
-4. Ask user for guidance if blocked > 10 minutes
-
-## Progress Tracking
-
-Keep visible progress:
-
-```markdown
-## Execution Status
-
-- [x] Task 1: Add duplicate method - Done
-- [x] Task 2: Add toolbar button - Done  
-- [ ] Task 3: Write E2E test - In Progress
-- [ ] Task 4: Update documentation - Pending
-```
-
-Update after each task completion.
-
-## Completion
-
-Execution is complete when:
-
-- [ ] All tasks marked done
-- [ ] All verifications passed
-- [ ] Final verification from plan passed
-- [ ] `yarn lint` passes
-- [ ] `yarn test` passes
-- [ ] Summary provided to user
+## Remember
+- Review plan critically first
+- Follow plan steps exactly
+- Don't skip verifications
+- Reference skills when plan says to
+- Between batches: just report and wait
+- Stop when blocked, don't guess

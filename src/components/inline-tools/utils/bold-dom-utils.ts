@@ -7,3 +7,11 @@ export function isBoldTag(node: Element): boolean {
 
   return tag === 'B' || tag === 'STRONG';
 }
+
+/**
+ * Type guard to check if a node is a bold element (STRONG or B)
+ * @param node - Node to inspect
+ */
+export function isBoldElement(node: Node | null): node is Element {
+  return Boolean(node && node.nodeType === Node.ELEMENT_NODE && isBoldTag(node as Element));
+}

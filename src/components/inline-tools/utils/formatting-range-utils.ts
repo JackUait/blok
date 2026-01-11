@@ -119,3 +119,26 @@ export const isRangeFormatted = (
 
   return textNodes.every((textNode) => hasFormattingAncestor(textNode, predicate));
 };
+
+/**
+ * Collect all unique formatting ancestors within a range
+ * @param range - The range to search within
+ * @param predicate - Function to test elements for formatting
+ */
+export const collectFormattingAncestors = (
+  range: Range,
+  predicate: (element: Element) => boolean
+): HTMLElement[] => {
+  const ancestors = new Set<HTMLElement>();
+  const walker = createRangeTextWalker(range);
+
+  while (walker.nextNode()) {
+    const ancestor = findFormattingAncestor(walker.currentNode, predicate);
+
+    if (ancestor) {
+      ancestors.add(ancestor);
+    }
+  }
+
+  return Array.from(ancestors);
+};

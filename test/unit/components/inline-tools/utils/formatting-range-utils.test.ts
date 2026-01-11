@@ -4,6 +4,7 @@ import {
   findFormattingAncestor,
   hasFormattingAncestor,
   isRangeFormatted,
+  collectFormattingAncestors,
 } from '../../../../../src/components/inline-tools/utils/formatting-range-utils';
 
 describe('formatting-range-utils', () => {
@@ -207,6 +208,52 @@ describe('formatting-range-utils', () => {
       range.selectNodeContents(strong);
 
       expect(isRangeFormatted(range, isBold)).toBe(true);
+    });
+  });
+
+  describe('collectFormattingAncestors', () => {
+    const isBold = (el: Element) => el.tagName === 'STRONG' || el.tagName === 'B';
+
+    it('collects all unique formatting ancestors in range', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<strong>first</strong> text <strong>second</strong>';
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+      range.selectNodeContents(container);
+
+      const ancestors = collectFormattingAncestors(range, isBold);
+
+      expect(ancestors).toHaveLength(2);
+      expect(ancestors[0].textContent).toBe('first');
+      expect(ancestors[1].textContent).toBe('second');
+    });
+
+    it('returns empty array when no formatted elements in range', () => {
+      const container = document.createElement('div');
+      container.innerHTML = 'plain text only';
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+      range.selectNodeContents(container);
+
+      const ancestors = collectFormattingAncestors(range, isBold);
+
+      expect(ancestors).toHaveLength(0);
+    });
+
+    it('deduplicates ancestors when multiple text nodes share same parent', () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<strong>part one <em>nested</em> part two</strong>';
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+      range.selectNodeContents(container);
+
+      const ancestors = collectFormattingAncestors(range, isBold);
+
+      expect(ancestors).toHaveLength(1);
+      expect(ancestors[0].tagName).toBe('STRONG');
     });
   });
 });

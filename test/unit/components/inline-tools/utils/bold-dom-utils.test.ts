@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { isBoldTag, isBoldElement, isElementEmpty } from '../../../../../src/components/inline-tools/utils/bold-dom-utils';
+import {
+  isBoldTag,
+  isBoldElement,
+  isElementEmpty,
+  hasBoldParent,
+  findBoldElement,
+} from '../../../../../src/components/inline-tools/utils/bold-dom-utils';
 
 describe('bold-dom-utils', () => {
   beforeEach(() => {
@@ -93,6 +99,86 @@ describe('bold-dom-utils', () => {
       div.appendChild(span);
 
       expect(isElementEmpty(div)).toBe(false);
+    });
+  });
+
+  describe('hasBoldParent', () => {
+    it('returns true when node is inside a strong element', () => {
+      const strong = document.createElement('strong');
+      const text = document.createTextNode('bold');
+
+      strong.appendChild(text);
+      document.body.appendChild(strong);
+
+      expect(hasBoldParent(text)).toBe(true);
+    });
+
+    it('returns true when node is the strong element itself', () => {
+      const strong = document.createElement('strong');
+
+      document.body.appendChild(strong);
+
+      expect(hasBoldParent(strong)).toBe(true);
+    });
+
+    it('returns false when node has no bold ancestor', () => {
+      const div = document.createElement('div');
+      const text = document.createTextNode('normal');
+
+      div.appendChild(text);
+      document.body.appendChild(div);
+
+      expect(hasBoldParent(text)).toBe(false);
+    });
+
+    it('returns false for null', () => {
+      expect(hasBoldParent(null)).toBe(false);
+    });
+  });
+
+  describe('findBoldElement', () => {
+    it('returns the strong element when node is inside it', () => {
+      const strong = document.createElement('strong');
+      const text = document.createTextNode('bold');
+
+      strong.appendChild(text);
+      document.body.appendChild(strong);
+
+      expect(findBoldElement(text)).toBe(strong);
+    });
+
+    it('returns the element itself when it is a strong', () => {
+      const strong = document.createElement('strong');
+
+      document.body.appendChild(strong);
+
+      expect(findBoldElement(strong)).toBe(strong);
+    });
+
+    it('returns null when no bold ancestor exists', () => {
+      const div = document.createElement('div');
+      const text = document.createTextNode('normal');
+
+      div.appendChild(text);
+      document.body.appendChild(div);
+
+      expect(findBoldElement(text)).toBeNull();
+    });
+
+    it('returns null for null input', () => {
+      expect(findBoldElement(null)).toBeNull();
+    });
+
+    it('converts B to STRONG when found', () => {
+      const b = document.createElement('b');
+      const text = document.createTextNode('bold');
+
+      b.appendChild(text);
+      document.body.appendChild(b);
+
+      const result = findBoldElement(text);
+
+      expect(result?.tagName).toBe('STRONG');
     });
   });
 });

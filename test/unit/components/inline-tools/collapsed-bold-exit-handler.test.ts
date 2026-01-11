@@ -90,4 +90,81 @@ describe('CollapsedBoldExitHandler', () => {
       expect(strong.getAttribute('data-blok-bold-collapsed-length')).toBe('4');
     });
   });
+
+  describe('maintain', () => {
+    it('moves overflow text from bold to boundary', () => {
+      const div = document.createElement('div');
+      const strong = document.createElement('strong');
+      const boundary = document.createTextNode('\u200B');
+
+      strong.textContent = 'bold';
+      div.contentEditable = 'true';
+      div.appendChild(strong);
+      div.appendChild(boundary);
+      document.body.appendChild(div);
+      div.focus();
+
+      const selection = window.getSelection()!;
+      const handler = CollapsedBoldExitHandler.getInstance();
+
+      handler.exitBold(selection, strong);
+
+      // Simulate typing inside the bold element
+      strong.textContent = 'boldX';
+
+      handler.maintain();
+
+      expect(strong.textContent).toBe('bold');
+      expect(boundary.textContent).toContain('X');
+    });
+
+    it('removes zero-width space when boundary has content', () => {
+      const div = document.createElement('div');
+      const strong = document.createElement('strong');
+
+      strong.textContent = 'bold';
+      div.contentEditable = 'true';
+      div.appendChild(strong);
+      document.body.appendChild(div);
+      div.focus();
+
+      const selection = window.getSelection()!;
+      const handler = CollapsedBoldExitHandler.getInstance();
+
+      handler.exitBold(selection, strong);
+
+      const boundary = strong.nextSibling as Text;
+
+      // Simulate typing after the ZWS
+      boundary.textContent = '\u200Btyped';
+
+      handler.maintain();
+
+      expect(boundary.textContent).toBe('typed');
+    });
+
+    it('removes stale records for disconnected elements', () => {
+      const div = document.createElement('div');
+      const strong = document.createElement('strong');
+
+      strong.textContent = 'bold';
+      div.contentEditable = 'true';
+      div.appendChild(strong);
+      document.body.appendChild(div);
+      div.focus();
+
+      const selection = window.getSelection()!;
+      const handler = CollapsedBoldExitHandler.getInstance();
+
+      handler.exitBold(selection, strong);
+      expect(handler.hasActiveRecords()).toBe(true);
+
+      // Disconnect the element
+      strong.remove();
+
+      handler.maintain();
+
+      expect(handler.hasActiveRecords()).toBe(false);
+    });
+  });
 });

@@ -1,5 +1,5 @@
 import type { CollapsedExitRecord } from './types';
-import { ensureStrongElement, isElementEmpty } from './utils/bold-dom-utils';
+import { ensureStrongElement, isElementEmpty, resolveBoundary } from './utils/bold-dom-utils';
 
 const DATA_ATTR_COLLAPSED_LENGTH = 'data-blok-bold-collapsed-length';
 const DATA_ATTR_COLLAPSED_ACTIVE = 'data-blok-bold-collapsed-active';
@@ -119,5 +119,97 @@ export class CollapsedBoldExitHandler {
     });
 
     return newRange;
+  }
+
+  /**
+   * Maintain the collapsed exit state by enforcing text boundaries
+   */
+  public maintain(): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    for (const record of Array.from(this.records)) {
+      const resolved = resolveBoundary(record);
+
+      if (!resolved) {
+        this.records.delete(record);
+        continue;
+      }
+
+      record.boundary = resolved.boundary;
+      record.boldElement = resolved.boldElement;
+
+      this.enforceTextBoundary(record);
+      this.cleanupZeroWidthSpace(record);
+      this.updateRecordState(record);
+      this.checkForRecordDeletion(record);
+    }
+  }
+
+  private enforceTextBoundary(record: CollapsedExitRecord): void {
+    const { boundary, boldElement, allowedLength } = record;
+    const currentText = boldElement.textContent ?? '';
+
+    if (currentText.length > allowedLength) {
+      const preserved = currentText.slice(0, allowedLength);
+      const extra = currentText.slice(allowedLength);
+
+      boldElement.textContent = preserved;
+      boundary.textContent = extra + (boundary.textContent ?? '');
+    }
+  }
+
+  private cleanupZeroWidthSpace(record: CollapsedExitRecord): void {
+    const { boundary } = record;
+    const boundaryContent = boundary.textContent ?? '';
+
+    if (boundaryContent.length > 1 && boundaryContent.startsWith('\u200B')) {
+      boundary.textContent = boundaryContent.slice(1);
+    }
+  }
+
+  private updateRecordState(record: CollapsedExitRecord): void {
+    const { boundary } = record;
+    const boundaryText = boundary.textContent ?? '';
+    const sanitizedBoundary = boundaryText.replace(/\u200B/g, '');
+    const leadingMatch = sanitizedBoundary.match(/^\s+/);
+    const containsTypedContent = /\S/.test(sanitizedBoundary);
+
+    if (leadingMatch) {
+      record.hasLeadingSpace = true;
+      record.leadingWhitespace = leadingMatch[0];
+    }
+
+    if (containsTypedContent) {
+      record.hasTypedContent = true;
+    }
+  }
+
+  private checkForRecordDeletion(record: CollapsedExitRecord): void {
+    const { boundary, boldElement, allowedLength } = record;
+    const boundaryText = boundary.textContent ?? '';
+    const sanitizedBoundary = boundaryText.replace(/\u200B/g, '');
+    const selectionStartsWithZws = boundaryText.startsWith('\u200B');
+    const boundaryHasVisibleLeading = /^\s/.test(sanitizedBoundary);
+
+    const meetsDeletionCriteria = record.hasTypedContent &&
+      !selectionStartsWithZws &&
+      (boldElement.textContent ?? '').length <= allowedLength;
+
+    const shouldRestoreLeadingSpace = record.hasLeadingSpace &&
+      record.hasTypedContent &&
+      !boundaryHasVisibleLeading;
+
+    if (meetsDeletionCriteria && shouldRestoreLeadingSpace) {
+      const trimmedActual = boundaryText.replace(/^[\u200B\s]+/, '');
+      const leadingWhitespace = record.leadingWhitespace || ' ';
+
+      boundary.textContent = `${leadingWhitespace}${trimmedActual}`;
+    }
+
+    if (meetsDeletionCriteria) {
+      this.records.delete(record);
+    }
   }
 }

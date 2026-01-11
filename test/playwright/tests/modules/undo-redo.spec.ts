@@ -4405,4 +4405,133 @@ test.describe('yjs undo/redo', () => {
       await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
     });
   });
+
+  test.describe('smart grouping', () => {
+    // Boundary timeout: 100ms in implementation + buffer for test reliability
+    const BOUNDARY_TIMEOUT = 150;
+
+    test('word boundary + pause creates checkpoint', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type "Hello " then pause long enough for boundary timeout
+      await page.keyboard.type('Hello ');
+      await waitForDelay(page, BOUNDARY_TIMEOUT);
+
+      // Type "world" and wait for Yjs to capture
+      await page.keyboard.type('world');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify full text
+      await expect(paragraphInput).toHaveText('Hello world');
+
+      // Undo should remove only "world" (boundary + pause created checkpoint after "Hello ")
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('Hello ');
+    });
+
+    test('punctuation + pause creates checkpoint', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type "Hello," then pause long enough for boundary timeout
+      await page.keyboard.type('Hello,');
+      await waitForDelay(page, BOUNDARY_TIMEOUT);
+
+      // Type " world" and wait for Yjs to capture
+      await page.keyboard.type(' world');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify full text
+      await expect(paragraphInput).toHaveText('Hello, world');
+
+      // Undo should remove only " world" (boundary + pause created checkpoint after "Hello,")
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('Hello,');
+    });
+
+    test('sentence boundary creates checkpoint', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type "Hello." then pause long enough for boundary timeout
+      await page.keyboard.type('Hello.');
+      await waitForDelay(page, BOUNDARY_TIMEOUT);
+
+      // Type " World" and wait for Yjs to capture
+      await page.keyboard.type(' World');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify full text
+      await expect(paragraphInput).toHaveText('Hello. World');
+
+      // Undo should remove only " World" (boundary + pause created checkpoint after "Hello.")
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('Hello.');
+    });
+
+    test('question mark creates checkpoint', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type "What?" then pause long enough for boundary timeout
+      await page.keyboard.type('What?');
+      await waitForDelay(page, BOUNDARY_TIMEOUT);
+
+      // Type " Yes" and wait for Yjs to capture
+      await page.keyboard.type(' Yes');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Verify full text
+      await expect(paragraphInput).toHaveText('What? Yes');
+
+      // Undo should remove only " Yes" (boundary + pause created checkpoint after "What?")
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('What?');
+    });
+  });
 });

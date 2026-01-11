@@ -29,12 +29,14 @@ export class BlocksAPI extends Module {
       getBlockIndex: (id: string): number | undefined => this.getBlockIndex(id),
       getBlocksCount: (): number => this.getBlocksCount(),
       getBlockByElement: (element: HTMLElement) => this.getBlockByElement(element),
+      getChildren: (parentId: string): BlockAPIInterface[] => this.getChildren(parentId),
       insert: this.insert,
       insertMany: this.insertMany,
       update: this.update,
       composeBlockData: this.composeBlockData,
       convert: this.convert,
       stopBlockMutationWatching: (index: number): void => this.stopBlockMutationWatching(index),
+      splitBlock: this.splitBlock,
     };
   }
 
@@ -117,6 +119,19 @@ export class BlocksAPI extends Module {
 
     return new BlockAPI(block);
   }
+
+  /**
+   * Returns all child blocks of a parent container block
+   * @param parentId - id of the parent block
+   */
+  public getChildren(parentId: string): BlockAPIInterface[] {
+    const children = this.Blok.BlockManager.blocks.filter(
+      (block) => block.parentId === parentId
+    );
+
+    return children.map((block) => new BlockAPI(block));
+  }
+
 
   /**
    * Move block from one index to another
@@ -358,6 +373,45 @@ export class BlocksAPI extends Module {
   }
 
   /**
+   * Atomically splits a block by updating the current block's data and inserting a new block.
+   * Both operations are grouped into a single undo entry.
+   *
+   * @param currentBlockId - id of the block to update
+   * @param currentBlockData - new data for the current block (typically truncated content)
+   * @param newBlockType - tool type for the new block
+   * @param newBlockData - data for the new block (typically extracted content)
+   * @param insertIndex - index where to insert the new block
+   * @returns the newly created block
+   */
+  private splitBlock = (
+    currentBlockId: string,
+    currentBlockData: Partial<BlockToolData>,
+    newBlockType: string,
+    newBlockData: BlockToolData,
+    insertIndex: number
+  ): BlockAPIInterface => {
+    // Force new undo group so block split is separate from previous typing.
+    this.Blok.YjsManager.stopCapturing();
+
+    const newBlock = this.Blok.BlockManager.splitBlockWithData(
+      currentBlockId,
+      currentBlockData,
+      newBlockType,
+      newBlockData,
+      insertIndex
+    );
+
+    // Use requestAnimationFrame to delay stopCapturing until after MutationObserver callbacks
+    // have been processed. This ensures any DOM sync operations from the split complete first,
+    // keeping them in the same undo entry as the split itself.
+    requestAnimationFrame(() => {
+      this.Blok.YjsManager.stopCapturing();
+    });
+
+    return new BlockAPI(newBlock);
+  };
+
+  /**
    * Validated block index and throws an error if it's invalid
    * @param index - index to validate
    */
@@ -367,10 +421,6 @@ export class BlocksAPI extends Module {
     }
 
     if (index < 0) {
-      throw new Error(`Index should be greater than or equal to 0`);
-    }
-
-    if (index === null) {
       throw new Error(`Index should be greater than or equal to 0`);
     }
   }

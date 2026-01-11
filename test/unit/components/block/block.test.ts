@@ -305,6 +305,117 @@ describe('Block', () => {
     });
   });
 
+  describe('setData', () => {
+    it('clears contenteditable content when called with empty object on paragraph block', async () => {
+      const { block, renderElement } = createBlock({ data: { text: 'initial content' } });
+
+      renderElement.innerHTML = 'hello';
+
+      const result = await block.setData({});
+
+      expect(result).toBe(true);
+      expect(renderElement.innerHTML).toBe('');
+    });
+
+    it('updates contenteditable content when called with text property', async () => {
+      const { block, renderElement } = createBlock({ data: { text: 'initial content' } });
+
+      renderElement.innerHTML = 'old text';
+
+      const result = await block.setData({ text: 'new text' });
+
+      expect(result).toBe(true);
+      expect(renderElement.innerHTML).toBe('new text');
+    });
+
+    it('returns false for non-paragraph blocks with empty data', async () => {
+      const renderElement = document.createElement('div');
+
+      renderElement.setAttribute('contenteditable', 'true');
+
+      const toolInstance = {
+        render: vi.fn((): HTMLElement => renderElement),
+        save: vi.fn(async (): Promise<BlockToolData> => ({ src: 'image.png' })),
+        validate: vi.fn(async (): Promise<boolean> => true),
+      };
+
+      const toolAdapter = {
+        name: 'image', // Not a paragraph
+        settings: { config: {} },
+        create: vi.fn(() => toolInstance as unknown as object),
+        tunes: new ToolsCollection<BlockTuneAdapter>(),
+        sanitizeConfig: {},
+        inlineTools: new ToolsCollection(),
+        conversionConfig: undefined,
+      } as unknown as BlockToolAdapter;
+
+      const block = new Block({
+        id: 'test-image-block',
+        data: { src: 'image.png' },
+        tool: toolAdapter,
+        readOnly: false,
+        tunesData: {},
+        api: {} as ApiModules,
+      });
+
+      renderElement.innerHTML = 'caption text';
+
+      const result = await block.setData({});
+
+      // Should return false because it's not a paragraph block
+      expect(result).toBe(false);
+      // Content should remain unchanged
+      expect(renderElement.innerHTML).toBe('caption text');
+    });
+  });
+
+  describe('currentInputIndex', () => {
+    it('returns the default input index', () => {
+      const { block } = createBlock();
+
+      // Default should be 0
+      expect(block.currentInputIndex).toBe(0);
+    });
+
+    it('returns the updated input index when currentInput is changed', () => {
+      const { block } = createBlock();
+      const content = block.pluginsContent;
+
+      // Add additional inputs to the block (as siblings, not nested)
+      const secondInput = document.createElement('div');
+
+      secondInput.setAttribute('contenteditable', 'true');
+
+      const thirdInput = document.createElement('div');
+
+      thirdInput.setAttribute('contenteditable', 'true');
+
+      // Get the parent of pluginsContent to add siblings
+      const parent = content.parentElement;
+
+      if (parent === null) {
+        throw new Error('Expected parent element');
+      }
+
+      parent.appendChild(secondInput);
+      parent.appendChild(thirdInput);
+
+      // Drop inputs cache to refresh
+      (block as unknown as { dropInputsCache: () => void }).dropInputsCache();
+
+      // Verify we now have 3 inputs
+      expect(block.inputs.length).toBe(3);
+
+      // Set current input to second element
+      block.currentInput = secondInput;
+      expect(block.currentInputIndex).toBe(1);
+
+      // Set current input to third element
+      block.currentInput = thirdInput;
+      expect(block.currentInputIndex).toBe(2);
+    });
+  });
+
   describe('block state helpers', () => {
     it('detects empty state based on text and media content', () => {
       const { block } = createBlock();

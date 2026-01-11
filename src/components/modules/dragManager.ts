@@ -914,11 +914,21 @@ export class DragManager extends Module {
     const firstBlockIndex = manager.getBlockIndex(sortedBlocks[0]);
     const movingDown = insertIndex > firstBlockIndex;
 
-    // Execute the move based on direction
-    if (movingDown) {
-      this.moveBlocksDown(sortedBlocks, insertIndex);
+    // For multi-block moves, group them as a single undo entry using transactMoves
+    // for exception safety (endMoveGroup is always called even if move throws)
+    const isMultiBlockMove = sortedBlocks.length > 1;
+    const executeMoves = (): void => {
+      if (movingDown) {
+        this.moveBlocksDown(sortedBlocks, insertIndex);
+      } else {
+        this.moveBlocksUp(sortedBlocks, insertIndex);
+      }
+    };
+
+    if (isMultiBlockMove) {
+      this.Blok.YjsManager.transactMoves(executeMoves);
     } else {
-      this.moveBlocksUp(sortedBlocks, insertIndex);
+      executeMoves();
     }
 
     // Clear selection first, then re-select all moved blocks

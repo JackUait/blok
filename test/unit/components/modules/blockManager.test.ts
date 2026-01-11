@@ -221,6 +221,15 @@ const createBlockManager = (
       },
       checkEmptiness: vi.fn(),
     } as unknown as BlokModules['UI'],
+    YjsManager: {
+      addBlock: vi.fn(),
+      removeBlock: vi.fn(),
+      moveBlock: vi.fn(),
+      updateBlockData: vi.fn(),
+      updateBlockTune: vi.fn(),
+      stopCapturing: vi.fn(),
+      transact: vi.fn((fn: () => void) => fn()),
+    } as unknown as BlokModules['YjsManager'],
   };
 
   blockManager.state = {
@@ -374,6 +383,7 @@ describe('BlockManager', () => {
       tool: 'paragraph',
       data: { text: 'Updated' },
       tunes: { alignment: 'center' },
+      bindEventsImmediately: true,
     });
     expect(blocksStub.replace).toHaveBeenCalledWith(0, newBlock);
     expect(blockDidMutatedSpy).toHaveBeenCalledWith(
@@ -416,7 +426,7 @@ describe('BlockManager', () => {
     expect(result).toBe(defaultBlock);
     expect(blocksStub.blocks[0]).toBe(defaultBlock);
     expect(blockManager.currentBlockIndex).toBe(1);
-    expect(composeBlockSpy).toHaveBeenCalledWith({ tool: 'paragraph' });
+    expect(composeBlockSpy).toHaveBeenCalledWith({ tool: 'paragraph', bindEventsImmediately: true });
     expect(blockDidMutatedSpy).toHaveBeenCalledWith(
       BlockAddedMutationType,
       defaultBlock,
@@ -448,15 +458,14 @@ describe('BlockManager', () => {
     expect(() => blockManager.insertDefaultBlockAtIndex(0)).toThrow('Could not insert default Block. Default block tool is not defined in the configuration.');
   });
 
-  it('removes only selected blocks and returns the first removed index', () => {
+  it('deletes selected blocks and inserts replacement when all blocks are selected', () => {
     const blocks = [
       createBlockStub({ id: 'first' }),
       createBlockStub({ id: 'second' }),
-      createBlockStub({ id: 'third' }),
     ];
 
+    blocks[0].selected = true;
     blocks[1].selected = true;
-    blocks[2].selected = true;
 
     const { blockManager } = createBlockManager({
       initialBlocks: blocks,
@@ -466,11 +475,26 @@ describe('BlockManager', () => {
       .spyOn(blockManager as unknown as { removeBlock: BlockManager['removeBlock'] }, 'removeBlock')
       .mockResolvedValue();
 
-    const firstRemovedIndex = blockManager.removeSelectedBlocks();
+    const replacementBlock = createBlockStub({ id: 'replacement' });
+    const insertSpy = vi
+      .spyOn(blockManager as unknown as { insert: BlockManager['insert'] }, 'insert')
+      .mockReturnValue(replacementBlock);
 
-    expect(removeSpy).toHaveBeenNthCalledWith(1, blocks[2], false);
-    expect(removeSpy).toHaveBeenNthCalledWith(2, blocks[1], false);
-    expect(firstRemovedIndex).toBe(1);
+    const result = blockManager.deleteSelectedBlocksAndInsertReplacement();
+
+    // Should remove both selected blocks (in reverse order by index)
+    expect(removeSpy).toHaveBeenNthCalledWith(1, blocks[1], false, true);
+    expect(removeSpy).toHaveBeenNthCalledWith(2, blocks[0], false, true);
+
+    // Should insert replacement block
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'paragraph',
+      index: 0,
+      needToFocus: true,
+      skipYjsSync: true,
+    }));
+
+    expect(result).toBe(replacementBlock);
   });
 
   it('splits the current block using caret fragment contents', () => {
@@ -495,7 +519,11 @@ describe('BlockManager', () => {
     const result = blockManager.split();
 
     expect(caretStub.extractFragmentFromCaretPosition).toHaveBeenCalledTimes(1);
-    expect(insertSpy).toHaveBeenCalledWith({ data: { text: 'Split content' } });
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'paragraph',
+      data: { text: 'Split content' },
+      skipYjsSync: true,
+    }));
     expect(result).toBe(insertedBlock);
   });
 
@@ -581,6 +609,76 @@ describe('BlockManager', () => {
     expect(blockManager.setCurrentBlockByChildNode(alienChild)).toBeUndefined();
 
     ui.nodes.wrapper.remove();
+  });
+
+  it('splits block with provided data and returns new block', () => {
+    const originalBlock = createBlockStub({ id: 'original', name: 'list' });
+
+    originalBlock.holder.innerHTML = '<div contenteditable="true">Hello World</div>';
+
+    const yjsManagerMock = {
+      addBlock: vi.fn(),
+      removeBlock: vi.fn(),
+      moveBlock: vi.fn(),
+      updateBlockData: vi.fn(),
+      updateBlockTune: vi.fn(),
+      stopCapturing: vi.fn(),
+      transact: vi.fn((fn: () => void) => fn()),
+    } as unknown as BlokModules['YjsManager'];
+
+    const { blockManager } = createBlockManager({
+      initialBlocks: [ originalBlock ],
+      blokOverrides: {
+        YjsManager: yjsManagerMock,
+      },
+    });
+
+    const insertedBlock = createBlockStub({ id: 'new-item', name: 'list' });
+    const insertSpy = vi.spyOn(blockManager as unknown as { insert: BlockManager['insert'] }, 'insert').mockReturnValue(insertedBlock);
+
+    const result = blockManager.splitBlockWithData(
+      'original',
+      { text: 'Hello' },
+      'list',
+      { text: ' World', style: 'unordered' },
+      1
+    );
+
+    // Yjs transaction should be called
+    expect(yjsManagerMock.transact).toHaveBeenCalledTimes(1);
+
+    // Should update original block data in Yjs
+    expect(yjsManagerMock.updateBlockData).toHaveBeenCalledWith('original', 'text', 'Hello');
+
+    // Should add new block to Yjs
+    expect(yjsManagerMock.addBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'list',
+        data: { text: ' World', style: 'unordered' },
+      }),
+      1
+    );
+
+    // Should insert DOM block with skipYjsSync
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'list',
+      data: { text: ' World', style: 'unordered' },
+      index: 1,
+      needToFocus: true,
+      skipYjsSync: true,
+    }));
+
+    expect(result).toBe(insertedBlock);
+  });
+
+  it('throws when splitBlockWithData receives unknown block id', () => {
+    const { blockManager } = createBlockManager({
+      initialBlocks: [ createBlockStub({ id: 'existing' }) ],
+    });
+
+    expect(() => {
+      blockManager.splitBlockWithData('unknown', { text: 'a' }, 'paragraph', { text: 'b' }, 1);
+    }).toThrow('Block with id "unknown" not found');
   });
 
   it('emits enumerable events when blockDidMutated is invoked', () => {

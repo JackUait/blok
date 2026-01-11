@@ -13,8 +13,6 @@ import type { BlockSettingsOpenedPayload } from './BlockSettingsOpened';
 import { BlockSettingsOpened } from './BlockSettingsOpened';
 import type { BlockSettingsClosedPayload } from './BlockSettingsClosed';
 import { BlockSettingsClosed } from './BlockSettingsClosed';
-import type { HistoryStateChangedPayload } from './HistoryStateChanged';
-import { HistoryStateChanged } from './HistoryStateChanged';
 
 /**
  * Events fired by Blok Event Dispatcher
@@ -27,7 +25,6 @@ export {
   BlokMobileLayoutToggled,
   BlockSettingsOpened,
   BlockSettingsClosed,
-  HistoryStateChanged
 };
 
 /**
@@ -42,5 +39,4 @@ export interface BlokEventMap {
   [BlokMobileLayoutToggled]: BlokMobileLayoutToggledPayload;
   [BlockSettingsOpened]: BlockSettingsOpenedPayload;
   [BlockSettingsClosed]: BlockSettingsClosedPayload;
-  [HistoryStateChanged]: HistoryStateChangedPayload;
 }

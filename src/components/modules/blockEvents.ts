@@ -8,6 +8,7 @@ import { Flipper } from '../flipper';
 import type { Block } from '../block';
 import { areBlocksMergeable } from '../utils/blocks';
 import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../utils/caret';
+import { YjsManager } from './yjsManager';
 
 const KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP: Record<string, number> = {
   Backspace: keyCodes.BACKSPACE,
@@ -284,11 +285,9 @@ export class BlockEvents extends Module {
       return false;
     }
 
-    const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
-    if (selectionPositionIndex !== undefined) {
-      const insertedBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
-
+    if (insertedBlock) {
       Caret.setToBlock(insertedBlock, Caret.positions.START);
     }
 
@@ -481,8 +480,11 @@ export class BlockEvents extends Module {
    * @param {InputEvent} event - input event
    */
   public input(event: InputEvent): void {
+    // Handle smart grouping for undo
+    this.handleSmartGrouping(event);
+
     /**
-     * Only handle insertText events (typing) that end with a space
+     * Only handle markdown shortcuts for insertText events that end with a space
      */
     if (event.inputType !== 'insertText' || event.data !== ' ') {
       return;
@@ -490,6 +492,37 @@ export class BlockEvents extends Module {
 
     this.handleListShortcut();
     this.handleHeaderShortcut();
+  }
+
+  /**
+   * Handle smart grouping logic for undo based on boundary characters.
+   * Boundary characters (space, punctuation) followed by a pause create undo checkpoints.
+   * @param event - input event
+   */
+  private handleSmartGrouping(event: InputEvent): void {
+    const { YjsManager: yjsManager } = this.Blok;
+
+    // Only handle text input
+    if (event.inputType !== 'insertText' || event.data === null) {
+      return;
+    }
+
+    const char = event.data;
+
+    // Check if previous boundary has timed out (user resumed typing after pause)
+    yjsManager.checkAndHandleBoundary();
+
+    if (YjsManager.isBoundaryCharacter(char)) {
+      // Mark boundary - will create checkpoint if followed by pause
+      yjsManager.markBoundary();
+
+      return;
+    }
+
+    if (yjsManager.hasPendingBoundary()) {
+      // Non-boundary character typed quickly after boundary - clear pending state
+      yjsManager.clearBoundary();
+    }
   }
 
   /**
@@ -546,6 +579,9 @@ export class BlockEvents extends Module {
     const checklistMatch = BlockEvents.CHECKLIST_PATTERN.exec(textContent);
 
     if (checklistMatch) {
+      // Force new undo group so list conversion is separate from previous typing
+      this.Blok.YjsManager.stopCapturing();
+
       /**
        * Determine if the checkbox should be checked
        * [x] or [X] means checked, [] or [ ] means unchecked
@@ -569,6 +605,9 @@ export class BlockEvents extends Module {
 
       this.setCaretAfterConversion(newBlock, caretOffset);
 
+      // Force new undo group so subsequent typing is separate from list conversion
+      this.Blok.YjsManager.stopCapturing();
+
       return;
     }
 
@@ -578,6 +617,9 @@ export class BlockEvents extends Module {
     const unorderedMatch = BlockEvents.UNORDERED_LIST_PATTERN.exec(textContent);
 
     if (unorderedMatch) {
+      // Force new undo group so list conversion is separate from previous typing
+      this.Blok.YjsManager.stopCapturing();
+
       /**
        * Extract remaining content (group 1) and calculate shortcut length
        * Shortcut length: "-" or "*" + " " = 2 chars
@@ -595,6 +637,9 @@ export class BlockEvents extends Module {
 
       this.setCaretAfterConversion(newBlock, caretOffset);
 
+      // Force new undo group so subsequent typing is separate from list conversion
+      this.Blok.YjsManager.stopCapturing();
+
       return;
     }
 
@@ -606,6 +651,9 @@ export class BlockEvents extends Module {
     if (!orderedMatch) {
       return;
     }
+
+    // Force new undo group so list conversion is separate from previous typing
+    this.Blok.YjsManager.stopCapturing();
 
     /**
      * Extract the starting number from the pattern
@@ -642,6 +690,9 @@ export class BlockEvents extends Module {
     const newBlock = BlockManager.replace(currentBlock, 'list', listData);
 
     this.setCaretAfterConversion(newBlock, caretOffset);
+
+    // Force new undo group so subsequent typing is separate from list conversion
+    this.Blok.YjsManager.stopCapturing();
   }
 
   /**
@@ -677,6 +728,9 @@ export class BlockEvents extends Module {
       return;
     }
 
+    // Force new undo group so header conversion is separate from previous typing
+    this.Blok.YjsManager.stopCapturing();
+
     const remainingHtml = this.extractRemainingHtml(currentInput, match.shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - match.shortcutLength;
 
@@ -686,6 +740,9 @@ export class BlockEvents extends Module {
     });
 
     this.setCaretAfterConversion(newBlock, caretOffset);
+
+    // Force new undo group so subsequent typing is separate from header conversion
+    this.Blok.YjsManager.stopCapturing();
   }
 
   private matchDefaultHeaderShortcut(text: string): { level: number; shortcutLength: number } | null {
@@ -862,18 +919,12 @@ export class BlockEvents extends Module {
     }
 
     BlockSelection.copySelectedBlocks(event).then(() => {
-      const selectionPositionIndex = BlockManager.removeSelectedBlocks();
+      const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
-      /**
-       * Insert default block in place of removed ones
-       */
-      if (selectionPositionIndex !== undefined) {
-        const insertedBlock = BlockManager.insertDefaultBlockAtIndex(selectionPositionIndex, true);
-
+      if (insertedBlock) {
         Caret.setToBlock(insertedBlock, Caret.positions.START);
       }
 
-      /** Clear selection */
       BlockSelection.clearSelection(event);
     })
       .catch(() => {
@@ -989,30 +1040,10 @@ export class BlockEvents extends Module {
       return;
     }
 
-    /**
-     * If enter has been pressed at the start of the text, just insert paragraph Block above
-     */
-    const blockToFocus = (() => {
-      if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
-        this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
+    // Force new undo group so block creation is separate from previous typing
+    this.Blok.YjsManager.stopCapturing();
 
-        return currentBlock;
-      }
-
-      /**
-       * If caret is at very end of the block, just append the new block without splitting
-       * to prevent unnecessary dom mutation observing
-       */
-      if (currentBlock.currentInput && isCaretAtEndOfInput(currentBlock.currentInput)) {
-        return this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
-      }
-
-      /**
-       * Split the Current Block into two blocks
-       * Renew local current node after split
-       */
-      return this.Blok.BlockManager.split();
-    })();
+    const blockToFocus = this.createBlockOnEnter(currentBlock);
 
     this.Blok.Caret.setToBlock(blockToFocus);
 
@@ -1022,6 +1053,42 @@ export class BlockEvents extends Module {
     this.Blok.Toolbar.moveAndOpen(blockToFocus);
 
     event.preventDefault();
+  }
+
+  /**
+   * Determines which block to create when Enter is pressed and returns the block to focus.
+   * Handles three cases:
+   * 1. Caret at start of block → insert empty block above, focus stays on current
+   * 2. Caret at end of block → insert empty block below, focus moves to new block
+   * 3. Caret in middle → split block, focus moves to new block
+   *
+   * @param currentBlock - the block where Enter was pressed
+   * @returns the block that should receive focus after the operation
+   */
+  private createBlockOnEnter(currentBlock: Block): Block {
+    // Case 1: Caret at start - insert block above
+    if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
+      this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
+
+      // Force new undo group so typing in the new block is separate from block creation
+      this.Blok.YjsManager.stopCapturing();
+
+      return currentBlock;
+    }
+
+    // Case 2: Caret at end - insert block below
+    if (currentBlock.currentInput && isCaretAtEndOfInput(currentBlock.currentInput)) {
+      const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
+
+      // Force new undo group so typing in the new block is separate from block creation
+      this.Blok.YjsManager.stopCapturing();
+
+      return newBlock;
+    }
+
+    // Case 3: Caret in middle - split block
+    // Note: split() uses transact() internally, so it's already atomic - no stopCapturing needed
+    return this.Blok.BlockManager.split();
   }
 
   /**

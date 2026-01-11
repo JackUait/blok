@@ -48,6 +48,8 @@ export class Renderer extends Module {
           ? expandToHierarchical(blocksData)
           : blocksData;
 
+        // Note: Yjs data layer is loaded via BlockManager.insertMany() with the correct block IDs
+
         /**
          * Create Blocks instances
          */

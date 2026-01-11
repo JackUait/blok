@@ -984,6 +984,35 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Time in milliseconds to wait after a boundary character before creating a checkpoint.
+   */
+  private static readonly BOUNDARY_TIMEOUT_MS = 100;
+
+  /**
+   * Mark that a boundary character (space, punctuation) was just typed.
+   * Starts a timer that will call stopCapturing() after BOUNDARY_TIMEOUT_MS
+   * if no new input arrives.
+   */
+  public markBoundary(): void {
+    this.pendingBoundary = true;
+    this.boundaryTimestamp = Date.now();
+
+    // Clear any existing timeout
+    if (this.boundaryTimeoutId !== null) {
+      clearTimeout(this.boundaryTimeoutId);
+    }
+
+    // Set new timeout to create checkpoint if no more input
+    this.boundaryTimeoutId = setTimeout(() => {
+      if (this.pendingBoundary) {
+        this.stopCapturing();
+        this.pendingBoundary = false;
+      }
+      this.boundaryTimeoutId = null;
+    }, YjsManager.BOUNDARY_TIMEOUT_MS);
+  }
+
+  /**
    * Start collecting move operations into a single undo group.
    * All moveBlock calls after this will be collected until endMoveGroup() is called.
    * Also captures caret position before the group starts.

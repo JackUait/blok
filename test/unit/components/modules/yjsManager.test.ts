@@ -594,5 +594,21 @@ describe('YjsManager', () => {
     it('should initialize with no pending boundary', () => {
       expect(manager.hasPendingBoundary()).toBe(false);
     });
+
+    it('should set pending boundary when markBoundary is called', () => {
+      manager.markBoundary();
+      expect(manager.hasPendingBoundary()).toBe(true);
+    });
+
+    it('should clear pending boundary after timeout', async () => {
+      vi.useFakeTimers();
+      manager.markBoundary();
+      expect(manager.hasPendingBoundary()).toBe(true);
+
+      vi.advanceTimersByTime(150);
+
+      expect(manager.hasPendingBoundary()).toBe(false);
+      vi.useRealTimers();
+    });
   });
 });

@@ -670,4 +670,18 @@ describe('YjsManager', () => {
       expect(stopCapturingSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('clearHistory boundary cleanup', () => {
+    it('should clear pending boundary when history is cleared via fromJSON', () => {
+      vi.useFakeTimers();
+      manager.markBoundary();
+      expect(manager.hasPendingBoundary()).toBe(true);
+
+      // fromJSON calls clearHistory internally
+      manager.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Test' } }]);
+
+      expect(manager.hasPendingBoundary()).toBe(false);
+      vi.useRealTimers();
+    });
+  });
 });

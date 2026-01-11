@@ -782,6 +782,8 @@ export class YjsManager extends Module {
     this.pendingCaretBefore = null;
     this.hasPendingCaret = false;
     this.isPerformingUndoRedo = false;
+    // Clear smart grouping state
+    this.clearBoundary();
     this.undoManager.clear();
   }
 

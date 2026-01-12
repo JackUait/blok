@@ -67,6 +67,101 @@ export class CollapsedBoldManager {
   }
 
   /**
+   * Enter collapsed bold mode by inserting an empty <strong> for typing
+   * @param range - Current collapsed range
+   * @param mergeCallback - Callback to merge adjacent bold elements
+   */
+  public enter(
+    range: Range,
+    mergeCallback: (element: HTMLElement) => HTMLElement
+  ): Range | undefined {
+    if (!range.collapsed) {
+      return;
+    }
+
+    const strong = document.createElement('strong');
+    const textNode = document.createTextNode('');
+
+    strong.appendChild(textNode);
+    strong.setAttribute(ATTR.COLLAPSED_ACTIVE, 'true');
+
+    const container = range.startContainer;
+    const offset = range.startOffset;
+
+    const insertionSucceeded = (() => {
+      if (container.nodeType === Node.TEXT_NODE) {
+        return this.insertCollapsedBoldIntoText(container as Text, strong, offset);
+      }
+
+      if (container.nodeType === Node.ELEMENT_NODE) {
+        this.insertCollapsedBoldIntoElement(container as Element, strong, offset);
+
+        return true;
+      }
+
+      return false;
+    })();
+
+    if (!insertionSucceeded) {
+      return;
+    }
+
+    const newRange = document.createRange();
+
+    newRange.setStart(textNode, 0);
+    newRange.collapse(true);
+
+    const merged = mergeCallback(strong);
+
+    return merged.firstChild instanceof Text ? (() => {
+      const caretRange = document.createRange();
+
+      caretRange.setStart(merged.firstChild, merged.firstChild.textContent?.length ?? 0);
+      caretRange.collapse(true);
+
+      return caretRange;
+    })() : newRange;
+  }
+
+  /**
+   * Insert a collapsed bold wrapper when the caret resides inside a text node
+   */
+  private insertCollapsedBoldIntoText(text: Text, strong: HTMLElement, offset: number): boolean {
+    const parent = text.parentNode;
+
+    if (!parent) {
+      return false;
+    }
+
+    const content = text.textContent ?? '';
+    const before = content.slice(0, offset);
+    const after = content.slice(offset);
+
+    text.textContent = before;
+
+    const afterNode = after.length ? document.createTextNode(after) : null;
+
+    if (afterNode) {
+      parent.insertBefore(afterNode, text.nextSibling);
+    }
+
+    parent.insertBefore(strong, afterNode ?? text.nextSibling);
+    strong.setAttribute(ATTR.PREV_LENGTH, before.length.toString());
+
+    return true;
+  }
+
+  /**
+   * Insert a collapsed bold wrapper directly into an element container
+   */
+  private insertCollapsedBoldIntoElement(element: Element, strong: HTMLElement, offset: number): void {
+    const referenceNode = element.childNodes[offset] ?? null;
+
+    element.insertBefore(strong, referenceNode);
+    strong.setAttribute(ATTR.PREV_LENGTH, '0');
+  }
+
+  /**
    * Exit a collapsed bold selection by moving caret outside the bold element
    * @param selection - The current selection
    * @param boldElement - The bold element to exit from

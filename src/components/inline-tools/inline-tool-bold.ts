@@ -557,108 +557,21 @@ export class BoldInlineTool implements InlineTool {
    * @param range - Current collapsed range
    */
   private startCollapsedBold(range: Range): Range | undefined {
-    if (!range.collapsed) {
-      return;
-    }
-
-    const strong = document.createElement('strong');
-    const textNode = document.createTextNode('');
-
-    strong.appendChild(textNode);
-    strong.setAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE, 'true');
-
-    const container = range.startContainer;
-    const offset = range.startOffset;
-
-    const insertionSucceeded = (() => {
-      if (container.nodeType === Node.TEXT_NODE) {
-        return this.insertCollapsedBoldIntoText(container as Text, strong, offset);
-      }
-
-      if (container.nodeType === Node.ELEMENT_NODE) {
-        this.insertCollapsedBoldIntoElement(container as Element, strong, offset);
-
-        return true;
-      }
-
-      return false;
-    })();
-
-    if (!insertionSucceeded) {
-      return;
-    }
+    const manager = CollapsedBoldManager.getInstance();
+    const resultRange = manager.enter(range, (strong) => this.mergeAdjacentBold(strong));
 
     const selection = window.getSelection();
-    const newRange = document.createRange();
-
-    newRange.setStart(textNode, 0);
-    newRange.collapse(true);
-
-    const merged = this.mergeAdjacentBold(strong);
 
     BoldNormalizationPass.normalizeAroundSelection(selection);
 
-    if (selection) {
+    if (selection && resultRange) {
       selection.removeAllRanges();
-      selection.addRange(newRange);
+      selection.addRange(resultRange);
     }
 
     this.notifySelectionChange();
 
-    return merged.firstChild instanceof Text ? (() => {
-      const caretRange = document.createRange();
-
-      caretRange.setStart(merged.firstChild, merged.firstChild.textContent?.length ?? 0);
-      caretRange.collapse(true);
-
-      return caretRange;
-    })() : newRange;
-  }
-
-  /**
-   * Insert a collapsed bold wrapper when the caret resides inside a text node
-   * @param text - Text node containing the caret
-   * @param strong - Strong element to insert
-   * @param offset - Caret offset within the text node
-   * @returns true when insertion succeeded
-   */
-  private insertCollapsedBoldIntoText(text: Text, strong: HTMLElement, offset: number): boolean {
-    const textNode = text;
-    const parent = textNode.parentNode;
-
-    if (!parent) {
-      return false;
-    }
-
-    const content = textNode.textContent ?? '';
-    const before = content.slice(0, offset);
-    const after = content.slice(offset);
-
-    textNode.textContent = before;
-
-    const afterNode = after.length ? document.createTextNode(after) : null;
-
-    if (afterNode) {
-      parent.insertBefore(afterNode, textNode.nextSibling);
-    }
-
-    parent.insertBefore(strong, afterNode ?? textNode.nextSibling);
-    strong.setAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH, before.length.toString());
-
-    return true;
-  }
-
-  /**
-   * Insert a collapsed bold wrapper directly into an element container
-   * @param element - Container element
-   * @param strong - Strong element to insert
-   * @param offset - Index at which to insert the strong element
-   */
-  private insertCollapsedBoldIntoElement(element: Element, strong: HTMLElement, offset: number): void {
-    const referenceNode = element.childNodes[offset] ?? null;
-
-    element.insertBefore(strong, referenceNode);
-    strong.setAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH, '0');
+    return resultRange;
   }
 
   /**

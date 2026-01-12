@@ -121,7 +121,9 @@ export class BoldInlineTool implements InlineTool {
 
     // Register a dedicated keydown listener for boundary guard (runs on all printable keys)
     if (!BoldInlineTool.guardKeydownListenerRegistered) {
-      document.addEventListener('keydown', BoldInlineTool.guardCollapsedBoundaryKeydown, true);
+      document.addEventListener('keydown', (event) => {
+        CollapsedBoldManager.getInstance().guardBoundaryKeydown(event);
+      }, true);
       BoldInlineTool.guardKeydownListenerRegistered = true;
     }
 
@@ -762,53 +764,6 @@ export class BoldInlineTool implements InlineTool {
     }
 
     BoldInlineTool.setCaretAfterNode(selection, boldElement);
-  }
-
-  /**
-   * Ensure caret is positioned at the end of a collapsed boundary text node before the browser processes a printable keydown
-   * @param event - Keydown event fired before browser input handling
-   */
-  private static guardCollapsedBoundaryKeydown(event: KeyboardEvent): void {
-    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
-      return;
-    }
-
-    const key = event.key;
-
-    if (key.length !== 1) {
-      return;
-    }
-
-    const selection = window.getSelection();
-
-    if (!selection || !selection.isCollapsed || selection.rangeCount === 0) {
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-
-    if (range.startContainer.nodeType !== Node.TEXT_NODE) {
-      return;
-    }
-
-    const textNode = range.startContainer as Text;
-    const textContent = textNode.textContent ?? '';
-
-    if (textContent.length === 0 || range.startOffset !== 0) {
-      return;
-    }
-
-    const previousSibling = textNode.previousSibling;
-
-    if (!isBoldElement(previousSibling)) {
-      return;
-    }
-
-    if (!/^\s/.test(textContent)) {
-      return;
-    }
-
-    BoldInlineTool.setCaret(selection, textNode, textContent.length);
   }
 
   /**

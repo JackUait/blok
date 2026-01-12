@@ -512,4 +512,74 @@ export class CollapsedBoldManager {
 
     return textNode;
   }
+
+  /**
+   * Guard collapsed boundary keydown events to ensure proper caret positioning
+   * Prevents typed characters from being inserted at wrong positions near bold elements
+   * @param event - Keydown event fired before browser input handling
+   */
+  public guardBoundaryKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+
+    const key = event.key;
+
+    if (key.length !== 1) {
+      return;
+    }
+
+    const selection = window.getSelection();
+
+    if (!selection || !selection.isCollapsed || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    if (range.startContainer.nodeType !== Node.TEXT_NODE) {
+      return;
+    }
+
+    const textNode = range.startContainer as Text;
+    const textContent = textNode.textContent ?? '';
+
+    if (textContent.length === 0 || range.startOffset !== 0) {
+      return;
+    }
+
+    const previousSibling = textNode.previousSibling;
+
+    if (!previousSibling || previousSibling.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
+
+    const prevElement = previousSibling as Element;
+
+    if (prevElement.tagName !== 'STRONG' && prevElement.tagName !== 'B') {
+      return;
+    }
+
+    if (!/^\s/.test(textContent)) {
+      return;
+    }
+
+    this.setCaret(selection, textNode, textContent.length);
+  }
+
+  /**
+   * Place caret at the provided offset within a text node
+   * @param selection - Current selection
+   * @param node - Target text node
+   * @param offset - Offset within the text node
+   */
+  private setCaret(selection: Selection, node: Text, offset: number): void {
+    const newRange = document.createRange();
+
+    newRange.setStart(node, offset);
+    newRange.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+  }
 }

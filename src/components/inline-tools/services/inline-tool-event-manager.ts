@@ -39,8 +39,11 @@ export interface InlineToolEventHandler {
 export class InlineToolEventManager {
   private static instance: InlineToolEventManager | null = null;
   private readonly handlers = new Map<string, InlineToolEventHandler>();
+  private listenersRegistered = false;
 
-  private constructor() {}
+  private constructor() {
+    this.initializeListeners();
+  }
 
   /**
    * Get the singleton instance
@@ -58,6 +61,7 @@ export class InlineToolEventManager {
    */
   public static reset(): void {
     if (InlineToolEventManager.instance) {
+      InlineToolEventManager.instance.removeListeners();
       InlineToolEventManager.instance.handlers.clear();
     }
     InlineToolEventManager.instance = null;
@@ -86,5 +90,168 @@ export class InlineToolEventManager {
    */
   public hasHandler(toolName: string): boolean {
     return this.handlers.has(toolName);
+  }
+
+  /**
+   * Initialize document-level event listeners
+   */
+  private initializeListeners(): void {
+    if (typeof document === 'undefined' || this.listenersRegistered) {
+      return;
+    }
+
+    document.addEventListener('selectionchange', this.handleSelectionChange, true);
+    document.addEventListener('input', this.handleInput, true);
+    document.addEventListener('beforeinput', this.handleBeforeInput, true);
+    document.addEventListener('keydown', this.handleKeydown, true);
+
+    this.listenersRegistered = true;
+  }
+
+  /**
+   * Remove document-level event listeners
+   */
+  private removeListeners(): void {
+    if (typeof document === 'undefined' || !this.listenersRegistered) {
+      return;
+    }
+
+    document.removeEventListener('selectionchange', this.handleSelectionChange, true);
+    document.removeEventListener('input', this.handleInput, true);
+    document.removeEventListener('beforeinput', this.handleBeforeInput, true);
+    document.removeEventListener('keydown', this.handleKeydown, true);
+
+    this.listenersRegistered = false;
+  }
+
+  /**
+   * Get current selection if available
+   */
+  private getSelection(): Selection | null {
+    return typeof window !== 'undefined' ? window.getSelection() : null;
+  }
+
+  /**
+   * Handle selectionchange events
+   */
+  private handleSelectionChange = (): void => {
+    const selection = this.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
+    this.handlers.forEach((handler) => {
+      if (handler.isRelevant && !handler.isRelevant(selection)) {
+        return;
+      }
+
+      handler.onSelectionChange?.(selection);
+    });
+  };
+
+  /**
+   * Handle input events
+   */
+  private handleInput = (event: Event): void => {
+    const selection = this.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
+    this.handlers.forEach((handler) => {
+      if (handler.isRelevant && !handler.isRelevant(selection)) {
+        return;
+      }
+
+      handler.onInput?.(event, selection);
+    });
+  };
+
+  /**
+   * Handle beforeinput events
+   */
+  private handleBeforeInput = (event: Event): void => {
+    const inputEvent = event as InputEvent;
+    const selection = this.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
+    this.handlers.forEach((handler) => {
+      if (handler.isRelevant && !handler.isRelevant(selection)) {
+        return;
+      }
+
+      const shouldPrevent = handler.onBeforeInput?.(inputEvent, selection);
+
+      if (shouldPrevent) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+      }
+    });
+  };
+
+  /**
+   * Handle keydown events for shortcuts
+   */
+  private handleKeydown = (event: KeyboardEvent): void => {
+    const selection = this.getSelection();
+
+    if (!selection || !selection.rangeCount) {
+      return;
+    }
+
+    this.handlers.forEach((handler) => {
+      if (!handler.shortcut || !handler.onShortcut) {
+        return;
+      }
+
+      if (!this.matchesShortcut(event, handler.shortcut)) {
+        return;
+      }
+
+      if (handler.isRelevant && !handler.isRelevant(selection)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      handler.onShortcut(event, selection);
+    });
+  };
+
+  /**
+   * Check if a keyboard event matches a shortcut definition
+   */
+  private matchesShortcut(event: KeyboardEvent, shortcut: ShortcutDefinition): boolean {
+    if (event.key.toLowerCase() !== shortcut.key.toLowerCase()) {
+      return false;
+    }
+
+    if (event.altKey) {
+      return false;
+    }
+
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+    const isMac = userAgent.includes('mac');
+
+    const primaryModifier = isMac ? event.metaKey : event.ctrlKey;
+    const metaRequired = shortcut.meta && !primaryModifier;
+
+    if (metaRequired) {
+      return false;
+    }
+
+    if (shortcut.ctrl && !event.ctrlKey) {
+      return false;
+    }
+
+    return true;
   }
 }

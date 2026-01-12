@@ -58,4 +58,64 @@ describe('InlineToolEventManager', () => {
       expect(manager.hasHandler('test-tool')).toBe(false);
     });
   });
+
+  describe('event dispatching', () => {
+    it('dispatches selectionchange to relevant handlers', () => {
+      const manager = InlineToolEventManager.getInstance();
+      const onSelectionChange = vi.fn();
+
+      manager.register('test-tool', {
+        onSelectionChange,
+        isRelevant: () => true,
+      });
+
+      document.dispatchEvent(new Event('selectionchange'));
+
+      expect(onSelectionChange).toHaveBeenCalled();
+    });
+
+    it('does not dispatch to handlers where isRelevant returns false', () => {
+      const manager = InlineToolEventManager.getInstance();
+      const onSelectionChange = vi.fn();
+
+      manager.register('test-tool', {
+        onSelectionChange,
+        isRelevant: () => false,
+      });
+
+      document.dispatchEvent(new Event('selectionchange'));
+
+      expect(onSelectionChange).not.toHaveBeenCalled();
+    });
+
+    it('dispatches input events to relevant handlers', () => {
+      const manager = InlineToolEventManager.getInstance();
+      const onInput = vi.fn();
+
+      manager.register('test-tool', {
+        onInput,
+        isRelevant: () => true,
+      });
+
+      document.dispatchEvent(new Event('input'));
+
+      expect(onInput).toHaveBeenCalled();
+    });
+
+    it('stops listening after reset', () => {
+      const manager = InlineToolEventManager.getInstance();
+      const onSelectionChange = vi.fn();
+
+      manager.register('test-tool', {
+        onSelectionChange,
+        isRelevant: () => true,
+      });
+
+      InlineToolEventManager.reset();
+
+      document.dispatchEvent(new Event('selectionchange'));
+
+      expect(onSelectionChange).not.toHaveBeenCalled();
+    });
+  });
 });

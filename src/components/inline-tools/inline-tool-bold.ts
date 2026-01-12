@@ -15,6 +15,7 @@ import {
   isRangeFormatted,
   collectFormattingAncestors,
 } from './utils/formatting-range-utils';
+import { InlineToolEventManager } from './services/inline-tool-event-manager';
 
 /**
  * Bold Tool
@@ -95,11 +96,6 @@ export class BoldInlineTool implements InlineTool {
     });
   }
 
-  private static shortcutListenerRegistered = false;
-  private static selectionListenerRegistered = false;
-  private static inputListenerRegistered = false;
-  private static beforeInputListenerRegistered = false;
-  private static readonly globalListenersInitialized = BoldInlineTool.initializeGlobalListeners();
   private static markerSequence = 0;
   private static mutationObserver?: MutationObserver;
   private static isProcessingMutation = false;
@@ -122,6 +118,8 @@ export class BoldInlineTool implements InlineTool {
     BoldInlineTool.initializeGlobalListeners();
   }
 
+  private static guardKeydownListenerRegistered = false;
+
   /**
    * Ensure global event listeners are registered once per document
    */
@@ -130,24 +128,43 @@ export class BoldInlineTool implements InlineTool {
       return false;
     }
 
-    if (!BoldInlineTool.shortcutListenerRegistered) {
-      document.addEventListener('keydown', BoldInlineTool.handleShortcut, true);
-      BoldInlineTool.shortcutListenerRegistered = true;
+    const manager = InlineToolEventManager.getInstance();
+
+    if (manager.hasHandler('bold')) {
+      return true;
     }
 
-    if (!BoldInlineTool.selectionListenerRegistered) {
-      document.addEventListener('selectionchange', BoldInlineTool.handleGlobalSelectionChange, true);
-      BoldInlineTool.selectionListenerRegistered = true;
-    }
+    manager.register('bold', {
+      shortcut: { key: 'b', meta: true },
+      onShortcut: (_event, _selection) => {
+        const instance = BoldInlineTool.instances.values().next().value;
 
-    if (!BoldInlineTool.inputListenerRegistered) {
-      document.addEventListener('input', BoldInlineTool.handleGlobalInput, true);
-      BoldInlineTool.inputListenerRegistered = true;
-    }
+        if (instance) {
+          instance.toggleBold();
+        }
+      },
+      onSelectionChange: (_selection) => {
+        BoldInlineTool.refreshSelectionState('selectionchange');
+      },
+      onInput: (_event, _selection) => {
+        BoldInlineTool.refreshSelectionState('input');
+      },
+      onBeforeInput: (event) => {
+        if (event.inputType !== 'formatBold') {
+          return false;
+        }
 
-    if (!BoldInlineTool.beforeInputListenerRegistered) {
-      document.addEventListener('beforeinput', BoldInlineTool.handleBeforeInput, true);
-      BoldInlineTool.beforeInputListenerRegistered = true;
+        BoldInlineTool.normalizeAllBoldTags();
+
+        return true;
+      },
+      isRelevant: (selection) => BoldInlineTool.isSelectionInsideBlok(selection),
+    });
+
+    // Register a dedicated keydown listener for boundary guard (runs on all printable keys)
+    if (!BoldInlineTool.guardKeydownListenerRegistered) {
+      document.addEventListener('keydown', BoldInlineTool.guardCollapsedBoundaryKeydown, true);
+      BoldInlineTool.guardKeydownListenerRegistered = true;
     }
 
     BoldInlineTool.ensureMutationObserver();
@@ -1361,20 +1378,6 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   *
-   */
-  private static handleGlobalSelectionChange(): void {
-    BoldInlineTool.refreshSelectionState('selectionchange');
-  }
-
-  /**
-   *
-   */
-  private static handleGlobalInput(): void {
-    BoldInlineTool.refreshSelectionState('input');
-  }
-
-  /**
    * Normalize selection state after blok input or selection updates
    * @param source - The event source triggering the refresh
    */
@@ -1438,30 +1441,6 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Prevent the browser's native bold command to avoid <b> wrappers
-   * @param event - BeforeInput event fired by the browser
-   */
-  private static handleBeforeInput(event: InputEvent): void {
-    if (event.inputType !== 'formatBold') {
-      return;
-    }
-
-    const selection = window.getSelection();
-    const isSelectionInside = Boolean(selection && BoldInlineTool.isSelectionInsideBlok(selection));
-    const isTargetInside = BoldInlineTool.isEventTargetInsideBlok(event.target);
-
-    if (!isSelectionInside && !isTargetInside) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    BoldInlineTool.normalizeAllBoldTags();
-  }
-
-  /**
    * Get a bold element at the boundary of a collapsed range
    * @param range - The collapsed range to check
    */
@@ -1513,52 +1492,6 @@ export class BoldInlineTool implements InlineTool {
     const previous = element.childNodes[range.startOffset - 1];
 
     return isBoldElement(previous) ? previous as HTMLElement : null;
-  }
-
-  /**
-   * Handle keyboard shortcut for bold when selection is collapsed
-   * @param event - The keyboard event
-   */
-  private static handleShortcut(event: KeyboardEvent): void {
-    BoldInlineTool.guardCollapsedBoundaryKeydown(event);
-
-    if (!BoldInlineTool.isBoldShortcut(event)) {
-      return;
-    }
-
-    const selection = window.getSelection();
-
-    if (!selection || !selection.rangeCount || !BoldInlineTool.isSelectionInsideBlok(selection)) {
-      return;
-    }
-
-    const instance = BoldInlineTool.instances.values().next().value ?? new BoldInlineTool();
-
-    if (!instance) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    instance.toggleBold();
-  }
-
-  /**
-   * Check if a keyboard event is the bold shortcut (Cmd/Ctrl+B)
-   * @param event - The keyboard event to check
-   */
-  private static isBoldShortcut(event: KeyboardEvent): boolean {
-    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
-    const isMac = userAgent.includes('mac');
-    const primaryModifier = isMac ? event.metaKey : event.ctrlKey;
-
-    if (!primaryModifier || event.altKey) {
-      return false;
-    }
-
-    return event.key.toLowerCase() === 'b';
   }
 
   /**

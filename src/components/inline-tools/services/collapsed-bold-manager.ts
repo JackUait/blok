@@ -408,4 +408,108 @@ export class CollapsedBoldManager {
       selection.addRange(newRange);
     });
   }
+
+  /**
+   * Enforce length limits on collapsed bold elements
+   * @param selection - The current selection to determine the blok context
+   */
+  public enforceLengths(selection: Selection | null): void {
+    const node = selection?.anchorNode ?? selection?.focusNode;
+
+    if (!node) {
+      return;
+    }
+
+    const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
+    const root = element?.closest(createSelector(DATA_ATTR.editor));
+
+    if (!root) {
+      return;
+    }
+
+    const tracked = root.querySelectorAll<HTMLElement>(`strong[${ATTR.COLLAPSED_LENGTH}]`);
+
+    tracked.forEach((boldEl) => {
+      const lengthAttr = boldEl.getAttribute(ATTR.COLLAPSED_LENGTH);
+
+      if (!lengthAttr) {
+        return;
+      }
+
+      const allowedLength = Number(lengthAttr);
+      const currentText = boldEl.textContent ?? '';
+
+      if (!Number.isFinite(allowedLength)) {
+        return;
+      }
+
+      const shouldRemoveCurrentLength = currentText.length > allowedLength;
+      const newTextNodeAfterSplit = shouldRemoveCurrentLength
+        ? this.splitCollapsedBoldText(boldEl, allowedLength, currentText)
+        : null;
+
+      const prevLengthAttr = boldEl.getAttribute(ATTR.PREV_LENGTH);
+      const prevLength = prevLengthAttr ? Number(prevLengthAttr) : NaN;
+      const prevNode = boldEl.previousSibling;
+      const previousTextNode = prevNode?.nodeType === Node.TEXT_NODE ? prevNode as Text : null;
+      const prevText = previousTextNode?.textContent ?? '';
+      const shouldRemovePrevLength = Boolean(
+        prevLengthAttr &&
+        Number.isFinite(prevLength) &&
+        previousTextNode &&
+        prevText.length > prevLength
+      );
+
+      if (shouldRemovePrevLength && previousTextNode) {
+        const preservedPrev = prevText.slice(0, prevLength);
+        const extraPrev = prevText.slice(prevLength);
+
+        previousTextNode.textContent = preservedPrev;
+        const extraNode = document.createTextNode(extraPrev);
+
+        boldEl.parentNode?.insertBefore(extraNode, boldEl.nextSibling);
+      }
+
+      if (shouldRemovePrevLength) {
+        boldEl.removeAttribute(ATTR.PREV_LENGTH);
+      }
+
+      if (selection?.isCollapsed && newTextNodeAfterSplit && isNodeWithin(selection.focusNode, boldEl)) {
+        const caretRange = document.createRange();
+        const caretOffset = newTextNodeAfterSplit.textContent?.length ?? 0;
+
+        caretRange.setStart(newTextNodeAfterSplit, caretOffset);
+        caretRange.collapse(true);
+
+        selection.removeAllRanges();
+        selection.addRange(caretRange);
+      }
+
+      if (shouldRemoveCurrentLength) {
+        boldEl.removeAttribute(ATTR.COLLAPSED_LENGTH);
+      }
+    });
+  }
+
+  /**
+   * Split text content exceeding the allowed collapsed bold length
+   */
+  private splitCollapsedBoldText(boldEl: HTMLElement, allowedLength: number, currentText: string): Text | null {
+    const parent = boldEl.parentNode;
+
+    if (!parent) {
+      return null;
+    }
+
+    const preserved = currentText.slice(0, allowedLength);
+    const extra = currentText.slice(allowedLength);
+
+    boldEl.textContent = preserved;
+
+    const textNode = document.createTextNode(extra);
+
+    parent.insertBefore(textNode, boldEl.nextSibling);
+
+    return textNode;
+  }
 }

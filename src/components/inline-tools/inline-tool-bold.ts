@@ -578,7 +578,7 @@ export class BoldInlineTool implements InlineTool {
    * Notify listeners that the selection state has changed
    */
   private notifySelectionChange(): void {
-    BoldInlineTool.enforceCollapsedBoldLengths(window.getSelection());
+    CollapsedBoldManager.getInstance().enforceLengths(window.getSelection());
     document.dispatchEvent(new Event('selectionchange'));
     this.updateToolbarButtonState();
   }
@@ -869,115 +869,6 @@ export class BoldInlineTool implements InlineTool {
     return textNode;
   }
 
-  /**
-   * Enforce length limits on collapsed bold elements
-   * @param selection - The current selection to determine the blok context
-   */
-  private static enforceCollapsedBoldLengths(selection: Selection | null): void {
-    const node = selection?.anchorNode ?? selection?.focusNode;
-
-    if (!node) {
-      return;
-    }
-
-    const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const root = element?.closest(createSelector(DATA_ATTR.editor));
-
-    if (!root) {
-      return;
-    }
-
-    const tracked = root.querySelectorAll<HTMLElement>(`strong[${BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH}]`);
-
-    tracked.forEach((boldElement) => {
-      const boldEl = boldElement;
-      const lengthAttr = boldEl.getAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH);
-
-      if (!lengthAttr) {
-        return;
-      }
-
-      const allowedLength = Number(lengthAttr);
-      const currentText = boldEl.textContent ?? '';
-
-      if (!Number.isFinite(allowedLength)) {
-        return;
-      }
-
-      const shouldRemoveCurrentLength = currentText.length > allowedLength;
-      const newTextNodeAfterSplit = shouldRemoveCurrentLength
-        ? BoldInlineTool.splitCollapsedBoldText(boldEl, allowedLength, currentText)
-        : null;
-
-      const prevLengthAttr = boldEl.getAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
-      const prevLength = prevLengthAttr ? Number(prevLengthAttr) : NaN;
-      const prevNode = boldEl.previousSibling;
-      const previousTextNode = prevNode?.nodeType === Node.TEXT_NODE ? prevNode as Text : null;
-      const prevText = previousTextNode?.textContent ?? '';
-      const shouldRemovePrevLength = Boolean(
-        prevLengthAttr &&
-        Number.isFinite(prevLength) &&
-        previousTextNode &&
-        prevText.length > prevLength
-      );
-
-      if (shouldRemovePrevLength && previousTextNode) {
-        const preservedPrev = prevText.slice(0, prevLength);
-        const extraPrev = prevText.slice(prevLength);
-
-        previousTextNode.textContent = preservedPrev;
-        const extraNode = document.createTextNode(extraPrev);
-
-        boldEl.parentNode?.insertBefore(extraNode, boldEl.nextSibling);
-      }
-
-      if (shouldRemovePrevLength) {
-        boldEl.removeAttribute(BoldInlineTool.DATA_ATTR_PREV_LENGTH);
-      }
-
-      if (selection?.isCollapsed && newTextNodeAfterSplit && isNodeWithin(selection.focusNode, boldEl)) {
-        const caretRange = document.createRange();
-        const caretOffset = newTextNodeAfterSplit.textContent?.length ?? 0;
-
-        caretRange.setStart(newTextNodeAfterSplit, caretOffset);
-        caretRange.collapse(true);
-
-        selection.removeAllRanges();
-        selection.addRange(caretRange);
-      }
-
-      if (shouldRemoveCurrentLength) {
-        boldEl.removeAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH);
-      }
-    });
-  }
-
-  /**
-   * Split text content exceeding the allowed collapsed bold length and move the excess outside
-   * @param boldEl - Bold element hosting the collapsed selection
-   * @param allowedLength - Maximum allowed length for the collapsed bold
-   * @param currentText - Current text content inside the bold element
-   */
-  private static splitCollapsedBoldText(boldEl: HTMLElement, allowedLength: number, currentText: string): Text | null {
-    const targetBoldElement = boldEl;
-    const parent = targetBoldElement.parentNode;
-
-    if (!parent) {
-      return null;
-    }
-
-    const preserved = currentText.slice(0, allowedLength);
-    const extra = currentText.slice(allowedLength);
-
-    targetBoldElement.textContent = preserved;
-
-    const textNode = document.createTextNode(extra);
-
-    parent.insertBefore(textNode, targetBoldElement.nextSibling);
-
-    return textNode;
-  }
-
 
   /**
    * Normalize selection state after blok input or selection updates
@@ -986,7 +877,7 @@ export class BoldInlineTool implements InlineTool {
   private static refreshSelectionState(source: 'selectionchange' | 'input'): void {
     const selection = window.getSelection();
 
-    BoldInlineTool.enforceCollapsedBoldLengths(selection);
+    CollapsedBoldManager.getInstance().enforceLengths(selection);
     CollapsedBoldManager.getInstance().maintain();
     CollapsedBoldManager.getInstance().synchronize(selection);
     BoldNormalizationPass.normalizeAroundSelection(selection, { normalizeWhitespace: false });

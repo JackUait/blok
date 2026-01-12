@@ -16,6 +16,7 @@ import {
   collectFormattingAncestors,
 } from './utils/formatting-range-utils';
 import { InlineToolEventManager } from './services/inline-tool-event-manager';
+import { BoldNormalizationPass } from './services/bold-normalization-pass';
 
 /**
  * Bold Tool
@@ -51,49 +52,6 @@ export class BoldInlineTool implements InlineTool {
       strong: {},
       b: {},
     } as SanitizerConfig;
-  }
-
-  /**
-   * Normalize any remaining legacy <b> tags within the blok wrapper
-   */
-  private static normalizeAllBoldTags(): void {
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    const selector = `${createSelector(DATA_ATTR.interface)} b, ${createSelector(DATA_ATTR.editor)} b`;
-
-    document.querySelectorAll(selector).forEach((boldNode) => {
-      ensureStrongElement(boldNode as HTMLElement);
-    });
-  }
-
-  /**
-   * Normalize bold tags within a mutated node if it belongs to the blok
-   * @param node - The node affected by mutation
-   */
-  private static normalizeBoldInNode(node: Node): void {
-    const element = node.nodeType === Node.ELEMENT_NODE
-      ? node as Element
-      : node.parentElement;
-
-    if (!element || typeof element.closest !== 'function') {
-      return;
-    }
-
-    const blokRoot = element.closest(`${createSelector(DATA_ATTR.interface)}, ${createSelector(DATA_ATTR.editor)}`);
-
-    if (!blokRoot) {
-      return;
-    }
-
-    if (element.tagName === 'B') {
-      ensureStrongElement(element as HTMLElement);
-    }
-
-    element.querySelectorAll?.('b').forEach((boldNode) => {
-      ensureStrongElement(boldNode as HTMLElement);
-    });
   }
 
   private static markerSequence = 0;
@@ -154,7 +112,7 @@ export class BoldInlineTool implements InlineTool {
           return false;
         }
 
-        BoldInlineTool.normalizeAllBoldTags();
+        BoldNormalizationPass.normalizeAroundSelection(window.getSelection());
 
         return true;
       },
@@ -265,8 +223,6 @@ export class BoldInlineTool implements InlineTool {
       selection.addRange(insertedRange);
     }
 
-    BoldInlineTool.normalizeAllBoldTags();
-
     /**
      * Find the bold element from the inserted range.
      * After insertion, selection.focusNode may point to the parent container (e.g., DIV)
@@ -280,6 +236,7 @@ export class BoldInlineTool implements InlineTool {
        * Even if we can't find the bold element, we should still notify selection change
        * to update the toolbar button state based on the current selection.
        */
+      BoldNormalizationPass.normalizeAroundSelection(selection);
       this.notifySelectionChange();
 
       return;
@@ -287,11 +244,8 @@ export class BoldInlineTool implements InlineTool {
 
     const merged = this.mergeAdjacentBold(boldElement);
 
-    this.normalizeWhitespaceAround(merged);
-
     this.selectElementContents(merged);
-    BoldInlineTool.normalizeBoldTagsWithinBlok(window.getSelection());
-    BoldInlineTool.replaceNbspInBlock(window.getSelection());
+    BoldNormalizationPass.normalizeAroundSelection(selection);
     this.notifySelectionChange();
   }
 
@@ -353,10 +307,7 @@ export class BoldInlineTool implements InlineTool {
       selection.removeAllRanges();
     }
 
-    this.replaceNbspWithinRange(finalRange);
-    BoldInlineTool.normalizeBoldTagsWithinBlok(selection);
-    BoldInlineTool.replaceNbspInBlock(selection);
-    BoldInlineTool.removeEmptyBoldElements(selection);
+    BoldNormalizationPass.normalizeAroundSelection(selection);
 
     boldAncestors.forEach((element) => {
       if (isElementEmpty(element)) {
@@ -597,9 +548,7 @@ export class BoldInlineTool implements InlineTool {
       selection.addRange(updatedRange);
     }
 
-    BoldInlineTool.normalizeBoldTagsWithinBlok(selection);
-    BoldInlineTool.replaceNbspInBlock(selection);
-    BoldInlineTool.removeEmptyBoldElements(selection);
+    BoldNormalizationPass.normalizeAroundSelection(selection);
     this.notifySelectionChange();
   }
 
@@ -647,9 +596,7 @@ export class BoldInlineTool implements InlineTool {
 
     const merged = this.mergeAdjacentBold(strong);
 
-    BoldInlineTool.normalizeBoldTagsWithinBlok(selection);
-    BoldInlineTool.replaceNbspInBlock(selection);
-    BoldInlineTool.removeEmptyBoldElements(selection);
+    BoldNormalizationPass.normalizeAroundSelection(selection);
 
     if (selection) {
       selection.removeAllRanges();
@@ -715,14 +662,6 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Check if an element is empty (has no text content)
-   * @param element - The element to check
-   */
-  private static isElementEmpty(element: HTMLElement): boolean {
-    return (element.textContent ?? '').length === 0;
-  }
-
-  /**
    *
    */
   private notifySelectionChange(): void {
@@ -767,157 +706,6 @@ export class BoldInlineTool implements InlineTool {
     } else {
       button.removeAttribute('data-blok-popover-item-active');
     }
-  }
-
-  /**
-   * Normalize whitespace around a bold element
-   * @param element - The bold element to normalize whitespace around
-   */
-  private normalizeWhitespaceAround(element: HTMLElement): void {
-    BoldInlineTool.replaceNbspWithSpace(element.previousSibling);
-    BoldInlineTool.replaceNbspWithSpace(element.nextSibling);
-  }
-
-  /**
-   * Replace non-breaking spaces with regular spaces in a text node
-   * @param node - The text node to process
-   */
-  private static replaceNbspWithSpace(node: Node | null): void {
-    if (!node || node.nodeType !== Node.TEXT_NODE) {
-      return;
-    }
-
-    const textNode = node as Text;
-    const text = textNode.textContent ?? '';
-
-    if (!text.includes('\u00A0')) {
-      return;
-    }
-
-    textNode.textContent = text.replace(/\u00A0/g, ' ');
-  }
-
-  /**
-   * Replace non-breaking spaces with regular spaces within a range
-   * @param range - The range to process
-   */
-  private replaceNbspWithinRange(range?: Range): void {
-    if (!range) {
-      return;
-    }
-
-    const walker = document.createTreeWalker(
-      range.commonAncestorContainer,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          try {
-            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (_error) {
-            const nodeRange = document.createRange();
-
-            nodeRange.selectNodeContents(node);
-
-            const startsBeforeEnd = range.compareBoundaryPoints(Range.END_TO_START, nodeRange) > 0;
-            const endsAfterStart = range.compareBoundaryPoints(Range.START_TO_END, nodeRange) < 0;
-
-            return (startsBeforeEnd && endsAfterStart) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          }
-        },
-      }
-    );
-
-    while (walker.nextNode()) {
-      BoldInlineTool.replaceNbspWithSpace(walker.currentNode);
-    }
-  }
-
-  /**
-   * Normalize all bold tags within the blok to <strong> tags
-   * Converts any legacy <b> tags to <strong> tags
-   * @param selection - The current selection to determine the blok context
-   */
-  private static normalizeBoldTagsWithinBlok(selection: Selection | null): void {
-    const node = selection?.anchorNode ?? selection?.focusNode;
-
-    if (!node) {
-      return;
-    }
-
-    const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const root = element?.closest(createSelector(DATA_ATTR.editor));
-
-    if (!root) {
-      return;
-    }
-
-    // Convert any legacy <b> tags to <strong> tags
-    root.querySelectorAll('b').forEach((boldNode) => {
-      ensureStrongElement(boldNode as HTMLElement);
-    });
-  }
-
-  /**
-   * Replace non-breaking spaces with regular spaces in the block containing the selection
-   * @param selection - The current selection to determine the block context
-   */
-  private static replaceNbspInBlock(selection: Selection | null): void {
-    const node = selection?.anchorNode ?? selection?.focusNode;
-
-    if (!node) {
-      return;
-    }
-
-    const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const block = element?.closest('[data-blok-component="paragraph"]');
-
-    if (!block) {
-      return;
-    }
-
-    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-
-    while (walker.nextNode()) {
-      BoldInlineTool.replaceNbspWithSpace(walker.currentNode);
-    }
-
-    block.querySelectorAll('b').forEach((boldNode) => {
-      ensureStrongElement(boldNode as HTMLElement);
-    });
-  }
-
-  /**
-   * Remove empty bold elements within the current block
-   * @param selection - The current selection to determine the block context
-   */
-  private static removeEmptyBoldElements(selection: Selection | null): void {
-    const node = selection?.anchorNode ?? selection?.focusNode;
-
-    if (!node) {
-      return;
-    }
-
-    const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-    const block = element?.closest('[data-blok-component="paragraph"]');
-
-    if (!block) {
-      return;
-    }
-
-    const focusNode = selection?.focusNode ?? null;
-
-    block.querySelectorAll('strong').forEach((strong) => {
-      const isCollapsedPlaceholder = strong.getAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE) === 'true';
-      const hasTrackedLength = strong.hasAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_LENGTH);
-
-      if (isCollapsedPlaceholder || hasTrackedLength) {
-        return;
-      }
-
-      if ((strong.textContent ?? '').length === 0 && !isNodeWithin(focusNode, strong)) {
-        strong.remove();
-      }
-    });
   }
 
   /**
@@ -1190,14 +978,6 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Determine whether a node is a bold element (<strong>/<b>)
-   * @param node - Node to inspect
-   */
-  private static isBoldElement(node: Node | null): node is Element {
-    return Boolean(node && node.nodeType === Node.ELEMENT_NODE && isBoldTag(node as Element));
-  }
-
-  /**
    * Place caret at the provided offset within a text node
    * @param selection - Current selection
    * @param node - Target text node
@@ -1364,18 +1144,6 @@ export class BoldInlineTool implements InlineTool {
     return textNode;
   }
 
-  /**
-   * Check if a node is within the provided container
-   * @param target - Node to test
-   * @param container - Potential ancestor container
-   */
-  private static isNodeWithin(target: Node | null, container: Node): boolean {
-    if (!target) {
-      return false;
-    }
-
-    return target === container || container.contains(target);
-  }
 
   /**
    * Normalize selection state after blok input or selection updates
@@ -1387,14 +1155,11 @@ export class BoldInlineTool implements InlineTool {
     BoldInlineTool.enforceCollapsedBoldLengths(selection);
     CollapsedBoldExitHandler.getInstance().maintain();
     BoldInlineTool.synchronizeCollapsedBold(selection);
-    BoldInlineTool.normalizeBoldTagsWithinBlok(selection);
-    BoldInlineTool.removeEmptyBoldElements(selection);
+    BoldNormalizationPass.normalizeAroundSelection(selection, { normalizeWhitespace: false });
 
     if (source === 'input' && selection) {
       BoldInlineTool.moveCaretAfterBoundaryBold(selection);
     }
-
-    BoldInlineTool.normalizeAllBoldTags();
   }
 
   /**
@@ -1417,13 +1182,19 @@ export class BoldInlineTool implements InlineTool {
       BoldInlineTool.isProcessingMutation = true;
 
       try {
+        const processScope = (scope: Element | null): void => {
+          if (scope) {
+            new BoldNormalizationPass({ mergeAdjacent: false, removeEmpty: false, normalizeWhitespace: false }).run(scope);
+          }
+        };
+
         mutations.forEach((mutation) => {
           mutation.addedNodes.forEach((node) => {
-            BoldInlineTool.normalizeBoldInNode(node);
+            processScope(BoldInlineTool.findBlokScopeFromNode(node));
           });
 
           if (mutation.type === 'characterData' && mutation.target) {
-            BoldInlineTool.normalizeBoldInNode(mutation.target);
+            processScope(BoldInlineTool.findBlokScopeFromNode(mutation.target));
           }
         });
       } finally {
@@ -1438,6 +1209,23 @@ export class BoldInlineTool implements InlineTool {
     });
 
     BoldInlineTool.mutationObserver = observer;
+  }
+
+  /**
+   * Find the blok scope element from a node for normalization
+   * @param node - The node to find the scope from
+   * @returns The scope element or null if not within blok
+   */
+  private static findBlokScopeFromNode(node: Node): Element | null {
+    const element = node.nodeType === Node.ELEMENT_NODE
+      ? node as Element
+      : node.parentElement;
+
+    if (!element || typeof element.closest !== 'function') {
+      return null;
+    }
+
+    return element.closest(`${createSelector(DATA_ATTR.interface)}, ${createSelector(DATA_ATTR.editor)}`);
   }
 
   /**
@@ -1508,44 +1296,6 @@ export class BoldInlineTool implements InlineTool {
     const element = anchor.nodeType === Node.ELEMENT_NODE ? anchor as Element : anchor.parentElement;
 
     return Boolean(element?.closest(createSelector(DATA_ATTR.editor)));
-  }
-
-  /**
-   * Check if an event target resides inside the blok wrapper
-   * @param target - Event target to inspect
-   */
-  private static isEventTargetInsideBlok(target: EventTarget | null): boolean {
-    if (!target || typeof Node === 'undefined') {
-      return false;
-    }
-
-    if (target instanceof Element) {
-      return Boolean(target.closest(createSelector(DATA_ATTR.editor)));
-    }
-
-    if (target instanceof Text) {
-      return Boolean(target.parentElement?.closest(createSelector(DATA_ATTR.editor)));
-    }
-
-    if (typeof ShadowRoot !== 'undefined' && target instanceof ShadowRoot) {
-      return BoldInlineTool.isEventTargetInsideBlok(target.host);
-    }
-
-    if (!(target instanceof Node)) {
-      return false;
-    }
-
-    const parentNode = target.parentNode;
-
-    if (!parentNode) {
-      return false;
-    }
-
-    if (parentNode instanceof Element) {
-      return Boolean(parentNode.closest(createSelector(DATA_ATTR.editor)));
-    }
-
-    return BoldInlineTool.isEventTargetInsideBlok(parentNode);
   }
 
   /**

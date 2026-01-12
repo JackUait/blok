@@ -57,10 +57,6 @@ export class BoldInlineTool implements InlineTool {
   private static markerSequence = 0;
   private static mutationObserver?: MutationObserver;
   private static isProcessingMutation = false;
-  private static readonly DATA_ATTR_COLLAPSED_LENGTH = 'data-blok-bold-collapsed-length';
-  private static readonly DATA_ATTR_COLLAPSED_ACTIVE = 'data-blok-bold-collapsed-active';
-  private static readonly DATA_ATTR_PREV_LENGTH = 'data-blok-bold-prev-length';
-  private static readonly DATA_ATTR_LEADING_WHITESPACE = 'data-blok-bold-leading-ws';
   private static readonly instances = new Set<BoldInlineTool>();
 
   /**
@@ -532,7 +528,7 @@ export class BoldInlineTool implements InlineTool {
     const insideBold = findBoldElement(range.startContainer);
 
     const updatedRange = (() => {
-      if (insideBold && insideBold.getAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE) !== 'true') {
+      if (insideBold && insideBold.getAttribute(CollapsedBoldManager.ATTR.COLLAPSED_ACTIVE) !== 'true') {
         return CollapsedBoldManager.getInstance().exit(selection, insideBold);
       }
 

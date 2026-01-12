@@ -9,7 +9,6 @@ import {
   isElementEmpty,
   findBoldElement,
   ensureStrongElement,
-  isNodeWithin,
 } from './utils/bold-dom-utils';
 import {
   isRangeFormatted,

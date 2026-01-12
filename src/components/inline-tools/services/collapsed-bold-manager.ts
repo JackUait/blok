@@ -641,7 +641,7 @@ export class CollapsedBoldManager {
   private moveCaretAfterPreviousBold(selection: Selection, element: Element, offset: number): boolean {
     const beforeNode = offset > 0 ? element.childNodes[offset - 1] ?? null : null;
 
-    if (!this.isBoldElement(beforeNode)) {
+    if (!this.isBoldElement(beforeNode) || !beforeNode) {
       return false;
     }
 

@@ -2,7 +2,7 @@ import type { InlineTool, SanitizerConfig } from '../../../types';
 import { IconBold } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector } from '../constants';
-import { CollapsedBoldExitHandler } from './collapsed-bold-exit-handler';
+import { CollapsedBoldManager } from './services/collapsed-bold-manager';
 import {
   isBoldTag,
   isBoldElement,
@@ -531,13 +531,13 @@ export class BoldInlineTool implements InlineTool {
 
     const updatedRange = (() => {
       if (insideBold && insideBold.getAttribute(BoldInlineTool.DATA_ATTR_COLLAPSED_ACTIVE) !== 'true') {
-        return CollapsedBoldExitHandler.getInstance().exitBold(selection, insideBold);
+        return CollapsedBoldManager.getInstance().exit(selection, insideBold);
       }
 
       const boundaryBold = insideBold ?? BoldInlineTool.getBoundaryBold(range);
 
       return boundaryBold
-        ? CollapsedBoldExitHandler.getInstance().exitBold(selection, boundaryBold)
+        ? CollapsedBoldManager.getInstance().exit(selection, boundaryBold)
         : this.startCollapsedBold(range);
     })();
 
@@ -1153,7 +1153,7 @@ export class BoldInlineTool implements InlineTool {
     const selection = window.getSelection();
 
     BoldInlineTool.enforceCollapsedBoldLengths(selection);
-    CollapsedBoldExitHandler.getInstance().maintain();
+    CollapsedBoldManager.getInstance().maintain();
     BoldInlineTool.synchronizeCollapsedBold(selection);
     BoldNormalizationPass.normalizeAroundSelection(selection, { normalizeWhitespace: false });
 

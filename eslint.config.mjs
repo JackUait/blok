@@ -1006,8 +1006,8 @@ export default defineConfig(
       'internal-dom': internalDomPlugin,
     },
     rules: {
-      // Limit file length to 600 lines
-      'max-lines': ['error', { max: 600, skipBlankLines: true }],
+      // Limit file length to 500 lines
+      'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
       'sonarjs/no-identical-functions': 'error',

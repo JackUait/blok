@@ -138,6 +138,7 @@ export class CollapsedBoldManager {
     const before = content.slice(0, offset);
     const after = content.slice(offset);
 
+    // eslint-disable-next-line no-param-reassign -- intentional DOM mutation
     text.textContent = before;
 
     const afterNode = after.length ? document.createTextNode(after) : null;
@@ -294,11 +295,14 @@ export class CollapsedBoldManager {
     const containsTypedContent = /\S/.test(sanitizedBoundary);
 
     if (leadingMatch) {
+      // eslint-disable-next-line no-param-reassign -- intentional state update
       record.hasLeadingSpace = true;
+      // eslint-disable-next-line no-param-reassign -- intentional state update
       record.leadingWhitespace = leadingMatch[0];
     }
 
     if (containsTypedContent) {
+      // eslint-disable-next-line no-param-reassign -- intentional state update
       record.hasTypedContent = true;
     }
   }
@@ -504,6 +508,7 @@ export class CollapsedBoldManager {
     const preserved = currentText.slice(0, allowedLength);
     const extra = currentText.slice(allowedLength);
 
+    // eslint-disable-next-line no-param-reassign -- intentional DOM mutation
     boldEl.textContent = preserved;
 
     const textNode = document.createTextNode(extra);

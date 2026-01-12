@@ -1,5 +1,6 @@
 import { DATA_ATTR, createSelector } from '../../constants';
 import { isBoldElement, ensureStrongElement, isNodeWithin } from '../utils/bold-dom-utils';
+import { CollapsedBoldManager } from './collapsed-bold-manager';
 
 /**
  * Configuration options for bold normalization pass
@@ -228,10 +229,7 @@ export class BoldNormalizationPass {
     }
 
     // Don't remove collapsed bold placeholders (used for typing new bold text)
-    const isCollapsedPlaceholder = strong.getAttribute('data-blok-bold-collapsed-active') === 'true';
-    const hasTrackedLength = strong.hasAttribute('data-blok-bold-collapsed-length');
-
-    if (isCollapsedPlaceholder || hasTrackedLength) {
+    if (CollapsedBoldManager.getInstance().isActivePlaceholder(strong)) {
       return false;
     }
 

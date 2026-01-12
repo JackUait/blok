@@ -1,6 +1,6 @@
 import type { CollapsedExitRecord } from '../types';
 import { DATA_ATTR, createSelector } from '../../constants';
-import { ensureStrongElement, isElementEmpty, isNodeWithin, resolveBoundary } from '../utils/bold-dom-utils';
+import { ensureStrongElement, findBoldElement, isElementEmpty, isNodeWithin, resolveBoundary } from '../utils/bold-dom-utils';
 
 /**
  * Centralized data attributes for collapsed bold state tracking
@@ -581,5 +581,204 @@ export class CollapsedBoldManager {
 
     selection.removeAllRanges();
     selection.addRange(newRange);
+  }
+
+  /**
+   * Ensure caret is positioned after boundary bold elements when toggling collapsed selections
+   * @param selection - Current selection
+   */
+  public moveCaretAfterBoundaryBold(selection: Selection): void {
+    if (!selection.rangeCount) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    if (!range.collapsed) {
+      return;
+    }
+
+    const activePlaceholder = findBoldElement(range.startContainer);
+
+    if (activePlaceholder?.getAttribute(ATTR.COLLAPSED_ACTIVE) === 'true') {
+      return;
+    }
+
+    if (this.moveCaretFromElementContainer(selection, range)) {
+      return;
+    }
+
+    this.moveCaretFromTextContainer(selection, range);
+  }
+
+  /**
+   * Adjust caret when selection container is an element adjacent to bold content
+   * @param selection - Current selection
+   * @param range - Collapsed range to inspect
+   * @returns true when caret position was updated
+   */
+  private moveCaretFromElementContainer(selection: Selection, range: Range): boolean {
+    if (range.startContainer.nodeType !== Node.ELEMENT_NODE) {
+      return false;
+    }
+
+    const element = range.startContainer as Element;
+    const movedAfterPrevious = this.moveCaretAfterPreviousBold(selection, element, range.startOffset);
+
+    if (movedAfterPrevious) {
+      return true;
+    }
+
+    return this.moveCaretBeforeNextBold(selection, element, range.startOffset);
+  }
+
+  /**
+   * Move caret after the bold node that precedes the caret when possible
+   * @param selection - Current selection
+   * @param element - Container element
+   * @param offset - Caret offset within the container
+   */
+  private moveCaretAfterPreviousBold(selection: Selection, element: Element, offset: number): boolean {
+    const beforeNode = offset > 0 ? element.childNodes[offset - 1] ?? null : null;
+
+    if (!this.isBoldElement(beforeNode)) {
+      return false;
+    }
+
+    const textNode = this.ensureFollowingTextNode(beforeNode as Element, beforeNode.nextSibling);
+
+    if (!textNode) {
+      return false;
+    }
+
+    const textOffset = textNode.textContent?.length ?? 0;
+
+    this.setCaret(selection, textNode, textOffset);
+
+    return true;
+  }
+
+  /**
+   * Move caret before the bold node that follows the caret, ensuring there's a text node to receive input
+   * @param selection - Current selection
+   * @param element - Container element
+   * @param offset - Caret offset within the container
+   */
+  private moveCaretBeforeNextBold(selection: Selection, element: Element, offset: number): boolean {
+    const nextNode = element.childNodes[offset] ?? null;
+
+    if (!this.isBoldElement(nextNode)) {
+      return false;
+    }
+
+    const textNode = this.ensureFollowingTextNode(nextNode as Element, nextNode.nextSibling);
+
+    if (!textNode) {
+      this.setCaretAfterNode(selection, nextNode);
+
+      return true;
+    }
+
+    this.setCaret(selection, textNode, 0);
+
+    return true;
+  }
+
+  /**
+   * Adjust caret when selection container is a text node adjacent to bold content
+   * @param selection - Current selection
+   * @param range - Collapsed range to inspect
+   */
+  private moveCaretFromTextContainer(selection: Selection, range: Range): void {
+    if (range.startContainer.nodeType !== Node.TEXT_NODE) {
+      return;
+    }
+
+    const textNode = range.startContainer as Text;
+    const previousSibling = textNode.previousSibling;
+    const textContent = textNode.textContent ?? '';
+    const startsWithWhitespace = /^\s/.test(textContent);
+
+    if (
+      range.startOffset === 0 &&
+      this.isBoldElement(previousSibling) &&
+      (textContent.length === 0 || startsWithWhitespace)
+    ) {
+      this.setCaret(selection, textNode, textContent.length);
+
+      return;
+    }
+
+    const boldElement = findBoldElement(textNode);
+
+    if (!boldElement || range.startOffset !== (textNode.textContent?.length ?? 0)) {
+      return;
+    }
+
+    const textNodeAfter = this.ensureFollowingTextNode(boldElement, boldElement.nextSibling);
+
+    if (textNodeAfter) {
+      this.setCaret(selection, textNodeAfter, 0);
+
+      return;
+    }
+
+    this.setCaretAfterNode(selection, boldElement);
+  }
+
+  /**
+   * Position caret immediately after the provided node
+   * @param selection - Current selection
+   * @param node - Reference node
+   */
+  private setCaretAfterNode(selection: Selection, node: Node | null): void {
+    if (!node) {
+      return;
+    }
+
+    const newRange = document.createRange();
+
+    newRange.setStartAfter(node);
+    newRange.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+  }
+
+  /**
+   * Ensure there is a text node immediately following a bold element to accept new input
+   * @param boldElement - Bold element after which text should be inserted
+   * @param referenceNode - Node that currently follows the bold element
+   */
+  private ensureFollowingTextNode(boldElement: Element, referenceNode: Node | null): Text | null {
+    const parent = boldElement.parentNode;
+
+    if (!parent) {
+      return null;
+    }
+
+    if (referenceNode && referenceNode.nodeType === Node.TEXT_NODE) {
+      return referenceNode as Text;
+    }
+
+    const textNode = document.createTextNode('');
+
+    parent.insertBefore(textNode, referenceNode);
+
+    return textNode;
+  }
+
+  /**
+   * Check if a node is a bold element (STRONG or B tag)
+   * @param node - Node to check
+   */
+  private isBoldElement(node: Node | null): boolean {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+      return false;
+    }
+
+    const element = node as Element;
+
+    return element.tagName === 'STRONG' || element.tagName === 'B';
   }
 }

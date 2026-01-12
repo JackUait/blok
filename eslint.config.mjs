@@ -1007,7 +1007,7 @@ export default defineConfig(
     },
     rules: {
       // Limit file length to 600 lines
-      'max-lines': ['error', { max: 600, skipBlankLines: true, skipComments: true }],
+      'max-lines': ['error', { max: 600, skipBlankLines: true }],
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
       'sonarjs/no-identical-functions': 'error',

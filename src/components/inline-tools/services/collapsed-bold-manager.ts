@@ -1,5 +1,6 @@
 import type { CollapsedExitRecord } from '../types';
-import { ensureStrongElement, isElementEmpty, resolveBoundary } from '../utils/bold-dom-utils';
+import { DATA_ATTR, createSelector } from '../../constants';
+import { ensureStrongElement, isElementEmpty, isNodeWithin, resolveBoundary } from '../utils/bold-dom-utils';
 
 /**
  * Centralized data attributes for collapsed bold state tracking
@@ -327,5 +328,84 @@ export class CollapsedBoldManager {
     if (meetsDeletionCriteria) {
       this.records.delete(record);
     }
+  }
+
+  /**
+   * Ensure collapsed bold placeholders absorb newly typed text
+   * @param selection - The current selection to determine the blok context
+   */
+  public synchronize(selection: Selection | null): void {
+    const node = selection?.anchorNode ?? selection?.focusNode;
+    const element = node && node.nodeType === Node.ELEMENT_NODE ? node as Element : node?.parentElement;
+    const root = element?.closest(createSelector(DATA_ATTR.editor)) ?? element?.ownerDocument;
+
+    if (!root) {
+      return;
+    }
+
+    const selector = `strong[${ATTR.COLLAPSED_ACTIVE}="true"]`;
+
+    root.querySelectorAll<HTMLElement>(selector).forEach((boldElement) => {
+      const prevLengthAttr = boldElement.getAttribute(ATTR.PREV_LENGTH);
+      const prevNode = boldElement.previousSibling;
+
+      if (!prevLengthAttr || !prevNode || prevNode.nodeType !== Node.TEXT_NODE) {
+        return;
+      }
+
+      const prevLength = Number(prevLengthAttr);
+
+      if (!Number.isFinite(prevLength)) {
+        return;
+      }
+
+      const prevTextNode = prevNode as Text;
+      const prevText = prevTextNode.textContent ?? '';
+
+      if (prevText.length <= prevLength) {
+        return;
+      }
+
+      const preserved = prevText.slice(0, prevLength);
+      const extra = prevText.slice(prevLength);
+
+      prevTextNode.textContent = preserved;
+
+      const leadingMatch = extra.match(/^[\u00A0\s]+/);
+
+      if (leadingMatch && !boldElement.hasAttribute(ATTR.LEADING_WHITESPACE)) {
+        boldElement.setAttribute(ATTR.LEADING_WHITESPACE, leadingMatch[0]);
+      }
+
+      if (extra.length === 0) {
+        return;
+      }
+
+      const existingContent = boldElement.textContent ?? '';
+      const newContent = existingContent + extra;
+      const storedLeading = boldElement.getAttribute(ATTR.LEADING_WHITESPACE) ?? '';
+      const shouldPrefixLeading = storedLeading.length > 0 && existingContent.length === 0 && !newContent.startsWith(storedLeading);
+      const adjustedContent = shouldPrefixLeading ? storedLeading + newContent : newContent;
+      const updatedTextNode = document.createTextNode(adjustedContent);
+
+      while (boldElement.firstChild) {
+        boldElement.removeChild(boldElement.firstChild);
+      }
+
+      boldElement.appendChild(updatedTextNode);
+
+      if (!selection?.isCollapsed || !isNodeWithin(selection.focusNode, prevTextNode)) {
+        return;
+      }
+
+      const newRange = document.createRange();
+      const caretOffset = updatedTextNode.textContent?.length ?? 0;
+
+      newRange.setStart(updatedTextNode, caretOffset);
+      newRange.collapse(true);
+
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    });
   }
 }

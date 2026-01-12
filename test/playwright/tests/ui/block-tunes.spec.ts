@@ -706,8 +706,7 @@ test.describe('ui.block-tunes', () => {
       await expect(page.locator(NESTED_POPOVER_SELECTOR)).toBeVisible();
     });
 
-    // eslint-disable-next-line playwright/no-skipped-test -- TODO: Fix nested popover keyboard navigation - pre-existing bug
-    test.skip('closes nested popover with ArrowLeft and returns focus to parent', async ({ page }) => {
+    test('closes nested popover with ArrowLeft and returns focus to parent', async ({ page }) => {
       await createBlok(page, {
         tools: {
           header: {
@@ -748,8 +747,7 @@ test.describe('ui.block-tunes', () => {
       await expect(convertToOption).toHaveAttribute('data-blok-focused', 'true');
     });
 
-    // eslint-disable-next-line playwright/no-skipped-test -- TODO: Fix nested popover keyboard navigation - pre-existing bug
-    test.skip('navigates within nested popover using arrow keys', async ({ page }) => {
+    test('navigates within nested popover using arrow keys', async ({ page }) => {
       await createBlok(page, {
         tools: {
           header: {
@@ -827,8 +825,7 @@ test.describe('ui.block-tunes', () => {
       await expect(popoverContainer).toHaveCount(0);
     });
 
-    // eslint-disable-next-line playwright/no-skipped-test -- TODO: Fix nested popover keyboard navigation - pre-existing bug
-    test.skip('selects tool in nested popover with Enter and converts block', async ({ page }) => {
+    test('selects tool in nested popover with Enter and converts block', async ({ page }) => {
       await createBlok(page, {
         tools: {
           header: {

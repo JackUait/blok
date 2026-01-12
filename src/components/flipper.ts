@@ -392,6 +392,13 @@ export class Flipper {
   }
 
   /**
+   * Returns true if flipper handles events from contenteditable elements
+   */
+  public getHandleContentEditableTargets(): boolean {
+    return this.handleContentEditableTargets;
+  }
+
+  /**
    * When flipper is activated tab press will leaf the items
    * @param {KeyboardEvent} event - tab keydown event
    */

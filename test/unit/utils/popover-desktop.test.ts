@@ -11,6 +11,7 @@ type MockFlipperShape = {
   focusItem: Mock<(position: number, options?: { skipNextTab?: boolean }) => void>;
   onFlip: Mock<(callback: () => void) => void>;
   removeOnFlip: Mock<(callback: () => void) => void>;
+  getHandleContentEditableTargets: Mock<() => boolean>;
   triggerFlip: () => void;
   lastActivatedWith: HTMLElement[] | undefined;
   readonly isActivated: boolean;
@@ -60,6 +61,8 @@ vi.mock('../../../src/components/flipper', () => {
     public readonly focusItem = vi.fn((_position: number, _options?: { skipNextTab?: boolean }) => {});
 
     public readonly hasFocus = vi.fn(() => this.activated);
+
+    public readonly getHandleContentEditableTargets = vi.fn(() => false);
 
     public lastActivatedWith: HTMLElement[] | undefined;
 

@@ -2,7 +2,6 @@ import type {
   BlockAPI as BlockAPIInterface,
   BlockTool as IBlockTool,
   BlockToolData,
-  BlockTune as IBlockTune,
   SanitizerConfig,
   ToolConfig,
   ToolboxConfigEntry,
@@ -22,15 +21,14 @@ import type { BlockTuneAdapter } from '../tools/tune';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { ToolsCollection } from '../tools/collection';
 import { EventsDispatcher } from '../utils/events';
-import type { MenuConfigItem } from '../../../types/tools';
 import type { BlokEventMap } from '../events';
 import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet } from '../events';
 import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
-import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { DATA_ATTR, createSelector } from '../constants';
 import type { DragManager } from '../modules/dragManager';
 import { InputManager } from './input-manager';
 import { MutationHandler } from './mutation-handler';
+import { TunesManager } from './tunes-manager';
 
 /**
  * Interface describes Block class constructor argument
@@ -206,14 +204,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
   private readonly toolInstance: IBlockTool;
 
   /**
-   * User provided Block Tunes instances
+   * Manages block tunes
    */
-  private readonly tunesInstances: Map<string, IBlockTune> = new Map();
-
-  /**
-   * Blok provided Block Tunes instances
-   */
-  private readonly defaultTunesInstances: Map<string, IBlockTune> = new Map();
+  private readonly tunesManager: TunesManager;
 
   /**
    * Promise that resolves when the block is ready (rendered)
@@ -224,12 +217,6 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Resolver for ready promise
    */
   private readyResolver: (() => void) | null = null;
-
-  /**
-   * If there is saved data for Tune which is not available at the moment,
-   * we will store it here and provide back on save so data is not lost
-   */
-  private unavailableTunesData: { [name: string]: BlockTuneData } = {};
 
   /**
    * Common blok event bus
@@ -302,7 +289,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
      */
     this.tunes = tool.tunes;
 
-    this.composeTunes(tunesData);
+    /**
+     * Initialize tunes manager
+     */
+    this.tunesManager = new TunesManager(this.tunes, tunesData, this.blockAPI);
 
     const holderElement = this.compose();
 
@@ -451,26 +441,12 @@ export class Block extends EventsDispatcher<BlockEvents> {
       return undefined;
     }
 
-    const tunesData: { [name: string]: BlockTuneData } = { ...this.unavailableTunesData };
-
-    [
-      ...this.tunesInstances.entries(),
-      ...this.defaultTunesInstances.entries(),
-    ]
-      .forEach(([name, tune]) => {
-        if (isFunction(tune.save)) {
-          try {
-            tunesData[name] = tune.save();
-          } catch (e) {
-            log(`Tune ${tune.constructor.name} save method throws an Error %o`, 'warn', e);
-          }
-        }
-      });
-
     /**
      * Measuring execution time
      */
     const measuringStart = window.performance.now();
+
+    const tunesData = this.tunesManager.extractTunesData();
 
     this.lastSavedData = extractedBlock;
     this.lastSavedTunes = { ...tunesData };
@@ -554,54 +530,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
       toolTunes: PopoverItemParams[];
       commonTunes: PopoverItemParams[];
       } {
-    const toolTunesPopoverParams: PopoverItemParams[] = [];
-    const commonTunesPopoverParams: PopoverItemParams[] = [];
-    const pushTuneConfig = (
-      tuneConfig: MenuConfigItem | MenuConfigItem[] | HTMLElement | undefined,
-      target: PopoverItemParams[]
-    ): void => {
-      if (!tuneConfig) {
-        return;
-      }
-
-      if ($.isElement(tuneConfig)) {
-        target.push({
-          type: PopoverItemType.Html,
-          element: tuneConfig,
-        });
-
-        return;
-      }
-
-      if (Array.isArray(tuneConfig)) {
-        target.push(...tuneConfig);
-
-        return;
-      }
-
-      target.push(tuneConfig);
-    };
-
     /** Tool's tunes: may be defined as return value of optional renderSettings method */
     const tunesDefinedInTool = typeof this.toolInstance.renderSettings === 'function' ? this.toolInstance.renderSettings() : [];
 
-    pushTuneConfig(tunesDefinedInTool, toolTunesPopoverParams);
-
-    /** Common tunes: combination of default tunes (move up, move down, delete) and third-party tunes connected via tunes api */
-    const commonTunes = [
-      ...this.tunesInstances.values(),
-      ...this.defaultTunesInstances.values(),
-    ].map(tuneInstance => tuneInstance.render());
-
-    /** Separate custom html from Popover items params for common tunes */
-    commonTunes.forEach(tuneConfig => {
-      pushTuneConfig(tuneConfig, commonTunesPopoverParams);
-    });
-
-    return {
-      toolTunes: toolTunesPopoverParams,
-      commonTunes: commonTunesPopoverParams,
-    };
+    return this.tunesManager.getMenuConfig(tunesDefinedInTool);
   }
 
   /**
@@ -1047,20 +979,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
      *   </tune1wrapper>
      * </tune2wrapper>
      */
-    const wrappedContentNode: HTMLElement = [...this.tunesInstances.values(), ...this.defaultTunesInstances.values()]
-      .reduce((acc, tune) => {
-        if (isFunction(tune.wrap)) {
-          try {
-            return tune.wrap(acc);
-          } catch (e) {
-            log(`Tune ${tune.constructor.name} wrap method throws an Error %o`, 'warn', e);
-
-            return acc;
-          }
-        }
-
-        return acc;
-      }, contentNode);
+    const wrappedContentNode = this.tunesManager.wrapContent(contentNode);
 
     wrapper.appendChild(wrappedContentNode);
 
@@ -1120,28 +1039,6 @@ export class Block extends EventsDispatcher<BlockEvents> {
     if (placeholder === false && element.hasAttribute(placeholderAttribute)) {
       element.removeAttribute(placeholderAttribute);
     }
-  }
-
-  /**
-   * Instantiate Block Tunes
-   * @param tunesData - current Block tunes data
-   * @private
-   */
-  private composeTunes(tunesData: { [name: string]: BlockTuneData }): void {
-    Array.from(this.tunes.values()).forEach((tune) => {
-      const collection = tune.isInternal ? this.defaultTunesInstances : this.tunesInstances;
-
-      collection.set(tune.name, tune.create(tunesData[tune.name], this.blockAPI));
-    });
-
-    /**
-     * Check if there is some data for not available tunes
-     */
-    Object.entries(tunesData).forEach(([name, data]) => {
-      if (!this.tunesInstances.has(name)) {
-        this.unavailableTunesData[name] = data;
-      }
-    });
   }
 
   /**

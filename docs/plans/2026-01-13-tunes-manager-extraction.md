@@ -1,6 +1,6 @@
 # TunesManager Extraction Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Extract tune-related logic from Block class into a dedicated TunesManager class for improved maintainability.
 
@@ -9,6 +9,8 @@
 **Tech Stack:** TypeScript, Vitest for unit tests
 
 **Date:** 2026-01-13
+
+## Implementation Tasks
 
 ## Context
 

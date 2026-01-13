@@ -1,7 +1,14 @@
-# TunesManager Extraction Design
+# TunesManager Extraction Implementation Plan
 
-**Date:** 2026-01-13  
+> **For Claude:** REQUIRED SUB-SKILL: Use executing-plans to implement this plan task-by-task.
+
 **Goal:** Extract tune-related logic from Block class into a dedicated TunesManager class for improved maintainability.
+
+**Architecture:** Composition pattern - TunesManager is a helper class that Block owns and delegates to. Follows existing patterns of InputManager and MutationHandler.
+
+**Tech Stack:** TypeScript, Vitest for unit tests
+
+**Date:** 2026-01-13
 
 ## Context
 

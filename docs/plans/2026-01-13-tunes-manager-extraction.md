@@ -109,3 +109,67 @@ src/components/block/
 - ~100 lines removed from Block class
 - ~120 lines in new TunesManager class
 - Net complexity reduction through single-responsibility modules
+
+## Testing
+
+**File:** `test/unit/components/block/tunes-manager.test.ts`
+
+### Unit Tests Required
+
+1. **Constructor / Instantiation**
+   - Creates user tune instances from tune adapters
+   - Creates default (internal) tune instances separately
+   - Stores unavailable tune data for tunes not in collection
+
+2. **getMenuConfig()**
+   - Returns tool tunes from passed `toolRenderSettings`
+   - Returns common tunes from tune instances' `render()` methods
+   - Handles HTMLElement return from `render()`
+   - Handles array return from `render()`
+   - Handles single MenuConfigItem return from `render()`
+   - Handles undefined/null gracefully
+
+3. **wrapContent()**
+   - Returns original node when no tunes have `wrap()` method
+   - Applies single tune wrapper
+   - Chains multiple tune wrappers in correct order
+   - Handles tune `wrap()` throwing error (logs warning, continues)
+
+4. **extractTunesData()**
+   - Extracts data from user tunes with `save()` method
+   - Extracts data from default tunes with `save()` method
+   - Includes unavailable tune data in result
+   - Handles tune `save()` throwing error (logs warning, skips)
+
+5. **Getters**
+   - `userTunes` returns user tune instances map
+   - `defaultTunes` returns default tune instances map
+
+### Mocking Strategy
+
+```typescript
+// Mock BlockTuneAdapter
+const mockTuneAdapter = {
+  name: 'testTune',
+  isInternal: false,
+  create: vi.fn().mockReturnValue({
+    render: vi.fn(),
+    save: vi.fn(),
+    wrap: vi.fn(),
+  }),
+};
+
+// Mock ToolsCollection
+const mockTunesCollection = {
+  values: () => [mockTuneAdapter],
+};
+
+// Mock BlockAPI (minimal interface needed)
+const mockBlockAPI = {} as BlockAPIInterface;
+```
+
+### Existing Tests to Verify
+
+After extraction, run existing Block tests to ensure no regressions:
+- `test/unit/components/block/block.test.ts` (if exists)
+- E2E tests involving block tunes functionality

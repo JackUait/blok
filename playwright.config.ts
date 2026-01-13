@@ -80,6 +80,7 @@ const LOGIC_TESTS = [
   '**/modules/selection.spec.ts',
   '**/modules/navigation-mode.spec.ts',
   '**/modules/undo-redo.spec.ts',
+  '**/modules/multi-block-selection-with-toolbar.spec.ts',
 
   // Tool configuration tests (standard DOM operations)
   '**/tools/block-tool.spec.ts',

@@ -145,12 +145,12 @@ src/actions/posts.ts          |    0     |   1    |  2  |     1      |   8
 
 **Step 1: Calculate agent count**
 ```
-num_agents = max(1, ceil(total_points / 40))
+num_agents = max(1, ceil(total_points / 10))
 ```
 
 The `max(1, ...)` ensures at least 1 agent is always spawned.
 
-Example: 63 total points → `ceil(63/40)` = 2 agents
+Example: 63 total points → `ceil(63/10)` = 7 agents
 Example: 0 total points → `max(1, 0)` = 1 agent
 
 **Step 2: Sort files by score (descending)**
@@ -171,7 +171,7 @@ For each file (largest first):
 **Edge cases (ALL cases still spawn subagents):**
 - Single file → 1 subagent (still use Task tool)
 - All files score 0 → 1 subagent handles all (verification pass via subagent)
-- One file with 44+ points → Gets dedicated subagent
+- One file with 10+ points → Gets dedicated subagent
 
 ## Phase 3: Distribution
 

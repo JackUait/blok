@@ -152,8 +152,8 @@ describe('LinkInlineTool', () => {
     const input = renderResult.children.items[0].element as HTMLInputElement;
 
     expect(input.placeholder).toBe('tools.link.addLink');
-    expect(input.getAttribute('data-blok-testid')).toBe('inline-tool-input');
-    expect(input.getAttribute('data-blok-link-tool-input-opened')).toBe('false');
+    expect(input).toHaveAttribute('data-blok-testid', 'inline-tool-input');
+    expect(input).toHaveAttribute('data-blok-link-tool-input-opened', 'false');
 
     const event = createKeyboardEventWithKeyCode(13);
 
@@ -315,6 +315,6 @@ describe('LinkInlineTool', () => {
     const anchorCheck = document.querySelector('a');
 
     expect(anchorCheck).toBeNull();
-    expect(document.body.textContent).toBe('link text');
+    expect(document.body).toHaveTextContent('link text');
   });
 });

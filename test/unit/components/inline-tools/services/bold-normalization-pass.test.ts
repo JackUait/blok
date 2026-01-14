@@ -74,8 +74,8 @@ describe('BoldNormalizationPass', () => {
 
       pass.run(container);
 
-      expect(container.textContent).toBe('Text with nbsp');
-      expect(container.textContent).not.toContain(nbsp);
+      expect(container).toHaveTextContent('Text with nbsp');
+      expect(container).not.toHaveTextContent(new RegExp(nbsp));
     });
 
     it('should replace nbsp in multiple text nodes', () => {
@@ -87,7 +87,7 @@ describe('BoldNormalizationPass', () => {
 
       pass.run(container);
 
-      expect(container.textContent).not.toContain(nbsp);
+      expect(container).not.toHaveTextContent(new RegExp(nbsp));
     });
 
     it('should skip nbsp replacement when normalizeWhitespace is false', () => {
@@ -99,7 +99,7 @@ describe('BoldNormalizationPass', () => {
 
       pass.run(container);
 
-      expect(container.textContent).toContain(nbsp);
+      expect(container).toHaveTextContent(new RegExp(nbsp));
     });
   });
 
@@ -112,7 +112,7 @@ describe('BoldNormalizationPass', () => {
       pass.run(container);
 
       expect(container.querySelector('strong')).toBeNull();
-      expect(container.textContent).toBe('Text  more text');
+      expect(container).toHaveTextContent('Text  more text');
     });
 
     it('should remove multiple empty <strong> elements', () => {
@@ -200,7 +200,7 @@ describe('BoldNormalizationPass', () => {
       const strongs = container.querySelectorAll('strong');
 
       expect(strongs).toHaveLength(1);
-      expect(strongs[0].textContent).toBe('FirstSecond');
+      expect(strongs[0]).toHaveTextContent('FirstSecond');
     });
 
     it('should merge multiple consecutive <strong> elements', () => {
@@ -213,7 +213,7 @@ describe('BoldNormalizationPass', () => {
       const strongs = container.querySelectorAll('strong');
 
       expect(strongs).toHaveLength(1);
-      expect(strongs[0].textContent).toBe('ABC');
+      expect(strongs[0]).toHaveTextContent('ABC');
     });
 
     it('should not merge <strong> elements separated by text', () => {
@@ -246,7 +246,7 @@ describe('BoldNormalizationPass', () => {
       const strongs = container.querySelectorAll('strong');
 
       expect(strongs).toHaveLength(1);
-      expect(strongs[0].textContent).toBe('FirstSecond');
+      expect(strongs[0]).toHaveTextContent('FirstSecond');
     });
 
     it('should skip merging when mergeAdjacent is false', () => {
@@ -277,7 +277,7 @@ describe('BoldNormalizationPass', () => {
       expect(container.querySelectorAll('strong')).toHaveLength(1);
 
       // Should replace nbsp
-      expect(container.textContent).not.toContain(nbsp);
+      expect(container).not.toHaveTextContent(new RegExp(nbsp));
 
       // Should remove empty <strong>
       expect(container.querySelector('strong')?.textContent).toBe('Bold textMore');

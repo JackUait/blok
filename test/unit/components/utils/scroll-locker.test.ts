@@ -54,11 +54,11 @@ describe('ScrollLocker', () => {
 
     locker.lock();
 
-    expect(document.body.getAttribute('data-blok-scroll-locked')).toBe('true');
+    expect(document.body).toHaveAttribute('data-blok-scroll-locked', 'true');
 
     locker.unlock();
 
-    expect(document.body.hasAttribute('data-blok-scroll-locked')).toBe(false);
+    expect(document.body).not.toHaveAttribute('data-blok-scroll-locked');
   });
 
   it('performs hard lock on iOS devices and restores scroll position', () => {
@@ -78,12 +78,12 @@ describe('ScrollLocker', () => {
 
     locker.lock();
 
-    expect(document.body.getAttribute('data-blok-scroll-locked-hard')).toBe('true');
+    expect(document.body).toHaveAttribute('data-blok-scroll-locked-hard', 'true');
     expect(document.documentElement?.style.getPropertyValue('--window-scroll-offset')).toBe(`${storedScroll}px`);
 
     locker.unlock();
 
-    expect(document.body.hasAttribute('data-blok-scroll-locked-hard')).toBe(false);
+    expect(document.body).not.toHaveAttribute('data-blok-scroll-locked-hard');
     expect(scrollTo).toHaveBeenCalledWith(0, storedScroll);
   });
 

@@ -257,7 +257,7 @@ describe('PopoverDesktop', () => {
       const popover = createPopover({ nestingLevel: 1 });
 
       expect(popover.nestingLevel).toBe(1);
-      expect(popover.getElement().hasAttribute(DATA_ATTR.nested)).toBe(true);
+      expect(popover.getElement()).toHaveAttribute(DATA_ATTR.nested);
     });
 
     it('reuses provided flipper instance and attaches flip handler', () => {
@@ -540,9 +540,9 @@ describe('PopoverDesktop', () => {
       expect(sizeSpy).toHaveBeenCalled();
       expect(openBottomSpy).toHaveBeenCalled();
       expect(openRightSpy).toHaveBeenCalled();
-      expect(popoverElement.hasAttribute('data-blok-popover-opened')).toBe(true);
-      expect(popoverElement.hasAttribute(DATA_ATTR.popoverOpenTop)).toBe(true);
-      expect(popoverElement.hasAttribute(DATA_ATTR.popoverOpenLeft)).toBe(true);
+      expect(popoverElement).toHaveAttribute('data-blok-popover-opened');
+      expect(popoverElement).toHaveAttribute(DATA_ATTR.popoverOpenTop);
+      expect(popoverElement).toHaveAttribute(DATA_ATTR.popoverOpenLeft);
       expect(popoverElement.style.getPropertyValue(CSSVariables.PopoverHeight)).toBe('120px');
       expect(flipper.activate).toHaveBeenCalledWith(instance.flippableElements);
     });
@@ -583,7 +583,7 @@ describe('PopoverDesktop', () => {
 
       const flipper = getMockFlipper();
 
-      expect(popover.getElement().hasAttribute('data-blok-popover-opened')).toBe(false);
+      expect(popover.getElement()).not.toHaveAttribute('data-blok-popover-opened');
       expect(flipper.deactivate).toHaveBeenCalled();
       expect(instance.nestedPopover).toBeNull();
       expect(instance.nestedPopoverTriggerItem).toBeNull();
@@ -690,14 +690,14 @@ describe('PopoverDesktop', () => {
       expect(defaultItems[0].getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
       expect(defaultItems[1].getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(false);
       expect(separator?.getElement().hasAttribute(DATA_ATTR.hidden)).toBe(true);
-      expect(instance.nodes.nothingFoundMessage.hasAttribute(DATA_ATTR.nothingFoundDisplayed)).toBe(false);
+      expect(instance.nodes.nothingFoundMessage).not.toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
 
       searchInput.emitSearch({
         query: 'Zeta',
         items: [],
       });
 
-      expect(instance.nodes.nothingFoundMessage.hasAttribute(DATA_ATTR.nothingFoundDisplayed)).toBe(true);
+      expect(instance.nodes.nothingFoundMessage).toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
       defaultItems.forEach((item: PopoverItemDefault) => {
         expect(item.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
       });

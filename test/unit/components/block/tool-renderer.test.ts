@@ -54,10 +54,10 @@ describe('ToolRenderer', () => {
       const wrapper = toolRenderer.compose();
 
       expect(wrapper).toBeInstanceOf(HTMLDivElement);
-      expect(wrapper.getAttribute('data-blok-element')).toBe('');
-      expect(wrapper.getAttribute('data-blok-testid')).toBe('block-wrapper');
-      expect(wrapper.getAttribute('data-blok-component')).toBe('paragraph');
-      expect(wrapper.getAttribute('data-blok-id')).toBe('test-block-id');
+      expect(wrapper).toHaveAttribute('data-blok-element', '');
+      expect(wrapper).toHaveAttribute('data-blok-testid', 'block-wrapper');
+      expect(wrapper).toHaveAttribute('data-blok-component', 'paragraph');
+      expect(wrapper).toHaveAttribute('data-blok-id', 'test-block-id');
     });
 
     it('creates content element with correct attributes', () => {
@@ -171,7 +171,7 @@ describe('ToolRenderer', () => {
 
         renderer.compose();
 
-        expect(mockRenderedElement.getAttribute('data-blok-placeholder')).toBe('Enter header...');
+        expect(mockRenderedElement).toHaveAttribute('data-blok-placeholder', 'Enter header...');
       });
 
       it('adds placeholder classes for non-paragraph tools', () => {
@@ -187,7 +187,7 @@ describe('ToolRenderer', () => {
 
         renderer.compose();
 
-        expect(mockRenderedElement.getAttribute('data-blok-placeholder')).toBe('Enter header...');
+        expect(mockRenderedElement).toHaveAttribute('data-blok-placeholder', 'Enter header...');
       });
 
       it('skips placeholder for paragraph tool', () => {
@@ -203,7 +203,7 @@ describe('ToolRenderer', () => {
 
         renderer.compose();
 
-        expect(mockRenderedElement.getAttribute('data-blok-placeholder')).toBeNull();
+        expect(mockRenderedElement).not.toHaveAttribute('data-blok-placeholder');
       });
 
       it('removes placeholder when config sets placeholder to false', () => {
@@ -220,7 +220,7 @@ describe('ToolRenderer', () => {
 
         renderer.compose();
 
-        expect(mockRenderedElement.getAttribute('data-blok-placeholder')).toBeNull();
+        expect(mockRenderedElement).not.toHaveAttribute('data-blok-placeholder');
       });
     });
   });

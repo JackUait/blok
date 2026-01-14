@@ -67,14 +67,14 @@ describe('SelectionManager', () => {
     it('sets data-blok-selected attribute when state is true', () => {
       selectionManager.selected = true;
 
-      expect(holder.getAttribute(DATA_ATTR.selected)).toBe('true');
+      expect(holder).toHaveAttribute(DATA_ATTR.selected, 'true');
     });
 
     it('removes data-blok-selected attribute when state is false', () => {
       holder.setAttribute(DATA_ATTR.selected, 'true');
       selectionManager.selected = false;
 
-      expect(holder.getAttribute(DATA_ATTR.selected)).toBeNull();
+      expect(holder).not.toHaveAttribute(DATA_ATTR.selected);
     });
 
     it('updates content element via StyleManager', () => {

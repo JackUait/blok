@@ -666,8 +666,8 @@ describe('PopoverInline', () => {
 
       expect(result).toBe(nestedPopover);
       // Verify nested level data attribute was applied - this tests CSS positioning behavior
-      expect(nestedPopoverEl.hasAttribute(DATA_ATTR.nestedLevel)).toBe(true);
-      expect(nestedPopoverEl.getAttribute(DATA_ATTR.nestedLevel)).toBe(getNestedLevelAttrValue(1));
+      expect(nestedPopoverEl).toHaveAttribute(DATA_ATTR.nestedLevel);
+      expect(nestedPopoverEl).toHaveAttribute(DATA_ATTR.nestedLevel, getNestedLevelAttrValue(1));
     });
 
     it('should enable flipper to handle contenteditable targets for nested popover', () => {

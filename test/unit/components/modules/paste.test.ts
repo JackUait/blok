@@ -820,9 +820,9 @@ describe('Paste module', () => {
 
     expect(result).toHaveLength(2);
     expect(result[0].tool).toBe('paragraph');
-    expect(result[0].content.textContent).toBe('First');
+    expect(result[0].content).toHaveTextContent('First');
     expect(result[0].event.type).toBe('tag');
-    expect(result[1].content.textContent).toBe('Second');
+    expect(result[1].content).toHaveTextContent('Second');
   });
 
   it('inserts a new block when pasted tool differs from current block', async () => {

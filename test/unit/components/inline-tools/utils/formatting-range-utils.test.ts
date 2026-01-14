@@ -33,9 +33,9 @@ describe('formatting-range-utils', () => {
       }
 
       expect(textNodes).toHaveLength(3);
-      expect(textNodes[0].textContent).toBe('Hello ');
-      expect(textNodes[1].textContent).toBe('bold');
-      expect(textNodes[2].textContent).toBe(' world');
+      expect(textNodes[0]).toHaveTextContent('Hello ');
+      expect(textNodes[1]).toHaveTextContent('bold');
+      expect(textNodes[2]).toHaveTextContent(' world');
     });
 
     it('only includes text nodes intersecting the range', () => {
@@ -55,7 +55,7 @@ describe('formatting-range-utils', () => {
       }
 
       expect(textNodes).toHaveLength(1);
-      expect(textNodes[0].textContent).toBe('Inside');
+      expect(textNodes[0]).toHaveTextContent('Inside');
     });
   });
 
@@ -225,8 +225,8 @@ describe('formatting-range-utils', () => {
       const ancestors = collectFormattingAncestors(range, isBold);
 
       expect(ancestors).toHaveLength(2);
-      expect(ancestors[0].textContent).toBe('first');
-      expect(ancestors[1].textContent).toBe('second');
+      expect(ancestors[0]).toHaveTextContent('first');
+      expect(ancestors[1]).toHaveTextContent('second');
     });
 
     it('returns empty array when no formatted elements in range', () => {

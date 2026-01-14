@@ -506,7 +506,7 @@ describe('DragManager', () => {
 
       document.dispatchEvent(mouseMoveEvent);
 
-      expect(wrapper.getAttribute(DATA_ATTR.dragging)).toBe('true');
+      expect(wrapper).toHaveAttribute(DATA_ATTR.dragging, 'true');
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -637,7 +637,7 @@ describe('DragManager', () => {
 
       document.dispatchEvent(mouseMoveEvent);
 
-      expect(wrapper.getAttribute(DATA_ATTR.draggingMulti)).toBe('true');
+      expect(wrapper).toHaveAttribute(DATA_ATTR.draggingMulti, 'true');
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -755,12 +755,12 @@ describe('DragManager', () => {
 
       document.dispatchEvent(mouseMoveEvent);
 
-      expect(wrapper.getAttribute(DATA_ATTR.dragging)).toBe('true');
+      expect(wrapper).toHaveAttribute(DATA_ATTR.dragging, 'true');
 
       // Mouse up triggers cleanup
       document.dispatchEvent(createMouseEvent('mouseup'));
 
-      expect(wrapper.getAttribute(DATA_ATTR.dragging)).toBeNull();
+      expect(wrapper).not.toHaveAttribute(DATA_ATTR.dragging);
     });
 
     it('removes preview element from DOM on cleanup', () => {
@@ -986,7 +986,7 @@ describe('DragManager', () => {
 
       document.dispatchEvent(moveOverTarget);
 
-      expect(blocks[2].holder.getAttribute('data-drop-indicator')).toBe('bottom');
+      expect(blocks[2].holder).toHaveAttribute('data-drop-indicator', 'bottom');
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1032,12 +1032,12 @@ describe('DragManager', () => {
 
       document.dispatchEvent(moveOverTarget);
 
-      expect(blocks[2].holder.getAttribute('data-drop-indicator')).toBe('bottom');
+      expect(blocks[2].holder).toHaveAttribute('data-drop-indicator', 'bottom');
 
       // Drop
       document.dispatchEvent(createMouseEvent('mouseup'));
 
-      expect(blocks[2].holder.getAttribute('data-drop-indicator')).toBeNull();
+      expect(blocks[2].holder).not.toHaveAttribute('data-drop-indicator');
     });
   });
 
@@ -1075,7 +1075,7 @@ describe('DragManager', () => {
       document.dispatchEvent(mouseMoveEvent);
 
       // Check that multi-block dragging is set (because descendants are included)
-      expect(wrapper.getAttribute(DATA_ATTR.draggingMulti)).toBe('true');
+      expect(wrapper).toHaveAttribute(DATA_ATTR.draggingMulti, 'true');
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1113,7 +1113,7 @@ describe('DragManager', () => {
       document.dispatchEvent(mouseMoveEvent);
 
       // Should NOT be multi-block drag since sibling is not a descendant
-      expect(wrapper.getAttribute(DATA_ATTR.draggingMulti)).toBeNull();
+      expect(wrapper).not.toHaveAttribute(DATA_ATTR.draggingMulti);
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1148,7 +1148,7 @@ describe('DragManager', () => {
       dragManager.destroy();
 
       expect(dragManager.isDragging).toBe(false);
-      expect(wrapper.getAttribute(DATA_ATTR.dragging)).toBeNull();
+      expect(wrapper).not.toHaveAttribute(DATA_ATTR.dragging);
     });
   });
 
@@ -1186,7 +1186,7 @@ describe('DragManager', () => {
       // Press Alt key
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
 
-      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBe('true');
+      expect(wrapper).toHaveAttribute(DATA_ATTR.duplicating, 'true');
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1208,11 +1208,11 @@ describe('DragManager', () => {
 
       // Press Alt key
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
-      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBe('true');
+      expect(wrapper).toHaveAttribute(DATA_ATTR.duplicating, 'true');
 
       // Release Alt key
       document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Alt', bubbles: true }));
-      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBeNull();
+      expect(wrapper).not.toHaveAttribute(DATA_ATTR.duplicating);
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1236,7 +1236,7 @@ describe('DragManager', () => {
       // Press Alt key - should not set attribute since not dragging
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
 
-      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBeNull();
+      expect(wrapper).not.toHaveAttribute(DATA_ATTR.duplicating);
 
       // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
@@ -1258,12 +1258,12 @@ describe('DragManager', () => {
 
       // Press Alt key
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
-      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBe('true');
+      expect(wrapper).toHaveAttribute(DATA_ATTR.duplicating, 'true');
 
       // Clean up via mouseup
       document.dispatchEvent(createMouseEvent('mouseup'));
 
-      expect(wrapper.getAttribute(DATA_ATTR.duplicating)).toBeNull();
+      expect(wrapper).not.toHaveAttribute(DATA_ATTR.duplicating);
     });
 
     it('calls insert instead of move when Alt key is held during drop', async () => {

@@ -47,14 +47,14 @@ describe('StyleManager', () => {
     it('sets stretched attribute when state is true', () => {
       styleManager.setStretchState(true, false);
 
-      expect(holder.getAttribute(DATA_ATTR.stretched)).toBe('true');
+      expect(holder).toHaveAttribute(DATA_ATTR.stretched, 'true');
     });
 
     it('removes stretched attribute when state is false', () => {
       holder.setAttribute(DATA_ATTR.stretched, 'true');
       styleManager.setStretchState(false, false);
 
-      expect(holder.getAttribute(DATA_ATTR.stretched)).toBeNull();
+      expect(holder).not.toHaveAttribute(DATA_ATTR.stretched);
     });
 
     it('updates content classes when not selected', () => {

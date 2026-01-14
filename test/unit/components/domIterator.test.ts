@@ -87,7 +87,7 @@ describe('DomIterator', () => {
     iterator.next();
 
     expect(iterator.currentItem).toBe(items[0]);
-    expect(items[0].getAttribute('data-blok-focused')).toBe('true');
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
     expect(hoistedMocks.canSetCaretMock).toHaveBeenCalledWith(items[0]);
     expect(hoistedMocks.setCursorMock).not.toHaveBeenCalled();
   });
@@ -100,8 +100,8 @@ describe('DomIterator', () => {
     iterator.next();
 
     expect(iterator.currentItem).toBe(items[1]);
-    expect(items[1].getAttribute('data-blok-focused')).toBe('true');
-    expect(items[0].getAttribute('data-blok-focused')).toBeNull();
+    expect(items[1]).toHaveAttribute('data-blok-focused', 'true');
+    expect(items[0]).not.toHaveAttribute('data-blok-focused');
   });
 
   it('wraps to the last item when navigating previous from initial state', () => {
@@ -113,7 +113,7 @@ describe('DomIterator', () => {
     const lastItem = items[items.length - 1];
 
     expect(iterator.currentItem).toBe(lastItem);
-    expect(lastItem.getAttribute('data-blok-focused')).toBe('true');
+    expect(lastItem).toHaveAttribute('data-blok-focused', 'true');
   });
 
   it('drops cursor and removes focus class from the current item', () => {
@@ -124,7 +124,7 @@ describe('DomIterator', () => {
     iterator.dropCursor();
 
     expect(iterator.currentItem).toBeNull();
-    expect(items[0].getAttribute('data-blok-focused')).toBeNull();
+    expect(items[0]).not.toHaveAttribute('data-blok-focused');
   });
 
   it('sets cursor to a specific index when setCursor is called with valid value', () => {
@@ -134,12 +134,12 @@ describe('DomIterator', () => {
     iterator.setCursor(1);
 
     expect(iterator.currentItem).toBe(items[1]);
-    expect(items[1].getAttribute('data-blok-focused')).toBe('true');
+    expect(items[1]).toHaveAttribute('data-blok-focused', 'true');
 
     iterator.setCursor(10);
 
     expect(iterator.currentItem).toBe(items[1]);
-    expect(items[1].getAttribute('data-blok-focused')).toBe('true');
+    expect(items[1]).toHaveAttribute('data-blok-focused', 'true');
   });
 
   it('calls SelectionUtils.setCursor via delay when caret can be set', () => {

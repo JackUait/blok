@@ -136,7 +136,7 @@ describe('PopoverAbstract', () => {
       expect(popover.getElement()).toBe(nodes.popover);
       expect(nodes.popover.dataset.blokTestid).toBe('popover');
       expect(nodes.popover.dataset.blokPopoverCustomClass).toBe('custom-popover');
-      expect(nodes.nothingFoundMessage.textContent).toBe(nothingFoundText);
+      expect(nodes.nothingFoundMessage).toHaveTextContent(nothingFoundText);
       expect(nodes.popoverContainer.contains(nodes.items)).toBe(true);
       expect(nodes.items.childElementCount).toBe(items.length);
     });
@@ -242,7 +242,7 @@ describe('PopoverAbstract', () => {
 
       popover.show();
 
-      expect(nodes.popover.getAttribute(DATA_ATTR.popoverOpened)).toBe('true');
+      expect(nodes.popover).toHaveAttribute(DATA_ATTR.popoverOpened, 'true');
       expect(focus).toHaveBeenCalledTimes(1);
     });
 
@@ -272,8 +272,8 @@ describe('PopoverAbstract', () => {
       popover.show();
       popover.hide();
 
-      expect(nodes.popover.getAttribute(DATA_ATTR.popoverOpened)).toBeNull();
-      expect(nodes.popover.getAttribute(DATA_ATTR.popoverOpenTop)).toBeNull();
+      expect(nodes.popover).not.toHaveAttribute(DATA_ATTR.popoverOpened);
+      expect(nodes.popover).not.toHaveAttribute(DATA_ATTR.popoverOpenTop);
       expect(resetSpy).toHaveBeenCalled();
       expect(searchMock.clear).toHaveBeenCalledTimes(1);
       expect(closedHandler).toHaveBeenCalledTimes(1);
@@ -443,7 +443,7 @@ describe('PopoverAbstract', () => {
       popover.show();
       popover.invokeHandleItemClick(item);
 
-      expect(nodes.popover.getAttribute(DATA_ATTR.popoverOpened)).toBeNull();
+      expect(nodes.popover).not.toHaveAttribute(DATA_ATTR.popoverOpened);
       expect(closedOnActivateHandler).toHaveBeenCalledTimes(1);
     });
   });

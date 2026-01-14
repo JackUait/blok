@@ -35,7 +35,7 @@ describe('SearchInput', () => {
     const searchInput = createSearchInput();
     const element = searchInput.getElement();
 
-    expect(element.getAttribute('data-blok-testid')).toBe('popover-search-field');
+    expect(element).toHaveAttribute('data-blok-testid', 'popover-search-field');
     expect(element.children.length).toBe(2);
 
     const input = element.querySelector('[data-blok-testid="popover-search-input"]') as HTMLInputElement;
@@ -43,7 +43,7 @@ describe('SearchInput', () => {
     expect(input).not.toBeNull();
     expect(input.type).toBe('search');
     expect(input.tabIndex).toBe(-1);
-    expect(input.getAttribute('data-blok-flipper-navigation-target')).toBe('true');
+    expect(input).toHaveAttribute('data-blok-flipper-navigation-target', 'true');
     expect(input.placeholder).toBe('Filter actions');
   });
 

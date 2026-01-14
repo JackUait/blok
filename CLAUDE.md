@@ -244,6 +244,18 @@ Uses `data-blok-*` attributes for behavior/testing (not CSS classes):
 
 ### Testing Best Practices
 
+**Testing Coverage Mandate**
+
+**ALL code changes MUST be covered by behavior tests.** This is a hard requirement—untested code will not be accepted.
+
+- **New features**: Tests are mandatory. Write tests before or alongside implementation. Every new behavior needs test coverage.
+- **Bug fixes**: A regression test that reproduces the bug is REQUIRED. Fix the bug only after the test fails. This guarantees the bug cannot return.
+- **Refactoring**: Existing tests must pass. Add new tests if behavior changes.
+
+**No exceptions.** If you add code, you add tests. Period.
+
+---
+
 This section covers common mistakes to avoid when writing tests. These rules prevent the most frequent errors.
 
 #### Section 1: Critical Rules (The "Never Do This" List)

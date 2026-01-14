@@ -460,9 +460,10 @@ export class Toolbar extends Module<ToolbarNodes> {
       this.toolboxInstance.close();
     }
 
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
-    }
+    /**
+     * Don't close BlockSettings here - it should remain open if the user explicitly opened it via the settings toggler.
+     * The hover behavior that calls this method shouldn't interfere with the user's intent to open the menu.
+     */
 
     /**
      * Use the provided block or fall back to the first selected block as the anchor for the toolbar
@@ -910,7 +911,6 @@ export class Toolbar extends Module<ToolbarNodes> {
             beforeCallback: () => {
               if (this.ignoreNextSettingsMouseUp) {
                 this.ignoreNextSettingsMouseUp = false;
-
                 return false;
               }
 

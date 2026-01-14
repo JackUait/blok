@@ -1227,6 +1227,8 @@ export default defineConfig(
       '@typescript-eslint/no-floating-promises': 'off',
       // Stories may have repeated selectors and test data
       'sonarjs/no-duplicate-string': 'off',
+      // Disable max-lines for stories (they can be longer due to multiple variations)
+      'max-lines': 'off',
     },
   },
 );

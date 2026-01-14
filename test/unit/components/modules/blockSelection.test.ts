@@ -102,6 +102,10 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     InlineToolbar: {
       close: vi.fn(),
     } as unknown as BlokModules['InlineToolbar'],
+    Toolbar: {
+      close: vi.fn(),
+      moveAndOpenForMultipleBlocks: vi.fn(),
+    } as unknown as BlokModules['Toolbar'],
     ReadOnly: {
       isEnabled: false,
     } as unknown as BlokModules['ReadOnly'],

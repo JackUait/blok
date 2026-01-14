@@ -448,17 +448,28 @@ describe('UI module', () => {
       blok.InlineToolbar.opened = true;
       blok.Toolbar.toolbox.opened = true;
 
+      // Make mocks actually close (update state)
+      blok.BlockSettings.close = vi.fn(() => {
+        blok.BlockSettings.opened = false;
+      });
+      blok.InlineToolbar.close = vi.fn(() => {
+        blok.InlineToolbar.opened = false;
+      });
+      blok.Toolbar.toolbox.close = vi.fn(() => {
+        blok.Toolbar.toolbox.opened = false;
+      });
+
       ui.closeAllToolbars();
 
-      // Verify behavior: close methods are called on all toolbars
+      // Verify close methods are called on all toolbars
       expect(blok.BlockSettings.close).toHaveBeenCalledTimes(1);
       expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
       expect(blok.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
 
-      // Verify observable behavior: close method was invoked (mock results exist)
-      const closeResults = blok.BlockSettings.close.mock.results;
-      expect(closeResults).toBeDefined();
-      expect(closeResults.length).toBe(1);
+      // Verify observable behavior: toolbars are now closed
+      expect(blok.BlockSettings.opened).toBe(false);
+      expect(blok.InlineToolbar.opened).toBe(false);
+      expect(blok.Toolbar.toolbox.opened).toBe(false);
     });
   });
 

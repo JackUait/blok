@@ -33,9 +33,9 @@ describe('formatting-range-utils', () => {
       }
 
       expect(textNodes).toHaveLength(3);
-      expect(textNodes[0]).toHaveTextContent('Hello ');
+      expect(textNodes[0]).toHaveTextContent('Hello ', {normalizeWhitespace: false});
       expect(textNodes[1]).toHaveTextContent('bold');
-      expect(textNodes[2]).toHaveTextContent(' world');
+      expect(textNodes[2]).toHaveTextContent(' world', {normalizeWhitespace: false});
     });
 
     it('only includes text nodes intersecting the range', () => {

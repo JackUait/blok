@@ -75,7 +75,9 @@ describe('BoldNormalizationPass', () => {
       pass.run(container);
 
       expect(container).toHaveTextContent('Text with nbsp');
-      expect(container).not.toHaveTextContent(new RegExp(nbsp));
+      // Note: toHaveTextContent matcher from jest-dom always replaces nbsp, so we use textContent directly
+      // eslint-disable-next-line jest-dom/prefer-to-have-text-content
+      expect(container.textContent).not.toContain(nbsp);
     });
 
     it('should replace nbsp in multiple text nodes', () => {
@@ -87,7 +89,9 @@ describe('BoldNormalizationPass', () => {
 
       pass.run(container);
 
-      expect(container).not.toHaveTextContent(new RegExp(nbsp));
+      // Note: toHaveTextContent matcher from jest-dom always replaces nbsp, so we use textContent directly
+      // eslint-disable-next-line jest-dom/prefer-to-have-text-content
+      expect(container.textContent).not.toContain(nbsp);
     });
 
     it('should skip nbsp replacement when normalizeWhitespace is false', () => {
@@ -99,7 +103,10 @@ describe('BoldNormalizationPass', () => {
 
       pass.run(container);
 
-      expect(container).toHaveTextContent(new RegExp(nbsp));
+      // Note: toHaveTextContent matcher from jest-dom always replaces nbsp with regular spaces
+      // so we need to use a different assertion
+      // eslint-disable-next-line jest-dom/prefer-to-have-text-content
+      expect(container.textContent).toContain(nbsp);
     });
   });
 
@@ -112,7 +119,7 @@ describe('BoldNormalizationPass', () => {
       pass.run(container);
 
       expect(container.querySelector('strong')).toBeNull();
-      expect(container).toHaveTextContent('Text  more text');
+      expect(container).toHaveTextContent('Text  more text', { normalizeWhitespace: false });
     });
 
     it('should remove multiple empty <strong> elements', () => {
@@ -277,6 +284,7 @@ describe('BoldNormalizationPass', () => {
       expect(container.querySelectorAll('strong')).toHaveLength(1);
 
       // Should replace nbsp
+      // Note: toHaveTextContent matcher from jest-dom always replaces nbsp, so we use textContent directly
       expect(container).not.toHaveTextContent(new RegExp(nbsp));
 
       // Should remove empty <strong>

@@ -701,11 +701,15 @@ describe('Blocks', () => {
 
       blocks.push(block);
 
-      const removeSpy = vi.spyOn(block.holder, 'remove');
+      // Verify holder is in DOM before removal
+      expect(workingArea.children).toContain(block.holder);
 
       blocks.remove(0);
 
-      expect(removeSpy).toHaveBeenCalled();
+      // Verify holder is no longer in DOM after removal
+      expect(workingArea.children).not.toContain(block.holder);
+      expect(blocks.blocks).not.toContain(block);
+      expect(blocks.length).toBe(0);
     });
 
     it('should call REMOVED event on block', () => {

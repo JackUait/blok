@@ -24,6 +24,7 @@ vi.mock('../../../../src/components/utils', async () => {
 });
 
 const originalScrollTo = window.scrollTo;
+const originalPageYOffsetDescriptor = Object.getOwnPropertyDescriptor(window, 'pageYOffset');
 
 describe('ScrollLocker', () => {
   beforeEach(() => {
@@ -32,20 +33,31 @@ describe('ScrollLocker', () => {
     document.body.innerHTML = '';
     document.documentElement?.style.removeProperty('--window-scroll-offset');
     setIsIosDeviceValue(false);
-    delete (window as { pageYOffset?: number }).pageYOffset;
+    if (originalPageYOffsetDescriptor) {
+      Object.defineProperty(window, 'pageYOffset', originalPageYOffsetDescriptor);
+    }
   });
 
   afterEach(() => {
     if (originalScrollTo) {
-      window.scrollTo = originalScrollTo;
+      Object.defineProperty(window, 'scrollTo', {
+        configurable: true,
+        writable: true,
+        value: originalScrollTo,
+      });
     } else {
-      delete (window as { scrollTo?: typeof window.scrollTo }).scrollTo;
+      Object.defineProperty(window, 'scrollTo', {
+        configurable: true,
+        value: window.scrollTo,
+      });
     }
     document.body.removeAttribute('data-blok-scroll-locked');
     document.body.removeAttribute('data-blok-scroll-locked-hard');
     document.documentElement?.style.removeProperty('--window-scroll-offset');
     setIsIosDeviceValue(false);
-    delete (window as { pageYOffset?: number }).pageYOffset;
+    if (originalPageYOffsetDescriptor) {
+      Object.defineProperty(window, 'pageYOffset', originalPageYOffsetDescriptor);
+    }
   });
 
   it('adds and removes body class on non-iOS devices', () => {

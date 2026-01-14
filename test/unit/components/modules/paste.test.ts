@@ -157,6 +157,16 @@ describe('Paste module', () => {
     await paste.prepare();
 
     expect(processToolsSpy).toHaveBeenCalledTimes(1);
+    // Verify observable behavior: tool configurations are collected and accessible
+    const toolsTags = (paste as unknown as { toolsTags: Record<string, { tool: BlockToolAdapter }> }).toolsTags;
+    const tagsByTool = (paste as unknown as { tagsByTool: Record<string, string[]> }).tagsByTool;
+    const toolsFiles = (paste as unknown as { toolsFiles: Record<string, { extensions: string[]; mimeTypes: string[] }> }).toolsFiles;
+    const toolsPatterns = (paste as unknown as { toolsPatterns: Array<{ key: string; pattern: RegExp; tool: BlockToolAdapter }> }).toolsPatterns;
+
+    expect(toolsTags).toBeDefined();
+    expect(tagsByTool).toBeDefined();
+    expect(toolsFiles).toBeDefined();
+    expect(toolsPatterns).toBeDefined();
   });
 
   it('processes every tool registered in Tools collection', () => {
@@ -809,6 +819,24 @@ describe('Paste module', () => {
     // Should use insertBlokData for multi-block paste
     expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
     expect(mocks.BlockManager.insert).toHaveBeenCalledTimes(2);
+
+    // Verify the actual data being inserted - observable behavior
+    const firstCall = mocks.BlockManager.insert.mock.calls[0][0];
+    const secondCall = mocks.BlockManager.insert.mock.calls[1][0];
+
+    expect(firstCall).toEqual({
+      tool: 'paragraph',
+      data: { text: 'First block' },
+      replace: true,
+    });
+    expect(secondCall).toEqual({
+      tool: 'paragraph',
+      data: { text: 'Second block' },
+      replace: false,
+    });
+
+    // Verify caret position is set to the last inserted block
+    expect(mocks.Caret.setToBlock).toHaveBeenCalledWith({ id: 'block-id' }, mocks.Caret.positions.END);
   });
 
   it('splits plain text by new lines and creates PasteData entries', () => {

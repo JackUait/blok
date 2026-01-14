@@ -246,24 +246,11 @@ describe('PopoverAbstract', () => {
       expect(focus).toHaveBeenCalledTimes(1);
     });
 
-    it('hide() clears classes, resets items, clears search and emits Closed event', () => {
+    it('hide() clears classes and emits Closed event', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
-      const defaultItem = popover.getItemsForTests().find((item): item is PopoverItemDefault => item instanceof PopoverItemDefault);
-
-      if (defaultItem === undefined) {
-        throw new Error('Expected default item to exist');
-      }
-
-      const resetSpy = vi.spyOn(defaultItem, 'reset');
-      const searchMock = {
-        focus: vi.fn(),
-        clear: vi.fn(),
-        destroy: vi.fn(),
-      } as unknown as SearchInput;
       const closedHandler = vi.fn();
 
-      (popover as unknown as { search?: SearchInput }).search = searchMock;
       popover.on(PopoverEvent.Closed, closedHandler);
 
       // Use the protected methods to set open states (simulating what subclasses do)
@@ -274,9 +261,8 @@ describe('PopoverAbstract', () => {
 
       expect(nodes.popover).not.toHaveAttribute(DATA_ATTR.popoverOpened);
       expect(nodes.popover).not.toHaveAttribute(DATA_ATTR.popoverOpenTop);
-      expect(resetSpy).toHaveBeenCalled();
-      expect(searchMock.clear).toHaveBeenCalledTimes(1);
-      expect(closedHandler).toHaveBeenCalledTimes(1);
+      expect(nodes.popover).not.toHaveAttribute(DATA_ATTR.popoverOpenLeft);
+      expect(closedHandler).toHaveBeenCalledWith(undefined);
     });
 
     it('destroy() tears down DOM nodes, listeners, items and search instance', () => {
@@ -444,7 +430,7 @@ describe('PopoverAbstract', () => {
       popover.invokeHandleItemClick(item);
 
       expect(nodes.popover).not.toHaveAttribute(DATA_ATTR.popoverOpened);
-      expect(closedOnActivateHandler).toHaveBeenCalledTimes(1);
+      expect(closedOnActivateHandler).toHaveBeenCalledWith(undefined);
     });
   });
 

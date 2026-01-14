@@ -80,21 +80,32 @@ describe('Module base class', () => {
 
   it('removes memorized HTMLElements via removeAllNodes()', () => {
     const moduleInstance = createConcreteModule();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
     const first = document.createElement('div');
     const second = document.createElement('span');
-    const firstRemoveSpy = vi.spyOn(first, 'remove');
-    const secondRemoveSpy = vi.spyOn(second, 'remove');
+    container.append(first, second);
+
     const mockObject = { remove: vi.fn() };
 
     moduleInstance.nodes.primary = first;
     moduleInstance.nodes.secondary = second;
     moduleInstance.nodes.misc = mockObject as unknown as HTMLElement;
 
+    // Verify elements are in DOM before removal
+    expect(first.isConnected).toBe(true);
+    expect(second.isConnected).toBe(true);
+
     moduleInstance.removeAllNodes();
 
-    expect(firstRemoveSpy).toHaveBeenCalledTimes(1);
-    expect(secondRemoveSpy).toHaveBeenCalledTimes(1);
+    // Verify actual DOM state change - elements are removed from DOM
+    expect(first.isConnected).toBe(false);
+    expect(second.isConnected).toBe(false);
+    // Non-HTMLElement objects should not have remove called
     expect(mockObject.remove).not.toHaveBeenCalled();
+
+    document.body.removeChild(container);
   });
 
   it('tracks read-only mutable listeners and clears them on demand', () => {

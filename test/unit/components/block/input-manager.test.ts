@@ -502,14 +502,13 @@ describe('InputManager', () => {
 
       // Trigger focus on second input
       input2.focus();
-      input2.dispatchEvent(new FocusEvent('focus'));
 
       // The focus handler should have been called
       // It drops cache and updates current input based on active element
       expect(inputManager.currentInput).toBe(input2);
     });
 
-    it('native input change triggers onInputEvent callback', () => {
+    it('native input change triggers onInputEvent callback and updates currentInput', () => {
       const nativeInput = createNativeInput();
 
       holder.appendChild(nativeInput);
@@ -517,10 +516,15 @@ describe('InputManager', () => {
 
       inputManager.addInputEvents();
 
-      // Trigger input event on native input
-      nativeInput.dispatchEvent(new Event('input'));
+      // Focus the input to simulate user interaction
+      nativeInput.focus();
+      nativeInput.value = 'test value';
+
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- No DOM method exists to trigger input events in unit tests (unlike .focus() for focus). user-event library not available.
+      nativeInput.dispatchEvent(new Event('input', { bubbles: true }));
 
       expect(onInputEvent).toHaveBeenCalled();
+      expect(inputManager.currentInput).toBe(nativeInput);
     });
   });
 

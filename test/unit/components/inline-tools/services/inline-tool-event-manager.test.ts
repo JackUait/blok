@@ -62,7 +62,10 @@ describe('InlineToolEventManager', () => {
   describe('event dispatching', () => {
     it('dispatches selectionchange to relevant handlers', () => {
       const manager = InlineToolEventManager.getInstance();
-      const onSelectionChange = vi.fn();
+      const receivedSelections: Selection[] = [];
+      const onSelectionChange = vi.fn((selection: Selection) => {
+        receivedSelections.push(selection);
+      });
 
       manager.register('test-tool', {
         onSelectionChange,
@@ -72,6 +75,8 @@ describe('InlineToolEventManager', () => {
       document.dispatchEvent(new Event('selectionchange'));
 
       expect(onSelectionChange).toHaveBeenCalled();
+      expect(receivedSelections).toHaveLength(1);
+      expect(receivedSelections[0]).toBe(window.getSelection());
     });
 
     it('does not dispatch to handlers where isRelevant returns false', () => {
@@ -90,16 +95,33 @@ describe('InlineToolEventManager', () => {
 
     it('dispatches input events to relevant handlers', () => {
       const manager = InlineToolEventManager.getInstance();
-      const onInput = vi.fn();
+      const receivedEvents: { event: Event; selection: Selection }[] = [];
+      const onInput = vi.fn((event: Event, selection: Selection) => {
+        receivedEvents.push({ event, selection });
+      });
 
       manager.register('test-tool', {
         onInput,
         isRelevant: () => true,
       });
 
-      document.dispatchEvent(new Event('input'));
+      // Simulate actual user interaction with an editable element
+      const editable = document.createElement('div');
+      editable.contentEditable = 'true';
+      document.body.appendChild(editable);
+
+      // Focus and type to trigger natural input event
+      editable.focus();
+      editable.textContent = 'a';
+      // Use an InputEvent for realistic user interaction simulation
+      const userEvent = new InputEvent('input', { bubbles: true, data: 'a' });
+      editable.dispatchEvent(userEvent);
 
       expect(onInput).toHaveBeenCalled();
+      expect(receivedEvents).toHaveLength(1);
+      expect(receivedEvents[0].selection).toBe(window.getSelection());
+
+      document.body.removeChild(editable);
     });
 
     it('stops listening after reset', () => {

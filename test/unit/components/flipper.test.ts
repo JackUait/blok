@@ -62,18 +62,10 @@ describe('Flipper', () => {
   });
 
   afterAll(() => {
-    if (originalScrollIntoViewIfNeeded) {
-      Object.defineProperty(HTMLElement.prototype, 'scrollIntoViewIfNeeded', {
-        configurable: true,
-        value: originalScrollIntoViewIfNeeded,
-      });
-    } else {
-
-      Object.defineProperty(HTMLElement.prototype, 'scrollIntoViewIfNeeded', {
-        configurable: true,
-        value: () => {},
-      });
-    }
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoViewIfNeeded', {
+      configurable: true,
+      value: originalScrollIntoViewIfNeeded ?? (() => {}),
+    });
   });
 
   beforeEach(() => {
@@ -97,7 +89,7 @@ describe('Flipper', () => {
 
     expect(docAddSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
     expect(winAddSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
-    expect(items[1]).toHaveAttribute('data-blok-focused');
+    expect(items[1]).toHaveAttribute('data-blok-focused', 'true');
 
     flipper.deactivate();
   });
@@ -139,7 +131,7 @@ describe('Flipper', () => {
     flipper.handleExternalKeydown(event);
 
     expect(onFlipSpy).toHaveBeenCalledTimes(1);
-    expect(items[0]).toHaveAttribute('data-blok-focused');
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
     expect(event.defaultPrevented).toBe(true);
 
     flipper.deactivate();
@@ -268,7 +260,7 @@ describe('Flipper', () => {
     flipper.activate();
     flipper.focusFirst();
 
-    expect(items[0]).toHaveAttribute('data-blok-focused');
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
     expect(scrollSpy).toHaveBeenCalledTimes(1);
 
     flipper.deactivate();
@@ -283,7 +275,7 @@ describe('Flipper', () => {
 
     flipper.activate();
     flipper.focusItem(1);
-    expect(items[1]).toHaveAttribute('data-blok-focused');
+    expect(items[1]).toHaveAttribute('data-blok-focused', 'true');
 
     flipper.focusItem(-1);
     expect(Array.from(items).some(item => item.hasAttribute('data-blok-focused'))).toBe(false);
@@ -300,17 +292,17 @@ describe('Flipper', () => {
 
     flipper.activate();
     flipper.focusItem(0);
-    expect(items[0]).toHaveAttribute('data-blok-focused');
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
 
     const firstTabEvent = createKeyboardEvent('Tab');
 
     flipper.handleExternalKeydown(firstTabEvent);
-    expect(items[0]).toHaveAttribute('data-blok-focused');
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
 
     const secondTabEvent = createKeyboardEvent('Tab');
 
     flipper.handleExternalKeydown(secondTabEvent);
-    expect(items[1]).toHaveAttribute('data-blok-focused');
+    expect(items[1]).toHaveAttribute('data-blok-focused', 'true');
 
     flipper.deactivate();
   });
@@ -330,12 +322,16 @@ describe('Flipper', () => {
 
     flipper.handleExternalKeydown(initialEvent);
     expect(callback).toHaveBeenCalledTimes(1);
+    // Verify DOM state: first item is focused
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
 
     flipper.removeOnFlip(callback);
     const secondEvent = createKeyboardEvent('ArrowDown');
 
     flipper.handleExternalKeydown(secondEvent);
     expect(callback).toHaveBeenCalledTimes(1);
+    // Verify DOM state: second item is focused, callback was not called again
+    expect(items[1]).toHaveAttribute('data-blok-focused', 'true');
 
     flipper.deactivate();
   });
@@ -353,7 +349,7 @@ describe('Flipper', () => {
 
     flipper.handleExternalKeydown(event);
 
-    expect(items[0]).toHaveAttribute('data-blok-focused');
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
 
     flipper.deactivate();
   });

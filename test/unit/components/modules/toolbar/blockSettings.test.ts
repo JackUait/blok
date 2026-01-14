@@ -468,7 +468,8 @@ describe('BlockSettings', () => {
 
     blockSettings.close();
 
-    expect(selectionStub.restore).not.toHaveBeenCalled();
+    expect(blockSettings.opened).toBe(false);
+    expect(eventsDispatcher.emit).toHaveBeenCalledWith(blockSettings.events.closed);
     expect(selectionStub.clearSaved).toHaveBeenCalledTimes(1);
 
     selectionAtBlokSpy.mockRestore();
@@ -559,11 +560,13 @@ describe('BlockSettings', () => {
   });
 
   it('forwards popover close event to block settings close', () => {
-    const closeSpy = vi.spyOn(blockSettings, 'close');
+    Object.assign(blockSettings as unknown as { opened: boolean }, {
+      opened: true,
+    });
 
     (blockSettings as unknown as { onPopoverClose: () => void }).onPopoverClose();
 
-    expect(closeSpy).toHaveBeenCalledTimes(1);
+    expect(blockSettings.opened).toBe(false);
   });
 
   it('attaches and detaches flipper keydown listeners around block content', () => {

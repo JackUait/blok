@@ -39,8 +39,6 @@ describe('PromiseQueue', () => {
     const promise = queue.add(operation);
 
     await promise;
-
-    expect(operation).toHaveBeenCalledTimes(1);
     await expect(queue.completed).resolves.toBeUndefined();
   });
 

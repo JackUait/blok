@@ -158,12 +158,17 @@ describe('Listeners', () => {
     expect(getStoredListeners(listeners)).toHaveLength(0);
   });
 
-  it('invokes removeAll on destroy', () => {
-    const removeAllSpy = vi.spyOn(listeners, 'removeAll');
+  it('removes all listeners on destroy', () => {
+    const otherElement = document.createElement('button');
+    const clickHandler = vi.fn<(event: Event) => void>();
+    const keydownHandler = vi.fn<(event: Event) => void>();
+
+    listeners.on(element, 'click', clickHandler);
+    listeners.on(otherElement, 'keydown', keydownHandler);
 
     listeners.destroy();
 
-    expect(removeAllSpy).toHaveBeenCalledTimes(1);
+    expect(getStoredListeners(listeners)).toHaveLength(0);
   });
 });
 

@@ -224,7 +224,9 @@ describe('Plus button interactions', () => {
       },
       BlockSelection: {
         anyBlockSelected: true,
-        clearSelection: vi.fn(),
+        clearSelection: vi.fn(function(this: { anyBlockSelected: boolean }) {
+          this.anyBlockSelected = false;
+        }),
       },
       InlineToolbar: {
         opened: false,
@@ -257,8 +259,12 @@ describe('Plus button interactions', () => {
 
     (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void; open: () => void; toggle: () => void; hasFocus: () => boolean } }).toolboxInstance = {
       opened: false,
-      close: vi.fn(),
-      open: vi.fn(),
+      close: vi.fn(function(this: { opened: boolean }) {
+        this.opened = false;
+      }),
+      open: vi.fn(function(this: { opened: boolean }) {
+        this.opened = true;
+      }),
       toggle: vi.fn(),
       hasFocus: vi.fn(),
     };
@@ -276,27 +282,30 @@ describe('Plus button interactions', () => {
 
   it('clears block selection when plus button is clicked with blocks selected', () => {
     const plusButtonClicked = (toolbar as unknown as { plusButtonClicked: () => void }).plusButtonClicked;
-    const clearSelectionSpy = getBlok().BlockSelection.clearSelection;
-    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { open: () => void } }).toolboxInstance;
-    const openSpy = vi.spyOn(toolboxInstance, 'open');
+    const blockSelection = getBlok().BlockSelection as { anyBlockSelected: boolean };
+    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { opened: boolean } }).toolboxInstance;
+
+    expect(blockSelection.anyBlockSelected).toBe(true);
 
     plusButtonClicked.call(toolbar);
 
-    expect(clearSelectionSpy).toHaveBeenCalled();
-    expect(openSpy).toHaveBeenCalled();
+    expect(blockSelection.anyBlockSelected).toBe(false);
+    expect(toolboxInstance.opened).toBe(true);
   });
 
   it('does not clear selection when no blocks are selected', () => {
-    (getBlok().BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = false;
+    const blockSelection = getBlok().BlockSelection as { anyBlockSelected: boolean };
+    blockSelection.anyBlockSelected = false;
 
     const plusButtonClicked = (toolbar as unknown as { plusButtonClicked: () => void }).plusButtonClicked;
-    const clearSelectionSpy = getBlok().BlockSelection.clearSelection;
-    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { open: () => void } }).toolboxInstance;
-    const openSpy = vi.spyOn(toolboxInstance, 'open');
+    const toolboxInstance = (toolbar as unknown as { toolboxInstance: { opened: boolean } }).toolboxInstance;
 
     plusButtonClicked.call(toolbar);
 
-    expect(clearSelectionSpy).not.toHaveBeenCalled();
-    expect(openSpy).toHaveBeenCalled();
+    // Since no blocks were selected, clearSelection should not have been called
+    // and anyBlockSelected should still be false
+    expect(blockSelection.anyBlockSelected).toBe(false);
+    // Toolbox should still be opened
+    expect(toolboxInstance.opened).toBe(true);
   });
 });

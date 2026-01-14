@@ -687,13 +687,8 @@ test.describe('inline tool link', () => {
     await selectText(paragraph, 'Paste Link');
     const linkInput = await ensureLinkInputOpen(page);
 
-    // Simulate paste
-    await linkInput.evaluate((el, text) => {
-      const input = el as HTMLInputElement;
-
-      input.value = text;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    }, url);
+    // Fill the input using Playwright's fill method
+    await linkInput.fill(url);
 
     await linkInput.press('Enter');
 

@@ -6,6 +6,7 @@ import type { BlokConfig } from '../../../../types';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { Block } from '../../../../src/components/block';
 import { keyCodes } from '../../../../src/components/utils';
+import { DATA_ATTR } from '../../../../src/components/constants';
 
 const KEY_CODE_TO_KEY_MAP: Record<number, string> = {
   [keyCodes.BACKSPACE]: 'Backspace',
@@ -163,17 +164,24 @@ afterEach(() => {
 
 describe('BlockEvents', () => {
   describe('keyup', () => {
-    it('calls UI.checkEmptiness when Shift is not pressed', () => {
-      const checkEmptiness = vi.fn();
+    it('sets empty attribute on wrapper when Shift is not pressed', () => {
+      const wrapper = document.createElement('div');
+      const checkEmptiness = vi.fn(function(this: BlokModules['UI']) {
+        this.nodes.wrapper.setAttribute(DATA_ATTR.empty, 'true');
+      });
       const blockEvents = createBlockEvents({
         UI: {
           checkEmptiness,
+          nodes: {
+            wrapper,
+          },
         } as unknown as BlokModules['UI'],
       });
 
       blockEvents.keyup(createKeyboardEvent({ shiftKey: false }));
 
       expect(checkEmptiness).toHaveBeenCalledTimes(1);
+      expect(wrapper).toHaveAttribute(DATA_ATTR.empty);
     });
 
     it('skips UI.checkEmptiness when Shift is pressed', () => {
@@ -310,12 +318,15 @@ describe('BlockEvents', () => {
       expect(() => blockEvents.keydown(event)).not.toThrow();
     });
 
-    it('calls preventDefault for "/" key when block is empty', () => {
+    it('activates toolbox and inserts slash when "/" key is pressed in empty block', () => {
       const currentBlock = {
         isEmpty: true,
       } as unknown as Block;
       const wrapper = document.createElement('div');
       const target = document.createElement('div');
+      const insertContentAtCaretPosition = vi.fn();
+      const moveAndOpen = vi.fn();
+      const toolboxOpen = vi.fn();
 
       wrapper.appendChild(target);
       document.body.appendChild(wrapper);
@@ -328,6 +339,16 @@ describe('BlockEvents', () => {
             wrapper,
           },
         } as unknown as BlokModules['UI'],
+        Caret: {
+          insertContentAtCaretPosition,
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          opened: false,
+          moveAndOpen,
+          toolbox: {
+            open: toolboxOpen,
+          },
+        } as unknown as BlokModules['Toolbar'],
       });
       const event = createKeyboardEvent({
         keyCode: keyCodes.SLASH,
@@ -338,17 +359,41 @@ describe('BlockEvents', () => {
       blockEvents.keydown(event);
 
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(insertContentAtCaretPosition).toHaveBeenCalledWith('/');
+      expect(moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(toolboxOpen).toHaveBeenCalledTimes(1);
 
       wrapper.remove();
     });
 
-    it('calls preventDefault for Ctrl+Slash combination', () => {
-      const blockEvents = createBlockEvents();
+    it('opens BlockSettings for Ctrl+Slash combination', () => {
+      let blockSettingsOpened = false;
+      const blockSettingsOpen = vi.fn().mockImplementation(async function(this: BlokModules['BlockSettings']) {
+        this.opened = true;
+        blockSettingsOpened = true;
+      });
+      const moveAndOpen = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockSelection: {
+          selectedBlocks: [],
+        } as unknown as BlokModules['BlockSelection'],
+        BlockSettings: {
+          opened: false,
+          open: blockSettingsOpen,
+        } as unknown as BlokModules['BlockSettings'],
+        Toolbar: {
+          opened: false,
+          moveAndOpen,
+        } as unknown as BlokModules['Toolbar'],
+      });
       const event = createKeyboardEvent({ code: 'Slash', ctrlKey: true });
 
       blockEvents.keydown(event);
 
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(blockSettingsOpen).toHaveBeenCalledTimes(1);
+      expect(blockSettingsOpened).toBe(true);
     });
   });
 
@@ -383,13 +428,21 @@ describe('BlockEvents', () => {
     });
 
     describe('smart grouping', () => {
-      it('calls markBoundary when space is typed', () => {
-        const markBoundarySpy = vi.fn();
+      it('marks boundary when space is typed', () => {
+        let pendingBoundary = false;
+        let boundaryTimestamp = 0;
+
+        const markBoundarySpy = vi.fn(() => {
+          pendingBoundary = true;
+          boundaryTimestamp = Date.now();
+        });
+        const hasPendingBoundarySpy = vi.fn(() => pendingBoundary);
+
         const blockEvents = createBlockEvents({
           YjsManager: {
             markBoundary: markBoundarySpy,
             checkAndHandleBoundary: vi.fn(),
-            hasPendingBoundary: vi.fn().mockReturnValue(false),
+            hasPendingBoundary: hasPendingBoundarySpy,
             clearBoundary: vi.fn(),
           } as unknown as BlokModules['YjsManager'],
         });
@@ -402,10 +455,17 @@ describe('BlockEvents', () => {
         blockEvents.input(event);
 
         expect(markBoundarySpy).toHaveBeenCalled();
+        expect(pendingBoundary).toBe(true);
+        expect(boundaryTimestamp).toBeGreaterThan(0);
       });
 
-      it('calls checkAndHandleBoundary on non-boundary character', () => {
-        const checkAndHandleBoundarySpy = vi.fn();
+      it('checks and handles boundary on non-boundary character', () => {
+        let boundaryChecked = false;
+
+        const checkAndHandleBoundarySpy = vi.fn(() => {
+          boundaryChecked = true;
+        });
+
         const blockEvents = createBlockEvents({
           YjsManager: {
             markBoundary: vi.fn(),
@@ -423,11 +483,17 @@ describe('BlockEvents', () => {
         blockEvents.input(event);
 
         expect(checkAndHandleBoundarySpy).toHaveBeenCalled();
+        expect(boundaryChecked).toBe(true);
       });
 
-      it('calls clearBoundary when non-boundary follows boundary quickly', () => {
-        const clearBoundarySpy = vi.fn();
+      it('clears boundary when non-boundary follows boundary quickly', () => {
+        let boundaryCleared = false;
         const hasPendingBoundarySpy = vi.fn().mockReturnValue(true);
+
+        const clearBoundarySpy = vi.fn(() => {
+          boundaryCleared = true;
+        });
+
         const blockEvents = createBlockEvents({
           YjsManager: {
             markBoundary: vi.fn(),
@@ -445,6 +511,7 @@ describe('BlockEvents', () => {
         blockEvents.input(event);
 
         expect(clearBoundarySpy).toHaveBeenCalled();
+        expect(boundaryCleared).toBe(true);
       });
     });
   });

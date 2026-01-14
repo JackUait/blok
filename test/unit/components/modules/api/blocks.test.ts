@@ -510,6 +510,8 @@ describe('BlocksAPI', () => {
       await blocksApi.delete(0);
 
       expect(blockManager.insert).toHaveBeenCalledTimes(1);
+      expect(blockManager.blocks).toHaveLength(1);
+      expect(blockManager.blocks[0].name).toBe('paragraph');
       expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
       expect(blok.Toolbar.close).toHaveBeenCalled();
     });

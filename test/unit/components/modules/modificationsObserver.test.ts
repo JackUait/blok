@@ -63,7 +63,7 @@ const observeOptions = {
 } as const;
 
 describe('ModificationsObserver', () => {
-  let originalMutationObserver: typeof MutationObserver | undefined;
+  let originalMutationObserver: typeof MutationObserver;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -75,12 +75,7 @@ describe('ModificationsObserver', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-    if (originalMutationObserver) {
-      globalThis.MutationObserver = originalMutationObserver;
-
-      return;
-    }
-    delete (globalThis as { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    globalThis.MutationObserver = originalMutationObserver;
   });
 
   const createObserver = (
@@ -141,7 +136,7 @@ describe('ModificationsObserver', () => {
   });
 
   it('disconnects the observer and prevents onChange while disabled', () => {
-    const { observer, eventsDispatcher, onChange } = createObserver();
+    const { observer, eventsDispatcher, onChange, apiMethods } = createObserver();
 
     observer.disable();
 
@@ -156,6 +151,14 @@ describe('ModificationsObserver', () => {
     vi.advanceTimersByTime(modificationsObserverBatchTimeout + 1);
 
     expect(onChange).not.toHaveBeenCalled();
+
+    // Re-enable to verify the observer resumes normal operation
+    observer.enable();
+    const blockEvent2 = createBlockMutationEvent('block-2');
+    eventsDispatcher.emit(BlockChanged, { event: blockEvent2 });
+    vi.advanceTimersByTime(modificationsObserverBatchTimeout);
+
+    expect(onChange).toHaveBeenCalledWith(apiMethods, blockEvent2);
   });
 
   it('emits onChange with the latest single event after batching time', () => {

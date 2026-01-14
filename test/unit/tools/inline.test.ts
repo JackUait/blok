@@ -163,14 +163,16 @@ describe('InlineToolAdapter', () => {
   describe('.reset', () => {
     it('invokes constructable reset', async () => {
       const options = createInlineToolOptions();
-      const reset = vi.fn();
+      const resetReturnValue = 'reset complete';
+      const reset = vi.fn().mockReturnValue(resetReturnValue);
 
       options.constructable.reset = reset;
       const tool = new InlineToolAdapter(options);
 
-      await tool.reset();
+      const result = await tool.reset();
 
       expect(reset).toHaveBeenCalledTimes(1);
+      expect(result).toBe(resetReturnValue);
     });
 
     it('does nothing when constructable reset is absent', async () => {

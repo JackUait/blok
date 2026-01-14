@@ -613,14 +613,13 @@ describe('BlockSelection', () => {
     });
 
     it('handles read-only mode by selecting all blocks via shortcut handler', () => {
-      const { blockSelection, modules } = createBlockSelection();
+      const { blockSelection, modules, blocks } = createBlockSelection();
 
       Object.defineProperty(modules.ReadOnly, 'isEnabled', {
         value: true,
         writable: true,
         configurable: true,
       });
-      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
       const shortcutsAdd = vi.spyOn(Shortcuts, 'add').mockImplementation(() => undefined);
 
       blockSelection.prepare();
@@ -634,8 +633,9 @@ describe('BlockSelection', () => {
 
       handler(event);
 
-      expect(event.preventDefault).toHaveBeenCalledTimes(1);
-      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+      // Verify the observable outcome: all blocks should be selected
+      expect(blocks.every((block) => block.selected)).toBe(true);
+      expect(blockSelection.allBlocksSelected).toBe(true);
     });
   });
 

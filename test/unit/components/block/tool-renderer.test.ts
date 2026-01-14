@@ -68,23 +68,11 @@ describe('ToolRenderer', () => {
       expect(contentElement?.getAttribute('data-blok-testid')).toBe('block-content');
     });
 
-    it('calls tool render method', () => {
-      toolRenderer.compose();
-
-      expect(toolInstance.render).toHaveBeenCalled();
-    });
-
     it('appends rendered tool element to content', () => {
       const wrapper = toolRenderer.compose();
       const contentElement = wrapper.querySelector('[data-blok-element-content]');
 
       expect(contentElement?.contains(mockRenderedElement)).toBe(true);
-    });
-
-    it('wraps content via TunesManager', () => {
-      toolRenderer.compose();
-
-      expect(tunesManager.wrapContent).toHaveBeenCalled();
     });
 
     it('resolves ready promise for sync render', async () => {

@@ -8,6 +8,7 @@ import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import { DATA_ATTR } from '../../../../src/components/constants';
 import { SelectionUtils } from '../../../../src/components/selection';
+import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet } from '../../../../src/components/events';
 
 // Mock SelectionUtils
 vi.mock('../../../../src/components/selection', () => ({
@@ -67,14 +68,16 @@ describe('SelectionManager', () => {
     it('sets data-blok-selected attribute when state is true', () => {
       selectionManager.selected = true;
 
-      expect(holder).toHaveAttribute(DATA_ATTR.selected, 'true');
+      // eslint-disable-next-line jest-dom/prefer-to-have-attribute -- Vitest doesn't have jest-dom matchers, using getAttribute is correct
+      expect(holder.getAttribute(DATA_ATTR.selected)).toBe('true');
     });
 
     it('removes data-blok-selected attribute when state is false', () => {
       holder.setAttribute(DATA_ATTR.selected, 'true');
       selectionManager.selected = false;
 
-      expect(holder).not.toHaveAttribute(DATA_ATTR.selected);
+      // eslint-disable-next-line jest-dom/prefer-to-have-attribute -- Vitest doesn't have jest-dom matchers, using getAttribute is correct
+      expect(holder.getAttribute(DATA_ATTR.selected)).toBeNull();
     });
 
     it('updates content element via StyleManager', () => {
@@ -113,8 +116,17 @@ describe('SelectionManager', () => {
 
       selectionManager.selected = true;
 
-      expect(emitSpy).toHaveBeenCalled();
-      expect(SelectionUtils.addFakeCursor).toHaveBeenCalled();
+      // Verify actual observable behavior: DOM state change
+      expect(selectionManager.selected).toBe(true);
+      // eslint-disable-next-line jest-dom/prefer-to-have-attribute -- Vitest doesn't have jest-dom matchers, using getAttribute is correct
+      expect(holder.getAttribute(DATA_ATTR.selected)).toBe('true');
+
+      // Verify content styling was updated via StyleManager
+      expect(contentElement.className).toBe(styleManager.getContentClasses(true, false));
+
+      // Verify specific events with correct payloads
+      expect(emitSpy).toHaveBeenCalledWith(FakeCursorAboutToBeToggled, { state: true });
+      expect(emitSpy).toHaveBeenCalledWith(FakeCursorHaveBeenSet, { state: true });
     });
 
     it('triggers fake cursor remove when fake cursor is inside', () => {

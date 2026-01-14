@@ -21,7 +21,8 @@ export default defineConfig({
           name: 'unit',
           globals: true,
           environment: 'jsdom',
-          include: ['test/unit/**/*.test.ts']
+          include: ['test/unit/**/*.test.ts'],
+          setupFiles: ['test/unit/vitest.setup.ts']
         }
       },
       {

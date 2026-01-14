@@ -205,12 +205,9 @@ describe('LinkInlineTool', () => {
   });
 
   it('removes link when input is submitted empty', () => {
-    const { tool, selection } = createTool();
+    const { tool, inlineToolbar } = createTool();
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
     const input = renderResult.children.items[0].element as HTMLInputElement;
-
-    const unlinkSpy = vi.spyOn(tool as unknown as { unlink(): void }, 'unlink');
-    const closeActionsSpy = vi.spyOn(tool as unknown as { closeActions(clearSavedSelection?: boolean): void }, 'closeActions');
 
     input.value = '   ';
 
@@ -218,10 +215,10 @@ describe('LinkInlineTool', () => {
 
     (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(event as unknown as KeyboardEvent);
 
-    expect(selection.restore).toHaveBeenCalled();
-    expect(unlinkSpy).toHaveBeenCalled();
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(closeActionsSpy).toHaveBeenCalled();
+    // Verify observable behavior: input is cleared and actions are closed
+    expect(input.value).toBe('');
+    expect(input).toHaveAttribute('data-blok-link-tool-input-opened', 'false');
+    expect(inlineToolbar.close).toHaveBeenCalled();
   });
 
   it('shows notifier when URL validation fails', () => {

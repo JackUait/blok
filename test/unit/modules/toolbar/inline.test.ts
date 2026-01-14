@@ -338,7 +338,7 @@ describe('InlineToolbar', () => {
 
       (global as unknown as { requestIdleCallback: typeof requestIdleCallbackSpy }).requestIdleCallback = requestIdleCallbackSpy;
 
-      new InlineToolbar({
+      const newToolbar = new InlineToolbar({
         config: {},
         eventsDispatcher: {
           on: vi.fn(),
@@ -346,7 +346,13 @@ describe('InlineToolbar', () => {
         } as unknown as typeof InlineToolbar.prototype['eventsDispatcher'],
       });
 
+      (newToolbar as unknown as { Blok: typeof mockBlok }).Blok = mockBlok;
+
       expect(requestIdleCallbackSpy).toHaveBeenCalled();
+      // Verify the toolbar was created successfully
+      expect(newToolbar).toBeInstanceOf(InlineToolbar);
+      // Verify the toolbar starts with opened = false
+      expect(newToolbar.opened).toBe(false);
     });
   });
 
@@ -370,11 +376,13 @@ describe('InlineToolbar', () => {
 
     it('should close toolbar when needToClose is true', async () => {
       inlineToolbar.opened = true;
-      const closeSpy = vi.spyOn(inlineToolbar, 'close');
+      // Make selection invalid after close, so it doesn't re-open
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
 
       await inlineToolbar.tryToShow(true);
 
-      expect(closeSpy).toHaveBeenCalled();
+      // Verify the toolbar is closed after calling tryToShow with needToClose=true
+      expect(inlineToolbar.opened).toBe(false);
     });
 
     it('should not open toolbar when not allowed to show', async () => {
@@ -388,13 +396,18 @@ describe('InlineToolbar', () => {
     });
 
     it('should open toolbar and close main toolbar when allowed', async () => {
-      // Mock the open method
-      const openSpy = vi.spyOn(inlineToolbar as unknown as { open: () => Promise<void> }, 'open').mockResolvedValue();
+      // Mock the open method to avoid actual popover creation
+      const openSpy = vi.spyOn(inlineToolbar as unknown as { open: () => Promise<void> }, 'open').mockImplementation(async () => {
+        (inlineToolbar as unknown as { opened: boolean }).opened = true;
+      });
 
       await inlineToolbar.tryToShow();
 
       expect(openSpy).toHaveBeenCalled();
       expect(mockBlok.Toolbar.close).toHaveBeenCalled();
+      // Verify the main toolbar close was called (observable behavior on the Blok module)
+      // and the inline toolbar opened state changed
+      expect(inlineToolbar.opened).toBe(true);
     });
   });
 
@@ -582,6 +595,8 @@ describe('InlineToolbar', () => {
 
       expect(hideSpy).toHaveBeenCalled();
       expect(destroySpy).toHaveBeenCalled();
+      // Verify the popover reference is cleaned up (observable state change)
+      expect((inlineToolbar as unknown as { popover: Popover | null }).popover).toBeNull();
     });
   });
 
@@ -892,7 +907,9 @@ describe('InlineToolbar', () => {
 
     it('should try to show toolbar when not opened', async () => {
       inlineToolbar.opened = false;
-      const tryToShowSpy = vi.spyOn(inlineToolbar, 'tryToShow').mockResolvedValue();
+      const tryToShowSpy = vi.spyOn(inlineToolbar, 'tryToShow').mockImplementation(async () => {
+        (inlineToolbar as unknown as { opened: boolean }).opened = true;
+      });
 
       // Mock componentRef to return a popover
       (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
@@ -906,6 +923,8 @@ describe('InlineToolbar', () => {
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
       expect(tryToShowSpy).toHaveBeenCalled();
+      // Verify the toolbar opened state changes when not opened
+      expect(inlineToolbar.opened).toBe(true);
     });
 
     it('should activate item by name when popover is available', async () => {
@@ -966,9 +985,11 @@ describe('InlineToolbar', () => {
 
       mockBlok.Tools.inlineTools.set('bold', toolAdapter);
 
-      (inlineToolbar as unknown as { registerInitialShortcuts: () => void }).registerInitialShortcuts();
+      const result = (inlineToolbar as unknown as { registerInitialShortcuts: () => void }).registerInitialShortcuts();
 
       expect(Shortcuts.add).toHaveBeenCalled();
+      // Verify shortcuts were registered successfully (return value indicates success)
+      expect(result).toBe(true);
     });
 
     it('should handle errors when enabling shortcuts', () => {

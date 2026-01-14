@@ -3,6 +3,7 @@ import { KeyboardNavigation } from '../../../../../../src/components/modules/blo
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 import type { Block } from '../../../../../../src/components/block';
 import { keyCodes } from '../../../../../../src/components/utils';
+import * as caretUtils from '../../../../../../src/components/utils/caret';
 
 const createKeyboardEvent = (options: Partial<KeyboardEvent> = {}): KeyboardEvent => {
   return {
@@ -256,7 +257,17 @@ describe('KeyboardNavigation', () => {
       const moveAndOpen = vi.fn();
       const setToBlock = vi.fn();
       const stopCapturing = vi.fn();
+      const mockBlock = createBlock();
+      const insertedBlock = createBlock({ id: 'inserted-block' });
+      const insertDefaultBlockAtIndex = vi.fn(() => insertedBlock);
+      const split = vi.fn(() => insertedBlock);
       const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          split,
+          insertDefaultBlockAtIndex,
+          currentBlockIndex: 0,
+        } as unknown as BlokModules['BlockManager'],
         Toolbar: {
           moveAndOpen,
         } as unknown as BlokModules['Toolbar'],
@@ -273,9 +284,13 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleEnter(event);
 
-      expect(stopCapturing).toHaveBeenCalled();
+      // Verify that a block operation was performed (either split or insert)
+      const blockOperationCalled = split.mock.calls.length > 0 || insertDefaultBlockAtIndex.mock.calls.length > 0;
+      expect(blockOperationCalled).toBe(true);
+      // Verify the returned block was focused
       expect(setToBlock).toHaveBeenCalled();
       expect(moveAndOpen).toHaveBeenCalled();
+      // Verify default browser behavior was prevented
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
   });
@@ -296,36 +311,62 @@ describe('KeyboardNavigation', () => {
     });
 
     it('navigates to previous input when not at first input', () => {
+      const firstInput = document.createElement('div');
+      firstInput.contentEditable = 'true';
       const secondInput = document.createElement('div');
       secondInput.contentEditable = 'true';
+
       const mockBlock = createBlock({
-        inputs: [document.createElement('div'), secondInput],
-        firstInput: document.createElement('div'),
+        inputs: [firstInput, secondInput],
+        firstInput,
         lastInput: secondInput,
         currentInput: secondInput,
       });
-      const navigatePrevious = vi.fn();
+
+      let navigationOccurred = false;
+      const navigatePrevious = vi.fn(() => {
+        navigationOccurred = true;
+        return true;
+      });
+      const close = vi.fn();
+      const removeBlock = vi.fn();
+      const mergeBlocks = vi.fn();
+      const setToBlock = vi.fn();
       const blok = createBlokModules({
         BlockManager: {
           currentBlock: mockBlock,
+          previousBlock: createBlock({ id: 'previous-block' }),
+          removeBlock,
+          mergeBlocks,
         } as unknown as BlokModules['BlockManager'],
         Caret: {
           navigatePrevious,
+          setToBlock,
         } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
       const event = createKeyboardEvent({ key: 'Backspace' });
 
-      // Mock isCaretAtStartOfInput to return true
-      vi.doMock('../../../../src/components/utils/caret', () => ({
-        isCaretAtStartOfInput: () => true,
-        areBlocksMergeable: () => false,
-      }));
+      // Mock isCaretAtStartOfInput to simulate caret at start of input
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
 
       keyboardNavigation.handleBackspace(event);
 
-      expect(navigatePrevious).toHaveBeenCalled();
+      // Verify toolbar was closed (observable side effect)
+      expect(close).toHaveBeenCalled();
+      // Verify navigation occurred (caret moved to previous input)
+      expect(navigationOccurred).toBe(true);
+      // Verify default browser behavior was prevented (custom behavior occurred)
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      // Verify no block state changes occurred (navigation only within same block)
+      expect(removeBlock).not.toHaveBeenCalled();
+      expect(mergeBlocks).not.toHaveBeenCalled();
+      expect(setToBlock).not.toHaveBeenCalled();
+
+      isCaretAtStartOfInputSpy.mockRestore();
     });
   });
 

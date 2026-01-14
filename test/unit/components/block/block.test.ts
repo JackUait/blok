@@ -10,7 +10,7 @@ import type { BlockToolData } from '@/types';
 import type { BlockTuneData } from '@/types/block-tunes/block-tune-data';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
-import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet } from '../../../../src/components/events';
+import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../../../../src/components/events';
 import { SelectionUtils } from '../../../../src/components/selection';
 
 interface MockToolInstance {
@@ -539,24 +539,66 @@ describe('Block', () => {
 
     it('unwatchBlockMutations stops mutation observation', () => {
       const eventBus = new EventsDispatcher<BlokEventMap>();
-      const offSpy = vi.spyOn(eventBus, 'off');
       const { block } = createBlock({ eventBus });
 
+      const mutationHandler = vi.fn();
+
+      block.on('didMutated', mutationHandler);
+
+      // Create a mock mutation record that belongs to the block's content element
+      const mockMutation = {
+        type: 'childList' as MutationRecordType,
+        target: block.pluginsContent,
+        addedNodes: [],
+        removedNodes: [],
+      } as unknown as MutationRecord;
+
+      // Trigger a DOM mutation event - should trigger didMutated
+      eventBus.emit(RedactorDomChanged, {
+        mutations: [mockMutation],
+      });
+      expect(mutationHandler.mock.calls.length).toBe(1);
+
+      // Unwatch mutations
       block.unwatchBlockMutations();
 
-      // MutationHandler.unwatch() should have been called, which calls eventBus.off
-      expect(offSpy).toHaveBeenCalled();
+      // After unwatch, DOM mutation events should not trigger didMutated
+      eventBus.emit(RedactorDomChanged, {
+        mutations: [mockMutation],
+      });
+      expect(mutationHandler.mock.calls.length).toBe(1);
     });
 
     it('cleans up MutationHandler on destroy', () => {
       const eventBus = new EventsDispatcher<BlokEventMap>();
-      const offSpy = vi.spyOn(eventBus, 'off');
       const { block } = createBlock({ eventBus });
 
+      const mutationHandler = vi.fn();
+
+      block.on('didMutated', mutationHandler);
+
+      // Create a mock mutation record that belongs to the block's content element
+      const mockMutation = {
+        type: 'childList' as MutationRecordType,
+        target: block.pluginsContent,
+        addedNodes: [],
+        removedNodes: [],
+      } as unknown as MutationRecord;
+
+      // Trigger a DOM mutation event - should trigger didMutated
+      eventBus.emit(RedactorDomChanged, {
+        mutations: [mockMutation],
+      });
+      expect(mutationHandler.mock.calls.length).toBe(1);
+
+      // Destroy the block
       block.destroy();
 
-      // MutationHandler should have cleaned up
-      expect(offSpy).toHaveBeenCalled();
+      // After destroy, DOM mutation events should not trigger didMutated
+      eventBus.emit(RedactorDomChanged, {
+        mutations: [mockMutation],
+      });
+      expect(mutationHandler.mock.calls.length).toBe(1);
     });
 
     it('refreshToolRootElement updates internal reference', () => {
@@ -614,17 +656,29 @@ describe('Block', () => {
       const { block } = createBlock();
       const dragHandle = document.createElement('div');
 
-      // Mock DragManager
-      const mockCleanup = vi.fn();
+      // Mock DragManager that tracks cleanup state
+      let isDragActive = false;
+      const mockCleanup = vi.fn(() => {
+        isDragActive = false;
+      });
       const mockDragManager = {
-        setupDragHandle: vi.fn(() => mockCleanup),
+        setupDragHandle: vi.fn(() => {
+          isDragActive = true;
+          return mockCleanup;
+        }),
       };
 
       block.setupDraggable(dragHandle, mockDragManager as unknown as Parameters<typeof block.setupDraggable>[1]);
 
+      // Verify setup was called and drag is active
+      expect(mockDragManager.setupDragHandle.mock.calls.length).toBe(1);
+      expect(isDragActive).toBe(true);
+
       block.destroy();
 
-      expect(mockCleanup).toHaveBeenCalled();
+      // Verify cleanup was called and drag is no longer active
+      expect(mockCleanup.mock.calls.length).toBe(1);
+      expect(isDragActive).toBe(false);
     });
   });
 });

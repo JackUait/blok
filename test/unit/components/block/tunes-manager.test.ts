@@ -375,9 +375,12 @@ describe('TunesManager', () => {
 
       const result = manager.extractTunesData();
 
-      // Should not have the tune data since save failed
-      expect(result).not.toHaveProperty('userTune');
-      expect(consoleWarnSpy).toHaveBeenCalled();
+      // Verify the tune data is not included in the result since save failed
+      expect(result).toEqual({});
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+      expect(consoleWarnSpy.mock.calls[0][0]).toContain('Tune');
+      expect(consoleWarnSpy.mock.calls[0][0]).toContain('save method throws an Error');
+      expect(consoleWarnSpy.mock.calls[0][1]).toBeInstanceOf(Error);
 
       consoleWarnSpy.mockRestore();
     });

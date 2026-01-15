@@ -512,7 +512,7 @@ export class DragController extends Module {
 
     // Clear drop indicator
     const state = this.stateMachine.getState();
-    if (state.type === 'dragging' && state.targetBlock) {
+    if ((state.type === 'dragging' || state.type === 'dropped') && state.targetBlock) {
       state.targetBlock.holder.removeAttribute('data-drop-indicator');
       state.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
     }

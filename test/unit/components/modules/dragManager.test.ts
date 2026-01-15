@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
-import { DragManager } from '../../../../src/components/modules/dragManager';
+import { DragController as DragManager } from '../../../../src/components/modules/drag/DragController';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
@@ -143,6 +143,7 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
       redactor: document.createElement('div'),
       holder: document.createElement('div'),
     },
+    contentRect: { left: 0 },
   };
 
   const i18n = {
@@ -168,13 +169,24 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
     I18n: i18n as unknown as BlokModules['I18n'],
   };
 
-  const mergedState = { ...defaults, ...overrides } as BlokModules;
+  const yjsManager = {
+    transact: vi.fn((callback: () => void) => callback()),
+  };
+
+  const mergedState = {
+    ...defaults,
+    ...overrides,
+    YjsManager: yjsManager as unknown as BlokModules['YjsManager'],
+  } as BlokModules;
   const dragManager = new DragManager({
     config: {} as BlokConfig,
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 
   dragManager.state = mergedState;
+
+  // Call prepare to initialize internal components
+  void dragManager.prepare();
 
   return {
     dragManager,

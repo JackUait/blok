@@ -315,20 +315,22 @@ describe('BlockFactory', () => {
     });
 
     it('binds block events immediately when bindEventsImmediately is true', () => {
-      factory.composeBlock({
+      const block = factory.composeBlock({
         tool: 'paragraph',
         bindEventsImmediately: true,
       });
 
+      expect(block.name).toBe('paragraph');
       expect(bindBlockEventsFn).toHaveBeenCalledTimes(1);
     });
 
     it('defers event binding via requestIdleCallback when bindEventsImmediately is false', () => {
-      factory.composeBlock({
+      const block = factory.composeBlock({
         tool: 'paragraph',
         bindEventsImmediately: false,
       });
 
+      expect(block.name).toBe('paragraph');
       expect(bindBlockEventsFn).not.toHaveBeenCalled();
       // requestIdleCallback should be called via polyfill
       expect(window.requestIdleCallback).toHaveBeenCalled();
@@ -338,11 +340,12 @@ describe('BlockFactory', () => {
       dependencies.readOnly = true;
       const readOnlyFactory = new BlockFactory(dependencies, bindBlockEventsFn);
 
-      readOnlyFactory.composeBlock({
+      const block = readOnlyFactory.composeBlock({
         tool: 'paragraph',
         bindEventsImmediately: true,
       });
 
+      expect(block.name).toBe('paragraph');
       expect(bindBlockEventsFn).not.toHaveBeenCalled();
     });
 
@@ -417,8 +420,8 @@ describe('BlockFactory', () => {
       });
 
       // In read-only mode, events should not be bound
+      expect(block.name).toBe('paragraph');
       expect(bindBlockEventsFn).not.toHaveBeenCalled();
-      expect(block).toBeInstanceOf(Block);
     });
 
     it('toggles read-only state back to writable', () => {
@@ -430,18 +433,19 @@ describe('BlockFactory', () => {
         bindEventsImmediately: true,
       });
 
-      expect(block).toBeInstanceOf(Block);
+      expect(block.name).toBe('paragraph');
       expect(bindBlockEventsFn).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('requestIdleCallback behavior', () => {
     it('executes deferred callback eventually', async () => {
-      factory.composeBlock({
+      const block = factory.composeBlock({
         tool: 'paragraph',
         bindEventsImmediately: false,
       });
 
+      expect(block.name).toBe('paragraph');
       // Wait for the setTimeout in the polyfill to execute
       await new Promise(resolve => setTimeout(resolve, 10));
 

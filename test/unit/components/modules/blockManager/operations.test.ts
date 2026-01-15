@@ -285,6 +285,7 @@ describe('BlockOperations', () => {
     it('calls stopCapturing when index changes', () => {
       operations.currentBlockIndexValue = 1;
       expect(dependencies.YjsManager.stopCapturing).toHaveBeenCalledTimes(1);
+      expect(operations.currentBlockIndexValue).toBe(1);
     });
 
     it('does not call stopCapturing when suppressStopCapturing is true', () => {
@@ -580,9 +581,10 @@ describe('BlockOperations', () => {
     it('uses Yjs transaction for atomic undo', () => {
       const block = repository.getBlockById('block-1')!;
 
-      operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
+      const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
       expect(dependencies.YjsManager.transact).toHaveBeenCalled();
+      expect(newBlock).toBeDefined();
     });
 
     it('inserts with skipYjsSync since transaction handles sync', () => {
@@ -591,9 +593,10 @@ describe('BlockOperations', () => {
 
       (dependencies.YjsManager.transact as ReturnType<typeof vi.fn>).mockImplementation(transactSpy);
 
-      operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
+      const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
       expect(transactSpy).toHaveBeenCalled();
+      expect(newBlock).toBeDefined();
     });
   });
 
@@ -639,6 +642,7 @@ describe('BlockOperations', () => {
       operations.move(1, 0, false, blocksStore);
 
       expect(dependencies.YjsManager.moveBlock).toHaveBeenCalled();
+      expect(repository.blocks[0].id).toBe('block-2');
     });
 
     it('dispatches block-moved event', () => {
@@ -682,9 +686,10 @@ describe('BlockOperations', () => {
 
       (dependencies.Caret.extractFragmentFromCaretPosition as ReturnType<typeof vi.fn>).mockReturnValue(fragment);
 
-      operations.split(blocksStore);
+      const newBlock = operations.split(blocksStore);
 
       expect(dependencies.YjsManager.transact).toHaveBeenCalled();
+      expect(newBlock).toBeDefined();
     });
 
     it('inserts new block with skipYjsSync', () => {
@@ -693,9 +698,10 @@ describe('BlockOperations', () => {
 
       (dependencies.Caret.extractFragmentFromCaretPosition as ReturnType<typeof vi.fn>).mockReturnValue(fragment);
 
-      operations.split(blocksStore);
+      const newBlock = operations.split(blocksStore);
 
       expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
+      expect(newBlock).toBeDefined();
     });
   });
 
@@ -722,9 +728,10 @@ describe('BlockOperations', () => {
 
     it('uses Yjs transaction', () => {
       operations.currentBlockIndexValue = 0;
-      operations.splitBlockWithData('block-1', {}, 'paragraph', {}, 1, blocksStore);
+      const newBlock = operations.splitBlockWithData('block-1', {}, 'paragraph', {}, 1, blocksStore);
 
       expect(dependencies.YjsManager.transact).toHaveBeenCalled();
+      expect(newBlock).toBeDefined();
     });
 
     it('updates current block content element when text is provided', () => {
@@ -808,17 +815,19 @@ describe('BlockOperations', () => {
         },
       } as unknown as PasteEvent;
 
-      await operations.paste('paragraph', pasteEvent, false, blocksStore);
+      const result = await operations.paste('paragraph', pasteEvent, false, blocksStore);
 
       expect(dependencies.YjsManager.addBlock).toHaveBeenCalled();
+      expect(result).toBeDefined();
     });
 
     it('uses atomic operation during paste processing', async () => {
       const pasteEvent: PasteEvent = {} as PasteEvent;
 
-      await operations.paste('paragraph', pasteEvent, false, blocksStore);
+      const result = await operations.paste('paragraph', pasteEvent, false, blocksStore);
 
       expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
+      expect(result).toBeDefined();
     });
   });
 
@@ -847,6 +856,7 @@ describe('BlockOperations', () => {
       operations.moveCurrentBlockUp(blocksStore);
 
       expect(dependencies.Caret.setToBlock).toHaveBeenCalled();
+      expect(operations.currentBlockIndexValue).toBe(0);
     });
   });
 
@@ -875,6 +885,7 @@ describe('BlockOperations', () => {
       operations.moveCurrentBlockDown(blocksStore);
 
       expect(dependencies.Caret.setToBlock).toHaveBeenCalled();
+      expect(operations.currentBlockIndexValue).toBe(1);
     });
   });
 

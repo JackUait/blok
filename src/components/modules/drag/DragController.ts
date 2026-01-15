@@ -409,11 +409,9 @@ export class DragController extends Module {
     const result = this.operations!.moveBlocks(sourceBlocks, targetBlock, edge);
 
     // Announce successful drop to screen readers
-    if (this.a11y) {
-      const movedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
-      if (movedBlock) {
-        this.a11y.announceDropComplete(movedBlock, sourceBlocks, isMultiBlockDrag);
-      }
+    const movedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
+    if (this.a11y && movedBlock) {
+      this.a11y.announceDropComplete(movedBlock, sourceBlocks, isMultiBlockDrag);
     }
 
     // Re-open toolbar on the dropped block

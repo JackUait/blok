@@ -134,8 +134,12 @@ describe('DragA11y', () => {
 
       vi.advanceTimersByTime(300);
 
-      // Only one call to announce (the last one wins)
+      // Only one announcement should be made (the last one wins)
       expect(mockAnnouncer.announce).toHaveBeenCalledTimes(1);
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(
+        'a11y.dropPosition:{"position":3,"total":2}',
+        { politeness: 'polite' }
+      );
     });
 
     it('should handle position changes after timeout', () => {
@@ -152,13 +156,20 @@ describe('DragA11y', () => {
       // First announcement
       a11y.announceDropPosition(targetBlock1 as Block, 'top');
       vi.advanceTimersByTime(300);
-      vi.clearAllMocks();
+
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(
+        'a11y.dropPosition:{"position":1,"total":2}',
+        { politeness: 'polite' }
+      );
 
       // Second announcement after first completed
       a11y.announceDropPosition(targetBlock2 as Block, 'bottom');
       vi.advanceTimersByTime(300);
 
-      expect(mockAnnouncer.announce).toHaveBeenCalledTimes(1);
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(
+        'a11y.dropPosition:{"position":4,"total":2}',
+        { politeness: 'polite' }
+      );
     });
   });
 
@@ -251,6 +262,11 @@ describe('DragA11y', () => {
       a11y.announceDropPosition(targetBlock as Block, 'top');
       vi.advanceTimersByTime(300);
 
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(
+        'a11y.dropPosition:{"position":1,"total":1}',
+        { politeness: 'polite' }
+      );
+
       // Reset and announce same position - should announce again
       a11y.reset();
       vi.clearAllMocks();
@@ -258,7 +274,10 @@ describe('DragA11y', () => {
       a11y.announceDropPosition(targetBlock as Block, 'top');
       vi.advanceTimersByTime(300);
 
-      expect(mockAnnouncer.announce).toHaveBeenCalled();
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(
+        'a11y.dropPosition:{"position":1,"total":1}',
+        { politeness: 'polite' }
+      );
     });
   });
 

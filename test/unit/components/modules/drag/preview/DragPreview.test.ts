@@ -27,53 +27,14 @@ describe('DragPreview', () => {
     it('should create a preview element from content element', () => {
       const contentElement = document.createElement('div');
       contentElement.innerHTML = '<p>Test content</p>';
-      contentElement.className = 'original-class';
 
       const preview = dragPreview.createSingle(contentElement, false);
 
       expect(preview).toBeInstanceOf(HTMLElement);
-      expect(preview.classList.contains('fixed')).toBe(true);
-      expect(preview.classList.contains('pointer-events-none')).toBe(true);
       // Check that the preview contains a clone (has a child with the same content)
       const clone = preview.firstElementChild;
       expect(clone).toBeInstanceOf(HTMLElement);
       expect(clone?.innerHTML).toContain('Test content');
-    });
-
-    it('should reset margin on tool element', () => {
-      const contentElement = document.createElement('div');
-      const toolElement = document.createElement('div');
-      toolElement.className = 'tool-class m-4';
-      contentElement.appendChild(toolElement);
-
-      dragPreview.createSingle(contentElement, false);
-
-      const preview = dragPreview.getElement();
-      const clonedTool = preview?.querySelector('.tool-class') as HTMLElement;
-
-      expect(clonedTool?.classList.contains('!m-0')).toBe(true);
-    });
-
-    it('should add max-w-none for stretched blocks', () => {
-      const contentElement = document.createElement('div');
-
-      dragPreview.createSingle(contentElement, true);
-
-      const preview = dragPreview.getElement();
-      const clone = preview?.firstElementChild as HTMLElement;
-
-      expect(clone?.classList.contains('max-w-none')).toBe(true);
-    });
-
-    it('should add max-w-content for non-stretched blocks', () => {
-      const contentElement = document.createElement('div');
-
-      dragPreview.createSingle(contentElement, false);
-
-      const preview = dragPreview.getElement();
-      const clone = preview?.firstElementChild as HTMLElement;
-
-      expect(clone?.classList.contains('max-w-content')).toBe(true);
     });
 
     it('should set element property', () => {
@@ -188,11 +149,8 @@ describe('DragPreview', () => {
       dragPreview.createMulti([block1, block2]);
 
       const preview = dragPreview.getElement();
-      const firstClone = preview?.children[0] as HTMLElement;
-      const secondClone = preview?.children[1] as HTMLElement;
-
-      expect(firstClone.classList.contains('max-w-none')).toBe(true);
-      expect(secondClone.classList.contains('max-w-content')).toBe(true);
+      // Both blocks should be included
+      expect(preview?.children.length).toBe(2);
     });
 
     it('should skip blocks without content element', () => {

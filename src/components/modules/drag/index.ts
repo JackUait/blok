@@ -5,7 +5,7 @@
  * The main entry point is DragController which is exported as DragManager for backward compatibility.
  */
 
-// Main orchestrator (exported as DragManager for backward compatibility)
+// Main orchestrator (exported as DragController for backward compatibility)
 export { DragController } from './DragController';
 
 // State management

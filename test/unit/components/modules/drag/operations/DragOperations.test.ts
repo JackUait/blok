@@ -344,10 +344,13 @@ describe('DragOperations', () => {
         return -1;
       });
 
-      ops.moveBlocks([block1, block2], targetBlock, 'bottom');
+      const result = ops.moveBlocks([block1, block2], targetBlock, 'bottom');
 
       // Moves should still be executed
-      expect(mockBlockManager.move).toHaveBeenCalled();
+      expect(mockBlockManager.move).toHaveBeenCalledWith(4, 1, false);
+      expect(mockBlockManager.move).toHaveBeenCalledWith(3, 0, false);
+      expect(result.movedBlocks).toEqual([block1, block2]);
+      expect(result.targetIndex).toBe(5);
     });
   });
 });

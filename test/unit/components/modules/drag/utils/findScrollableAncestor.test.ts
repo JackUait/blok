@@ -2,7 +2,7 @@
  * Tests for findScrollableAncestor utility
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { findScrollableAncestor } from '../../../../../../src/components/modules/drag/utils/findScrollableAncestor';
 
 describe('findScrollableAncestor', () => {

@@ -3,8 +3,7 @@ import { BlockEventBinder, type ModuleListeners } from '../../../../../src/compo
 import type { BlockEventBinderDependencies } from '../../../../../src/components/modules/blockManager/event-binder';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
-import { BlockChanged } from '../../../../../src/components/events';
-import { Block } from '../../../../../src/components/block';
+import type { Block } from '../../../../../src/components/block';
 
 /**
  * Create a mock BlockEvents module
@@ -71,11 +70,11 @@ const createMockBlock = (id = 'test-block'): Block => {
  * Create mock dependencies for BlockEventBinder
  */
 const createMockDependencies = (): BlockEventBinderDependencies => ({
-  blockEvents: createMockBlockEvents() as any,
+  blockEvents: createMockBlockEvents() as unknown as BlockEventBinderDependencies['blockEvents'],
   listeners: createMockListeners(),
   eventsDispatcher: createMockEventsDispatcher(),
   getBlockIndex: vi.fn(() => 0),
-  onBlockMutated: vi.fn(() => createMockBlock()),
+  onBlockMutated: vi.fn((_, block) => block),
 });
 
 describe('BlockEventBinder', () => {
@@ -130,8 +129,6 @@ describe('BlockEventBinder', () => {
 
     it('binds didMutated event and emits BlockChanged', () => {
       const block = createMockBlock();
-      const emitSpy = vi.fn();
-      dependencies.eventsDispatcher.on(BlockChanged, emitSpy);
 
       binder.bindBlockEvents(block);
 
@@ -161,65 +158,42 @@ describe('BlockEventBinder', () => {
       const block = createMockBlock();
       binder.bindBlockEvents(block);
 
-      // Get the keydown handler
-      const keydownHandler = (mockListeners.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        call => call[1] === 'keydown'
-      )?.[2];
+      // Dispatch real keydown event to verify it reaches BlockEvents
+      const event = new KeyboardEvent('keydown', { key: 'Enter' });
+      block.holder.dispatchEvent(event);
 
-      if (keydownHandler) {
-        const event = new KeyboardEvent('keydown', { key: 'Enter' });
-        keydownHandler(event);
-      }
-
-      expect(dependencies.blockEvents.keydown).toHaveBeenCalled();
+      expect(dependencies.blockEvents.keydown).toHaveBeenCalledWith(event);
     });
 
     it('delegates to BlockEvents.keyup when keyup event fires', () => {
       const block = createMockBlock();
       binder.bindBlockEvents(block);
 
-      // Get the keyup handler
-      const keyupHandler = (mockListeners.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        call => call[1] === 'keyup'
-      )?.[2];
+      // Dispatch real keyup event to verify it reaches BlockEvents
+      const event = new KeyboardEvent('keyup', { key: 'a' });
+      block.holder.dispatchEvent(event);
 
-      if (keyupHandler) {
-        const event = new KeyboardEvent('keyup', { key: 'a' });
-        keyupHandler(event);
-      }
-
-      expect(dependencies.blockEvents.keyup).toHaveBeenCalled();
+      expect(dependencies.blockEvents.keyup).toHaveBeenCalledWith(event);
     });
 
     it('delegates to BlockEvents.input when input event fires', () => {
       const block = createMockBlock();
       binder.bindBlockEvents(block);
 
-      // Get the input handler
-      const inputHandler = (mockListeners.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        call => call[1] === 'input'
-      )?.[2];
+      // Dispatch real input event to verify it reaches BlockEvents
+      const event = new InputEvent('input', { data: 'a' });
+      block.holder.dispatchEvent(event);
 
-      if (inputHandler) {
-        const event = new InputEvent('input', { data: 'a' });
-        inputHandler(event);
-      }
-
-      expect(dependencies.blockEvents.input).toHaveBeenCalled();
+      expect(dependencies.blockEvents.input).toHaveBeenCalledWith(event);
     });
 
     it('does not bind non-KeyboardEvent to keydown handler', () => {
       const block = createMockBlock();
       binder.bindBlockEvents(block);
 
-      const keydownHandler = (mockListeners.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        call => call[1] === 'keydown'
-      )?.[2];
-
-      if (keydownHandler) {
-        const event = new Event('keydown');
-        keydownHandler(event);
-      }
+      // Regular Event('keydown') is not a KeyboardEvent (no key property)
+      const event = new Event('keydown');
+      block.holder.dispatchEvent(event);
 
       // Should not call BlockEvents.keydown for non-KeyboardEvent
       expect(dependencies.blockEvents.keydown).not.toHaveBeenCalled();
@@ -263,19 +237,12 @@ describe('BlockEventBinder', () => {
       const blocks = [createMockBlock()];
       binder.enableBindings(blocks);
 
-      // Get the cut handler
-      const cutHandler = (mockListeners.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        call => call[1] === 'cut'
-      )?.[2];
+      // Dispatch real cut event to document to verify it reaches BlockEvents
+      const event = new Event('cut', { bubbles: true }) as Event & { clipboardData: DataTransfer | null };
+      event.clipboardData = null;
+      document.dispatchEvent(event);
 
-      if (cutHandler) {
-        // Create a mock clipboard event since ClipboardEvent is not available in all test environments
-        const event = new Event('cut', { bubbles: true }) as Event & { clipboardData: DataTransfer | null };
-        event.clipboardData = null;
-        cutHandler(event);
-      }
-
-      expect(dependencies.blockEvents.handleCommandX).toHaveBeenCalled();
+      expect(dependencies.blockEvents.handleCommandX).toHaveBeenCalledWith(event);
     });
 
     it('handles empty blocks array', () => {
@@ -294,14 +261,23 @@ describe('BlockEventBinder', () => {
 
   describe('disableBindings', () => {
     it('disables all bindings when disabled', () => {
-      const blocks = [createMockBlock('block-1'), createMockBlock('block-2')];
+      const block = createMockBlock('test-block');
+      const blocks = [block];
 
       binder.enableBindings(blocks);
-      expect(mockListeners.on).toHaveBeenCalled();
+
+      // Verify event is handled before disable
+      const eventBefore = new KeyboardEvent('keydown', { key: 'a' });
+      block.holder.dispatchEvent(eventBefore);
+      expect(dependencies.blockEvents.keydown).toHaveBeenCalledWith(eventBefore);
 
       binder.disableBindings();
 
-      expect(mockListeners.clearAll).toHaveBeenCalled();
+      // Verify event is no longer handled after disable
+      const eventAfter = new KeyboardEvent('keydown', { key: 'b' });
+      block.holder.dispatchEvent(eventAfter);
+      // The keydown call count should still be 1 (from before disable)
+      expect(dependencies.blockEvents.keydown).toHaveBeenCalledTimes(1);
     });
 
     it('can call disableBindings without calling enableBindings first', () => {
@@ -312,25 +288,43 @@ describe('BlockEventBinder', () => {
     });
 
     it('clears all mutable listeners', () => {
+      const block = createMockBlock('test-block');
+      binder.enableBindings([block]);
+
+      // Verify initial state
+      expect(dependencies.blockEvents.keydown).not.toHaveBeenCalled();
+
       binder.disableBindings();
 
-      expect(mockListeners.clearAll).toHaveBeenCalledTimes(1);
+      // After disable, dispatching events should not reach BlockEvents
+      const event = new KeyboardEvent('keydown', { key: 'a' });
+      block.holder.dispatchEvent(event);
+      expect(dependencies.blockEvents.keydown).not.toHaveBeenCalled();
     });
   });
 
   describe('integration scenarios', () => {
     it('handles enable/disable cycle correctly', () => {
-      const blocks = [createMockBlock()];
+      const block = createMockBlock();
+      const blocks = [block];
 
+      // Enable and verify events are handled
       binder.enableBindings(blocks);
-      expect(mockListeners.on).toHaveBeenCalled();
+      const event1 = new KeyboardEvent('keydown', { key: 'a' });
+      block.holder.dispatchEvent(event1);
+      expect(dependencies.blockEvents.keydown).toHaveBeenCalledWith(event1);
 
+      // Disable and verify events are NOT handled
       binder.disableBindings();
-      expect(mockListeners.clearAll).toHaveBeenCalled();
+      const event2 = new KeyboardEvent('keydown', { key: 'b' });
+      block.holder.dispatchEvent(event2);
+      expect(dependencies.blockEvents.keydown).toHaveBeenCalledTimes(1);
 
-      // Re-enable should work
+      // Re-enable and verify events are handled again
       binder.enableBindings(blocks);
-      expect(mockListeners.on).toHaveBeenCalled();
+      const event3 = new KeyboardEvent('keydown', { key: 'c' });
+      block.holder.dispatchEvent(event3);
+      expect(dependencies.blockEvents.keydown).toHaveBeenCalledTimes(2);
     });
 
     it('binds events to multiple independent blocks', () => {

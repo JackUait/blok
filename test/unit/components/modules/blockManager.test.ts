@@ -514,6 +514,70 @@ describe('BlockManager', () => {
     expect(result).toBe(insertedBlock);
   });
 
+  it('splits block with empty-only fragment and produces empty text data', () => {
+    // Fragment containing only empty elements (br, empty spans) should be treated as empty
+    const fragment = document.createDocumentFragment();
+    const br = document.createElement('br');
+    const emptySpan = document.createElement('span');
+    fragment.appendChild(br);
+    fragment.appendChild(emptySpan);
+
+    const caretStub = {
+      extractFragmentFromCaretPosition: vi.fn().mockReturnValue(fragment),
+    } as unknown as BlokModules['Caret'];
+
+    const { blockManager, composeBlockSpy } = createBlockManager({
+      initialBlocks: [ createBlockStub({ id: 'origin' }) ],
+      blokOverrides: {
+        Caret: caretStub,
+      },
+    });
+
+    const insertedBlock = createBlockStub({ id: 'split' });
+    composeBlockSpy.mockReturnValue(insertedBlock);
+
+    const result = blockManager.split();
+
+    // Verify composeBlock was called with empty text (not with HTML markup)
+    expect(composeBlockSpy).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'paragraph',
+      data: { text: '' },
+      bindEventsImmediately: true,
+    }));
+    expect(result).toBe(insertedBlock);
+  });
+
+  it('splits block with whitespace-only fragment and preserves the whitespace', () => {
+    // Fragment containing only whitespace should preserve the whitespace (whitespace is meaningful content)
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(document.createTextNode('   '));
+    fragment.appendChild(document.createTextNode('\n'));
+
+    const caretStub = {
+      extractFragmentFromCaretPosition: vi.fn().mockReturnValue(fragment),
+    } as unknown as BlokModules['Caret'];
+
+    const { blockManager, composeBlockSpy } = createBlockManager({
+      initialBlocks: [ createBlockStub({ id: 'origin' }) ],
+      blokOverrides: {
+        Caret: caretStub,
+      },
+    });
+
+    const insertedBlock = createBlockStub({ id: 'split' });
+    composeBlockSpy.mockReturnValue(insertedBlock);
+
+    const result = blockManager.split();
+
+    // Verify composeBlock was called with the whitespace preserved (whitespace is content)
+    expect(composeBlockSpy).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'paragraph',
+      data: { text: '   \n' },
+      bindEventsImmediately: true,
+    }));
+    expect(result).toBe(insertedBlock);
+  });
+
   it('converts a block using the target tool conversion config', async () => {
     const blockToConvert = createBlockStub({ id: 'paragraph',
       name: 'paragraph' });

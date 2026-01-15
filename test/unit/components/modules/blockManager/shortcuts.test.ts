@@ -201,16 +201,54 @@ describe('BlockShortcuts', () => {
       expect(typeof handlers.onMoveDown).toBe('function');
     });
 
-    it('calls onMoveUp handler when registered via interface', () => {
-      handlers.onMoveUp();
+    it('calls onMoveUp handler when CMD+SHIFT+UP is triggered within wrapper', () => {
+      shortcuts.register();
 
-      expect(handlers.onMoveUp).toHaveBeenCalledTimes(1);
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const child = document.createElement('div');
+          wrapper.appendChild(child);
+
+          const event = new KeyboardEvent('keydown', {
+            code: 'ArrowUp',
+            key: 'ArrowUp',
+            metaKey: true,
+            shiftKey: true,
+            ctrlKey: true,
+          });
+          Object.defineProperty(event, 'target', { value: child, writable: false });
+
+          document.dispatchEvent(event);
+
+          expect(handlers.onMoveUp).toHaveBeenCalledWith();
+          resolve();
+        }, ASYNC_TIMEOUT);
+      });
     });
 
-    it('calls onMoveDown handler when registered via interface', () => {
-      handlers.onMoveDown();
+    it('calls onMoveDown handler when CMD+SHIFT+DOWN is triggered within wrapper', () => {
+      shortcuts.register();
 
-      expect(handlers.onMoveDown).toHaveBeenCalledTimes(1);
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const child = document.createElement('div');
+          wrapper.appendChild(child);
+
+          const event = new KeyboardEvent('keydown', {
+            code: 'ArrowDown',
+            key: 'ArrowDown',
+            metaKey: true,
+            shiftKey: true,
+            ctrlKey: true,
+          });
+          Object.defineProperty(event, 'target', { value: child, writable: false });
+
+          document.dispatchEvent(event);
+
+          expect(handlers.onMoveDown).toHaveBeenCalledWith();
+          resolve();
+        }, ASYNC_TIMEOUT);
+      });
     });
   });
 

@@ -27,6 +27,7 @@ import { announce } from '../../utils/announcer';
 import type { EventsDispatcher } from '../../utils/events';
 import type { BlokEventMap } from '../../events';
 import { BlockToolAPI } from '../../block';
+import { Dom as $ } from '../../dom';
 
 /**
  * Dependencies needed by BlockOperations
@@ -604,7 +605,7 @@ export class BlockOperations {
 
       wrapper.appendChild(extractedFragment as DocumentFragment);
 
-      const extractedText = wrapper.innerHTML === '' ? '' : wrapper.innerHTML;
+      const extractedText = $.isEmpty(wrapper) ? '' : wrapper.innerHTML;
 
       // Get truncated text (what remains in original block after extraction)
       const truncatedText = currentBlock.holder

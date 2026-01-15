@@ -157,11 +157,6 @@ export class BlockManager extends Module {
   private _blocks: BlocksStoreProxy | null = null;
 
   /**
-   * Flag to suppress stopCapturing during atomic operations (like split)
-   */
-  private suppressStopCapturing = false;
-
-  /**
    * Event binder for block-level events
    */
   private eventBinder!: BlockEventBinder;

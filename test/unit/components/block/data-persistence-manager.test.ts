@@ -226,14 +226,38 @@ describe('DataPersistenceManager', () => {
   });
 
   describe('exportDataAsString', () => {
-    it('exports data using conversion config', () => {
+    it('exports data using conversion config', async () => {
       const conversionConfig: ConversionConfig = {
         export: 'text',
       };
 
-      const result = dataPersistenceManager.exportDataAsString(conversionConfig);
+      const result = await dataPersistenceManager.exportDataAsString(conversionConfig);
 
-      expect(result).toBe('initial text');
+      expect(result).toBe('saved content');
+    });
+
+    it('uses fresh data from tool save, not cached data', async () => {
+      const conversionConfig: ConversionConfig = {
+        export: 'text',
+      };
+
+      // Initially, the tool returns 'saved content'
+      const firstResult = await dataPersistenceManager.exportDataAsString(conversionConfig);
+      expect(firstResult).toBe('saved content');
+
+      // Simulate the tool content changing (e.g., user typed more text)
+      vi.mocked(toolInstance.save).mockResolvedValue({ text: 'updated content' } as BlockToolData);
+
+      // exportDataAsString should use the fresh data, not the cached initialData
+      const secondResult = await dataPersistenceManager.exportDataAsString(conversionConfig);
+      expect(secondResult).toBe('updated content');
+    });
+
+    it('exports data when conversion config is empty', async () => {
+      const result = await dataPersistenceManager.exportDataAsString({});
+
+      // When conversion config is empty, convertBlockDataToString returns empty string
+      expect(result).toBe('');
     });
   });
 
@@ -261,20 +285,20 @@ describe('DataPersistenceManager', () => {
       expect(data).toEqual({});
     });
 
-    it('preservedData returns last saved data', () => {
-      expect(dataPersistenceManager.preservedData).toEqual(initialData);
-    });
-
-    it('preservedTunes returns last saved tunes', () => {
-      expect(dataPersistenceManager.preservedTunes).toEqual(initialTunesData);
-    });
-
     it('lastSavedData returns internal data property', () => {
       expect(dataPersistenceManager.lastSavedData).toEqual(initialData);
     });
 
     it('lastSavedTunes returns internal tunes property', () => {
       expect(dataPersistenceManager.lastSavedTunes).toEqual(initialTunesData);
+    });
+
+    it('preservedData returns last saved data', () => {
+      expect(dataPersistenceManager.preservedData).toEqual(initialData);
+    });
+
+    it('preservedTunes returns last saved tunes', () => {
+      expect(dataPersistenceManager.preservedTunes).toEqual(initialTunesData);
     });
   });
 

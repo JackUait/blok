@@ -681,4 +681,107 @@ describe('Block', () => {
       expect(isDragActive).toBe(false);
     });
   });
+
+  describe('exportDataAsString', () => {
+    it('exports data using tool save and conversion config', async () => {
+      const toolAdapter = {
+        name: 'paragraph',
+        settings: {},
+        create: vi.fn(() => ({
+          render: vi.fn(() => document.createElement('div')),
+          save: vi.fn(async () => ({ text: 'hello world' })),
+          validate: vi.fn(async () => true),
+        })),
+        tunes: new ToolsCollection<BlockTuneAdapter>(),
+        sanitizeConfig: {},
+        inlineTools: new ToolsCollection(),
+        conversionConfig: { export: 'text' },
+      } as unknown as BlockToolAdapter;
+
+      const block = new Block({
+        id: 'test-block',
+        data: { text: 'initial' },
+        tool: toolAdapter,
+        readOnly: false,
+        tunesData: {},
+        api: {} as ApiModules,
+      });
+
+      const result = await block.exportDataAsString();
+
+      expect(result).toBe('hello world');
+    });
+
+    it('uses fresh data from tool save, not cached preservedData', async () => {
+      const toolInstance = {
+        render: vi.fn(() => {
+          const el = document.createElement('div');
+          el.setAttribute('contenteditable', 'true');
+          return el;
+        }),
+        save: vi.fn(async () => ({ text: 'initial content' })),
+        validate: vi.fn(async () => true),
+      };
+
+      const toolAdapter = {
+        name: 'paragraph',
+        settings: {},
+        create: vi.fn(() => toolInstance),
+        tunes: new ToolsCollection<BlockTuneAdapter>(),
+        sanitizeConfig: {},
+        inlineTools: new ToolsCollection(),
+        conversionConfig: { export: 'text' },
+      } as unknown as BlockToolAdapter;
+
+      const block = new Block({
+        id: 'test-block',
+        data: { text: 'initial data' },
+        tool: toolAdapter,
+        readOnly: false,
+        tunesData: {},
+        api: {} as ApiModules,
+      });
+
+      // First export uses the initial save result
+      const firstResult = await block.exportDataAsString();
+      expect(firstResult).toBe('initial content');
+
+      // Simulate user editing the block - update the tool's save to return new content
+      toolInstance.save.mockResolvedValueOnce({ text: 'updated content' });
+
+      // Second export should use the fresh data from tool.save(), not the cached preservedData
+      const secondResult = await block.exportDataAsString();
+      expect(secondResult).toBe('updated content');
+    });
+
+    it('handles empty conversion config gracefully', async () => {
+      const toolAdapter = {
+        name: 'paragraph',
+        settings: {},
+        create: vi.fn(() => ({
+          render: vi.fn(() => document.createElement('div')),
+          save: vi.fn(async () => ({ text: 'test' })),
+          validate: vi.fn(async () => true),
+        })),
+        tunes: new ToolsCollection<BlockTuneAdapter>(),
+        sanitizeConfig: {},
+        inlineTools: new ToolsCollection(),
+        conversionConfig: undefined,
+      } as unknown as BlockToolAdapter;
+
+      const block = new Block({
+        id: 'test-block',
+        data: {},
+        tool: toolAdapter,
+        readOnly: false,
+        tunesData: {},
+        api: {} as ApiModules,
+      });
+
+      const result = await block.exportDataAsString();
+
+      // When conversion config is undefined/empty, convertBlockDataToString returns empty string
+      expect(result).toBe('');
+    });
+  });
 });

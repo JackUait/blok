@@ -152,10 +152,11 @@ export class DataPersistenceManager {
 
   /**
    * Exports Block data as string using conversion config
+   * Always uses fresh data by calling save() first.
    * @returns The block data as a string
    */
-  public exportDataAsString(conversionConfig: ConversionConfig): string {
-    const blockData = this.lastSavedDataInternal;
+  public async exportDataAsString(conversionConfig: ConversionConfig): Promise<string> {
+    const blockData = await this.data;
 
     return convertBlockDataToString(blockData, conversionConfig);
   }
@@ -175,20 +176,6 @@ export class DataPersistenceManager {
   }
 
   /**
-   * Returns last successfully extracted block data
-   */
-  public get preservedData(): BlockToolData {
-    return this.lastSavedDataInternal;
-  }
-
-  /**
-   * Returns last successfully extracted tune data
-   */
-  public get preservedTunes(): { [name: string]: BlockTuneData } {
-    return this.lastSavedTunesInternal;
-  }
-
-  /**
    * Get last saved data (internal accessor)
    */
   public get lastSavedData(): BlockToolData {
@@ -199,6 +186,20 @@ export class DataPersistenceManager {
    * Get last saved tunes (internal accessor)
    */
   public get lastSavedTunes(): { [name: string]: BlockTuneData } {
+    return this.lastSavedTunesInternal;
+  }
+
+  /**
+   * Returns last successfully extracted block data
+   */
+  public get preservedData(): BlockToolData {
+    return this.lastSavedDataInternal;
+  }
+
+  /**
+   * Returns last successfully extracted tune data
+   */
+  public get preservedTunes(): { [name: string]: BlockTuneData } {
     return this.lastSavedTunesInternal;
   }
 

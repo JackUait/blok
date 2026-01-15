@@ -559,7 +559,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
   /**
    * Exports Block data as string using conversion config
    */
-  public exportDataAsString(): string {
+  public async exportDataAsString(): Promise<string> {
     return this.dataPersistenceManager.exportDataAsString(this.tool.conversionConfig ?? {});
   }
 

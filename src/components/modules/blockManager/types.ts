@@ -105,4 +105,7 @@ export interface ConvertBlockOptions {
  */
 export type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
+  insert(index: number, block: Block, replace?: boolean): void;
+  remove(index: number): void;
+  move(toIndex: number, fromIndex: number, skipDOM?: boolean): void;
 };

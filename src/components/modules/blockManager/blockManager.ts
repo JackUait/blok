@@ -16,7 +16,6 @@ import { BlockChangedMutationType } from '../../../../types/events/block/BlockCh
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import { BlockChanged } from '../../events';
 import { DATA_ATTR } from '../../constants';
-import { Shortcuts } from '../../utils/shortcuts';
 import { generateBlockId } from '../../utils';
 
 // Imported modules
@@ -26,6 +25,8 @@ import { BlockHierarchy } from './hierarchy';
 import { BlockYjsSync } from './yjs-sync';
 import { BlockOperations } from './operations';
 import type { BlocksStore, BlockMutationEventDetailWithoutTarget } from './types';
+import { BlockEventBinder } from './event-binder';
+import { BlockShortcuts } from './shortcuts';
 
 type BlocksStoreProxy = BlocksStore & {
   [index: number]: Block | undefined;
@@ -161,9 +162,14 @@ export class BlockManager extends Module {
   private suppressStopCapturing = false;
 
   /**
-   * Registered keyboard shortcut names for cleanup
+   * Event binder for block-level events
    */
-  private registeredShortcuts: string[] = [];
+  private eventBinder!: BlockEventBinder;
+
+  /**
+   * Keyboard shortcuts handler
+   */
+  private shortcuts!: BlockShortcuts;
 
   /**
    * Repository for block queries
@@ -225,7 +231,8 @@ export class BlockManager extends Module {
       }
     );
 
-    this.setupKeyboardShortcuts();
+    // Register keyboard shortcuts
+    this.shortcuts.register();
 
     // Subscribe to Yjs changes for undo/redo DOM synchronization
     this.yjsSync.subscribe();
@@ -238,6 +245,15 @@ export class BlockManager extends Module {
     // Initialize repository
     this.repository = new BlockRepository();
     this.repository.initialize(this.blocksStore);
+
+    // Initialize event binder
+    this.eventBinder = new BlockEventBinder({
+      blockEvents: this.Blok.BlockEvents,
+      listeners: this.readOnlyMutableListeners,
+      eventsDispatcher: this.eventsDispatcher,
+      getBlockIndex: (block) => this.repository.getBlockIndex(block),
+      onBlockMutated: this.blockDidMutated.bind(this),
+    });
 
     // Initialize factory
     this.factory = new BlockFactory(
@@ -303,6 +319,15 @@ export class BlockManager extends Module {
 
     // Set yjsSync on operations to complete circular dependency
     this.operations.setYjsSync(this.yjsSync);
+
+    // Initialize shortcuts
+    this.shortcuts = new BlockShortcuts(
+      this.Blok.UI.nodes.wrapper,
+      {
+        onMoveUp: this.moveCurrentBlockUp.bind(this),
+        onMoveDown: this.moveCurrentBlockDown.bind(this),
+      }
+    );
   }
 
   /**
@@ -329,9 +354,9 @@ export class BlockManager extends Module {
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
     if (!readOnlyEnabled) {
-      this.enableModuleBindings();
+      this.eventBinder.enableBindings(this.blocks);
     } else {
-      this.disableModuleBindings();
+      this.eventBinder.disableBindings();
     }
 
     if (this.factory) {
@@ -847,11 +872,8 @@ export class BlockManager extends Module {
    * Cleans up all the block tools' resources
    */
   public async destroy(): Promise<void> {
-    // Remove registered keyboard shortcuts
-    for (const name of this.registeredShortcuts) {
-      Shortcuts.remove(document, name);
-    }
-    this.registeredShortcuts = [];
+    // Unregister keyboard shortcuts
+    this.shortcuts.unregister();
 
     await Promise.all(this.blocks.map((block) => {
       return block.destroy();
@@ -862,107 +884,7 @@ export class BlockManager extends Module {
    * Bind Block events
    */
   private bindBlockEvents(block: Block): void {
-    const { BlockEvents } = this.Blok;
-
-    this.readOnlyMutableListeners.on(block.holder, 'keydown', (event: Event) => {
-      if (event instanceof KeyboardEvent) {
-        BlockEvents.keydown(event);
-      }
-    });
-
-    this.readOnlyMutableListeners.on(block.holder, 'keyup', (event: Event) => {
-      if (event instanceof KeyboardEvent) {
-        BlockEvents.keyup(event);
-      }
-    });
-
-    this.readOnlyMutableListeners.on(block.holder, 'input', (event: Event) => {
-      if (event instanceof InputEvent) {
-        BlockEvents.input(event);
-      }
-    });
-
-    block.on('didMutated', (affectedBlock: Block) => {
-      return this.blockDidMutated(BlockChangedMutationType, affectedBlock, {
-        index: this.getBlockIndex(affectedBlock),
-      });
-    });
-  }
-
-  /**
-   * Disable mutable handlers and bindings
-   */
-  private disableModuleBindings(): void {
-    this.readOnlyMutableListeners.clearAll();
-  }
-
-  /**
-   * Enables all module handlers and bindings for all Blocks
-   */
-  private enableModuleBindings(): void {
-    /** Cut event */
-    this.readOnlyMutableListeners.on(
-      document,
-      'cut',
-      (event: Event) => {
-        this.Blok.BlockEvents.handleCommandX(event as ClipboardEvent);
-      }
-    );
-
-    this.blocks.forEach((block: Block) => {
-      this.bindBlockEvents(block);
-    });
-  }
-
-  /**
-   * Sets up keyboard shortcuts for block movement
-   */
-  private setupKeyboardShortcuts(): void {
-    // Wait for UI to be ready (same pattern as History module)
-    setTimeout(() => {
-      const shortcutNames = ['CMD+SHIFT+UP', 'CMD+SHIFT+DOWN'];
-
-      // Clear any existing shortcuts to avoid duplicate registration errors
-      shortcutNames.forEach(name => Shortcuts.remove(document, name));
-
-      // Move block up: Cmd+Shift+ArrowUp (Mac) / Ctrl+Shift+ArrowUp (Windows/Linux)
-      Shortcuts.add({
-        name: 'CMD+SHIFT+UP',
-        on: document,
-        handler: (event: KeyboardEvent) => {
-          if (!this.shouldHandleShortcut(event)) {
-            return;
-          }
-          event.preventDefault();
-          this.moveCurrentBlockUp();
-        },
-      });
-      this.registeredShortcuts.push('CMD+SHIFT+UP');
-
-      // Move block down: Cmd+Shift+ArrowDown (Mac) / Ctrl+Shift+ArrowDown (Windows/Linux)
-      Shortcuts.add({
-        name: 'CMD+SHIFT+DOWN',
-        on: document,
-        handler: (event: KeyboardEvent) => {
-          if (!this.shouldHandleShortcut(event)) {
-            return;
-          }
-          event.preventDefault();
-          this.moveCurrentBlockDown();
-        },
-      });
-      this.registeredShortcuts.push('CMD+SHIFT+DOWN');
-    }, 0);
-  }
-
-  /**
-   * Determines whether the block movement shortcut should be handled
-   */
-  private shouldHandleShortcut(event: KeyboardEvent): boolean {
-    const target = event.target;
-
-    return target instanceof HTMLElement &&
-      this.Blok.UI?.nodes?.wrapper?.contains(target) === true;
+    this.eventBinder.bindBlockEvents(block);
   }
 
   /**

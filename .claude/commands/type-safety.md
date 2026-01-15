@@ -1,22 +1,22 @@
 ---
 name: type-safety
-description: Use when writing or modifying TypeScript code, when seeing any/as/! in code, when asked to fix types, or when adding functions to files with weak typing patterns
+description: Use when writing or modifying TypeScript code, when asked to fix types, or when adding functions to files with weak typing patterns. Focuses on compiler errors and critical weak patterns (any, @ts-ignore).
 ---
 
 # TypeScript Type Safety
 
 ## Overview
 
-**Fix ALL TypeScript errors without introducing breaking changes to public APIs.**
+**Fix ALL TypeScript errors in the specified files without introducing breaking changes to public APIs.**
 
 This means:
-- Every compiler error (TS2554, TS2345, TS2339, etc.)
-- Every weak type pattern (`any`, `as`, non-null assertion, `@ts-ignore`)
-- Every file your changes break
+- Compiler errors (TS2554, TS2345, TS2339, etc.) in target files
+- Critical weak type patterns (`any` in new code, excessive `@ts-ignore`)
+- Cascade errors ONLY in directly modified files
 
 **CRITICAL: Preserve public API contracts.** Don't change exported function signatures, interface shapes, or type definitions in ways that break downstream consumers.
 
-The "consistency" argument is a trap. Bad patterns don't become acceptable because they're widespread.
+**Pragmatic approach:** Focus on real type safety issues.
 
 ## Public API Preservation
 
@@ -108,22 +108,18 @@ export function processUserLegacy(data: unknown): ProcessedUser {
 // INSTEAD: Keep original signature, fix internal implementation
 ```
 
-### Cascade Rule Amendment
+### Cascade Rule Amendment (RESTRICTED)
 
-**Original rule:** "If your changes break other files, those must be fixed too."
+**Rule:** "Fix cascades ONLY in files you directly modify. Don't chase errors into unrelated files."
 
-**Amended for public APIs:** "Fix cascades ONLY when the breakage is within your control. Breaking changes to public APIs require explicit user approval."
+- Modified file A, which breaks file B that imports from A? Fix file B.
+- Modified file A, which breaks file C that imports from B? STOP - that's out of scope.
+- User specified 3 files? Only work on those 3 files and their direct imports.
 
-- Breaking an internal helper? Fix all callers.
-- Breaking an exported function used by 50 files? STOP and ask user.
-- Changing a shared interface? STOP and ask user.
-
-**Signal for breaking change:**
+**Signal for stopping:**
 ```typescript
-// If fixing this type requires changing an EXPORTED signature
-// that's used in multiple files, that's a breaking change.
-
-export function process(...) // ← "export" = potential breaking change
+// If the cascade goes more than 2 levels deep from modified files,
+// stop and report. The user can decide if broader changes are needed.
 ```
 
 ## Iteration Loop
@@ -213,10 +209,6 @@ For each file, use grep to count occurrences (excluding lines that are comments)
 ```bash
 # any types - matches ": any" or "<any>" or "as any"
 grep -E ':\s*any\b|<any>|as\s+any\b' "$file" | grep -v '^\s*//' | wc -l
-
-# as Type assertions - matches "as SomeType" (but not "as any" which is counted above)
-grep -E '\bas\s+[A-Z][a-zA-Z0-9]*' "$file" | grep -v '^\s*//' | grep -v 'as\s+any' | wc -l
-
 # Non-null assertions - matches identifier, ) or ] followed by ! then punctuation
 # Note: ] must be first in BOTH character classes to be literal
 # Pattern catches: obj!, func()!, arr[0]! followed by . , ; ) ] } = < etc.
@@ -441,19 +433,16 @@ Scores (for context):
    $HOME/.bun/bin/bun run check-types 2>&1 | grep -E "{file_pattern}"
    $HOME/.bun/bin/bun run check:eslint {file_path} -- --format compact
 
-   ESLint catches TypeScript issues that the compiler doesn't enforce:
-   - @typescript-eslint/no-non-null-assertion (all ! assertions)
-   - @typescript-eslint/no-explicit-any (all any types)
-   - @typescript-eslint/consistent-type-assertions (as casts)
-   - @typescript-eslint/ban-ts-comment (@ts-ignore, @ts-expect-error)
+2. Scan each file for critical weak patterns (any, @ts-ignore)
 
-2. Scan each file for weak patterns (any, as, !, @ts-ignore)
+3. Create TodoWrite checklist with issues across your files
 
-3. Create TodoWrite checklist with ALL issues across your files
+4. Fix issues pragmatically:
+   - Compiler errors MUST be fixed
+   - `any` types MUST be replaced
+   - `@ts-ignore` SHOULD be removed if the underlying error is fixable or replace with `@ts-expect-error` with description if the error it's not fixable
 
-4. Fix every issue - no exceptions, no partial fixes
-
-5. After fixing all files, verify BOTH checks pass:
+5. After fixing files, verify checks pass:
    $HOME/.bun/bin/bun run check-types 2>&1 | grep -E "{file_pattern}"
    $HOME/.bun/bin/bun run check:eslint {file_path} -- --format compact
 
@@ -461,6 +450,7 @@ Scores (for context):
    - Files fixed
    - Issues resolved (compiler errors, ESLint errors, weak patterns)
    - Any cascade errors discovered in OTHER files (main agent handles these)
+   - Issues left unfixed with justification
 
 ## Core Rules
 
@@ -472,16 +462,12 @@ Scores (for context):
 
 **CRITICAL: Public API Preservation**
 DON'T change exported function signatures, interfaces, or types that have multiple callers.
-- Check if the function/type is exported (has `export` keyword)
-- Check if it has multiple callers (grep for usages)
+- Check if the function/type is exported
+- Check if it has multiple callers
 - If both true: STOP and report to main agent - this is a breaking change
-- Internal functions? Fix all callers - that's expected and safe
 
-**Cascade Rule:**
-If your fix breaks other files outside your batch, note them in your report but don't fix them. The main agent will handle cascades.
-
-**No partial fixes:**
-Fix ALL issues in your files. Don't skip any.
+**Cascade Rule (RESTRICTED):**
+Only fix cascade errors in direct imports of modified files. Don't chase errors beyond level 3.
 ```
 
 ## Core Rules
@@ -502,34 +488,38 @@ Fix ALL issues in your files. Don't skip any.
 | TS7006 | Parameter implicitly has 'any' type | `function foo(x) {}` |
 | **Any TS error** | **If `check-types` reports it, fix it** | **No exceptions** |
 
-### Cascade Rule: Fix What You Break (Except Public APIs)
+**Note:** If `check-types` reports a compiler error, fix it. These are genuine type issues.
 
-**If your changes break other files, those must be fixed too.**
+### Cascade Rule: Fix What You Break (RESTRICTED)
 
-**EXCEPTION: Public API changes require user approval.**
+**If your changes break other files, fix those files ONLY if they directly import from a modified file.**
 
 Example: You change a **private/internal** function signature from `parseUser(id: string)` to `parseUser(id: string, includeMetadata: boolean)`. This breaks 12 callers across 8 files.
 
 **WRONG:** "I fixed the function, the callers are a separate issue"
 **CORRECT:** Fix all 12 callers. You broke them, you fix them.
 
-**BUT if the function is exported and used by downstream code:**
+**BUT** if `src/services/userService.ts` breaks `src/components/UserProfile.tsx` which breaks `src/components/Avatar.tsx`:
 
-**WRONG:** Change the signature and "fix" all callers (breaking change!)
-**CORRECT:** STOP and ask user - this is a breaking change to the public API
+- Fix `src/components/Avatar.tsx`? **No**, that's 3 levels deep. Stop and report.
+
+**Public API exception:** If the function is exported and has multiple callers, ask user first.
 
 For subagents: If cascade errors are in files outside your batch, report them. The main agent will handle them in a follow-up round.
 
 ### Forbidden Constructs
 
-**NEVER use these - fix the underlying type issue instead:**
-
+**Fix or justify:**
 - **`any`** → Use specific type, generic `<T>`, or `unknown` with narrowing
-- **`as Type`** → Use type guards, discriminated unions, or proper inference
+- **@ts-ignore / @ts-expect-error** → Fix the actual error or document why it's necessary
+
 - **Non-null assertion (x!)** → Use null checks, optional chaining, or early returns
 - **@ts-ignore / @ts-expect-error** → Fix the actual type error
 
-### The Consistency Trap
+**Generally acceptable:**
+- **`as Type`** → OK for narrowing after validation, or working with untyped external APIs
+
+### The Consistency Trap (PRAGMATIC)
 
 ```
 RED FLAG: "I should match the existing pattern"
@@ -542,12 +532,13 @@ export function parseUserData(response: any): any { ... }
 export function parseChannelData(response: any): any { ... }
 ```
 
-**WRONG response:** Add your function with `any` to "match the pattern"
-
-**CORRECT response:** Add your function with proper types. Every function you write has proper types, period.
+**Context matters:**
+- Adding a NEW function to a legacy module? Use proper types for your addition.
+- Refactoring the entire module? Consider gradual improvement.
+- Just fixing a bug? Don't introduce new `any`, but also don't rewrite everything.
 
 ```typescript
-// Your new function - properly typed regardless of neighbors
+// Your new function - properly typed
 interface Post {
     id: string;
     message: string;
@@ -571,7 +562,7 @@ export function parsePostData(response: unknown): Post {
 
 ### Generic Functions and `as T`
 
-Using `as T` inside generic functions is still a type assertion lie:
+Using `as T` inside generic functions bypasses type safety. Consider the context:
 
 ```typescript
 // WRONG - hides the lie inside the function
@@ -581,7 +572,7 @@ async function fetchData<T>(endpoint: string): Promise<T> {
 }
 ```
 
-**CORRECT approaches:**
+**Better approaches when practical:**
 
 1. **Runtime validation (safest):**
 ```typescript
@@ -590,7 +581,7 @@ import {z} from 'zod';
 async function fetchData<T>(endpoint: string, schema: z.ZodType<T>): Promise<T> {
     const response = await fetch(`/api/${endpoint}`);
     const data = await response.json();
-    return schema.parse(data);  // Runtime validation
+    return schema.parse(data);
 }
 ```
 
@@ -601,26 +592,22 @@ async function fetchData(endpoint: string): Promise<unknown> {
     return response.json();
 }
 
-// Caller is responsible for validation
+// Caller validates
 const data = await fetchData('users');
 if (isUserArray(data)) {
     // Now properly narrowed
 }
 ```
 
-3. **Type-specific functions (when validation overhead matters):**
+3. **Endpoint-specific functions with `as` (acceptable):**
 ```typescript
 async function fetchUsers(): Promise<User[]> {
     const response = await fetch('/api/users');
-    return response.json() as User[];  // Acceptable ONLY with comment:
-    // API contract guarantees User[] shape - see /api/users endpoint spec
+    return response.json() as User[];  // Acceptable for known APIs
 }
 ```
 
-Option 3 is acceptable ONLY when:
-- The function is endpoint-specific (not generic)
-- There's a documented API contract
-- You add a comment explaining why the assertion is safe
+Use judgment based on your project's needs. Strict validation isn't always necessary.
 
 ## Fixing Existing Types
 
@@ -667,79 +654,50 @@ if (!container) return;
 const width = container.offsetWidth;  // Type narrowed
 ```
 
-## Red Flags - Stop and Reconsider
+## Guidance - When to Be Pragmatic
 
-If you're thinking any of these, STOP:
+Type safety is important, but pragmatism matters too. Use judgment based on context.
 
-### Skipping Compiler Errors
+### Compiler Errors
 
-| Thought | Reality |
-|---------|---------|
-| "This is a logic error, not a type error" | If `check-types` reports it, it's a type error. Fix it. |
-| "Wrong arguments isn't really a type issue" | TS2554 is literally a type error. Fix it. |
-| "The types are fine, just incompatible" | Incompatible types IS TS2345. Fix it. |
-| "That error is in a different file" | Your change broke it. Fix it. |
-| "Fixing callers is out of scope" | You broke them. They're in scope now. |
-| "I'll just fix the ones in this file" | Run full `check-types`. Fix ALL errors. |
-| "The other errors existed before" | If they show in `check-types`, fix them. |
-| "That's too many files to change" | Then change them all. That's the job. |
+These MUST be fixed:
+- TS errors in files you're actively modifying
+- Errors that break the build
+
+Use discretion for:
+- Errors in legacy/tolerance zones (test files, deprecated code)
+- Errors that would require extensive refactoring for minimal gain
 
 ### Weak Type Patterns
 
-| Thought | Reality |
-|---------|---------|
-| "Just this once won't hurt" | Every `any` spreads. Stop it here. |
-| "I'll fix it later" | You won't. Fix it now. |
-| "The existing code uses any" | Your code doesn't. |
-| "It's just internal code" | Internal code has the most maintenance burden. |
-| "Runtime validation is overkill" | Then use proper types with explicit unknown. |
-| "The generic with as T is isolated" | The lie still propagates to every caller. |
-| "Adding types will take too long" | Taking shortcuts creates tech debt that takes longer. |
-| "The user said no refactor" | Adding types to one function isn't a refactor. |
-| "The bug fix is unrelated to types" | You're touching the function. Type it. |
+Prefer strong types, but be pragmatic:
 
-### Partial Fixes
+| Situation | Guidance |
+|-----------|----------|
+| New code you're writing | Use proper types |
+| Bug fix in existing function | Fix the bug, don't introduce new `any` |
+| Working with untyped external APIs | `as` assertions are acceptable |
+| Test files | `any` is often fine |
+| Legacy integration layers | Document and move on |
 
-| Thought | Reality |
-|---------|---------|
-| "I fixed the main ones, that's enough" | Fix ALL of them. No partial fixes. |
-| "The file has too many to fix" | Then fix them all. That's the job. |
-| "I'll skip verification this time" | Verification is mandatory. Run it. |
-| "check-types passed on this file" | Run it on the whole project. Fix all errors. |
-| "Those errors are unrelated to my changes" | They're in `check-types` output. Fix them. |
+### Cascade Errors
 
-### Skipping Subagent Deployment
+Fix cascade errors in:
+- Direct imports of modified files (2 levels)
 
-| Thought | Reality |
-|---------|---------|
-| "It's just one file, I'll fix it directly" | Spawn a subagent. That's the process. |
-| "The score is 0, no subagent needed" | Spawn a subagent anyway. Verification matters. |
-| "Spawning an agent is overkill here" | The Task tool is mandatory. Use it. |
-| "I can do this faster myself" | Subagents are the process. Follow it. |
-| "This is a simple fix" | Simple fixes still go through subagents. |
+Skip cascade errors in:
+- Files beyond 2 levels of import depth
+- Unrelated modules
 
-### Stopping Too Early
+### Public API Changes
 
-| Thought | Reality |
-|---------|---------|
-| "One round should be enough" | Keep iterating until zero errors or impossible. |
-| "The remaining errors are minor" | Zero errors means zero. Keep going. |
-| "These cascade errors aren't my problem" | They appeared from your fixes. Fix them. |
-| "I've done 3 rounds, that's plenty" | There's no round limit. Only zero errors or impossible. |
-| "These errors look hard, probably impossible" | Try at least 2 rounds before declaring impossible. |
+Always ask user before changing:
+- Exported function signatures with multiple callers
+- Interface definitions used across modules
 
-### Breaking Changes
+### Iteration Limits
 
-| Thought | Reality |
-|---------|---------|
-| "I'll just fix all the callers" | If the function is exported, that's a breaking change. Ask user first. |
-| "The type improvement is worth the breakage" | You don't decide what breaks. The user does. |
-| "It's only 5 files, not a big deal" | Downstream consumers you can't see will also break. |
-| "The new signature is better" | Better ≠ non-breaking. Ask user before changing exports. |
-| "I can add `@deprecated` comments" | Still a breaking change. User must approve. |
-| "The tests will catch issues" | Tests don't exist for downstream consumers. Ask first. |
-
-**STOP before changing any exported signature that has multiple callers.**
+Maximum 5 rounds. If errors remain after 5 rounds, report and stop.
 
 ## Quick Reference
 

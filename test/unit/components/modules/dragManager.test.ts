@@ -1269,6 +1269,85 @@ describe('DragManager', () => {
 
       await expect(dragManager.prepare()).resolves.toBeUndefined();
     });
+
+    it('does not initialize dependencies since prepare is not called by Core', () => {
+      const { dragManager } = createDragManager();
+
+      // Call prepare to simulate what Core would do if DragManager was in modulesToPrepare
+      void dragManager.prepare();
+
+      // Verify dependencies are still null - they should be lazily initialized
+      expect((dragManager as unknown as { targetDetector: unknown }).targetDetector).toBeNull();
+      expect((dragManager as unknown as { operations: unknown }).operations).toBeNull();
+      expect((dragManager as unknown as { a11y: unknown }).a11y).toBeNull();
+      expect((dragManager as unknown as { listItemDescendants: unknown }).listItemDescendants).toBeNull();
+    });
+  });
+
+  describe('lazy initialization', () => {
+    it('initializes dependencies on first drag start', () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(blocks[0].holder);
+
+      // Initially, dependencies should be null
+      expect((dragManager as unknown as { targetDetector: unknown }).targetDetector).toBeNull();
+      expect((dragManager as unknown as { operations: unknown }).operations).toBeNull();
+      expect((dragManager as unknown as { a11y: unknown }).a11y).toBeNull();
+      expect((dragManager as unknown as { listItemDescendants: unknown }).listItemDescendants).toBeNull();
+
+      const dragHandle = document.createElement('div');
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+
+      // Start drag tracking - this should trigger lazy initialization
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+
+      // Now dependencies should be initialized
+      expect((dragManager as unknown as { targetDetector: unknown }).targetDetector).not.toBeNull();
+      expect((dragManager as unknown as { operations: unknown }).operations).not.toBeNull();
+      expect((dragManager as unknown as { a11y: unknown }).a11y).not.toBeNull();
+      expect((dragManager as unknown as { listItemDescendants: unknown }).listItemDescendants).not.toBeNull();
+
+      // Clean up
+      document.dispatchEvent(createMouseEvent('mouseup'));
+    });
+
+    it('does not re-initialize dependencies on subsequent drag operations', () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach(block => wrapper.appendChild(block.holder));
+
+      const dragHandle1 = document.createElement('div');
+      const dragHandle2 = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle1, blocks[0]);
+      dragManager.setupDragHandle(dragHandle2, blocks[1]);
+
+      // First drag - triggers lazy init
+      dragHandle1.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+
+      const targetDetectorAfterFirst = (dragManager as unknown as { targetDetector: unknown }).targetDetector;
+      const operationsAfterFirst = (dragManager as unknown as { operations: unknown }).operations;
+      const a11yAfterFirst = (dragManager as unknown as { a11y: unknown }).a11y;
+      const descendantsAfterFirst = (dragManager as unknown as { listItemDescendants: unknown }).listItemDescendants;
+
+      // Clean up first drag
+      document.dispatchEvent(createMouseEvent('mouseup'));
+
+      // Second drag - should NOT re-initialize
+      dragHandle2.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+
+      // Verify same instances are still being used (no re-initialization)
+      expect((dragManager as unknown as { targetDetector: unknown }).targetDetector).toBe(targetDetectorAfterFirst);
+      expect((dragManager as unknown as { operations: unknown }).operations).toBe(operationsAfterFirst);
+      expect((dragManager as unknown as { a11y: unknown }).a11y).toBe(a11yAfterFirst);
+      expect((dragManager as unknown as { listItemDescendants: unknown }).listItemDescendants).toBe(descendantsAfterFirst);
+
+      // Clean up
+      document.dispatchEvent(createMouseEvent('mouseup'));
+    });
   });
 
   describe('duplication mode', () => {

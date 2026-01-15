@@ -85,9 +85,22 @@ export class DragController extends Module {
 
   /**
    * Module preparation
+   * Note: DragManager is not in the modulesToPrepare list, so this method is never called.
+   * Initialization happens lazily in startDragTracking instead.
    */
   public async prepare(): Promise<void> {
-    // Initialize components that depend on Blok modules
+    // No preparation needed - initialization happens lazily
+  }
+
+  /**
+   * Lazily initialize dependencies that require Blok modules
+   * This is called when the first drag operation begins
+   */
+  private lazyInit(): void {
+    if (this.targetDetector && this.operations && this.a11y && this.listItemDescendants) {
+      return; // Already initialized
+    }
+
     this.targetDetector = new DropTargetDetector(
       { contentRect: this.Blok.UI.contentRect },
       this.Blok.BlockManager
@@ -153,6 +166,9 @@ export class DragController extends Module {
    * @param block - Block to drag
    */
   private startDragTracking(e: MouseEvent, block: Block): void {
+    // Initialize dependencies lazily on first drag
+    this.lazyInit();
+
     const contentElement = block.holder.querySelector('[data-blok-element-content]') as HTMLElement | null;
 
     if (!contentElement) {

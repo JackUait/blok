@@ -244,12 +244,26 @@ Uses `data-blok-*` attributes for behavior/testing (not CSS classes):
 
 ### Testing Best Practices
 
+> **🚨 BUG FIX POLICY - NON-NEGOTIABLE 🚨**
+>
+> **EVERY bug found MUST be covered by behavior tests to ensure it does not get repeated.**
+>
+> - **Step 1**: Write a regression test that reproduces the bug
+> - **Step 2**: Verify the test FAILS (proving the bug exists)
+> - **Step 3**: Fix the bug
+> - **Step 4**: Verify the test now PASSES
+> - **Step 5**: NEVER mark the fix as complete without passing tests
+>
+> **No exceptions. No excuses. A bug fix without a regression test is not a fix—it's technical debt waiting to happen.**
+
+---
+
 **Testing Coverage Mandate**
 
 **ALL code changes MUST be covered by behavior tests.** This is a hard requirement—untested code will not be accepted.
 
 - **New features**: Tests are mandatory. Write tests before or alongside implementation. Every new behavior needs test coverage.
-- **Bug fixes**: A regression test that reproduces the bug is REQUIRED. Fix the bug only after the test fails. This guarantees the bug cannot return.
+- **Bug fixes**: A regression test that reproduces the bug is **REQUIRED**. Fix the bug only after the test fails. This guarantees the bug cannot return.
 - **Refactoring**: Existing tests must pass. Add new tests if behavior changes.
 
 **No exceptions.** If you add code, you add tests. Period.
@@ -287,6 +301,14 @@ This section covers common mistakes to avoid when writing tests. These rules pre
 2. **NEVER bypass the module system** - Don't access internal properties directly. Use the public API or events system.
 
 3. **NEVER test multiple concerns in one test** - Each test should verify one behavior. Multiple assertions are fine if they verify the same behavior.
+
+**Bug Fix Rules:**
+
+1. **ALWAYS write a regression test BEFORE fixing the bug** - The test must fail first, demonstrating the bug exists. Only then fix it.
+
+2. **NEVER fix a bug without test coverage** - Every bug fix MUST include a test that reproduces the original issue. This prevents the bug from returning.
+
+3. **NEVER mark a bug fix as complete without passing tests** - The regression test must pass after the fix is applied.
 
 #### Section 2: Unit Test Patterns
 

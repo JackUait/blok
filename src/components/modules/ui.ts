@@ -1188,6 +1188,10 @@ export class UI extends Module<UINodes> {
   private processBottomZoneClick(event: MouseEvent): void {
     const lastBlock = this.Blok.BlockManager.getBlockByIndex(-1);
 
+    if (lastBlock === undefined) {
+      return;
+    }
+
     const lastBlockBottomCoord = $.offset(lastBlock.holder).bottom;
     const clickedCoord = event.pageY;
     const { BlockSelection } = this.Blok;

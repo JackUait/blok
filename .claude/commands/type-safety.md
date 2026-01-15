@@ -7,14 +7,124 @@ description: Use when writing or modifying TypeScript code, when seeing any/as/!
 
 ## Overview
 
-**Fix ALL TypeScript errors. No exceptions. No partial fixes.**
+**Fix ALL TypeScript errors without introducing breaking changes to public APIs.**
 
 This means:
 - Every compiler error (TS2554, TS2345, TS2339, etc.)
 - Every weak type pattern (`any`, `as`, non-null assertion, `@ts-ignore`)
 - Every file your changes break
 
+**CRITICAL: Preserve public API contracts.** Don't change exported function signatures, interface shapes, or type definitions in ways that break downstream consumers.
+
 The "consistency" argument is a trap. Bad patterns don't become acceptable because they're widespread.
+
+## Public API Preservation
+
+**NEVER break public APIs when fixing types.** A type safety fix that breaks downstream code is worse than the original type error.
+
+### What Counts as a Public API
+
+**Public APIs include:**
+- Exported function signatures
+- Exported interface/type definitions
+- Exported class declarations
+- Component props (for libraries/frameworks)
+- Return types of exported functions
+- Parameter types of exported functions
+
+**Internal code (safe to improve):**
+- Private functions
+- Internal helpers
+- Implementation details within functions
+- Local variable types
+- Non-exported utilities
+
+### Breaking vs. Non-Breaking Changes
+
+**Breaking (DON'T DO):**
+```typescript
+// BEFORE - exported API
+export function getUser(id: string): User | null
+
+// AFTER - breaking change! Callers now must handle Promise
+export function getUser(id: string): Promise<User | null>
+```
+
+**Non-Breaking (SAFE):**
+```typescript
+// BEFORE - internal implementation with weak types
+function parseResponse(data: any): User {
+    return { id: data.id, name: data.name };
+}
+
+// AFTER - proper types, no public API change
+function parseResponse(data: unknown): User {
+    if (!isValidUserData(data)) throw new ValidationError();
+    return { id: data.id, name: data.name };
+}
+```
+
+### Strategies for Public API Boundaries
+
+**When encountering `any` at public API boundaries:**
+
+1. **Document and defer (preferred for established APIs):**
+```typescript
+// TODO: Type safety - this accepts any for historical compatibility
+// Consider adding a strongly-typed alternative in v2.0
+export function legacyTransform(data: any): Result {
+    // Implementation unchanged
+}
+```
+
+2. **Add separate legacy function (gradual migration path):**
+```typescript
+// Internal implementation - single source of truth
+function processUserImpl(user: User): ProcessedUser {
+    return { id: user.id, name: user.name.toUpperCase() };
+}
+
+// New typed version
+export function processUser(user: User): ProcessedUser {
+    return processUserImpl(user);
+}
+
+// Legacy version for backward compatibility - can be deprecated later
+export function processUserLegacy(data: unknown): ProcessedUser {
+    if (isUser(data)) {
+        return processUserImpl(data);
+    }
+    throw new TypeError('Invalid user data');
+}
+```
+
+**Note:** TypeScript overloads don't exist at runtime. You cannot call an "overload" from within another overload - both signatures resolve to the same implementation function. Use a separate internal implementation function to avoid code duplication.
+
+3. **Widen, don't narrow (for return types):**
+```typescript
+// If changing return type, make it broader, not stricter
+// BEFORE: Exported returns SpecificType
+// AFTER: Exported returns SpecificType | undefined is BREAKING
+// INSTEAD: Keep original signature, fix internal implementation
+```
+
+### Cascade Rule Amendment
+
+**Original rule:** "If your changes break other files, those must be fixed too."
+
+**Amended for public APIs:** "Fix cascades ONLY when the breakage is within your control. Breaking changes to public APIs require explicit user approval."
+
+- Breaking an internal helper? Fix all callers.
+- Breaking an exported function used by 50 files? STOP and ask user.
+- Changing a shared interface? STOP and ask user.
+
+**Signal for breaking change:**
+```typescript
+// If fixing this type requires changing an EXPORTED signature
+// that's used in multiple files, that's a breaking change.
+
+export function process(...) // ← "export" = potential breaking change
+```
 
 ## Iteration Loop
 
@@ -145,12 +255,12 @@ src/actions/posts.ts          |    0     |   1    |  2  |     1      |   8
 
 **Step 1: Calculate agent count**
 ```
-num_agents = max(1, ceil(total_points / 10))
+num_agents = max(1, ceil(total_points / 20))
 ```
 
 The `max(1, ...)` ensures at least 1 agent is always spawned.
 
-Example: 63 total points → `ceil(63/10)` = 7 agents
+Example: 63 total points → `ceil(63/20)` = 4 agents
 Example: 0 total points → `max(1, 0)` = 1 agent
 
 **Step 2: Sort files by score (descending)**
@@ -171,7 +281,7 @@ For each file (largest first):
 **Edge cases (ALL cases still spawn subagents):**
 - Single file → 1 subagent (still use Task tool)
 - All files score 0 → 1 subagent handles all (verification pass via subagent)
-- One file with 10+ points → Gets dedicated subagent
+- One file with 22+ points → Gets dedicated subagent
 
 ## Phase 3: Distribution
 
@@ -360,6 +470,13 @@ Scores (for context):
 - Non-null assertions: Use null checks, optional chaining, or early returns
 - @ts-ignore / @ts-expect-error: Fix the actual type error
 
+**CRITICAL: Public API Preservation**
+DON'T change exported function signatures, interfaces, or types that have multiple callers.
+- Check if the function/type is exported (has `export` keyword)
+- Check if it has multiple callers (grep for usages)
+- If both true: STOP and report to main agent - this is a breaking change
+- Internal functions? Fix all callers - that's expected and safe
+
 **Cascade Rule:**
 If your fix breaks other files outside your batch, note them in your report but don't fix them. The main agent will handle cascades.
 
@@ -385,14 +502,21 @@ Fix ALL issues in your files. Don't skip any.
 | TS7006 | Parameter implicitly has 'any' type | `function foo(x) {}` |
 | **Any TS error** | **If `check-types` reports it, fix it** | **No exceptions** |
 
-### Cascade Rule: Fix What You Break
+### Cascade Rule: Fix What You Break (Except Public APIs)
 
 **If your changes break other files, those must be fixed too.**
 
-Example: You change a function signature from `getUser(id: string)` to `getUser(id: string, includeMetadata: boolean)`. This breaks 12 callers across 8 files.
+**EXCEPTION: Public API changes require user approval.**
+
+Example: You change a **private/internal** function signature from `parseUser(id: string)` to `parseUser(id: string, includeMetadata: boolean)`. This breaks 12 callers across 8 files.
 
 **WRONG:** "I fixed the function, the callers are a separate issue"
 **CORRECT:** Fix all 12 callers. You broke them, you fix them.
+
+**BUT if the function is exported and used by downstream code:**
+
+**WRONG:** Change the signature and "fix" all callers (breaking change!)
+**CORRECT:** STOP and ask user - this is a breaking change to the public API
 
 For subagents: If cascade errors are in files outside your batch, report them. The main agent will handle them in a follow-up round.
 
@@ -603,6 +727,19 @@ If you're thinking any of these, STOP:
 | "These cascade errors aren't my problem" | They appeared from your fixes. Fix them. |
 | "I've done 3 rounds, that's plenty" | There's no round limit. Only zero errors or impossible. |
 | "These errors look hard, probably impossible" | Try at least 2 rounds before declaring impossible. |
+
+### Breaking Changes
+
+| Thought | Reality |
+|---------|---------|
+| "I'll just fix all the callers" | If the function is exported, that's a breaking change. Ask user first. |
+| "The type improvement is worth the breakage" | You don't decide what breaks. The user does. |
+| "It's only 5 files, not a big deal" | Downstream consumers you can't see will also break. |
+| "The new signature is better" | Better ≠ non-breaking. Ask user before changing exports. |
+| "I can add `@deprecated` comments" | Still a breaking change. User must approve. |
+| "The tests will catch issues" | Tests don't exist for downstream consumers. Ask first. |
+
+**STOP before changing any exported signature that has multiple callers.**
 
 ## Quick Reference
 

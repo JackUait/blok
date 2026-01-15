@@ -7,5 +7,5 @@ export type {
   DropTarget,
   ContentRect,
   UIAdapter,
-  BlockManagerAdapter,
+  BlockManagerAdapter as BlockManagerTargetAdapter,
 } from './DropTargetDetector';

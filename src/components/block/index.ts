@@ -21,7 +21,7 @@ import type { ToolsCollection } from '../tools/collection';
 import { EventsDispatcher } from '../utils/events';
 import type { BlokEventMap } from '../events';
 import { isSameBlockData } from '../utils/blocks';
-import type { DragManager } from '../modules/dragManager';
+import type { DragController } from '../modules/drag/DragController';
 import { InputManager } from './input-manager';
 import { MutationHandler } from './mutation-handler';
 import { TunesManager } from './tunes-manager';
@@ -352,7 +352,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param dragHandle - The element to use as the drag handle
    * @param dragManager - DragManager instance to handle drag operations
    */
-  public setupDraggable(dragHandle: HTMLElement, dragManager: DragManager): void {
+  public setupDraggable(dragHandle: HTMLElement, dragManager: DragController): void {
     /** Clean up any existing draggable */
     this.cleanupDraggable();
 

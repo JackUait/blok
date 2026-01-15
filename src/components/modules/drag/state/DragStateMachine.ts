@@ -263,7 +263,8 @@ export class DragStateMachine {
       case 'dragging':
       case 'dropped':
         return this.state.isMultiBlockDrag;
-      default:
+      case 'cancelled':
+      case 'idle':
         return false;
     }
   }

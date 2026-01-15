@@ -90,12 +90,12 @@ describe('DragPreview', () => {
      * Helper to mock getBoundingClientRect for both holder and content element
      */
     const mockBlockRects = (
-      block: Partial<Block>,
+      block: Block,
       holderRect: DOMRect,
       contentRect: DOMRect
     ): void => {
-      vi.spyOn(block.holder!, 'getBoundingClientRect').mockReturnValue(holderRect);
-      const contentElement = block.holder?.querySelector('[data-blok-element-content]') as HTMLElement;
+      vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue(holderRect);
+      const contentElement = block.holder.querySelector('[data-blok-element-content]') as HTMLElement;
       if (contentElement) {
         vi.spyOn(contentElement, 'getBoundingClientRect').mockReturnValue(contentRect);
       }
@@ -197,18 +197,18 @@ describe('DragPreview', () => {
 
     it('should skip blocks without content element', () => {
       const block1 = createMockBlock('block-1', 100, 50, false);
-      const block2: Partial<Block> = {
+      const block2 = {
         id: 'block-2',
         holder: document.createElement('div'),
         name: 'paragraph',
         stretched: false,
-      };
+      } as Block;
 
       mockBlockRects(block1, {
         left: 0, top: 0, width: 100, height: 60, right: 100, bottom: 60, x: 0, y: 0, toJSON: () => ({}) },
         { left: 0, top: 0, width: 100, height: 50, right: 100, bottom: 50, x: 0, y: 0, toJSON: () => ({}) });
 
-      const preview = dragPreview.createMulti([block1 as Block, block2 as Block]);
+      const preview = dragPreview.createMulti([block1, block2]);
 
       // Should only have one child (block1)
       const clones = preview?.children;
@@ -370,7 +370,7 @@ const createMockBlock = (
   contentWidth: number,
   contentHeight: number,
   stretched: boolean
-): Partial<Block> => {
+): Block => {
   const holder = document.createElement('div');
   holder.setAttribute('data-blok-element', 'block');
 
@@ -381,10 +381,11 @@ const createMockBlock = (
 
   holder.appendChild(contentElement);
 
-  return {
+  const block = {
     id,
     holder,
     name: 'paragraph',
     stretched,
-  } as Block;
+  };
+  return block as unknown as Block;
 };

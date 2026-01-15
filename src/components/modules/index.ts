@@ -29,7 +29,7 @@ import { BlockManager } from './blockManager';
 import { BlockSelection } from './blockSelection';
 import { Caret } from './caret';
 import { CrossBlockSelection } from './crossBlockSelection';
-import { DragManager } from './dragManager';
+import { DragController as DragManager } from './drag/DragController';
 import { ModificationsObserver } from './modificationsObserver';
 import { Paste } from './paste';
 import { ReadOnly } from './readonly';

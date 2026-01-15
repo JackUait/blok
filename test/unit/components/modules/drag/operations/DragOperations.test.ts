@@ -5,6 +5,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { DragOperations } from '../../../../../../src/components/modules/drag/operations/DragOperations';
 import type { Block } from '../../../../../../src/components/block';
+import type { SavedData } from '../../../../../../types/data-formats';
 
 describe('DragOperations', () => {
   let operations: DragOperations;
@@ -78,7 +79,7 @@ describe('DragOperations', () => {
         return undefined;
       });
 
-      const result = operations.moveBlocks([sourceBlock as Block], targetBlock as Block, 'bottom');
+      const result = operations.moveBlocks([sourceBlock], targetBlock, 'bottom');
 
       // targetIndex(2) + 1 = 3, but source is at 0 which is < 3, so toIndex = 3 - 1 = 2
       expect(mockBlockManager.move).toHaveBeenCalledWith(2, 0, false);
@@ -103,7 +104,7 @@ describe('DragOperations', () => {
         return undefined;
       });
 
-      const result = operations.moveBlocks([sourceBlock as Block], targetBlock as Block, 'top');
+      const result = operations.moveBlocks([sourceBlock], targetBlock, 'top');
 
       // targetIndex(2), source is at 5 which is >= 2, so toIndex = 2
       expect(mockBlockManager.move).toHaveBeenCalledWith(2, 5, false);
@@ -121,7 +122,7 @@ describe('DragOperations', () => {
         return -1;
       });
 
-      const result = operations.moveBlocks([sourceBlock as Block], targetBlock as Block, 'top');
+      const result = operations.moveBlocks([sourceBlock], targetBlock, 'top');
 
       // source at 2, target at 3, moving to top of target = position 2 (same)
       expect(mockBlockManager.move).not.toHaveBeenCalled();
@@ -144,8 +145,8 @@ describe('DragOperations', () => {
       });
 
       const result = operations.moveBlocks(
-        [block1 as Block, block2 as Block],
-        targetBlock as Block,
+        [block1, block2],
+        targetBlock,
         'bottom'
       );
 
@@ -170,8 +171,8 @@ describe('DragOperations', () => {
       });
 
       const result = operations.moveBlocks(
-        [block1 as Block, block2 as Block],
-        targetBlock as Block,
+        [block1, block2],
+        targetBlock,
         'top'
       );
 
@@ -194,7 +195,7 @@ describe('DragOperations', () => {
         return -1;
       });
 
-      operations.moveBlocks([block1 as Block, block2 as Block], targetBlock as Block, 'top');
+      operations.moveBlocks([block1, block2], targetBlock, 'top');
 
       expect(mockBlockSelection.clearSelection).toHaveBeenCalled();
       expect(mockBlockSelection.selectBlock).toHaveBeenCalledWith(block1);
@@ -218,14 +219,14 @@ describe('DragOperations', () => {
       });
 
       mockBlockManager.insert = vi.fn((config) => {
-        if (config.index === 4) return newBlock1 as Block;
-        if (config.index === 5) return newBlock2 as Block;
-        return targetBlock as Block;
+        if (config.index === 4) return newBlock1;
+        if (config.index === 5) return newBlock2;
+        return targetBlock;
       });
 
       const result = await operations.duplicateBlocks(
-        [block1 as Block, block2 as Block],
-        targetBlock as Block,
+        [block1, block2],
+        targetBlock,
         'bottom'
       );
 
@@ -253,9 +254,9 @@ describe('DragOperations', () => {
       const newBlock = createMockBlock('new-1', 'paragraph', { text: 'new-1' });
 
       mockBlockManager.getBlockIndex = vi.fn(() => 1);
-      mockBlockManager.insert = vi.fn(() => newBlock as Block);
+      mockBlockManager.insert = vi.fn(() => newBlock);
 
-      await operations.duplicateBlocks([block1 as Block], targetBlock as Block, 'top');
+      await operations.duplicateBlocks([block1], targetBlock, 'top');
 
       expect(mockBlockSelection.clearSelection).toHaveBeenCalled();
       expect(mockBlockSelection.selectBlock).toHaveBeenCalledWith(newBlock);
@@ -265,14 +266,14 @@ describe('DragOperations', () => {
       const block1 = createMockBlock('block-1', 'paragraph', { text: '1' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
 
-      // Make save return null (failure)
-      block1.save = vi.fn(async () => null);
+      // Make save return undefined (failure)
+      block1.save = vi.fn(async () => undefined);
 
       mockBlockManager.getBlockIndex = vi.fn(() => 0);
 
       const result = await operations.duplicateBlocks(
-        [block1 as Block],
-        targetBlock as Block,
+        [block1],
+        targetBlock,
         'bottom'
       );
 
@@ -287,15 +288,21 @@ describe('DragOperations', () => {
       const newBlock = createMockBlock('new-1', 'paragraph', { text: 'new-1' });
 
       // block1 save succeeds, block2 save fails
-      block1.save = vi.fn(async () => ({ data: { text: '1' }, tunes: {} }));
-      block2.save = vi.fn(async () => null);
+      block1.save = vi.fn(async () => ({
+        id: 'block-1',
+        tool: 'paragraph',
+        data: { text: '1' },
+        time: Date.now(),
+        tunes: {},
+      }));
+      block2.save = vi.fn(async () => undefined);
 
       mockBlockManager.getBlockIndex = vi.fn(() => 1);
-      mockBlockManager.insert = vi.fn(() => newBlock as Block);
+      mockBlockManager.insert = vi.fn(() => newBlock);
 
       const result = await operations.duplicateBlocks(
-        [block1 as Block, block2 as Block],
-        targetBlock as Block,
+        [block1, block2],
+        targetBlock,
         'bottom'
       );
 
@@ -310,11 +317,11 @@ describe('DragOperations', () => {
       const newBlock = createMockBlock('new-1', 'paragraph', { text: 'new-1' });
 
       mockBlockManager.getBlockIndex = vi.fn(() => 0);
-      mockBlockManager.insert = vi.fn(() => newBlock as Block);
+      mockBlockManager.insert = vi.fn(() => newBlock);
 
       const result = await ops.duplicateBlocks(
-        [block1 as Block],
-        targetBlock as Block,
+        [block1],
+        targetBlock,
         'bottom'
       );
 
@@ -337,7 +344,7 @@ describe('DragOperations', () => {
         return -1;
       });
 
-      ops.moveBlocks([block1 as Block, block2 as Block], targetBlock as Block, 'bottom');
+      ops.moveBlocks([block1, block2], targetBlock, 'bottom');
 
       // Moves should still be executed
       expect(mockBlockManager.move).toHaveBeenCalled();
@@ -348,11 +355,19 @@ describe('DragOperations', () => {
 /**
  * Helper to create a mock block
  */
-const createMockBlock = (id: string, name: string, data: Record<string, unknown>): Partial<Block> => {
-  return {
+const createMockBlock = (id: string, name: string, data: Record<string, unknown>): Block => {
+  const holder = document.createElement('div');
+  const block = {
     id,
     name,
-    holder: document.createElement('div'),
-    save: vi.fn(async () => ({ data, tunes: {} })),
-  } as Block;
+    holder,
+    save: vi.fn(async (): Promise<SavedData & { tunes: { [name: string]: unknown } } | undefined> => ({
+      id,
+      tool: name,
+      data,
+      time: Date.now(),
+      tunes: {},
+    })),
+  };
+  return block as unknown as Block;
 }

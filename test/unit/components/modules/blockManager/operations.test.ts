@@ -262,10 +262,10 @@ describe('BlockOperations', () => {
       repository,
       factory,
       hierarchy,
-      yjsSync,
       blockDidMutatedSpy,
       0
     );
+    operations.setYjsSync(yjsSync);
   });
 
   afterEach(() => {
@@ -323,10 +323,10 @@ describe('BlockOperations', () => {
         emptyRepo,
         factory,
         hierarchy,
-        yjsSync,
         blockDidMutatedSpy,
         -1
       );
+      emptyOps.setYjsSync(yjsSync);
 
       expect(emptyOps.nextBlock).toBeNull();
     });
@@ -350,10 +350,10 @@ describe('BlockOperations', () => {
         emptyRepo,
         factory,
         hierarchy,
-        yjsSync,
         blockDidMutatedSpy,
         -1
       );
+      emptyOps.setYjsSync(yjsSync);
 
       expect(emptyOps.previousBlock).toBeNull();
     });

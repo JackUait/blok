@@ -7,6 +7,7 @@ import type { Block } from '../../block';
 import type { BlocksStore } from './types';
 import type { BlockRepository } from './repository';
 import type { BlockFactory } from './factory';
+import type { BlockOperations } from './operations';
 import type { BlockChangeEvent } from '../yjsManager';
 import type { YjsManager } from '../yjsManager';
 import type { Map as YMap } from 'yjs';
@@ -17,6 +18,8 @@ import type { Map as YMap } from 'yjs';
 export interface BlockYjsSyncDependencies {
   /** YjsManager instance */
   YjsManager: YjsManager;
+  /** BlockOperations instance for suppressing stopCapturing during atomic operations */
+  operations?: BlockOperations;
 }
 
 /**
@@ -35,6 +38,8 @@ export interface SyncHandlers {
   insertDefaultBlock: (skipYjsSync: boolean) => Block;
   /** Called to update block indentation */
   updateIndentation: (block: Block) => void;
+  /** Called to replace a block at a specific index with a new block instance */
+  replaceBlock: (index: number, newBlock: Block) => void;
 }
 
 /**
@@ -91,15 +96,27 @@ export class BlockYjsSync {
   }
 
   /**
-   * Execute a function within a sync context where Yjs auto-sync is suppressed
+   * Execute a function within a sync context where:
+   * - Yjs auto-sync is suppressed (DOM changes won't trigger sync back to Yjs)
+   * - stopCapturing is suppressed (block index changes won't break undo grouping)
+   *
+   * Use this for operations that need to update both Yjs and DOM atomically.
+   *
    * @param fn - Function to execute
    */
   public withAtomicOperation<T>(fn: () => T): T {
     this.yjsSyncCount++;
+    const operations = this.dependencies.operations;
+    if (operations) {
+      operations.suppressStopCapturing = true;
+    }
     try {
       return fn();
     } finally {
       this.yjsSyncCount--;
+      if (operations) {
+        operations.suppressStopCapturing = false;
+      }
     }
   }
 
@@ -158,6 +175,7 @@ export class BlockYjsSync {
     const tunes = ytunes !== undefined ? this.dependencies.YjsManager.yMapToObject(ytunes) : {};
 
     // Check if tunes have changed - if so, we need to recreate the block
+    // because tunes are instantiated during block construction
     const currentTunes = block.preservedTunes;
     const tuneKeys = Object.keys(tunes);
     const currentKeys = Object.keys(currentTunes);
@@ -165,17 +183,30 @@ export class BlockYjsSync {
       tuneKeys.some(key => tunes[key] !== currentTunes[key]);
 
     if (tunesChanged) {
-      // Recreate block with updated tunes - caller must handle this
-      // This is a limitation of the current design
-      // The full implementation requires access to replaceBlock
-      throw new Error('Tune changes require block recreation - not yet implemented in BlockYjsSync');
-    }
+      // Recreate block with updated tunes
+      const blockIndex = this.handlers.getBlockIndex(block);
+      const newBlock = this.factory.composeBlock({
+        id: block.id,
+        tool: block.name,
+        data,
+        tunes,
+        bindEventsImmediately: true,
+      });
 
-    // Just update data
-    this.yjsSyncCount++;
-    void block.setData(data).finally(() => {
-      this.yjsSyncCount--;
-    });
+      // Increment counter to prevent syncing back to Yjs during undo/redo
+      this.yjsSyncCount++;
+      try {
+        this.handlers.replaceBlock(blockIndex, newBlock);
+      } finally {
+        this.yjsSyncCount--;
+      }
+    } else {
+      // Just update data
+      this.yjsSyncCount++;
+      void block.setData(data).finally(() => {
+        this.yjsSyncCount--;
+      });
+    }
   }
 
   /**

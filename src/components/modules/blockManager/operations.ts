@@ -61,7 +61,7 @@ export class BlockOperations {
   private readonly repository: BlockRepository;
   private readonly factory: BlockFactory;
   private readonly hierarchy: BlockHierarchy;
-  private readonly yjsSync: BlockYjsSync;
+  private yjsSync!: BlockYjsSync; // Set via setter after initialization
   private readonly blockDidMutated: BlockDidMutated;
 
   /**
@@ -80,7 +80,6 @@ export class BlockOperations {
    * @param repository - BlockRepository for block lookups
    * @param factory - BlockFactory for creating blocks
    * @param hierarchy - BlockHierarchy for parent/child operations
-   * @param yjsSync - BlockYjsSync for Yjs synchronization
    * @param blockDidMutated - Callback for block mutations
    * @param initialCurrentBlockIndex - Initial current block index
    */
@@ -89,7 +88,6 @@ export class BlockOperations {
     repository: BlockRepository,
     factory: BlockFactory,
     hierarchy: BlockHierarchy,
-    yjsSync: BlockYjsSync,
     blockDidMutated: BlockDidMutated,
     initialCurrentBlockIndex: number = -1
   ) {
@@ -97,9 +95,15 @@ export class BlockOperations {
     this.repository = repository;
     this.factory = factory;
     this.hierarchy = hierarchy;
-    this.yjsSync = yjsSync;
     this.blockDidMutated = blockDidMutated;
     this.currentBlockIndex = initialCurrentBlockIndex;
+  }
+
+  /**
+   * Set the YjsSync instance (called after initialization to break circular dependency)
+   */
+  public setYjsSync(yjsSync: BlockYjsSync): void {
+    this.yjsSync = yjsSync;
   }
 
   /**
@@ -515,14 +519,16 @@ export class BlockOperations {
         this.dependencies.YjsManager.removeBlock(blockToMerge.id);
       });
 
-      // DOM updates (skip Yjs sync — already done above)
+      // DOM updates and index change (skip Yjs sync — already done above)
+      // The entire operation is wrapped in withAtomicOperation to suppress stopCapturing
+      // when currentBlockIndexValue is set at the end
       this.yjsSync.withAtomicOperation(() => {
-        return void targetBlock.mergeWith(mergeData).then(() => {
+        void targetBlock.mergeWith(mergeData).then(() => {
           return this.removeBlock(blockToMerge, true, true, blocksStore);
         });
-      });
 
-      this.currentBlockIndexValue = this.repository.getBlockIndex(targetBlock);
+        this.currentBlockIndexValue = this.repository.getBlockIndex(targetBlock);
+      });
     };
 
     /**

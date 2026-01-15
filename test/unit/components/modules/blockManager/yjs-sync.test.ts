@@ -187,6 +187,7 @@ const createMockSyncHandlers = (): SyncHandlers => ({
   getBlockIndex: vi.fn(() => 0),
   insertDefaultBlock: vi.fn(() => createMockBlock()),
   updateIndentation: vi.fn(),
+  replaceBlock: vi.fn(),
 });
 
 describe('BlockYjsSync', () => {

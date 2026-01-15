@@ -253,10 +253,27 @@ export class BlockManager extends Module {
     // Initialize hierarchy
     this.hierarchy = new BlockHierarchy(this.repository);
 
-    // Initialize yjs sync
+    // Initialize operations first (before yjsSync) to allow circular dependency resolution
+    this.operations = new BlockOperations(
+      {
+        config: this.config,
+        YjsManager: this.Blok.YjsManager,
+        Caret: this.Blok.Caret,
+        I18n: this.Blok.I18n,
+        eventsDispatcher: this.eventsDispatcher,
+      },
+      this.repository,
+      this.factory,
+      this.hierarchy,
+      this.blockDidMutated.bind(this),
+      this._currentBlockIndex
+    );
+
+    // Initialize yjs sync with reference to operations for suppressStopCapturing
     this.yjsSync = new BlockYjsSync(
       {
         YjsManager: this.Blok.YjsManager,
+        operations: this.operations,
       },
       this.repository,
       this.factory,
@@ -277,26 +294,15 @@ export class BlockManager extends Module {
         updateIndentation: (block) => {
           this.hierarchy.updateBlockIndentation(block);
         },
+        replaceBlock: (index, newBlock) => {
+          this.blocksStore.replace(index, newBlock);
+        },
       },
       this.blocksStore
     );
 
-    // Initialize operations
-    this.operations = new BlockOperations(
-      {
-        config: this.config,
-        YjsManager: this.Blok.YjsManager,
-        Caret: this.Blok.Caret,
-        I18n: this.Blok.I18n,
-        eventsDispatcher: this.eventsDispatcher,
-      },
-      this.repository,
-      this.factory,
-      this.hierarchy,
-      this.yjsSync,
-      this.blockDidMutated.bind(this),
-      this._currentBlockIndex
-    );
+    // Set yjsSync on operations to complete circular dependency
+    this.operations.setYjsSync(this.yjsSync);
   }
 
   /**

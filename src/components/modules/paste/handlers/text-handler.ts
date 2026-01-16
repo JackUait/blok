@@ -59,7 +59,7 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
 
     return plain
       .split(/\r?\n/)
-      .filter(Boolean)
+      .filter((text) => text.trim())
       .map((text) => {
         const content = Dom.make('div');
 

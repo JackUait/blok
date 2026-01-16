@@ -944,6 +944,71 @@ describe('Paste module', () => {
       expect((result[0] as { event: CustomEvent }).event.type).toBe('tag');
       expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('Second');
     });
+
+    it('filters out whitespace-only lines when processing plain text', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      const textHandler = new TextHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+        { defaultBlock: 'paragraph' }
+      );
+
+      const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('line1\n   \nline2\n\nline3');
+
+      // Whitespace-only lines should be filtered out
+      expect(result).toHaveLength(3);
+      expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('line1');
+      expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('line2');
+      expect((result[2] as { content: HTMLElement }).content).toHaveTextContent('line3');
+    });
+
+    it('filters out tabs-only lines when processing plain text', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      const textHandler = new TextHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+        { defaultBlock: 'paragraph' }
+      );
+
+      const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('line1\n\t\t\nline2');
+
+      expect(result).toHaveLength(2);
+      expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('line1');
+      expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('line2');
+    });
+
+    it('filters out mixed whitespace-only lines when processing plain text', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      const textHandler = new TextHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+        { defaultBlock: 'paragraph' }
+      );
+
+      const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('line1\n \t \nline2');
+
+      expect(result).toHaveLength(2);
+      expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('line1');
+      expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('line2');
+    });
   });
 
   describe('HtmlHandler', () => {

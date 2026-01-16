@@ -51,9 +51,9 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
    * Split plain text by new line symbols and return it as array of Block data.
    */
   private processPlain(plain: string): PasteData[] {
-    const { defaultBlock } = this.config as { defaultBlock: string };
+    const { defaultBlock } = this.config;
 
-    if (!plain) {
+    if (!plain || !defaultBlock) {
       return [];
     }
 

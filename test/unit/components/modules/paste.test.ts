@@ -3,7 +3,8 @@ import type { MockInstance } from 'vitest';
 
 import { Paste } from '../../../../src/components/modules/paste';
 import type { ToolRegistry } from '../../../../src/components/modules/paste/tool-registry';
-import type { SanitizerConfigBuilder } from '../../../../src/components/modules/paste/sanitizer-config';
+import { SanitizerConfigBuilder } from '../../../../src/components/modules/paste/sanitizer-config';
+import type { TagSubstitute } from '../../../../src/components/modules/paste/types';
 import { BlokDataHandler } from '../../../../src/components/modules/paste/handlers/blok-data-handler';
 import { FilesHandler } from '../../../../src/components/modules/paste/handlers/files-handler';
 import { HtmlHandler } from '../../../../src/components/modules/paste/handlers/html-handler';
@@ -1132,6 +1133,327 @@ describe('Paste module', () => {
       expect(handler.canHandle('any string')).toBe(10);
       expect(handler.canHandle('')).toBe(0);
       expect(handler.canHandle(123)).toBe(0);
+    });
+  });
+
+  describe('SanitizerConfigBuilder', () => {
+    let builder: SanitizerConfigBuilder;
+
+    beforeEach(() => {
+      builder = new SanitizerConfigBuilder(
+        new Map() as unknown as SanitizerConfigBuilder['tools'],
+        {} as SanitizerConfigBuilder['config']
+      );
+    });
+
+    it('buildToolsTagsConfig creates config with lowercase tag names', () => {
+      const toolsTags: { [tag: string]: TagSubstitute } = {
+        'P': { tool: {} as BlockToolAdapter, sanitizationConfig: {} },
+        'DIV': { tool: {} as BlockToolAdapter, sanitizationConfig: { class: 'test' } },
+        'H1': { tool: {} as BlockToolAdapter },
+      };
+
+      const result = builder.buildToolsTagsConfig(toolsTags);
+
+      expect(result).toEqual({
+        'p': {},
+        'div': { class: 'test' },
+        'h1': {},
+      });
+    });
+
+    it('buildToolsTagsConfig uses empty config when sanitizationConfig is undefined', () => {
+      const toolsTags = {
+        'SPAN': { tool: {} as BlockToolAdapter },
+      };
+
+      const result = builder.buildToolsTagsConfig(toolsTags);
+
+      expect(result).toEqual({
+        'span': {},
+      });
+    });
+
+    it('getStructuralTagsConfig detects table tags in HTML', () => {
+      const html = '<table><thead><tr><th>Header</th></tr></thead><tbody><tr><td>Data</td></tr></tbody></table>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      expect(result).toEqual({
+        'table': {},
+        'thead': {},
+        'tbody': {},
+        'tr': {},
+        'th': {},
+        'td': {},
+      });
+    });
+
+    it('getStructuralTagsConfig detects list tags in HTML', () => {
+      const html = '<ul><li>Item 1</li><li>Item 2</li></ul><ol><li>Ordered</li></ol>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      expect(result).toEqual({
+        'ul': {},
+        'li': {},
+        'ol': {},
+      });
+    });
+
+    it('getStructuralTagsConfig detects definition list tags', () => {
+      const html = '<dl><dt>Term</dt><dd>Definition</dd></dl>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      expect(result).toEqual({
+        'dl': {},
+        'dt': {},
+        'dd': {},
+      });
+    });
+
+    it('getStructuralTagsConfig handles nested structural tags', () => {
+      const html = '<table><tr><td><ul><li>Nested</li></ul></td></tr></table>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      // Note: browser automatically adds tbody to tables
+      expect(result).toEqual({
+        'table': {},
+        'tbody': {},
+        'tr': {},
+        'td': {},
+        'ul': {},
+        'li': {},
+      });
+    });
+
+    it('getStructuralTagsConfig ignores non-structural tags', () => {
+      const html = '<div><span>Text</span><p>Paragraph</p><b>Bold</b></div>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      expect(result).toEqual({});
+    });
+
+    it('getStructuralTagsConfig handles empty element', () => {
+      const emptyElement = document.createElement('div');
+
+      const result = builder.getStructuralTagsConfig(emptyElement);
+
+      expect(result).toEqual({});
+    });
+
+    it('buildToolConfig returns empty config when pasteConfig is false', () => {
+      const tool = {
+        pasteConfig: false,
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({});
+    });
+
+    it('buildToolConfig extracts tags from string array', () => {
+      const tool = {
+        pasteConfig: {
+          tags: ['P', 'DIV', 'H1'],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({
+        'p': {},
+        'div': {},
+        'h1': {},
+      });
+    });
+
+    it('buildToolConfig extracts tags and sanitization configs from object', () => {
+      const tool = {
+        pasteConfig: {
+          tags: [
+            { 'p': { class: 'paragraph' } },
+            { 'div': { id: true } },
+          ],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({
+        'p': { class: 'paragraph' },
+        'div': { id: true },
+      });
+    });
+
+    it('buildToolConfig handles mixed string and config array', () => {
+      const tool = {
+        pasteConfig: {
+          tags: [
+            'P',
+            { 'div': { class: 'wrapper' } },
+            'SPAN',
+          ],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({
+        'p': {},
+        'div': { class: 'wrapper' },
+        'span': {},
+      });
+    });
+
+    it('buildToolConfig handles nested tag object with multiple tags', () => {
+      const tool = {
+        pasteConfig: {
+          tags: [
+            {
+              'table': {
+                'tr': {
+                  'td': {},
+                },
+              },
+            },
+          ],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      // The function preserves nested structure: tag -> its sanitization config
+      expect(result).toEqual({
+        'table': {
+          'tr': {
+            'td': {},
+          },
+        },
+      });
+    });
+
+    it('buildToolConfig returns empty object when pasteConfig has no tags', () => {
+      const tool = {
+        pasteConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({});
+    });
+
+    it('buildToolConfig converts tag names to lowercase', () => {
+      const tool = {
+        pasteConfig: {
+          tags: ['P', 'DIV', 'CUSTOM-TAG'],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(Object.keys(result)).toEqual(['p', 'div', 'custom-tag']);
+    });
+
+    it('composeConfigs merges multiple configs', () => {
+      const config1 = { 'p': {} };
+      const config2 = { 'div': { class: 'test' } };
+      const config3 = { 'span': { id: true } };
+
+      const result = builder.composeConfigs(config1, config2, config3);
+
+      expect(result).toEqual({
+        'p': {},
+        'div': { class: 'test' },
+        'span': { id: true },
+      });
+    });
+
+    it('composeConfigs handles empty configs', () => {
+      const result = builder.composeConfigs({}, {}, {});
+
+      expect(result).toEqual({});
+    });
+
+    it('sanitizeTable cleans table HTML and returns sanitized element', () => {
+      const table = document.createElement('table');
+      table.innerHTML = '<tr><td><script>bad()</script>Data</td></tr>';
+
+      const result = builder.sanitizeTable(table, { 'table': {}, 'tr': {}, 'td': {} });
+
+      expect(result).toBeInstanceOf(HTMLElement);
+      expect(result?.tagName.toLowerCase()).toBe('table');
+      expect(result?.outerHTML).not.toContain('<script>');
+    });
+
+    it('sanitizeTable returns null when sanitization removes table', () => {
+      const table = document.createElement('table');
+      table.innerHTML = '<tr><td>Data</td></tr>';
+
+      const result = builder.sanitizeTable(table, {}); // Empty config removes everything
+
+      expect(result).toBeNull();
+    });
+
+    it('sanitizeTable returns null when result is not an element', () => {
+      const table = document.createElement('table');
+      table.innerHTML = '<tr><td>Data</td></tr>';
+
+      // Empty config will remove the table element
+      const result = builder.sanitizeTable(table, {});
+
+      expect(result).toBeNull();
+    });
+
+    it('isStructuralTag returns true for table tags', () => {
+      expect(builder.isStructuralTag('table')).toBe(true);
+      expect(builder.isStructuralTag('thead')).toBe(true);
+      expect(builder.isStructuralTag('tbody')).toBe(true);
+      expect(builder.isStructuralTag('tfoot')).toBe(true);
+      expect(builder.isStructuralTag('tr')).toBe(true);
+      expect(builder.isStructuralTag('th')).toBe(true);
+      expect(builder.isStructuralTag('td')).toBe(true);
+      expect(builder.isStructuralTag('caption')).toBe(true);
+      expect(builder.isStructuralTag('colgroup')).toBe(true);
+      expect(builder.isStructuralTag('col')).toBe(true);
+    });
+
+    it('isStructuralTag returns true for list tags', () => {
+      expect(builder.isStructuralTag('ul')).toBe(true);
+      expect(builder.isStructuralTag('ol')).toBe(true);
+      expect(builder.isStructuralTag('li')).toBe(true);
+      expect(builder.isStructuralTag('dl')).toBe(true);
+      expect(builder.isStructuralTag('dt')).toBe(true);
+      expect(builder.isStructuralTag('dd')).toBe(true);
+    });
+
+    it('isStructuralTag returns false for non-structural tags', () => {
+      expect(builder.isStructuralTag('div')).toBe(false);
+      expect(builder.isStructuralTag('span')).toBe(false);
+      expect(builder.isStructuralTag('p')).toBe(false);
+      expect(builder.isStructuralTag('h1')).toBe(false);
+      expect(builder.isStructuralTag('b')).toBe(false);
+      expect(builder.isStructuralTag('i')).toBe(false);
+    });
+
+    it('isStructuralTag handles case insensitive input', () => {
+      expect(builder.isStructuralTag('TABLE')).toBe(true);
+      expect(builder.isStructuralTag('Table')).toBe(true);
+      expect(builder.isStructuralTag('UL')).toBe(true);
+      expect(builder.isStructuralTag('DIV')).toBe(false);
     });
   });
 });

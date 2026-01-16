@@ -1,4 +1,5 @@
 import { isObject } from '../../utils';
+import { clean } from '../../utils/sanitizer';
 import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
 import type { BlokConfig } from '../../../../types/configs/blok-config';
 import type { BlockToolAdapter } from '../../tools/block';
@@ -92,7 +93,6 @@ export class SanitizerConfigBuilder {
    * Special handling for table sanitization.
    */
   public sanitizeTable(table: HTMLElement, config: SanitizerConfig): HTMLElement | null {
-    const { clean } = require('../../utils/sanitizer');
     const cleanTableHTML = clean(table.outerHTML, config);
     const tmpWrapper = document.createElement('div');
 

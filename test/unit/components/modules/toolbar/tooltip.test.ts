@@ -2,11 +2,26 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createTooltipContent } from '../../../../../src/components/modules/toolbar/tooltip';
 
 vi.mock('../../../../../src/components/dom', () => {
-  const make = vi.fn((tag: string, classes?: string | string[], props?: Record<string, unknown>) => {
+  const make = vi.fn((tag: string, _classNames: string | string[] | null = null, attributes: Record<string, unknown> = {}) => {
     const element = document.createElement(tag);
-    if (props?.textContent) {
-      element.textContent = String(props.textContent);
+
+    // Handle attributes (like textContent)
+    for (const attrName in attributes) {
+      if (!Object.prototype.hasOwnProperty.call(attributes, attrName)) {
+        continue;
+      }
+
+      const value = attributes[attrName];
+
+      if (value === undefined || value === null) {
+        continue;
+      }
+
+      if (attrName in element) {
+        (element as unknown as Record<string, unknown>)[attrName] = value;
+      }
     }
+
     return element;
   });
 
@@ -51,7 +66,9 @@ describe('createTooltipContent', () => {
     expect(span.style.color).toBe('white');
 
     // The rest of the text is a text node
-    expect(line.childNodes[1]).toHaveTextContent(' rest');
+    // Check using nodeValue directly since toHaveTextContent may normalize whitespace
+    const textNode = line.childNodes[1] as Text;
+    expect(textNode.nodeValue).toBe(' rest');
   });
 
   it('creates multiple lines separated by gap', () => {
@@ -88,7 +105,8 @@ describe('createTooltipContent', () => {
     const span = line.children[0] as HTMLElement;
     expect(span).toHaveTextContent('WordWith');
     // The substring from spaceIndex includes the space
-    expect(line.childNodes[1]).toHaveTextContent(' SpaceAfter ');
+    const textNode = line.childNodes[1] as Text;
+    expect(textNode.nodeValue).toBe(' SpaceAfter ');
   });
 
   it('preserves exact spacing in second part of line', () => {
@@ -96,6 +114,7 @@ describe('createTooltipContent', () => {
 
     expect(result.children).toHaveLength(1);
     const line = result.children[0] as HTMLElement;
-    expect(line.childNodes[1]).toHaveTextContent('  Click');
+    const textNode = line.childNodes[1] as Text;
+    expect(textNode.nodeValue).toBe('  Click');
   });
 });

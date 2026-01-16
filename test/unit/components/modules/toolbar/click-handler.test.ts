@@ -202,6 +202,7 @@ describe('ClickDragHandler', () => {
 
       expect(beforeCallback).toHaveBeenCalled();
       expect(callback).not.toHaveBeenCalled();
+      expect(mouseupListeners).toHaveLength(0);
     });
   });
 

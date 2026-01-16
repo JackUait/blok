@@ -35,7 +35,7 @@ describe('createTooltipContent', () => {
 
     expect(result.children).toHaveLength(1);
     const line = result.children[0] as HTMLElement;
-    expect(line.textContent).toBe('SingleLine');
+    expect(line).toHaveTextContent('SingleLine');
   });
 
   it('creates a single line element with space - first word styled white', () => {
@@ -47,11 +47,11 @@ describe('createTooltipContent', () => {
 
     const span = line.children[0] as HTMLElement;
     expect(span.tagName).toBe('SPAN');
-    expect(span.textContent).toBe('First');
+    expect(span).toHaveTextContent('First');
     expect(span.style.color).toBe('white');
 
     // The rest of the text is a text node
-    expect(line.childNodes[1].textContent).toBe(' rest');
+    expect(line.childNodes[1]).toHaveTextContent(' rest');
   });
 
   it('creates multiple lines separated by gap', () => {
@@ -86,9 +86,9 @@ describe('createTooltipContent', () => {
     expect(result.children).toHaveLength(1);
     const line = result.children[0] as HTMLElement;
     const span = line.children[0] as HTMLElement;
-    expect(span.textContent).toBe('WordWith');
+    expect(span).toHaveTextContent('WordWith');
     // The substring from spaceIndex includes the space
-    expect(line.childNodes[1].textContent).toBe(' SpaceAfter ');
+    expect(line.childNodes[1]).toHaveTextContent(' SpaceAfter ');
   });
 
   it('preserves exact spacing in second part of line', () => {
@@ -96,6 +96,6 @@ describe('createTooltipContent', () => {
 
     expect(result.children).toHaveLength(1);
     const line = result.children[0] as HTMLElement;
-    expect(line.childNodes[1].textContent).toBe('  Click');
+    expect(line.childNodes[1]).toHaveTextContent('  Click');
   });
 });

@@ -5,6 +5,7 @@ import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 import type { ToolRegistry } from '../tool-registry';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
+import { Dom } from '../../../dom';
 
 /**
  * Text Handler Priority.
@@ -23,7 +24,11 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
 
   canHandle(data: unknown): number {
     // This is the fallback handler, so it always can handle with lowest priority
-    return typeof data === 'string' ? 10 : 0;
+    if (typeof data !== 'string') {
+      return 0;
+    }
+
+    return data.length > 0 ? 10 : 0;
   }
 
   async handle(data: unknown, context: HandlerContext): Promise<boolean> {
@@ -58,7 +63,6 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
       .split(/\r?\n/)
       .filter((text) => text.trim())
       .map((text) => {
-        const { Dom } = require('../../../dom');
         const content = Dom.make('div');
 
         content.textContent = text;

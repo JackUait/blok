@@ -6,6 +6,20 @@ import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 
 /**
+ * Type guard to check if data is a DataTransfer-like object.
+ * In test environments, the global DataTransfer may not be available,
+ * so we use duck typing to check the shape.
+ */
+const isDataTransfer = (data: unknown): data is DataTransfer => (
+  typeof data === 'object' &&
+  data !== null &&
+  'files' in data &&
+  'types' in data &&
+  'getData' in data &&
+  'setData' in data
+);
+
+/**
  * Files Handler Priority.
  * Detects if DataTransfer contains files.
  */
@@ -18,7 +32,7 @@ export class FilesHandler extends BasePasteHandler implements PasteHandler {
     super(Blok, toolRegistry, sanitizerBuilder);
   }
   canHandle(data: unknown): number {
-    if (!(data instanceof DataTransfer)) {
+    if (!isDataTransfer(data)) {
       return 0;
     }
 
@@ -26,7 +40,7 @@ export class FilesHandler extends BasePasteHandler implements PasteHandler {
   }
 
   async handle(data: unknown, _context: HandlerContext): Promise<boolean> {
-    if (!(data instanceof DataTransfer)) {
+    if (!isDataTransfer(data)) {
       return false;
     }
 

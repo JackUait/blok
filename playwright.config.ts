@@ -170,7 +170,7 @@ export default defineConfig({
       testMatch: [...LOGIC_TESTS],
     },
   ],
-  retries: process.env.CI ? 2 : 0,
+  retries: 0,
   workers: process.env.CI ? undefined : AMOUNT_OF_LOCAL_WORKERS,
 });
 

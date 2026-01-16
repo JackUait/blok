@@ -7,6 +7,7 @@ import { Dom as $ } from '../../dom';
 import { DATA_ATTR } from '../../constants';
 import { IconMenu } from '../../icons';
 import type { ToolbarNodes } from './types';
+import { twJoin } from '../../utils/tw';
 
 /**
  * SettingsTogglerHandler manages the settings toggler (drag handle) behavior.
@@ -44,6 +45,13 @@ export class SettingsTogglerHandler {
    * Callback to close the toolbox
    */
   private closeToolbox: () => void;
+
+  /**
+   * Reference to the settings toggler element.
+   * Stored here because Toolbar module excludes itself from its own Blok reference via getModulesDiff(),
+   * so accessing blok.Toolbar.nodes.settingsToggler would be undefined.
+   */
+  private settingsTogglerElement: HTMLElement | null = null;
 
   /**
    * @param getBlok - Function to get Blok modules reference
@@ -101,8 +109,26 @@ export class SettingsTogglerHandler {
   public make(nodes: ToolbarNodes): HTMLElement {
     const blok = this.getBlok();
     const settingsToggler = $.make('span', [
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
-      blok.Toolbar.CSS.settingsToggler,
+      twJoin(
+        // Base toolbox-button styles
+        'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
+        // SVG sizing
+        '[&_svg]:h-6 [&_svg]:w-6',
+        // Active state
+        'active:cursor-grabbing',
+        // Hover (can-hover)
+        'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
+        // When toolbox is opened, use pointer cursor on hover
+        'group-data-[blok-toolbox-opened=true]:can-hover:hover:cursor-pointer',
+        // When block settings is opened, show hover background and pointer cursor
+        'group-data-[blok-block-settings-opened=true]:bg-bg-light',
+        'group-data-[blok-block-settings-opened=true]:can-hover:hover:cursor-pointer',
+        // Mobile styles (static positioning with overlay-pane appearance)
+        'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
+        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
+        // Not-mobile styles
+        'not-mobile:w-6'
+      ),
       'group-data-[blok-dragging=true]:cursor-grabbing',
     ], {
       innerHTML: IconMenu,
@@ -128,6 +154,8 @@ export class SettingsTogglerHandler {
 
     // eslint-disable-next-line no-param-reassign -- nodes is mutated by design
     nodes.settingsToggler = settingsToggler;
+
+    this.settingsTogglerElement = settingsToggler;
 
     /**
      * Add events to show/hide tooltip for settings toggler
@@ -207,7 +235,7 @@ export class SettingsTogglerHandler {
     if (blok.BlockSettings.opened) {
       blok.BlockSettings.close();
     } else {
-      void blok.BlockSettings.open(targetBlock, blok.Toolbar.nodes.settingsToggler);
+      void blok.BlockSettings.open(targetBlock, this.settingsTogglerElement ?? undefined);
     }
   }
 }

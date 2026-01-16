@@ -46,7 +46,13 @@ class MockDataTransfer implements DataTransfer {
 
   clearData(format?: string): void {
     if (format) {
-      delete this.data[format];
+      const newData: Record<string, string> = {};
+      Object.keys(this.data).forEach(key => {
+        if (key !== format) {
+          newData[key] = this.data[key];
+        }
+      });
+      this.data = newData;
     } else {
       this.data = {};
     }
@@ -464,7 +470,14 @@ describe('Paste module', () => {
 
       await paste.processText('Hello world', false);
 
-      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+
+      const [tool, event, shouldReplace] = mocks.BlockManager.paste.mock.calls[0];
+
+      expect(tool).toBe('paragraph');
+      expect(event).toBeInstanceOf(CustomEvent);
+      expect(event.type).toBe('tag');
+      expect(shouldReplace).toBe(true);
     });
 
     it('processes HTML via processText with isHTML flag', async () => {
@@ -485,7 +498,14 @@ describe('Paste module', () => {
 
       await paste.processText('<p>Hello world</p>', true);
 
-      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+
+      const [tool, event, shouldReplace] = mocks.BlockManager.paste.mock.calls[0];
+
+      expect(tool).toBe('paragraph');
+      expect(event).toBeInstanceOf(CustomEvent);
+      expect(event.type).toBe('tag');
+      expect(shouldReplace).toBe(true);
     });
 
     it('detects native inputs when checking for native behaviour', () => {
@@ -1054,6 +1074,27 @@ describe('Paste module', () => {
 
       expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(3);
       expect(cleanSpy).toHaveBeenCalled();
+
+      // Verify first call: inline span fragment (replaces default block)
+      const [tool1, event1, shouldReplace1] = mocks.BlockManager.paste.mock.calls[0];
+      expect(tool1).toBe('paragraph');
+      expect(event1).toBeInstanceOf(CustomEvent);
+      expect(event1.type).toBe('tag');
+      expect(shouldReplace1).toBe(true);
+
+      // Verify second call: div (inserted without replacement)
+      const [tool2, event2] = mocks.BlockManager.paste.mock.calls[1];
+      expect(tool2).toBe('paragraph');
+      expect(event2).toBeInstanceOf(CustomEvent);
+      expect(event2.type).toBe('tag');
+      expect(mocks.BlockManager.paste.mock.calls[1].length).toBe(2);
+
+      // Verify third call: h1 (substituted with header tool, inserted without replacement)
+      const [tool3, event3] = mocks.BlockManager.paste.mock.calls[2];
+      expect(tool3).toBe('header');
+      expect(event3).toBeInstanceOf(CustomEvent);
+      expect(event3.type).toBe('tag');
+      expect(mocks.BlockManager.paste.mock.calls[2].length).toBe(2);
     });
   });
 

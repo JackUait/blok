@@ -57,11 +57,9 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
       return [];
     }
 
-    const tool = defaultBlock;
-
     return plain
       .split(/\r?\n/)
-      .filter((text) => text.trim())
+      .filter(Boolean)
       .map((text) => {
         const content = Dom.make('div');
 
@@ -73,7 +71,7 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
 
         return {
           content,
-          tool,
+          tool: defaultBlock,
           isBlock: false,
           event,
         };

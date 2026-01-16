@@ -14,14 +14,10 @@ import { SelectionUtils } from '../../selection';
  */
 export class PlusButtonHandler {
   /**
-   * Reference to the Blok modules for accessing BlockManager, Caret, etc.
+   * Getter function to access Blok modules dynamically
+   * This ensures the handler always has access to the current state
    */
-  private Blok: BlokModules;
-
-  /**
-   * The block near which we display the Toolbox
-   */
-  private hoveredBlock: Block | null = null;
+  private getBlok: () => BlokModules;
 
   /**
    * Callback to get the current toolbox state
@@ -44,11 +40,11 @@ export class PlusButtonHandler {
   private moveAndOpenToolbar: (block?: Block | null, target?: Element | null) => void;
 
   /**
-   * @param blok - Reference to Blok modules
+   * @param getBlok - Function to get Blok modules reference
    * @param callbacks - Object containing callback functions
    */
   constructor(
-    blok: BlokModules,
+    getBlok: () => BlokModules,
     callbacks: {
       getToolboxOpened: () => boolean;
       openToolbox: () => void;
@@ -56,7 +52,7 @@ export class PlusButtonHandler {
       moveAndOpenToolbar: (block?: Block | null, target?: Element | null) => void;
     }
   ) {
-    this.Blok = blok;
+    this.getBlok = getBlok;
     this.getToolboxOpened = callbacks.getToolboxOpened;
     this.openToolbox = callbacks.openToolbox;
     this.closeToolbox = callbacks.closeToolbox;
@@ -66,16 +62,21 @@ export class PlusButtonHandler {
   /**
    * Gets the current hovered block
    */
-  public get getHoveredBlock(): Block | null {
-    return this.hoveredBlock;
+  get hoveredBlock(): Block | null {
+    return this.hoveredBlockInternal;
   }
 
   /**
    * Sets the hovered block
    */
-  public setHoveredBlock(block: Block | null): void {
-    this.hoveredBlock = block;
+  setHoveredBlock(block: Block | null): void {
+    this.hoveredBlockInternal = block;
   }
+
+  /**
+   * Internal storage for the hovered block
+   */
+  private hoveredBlockInternal: Block | null = null;
 
   /**
    * Creates the plus button element with tooltip
@@ -83,9 +84,10 @@ export class PlusButtonHandler {
    * @returns The created plus button element
    */
   public make(nodes: ToolbarNodes): HTMLElement {
+    const blok = this.getBlok();
     const plusButton = $.make('div', [
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
-      this.Blok.Toolbar.CSS.plusButton,
+      blok.Toolbar.CSS.plusButton,
     ], {
       innerHTML: IconPlus,
     });
@@ -99,14 +101,14 @@ export class PlusButtonHandler {
      * Add events to show/hide tooltip for plus button
      */
     const userOS = getUserOS();
-    const modifierClickText = this.Blok.I18n.t(
+    const modifierClickText = blok.I18n.t(
       userOS.win
         ? 'toolbox.ctrlAddAbove'
         : 'toolbox.optionAddAbove'
     );
 
     const tooltipContent = createTooltipContent([
-      this.Blok.I18n.t('toolbox.addBelow'),
+      blok.I18n.t('toolbox.addBelow'),
       modifierClickText,
     ]);
 
@@ -123,7 +125,7 @@ export class PlusButtonHandler {
    * @param insertAbove - if true, insert above the current block instead of below
    */
   public handleClick(insertAbove = false): void {
-    const { BlockManager, BlockSettings, BlockSelection, Caret } = this.Blok;
+    const { BlockManager, BlockSettings, BlockSelection, Caret } = this.getBlok();
 
     // Close other menus and clear selections
     if (BlockSettings.opened) {
@@ -142,7 +144,7 @@ export class PlusButtonHandler {
     }
 
     // Determine target block: reuse empty/slash paragraph, or create new one
-    const hoveredBlock = this.hoveredBlock;
+    const hoveredBlock = this.hoveredBlockInternal;
     const isParagraph = hoveredBlock?.name === 'paragraph';
     const startsWithSlash = isParagraph && hoveredBlock.pluginsContent.textContent?.startsWith('/');
     const isEmptyParagraph = isParagraph && hoveredBlock.isEmpty;

@@ -122,7 +122,7 @@ export class Toolbar extends Module<ToolbarNodes> {
      * Initialize handlers with callbacks to toolbar methods
      */
     this.plusButtonHandler = new PlusButtonHandler(
-      this.Blok,
+      () => this.Blok,
       {
         getToolboxOpened: () => this.toolbox.opened ?? false,
         openToolbox: () => this.toolbox.open(),
@@ -132,7 +132,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     );
 
     this.settingsTogglerHandler = new SettingsTogglerHandler(
-      this.Blok,
+      () => this.Blok,
       this.clickDragHandler,
       {
         setHoveredBlock: (block) => { this.hoveredBlock = block; },

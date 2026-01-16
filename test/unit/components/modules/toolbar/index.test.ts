@@ -239,6 +239,14 @@ describe('Plus button interactions', () => {
         insertContentAtCaretPosition: vi.fn(),
         positions: { START: 'start', DEFAULT: 'default' },
       },
+      I18n: {
+        t: vi.fn((key: string) => key),
+      },
+      Toolbar: {
+        CSS: {
+          plusButton: '',
+        },
+      },
     } as unknown as Toolbar['Blok'];
 
     (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes = {
@@ -281,13 +289,14 @@ describe('Plus button interactions', () => {
   });
 
   it('clears block selection when plus button is clicked with blocks selected', () => {
-    const plusButtonClicked = (toolbar as unknown as { plusButtonClicked: () => void }).plusButtonClicked;
+    // In the refactored code, plusButtonHandler.handleClick is now the method to test
+    const plusButtonHandler = (toolbar as unknown as { plusButtonHandler: { handleClick: () => void } }).plusButtonHandler;
     const blockSelection = getBlok().BlockSelection as { anyBlockSelected: boolean };
     const toolboxInstance = (toolbar as unknown as { toolboxInstance: { opened: boolean } }).toolboxInstance;
 
     expect(blockSelection.anyBlockSelected).toBe(true);
 
-    plusButtonClicked.call(toolbar);
+    plusButtonHandler.handleClick();
 
     expect(blockSelection.anyBlockSelected).toBe(false);
     expect(toolboxInstance.opened).toBe(true);
@@ -297,10 +306,10 @@ describe('Plus button interactions', () => {
     const blockSelection = getBlok().BlockSelection as { anyBlockSelected: boolean };
     blockSelection.anyBlockSelected = false;
 
-    const plusButtonClicked = (toolbar as unknown as { plusButtonClicked: () => void }).plusButtonClicked;
+    const plusButtonHandler = (toolbar as unknown as { plusButtonHandler: { handleClick: () => void } }).plusButtonHandler;
     const toolboxInstance = (toolbar as unknown as { toolboxInstance: { opened: boolean } }).toolboxInstance;
 
-    plusButtonClicked.call(toolbar);
+    plusButtonHandler.handleClick();
 
     // Since no blocks were selected, clearSelection should not have been called
     // and anyBlockSelected should still be false

@@ -2,12 +2,11 @@ import type { Block } from '../../block';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { ClickDragHandler } from './click-handler';
 import { createTooltipContent } from './tooltip';
+import { hide, onHover } from '../../utils/tooltip';
 import { Dom as $ } from '../../dom';
 import { DATA_ATTR } from '../../constants';
-import { onHover } from '../../utils/tooltip';
 import { IconMenu } from '../../icons';
 import type { ToolbarNodes } from './types';
-import { hide } from '../../utils/tooltip';
 
 /**
  * SettingsTogglerHandler manages the settings toggler (drag handle) behavior.
@@ -15,14 +14,10 @@ import { hide } from '../../utils/tooltip';
  */
 export class SettingsTogglerHandler {
   /**
-   * Reference to the Blok modules for accessing BlockManager, BlockSettings, etc.
+   * Getter function to access Blok modules dynamically
+   * This ensures the handler always has access to the current state
    */
-  private Blok: BlokModules;
-
-  /**
-   * The block near which we display the Toolbar
-   */
-  private hoveredBlock: Block | null = null;
+  private getBlok: () => BlokModules;
 
   /**
    * Click-vs-drag handler instance
@@ -51,12 +46,12 @@ export class SettingsTogglerHandler {
   private closeToolbox: () => void;
 
   /**
-   * @param blok - Reference to Blok modules
+   * @param getBlok - Function to get Blok modules reference
    * @param clickDragHandler - Click-vs-drag handler instance
    * @param callbacks - Object containing callback functions
    */
   constructor(
-    blok: BlokModules,
+    getBlok: () => BlokModules,
     clickDragHandler: ClickDragHandler,
     callbacks: {
       setHoveredBlock: (block: Block) => void;
@@ -64,7 +59,7 @@ export class SettingsTogglerHandler {
       closeToolbox: () => void;
     }
   ) {
-    this.Blok = blok;
+    this.getBlok = getBlok;
     this.clickDragHandler = clickDragHandler;
     this.setHoveredBlockCallback = callbacks.setHoveredBlock;
     this.getToolboxOpened = callbacks.getToolboxOpened;
@@ -74,16 +69,21 @@ export class SettingsTogglerHandler {
   /**
    * Gets the current hovered block
    */
-  public get getHoveredBlock(): Block | null {
-    return this.hoveredBlock;
+  get hoveredBlock(): Block | null {
+    return this.hoveredBlockInternal;
   }
 
   /**
    * Sets the hovered block
    */
-  public setHoveredBlock(block: Block | null): void {
-    this.hoveredBlock = block;
+  setHoveredBlock(block: Block | null): void {
+    this.hoveredBlockInternal = block;
   }
+
+  /**
+   * Internal storage for the hovered block
+   */
+  private hoveredBlockInternal: Block | null = null;
 
   /**
    * Prevents the settings menu from opening on the next mouseup event
@@ -99,9 +99,10 @@ export class SettingsTogglerHandler {
    * @returns The created settings toggler element
    */
   public make(nodes: ToolbarNodes): HTMLElement {
+    const blok = this.getBlok();
     const settingsToggler = $.make('span', [
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
-      this.Blok.Toolbar.CSS.settingsToggler,
+      blok.Toolbar.CSS.settingsToggler,
       'group-data-[blok-dragging=true]:cursor-grabbing',
     ], {
       innerHTML: IconMenu,
@@ -118,11 +119,11 @@ export class SettingsTogglerHandler {
     settingsToggler.setAttribute('tabindex', '-1');
     settingsToggler.setAttribute(
       'aria-label',
-      this.Blok.I18n.t('a11y.dragHandle')
+      blok.I18n.t('a11y.dragHandle')
     );
     settingsToggler.setAttribute(
       'aria-roledescription',
-      this.Blok.I18n.t('a11y.dragHandleRole')
+      blok.I18n.t('a11y.dragHandleRole')
     );
 
     // eslint-disable-next-line no-param-reassign -- nodes is mutated by design
@@ -132,8 +133,8 @@ export class SettingsTogglerHandler {
      * Add events to show/hide tooltip for settings toggler
      */
     const blockTunesTooltip = createTooltipContent([
-      this.Blok.I18n.t('blockSettings.dragToMove'),
-      this.Blok.I18n.t('blockSettings.clickToOpenMenu'),
+      blok.I18n.t('blockSettings.dragToMove'),
+      blok.I18n.t('blockSettings.clickToOpenMenu'),
     ]);
 
     onHover(settingsToggler, blockTunesTooltip, {
@@ -182,29 +183,31 @@ export class SettingsTogglerHandler {
    * Handles the settings toggler click
    */
   private handleClick(): void {
+    const blok = this.getBlok();
+
     /**
      * Cancel any pending drag tracking since we're opening the settings menu
      * This prevents the drag from starting when the user moves their mouse to the menu
      */
-    this.Blok.DragManager.cancelTracking();
+    blok.DragManager.cancelTracking();
 
     /**
      * Prefer the hovered block (desktop), fall back to the current block (mobile) so tapping the toggler still works
      */
-    const targetBlock = this.hoveredBlock ?? this.Blok.BlockManager.currentBlock;
+    const targetBlock = this.hoveredBlockInternal ?? blok.BlockManager.currentBlock;
 
     if (!targetBlock) {
       return;
     }
 
-    this.hoveredBlock = targetBlock;
+    this.hoveredBlockInternal = targetBlock;
     this.setHoveredBlockCallback(targetBlock);
-    this.Blok.BlockManager.currentBlock = targetBlock;
+    blok.BlockManager.currentBlock = targetBlock;
 
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
+    if (blok.BlockSettings.opened) {
+      blok.BlockSettings.close();
     } else {
-      void this.Blok.BlockSettings.open(targetBlock, this.Blok.Toolbar.nodes.settingsToggler);
+      void blok.BlockSettings.open(targetBlock, blok.Toolbar.nodes.settingsToggler);
     }
   }
 }

@@ -109,7 +109,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     );
     this.toolsManager = new InlineToolsManager(getBlok);
     this.selectionValidator = new InlineSelectionValidator(getBlok);
-    this.popoverBuilder = new InlinePopoverBuilder(getBlok, this.Blok.I18n);
+    this.popoverBuilder = new InlinePopoverBuilder(getBlok, () => this.Blok.I18n);
     this.keyboardHandler = new InlineKeyboardHandler(
       () => this.popover as PopoverInline | null,
       () => this.close()

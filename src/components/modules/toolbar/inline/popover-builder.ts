@@ -23,16 +23,16 @@ export class InlinePopoverBuilder {
   private getBlok: () => BlokModules;
 
   /**
-   * I18n module for translations
+   * Getter function to access I18n module dynamically
    */
-  private i18n: I18n;
+  private getI18n: () => I18n;
 
   constructor(
     getBlok: () => BlokModules,
-    i18n: I18n
+    getI18n: () => I18n
   ) {
     this.getBlok = getBlok;
-    this.i18n = i18n;
+    this.getI18n = getI18n;
   }
 
   /**
@@ -49,7 +49,7 @@ export class InlinePopoverBuilder {
       const shortcut = toolData?.shortcut;
       const shortcutBeautified = shortcut !== undefined ? beautifyShortcut(shortcut) : undefined;
 
-      const toolTitle = translateToolName(this.i18n, tool.titleKey, tool.title || capitalize(tool.name));
+      const toolTitle = translateToolName(this.getI18n(), tool.titleKey, tool.title || capitalize(tool.name));
 
       const itemsArray = Array.isArray(renderedTool) ? renderedTool : [renderedTool];
       const isFirstItem = index === 0;

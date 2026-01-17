@@ -64,7 +64,8 @@ describe('InlinePopoverBuilder', () => {
     } as unknown as typeof mockI18n;
 
     const getBlok = () => mockBlok;
-    popoverBuilder = new InlinePopoverBuilder(getBlok, mockI18n as any);
+    const getI18n = () => mockI18n as any;
+    popoverBuilder = new InlinePopoverBuilder(getBlok, getI18n);
   });
 
   afterEach(() => {

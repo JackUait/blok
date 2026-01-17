@@ -100,12 +100,20 @@ describe('SettingsTogglerHandler', () => {
       }).not.toThrow();
     });
 
-    it('should call DragManager.cancelTracking when opening settings', () => {
+    it('should open BlockSettings and set hovered block when settings toggler is clicked', () => {
       settingsTogglerHandler.setHoveredBlock(mockBlock);
+      const blok = getBlok();
+      const blockSettingsOpenSpy = vi.fn();
+      (blok.BlockSettings as any).open = blockSettingsOpenSpy;
 
       (settingsTogglerHandler as unknown as { handleClick: () => void }).handleClick();
 
-      expect(cancelTrackingSpy).toHaveBeenCalled();
+      // Verify BlockSettings.open was called with the target block and settings toggler element
+      expect(blockSettingsOpenSpy).toHaveBeenCalledWith(mockBlock, expect.any(HTMLSpanElement));
+      // Verify the callback to set hovered block was invoked
+      expect(setHoveredBlockSpy).toHaveBeenCalledWith(mockBlock);
+      // Verify the current block was updated on BlockManager
+      expect(blok.BlockManager.currentBlock).toBe(mockBlock);
     });
   });
 });

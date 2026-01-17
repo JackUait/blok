@@ -136,6 +136,7 @@ describe('InlineKeyboardHandler', () => {
   });
 
   describe('handle', () => {
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('should close toolbar on ArrowUp without Shift when opened and no focus', () => {
       const event = new KeyboardEvent('keydown', { key: 'ArrowUp', shiftKey: false });
 
@@ -145,6 +146,7 @@ describe('InlineKeyboardHandler', () => {
       expect(closeCallback).toHaveBeenCalled();
     });
 
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('should close toolbar on ArrowDown without Shift when opened and no focus', () => {
       const event = new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: false });
 
@@ -194,6 +196,7 @@ describe('InlineKeyboardHandler', () => {
       expect(closeCallback).not.toHaveBeenCalled();
     });
 
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('should prevent horizontal arrow key action when flipper has focus', () => {
       flipperMock.hasFocus.mockReturnValue(true);
       const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: false });

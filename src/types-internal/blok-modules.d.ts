@@ -18,7 +18,7 @@ import { UiAPI } from '../components/modules/api/ui';
 /** ./toolbar */
 import { BlockSettings } from '../components/modules/toolbar/blockSettings';
 import { Toolbar } from '../components/modules/toolbar/index';
-import { InlineToolbar } from '../components/modules/toolbar/inline';
+import { InlineToolbar } from '../components/modules/toolbar/inline/index';
 
 /** . */
 import { BlockEvents } from '../components/modules/blockEvents';

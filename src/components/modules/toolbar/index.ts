@@ -380,6 +380,14 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @param block - optional block to position the toolbar at (defaults to first selected block)
    */
   public moveAndOpenForMultipleBlocks(block?: Block): void {
+    /**
+     * Do not move toolbar if Block Settings is opened or opening.
+     * The settings menu should remain anchored to where the user opened it.
+     */
+    if (this.Blok.BlockSettings.opened || this.Blok.BlockSettings.isOpening) {
+      return;
+    }
+
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
 
     if (selectedBlocks.length < 2) {
@@ -759,7 +767,7 @@ export class Toolbar extends Module<ToolbarNodes> {
         /**
          * Do not move toolbar if Block Settings or Toolbox opened
          */
-        if (this.Blok.BlockSettings.opened || this.toolboxInstance?.opened) {
+        if (this.Blok.BlockSettings.opened || this.Blok.BlockSettings.isOpening || this.toolboxInstance?.opened) {
           return;
         }
 

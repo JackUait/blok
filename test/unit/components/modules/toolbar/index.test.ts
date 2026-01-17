@@ -78,6 +78,7 @@ describe('Toolbar module interactions', () => {
     toolbar.state = {
       BlockSettings: {
         opened: false,
+        isOpening: false,
         close: vi.fn(),
         getElement: vi.fn(() => document.createElement('div')),
       },
@@ -167,6 +168,78 @@ describe('Toolbar module interactions', () => {
     blockHoveredHandler?.({ block: {} });
 
     expect(moveSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not move when BlockSettings is opened and moveAndOpenForMultipleBlocks is called', () => {
+    // Setup mock blocks for multi-block selection
+    const block1 = { name: 'block1', holder: document.createElement('div') };
+    const block2 = { name: 'block2', holder: document.createElement('div') };
+
+    const blok = getBlok();
+    blok.BlockSettings.opened = true;
+    blok.BlockSettings.isOpening = false;
+
+    // Replace the BlockSelection mock with selected blocks by reassigning the whole object
+    const originalBlockSelection = blok.BlockSelection;
+    (toolbar as unknown as { Blok: { BlockSelection: typeof originalBlockSelection } }).Blok.BlockSelection = {
+      ...originalBlockSelection,
+      get selectedBlocks() {
+        return [block1, block2];
+      },
+    } as typeof blok.BlockSelection;
+
+    // Setup toolbox instance to prevent early return
+    (toolbar as unknown as { toolboxInstance: { opened: boolean } }).toolboxInstance = {
+      opened: false,
+    };
+
+    // Spy on moveAndOpen to verify it's not called
+    const moveAndOpenSpy = vi.spyOn(toolbar as unknown as { moveAndOpen: () => void }, 'moveAndOpen');
+
+    // Call moveAndOpenForMultipleBlocks - it should return early without moving
+    (toolbar as unknown as { moveAndOpenForMultipleBlocks: () => void }).moveAndOpenForMultipleBlocks();
+
+    // Verify that moveAndOpen was not called (meaning toolbar didn't move)
+    expect(moveAndOpenSpy).not.toHaveBeenCalled();
+
+    // Restore original BlockSelection
+    (toolbar as unknown as { Blok: { BlockSelection: typeof originalBlockSelection } }).Blok.BlockSelection = originalBlockSelection;
+  });
+
+  it('does not move when BlockSettings is opening and moveAndOpenForMultipleBlocks is called', () => {
+    // Setup mock blocks for multi-block selection
+    const block1 = { name: 'block1', holder: document.createElement('div') };
+    const block2 = { name: 'block2', holder: document.createElement('div') };
+
+    const blok = getBlok();
+    blok.BlockSettings.opened = false;
+    blok.BlockSettings.isOpening = true; // Opening flag is set
+
+    // Replace the BlockSelection mock with selected blocks by reassigning the whole object
+    const originalBlockSelection = blok.BlockSelection;
+    (toolbar as unknown as { Blok: { BlockSelection: typeof originalBlockSelection } }).Blok.BlockSelection = {
+      ...originalBlockSelection,
+      get selectedBlocks() {
+        return [block1, block2];
+      },
+    } as typeof blok.BlockSelection;
+
+    // Setup toolbox instance to prevent early return
+    (toolbar as unknown as { toolboxInstance: { opened: boolean } }).toolboxInstance = {
+      opened: false,
+    };
+
+    // Spy on moveAndOpen to verify it's not called
+    const moveAndOpenSpy = vi.spyOn(toolbar as unknown as { moveAndOpen: () => void }, 'moveAndOpen');
+
+    // Call moveAndOpenForMultipleBlocks - it should return early without moving
+    (toolbar as unknown as { moveAndOpenForMultipleBlocks: () => void }).moveAndOpenForMultipleBlocks();
+
+    // Verify that moveAndOpen was not called (meaning toolbar didn't move)
+    expect(moveAndOpenSpy).not.toHaveBeenCalled();
+
+    // Restore original BlockSelection
+    (toolbar as unknown as { Blok: { BlockSelection: typeof originalBlockSelection } }).Blok.BlockSelection = originalBlockSelection;
   });
 });
 

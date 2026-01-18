@@ -14,7 +14,7 @@ import { isEmpty, isObject, isString, log, generateBlockId } from '../../utils';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import type { BlockMutationType } from '../../../../types/events/block';
-import type { YjsManager } from '../yjsManager';
+import type { YjsManager } from '../yjs';
 import type { BlockRepository } from './repository';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';

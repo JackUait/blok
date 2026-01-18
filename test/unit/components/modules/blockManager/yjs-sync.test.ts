@@ -4,8 +4,8 @@ import { BlockRepository } from '../../../../../src/components/modules/blockMana
 import { BlockFactory } from '../../../../../src/components/modules/blockManager/factory';
 import { Blocks } from '../../../../../src/components/blocks';
 import type { Block } from '../../../../../src/components/block';
-import type { BlockChangeEvent } from '../../../../../src/components/modules/yjsManager';
-import type { YjsManager } from '../../../../../src/components/modules/yjsManager';
+import type { BlockChangeEvent } from '../../../../../src/components/modules/yjs/types';
+import type { YjsManager } from '../../../../../src/components/modules/yjs';
 import type { Map as YMap } from 'yjs';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';

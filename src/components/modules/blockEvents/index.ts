@@ -3,7 +3,7 @@
  */
 import { Module } from '../../__module';
 import { keyCodes } from '../../utils';
-import { YjsManager } from '../yjsManager';
+import { YjsManager } from '../yjs';
 import { NavigationMode } from './composers/navigationMode';
 import { MarkdownShortcuts } from './composers/markdownShortcuts';
 import { BlockSelectionKeys } from './composers/blockSelectionKeys';

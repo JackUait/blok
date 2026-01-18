@@ -16,7 +16,7 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokConfig } from '@/types/configs';
 import type { API } from '../../../../../src/components/modules/api';
-import type { YjsManager } from '../../../../../src/components/modules/yjsManager';
+import type { YjsManager } from '../../../../../src/components/modules/yjs';
 import type { Caret } from '../../../../../src/components/modules/caret';
 import type { I18n } from '../../../../../src/components/modules/i18n';
 import type { BlockMutationType, BlockToolData, PasteEvent } from '@/types';

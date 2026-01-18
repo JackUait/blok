@@ -8,8 +8,8 @@ import type { BlocksStore } from './types';
 import type { BlockRepository } from './repository';
 import type { BlockFactory } from './factory';
 import type { BlockOperations } from './operations';
-import type { BlockChangeEvent } from '../yjsManager';
-import type { YjsManager } from '../yjsManager';
+import type { BlockChangeEvent } from '../yjs/types';
+import type { YjsManager } from '../yjs';
 import type { Map as YMap } from 'yjs';
 
 /**

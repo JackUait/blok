@@ -80,6 +80,7 @@ const LOGIC_TESTS = [
   '**/modules/selection.spec.ts',
   '**/modules/navigation-mode.spec.ts',
   '**/modules/undo-redo.spec.ts',
+  '**/modules/multi-block-selection-with-toolbar.spec.ts',
 
   // Tool configuration tests (standard DOM operations)
   '**/tools/block-tool.spec.ts',
@@ -114,7 +115,19 @@ const LOGIC_TESTS = [
 const BROWSERS = ['chromium', 'firefox', 'webkit'] as const;
 const crossBrowserProjects = BROWSERS.map(browser => ({
   name: browser,
-  use: { browserName: browser },
+  use: {
+    browserName: browser,
+    // Firefox-specific fix: Bypass system proxy for localhost connections.
+    // Some macOS systems have proxy configurations that interfere with localhost,
+    // causing NS_ERROR_NET_ERROR_RESPONSE / 502 errors.
+    ...(browser === 'firefox' && {
+      launchOptions: {
+        firefoxUserPrefs: {
+          'network.proxy.type': 0, // 0 = No proxy / Direct connection
+        },
+      },
+    }),
+  },
   testMatch: [...CROSS_BROWSER_TESTS],
 }));
 
@@ -122,8 +135,8 @@ export default defineConfig({
   globalSetup: './test/playwright/global-setup.ts',
   testDir: 'test/playwright/tests',
   webServer: {
-    command: 'npx serve . -l 3333 --no-clipboard',
-    port: 3333,
+    command: 'npx serve . -l 3303 --no-clipboard',
+    port: 3303,
     reuseExistingServer: !process.env.CI,
   },
   timeout: 15_000,
@@ -157,7 +170,7 @@ export default defineConfig({
       testMatch: [...LOGIC_TESTS],
     },
   ],
-  retries: process.env.CI ? 2 : 0,
+  retries: 0,
   workers: process.env.CI ? undefined : AMOUNT_OF_LOCAL_WORKERS,
 });
 

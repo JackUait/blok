@@ -46,7 +46,7 @@ describe('Header Tool - Custom Configurations', () => {
       const header = new Header(options);
       const element = header.render();
 
-      expect(element.getAttribute('data-placeholder')).toBe('Enter heading...');
+      expect(element).toHaveAttribute('data-placeholder', 'Enter heading...');
     });
 
     it('uses empty placeholder when not provided', () => {
@@ -54,7 +54,7 @@ describe('Header Tool - Custom Configurations', () => {
       const header = new Header(options);
       const element = header.render();
 
-      expect(element.getAttribute('data-placeholder')).toBe('');
+      expect(element).toHaveAttribute('data-placeholder', '');
     });
   });
 
@@ -327,7 +327,7 @@ describe('Header Tool - Custom Configurations', () => {
       const header = new Header(options);
       const element = header.render();
 
-      expect(element.getAttribute('data-blok-tool')).toBe('header');
+      expect(element).toHaveAttribute('data-blok-tool', 'header');
     });
   });
 

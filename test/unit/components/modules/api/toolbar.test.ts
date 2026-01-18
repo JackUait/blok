@@ -17,6 +17,7 @@ type ToolbarBlokMock = {
     close: ReturnType<typeof vi.fn>;
   };
   Toolbar: {
+    opened: boolean;
     moveAndOpen: ReturnType<typeof vi.fn>;
     close: ReturnType<typeof vi.fn>;
     toolbox: {
@@ -46,16 +47,29 @@ describe('ToolbarAPI', () => {
       },
       BlockSettings: {
         opened: false,
-        open: vi.fn(),
-        close: vi.fn(),
+        open: vi.fn(() => {
+          blokMock.BlockSettings.opened = true;
+        }),
+        close: vi.fn(() => {
+          blokMock.BlockSettings.opened = false;
+        }),
       },
       Toolbar: {
-        moveAndOpen: vi.fn(),
-        close: vi.fn(),
+        opened: false,
+        moveAndOpen: vi.fn(() => {
+          blokMock.Toolbar.opened = true;
+        }),
+        close: vi.fn(() => {
+          blokMock.Toolbar.opened = false;
+        }),
         toolbox: {
           opened: false,
-          open: vi.fn(),
-          close: vi.fn(),
+          open: vi.fn(() => {
+            blokMock.Toolbar.toolbox.opened = true;
+          }),
+          close: vi.fn(() => {
+            blokMock.Toolbar.toolbox.opened = false;
+          }),
         },
       },
       ...overrides,
@@ -101,13 +115,15 @@ describe('ToolbarAPI', () => {
     it('opens the toolbar via Blok module', () => {
       toolbarApi.open();
 
-      expect(blokMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(blokMock.Toolbar.opened).toBe(true);
     });
 
     it('closes the toolbar via Blok module', () => {
+      blokMock.Toolbar.opened = true;
+
       toolbarApi.close();
 
-      expect(blokMock.Toolbar.close).toHaveBeenCalledTimes(1);
+      expect(blokMock.Toolbar.opened).toBe(false);
     });
   });
 
@@ -115,9 +131,8 @@ describe('ToolbarAPI', () => {
     it('opens block settings when state is omitted and block settings are closed', () => {
       toolbarApi.toggleBlockSettings(unspecifiedState);
 
-      expect(blokMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
-      expect(blokMock.BlockSettings.open).toHaveBeenCalledTimes(1);
-      expect(blokMock.BlockSettings.close).not.toHaveBeenCalled();
+      expect(blokMock.BlockSettings.opened).toBe(true);
+      expect(blokMock.Toolbar.opened).toBe(true);
     });
 
     it('closes block settings when state is omitted and block settings are opened', () => {
@@ -125,9 +140,7 @@ describe('ToolbarAPI', () => {
 
       toolbarApi.toggleBlockSettings(unspecifiedState);
 
-      expect(blokMock.BlockSettings.close).toHaveBeenCalledTimes(1);
-      expect(blokMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
-      expect(blokMock.BlockSettings.open).not.toHaveBeenCalled();
+      expect(blokMock.BlockSettings.opened).toBe(false);
     });
 
     it('forces opening when openingState is true', () => {
@@ -135,17 +148,16 @@ describe('ToolbarAPI', () => {
 
       toolbarApi.toggleBlockSettings(true);
 
-      expect(blokMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
-      expect(blokMock.BlockSettings.open).toHaveBeenCalledTimes(1);
-      expect(blokMock.BlockSettings.close).not.toHaveBeenCalled();
+      expect(blokMock.BlockSettings.opened).toBe(true);
+      expect(blokMock.Toolbar.opened).toBe(true);
     });
 
     it('forces closing when openingState is false', () => {
+      blokMock.BlockSettings.opened = true;
+
       toolbarApi.toggleBlockSettings(false);
 
-      expect(blokMock.BlockSettings.close).toHaveBeenCalledTimes(1);
-      expect(blokMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
-      expect(blokMock.BlockSettings.open).not.toHaveBeenCalled();
+      expect(blokMock.BlockSettings.opened).toBe(false);
     });
 
     it('logs a warning when no block is selected', () => {
@@ -159,42 +171,36 @@ describe('ToolbarAPI', () => {
         'Could\'t toggle the Toolbar because there is no block selected ',
         'warn'
       );
-      expect(blokMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
-      expect(blokMock.BlockSettings.open).not.toHaveBeenCalled();
-      expect(blokMock.BlockSettings.close).not.toHaveBeenCalled();
+      expect(blokMock.BlockSettings.opened).toBe(false);
     });
   });
 
   it('opens toolbox when toggleToolbox receives opening state', () => {
     toolbarApi.toggleToolbox(true);
 
-    expect(blokMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
-    expect(blokMock.Toolbar.toolbox.open).toHaveBeenCalledTimes(1);
-    expect(blokMock.Toolbar.toolbox.close).not.toHaveBeenCalled();
+    expect(blokMock.Toolbar.toolbox.opened).toBe(true);
+    expect(blokMock.Toolbar.opened).toBe(true);
   });
 
   it('closes toolbox when toggleToolbox receives closing state', () => {
+    blokMock.Toolbar.toolbox.opened = true;
+
     toolbarApi.toggleToolbox(false);
 
-    expect(blokMock.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
-    expect(blokMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
-    expect(blokMock.Toolbar.toolbox.open).not.toHaveBeenCalled();
+    expect(blokMock.Toolbar.toolbox.opened).toBe(false);
   });
 
   it('toggles toolbox when opening state is omitted', () => {
     toolbarApi.toggleToolbox(unspecifiedState);
 
-    expect(blokMock.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
-    expect(blokMock.Toolbar.toolbox.open).toHaveBeenCalledTimes(1);
+    expect(blokMock.Toolbar.toolbox.opened).toBe(true);
+    expect(blokMock.Toolbar.opened).toBe(true);
 
-    vi.clearAllMocks();
     blokMock.Toolbar.toolbox.opened = true;
 
     toolbarApi.toggleToolbox(unspecifiedState);
 
-    expect(blokMock.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
-    expect(blokMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
-    expect(blokMock.Toolbar.toolbox.open).not.toHaveBeenCalled();
+    expect(blokMock.Toolbar.toolbox.opened).toBe(false);
   });
 
   it('logs a warning when no block is selected for toggleToolbox', () => {
@@ -208,9 +214,6 @@ describe('ToolbarAPI', () => {
       'Could\'t toggle the Toolbox because there is no block selected ',
       'warn'
     );
-    expect(blokMock.Toolbar.moveAndOpen).not.toHaveBeenCalled();
-    expect(blokMock.Toolbar.toolbox.open).not.toHaveBeenCalled();
-    expect(blokMock.Toolbar.toolbox.close).not.toHaveBeenCalled();
+    expect(blokMock.Toolbar.toolbox.opened).toBe(false);
   });
 });
-

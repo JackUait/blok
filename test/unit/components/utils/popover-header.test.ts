@@ -1,6 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PopoverHeader } from '../../../../src/components/utils/popover/components/popover-header';
-import { Listeners } from '../../../../src/components/utils/listeners';
 
 const { iconMarkup } = vi.hoisted(() => ({
   iconMarkup: '<svg data-blok-testid="chevron"></svg>',
@@ -12,13 +11,14 @@ vi.mock('../../../../src/components/icons', () => ({
 
 const innerTextPolyfill = vi.hoisted(() => {
   const originalDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerText');
+  let polyfillDescriptor: PropertyDescriptor | undefined;
 
   const apply = (): void => {
     if (originalDescriptor !== undefined) {
       return;
     }
 
-    Object.defineProperty(HTMLElement.prototype, 'innerText', {
+    polyfillDescriptor = {
       configurable: true,
       get(this: HTMLElement) {
         return this.textContent ?? '';
@@ -26,7 +26,9 @@ const innerTextPolyfill = vi.hoisted(() => {
       set(this: HTMLElement, value: string) {
         this.textContent = value;
       },
-    });
+    };
+
+    Object.defineProperty(HTMLElement.prototype, 'innerText', polyfillDescriptor);
   };
 
   const restore = (): void => {
@@ -36,7 +38,16 @@ const innerTextPolyfill = vi.hoisted(() => {
       return;
     }
 
-    delete (HTMLElement.prototype as { innerText?: string }).innerText;
+    // Instead of deleting the property, redefine it with an empty descriptor
+    Object.defineProperty(HTMLElement.prototype, 'innerText', {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.textContent ?? '';
+      },
+      set(this: HTMLElement, value: string) {
+        this.textContent = value;
+      },
+    });
   };
 
   return { apply,
@@ -98,18 +109,21 @@ describe('PopoverHeader', () => {
   });
 
   it('invokes provided back button handler on click', () => {
-    const handler = vi.fn();
+    let handlerCalled = false;
+    const handler = () => {
+      handlerCalled = true;
+    };
     const header = createHeader({ onBackButtonClick: handler });
     const backButton = header.getElement()?.querySelector('button');
 
-    backButton?.dispatchEvent(new Event('click', { bubbles: true }));
+    backButton?.click();
 
-    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handlerCalled).toBe(true);
   });
 
-  it('removes root element from DOM and destroys listeners on destroy', () => {
-    const destroySpy = vi.spyOn(Listeners.prototype, 'destroy');
-    const header = createHeader();
+  it('removes root element from DOM and removes event listeners on destroy', () => {
+    const handler = vi.fn();
+    const header = createHeader({ onBackButtonClick: handler });
     const root = header.getElement();
 
     if (root === null) {
@@ -118,9 +132,19 @@ describe('PopoverHeader', () => {
 
     document.body.appendChild(root);
 
+    const backButton = root.querySelector('button');
+
+    // Verify handler works before destroy
+    backButton?.click();
+    expect(handler).toHaveBeenCalledTimes(1);
+
     header.destroy();
 
+    // Verify root element is removed from DOM
     expect(document.body.contains(root)).toBe(false);
-    expect(destroySpy).toHaveBeenCalledTimes(1);
+
+    // Verify event listeners are removed by clicking again (handler should not be called again)
+    backButton?.click();
+    expect(handler).toHaveBeenCalledTimes(1); // Still 1, not 2
   });
 });

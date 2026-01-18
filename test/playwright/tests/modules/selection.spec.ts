@@ -913,6 +913,10 @@ test.describe('modules/selection', () => {
 
     await page.mouse.move(reachBlockX, endY, { steps: 10 });
 
+    // The RectangleSelection module uses a 10ms throttled mousemove handler.
+    // Trigger one more single-pixel move to ensure the final position is fully processed.
+    await page.mouse.move(reachBlockX + 1, endY);
+
     // Now both blocks should be selected because rectangle intersects them
     await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
     await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');

@@ -58,6 +58,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   public opened = false;
 
   /**
+   * Flag to track if settings menu is in the process of opening
+   * Used to prevent toolbar movement during async menu item creation
+   */
+  public isOpening = false;
+
+  /**
    * Getter for inner popover's flipper instance
    * @todo remove once BlockSettings becomes standalone non-module class
    */
@@ -145,6 +151,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     /**
+     * Set isOpening flag BEFORE async operations to prevent toolbar from moving
+     * while menu items are being created. This fixes a bug where hovering over a different
+     * block during async getTunesItems() causes the toolbar to reposition incorrectly.
+     */
+    this.isOpening = true;
+
+    /**
      * If block settings contains any inputs, focus will be set there,
      * so we need to save current selection to restore it after block settings is closed
      */
@@ -190,6 +203,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * when opened=true but popover is still null
      */
     this.opened = true;
+    this.isOpening = false; // Clear isOpening flag after popover is created
 
     /** Tell to subscribers that block settings is opened */
     this.eventsDispatcher.emit(this.events.opened);
@@ -230,6 +244,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     this.opened = false;
+    this.isOpening = false; // Clear isOpening flag when closing
 
     /**
      * If selection is at blok on Block Settings closing,

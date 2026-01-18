@@ -163,15 +163,9 @@ test.describe('slash keydown', () => {
 
     await pageTitle.evaluate((element) => {
       element.removeAttribute('contenteditable');
-      element.dispatchEvent(
-        new KeyboardEvent('keydown', {
-          key: '/',
-          code: 'Slash',
-          which: 191,
-          bubbles: true,
-        })
-      );
     });
+
+    await page.keyboard.press('Slash');
 
     await expect(pageTitle).toHaveText('Blok test page');
   });

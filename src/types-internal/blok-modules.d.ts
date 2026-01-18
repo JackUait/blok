@@ -18,7 +18,7 @@ import { UiAPI } from '../components/modules/api/ui';
 /** ./toolbar */
 import { BlockSettings } from '../components/modules/toolbar/blockSettings';
 import { Toolbar } from '../components/modules/toolbar/index';
-import { InlineToolbar } from '../components/modules/toolbar/inline';
+import { InlineToolbar } from '../components/modules/toolbar/inline/index';
 
 /** . */
 import { BlockEvents } from '../components/modules/blockEvents';
@@ -26,7 +26,7 @@ import { BlockManager } from '../components/modules/blockManager';
 import { BlockSelection } from '../components/modules/blockSelection';
 import { Caret } from '../components/modules/caret';
 import { CrossBlockSelection } from '../components/modules/crossBlockSelection';
-import { DragManager } from '../components/modules/dragManager';
+import { DragController as DragManager } from '../components/modules/drag/DragController';
 import { ModificationsObserver } from '../components/modules/modificationsObserver';
 import { Paste } from '../components/modules/paste';
 import { ReadOnly } from '../components/modules/readonly';

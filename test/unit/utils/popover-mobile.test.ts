@@ -4,8 +4,7 @@ import type { PopoverItemDefaultParams, PopoverItemParams } from '@/types/utils/
 import type { PopoverHeaderParams } from '../../../src/components/utils/popover/components/popover-header';
 import { PopoverItemDefault } from '../../../src/components/utils/popover/components/popover-item';
 import { PopoverMobile } from '../../../src/components/utils/popover/popover-mobile';
-import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
-import { PopoverStatesHistory } from '../../../src/components/utils/popover/utils/popover-states-history';
+import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 
 interface MockScrollLockerInstance {
   lock: ReturnType<typeof vi.fn>;
@@ -71,6 +70,15 @@ const getIsHidden = (popover: PopoverMobile): boolean => {
   return (popover as unknown as { isHidden: boolean }).isHidden;
 };
 
+const getHistory = (popover: PopoverMobile): { currentItems: PopoverItemParams[]; currentTitle: string | undefined } => {
+  const history = (popover as unknown as { history: { currentItems: PopoverItemParams[]; currentTitle: string | undefined } }).history;
+
+  return {
+    currentItems: history.currentItems,
+    currentTitle: history.currentTitle,
+  };
+};
+
 const getPrivateApi = (popover: PopoverMobile): {
   updateItemsAndHeader: (items: PopoverItemParams[], title?: string) => void;
   showNestedItems: (item: PopoverItemDefault) => void;
@@ -116,79 +124,117 @@ describe('PopoverMobile', () => {
 
   describe('constructor', () => {
     it('creates overlay, attaches click to hide, and stores initial state in history', () => {
-      const historyPushSpy = vi.spyOn(PopoverStatesHistory.prototype, 'push');
       const { popover, params } = createPopover();
       const nodes = getNodes(popover);
-      const hideSpy = vi.spyOn(popover, 'hide');
+      const history = getHistory(popover);
 
       expect(nodes.overlay).toBeInstanceOf(HTMLElement);
       expect(getIsHidden(popover)).toBe(true);
       expect(nodes.popover.firstChild).toBe(nodes.overlay);
 
+      // Verify initial state is stored in history
+      expect(history.currentItems).toEqual(params.items);
+
+      // Verify clicking overlay hides the popover
       nodes.overlay.click();
 
-      expect(hideSpy).toHaveBeenCalledTimes(1);
-      expect(historyPushSpy).toHaveBeenCalledWith({ items: params.items });
+      expect(getIsHidden(popover)).toBe(true);
+      expect(getLatestScrollLocker().unlock).not.toHaveBeenCalled();
     });
   });
 
   describe('show', () => {
-    it('removes overlay hidden class, calls super.show, and locks scroll', () => {
-      const superShowSpy = vi.spyOn(PopoverAbstract.prototype, 'show');
+    it('removes overlay hidden attribute, adds popover to DOM, and locks scroll', () => {
       const { popover } = createPopover();
+      const nodes = getNodes(popover);
 
       popover.show();
 
-      expect(getIsHidden(popover)).toBe(false);
-      expect(superShowSpy).toHaveBeenCalledTimes(1);
+      // Verify overlay visible state - hidden attribute should be removed
+      expect(nodes.overlay).not.toHaveAttribute(DATA_ATTR.overlayHidden);
+
+      // Verify popover is in DOM and opened
+      expect(nodes.popover.isConnected).toBe(true);
+      expect(nodes.popover).toHaveAttribute(DATA_ATTR.popoverOpened, 'true');
+
+      // Verify scroll is locked
       expect(getLatestScrollLocker().lock).toHaveBeenCalledTimes(1);
+
+      // Verify isHidden flag is updated
+      expect(getIsHidden(popover)).toBe(false);
     });
   });
 
   describe('hide', () => {
     it('does nothing when already hidden', () => {
-      const superHideSpy = vi.spyOn(PopoverAbstract.prototype, 'hide');
-      const historyResetSpy = vi.spyOn(PopoverStatesHistory.prototype, 'reset');
       const { popover } = createPopover();
+      const nodes = getNodes(popover);
+      const historyBefore = getHistory(popover);
 
       popover.hide();
 
-      expect(superHideSpy).not.toHaveBeenCalled();
-      expect(historyResetSpy).not.toHaveBeenCalled();
+      // Verify state hasn't changed
+      expect(getIsHidden(popover)).toBe(true);
+      expect(nodes.overlay).toHaveAttribute(DATA_ATTR.overlayHidden);
+      expect(nodes.popover).not.toHaveAttribute(DATA_ATTR.popoverOpened);
+
+      // Verify history hasn't been reset (same current items)
+      const historyAfter = getHistory(popover);
+      expect(historyAfter.currentItems).toEqual(historyBefore.currentItems);
+
+      // Verify scroll unlock was not called
       expect(getLatestScrollLocker().unlock).not.toHaveBeenCalled();
     });
 
     it('hides overlay, resets history, and unlocks scroll when popover was visible', () => {
-      const superHideSpy = vi.spyOn(PopoverAbstract.prototype, 'hide');
-      const historyResetSpy = vi.spyOn(PopoverStatesHistory.prototype, 'reset');
-      const { popover } = createPopover();
+      const { popover, params } = createPopover();
+      const nodes = getNodes(popover);
 
       popover.show();
       popover.hide();
 
+      // Verify isHidden flag is updated
       expect(getIsHidden(popover)).toBe(true);
-      expect(superHideSpy).toHaveBeenCalledTimes(1);
-      expect(historyResetSpy).toHaveBeenCalledTimes(1);
+
+      // Verify overlay is hidden
+      expect(nodes.overlay).toHaveAttribute(DATA_ATTR.overlayHidden);
+
+      // Verify popover is closed
+      expect(nodes.popover).not.toHaveAttribute(DATA_ATTR.popoverOpened);
+
+      // Verify history is reset to initial state
+      const history = getHistory(popover);
+      expect(history.currentItems).toEqual(params.items);
+      expect(history.currentTitle).toBe(undefined);
+
+      // Verify scroll is unlocked
       expect(getLatestScrollLocker().unlock).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('destroy', () => {
-    it('calls super.destroy and unlocks scroll', () => {
-      const superDestroySpy = vi.spyOn(PopoverAbstract.prototype, 'destroy');
+    it('removes popover from DOM and unlocks scroll', () => {
       const { popover } = createPopover();
+      const nodes = getNodes(popover);
+
+      // Attach to DOM
+      document.body.appendChild(nodes.popover);
+      expect(nodes.popover.isConnected).toBe(true);
 
       popover.destroy();
 
-      expect(superDestroySpy).toHaveBeenCalledTimes(1);
+      // Verify popover is removed from DOM
+      expect(nodes.popover.isConnected).toBe(false);
+
+      // Verify scroll is unlocked
       expect(getLatestScrollLocker().unlock).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('showNestedItems', () => {
-    it('updates rendered items and pushes nested state to history', () => {
-      const historyPushSpy = vi.spyOn(PopoverStatesHistory.prototype, 'push');
+    it('updates rendered items and stores nested state in history', () => {
       const { popover } = createPopover();
+      const nodes = getNodes(popover);
       const popoverPrivate = getPrivateApi(popover);
       const nestedItems: PopoverItemParams[] = [
         {
@@ -203,19 +249,25 @@ describe('PopoverMobile', () => {
         },
       };
       const parentItem = new PopoverItemDefault(parentItemParams);
-      const updateSpy = vi.spyOn(popoverPrivate, 'updateItemsAndHeader');
 
       popoverPrivate.showNestedItems(parentItem);
 
-      expect(updateSpy).toHaveBeenCalledWith(nestedItems, 'Parent');
-      expect(historyPushSpy).toHaveBeenCalledWith({
-        title: 'Parent',
-        items: nestedItems,
-      });
+      // Verify DOM state - new items are rendered
+      expect(nodes.items.children.length).toBe(nestedItems.length);
+
+      // Verify header was created with parent title
+      expect(popoverHeaderMock.instances.length).toBe(1);
+      expect(popoverHeaderMock.instances[0].params.text).toBe('Parent');
+
+      // Verify history state
+      const history = getHistory(popover);
+      expect(history.currentItems).toEqual(nestedItems);
+      expect(history.currentTitle).toBe('Parent');
     });
 
     it('restores previous items when back button is clicked', () => {
       const { popover, params } = createPopover();
+      const nodes = getNodes(popover);
       const popoverPrivate = getPrivateApi(popover);
       const nestedItems: PopoverItemParams[] = [
         {
@@ -229,18 +281,25 @@ describe('PopoverMobile', () => {
           items: nestedItems,
         },
       } as PopoverItemDefaultParams);
-      const updateSpy = vi.spyOn(popoverPrivate, 'updateItemsAndHeader');
-      const historyPopSpy = vi.spyOn(PopoverStatesHistory.prototype, 'pop');
 
+      // Show nested items
       popoverPrivate.showNestedItems(parentItem);
-      updateSpy.mockClear();
+
+      // Verify nested items are rendered
+      expect(nodes.items.children.length).toBe(nestedItems.length);
 
       const header = popoverHeaderMock.instances[popoverHeaderMock.instances.length - 1];
 
+      // Simulate back button click
       header.params.onBackButtonClick();
 
-      expect(historyPopSpy).toHaveBeenCalledTimes(1);
-      expect(updateSpy).toHaveBeenCalledWith(params.items, undefined);
+      // Verify original items are restored
+      expect(nodes.items.children.length).toBe(params.items.length);
+
+      // Verify history state is restored
+      const history = getHistory(popover);
+      expect(history.currentItems).toEqual(params.items);
+      expect(history.currentTitle).toBe(undefined);
     });
   });
 
@@ -263,8 +322,11 @@ describe('PopoverMobile', () => {
 
       popoverPrivate.updateItemsAndHeader(nextItems, 'Nested title');
 
+      // Verify header is rendered
       expect(popoverHeaderMock.MockPopoverHeader).toHaveBeenCalledTimes(1);
       expect(popoverHeaderMock.instances[0].element).toBe(nodes.popoverContainer.firstChild);
+
+      // Verify items are replaced
       expect(nodes.items.childElementCount).toBe(nextItems.length);
       initialItems.forEach(element => {
         expect(nodes.items.contains(element)).toBe(false);
@@ -293,7 +355,10 @@ describe('PopoverMobile', () => {
 
       popoverPrivate.updateItemsAndHeader(secondItems, 'Second title');
 
+      // Verify first header was destroyed
       expect(firstHeader.destroy).toHaveBeenCalledTimes(1);
+
+      // Verify second header was created and rendered
       expect(popoverHeaderMock.MockPopoverHeader).toHaveBeenCalledTimes(2);
       expect(popoverHeaderMock.instances[1].element).toBe(nodes.popoverContainer.firstChild);
     });

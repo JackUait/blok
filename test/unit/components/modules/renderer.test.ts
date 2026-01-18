@@ -157,6 +157,12 @@ describe('Renderer module', () => {
 
     expect(blockManager.insert).toHaveBeenCalledTimes(1);
     expect(blockManager.insertMany).not.toHaveBeenCalled();
+
+    // Verify the return value - observable behavior: a block with default tool is created
+    const result = blockManager.insert.mock.results[0]?.value;
+
+    expect(result).toBeDefined();
+    expect(result.tool).toBe('default');
   });
 
   it('composes and inserts blocks when tools are available', async () => {

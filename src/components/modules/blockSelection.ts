@@ -671,6 +671,11 @@ export class BlockSelection extends Module {
 
     /** close InlineToolbar if we selected all Blocks */
     this.Blok.InlineToolbar.close();
+
+    /**
+     * Show toolbar for multi-block selection
+     */
+    this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
   }
 
   /**

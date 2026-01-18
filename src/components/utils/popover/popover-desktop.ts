@@ -349,11 +349,12 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     const triggerItemElement = this.nestedPopoverTriggerItem?.getElement();
+    const elementToRemove = this.nestedPopover.getElement();
 
     this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.hide);
     this.nestedPopover.hide();
     this.nestedPopover.destroy();
-    this.nestedPopover.getElement().remove();
+    elementToRemove.remove();
     this.nestedPopover = null;
     this.flipper?.activate(this.flippableElements);
     // Focus the trigger item synchronously to ensure keyboard events work immediately
@@ -394,6 +395,8 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param item - item to display nested popover by
    */
   protected showNestedPopoverForItem(item: PopoverItem): PopoverDesktop {
+    const handleContentEditable = this.flipper?.getHandleContentEditableTargets();
+
     this.nestedPopover = new PopoverDesktop({
       searchable: item.isChildrenSearchable,
       items: item.children,
@@ -402,6 +405,7 @@ export class PopoverDesktop extends PopoverAbstract {
       messages: this.messages,
       onNavigateBack: this.destroyNestedPopoverIfExists.bind(this),
       width: item.childrenWidth,
+      handleContentEditableNavigation: handleContentEditable,
     });
 
     item.onChildrenOpen();

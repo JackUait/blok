@@ -37,7 +37,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('data-blok-placeholder-active')).toBe('Start typing...');
+      expect(element).toHaveAttribute('data-blok-placeholder-active', 'Start typing...');
     });
 
     it('uses default placeholder translation key when not provided', () => {
@@ -46,7 +46,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const element = paragraph.render();
 
       // The mock API returns the key as-is, so we expect the translation key
-      expect(element.getAttribute('data-blok-placeholder-active')).toBe('tools.paragraph.placeholder');
+      expect(element).toHaveAttribute('data-blok-placeholder-active', 'tools.paragraph.placeholder');
     });
 
     it('uses DEFAULT_PLACEHOLDER static value when config is undefined', () => {
@@ -190,7 +190,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('data-blok-placeholder-active')).toBe('Enter text here...');
+      expect(element).toHaveAttribute('data-blok-placeholder-active', 'Enter text here...');
       expect(element.style.fontSize).toBe('14px');
       expect(element.style.lineHeight).toBe('1.5');
     });
@@ -228,7 +228,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('data-blok-placeholder-active')).toBe('Type something...');
+      expect(element).toHaveAttribute('data-blok-placeholder-active', 'Type something...');
       expect(element.style.fontSize).toBe('15px');
       expect(element.style.lineHeight).toBe('1.6');
       expect(element.style.marginTop).toBe('8px');
@@ -310,7 +310,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('data-blok-tool')).toBe('paragraph');
+      expect(element).toHaveAttribute('data-blok-tool', 'paragraph');
     });
   });
 

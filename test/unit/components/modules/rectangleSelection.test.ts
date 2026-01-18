@@ -804,6 +804,9 @@ describe('RectangleSelection', () => {
     expect(toolbar.close).toHaveBeenCalled();
     expect(trySelectSpy).not.toHaveBeenCalled();
     expect(selectionSpy).not.toHaveBeenCalled();
+    // Verify observable state: when no block is detected, selection remains active
+    // (the overlay stays visible for continuing the selection)
+    expect(internal.isRectSelectionActivated).toBe(true);
 
     genInfoSpy.mockRestore();
     selectionSpy.mockRestore();
@@ -812,6 +815,7 @@ describe('RectangleSelection', () => {
   it('clears selection state on mouse leave and mouse up events', () => {
     const {
       rectangleSelection,
+      blokWrapper,
     } = createRectangleSelection();
 
     rectangleSelection.prepare();
@@ -819,18 +823,43 @@ describe('RectangleSelection', () => {
     const internal = rectangleSelection as unknown as {
       processMouseLeave: () => void;
       processMouseUp: () => void;
-      clearSelection: () => void;
-      endSelection: () => void;
+      mousedown: boolean;
+      startX: number;
+      startY: number;
+      isRectSelectionActivated: boolean;
+      overlayRectangle: HTMLDivElement;
     };
 
-    const clearSpy = vi.spyOn(internal, 'clearSelection');
-    const endSpy = vi.spyOn(internal, 'endSelection');
+    // Set up initial state
+    internal.mousedown = true;
+    internal.startX = 100;
+    internal.startY = 200;
+    internal.isRectSelectionActivated = true;
+    internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
+    internal.overlayRectangle.style.display = 'block';
 
     internal.processMouseLeave();
+
+    // Verify state changes after mouse leave
+    expect(internal.mousedown).toBe(false);
+    expect(internal.startX).toBe(0);
+    expect(internal.startY).toBe(0);
+    expect(internal.isRectSelectionActivated).toBe(false);
+    expect(internal.overlayRectangle.style.display).toBe('none');
+
+    // Reset state to test mouse up
+    internal.mousedown = true;
+    internal.startX = 100;
+    internal.startY = 200;
+    internal.isRectSelectionActivated = true;
+
     internal.processMouseUp();
 
-    expect(clearSpy).toHaveBeenCalledTimes(2);
-    expect(endSpy).toHaveBeenCalledTimes(2);
+    // Verify state changes after mouse up
+    expect(internal.mousedown).toBe(false);
+    expect(internal.startX).toBe(0);
+    expect(internal.startY).toBe(0);
+    expect(internal.isRectSelectionActivated).toBe(false);
   });
 
   it('extends selection to skipped blocks in downward direction', () => {

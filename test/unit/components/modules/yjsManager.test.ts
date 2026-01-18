@@ -512,16 +512,18 @@ describe('YjsManager', () => {
 
   describe('restoreCaretSnapshot', () => {
     it('clears selection when snapshot is null', () => {
-      const removeAllRangesSpy = vi.fn();
+      let selectionCleared = false;
 
       vi.spyOn(window, 'getSelection').mockReturnValue({
-        removeAllRanges: removeAllRangesSpy,
+        removeAllRanges: () => {
+          selectionCleared = true;
+        },
       } as unknown as Selection);
 
-       
       (manager as any).restoreCaretSnapshot(null);
 
-      expect(removeAllRangesSpy).toHaveBeenCalled();
+      // Verify the observable behavior: selection clearing was triggered
+      expect(selectionCleared).toBe(true);
     });
 
     it('falls back to first block when block not found', () => {

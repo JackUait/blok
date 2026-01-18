@@ -190,11 +190,7 @@ const openBlockTunesForSelectedBlocks = async (page: Page): Promise<void> => {
   const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
   await expect(settingsButton).toBeVisible();
-
-  // Use dispatchEvent for mousedown/mouseup to ensure proper event handling
-  // The toolbar listens on mousedown and sets up a document-level mouseup listener
-  await settingsButton.dispatchEvent('mousedown', { button: 0 });
-  await settingsButton.dispatchEvent('mouseup', { button: 0 });
+  await settingsButton.click();
 
   const popover = page.locator(POPOVER_CONTAINER_SELECTOR);
 
@@ -263,9 +259,63 @@ test.describe('multi-block conversion', () => {
 
       await expect(settingsButton).toBeVisible();
     });
+
+    test('preserves multi-block selection when clicking settings toggler', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+        { type: 'paragraph', data: { text: 'Third block' } },
+      ]);
+
+      // Select all blocks via Shift+ArrowDown (this method shows the toolbar)
+      await selectBlocksWithShift(page, 0, 3);
+
+      // Verify blocks are selected before clicking
+      for (const index of [0, 1, 2]) {
+        await expect(getBlockByIndex(page, index)).toHaveAttribute('data-blok-selected', 'true');
+      }
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+      await settingsButton.click();
+
+      // After clicking settings toggler, BlockSettings should open and selection should be preserved
+      // Only the first block should be set as current, but all blocks should remain selected
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
+    });
   });
 
   test.describe('block tunes for multiple blocks', () => {
+    test('opens block settings popover with real click (not just dispatchEvent)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+      ]);
+
+      // Select blocks via Shift+ArrowDown
+      await selectBlocksWithShift(page, 0, 2);
+
+      // Verify blocks are selected
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await settingsButton.click();
+
+      // The block settings popover should be visible
+      const popover = page.locator(POPOVER_CONTAINER_SELECTOR);
+
+      await expect(popover).toHaveCount(1);
+      await popover.waitFor({ state: 'visible' });
+
+      // Blocks should still be selected after clicking
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    });
+
     test('shows convert-to option for multiple convertible blocks', async ({ page }) => {
       await createBlokWithBlocks(page, [
         { type: 'paragraph', data: { text: 'First block' } },

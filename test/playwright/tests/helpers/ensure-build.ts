@@ -6,9 +6,9 @@ let didBuild = false;
 const PROJECT_ROOT = path.resolve(__dirname, '../../../..');
 
 /**
- * Test page URL served by Playwright's webServer on port 3333.
+ * Test page URL served by Playwright's webServer on port 3303.
  */
-export const TEST_PAGE_URL = 'http://localhost:3333/test/playwright/fixtures/test.html';
+export const TEST_PAGE_URL = 'http://localhost:3303/test/playwright/fixtures/test.html';
 
 /**
  * Ensure the Blok bundle is freshly built before running Playwright tests.

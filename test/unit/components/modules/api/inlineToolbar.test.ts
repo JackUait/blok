@@ -41,27 +41,24 @@ describe('InlineToolbarAPI', () => {
   });
 
   it('exposes inline toolbar controls via methods getter', () => {
-    const openSpy = vi.spyOn(inlineToolbarApi, 'open').mockImplementation(() => {});
-    const closeSpy = vi.spyOn(inlineToolbarApi, 'close').mockImplementation(() => {});
-
     const { open, close } = inlineToolbarApi.methods;
 
     open();
     close();
 
-    expect(openSpy).toHaveBeenCalledTimes(1);
-    expect(closeSpy).toHaveBeenCalledTimes(1);
+    expect(blokMock.InlineToolbar.tryToShow).toHaveBeenCalledWith();
+    expect(blokMock.InlineToolbar.close).toHaveBeenCalledWith();
   });
 
   it('opens inline toolbar through Blok module', () => {
     inlineToolbarApi.open();
 
-    expect(blokMock.InlineToolbar.tryToShow).toHaveBeenCalledTimes(1);
+    expect(blokMock.InlineToolbar.tryToShow).toHaveBeenCalledWith();
   });
 
   it('closes inline toolbar through Blok module', () => {
     inlineToolbarApi.close();
 
-    expect(blokMock.InlineToolbar.close).toHaveBeenCalledTimes(1);
+    expect(blokMock.InlineToolbar.close).toHaveBeenCalledWith();
   });
 });

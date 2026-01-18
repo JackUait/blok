@@ -19,39 +19,32 @@ type NotifierInternals = {
 
 const hoisted = vi.hoisted(() => {
   const showSpy = vi.fn();
-  const moduleExports: Record<string, unknown> = {};
 
-  const overwriteModuleExports = (exports: unknown): void => {
+  const moduleExports: Record<string, unknown> = {
+    show: showSpy,
+  };
+
+  const resetModuleExports = (): void => {
     for (const key of Object.keys(moduleExports)) {
-      delete moduleExports[key];
+      moduleExports[key] = undefined;
     }
-
-    // Always set __esModule first
-    moduleExports.__esModule = true;
-
-    if (typeof exports === 'object' && exports !== null) {
-      Object.assign(moduleExports, exports as Record<string, unknown>);
-    }
+    moduleExports.show = showSpy;
   };
 
-  const setDefaultExports = (): void => {
-    overwriteModuleExports({
-      __esModule: true,
-      show: showSpy,
-    });
+  const setModuleExports = (exports: Record<string, unknown>): void => {
+    for (const key of Object.keys(moduleExports)) {
+      moduleExports[key] = undefined;
+    }
+    for (const [key, value] of Object.entries(exports)) {
+      moduleExports[key] = value;
+    }
   };
-
-  setDefaultExports();
 
   return {
     showSpy,
     getModuleExports: () => moduleExports,
-    setModuleExports: (exports: unknown) => {
-      overwriteModuleExports(exports);
-    },
-    resetModuleExports: () => {
-      setDefaultExports();
-    },
+    setModuleExports,
+    resetModuleExports,
   };
 });
 

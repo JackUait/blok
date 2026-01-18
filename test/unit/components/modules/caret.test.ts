@@ -461,7 +461,7 @@ describe('Caret module', () => {
 
       expect(fragment).toBeInstanceOf(DocumentFragment);
       expect(fragment?.textContent).toBe('cdef');
-      expect(input.textContent).toBe('ab');
+      expect(input).toHaveTextContent('ab');
     });
   });
 
@@ -497,7 +497,7 @@ describe('Caret module', () => {
       const lastChild = container.lastChild as Text;
 
       expect(lastChild).toBeInstanceOf(Text);
-      expect(lastChild.textContent).toBe('');
+      expect(lastChild).toHaveTextContent('');
     });
   });
 

@@ -61,8 +61,8 @@ describe('PopoverItemHtml', () => {
     const { root, params } = createItem({ element: customElement,
       name: 'html-item' });
 
-    expect(root.getAttribute('data-blok-testid')).toBe('popover-item-html');
-    expect(root.getAttribute('data-blok-item-name')).toBe(params.name);
+    expect(root).toHaveAttribute('data-blok-testid', 'popover-item-html');
+    expect(root).toHaveAttribute('data-blok-item-name', params.name);
     expect(root.contains(customElement)).toBe(true);
     expect(customElement.parentElement).toBe(root);
   });
@@ -125,10 +125,10 @@ describe('PopoverItemHtml', () => {
     const { item, root } = createItem();
 
     item.toggleHidden(true);
-    expect(root.getAttribute('data-blok-hidden')).toBe('true');
+    expect(root).toHaveAttribute('data-blok-hidden', 'true');
 
     item.toggleHidden(false);
-    expect(root.hasAttribute('data-blok-hidden')).toBe(false);
+    expect(root).not.toHaveAttribute('data-blok-hidden');
   });
 
   it('returns focusable controls located inside custom html content', () => {

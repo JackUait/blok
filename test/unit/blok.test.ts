@@ -231,7 +231,9 @@ describe('Blok', () => {
 
       await blok.isReady;
 
+      // Verify onReady was called and API is fully exported
       expect(onReady).toHaveBeenCalledTimes(1);
+      expect(typeof blok.destroy).toBe('function');
     });
 
     it('should use default empty onReady function when not provided', async () => {
@@ -638,10 +640,16 @@ describe('Blok', () => {
       const blok = new Blok();
 
       await blok.isReady;
+      const prototypeBeforeDestroy = Object.getPrototypeOf(blok);
+
       blok.destroy();
 
+      // Verify destroy was called on modules and Blok instance is cleaned up
       expect(mockDestroy1).toHaveBeenCalledTimes(1);
       expect(mockDestroy2).toHaveBeenCalledTimes(1);
+      // Verify observable outcome: prototype is null after destroy
+      expect(Object.getPrototypeOf(blok)).toBeNull();
+      expect(prototypeBeforeDestroy).not.toBeNull();
     });
 
     it('should remove all listeners from module instances', async () => {
@@ -659,7 +667,10 @@ describe('Blok', () => {
       await blok.isReady;
       blok.destroy();
 
+      // Verify listeners were removed and Blok instance is cleaned up
       expect(mockRemoveAll).toHaveBeenCalled();
+      // Verify observable outcome: prototype is null after destroy
+      expect(Object.getPrototypeOf(blok)).toBeNull();
     });
 
     it('should call destroyTooltip', async () => {
@@ -668,7 +679,10 @@ describe('Blok', () => {
       await blok.isReady;
       blok.destroy();
 
+      // Verify tooltip was destroyed and Blok instance is cleaned up
       expect(mocks.mockDestroyTooltip).toHaveBeenCalledTimes(1);
+      // Verify observable outcome: prototype is null after destroy
+      expect(Object.getPrototypeOf(blok)).toBeNull();
     });
 
     it('should delete all own properties', async () => {
@@ -735,9 +749,11 @@ describe('Blok', () => {
 
       await blok.isReady;
 
-      // Should not throw
+      // Should not throw and should complete cleanup successfully
       expect(() => blok.destroy()).not.toThrow();
       expect(mockModule.listeners.removeAll).toHaveBeenCalled();
+      // Verify observable outcome: destroy still completes successfully (prototype becomes null)
+      expect(Object.getPrototypeOf(blok)).toBeNull();
     });
   });
 

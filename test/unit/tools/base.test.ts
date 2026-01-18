@@ -167,16 +167,18 @@ describe('BaseToolAdapter', () => {
     });
 
     it('delegates reset to constructable when available', async () => {
-      const reset = vi.fn();
+      const resetReturnValue = { success: true };
+      const reset = vi.fn().mockResolvedValue(resetReturnValue);
       const { tool } = createTool({
         constructable: createConstructable({
           reset,
         }),
       });
 
-      await tool.reset();
+      const result = await tool.reset();
 
       expect(reset).toHaveBeenCalledTimes(1);
+      expect(result).toBe(resetReturnValue);
     });
 
     it('skips reset when constructable method is absent', async () => {

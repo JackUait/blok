@@ -176,12 +176,21 @@ export class CrossBlockSelection extends Module {
    * @param {MouseEvent} event - mouse down event
    */
   private enableCrossBlockSelection(event: MouseEvent): void {
-    const { UI } = this.Blok;
+    const { UI, Toolbar } = this.Blok;
 
     /**
      * UI might not be ready yet or editor might be destroyed
      */
     if (!UI.nodes.redactor) {
+      return;
+    }
+
+    /**
+     * Don't clear selection when clicking on toolbar elements (settings toggler, plus button, etc.)
+     * This allows multi-block selection to be preserved when interacting with the toolbar
+     */
+    const toolbarElement = Toolbar.nodes.wrapper;
+    if (toolbarElement && toolbarElement.contains(event.target as Node)) {
       return;
     }
 

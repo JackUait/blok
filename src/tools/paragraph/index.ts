@@ -67,6 +67,8 @@ export interface ParagraphConfig {
   preserveBlank?: boolean;
   /** Style overrides for paragraph customization */
   styles?: ParagraphStyleConfig;
+  /** Index signature for additional tool options */
+  [key: string]: unknown;
 }
 
 /**

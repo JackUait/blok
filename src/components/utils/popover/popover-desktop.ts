@@ -102,10 +102,11 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
-    if (params.flipper !== undefined) {
-      params.flipper.deactivate();
-      params.flipper.removeOnFlip(this.onFlip);
-      this.flipper = params.flipper;
+    const existingFlipper = params.flipper;
+    if (existingFlipper !== undefined) {
+      existingFlipper.deactivate();
+      existingFlipper.removeOnFlip(this.onFlip);
+      this.flipper = existingFlipper;
     } else {
       this.flipper = new Flipper({
         items: this.flippableElements,
@@ -337,7 +338,8 @@ export class PopoverDesktop extends PopoverAbstract {
     const itemOffsetTop = (itemEl ? itemEl.offsetTop : 0) - this.scrollTop;
     const topOffset = this.offsetTop + itemOffsetTop;
 
-    const actualPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`) ?? nestedPopoverEl;
+    const queriedPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`);
+    const actualPopoverEl: HTMLElement = queriedPopoverEl instanceof HTMLElement ? queriedPopoverEl : nestedPopoverEl;
 
     actualPopoverEl.style.setProperty(CSSVariables.TriggerItemTop, topOffset + 'px');
   }
@@ -444,13 +446,14 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param nestedPopoverEl - the nested popover element (mount element)
    */
   private applyNestedPopoverPositioning(nestedPopoverEl: HTMLElement): void {
-    const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`);
-
-    if (!nestedContainer) {
+    const nestedContainerEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`);
+    if (!(nestedContainerEl instanceof HTMLElement)) {
       return;
     }
+    const nestedContainer = nestedContainerEl;
 
-    const actualPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`) ?? nestedPopoverEl;
+    const queriedPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`);
+    const actualPopoverEl: HTMLElement = queriedPopoverEl instanceof HTMLElement ? queriedPopoverEl : nestedPopoverEl;
 
     // Check if parent popover has openTop or openLeft state
     const isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenTop);

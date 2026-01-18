@@ -109,7 +109,11 @@ type UniversalScope = {
 
 const globalScope: UniversalScope | undefined = (() => {
   try {
-    return Function('return this')() as UniversalScope;
+    // Use indirect eval to get the global object in any environment
+    // eslint-disable-next-line no-new-func
+    const globalFactory = new Function('return this') as () => unknown;
+
+    return globalFactory() as UniversalScope;
   } catch {
     return undefined;
   }
@@ -175,6 +179,10 @@ const _log = (
   const argsToPass: unknown[] = [];
 
   switch (_log.logLevel) {
+    case LogLevels.VERBOSE:
+      // VERBOSE logs everything, no early return
+      break;
+
     case LogLevels.ERROR:
       if (type !== 'error') {
         return;
@@ -304,7 +312,7 @@ export const isObject = (v: unknown): v is object => {
   if (v === null || typeof v !== 'object') {
     return false;
   }
-  const proto = Object.getPrototypeOf(v);
+  const proto = Object.getPrototypeOf(v) as object | null;
 
   return proto === null || proto === Object.prototype;
 };

@@ -1,5 +1,30 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import type { BlockAPI, BlockToolData, ToolSettings, BlockToolConstructable, API, ToolboxConfigEntry, SanitizerConfig } from '@/types';
+import type {
+  BlockAPI,
+  BlockToolData,
+  ToolSettings,
+  BlockToolConstructable,
+  InlineToolConstructable,
+  API,
+  ToolboxConfigEntry,
+  SanitizerConfig,
+  Blocks,
+  Caret,
+  Tools,
+  Events,
+  Listeners,
+  Notifier,
+  Sanitizer,
+  Saver,
+  Selection,
+  Styles,
+  Toolbar,
+  InlineToolbar,
+  Tooltip,
+  I18n,
+  ReadOnly,
+  Ui,
+} from '@/types';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 import { BlockToolAdapter } from '../../../src/components/tools/block';
 import { InlineToolAdapter } from '../../../src/components/tools/inline';
@@ -91,25 +116,25 @@ const createConstructable = (overrides: Record<string, unknown> = {}): BlockTool
 
 /**
  * Creates a partial mock of the API interface for testing.
- * We use Partial<API> since tests don't need all API methods.
- */
+ * We use empty objects typed as mocks for each API property.
+*/
 const createMockAPI = (): Partial<API> => ({
-  blocks: {} as any,
-  caret: {} as any,
-  tools: {} as any,
-  events: {} as any,
-  listeners: {} as any,
-  notifier: {} as any,
-  sanitizer: {} as any,
-  saver: {} as any,
-  selection: {} as any,
-  styles: {} as any,
-  toolbar: {} as any,
-  inlineToolbar: {} as any,
-  tooltip: {} as any,
-  i18n: {} as any,
-  readOnly: {} as any,
-  ui: {} as any,
+  blocks: {} as Blocks,
+  caret: {} as Caret,
+  tools: {} as Tools,
+  events: {} as Events,
+  listeners: {} as Listeners,
+  notifier: {} as Notifier,
+  sanitizer: {} as Sanitizer,
+  saver: {} as Saver,
+  selection: {} as Selection,
+  styles: {} as Styles,
+  toolbar: {} as Toolbar,
+  inlineToolbar: {} as InlineToolbar,
+  tooltip: {} as Tooltip,
+  i18n: {} as I18n,
+  readOnly: {} as ReadOnly,
+  ui: {} as Ui,
 });
 
 const createBaseOptions = (): BlockToolAdapterOptions => {
@@ -180,7 +205,7 @@ const createInlineTool = (sanitize: Record<string, unknown>): InlineToolAdapter 
         return document.createElement('span');
       }
       public static isInline = true;
-    } as any,
+    } as unknown as InlineToolConstructable,
     config: {
       config: {},
     },
@@ -277,7 +302,7 @@ describe('BlockToolAdapter', () => {
       const inlineTool2 = createInlineTool({ em: true });
 
       const emptyConstructable = createConstructable();
-      (emptyConstructable as any).sanitize = undefined;
+      (emptyConstructable as unknown as Record<string, unknown>).sanitize = undefined;
 
       const tool = new BlockToolAdapter({
         ...options,
@@ -299,7 +324,7 @@ describe('BlockToolAdapter', () => {
       const { options } = createBlockTool();
 
       const emptyConstructable = createConstructable();
-      (emptyConstructable as any).sanitize = undefined;
+      (emptyConstructable as unknown as Record<string, unknown>).sanitize = undefined;
 
       const tool = new BlockToolAdapter({
         ...options,
@@ -336,7 +361,7 @@ describe('BlockToolAdapter', () => {
 
       if (isBlockToolConstructable(options.constructable)) {
         const constructable = options.constructable;
-        const enableLineBreaks = (constructable as any)[InternalBlockToolSettings.IsEnabledLineBreaks] ?? false;
+        const enableLineBreaks = (constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.IsEnabledLineBreaks] ?? false;
         expect(tool.isLineBreaksEnabled).toBe(enableLineBreaks);
       } else {
         expect(tool.isLineBreaksEnabled).toBe(false);
@@ -384,7 +409,7 @@ describe('BlockToolAdapter', () => {
       const { options } = createBlockTool();
 
       const customConstructable = createConstructable();
-      (customConstructable as any).pasteConfig = undefined;
+      (customConstructable as unknown as Record<string, unknown>).pasteConfig = undefined;
 
       const tool = new BlockToolAdapter({
         ...options,
@@ -473,9 +498,10 @@ describe('BlockToolAdapter', () => {
         { title: 'Toolbox entry 2' },
       ];
       // Get the icon from the base constructable's toolbox
-      const baseIcon = isBlockToolConstructable(options.constructable) && options.constructable.toolbox
-        ? (options.constructable.toolbox as any).icon ?? ''
-        : '';
+      const toolboxIcon = isBlockToolConstructable(options.constructable) && options.constructable.toolbox
+        ? (options.constructable.toolbox as unknown as Record<string, unknown>).icon
+        : undefined;
+      const baseIcon = (typeof toolboxIcon === 'string' ? toolboxIcon : '') ?? '';
 
       const userConfig = {
         title: 'User title',
@@ -599,7 +625,7 @@ describe('BlockToolAdapter', () => {
       const { tool, options } = createBlockTool();
       const prepare = vi.fn();
 
-      (options.constructable as any).prepare = prepare;
+      (options.constructable as unknown as Record<string, unknown>).prepare = prepare;
 
       await tool.prepare();
 
@@ -612,7 +638,7 @@ describe('BlockToolAdapter', () => {
     it('gracefully skips prepare when missing', () => {
       const { tool, options } = createBlockTool();
 
-      (options.constructable as any).prepare = undefined;
+      (options.constructable as unknown as Record<string, unknown>).prepare = undefined;
 
       expect(tool.prepare()).toBeUndefined();
     });
@@ -622,7 +648,7 @@ describe('BlockToolAdapter', () => {
       const resetResult = { success: true };
       const reset = vi.fn(() => resetResult);
 
-      (options.constructable as any).reset = reset;
+      (options.constructable as unknown as Record<string, unknown>).reset = reset;
 
       const result = await tool.reset();
 
@@ -633,7 +659,7 @@ describe('BlockToolAdapter', () => {
     it('gracefully skips reset when missing', () => {
       const { tool, options } = createBlockTool();
 
-      (options.constructable as any).reset = undefined;
+      (options.constructable as unknown as Record<string, unknown>).reset = undefined;
 
       expect(tool.reset()).toBeUndefined();
     });
@@ -694,7 +720,9 @@ describe('BlockToolAdapter', () => {
       expect(instanceWithProps.api).toEqual(options.api);
 
       // Config should include original settings plus injected _toolboxEntries
-      expect(instanceWithProps.config).toMatchObject(options.config.config);
+      if (options.config.config !== undefined) {
+        expect(instanceWithProps.config).toMatchObject(options.config.config);
+      }
       expect(instanceWithProps.config).toHaveProperty('_toolboxEntries');
     });
   });

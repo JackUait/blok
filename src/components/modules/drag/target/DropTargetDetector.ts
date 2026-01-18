@@ -62,7 +62,7 @@ export class DropTargetDetector {
     // First try: find block holder directly under cursor
     const directHolder = elementUnderCursor.closest(createSelector(DATA_ATTR.element));
 
-    if (directHolder) {
+    if (directHolder instanceof HTMLElement) {
       const block = this.blockManager.blocks.find(b => b.holder === directHolder);
 
       return { block, holder: directHolder };

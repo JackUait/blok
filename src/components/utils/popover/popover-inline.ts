@@ -306,7 +306,7 @@ export class PopoverInline extends PopoverDesktop {
     nestedPopoverEl.setAttribute(DATA_ATTR.nestedLevel, getNestedLevelAttrValue(nestedPopover.nestingLevel));
 
     // Apply level-1 specific positioning styles
-    if (nestedPopover.nestingLevel === 1 && nestedContainer) {
+    if (nestedPopover.nestingLevel === 1 && nestedContainer instanceof HTMLElement) {
       nestedContainer.className = twMerge(nestedContainer.className, 'left-0');
       // Set top position based on height
       const topOffset = isMobileScreen() ? 'calc(var(--height-mobile) + 3px)' : 'calc(var(--height) + 3px)';

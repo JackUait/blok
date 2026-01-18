@@ -525,8 +525,10 @@ test.describe('backspace keydown', () => {
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
          
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Access blokInstance internals
         const blok = window.blokInstance as any;
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access blokInstance internals
         if (blockId && blok && blok.module && blok.module.blockManager) {
           const block = blok.module.blockManager.getBlockById(blockId);
 
@@ -619,8 +621,10 @@ test.describe('backspace keydown', () => {
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
          
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Access blokInstance internals
         const blok = window.blokInstance as any;
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access blokInstance internals
         if (blockId && blok && blok.module && blok.module.blockManager) {
           const block = blok.module.blockManager.getBlockById(blockId);
 
@@ -710,8 +714,10 @@ test.describe('backspace keydown', () => {
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
          
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Access blokInstance internals
         const blok = window.blokInstance as any;
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access blokInstance internals
         if (blockId && blok && blok.module && blok.module.blockManager) {
           const block = blok.module.blockManager.getBlockById(blockId);
 
@@ -801,8 +807,10 @@ test.describe('backspace keydown', () => {
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
          
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Access blokInstance internals
         const blok = window.blokInstance as any;
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access blokInstance internals
         if (blockId && blok && blok.module && blok.module.blockManager) {
           const block = blok.module.blockManager.getBlockById(blockId);
 

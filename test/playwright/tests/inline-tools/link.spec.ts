@@ -358,6 +358,7 @@ test.describe('inline tool link', () => {
 
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Paragraph data has text property
     expect(paragraphBlock?.data.text).toContain('<a href="https://google.com" target="_blank" rel="nofollow">Persist me</a>');
   });
 

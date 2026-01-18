@@ -248,7 +248,7 @@ const createBlokWithListTool = async (page: Page, blocks: OutputData['blocks']):
     const blok = new window.Blok({
       holder: holder,
       tools: {
-         
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access List tool from window
         list: (window as any).Blok.List,
       },
       data: { blocks: blokBlocks },
@@ -416,7 +416,10 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       // This accounts for different character widths
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
-      expect(Math.abs(xAfter! - xBefore!)).toBeLessThan(50);
+
+      if (xBefore !== null && xAfter !== null) {
+        expect(Math.abs(xAfter - xBefore)).toBeLessThan(50);
+      }
     });
 
     test('should preserve horizontal position when moving up between blocks', async ({ page }) => {

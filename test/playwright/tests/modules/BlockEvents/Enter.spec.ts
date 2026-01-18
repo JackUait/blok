@@ -188,6 +188,7 @@ test.describe('enter keydown', () => {
     await resetBlok(page);
 
     await page.evaluate(async ({ holder, toolSource }) => {
+      // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment -- Dynamic tool creation for testing
       const PreventDefaultTool = new Function(`return (${toolSource});`)();
 
       const blok = new window.Blok({

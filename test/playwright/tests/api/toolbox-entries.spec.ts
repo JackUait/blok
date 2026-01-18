@@ -122,6 +122,7 @@ const createBlokWithTools = async (
 return (${classSource});
 `;
 
+        // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call -- Required for dynamically creating tool classes in tests
         return new Function('globals', factoryBody)(classGlobals) as BlockToolConstructable;
       };
 

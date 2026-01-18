@@ -48,7 +48,7 @@ describe('blocks utilities', () => {
     it('should return true when block tool has valid export conversion config (function)', () => {
       const mockTool = {
         conversionConfig: {
-          export: (data: BlockToolData) => String(data),
+          export: (data: BlockToolData) => JSON.stringify(data),
         },
       } as unknown as BlockToolAdapter;
 
@@ -276,8 +276,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('paragraph');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'paragraph',
         data: { text: 'Test' },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -316,8 +318,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('paragraph');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'paragraph',
         data: { text: 'Test' },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -358,8 +362,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('paragraph');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'paragraph',
         data: { text: 'Test' },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -394,8 +400,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('paragraph');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'paragraph',
         data: { text: 'Test' },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -425,8 +433,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('paragraph');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'paragraph',
         data: { text: 'Test' },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -464,8 +474,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('paragraph');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'paragraph',
         data: { level: 1 },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -493,8 +505,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('paragraph');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'paragraph',
         data: { text: 'Test' },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -531,8 +545,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('header');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'header',
         data: { level: 1 },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -561,8 +577,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('paragraph');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'paragraph',
         data: { text: 'Test' },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -589,8 +607,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('unknown-tool');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'unknown-tool',
         data: { text: 'Test' },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
@@ -1027,8 +1047,10 @@ describe('blocks utilities', () => {
       const mockBlock = createMockBlock('paragraph');
 
       mockSave.mockResolvedValue({
+        id: 'test-block-id',
         tool: 'paragraph',
         data: { text: 'Test' },
+        time: Date.now(),
       } as SavedData);
 
       const result = await getConvertibleToolsForBlocks([mockBlock], allBlockTools);
@@ -1274,7 +1296,7 @@ describe('blocks utilities', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].toolbox).toHaveLength(1);
-      expect(result[0].toolbox![0].icon).toBe('H');
+      expect(result[0].toolbox?.[0].icon).toBe('H');
     });
   });
 });

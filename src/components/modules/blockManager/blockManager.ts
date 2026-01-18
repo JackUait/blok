@@ -419,7 +419,7 @@ export class BlockManager extends Module {
     this.blocksStore.insertMany(blocks, index);
 
     // Load blocks into Yjs with 'load' origin (not tracked by undo manager)
-    const blockDataArray: OutputBlockData[] = blocks.map(block => {
+    const blockDataArray: OutputBlockData<string, Record<string, unknown>>[] = blocks.map(block => {
       const tunes = block.preservedTunes;
 
       return {

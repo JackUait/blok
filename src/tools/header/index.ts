@@ -563,8 +563,10 @@ export class Header implements BlockTool {
       };
     });
 
-    return this._settings.levels
-      ? availableLevels.filter(l => this._settings.levels!.includes(l.number))
+    const allowedLevels = this._settings.levels;
+
+    return allowedLevels
+      ? availableLevels.filter(l => allowedLevels.includes(l.number))
       : availableLevels;
   }
 

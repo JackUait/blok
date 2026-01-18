@@ -1167,7 +1167,7 @@ test.describe('tooltip API', () => {
 
         return {
           ariaHidden: tooltipElement.getAttribute('aria-hidden'),
-          visibility: tooltipElement.style.visibility,
+          visibility: (tooltipElement as HTMLElement).style.visibility,
         };
       }, TOOLTIP_INTERFACE_SELECTOR);
 
@@ -1194,7 +1194,7 @@ test.describe('tooltip API', () => {
 
         return {
           ariaHidden: tooltipElement.getAttribute('aria-hidden'),
-          visibility: tooltipElement.style.visibility,
+          visibility: (tooltipElement as HTMLElement).style.visibility,
         };
       }, TOOLTIP_INTERFACE_SELECTOR);
 
@@ -1252,7 +1252,7 @@ test.describe('tooltip API', () => {
 
         return {
           ariaHidden: tooltipElement.getAttribute('aria-hidden'),
-          visibility: tooltipElement.style.visibility,
+          visibility: (tooltipElement as HTMLElement).style.visibility,
         };
       }, TOOLTIP_INTERFACE_SELECTOR);
 
@@ -1301,7 +1301,7 @@ test.describe('tooltip API', () => {
         }
 
         return {
-          left: parseFloat(tooltipElement.style.left),
+          left: parseFloat((tooltipElement as HTMLElement).style.left),
           placement: tooltipElement.getAttribute('data-blok-placement'),
         };
       }, TOOLTIP_INTERFACE_SELECTOR);
@@ -1332,7 +1332,7 @@ test.describe('tooltip API', () => {
           return null;
         }
 
-        return parseFloat(tooltipElement.style.left);
+        return parseFloat((tooltipElement as HTMLElement).style.left);
       }, TOOLTIP_INTERFACE_SELECTOR);
 
       expect(leftPlacementWithMargin).not.toBeNull();
@@ -1361,7 +1361,7 @@ test.describe('tooltip API', () => {
         }
 
         return {
-          left: parseFloat(tooltipElement.style.left),
+          left: parseFloat((tooltipElement as HTMLElement).style.left),
           placement: tooltipElement.getAttribute('data-blok-placement'),
         };
       }, TOOLTIP_INTERFACE_SELECTOR);
@@ -1392,7 +1392,7 @@ test.describe('tooltip API', () => {
           return null;
         }
 
-        return parseFloat(tooltipElement.style.left);
+        return parseFloat((tooltipElement as HTMLElement).style.left);
       }, TOOLTIP_INTERFACE_SELECTOR);
 
       expect(rightPlacementWithMargin).not.toBeNull();

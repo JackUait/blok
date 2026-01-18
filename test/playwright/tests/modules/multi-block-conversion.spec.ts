@@ -92,10 +92,12 @@ const createBlokWithBlocks = async (
       }
 
       if (toolConfig.classSource) {
+        // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call -- Dynamic class evaluation is intentional for test code
         const revivedClass = new Function(`return (${toolConfig.classSource});`)();
 
         return {
           ...accumulator,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
           [toolConfig.name]: toolConfig.config
             ? { ...toolConfig.config, class: revivedClass }
             : revivedClass,

@@ -86,6 +86,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
     async ({ holder, blokData, blokConfig, toolDefinitions }) => {
       const reviveToolClass = (source: string): unknown => {
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, no-new-func
         return new Function(`return (${source});`)();
       };
 
@@ -367,7 +368,11 @@ test.describe('blok configuration options', () => {
     const paddingBottom = await page.evaluate(({ selector }) => {
       const redactor = document.querySelector(selector);
 
-      return redactor?.style.paddingBottom ?? null;
+      if (!(redactor instanceof HTMLElement)) {
+        return null;
+      }
+
+      return redactor.style.paddingBottom ?? null;
     }, { selector: REDACTOR_SELECTOR });
 
     expect(paddingBottom).toBe('180px');
@@ -379,7 +384,11 @@ test.describe('blok configuration options', () => {
     const paddingBottom = await page.evaluate(({ selector }) => {
       const redactor = document.querySelector(selector);
 
-      return redactor?.style.paddingBottom ?? null;
+      if (!(redactor instanceof HTMLElement)) {
+        return null;
+      }
+
+      return redactor.style.paddingBottom ?? null;
     }, { selector: REDACTOR_SELECTOR });
 
     expect(paddingBottom).toBe('300px');
@@ -678,7 +687,8 @@ test.describe('blok configuration options', () => {
       },
     });
 
-    const savedHtml = await page.evaluate(async () => {
+    type SavedHtml = string;
+    const savedHtmlResult = await page.evaluate<SavedHtml>(async () => {
       const blok = window.blokInstance;
 
       if (!blok) {
@@ -687,8 +697,28 @@ test.describe('blok configuration options', () => {
 
       const data = await blok.save();
 
-      return data.blocks[0]?.data?.text ?? '';
+      // Extract text from first block using Object.entries to safely access properties
+      if (data.blocks && Array.isArray(data.blocks) && data.blocks.length > 0) {
+        const firstBlock = data.blocks[0];
+        if (firstBlock && typeof firstBlock === 'object') {
+          const blockEntries = Object.entries(firstBlock);
+          const dataEntry = blockEntries.find(([key]) => key === 'data');
+          if (dataEntry && dataEntry[1] && typeof dataEntry[1] === 'object' && dataEntry[1] !== null && !Array.isArray(dataEntry[1])) {
+            // After the above checks, we know dataEntry[1] is a plain object, safe to pass to Object.entries
+            const dataValue = dataEntry[1] as Record<string, unknown>;
+            const dataEntries = Object.entries(dataValue);
+            const textEntry = dataEntries.find(([key]) => key === 'text');
+            if (textEntry && typeof textEntry[1] === 'string') {
+              return textEntry[1];
+            }
+          }
+        }
+      }
+
+      return '';
     });
+
+    const savedHtml = savedHtmlResult;
 
     expect(savedHtml).toContain('<span');
     expect(savedHtml).toContain('data-blok-test="allowed"');
@@ -708,7 +738,8 @@ test.describe('blok configuration options', () => {
       },
     });
 
-    const savedHtml = await page.evaluate(async () => {
+    type SavedHtml = string;
+    const savedHtmlResult = await page.evaluate<SavedHtml>(async () => {
       const blok = window.blokInstance;
 
       if (!blok) {
@@ -717,8 +748,28 @@ test.describe('blok configuration options', () => {
 
       const data = await blok.save();
 
-      return data.blocks[0]?.data?.text ?? '';
+      // Extract text from first block using Object.entries to safely access properties
+      if (data.blocks && Array.isArray(data.blocks) && data.blocks.length > 0) {
+        const firstBlock = data.blocks[0];
+        if (firstBlock && typeof firstBlock === 'object') {
+          const blockEntries = Object.entries(firstBlock);
+          const dataEntry = blockEntries.find(([key]) => key === 'data');
+          if (dataEntry && dataEntry[1] && typeof dataEntry[1] === 'object' && dataEntry[1] !== null && !Array.isArray(dataEntry[1])) {
+            // After the above checks, we know dataEntry[1] is a plain object, safe to pass to Object.entries
+            const dataValue = dataEntry[1] as Record<string, unknown>;
+            const dataEntries = Object.entries(dataValue);
+            const textEntry = dataEntries.find(([key]) => key === 'text');
+            if (textEntry && typeof textEntry[1] === 'string') {
+              return textEntry[1];
+            }
+          }
+        }
+      }
+
+      return '';
     });
+
+    const savedHtml = savedHtmlResult;
 
     expect(savedHtml).not.toContain('<script');
     expect(savedHtml).toContain('Safe text');

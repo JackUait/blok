@@ -9,6 +9,30 @@ const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="settings-toggler"]`;
 
 /**
+ * Helper function to get block text data from saved output.
+ * @param block - Output block data
+ * @returns The text property from block data
+ */
+const getBlockText = (block: { data: unknown } | undefined): string => {
+  if (!block) {
+    throw new Error('Block is undefined');
+  }
+  return (block.data as { text: string }).text;
+};
+
+/**
+ * Helper function to get block depth from saved output.
+ * @param block - Output block data
+ * @returns The depth property from block data
+ */
+const getBlockDepth = (block: { data: unknown } | undefined): number | undefined => {
+  if (!block) {
+    return undefined;
+  }
+  return (block.data as { text?: string; depth?: number }).depth;
+};
+
+/**
  * Helper function to get bounding box and throw if it doesn't exist.
  * @param locator Locator for the element.
  * @returns Bounding box of the element.
@@ -231,9 +255,9 @@ test.describe('drag and drop', () => {
     // 5. Verify the new order in Blok data
     const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-    expect(savedData?.blocks[0].data.text).toBe('Second block');
-    expect(savedData?.blocks[1].data.text).toBe('Third block');
-    expect(savedData?.blocks[2].data.text).toBe('First block');
+    expect(getBlockText(savedData?.blocks[0])).toBe('Second block');
+    expect(getBlockText(savedData?.blocks[1])).toBe('Third block');
+    expect(getBlockText(savedData?.blocks[2])).toBe('First block');
   });
 
   test('should move block from last position to the first', async ({ page }) => {
@@ -279,9 +303,9 @@ test.describe('drag and drop', () => {
     // 5. Verify data
     const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-    expect(savedData?.blocks[0].data.text).toBe('Third block');
-    expect(savedData?.blocks[1].data.text).toBe('First block');
-    expect(savedData?.blocks[2].data.text).toBe('Second block');
+    expect(getBlockText(savedData?.blocks[0])).toBe('Third block');
+    expect(getBlockText(savedData?.blocks[1])).toBe('First block');
+    expect(getBlockText(savedData?.blocks[2])).toBe('Second block');
   });
 
   test('should not open block settings menu after dragging', async ({ page }) => {
@@ -438,11 +462,11 @@ test.describe('drag and drop', () => {
     // Verify data
     const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-    expect(savedData?.blocks[0].data.text).toBe('Block 0');
-    expect(savedData?.blocks[1].data.text).toBe('Block 4');
-    expect(savedData?.blocks[2].data.text).toBe('Block 1');
-    expect(savedData?.blocks[3].data.text).toBe('Block 2');
-    expect(savedData?.blocks[4].data.text).toBe('Block 3');
+    expect(getBlockText(savedData?.blocks[0])).toBe('Block 0');
+    expect(getBlockText(savedData?.blocks[1])).toBe('Block 4');
+    expect(getBlockText(savedData?.blocks[2])).toBe('Block 1');
+    expect(getBlockText(savedData?.blocks[3])).toBe('Block 2');
+    expect(getBlockText(savedData?.blocks[4])).toBe('Block 3');
   });
 
   test('should drag multiple non-contiguous selected blocks together', async ({ page }) => {
@@ -512,11 +536,11 @@ test.describe('drag and drop', () => {
     // Verify data
     const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-    expect(savedData?.blocks[0].data.text).toBe('Block 1');
-    expect(savedData?.blocks[1].data.text).toBe('Block 3');
-    expect(savedData?.blocks[2].data.text).toBe('Block 0');
-    expect(savedData?.blocks[3].data.text).toBe('Block 2');
-    expect(savedData?.blocks[4].data.text).toBe('Block 4');
+    expect(getBlockText(savedData?.blocks[0])).toBe('Block 1');
+    expect(getBlockText(savedData?.blocks[1])).toBe('Block 3');
+    expect(getBlockText(savedData?.blocks[2])).toBe('Block 0');
+    expect(getBlockText(savedData?.blocks[3])).toBe('Block 2');
+    expect(getBlockText(savedData?.blocks[4])).toBe('Block 4');
   });
 
   test('should prevent dropping into the middle of a selection', async ({ page }) => {
@@ -580,10 +604,10 @@ test.describe('drag and drop', () => {
     // Verify data
     const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-    expect(savedData?.blocks[0].data.text).toBe('Block 0');
-    expect(savedData?.blocks[1].data.text).toBe('Block 1');
-    expect(savedData?.blocks[2].data.text).toBe('Block 2');
-    expect(savedData?.blocks[3].data.text).toBe('Block 3');
+    expect(getBlockText(savedData?.blocks[0])).toBe('Block 0');
+    expect(getBlockText(savedData?.blocks[1])).toBe('Block 1');
+    expect(getBlockText(savedData?.blocks[2])).toBe('Block 2');
+    expect(getBlockText(savedData?.blocks[3])).toBe('Block 3');
   });
 
   test('should drag single selected block using multi-block path', async ({ page }) => {
@@ -633,9 +657,9 @@ test.describe('drag and drop', () => {
     // Verify data
     const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-    expect(savedData?.blocks[0].data.text).toBe('Block 1');
-    expect(savedData?.blocks[1].data.text).toBe('Block 0');
-    expect(savedData?.blocks[2].data.text).toBe('Block 2');
+    expect(getBlockText(savedData?.blocks[0])).toBe('Block 1');
+    expect(getBlockText(savedData?.blocks[1])).toBe('Block 0');
+    expect(getBlockText(savedData?.blocks[2])).toBe('Block 2');
   });
 
   test('should auto-scroll viewport down when dragging near bottom edge', async ({ page }) => {
@@ -1054,10 +1078,10 @@ test.describe('drag and drop', () => {
       // Verify the new order: parent and children moved together after "Second"
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(savedData?.blocks[0].data.text).toBe('Second');
-      expect(savedData?.blocks[1].data.text).toBe('First');
-      expect(savedData?.blocks[2].data.text).toBe('Nested A');
-      expect(savedData?.blocks[3].data.text).toBe('Nested B');
+      expect(getBlockText(savedData?.blocks[0])).toBe('Second');
+      expect(getBlockText(savedData?.blocks[1])).toBe('First');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Nested A');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Nested B');
     });
 
     test('should drag nested item with its own children', async ({ page }) => {
@@ -1094,10 +1118,10 @@ test.describe('drag and drop', () => {
       // Verify: Nested A and Deep A1 moved together after Nested B
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(savedData?.blocks[0].data.text).toBe('First');
-      expect(savedData?.blocks[1].data.text).toBe('Nested B');
-      expect(savedData?.blocks[2].data.text).toBe('Nested A');
-      expect(savedData?.blocks[3].data.text).toBe('Deep A1');
+      expect(getBlockText(savedData?.blocks[0])).toBe('First');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Nested B');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Nested A');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Deep A1');
     });
 
     test('should drag deepest nested item alone (no children)', async ({ page }) => {
@@ -1134,10 +1158,10 @@ test.describe('drag and drop', () => {
       // Verify: Only Deep A1 moved, rest unchanged
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(savedData?.blocks[0].data.text).toBe('First');
-      expect(savedData?.blocks[1].data.text).toBe('Nested A');
-      expect(savedData?.blocks[2].data.text).toBe('Nested B');
-      expect(savedData?.blocks[3].data.text).toBe('Deep A1');
+      expect(getBlockText(savedData?.blocks[0])).toBe('First');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Nested A');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Nested B');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Deep A1');
     });
 
     test('should not include sibling list items at the same depth', async ({ page }) => {
@@ -1171,9 +1195,9 @@ test.describe('drag and drop', () => {
       // Verify: Only "First" moved, siblings stay in place
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(savedData?.blocks[0].data.text).toBe('Second');
-      expect(savedData?.blocks[1].data.text).toBe('Third');
-      expect(savedData?.blocks[2].data.text).toBe('First');
+      expect(getBlockText(savedData?.blocks[0])).toBe('Second');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Third');
+      expect(getBlockText(savedData?.blocks[2])).toBe('First');
     });
 
     test('should adjust depth when dropping into nested list context', async ({ page }) => {
@@ -1213,13 +1237,13 @@ test.describe('drag and drop', () => {
       // Verify: Fourth is now between Second and Third with depth 1
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(savedData?.blocks[0].data.text).toBe('First');
-      expect(savedData?.blocks[1].data.text).toBe('Second');
-      expect(savedData?.blocks[2].data.text).toBe('Fourth');
-      expect(savedData?.blocks[3].data.text).toBe('Third');
+      expect(getBlockText(savedData?.blocks[0])).toBe('First');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Second');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Fourth');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Third');
 
       // Fourth should have been adjusted to depth 1
-      expect(savedData?.blocks[2].data.depth).toBe(1);
+      expect(getBlockDepth(savedData?.blocks[2])).toBe(1);
     });
 
     test('should preserve ordering when dragging list subtree', async ({ page }) => {
@@ -1253,11 +1277,11 @@ test.describe('drag and drop', () => {
       // Verify: Parent and children moved before Target, preserving order
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(savedData?.blocks[0].data.text).toBe('Parent');
-      expect(savedData?.blocks[1].data.text).toBe('Child 1');
-      expect(savedData?.blocks[2].data.text).toBe('Child 2');
-      expect(savedData?.blocks[3].data.text).toBe('Child 3');
-      expect(savedData?.blocks[4].data.text).toBe('Target');
+      expect(getBlockText(savedData?.blocks[0])).toBe('Parent');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Child 1');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Child 2');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Child 3');
+      expect(getBlockText(savedData?.blocks[4])).toBe('Target');
     });
 
     test('should handle multi-level nesting when dragging', async ({ page }) => {
@@ -1294,10 +1318,10 @@ test.describe('drag and drop', () => {
       // Verify: Entire subtree moved
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(savedData?.blocks[0].data.text).toBe('Second');
-      expect(savedData?.blocks[1].data.text).toBe('First');
-      expect(savedData?.blocks[2].data.text).toBe('Child');
-      expect(savedData?.blocks[3].data.text).toBe('Grandchild');
+      expect(getBlockText(savedData?.blocks[0])).toBe('Second');
+      expect(getBlockText(savedData?.blocks[1])).toBe('First');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Child');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Grandchild');
     });
 
     test('should use explicit selection when blocks are selected (not auto-include children)', async ({ page }) => {
@@ -1343,10 +1367,10 @@ test.describe('drag and drop', () => {
       // Verify: Only explicitly selected blocks (First, Child A) moved, Child B stays
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(savedData?.blocks[0].data.text).toBe('Child B');
-      expect(savedData?.blocks[1].data.text).toBe('Second');
-      expect(savedData?.blocks[2].data.text).toBe('First');
-      expect(savedData?.blocks[3].data.text).toBe('Child A');
+      expect(getBlockText(savedData?.blocks[0])).toBe('Child B');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Second');
+      expect(getBlockText(savedData?.blocks[2])).toBe('First');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Child A');
     });
   });
 
@@ -1697,10 +1721,10 @@ test.describe('drag and drop', () => {
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
       expect(savedData?.blocks).toHaveLength(4);
-      expect(savedData?.blocks[0].data.text).toBe('First block');
-      expect(savedData?.blocks[1].data.text).toBe('Second block');
-      expect(savedData?.blocks[2].data.text).toBe('Third block');
-      expect(savedData?.blocks[3].data.text).toBe('First block');
+      expect(getBlockText(savedData?.blocks[0])).toBe('First block');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Second block');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Third block');
+      expect(getBlockText(savedData?.blocks[3])).toBe('First block');
 
       // Verify duplicate has a different ID than original
       expect(savedData?.blocks[3].id).not.toBe(savedData?.blocks[0].id);
@@ -1811,8 +1835,8 @@ test.describe('drag and drop', () => {
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
       expect(savedData?.blocks).toHaveLength(6);
-      expect(savedData?.blocks[4].data.text).toBe('Block 1');
-      expect(savedData?.blocks[5].data.text).toBe('Block 2');
+      expect(getBlockText(savedData?.blocks[4])).toBe('Block 1');
+      expect(getBlockText(savedData?.blocks[5])).toBe('Block 2');
     });
 
     test('should show duplicating visual feedback when Alt key is pressed during drag', async ({ page }) => {
@@ -1938,7 +1962,7 @@ test.describe('drag and drop', () => {
 
       // Duplicate should have new ID
       expect(savedData?.blocks[3].id).not.toBe(idsBefore?.[1]);
-      expect(savedData?.blocks[3].data.text).toBe('Beta');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Beta');
     });
 
     test('should not duplicate when dropping without Alt key', async ({ page }) => {
@@ -2089,11 +2113,11 @@ test.describe('drag and drop', () => {
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
       expect(savedData?.blocks).toHaveLength(5);
-      expect(savedData?.blocks[0].data.text).toBe('Parent');
-      expect(savedData?.blocks[1].data.text).toBe('Child');
-      expect(savedData?.blocks[2].data.text).toBe('Sibling');
-      expect(savedData?.blocks[3].data.text).toBe('Parent'); // Duplicate
-      expect(savedData?.blocks[4].data.text).toBe('Child'); // Duplicate child
+      expect(getBlockText(savedData?.blocks[0])).toBe('Parent');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Child');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Sibling');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Parent'); // Duplicate
+      expect(getBlockText(savedData?.blocks[4])).toBe('Child'); // Duplicate child
     });
 
     test('should cancel duplication if drop target is invalid', async ({ page }) => {

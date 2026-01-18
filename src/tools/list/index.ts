@@ -154,14 +154,25 @@ export class ListItem implements BlockTool {
   }
 
   /**
+   * Type guard to check if data is a BlockChanged event payload
+   */
+  private isBlockChangedEventPayload(data: unknown): data is { event: { type: string } } {
+    return typeof data === 'object' && data !== null && 'event' in data &&
+      typeof data.event === 'object' && data.event !== null && 'type' in data.event &&
+      typeof data.event.type === 'string';
+  }
+
+  /**
    * Handler for block change events.
    * When any block is removed, trigger renumbering of ordered list items.
    * Uses a static flag to deduplicate multiple calls in the same frame.
    */
   private handleBlockChanged = (data: unknown): void => {
-    const payload = data as { event?: { type?: string } } | undefined;
+    if (!this.isBlockChangedEventPayload(data)) {
+      return;
+    }
 
-    if (payload?.event?.type !== 'block-removed') {
+    if (data.event.type !== 'block-removed') {
       return;
     }
 
@@ -186,10 +197,14 @@ export class ListItem implements BlockTool {
   sanitize?: ToolSanitizerConfig | undefined;
 
   /**
-   * Legacy list item structure for backward compatibility
+   * Type guard for legacy list item format
    */
   private static isLegacyFormat(data: unknown): data is { items: Array<{ content: string; checked?: boolean }>, style?: ListItemStyle, start?: number } {
-    return typeof data === 'object' && data !== null && 'items' in data && Array.isArray((data as { items: unknown }).items);
+    if (typeof data !== 'object' || data === null || !('items' in data)) {
+      return false;
+    }
+    const potentialData = data as { items: unknown };
+    return Array.isArray(potentialData.items);
   }
 
   private normalizeData(data: ListItemData | Record<string, never>): ListItemData {
@@ -636,6 +651,13 @@ export class ListItem implements BlockTool {
   }
 
   /**
+   * Type guard to check if a string is a valid ListItemStyle
+   */
+  private isValidListItemStyle(style: string | null | undefined): style is ListItemStyle {
+    return style === 'unordered' || style === 'ordered' || style === 'checklist';
+  }
+
+  /**
    * Get the style of a block by reading from its DOM
    */
   private getBlockStyle(block: ReturnType<typeof this.api.blocks.getBlockByIndex>): ListItemStyle | null {
@@ -647,7 +669,7 @@ export class ListItem implements BlockTool {
     const listItemEl = blockHolder?.querySelector('[data-list-style]');
     const style = listItemEl?.getAttribute('data-list-style');
 
-    return (style as ListItemStyle) || null;
+    return this.isValidListItemStyle(style) ? style : null;
   }
 
   /**
@@ -1386,13 +1408,20 @@ export class ListItem implements BlockTool {
   }
 
   /**
+   * Type guard to check if a node is a Text node
+   */
+  private isTextNode(node: Node): node is Text {
+    return node.nodeType === Node.TEXT_NODE;
+  }
+
+  /**
    * Collect all text nodes from an element
    * @param node - Node to collect text nodes from
    * @returns Array of text nodes
    */
   private collectTextNodes(node: Node): Text[] {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return [node as Text];
+    if (this.isTextNode(node)) {
+      return [node];
     }
 
     if (!node.hasChildNodes?.()) {
@@ -1448,8 +1477,8 @@ export class ListItem implements BlockTool {
       return;
     }
 
-    const checkbox = this._element?.querySelector('input[type="checkbox"]') as HTMLInputElement;
-    if (checkbox) {
+    const checkbox = this._element?.querySelector('input[type="checkbox"]');
+    if (checkbox instanceof HTMLInputElement) {
       this._data.checked = checkbox.checked;
     }
   }
@@ -1544,11 +1573,12 @@ export class ListItem implements BlockTool {
     if (!this._element) return null;
 
     if (this._data.style === 'checklist') {
-      return this._element.querySelector('[contenteditable]') as HTMLElement;
+      const contentEditable = this._element.querySelector('[contenteditable]');
+      return contentEditable instanceof HTMLElement ? contentEditable : null;
     }
 
-    const contentContainer = this._element.querySelector('div.flex-1') as HTMLElement;
-    return contentContainer;
+    const contentContainer = this._element.querySelector('div.flex-1');
+    return contentContainer instanceof HTMLElement ? contentContainer : null;
   }
 
   /**
@@ -1564,8 +1594,8 @@ export class ListItem implements BlockTool {
       if (!holder) return;
 
       // Find the contenteditable element within the new block
-      const contentEl = holder.querySelector('[contenteditable="true"]') as HTMLElement;
-      if (!contentEl) {
+      const contentEl = holder.querySelector('[contenteditable="true"]');
+      if (!(contentEl instanceof HTMLElement)) {
         // Fallback to setToBlock if no content element found
         this.api.caret.setToBlock(block, position);
         // Update the caret "after" position for undo/redo since we're in requestAnimationFrame
@@ -1832,16 +1862,28 @@ export class ListItem implements BlockTool {
     return { tags: ['LI'] };
   }
 
+  /**
+   * Type guard to check if paste event data is an HTMLElement
+   */
+  private isPasteEventHTMLElement(data: unknown): data is HTMLElement {
+    return data instanceof HTMLElement;
+  }
+
   public onPaste(event: PasteEvent): void {
     const detail = event.detail;
     if (!('data' in detail)) return;
 
-    const content = detail.data as HTMLElement;
+    const data = detail.data;
+    if (!this.isPasteEventHTMLElement(data)) {
+      return;
+    }
+
+    const content = data;
     const text = content.innerHTML || content.textContent || '';
 
     // Check for checked state if checklist
-    const checkbox = content.querySelector('input[type="checkbox"]') as HTMLInputElement;
-    const checked = checkbox?.checked || false;
+    const checkbox = content.querySelector('input[type="checkbox"]');
+    const checked = checkbox instanceof HTMLInputElement ? checkbox.checked : false;
 
     this._data = {
       text,

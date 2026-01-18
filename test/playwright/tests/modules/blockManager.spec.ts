@@ -81,6 +81,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
           const revivedClassCode = toolConfig.classCode.trim().replace(/;+\s*$/, '');
 
           try {
+            // eslint-disable-next-line no-eval -- Dynamic class evaluation is intentional for test code
             return window.eval?.(revivedClassCode) ?? eval(revivedClassCode);
           } catch (error) {
             throw new Error(

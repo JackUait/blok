@@ -1189,6 +1189,7 @@ test.describe('yjs undo/redo', () => {
       await page.evaluate(
         async ({ holder, blocks: blokBlocks, tuneSource }) => {
           // Use Function constructor instead of eval for slightly better security
+          // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
           const TuneClass = new Function(`return ${tuneSource}`)();
 
           const blok = new window.Blok({

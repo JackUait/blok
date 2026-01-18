@@ -101,7 +101,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
             }
 
             if (!toolClass && classCode) {
-
+              // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call -- Required for dynamically creating tool classes in tests
               toolClass = new Function(`return (${classCode});`)();
             }
 
@@ -744,7 +744,8 @@ test.describe('copy and paste', () => {
 
       expect(clipboardData['application/x-blok']).toBeDefined();
 
-      const data = JSON.parse(clipboardData['application/x-blok']);
+      type ClipboardBlock = { tool: string; data: { text: string } };
+      const data = JSON.parse(clipboardData['application/x-blok']) as ClipboardBlock[];
 
       expect(data[0]?.tool).toBe('paragraph');
       expect(data[0]?.data?.text).toMatch(/First block(<br>)?/);
@@ -797,7 +798,8 @@ test.describe('copy and paste', () => {
 
       expect(serializedBlocks).toBeDefined();
 
-      const data = JSON.parse(serializedBlocks);
+      type ClipboardBlock = { tool: string; data: { text: string } };
+      const data = JSON.parse(serializedBlocks) as ClipboardBlock[];
 
       expect(data[0]?.tool).toBe('paragraph');
       expect(data[0]?.data?.text).toMatch(/First block(<br>)?/);
@@ -830,7 +832,8 @@ test.describe('copy and paste', () => {
 
       expect(serializedBlocks).toBeDefined();
 
-      const data = JSON.parse(serializedBlocks);
+      type ClipboardBlock = { tool: string; data: { text: string } };
+      const data = JSON.parse(serializedBlocks) as ClipboardBlock[];
 
       expect(Array.isArray(data)).toBe(true);
       expect(data).toHaveLength(numberOfBlocks);

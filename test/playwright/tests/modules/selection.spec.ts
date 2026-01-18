@@ -89,6 +89,7 @@ const createBlokWithBlocks = async (
     serializedTools: ToolDefinition[];
   }) => {
     const reviveToolClass = (classSource: string): unknown => {
+      // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call -- Dynamic class evaluation is intentional for test code
       return new Function(`return (${classSource});`)();
     };
 

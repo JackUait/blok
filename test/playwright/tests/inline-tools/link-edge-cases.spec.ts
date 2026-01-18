@@ -269,6 +269,7 @@ test.describe('inline tool link - edge cases', () => {
       return window.blokInstance?.save();
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Paragraph data has text property
     const blockData = savedData?.blocks[0].data.text;
 
     // Blok sanitizer should strip javascript: hrefs

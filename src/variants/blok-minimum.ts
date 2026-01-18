@@ -9,15 +9,15 @@
  * This file is NOT part of the public API - it's only used for bundle size measurement.
  */
 
-import type { BlokConfig } from '../../types';
-import type { BlokModules } from '../types-internal/blok-modules';
-
 import '@babel/register';
 import '../components/polyfills';
-import { Core } from '../components/core';
-import { getBlokVersion, isObject, isFunction } from '../components/utils';
-import { destroy as destroyTooltip } from '../components/utils/tooltip';
+
+import type { BlokConfig } from '../../types';
 import { DATA_ATTR } from '../components/constants/data-attributes';
+import { Core } from '../components/core';
+import { getBlokVersion, isFunction, isObject } from '../components/utils';
+import { destroy as destroyTooltip } from '../components/utils/tooltip';
+import type { BlokModules } from '../types-internal/blok-modules';
 
 export const version = getBlokVersion();
 export { DATA_ATTR };
@@ -81,8 +81,10 @@ class Blok {
 
       destroyTooltip();
 
+      // Delete all properties during cleanup - use dynamic delete since we need to iterate over own properties
       for (const field in this) {
         if (Object.prototype.hasOwnProperty.call(this, field)) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- deleting all own properties during cleanup
           delete (this as Record<string, unknown>)[field];
         }
       }

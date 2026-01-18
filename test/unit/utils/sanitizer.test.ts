@@ -860,9 +860,11 @@ describe('sanitizer', () => {
 
       const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-      expect(result[0].data.text).toContain('target="_blank"');
+      const text = result[0].data.text as string;
+
+      expect(text).toContain('target="_blank"');
       // Both links should have target="_blank"
-      const matches = result[0].data.text.match(/target="_blank"/g);
+      const matches = text.match(/target="_blank"/g);
 
       expect(matches).toHaveLength(2);
     });

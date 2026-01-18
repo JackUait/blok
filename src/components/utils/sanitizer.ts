@@ -108,7 +108,7 @@ const deepSanitize = (
     /**
      * Array: call sanitize for each item
      */
-    return cleanArray(dataToSanitize, rules, globalRules);
+    return cleanArray(dataToSanitize as Array<object | string>, rules, globalRules);
   }
 
   if (isObject(dataToSanitize)) {

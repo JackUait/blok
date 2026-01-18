@@ -1709,6 +1709,27 @@ export default defineConfig(
       '@typescript-eslint/no-redundant-type-constituents': 'error',
       // Disallow non-null assertions (!) - use proper type guards or nullish coalescing instead
       '@typescript-eslint/no-non-null-assertion': 'error',
+      // Prohibit weak types
+      '@typescript-eslint/no-explicit-any': 'error',
+      // Ban the `object` type and similar weak types
+      '@typescript-eslint/no-restricted-types': [
+        'error',
+        {
+          types: {
+            object: {
+              message: 'Avoid using the `object` type. Use a more specific type or Record<string, unknown> instead.',
+              fixWith: 'Record<string, unknown>',
+            },
+            Function: {
+              message: 'Avoid using the `Function` type. Use a specific function signature instead.',
+            },
+            '{}': {
+              message: 'Avoid using the `{}` type. Use `Record<string, unknown>` or a specific interface instead.',
+              fixWith: 'Record<string, unknown>',
+            },
+          },
+        },
+      ],
       'no-unused-vars': 'off',
     },
   },

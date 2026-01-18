@@ -189,7 +189,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
           return new PopoverItemSeparator(this.itemsRenderParams[PopoverItemType.Separator]);
         case PopoverItemType.Html:
           return new PopoverItemHtml(item, this.itemsRenderParams[PopoverItemType.Html]);
-        default:
+        case PopoverItemType.Default:
+        case undefined:
           return new PopoverItemDefault(item, this.itemsRenderParams[PopoverItemType.Default]);
       }
     });

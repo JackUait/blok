@@ -404,7 +404,7 @@ export const focusSearchInput = (
 ): boolean => {
   const searchInput = document.querySelector(searchInputSelector);
 
-  if (!searchInput) {
+  if (!(searchInput instanceof HTMLInputElement)) {
     return false;
   }
 

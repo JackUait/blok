@@ -124,7 +124,7 @@ const createCustomHeaderEditor = (args: HeaderArgs): HTMLElement => createEditor
   tools: {
     header: {
       class: Header,
-      config: customHeaderConfig,
+      config: customHeaderConfig as Record<string, unknown>,
     },
   },
 });

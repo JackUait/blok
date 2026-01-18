@@ -115,7 +115,7 @@ describe('tools module', () => {
         /**
          *
          */
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
       }
@@ -129,7 +129,7 @@ describe('tools module', () => {
         /**
          *
          */
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
       }
@@ -363,7 +363,7 @@ describe('tools module', () => {
         /**
          *
          */
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
       }
@@ -383,7 +383,7 @@ describe('tools module', () => {
         /**
          *
          */
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
       }
@@ -584,7 +584,7 @@ describe('tools module', () => {
 
       class InlineTool {
         public static isInline = true;
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
       }
@@ -616,7 +616,7 @@ describe('tools module', () => {
 
       class InlineTool {
         public static isInline = true;
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
       }

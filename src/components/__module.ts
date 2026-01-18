@@ -10,7 +10,7 @@ import { Listeners } from './utils/listeners';
  * The type <T> of the Module generic.
  * It describes the structure of nodes used in modules.
  */
-export type ModuleNodes = object;
+export type ModuleNodes = Record<string, unknown>;
 
 /**
  * @abstract

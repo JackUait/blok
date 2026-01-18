@@ -17,10 +17,10 @@ type MockBlockConstructorOptions = {
 
 const { blockConstructorSpy, blockAPIConstructorSpy } = vi.hoisted(() => {
   return {
-    blockConstructorSpy: vi.fn<(options?: MockBlockConstructorOptions) => object>(function (this: object) {
+    blockConstructorSpy: vi.fn<(options?: MockBlockConstructorOptions) => Record<string, unknown>>(function (this: Record<string, unknown>) {
       return this;
     }),
-    blockAPIConstructorSpy: vi.fn<(block: unknown) => object>(function (this: object) {
+    blockAPIConstructorSpy: vi.fn<(block: unknown) => Record<string, unknown>>(function (this: Record<string, unknown>) {
       return this;
     }),
   };

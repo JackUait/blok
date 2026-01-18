@@ -19,8 +19,8 @@ import { PromiseQueue } from '../utils/promise-queue';
  * @interface ChainData
  */
 export interface ChainData {
-  data?: object;
-  function: (data?: object) => unknown;
+  data?: Record<string, unknown>;
+  function: (data?: Record<string, unknown>) => unknown;
 }
 
 type ToolPrepareData = {
@@ -173,7 +173,7 @@ export class Tools extends Module {
       return Promise.resolve();
     }
 
-    const handlePrepareSuccess = (data: object): void => {
+    const handlePrepareSuccess = (data: Record<string, unknown>): void => {
       if (!this.isToolPrepareData(data)) {
         return;
       }
@@ -181,7 +181,7 @@ export class Tools extends Module {
       this.toolPrepareMethodSuccess({ toolName: data.toolName });
     };
 
-    const handlePrepareFallback = (data: object): void => {
+    const handlePrepareFallback = (data: Record<string, unknown>): void => {
       if (!this.isToolPrepareData(data)) {
         return;
       }
@@ -561,7 +561,7 @@ export class Tools extends Module {
    * Type guard that ensures provided data contains tool preparation metadata.
    * @param data - data passed to prepare sequence callbacks
    */
-  private isToolPrepareData(data: object): data is ToolPrepareData {
+  private isToolPrepareData(data: Record<string, unknown>): data is ToolPrepareData {
     const candidate = data as Partial<ToolPrepareData>;
 
     return typeof candidate?.toolName === 'string';

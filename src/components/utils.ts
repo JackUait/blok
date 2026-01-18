@@ -308,11 +308,11 @@ export const isFunction = (fn: unknown): fn is (...args: unknown[]) => unknown =
  * @param {*} v - object to check
  * @returns {boolean}
  */
-export const isObject = (v: unknown): v is object => {
+export const isObject = (v: unknown): v is Record<string, unknown> => {
   if (v === null || typeof v !== 'object') {
     return false;
   }
-  const proto = Object.getPrototypeOf(v) as object | null;
+  const proto = Object.getPrototypeOf(v) as Record<string, unknown> | null;
 
   return proto === null || proto === Object.prototype;
 };
@@ -620,8 +620,8 @@ const deepMergeTwo = (target: Record<string, unknown>, source: Record<string, un
 
     if (shouldRecurseMerge) {
       result[key] = deepMergeTwo(
-        targetValue as Record<string, unknown>,
-        sourceValue as Record<string, unknown>
+        targetValue,
+        sourceValue
       );
 
       return;
@@ -640,7 +640,7 @@ const deepMergeTwo = (target: Record<string, unknown>, source: Record<string, un
  * @param sources - source objects to merge from
  * @returns merged object (same reference as target)
  */
-export const deepMerge = <T extends object> (target: T, ...sources: Partial<T>[]): T => {
+export const deepMerge = <T extends Record<string, unknown>> (target: T, ...sources: Partial<T>[]): T => {
   if (!isObject(target) || sources.length === 0) {
     return target;
   }
@@ -761,7 +761,7 @@ type Stage3DecoratorContext = {
 
 type CacheableDecorator = {
   <Member>(
-    target: object,
+    target: Record<string, unknown>,
     propertyKey: string | symbol,
     descriptor?: TypedPropertyDescriptor<Member>
   ): TypedPropertyDescriptor<Member> | void;
@@ -774,7 +774,7 @@ type CacheableDecorator = {
 };
 
 const ensureCacheValue = <Value>(
-  holder: object,
+  holder: Record<string, unknown>,
   cacheKey: string | symbol,
   compute: () => Value
 ): Value => {
@@ -789,7 +789,7 @@ const ensureCacheValue = <Value>(
   return Reflect.get(holder, cacheKey) as Value;
 };
 
-const clearCacheValue = (holder: object, cacheKey: string | symbol): void => {
+const clearCacheValue = (holder: Record<string, unknown>, cacheKey: string | symbol): void => {
   if (Reflect.has(holder, cacheKey)) {
     Reflect.deleteProperty(holder, cacheKey);
   }
@@ -812,7 +812,7 @@ const buildLegacyCacheableDescriptor = (
     descriptor ??
     Object.getOwnPropertyDescriptor(target, propertyKey) ??
     (typeof target === 'function'
-      ? Object.getOwnPropertyDescriptor((target as unknown as { prototype?: object }).prototype ?? {}, propertyKey)
+      ? Object.getOwnPropertyDescriptor((target as unknown as { prototype?: Record<string, unknown> }).prototype ?? {}, propertyKey)
       : undefined) ??
     {
       configurable: true,
@@ -830,7 +830,7 @@ const buildLegacyCacheableDescriptor = (
   if (hasMethodValue) {
     const originalMethod = descriptorRef.value as (...methodArgs: unknown[]) => unknown;
 
-    descriptorRef.value = function (this: object, ...methodArgs: unknown[]): unknown {
+    descriptorRef.value = function (this: Record<string, unknown>, ...methodArgs: unknown[]): unknown {
       return ensureCacheValue(this, cacheKey, () => originalMethod.apply(this, methodArgs));
     } as typeof originalMethod;
   }
@@ -838,7 +838,7 @@ const buildLegacyCacheableDescriptor = (
   if (shouldWrapGetter && descriptorRef.get !== undefined) {
     const originalGetter = descriptorRef.get as () => unknown;
 
-    descriptorRef.get = function (this: object): unknown {
+    descriptorRef.get = function (this: Record<string, unknown>): unknown {
       return ensureCacheValue(this, cacheKey, () => originalGetter.call(this));
     } as typeof originalGetter;
   }
@@ -846,7 +846,7 @@ const buildLegacyCacheableDescriptor = (
   if (shouldWrapSetter && descriptorRef.set !== undefined) {
     const originalSetter = descriptorRef.set;
 
-    descriptorRef.set = function (this: object, newValue: unknown): void {
+    descriptorRef.set = function (this: Record<string, unknown>, newValue: unknown): void {
       clearCacheValue(this, cacheKey);
       originalSetter.call(this, newValue);
     } as typeof originalSetter;
@@ -880,7 +880,7 @@ const applyStage3CacheableDecorator = (
   if (context.kind === 'method' && typeof value === 'function') {
     const originalMethod = value as (...methodArgs: unknown[]) => unknown;
 
-    return function (this: object, ...methodArgs: unknown[]): unknown {
+    return function (this: Record<string, unknown>, ...methodArgs: unknown[]): unknown {
       return ensureCacheValue(this, cacheKey, () => originalMethod.apply(this, methodArgs));
     } as typeof originalMethod;
   }
@@ -888,7 +888,7 @@ const applyStage3CacheableDecorator = (
   if (context.kind === 'getter' && typeof value === 'function') {
     const originalGetter = value as () => unknown;
 
-    return function (this: object): unknown {
+    return function (this: Record<string, unknown>): unknown {
       return ensureCacheValue(this, cacheKey, () => originalGetter.call(this));
     } as typeof originalGetter;
   }
@@ -899,12 +899,12 @@ const applyStage3CacheableDecorator = (
     const fallbackSetter = accessor.set ?? context.access?.set;
 
     return {
-      get(this: object): unknown {
+      get(this: Record<string, unknown>): unknown {
         return fallbackGetter
           ? ensureCacheValue(this, cacheKey, () => fallbackGetter.call(this))
           : undefined;
       },
-      set(this: object, newValue: unknown): void {
+      set(this: Record<string, unknown>, newValue: unknown): void {
         clearCacheValue(this, cacheKey);
         fallbackSetter?.call(this, newValue);
       },

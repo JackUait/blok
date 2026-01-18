@@ -76,7 +76,7 @@ const createMockToolsCollection = (toolNames: string[] = ['paragraph']): ToolsCo
 const createBlockStub = (options: {
   id?: string;
   name?: string;
-  data?: object;
+  data?: Record<string, unknown>;
   tunes?: Record<string, unknown>;
 } = {}): Block => {
   const holder = document.createElement('div');

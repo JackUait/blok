@@ -15,7 +15,7 @@ interface MockBlock {
   isEmpty: boolean;
   parentId: string | null;
   contentIds: string[];
-  call: (methodName: string, params?: object) => void;
+  call: (methodName: string, params?: Record<string, unknown>) => void;
 }
 
 /**

@@ -135,7 +135,7 @@ const createBlock = (options: CreateBlockOptions = {}): CreateBlockResult => {
   const toolAdapter = {
     name: 'paragraph',
     settings: { config: { placeholder: 'Test' } },
-    create: vi.fn(() => toolInstance as unknown as object),
+    create: vi.fn(() => toolInstance as unknown as Record<string, unknown>),
     tunes: tunesCollection,
     sanitizeConfig: {},
     inlineTools: new ToolsCollection(),
@@ -344,7 +344,7 @@ describe('Block', () => {
       const toolAdapter = {
         name: 'image', // Not a paragraph
         settings: { config: {} },
-        create: vi.fn(() => toolInstance as unknown as object),
+        create: vi.fn(() => toolInstance as unknown as Record<string, unknown>),
         tunes: new ToolsCollection<BlockTuneAdapter>(),
         sanitizeConfig: {},
         inlineTools: new ToolsCollection(),

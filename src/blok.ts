@@ -163,7 +163,7 @@ class Blok {
     const apiMethods = blok.moduleInstances.API.methods;
     const eventsDispatcherApi = blok.moduleInstances.EventsAPI.methods;
 
-    const defineDispatcher = (target: object): void => {
+    const defineDispatcher = (target: Record<string, unknown>): void => {
       if (!Object.prototype.hasOwnProperty.call(target, 'eventsDispatcher')) {
         Object.defineProperty(target, 'eventsDispatcher', {
           value: eventsDispatcherApi,

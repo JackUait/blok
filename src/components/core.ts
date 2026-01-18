@@ -348,13 +348,13 @@ export class Core {
     }
 
     if (isObject(paragraphEntry)) {
-      const paragraphSettings = paragraphEntry as Record<string, unknown>;
+      const paragraphSettings = paragraphEntry;
       const existingConfig = paragraphSettings.config;
 
       return {
         ...paragraphSettings,
         config: {
-          ...(isObject(existingConfig) ? existingConfig as Record<string, unknown> : {}),
+          ...(isObject(existingConfig) ? existingConfig : {}),
           preserveBlank: true,
         },
       };

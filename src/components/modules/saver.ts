@@ -247,7 +247,7 @@ export class Saver extends Module {
       return false;
     }
 
-    const candidate = data as Record<string, unknown>;
+    const candidate = data;
 
     return typeof candidate.type === 'string' && candidate.data !== undefined;
   }

@@ -94,10 +94,10 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {} as
  * @param {SanitizerConfig} globalRules - global sanitizer config
  */
 const deepSanitize = (
-  dataToSanitize: object | string,
+  dataToSanitize: Record<string, unknown> | string,
   rules: DeepSanitizerRule,
   globalRules: SanitizerConfig
-): object | string => {
+): Record<string, unknown> | string => {
   /**
    * BlockData It may contain 3 types:
    *  - Array
@@ -108,7 +108,7 @@ const deepSanitize = (
     /**
      * Array: call sanitize for each item
      */
-    return cleanArray(dataToSanitize as Array<object | string>, rules, globalRules);
+    return cleanArray(dataToSanitize as Array<Record<string, unknown> | string>, rules, globalRules);
   }
 
   if (isObject(dataToSanitize)) {
@@ -137,10 +137,10 @@ const deepSanitize = (
  * @param {SanitizerConfig} globalRules - global sanitizer config
  */
 const cleanArray = (
-  array: Array<object | string>,
+  array: Array<Record<string, unknown> | string>,
   ruleForItem: DeepSanitizerRule,
   globalRules: SanitizerConfig
-): Array<object | string> => {
+): Array<Record<string, unknown> | string> => {
   return array.map((arrayItem) => deepSanitize(arrayItem, ruleForItem, globalRules));
 };
 
@@ -152,12 +152,12 @@ const cleanArray = (
  * @returns {object}
  */
 const cleanObject = (
-  object: object,
+  object: Record<string, unknown>,
   rules: DeepSanitizerRule | Record<string, DeepSanitizerRule>,
   globalRules: SanitizerConfig
-): object => {
+): Record<string, unknown> => {
   const cleanData: Record<string, unknown> = {};
-  const objectRecord = object as Record<string, unknown>;
+  const objectRecord = object;
 
   for (const fieldName in object) {
     if (!Object.prototype.hasOwnProperty.call(object, fieldName)) {
@@ -177,7 +177,7 @@ const cleanObject = (
       ? ruleCandidate
       : rules;
 
-    cleanData[fieldName] = deepSanitize(currentIterationItem as object | string, ruleForItem as DeepSanitizerRule, globalRules);
+    cleanData[fieldName] = deepSanitize(currentIterationItem as Record<string, unknown> | string, ruleForItem as DeepSanitizerRule, globalRules);
   }
 
   return cleanData;

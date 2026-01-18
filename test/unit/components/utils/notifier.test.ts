@@ -53,17 +53,17 @@ const { showSpy, getModuleExports, setModuleExports, resetModuleExports } = hois
 vi.mock('../../../../src/components/utils/notifier/index', () => getModuleExports());
 
 const exposeInternals = (notifier: Notifier): NotifierInternals => {
-  const loadModule = (Reflect.get(notifier as object, 'loadNotifierModule') as () => Promise<NotifierModule>).bind(notifier);
+  const loadModule = (Reflect.get(notifier as Record<string, unknown>, 'loadNotifierModule') as () => Promise<NotifierModule>).bind(notifier);
 
   return {
     loadNotifierModule: loadModule,
-    getNotifierModule: () => Reflect.get(notifier as object, 'notifierModule') as NotifierModule | null,
+    getNotifierModule: () => Reflect.get(notifier as Record<string, unknown>, 'notifierModule') as NotifierModule | null,
     setNotifierModule: (module) => {
-      Reflect.set(notifier as object, 'notifierModule', module);
+      Reflect.set(notifier as Record<string, unknown>, 'notifierModule', module);
     },
-    getLoadingPromise: () => Reflect.get(notifier as object, 'loadingPromise') as Promise<NotifierModule> | null,
+    getLoadingPromise: () => Reflect.get(notifier as Record<string, unknown>, 'loadingPromise') as Promise<NotifierModule> | null,
     setLoadingPromise: (promise) => {
-      Reflect.set(notifier as object, 'loadingPromise', promise);
+      Reflect.set(notifier as Record<string, unknown>, 'loadingPromise', promise);
     },
   };
 };

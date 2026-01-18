@@ -371,7 +371,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param {string} methodName - method to call
    * @param {object} params - method argument
    */
-  public call(methodName: string, params?: object): void {
+  public call(methodName: string, params?: Record<string, unknown>): void {
     /**
      * call Tool's method with the instance context
      */

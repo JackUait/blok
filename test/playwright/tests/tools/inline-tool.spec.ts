@@ -18,10 +18,10 @@ const createInlineToolOptions = (): any => {
     public static shortcut = 'CTRL+N';
     public static isReadOnlySupported = true;
 
-    public api: object;
+    public api: Record<string, unknown>;
     public config: ToolSettings;
 
-    constructor({ api, config }: { api: object; config: ToolSettings }) {
+    constructor({ api, config }: { api: Record<string, unknown>; config: ToolSettings }) {
       this.api = api;
       this.config = config;
     }
@@ -190,7 +190,7 @@ test.describe('inlineToolAdapter', () => {
       const Parent = options.constructable;
 
       class ConstructableWithRender extends Parent {
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
       }
@@ -209,7 +209,7 @@ test.describe('inlineToolAdapter', () => {
       const Parent = options.constructable;
 
       class ConstructableWithAllMethods extends Parent {
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
         public surround(): void {}

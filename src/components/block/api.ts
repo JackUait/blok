@@ -90,7 +90,7 @@ const BlockAPIConstructor = function BlockAPI(
      * @param {object} param - object with parameters
      * @returns {unknown}
      */
-    call(methodName: string, param?: object): unknown {
+    call(methodName: string, param?: Record<string, unknown>): unknown {
       return block.call(methodName, param);
     },
 

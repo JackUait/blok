@@ -12,10 +12,10 @@ const createBlockTuneOptions = (): any => {
       data: { toolName: string; config: ToolSettings }
     ) => void | Promise<void>;
 
-    public api: object;
+    public api: Record<string, unknown>;
     public config: ToolSettings;
     public data: BlockTuneData;
-    public block: object;
+    public block: Record<string, unknown>;
 
     constructor({
       api,
@@ -23,9 +23,9 @@ const createBlockTuneOptions = (): any => {
       block,
       data,
     }: {
-      api: object;
+      api: Record<string, unknown>;
       config: ToolSettings;
-      block: object;
+      block: Record<string, unknown>;
       data: BlockTuneData;
     }) {
       this.api = api;

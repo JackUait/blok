@@ -345,7 +345,7 @@ export class Blocks {
    * @param {string} type - event type
    * @param {object} detail - event detail
    */
-  private composeBlockEvent(type: string, detail: object): MoveEvent {
+  private composeBlockEvent(type: string, detail: Record<string, unknown>): MoveEvent {
     return new CustomEvent(type, {
       detail,
     }) as MoveEvent;

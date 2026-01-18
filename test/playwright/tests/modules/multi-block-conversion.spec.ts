@@ -92,13 +92,14 @@ const createBlokWithBlocks = async (
       }
 
       if (toolConfig.classSource) {
-        // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call -- Dynamic class evaluation is intentional for test code
+        // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
         const revivedClass = new Function(`return (${toolConfig.classSource});`)();
 
         return {
           ...accumulator,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
           [toolConfig.name]: toolConfig.config
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
             ? { ...toolConfig.config, class: revivedClass }
             : revivedClass,
         };
@@ -796,12 +797,12 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(3);
       expect(savedData.blocks[0].type).toBe('list');
-      expect(savedData.blocks[0].data.text).toBe('First item');
-      expect(savedData.blocks[0].data.style).toBe('unordered');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('First item');
+      expect((savedData.blocks[0]?.data as { style: string }).style).toBe('unordered');
       expect(savedData.blocks[1].type).toBe('list');
-      expect(savedData.blocks[1].data.text).toBe('Second item');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Second item');
       expect(savedData.blocks[2].type).toBe('list');
-      expect(savedData.blocks[2].data.text).toBe('Third item');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Third item');
     });
 
     test('converts mixed block types to list items', async ({ page, browserName }) => {
@@ -840,10 +841,10 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(3);
       expect(savedData.blocks[0].type).toBe('list');
-      expect(savedData.blocks[0].data.style).toBe('ordered');
-      expect(savedData.blocks[0].data.text).toBe('Paragraph text');
-      expect(savedData.blocks[1].data.text).toBe('Header text');
-      expect(savedData.blocks[2].data.text).toBe('Another paragraph');
+      expect((savedData.blocks[0]?.data as { style: string }).style).toBe('ordered');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Paragraph text');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Header text');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Another paragraph');
     });
 
     test('converts subset of blocks to list items', async ({ page }) => {
@@ -919,7 +920,7 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(1);
       expect(savedData.blocks[0].type).toBe('paragraph');
-      expect(savedData.blocks[0].data.text).toBe('List item text');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('List item text');
     });
 
     test('converts list item to header', async ({ page }) => {
@@ -956,7 +957,7 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(1);
       expect(savedData.blocks[0].type).toBe('header');
-      expect(savedData.blocks[0].data.text).toBe('List item heading');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('List item heading');
     });
 
     test('converts multiple list items to paragraphs', async ({ page, browserName }) => {
@@ -994,11 +995,11 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(3);
       expect(savedData.blocks[0].type).toBe('paragraph');
-      expect(savedData.blocks[0].data.text).toBe('First item');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('First item');
       expect(savedData.blocks[1].type).toBe('paragraph');
-      expect(savedData.blocks[1].data.text).toBe('Second item');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Second item');
       expect(savedData.blocks[2].type).toBe('paragraph');
-      expect(savedData.blocks[2].data.text).toBe('Third item');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Third item');
     });
   });
 });

@@ -249,7 +249,7 @@ describe('utils', () => {
     });
 
     it('should return true for object created with Object.create (no constructor)', () => {
-      const obj = Object.create(null);
+      const obj = Object.create(null) as Record<string, unknown>;
 
       // lodash isEmpty returns true for objects with no enumerable properties
       expect(isEmpty(obj)).toBe(true);
@@ -894,7 +894,7 @@ describe('utils', () => {
       const descriptor = Object.getOwnPropertyDescriptor(TestClass.prototype, 'getValue');
 
       if (descriptor) {
-        cacheable(TestClass.prototype, 'getValue', descriptor);
+        cacheable(TestClass.prototype as unknown as Record<string, unknown>, 'getValue', descriptor);
         Object.defineProperty(TestClass.prototype, 'getValue', descriptor);
       }
 
@@ -928,7 +928,7 @@ describe('utils', () => {
       const descriptor = Object.getOwnPropertyDescriptor(TestClass.prototype, 'value');
 
       if (descriptor) {
-        cacheable(TestClass.prototype, 'value', descriptor);
+        cacheable(TestClass.prototype as unknown as Record<string, unknown>, 'value', descriptor);
         Object.defineProperty(TestClass.prototype, 'value', descriptor);
       }
 
@@ -970,7 +970,7 @@ describe('utils', () => {
       const descriptor = Object.getOwnPropertyDescriptor(TestClass.prototype, 'value');
 
       if (descriptor) {
-        cacheable(TestClass.prototype, 'value', descriptor);
+        cacheable(TestClass.prototype as unknown as Record<string, unknown>, 'value', descriptor);
         Object.defineProperty(TestClass.prototype, 'value', descriptor);
       }
 

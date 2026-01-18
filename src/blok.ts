@@ -174,7 +174,7 @@ class Blok {
       }
     };
 
-    defineDispatcher(apiMethods);
+    defineDispatcher(apiMethods as unknown as Record<string, unknown>);
     defineDispatcher(this as Record<string, unknown>);
 
     if (Object.getPrototypeOf(apiMethods) !== Blok.prototype) {

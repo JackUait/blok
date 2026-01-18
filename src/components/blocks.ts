@@ -1,5 +1,3 @@
-import type { MoveEvent } from '../../types/tools';
-
 import type { Block } from './block';
 import { BlockToolAPI } from './block';
 
@@ -141,12 +139,10 @@ export class Blocks {
     this.blocks.splice(toIndex, 0, block);
 
     // invoke hook
-    const event: MoveEvent = this.composeBlockEvent('move', {
+    block.call(BlockToolAPI.MOVED, {
       fromIndex,
       toIndex,
     });
-
-    block.call(BlockToolAPI.MOVED, event);
   }
 
   /**
@@ -338,16 +334,5 @@ export class Blocks {
     }
 
     block.call(BlockToolAPI.RENDERED);
-  }
-
-  /**
-   * Composes Block event with passed type and details
-   * @param {string} type - event type
-   * @param {object} detail - event detail
-   */
-  private composeBlockEvent(type: string, detail: Record<string, unknown>): MoveEvent {
-    return new CustomEvent(type, {
-      detail,
-    }) as MoveEvent;
   }
 }

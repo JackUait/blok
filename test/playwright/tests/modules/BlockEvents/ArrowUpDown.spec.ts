@@ -245,11 +245,20 @@ const setCaretAtOffset = async (locator: Locator, offset: number): Promise<void>
 const createBlokWithListTool = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
   await resetBlok(page);
   await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    // Resolve List tool dynamically from window.Blok
+    const ListTool = 'Blok.List'.split('.').reduce<unknown>(
+      (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
+      window
+    );
+
+    if (!ListTool) {
+      throw new Error('List tool is not available globally');
+    }
+
     const blok = new window.Blok({
       holder: holder,
       tools: {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access List tool from window
-        list: (window as any).Blok.List,
+        list: ListTool,
       },
       data: { blocks: blokBlocks },
     });
@@ -417,9 +426,12 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
 
-      if (xBefore !== null && xAfter !== null) {
-        expect(Math.abs(xAfter - xBefore)).toBeLessThan(50);
+      // Early return for type safety if positions are null
+      if (xBefore === null || xAfter === null) {
+        return;
       }
+
+      expect(Math.abs(xAfter - xBefore)).toBeLessThan(50);
     });
 
     test('should preserve horizontal position when moving up between blocks', async ({ page }) => {
@@ -450,7 +462,13 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       // The X positions should be approximately the same
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
-      expect(Math.abs(xAfter! - xBefore!)).toBeLessThan(50);
+
+      // Early return for type safety if positions are null
+      if (xBefore === null || xAfter === null) {
+        return;
+      }
+
+      expect(Math.abs(xAfter - xBefore)).toBeLessThan(50);
     });
 
     test('should clamp to end of shorter block when target X exceeds block length', async ({ page }) => {
@@ -802,7 +820,13 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       // Positions should be approximately the same (within 50px tolerance)
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
-      expect(Math.abs(xAfter! - xBefore!)).toBeLessThan(50);
+
+      // Early return for type safety if positions are null
+      if (xBefore === null || xAfter === null) {
+        return;
+      }
+
+      expect(Math.abs(xAfter - xBefore)).toBeLessThan(50);
     });
   });
 });

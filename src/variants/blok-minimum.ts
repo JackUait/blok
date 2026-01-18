@@ -133,7 +133,7 @@ class Blok {
         }
       };
 
-      defineDispatcher(apiMethods);
+      defineDispatcher(apiMethods as unknown as Record<string, unknown>);
       defineDispatcher(this as Record<string, unknown>);
     }
 

@@ -26,7 +26,7 @@ import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
 /**
  * HTML Elements used for UI
  */
-interface UINodes {
+interface UINodes extends Record<string, unknown> {
   holder: HTMLElement;
   wrapper: HTMLElement;
   redactor: HTMLElement;

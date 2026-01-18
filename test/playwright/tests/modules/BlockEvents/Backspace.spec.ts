@@ -5,6 +5,18 @@ import type { OutputData } from '../../../../../types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
+/**
+ * Type for accessing internal Blok modules in tests
+ */
+type BlokWithInternalModules = Blok & {
+  module: {
+    blockManager: {
+      getBlockById(id: string): { id: string } | undefined;
+      currentBlock: { id: string } | undefined;
+    };
+  };
+};
+
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
 const TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
@@ -524,11 +536,9 @@ test.describe('backspace keydown', () => {
 
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
-         
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Access blokInstance internals
-        const blok = window.blokInstance as any;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access blokInstance internals
+        const blok = window.blokInstance as unknown as BlokWithInternalModules;
+
         if (blockId && blok && blok.module && blok.module.blockManager) {
           const block = blok.module.blockManager.getBlockById(blockId);
 
@@ -620,11 +630,9 @@ test.describe('backspace keydown', () => {
 
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
-         
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Access blokInstance internals
-        const blok = window.blokInstance as any;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access blokInstance internals
+        const blok = window.blokInstance as unknown as BlokWithInternalModules;
+
         if (blockId && blok && blok.module && blok.module.blockManager) {
           const block = blok.module.blockManager.getBlockById(blockId);
 
@@ -713,11 +721,9 @@ test.describe('backspace keydown', () => {
 
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
-         
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Access blokInstance internals
-        const blok = window.blokInstance as any;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access blokInstance internals
+        const blok = window.blokInstance as unknown as BlokWithInternalModules;
+
         if (blockId && blok && blok.module && blok.module.blockManager) {
           const block = blok.module.blockManager.getBlockById(blockId);
 
@@ -806,11 +812,9 @@ test.describe('backspace keydown', () => {
 
         // Ensure BlockManager knows about the current block
         const blockId = el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-id');
-         
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Access blokInstance internals
-        const blok = window.blokInstance as any;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Access blokInstance internals
+        const blok = window.blokInstance as unknown as BlokWithInternalModules;
+
         if (blockId && blok && blok.module && blok.module.blockManager) {
           const block = blok.module.blockManager.getBlockById(blockId);
 

@@ -52,18 +52,25 @@ const { showSpy, getModuleExports, setModuleExports, resetModuleExports } = hois
 
 vi.mock('../../../../src/components/utils/notifier/index', () => getModuleExports());
 
+type NotifierWithPrivateProps = {
+  loadNotifierModule: () => Promise<NotifierModule>;
+  notifierModule: NotifierModule | null;
+  loadingPromise: Promise<NotifierModule> | null;
+};
+
 const exposeInternals = (notifier: Notifier): NotifierInternals => {
-  const loadModule = (Reflect.get(notifier as Record<string, unknown>, 'loadNotifierModule') as () => Promise<NotifierModule>).bind(notifier);
+  const target = notifier as unknown as NotifierWithPrivateProps;
+  const loadModule = target.loadNotifierModule.bind(notifier);
 
   return {
     loadNotifierModule: loadModule,
-    getNotifierModule: () => Reflect.get(notifier as Record<string, unknown>, 'notifierModule') as NotifierModule | null,
+    getNotifierModule: () => target.notifierModule,
     setNotifierModule: (module) => {
-      Reflect.set(notifier as Record<string, unknown>, 'notifierModule', module);
+      target.notifierModule = module;
     },
-    getLoadingPromise: () => Reflect.get(notifier as Record<string, unknown>, 'loadingPromise') as Promise<NotifierModule> | null,
+    getLoadingPromise: () => target.loadingPromise,
     setLoadingPromise: (promise) => {
-      Reflect.set(notifier as Record<string, unknown>, 'loadingPromise', promise);
+      target.loadingPromise = promise;
     },
   };
 };
@@ -172,11 +179,11 @@ describe('Notifier utility', () => {
       await expect(loadingPromise).rejects.toThrow('notifier module does not expose a "show" method.');
 
       expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
-      const [message, errorInstance] = consoleErrorSpy.mock.calls[0];
+      const [message, errorInstance] = consoleErrorSpy.mock.calls[0] as [string, Error];
 
       expect(message).toBe('[Blok] Failed to display notification. Reason:');
       expect(errorInstance).toBeInstanceOf(Error);
-      expect((errorInstance as Error).message).toBe('notifier module does not expose a "show" method.');
+      expect(errorInstance.message).toBe('notifier module does not expose a "show" method.');
     });
   });
 });

@@ -94,7 +94,7 @@ export class Core {
        * Make config object
        */
       this.config = {
-        holder: config,
+        holder: config as string | undefined,
       };
     }
 

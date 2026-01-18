@@ -1197,6 +1197,7 @@ test.describe('yjs undo/redo', () => {
             data: { blocks: blokBlocks },
             tools: {
               exampleTune: {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
                 class: TuneClass,
               },
             },
@@ -1786,9 +1787,9 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks).toHaveLength(3);
-      expect(savedData.blocks[0].data.text).toBe('Block 1');
-      expect(savedData.blocks[1].data.text).toBe('Block 2');
-      expect(savedData.blocks[2].data.text).toBe('Block 3');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Block 1');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Block 2');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Block 3');
     });
 
     test('handles many rapid redos without data corruption', async ({ page }) => {
@@ -1831,7 +1832,7 @@ test.describe('yjs undo/redo', () => {
       // Verify data integrity
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Version 5');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Version 5');
     });
 
     test('handles rapid interleaved undo/redo without corruption', async ({ page }) => {
@@ -1878,7 +1879,7 @@ test.describe('yjs undo/redo', () => {
       // Verify data integrity
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Step 3');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Step 3');
     });
 
     test('handles rapid block deletions and undos', async ({ page }) => {
@@ -1976,7 +1977,7 @@ test.describe('yjs undo/redo', () => {
       // Verify data integrity
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Entry 2');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Entry 2');
     });
   });
 
@@ -2128,8 +2129,8 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
       const headerBlock = savedData.blocks.find(b => b.type === 'header');
       expect(headerBlock).toBeDefined();
-      expect(headerBlock?.data.level).toBe(3);
-      expect(headerBlock?.data.text).toBe('My Heading');
+      expect((headerBlock?.data as { level: number }).level).toBe(3);
+      expect((headerBlock?.data as { text: string }).text).toBe('My Heading');
 
       // Undo the typing
       await page.keyboard.press(UNDO_SHORTCUT);
@@ -2373,9 +2374,9 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks).toHaveLength(3);
-      expect(savedData.blocks[0].data.text).toBe('First content');
-      expect(savedData.blocks[1].data.text).toBe('Second content');
-      expect(savedData.blocks[2].data.text).toBe('Third content');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('First content');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Second content');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Third content');
     });
 
     test('multi-block delete requires single undo (atomic operation)', async ({ page }) => {
@@ -2457,10 +2458,10 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks).toHaveLength(4);
-      expect(savedData.blocks[0].data.text).toBe('Alpha');
-      expect(savedData.blocks[1].data.text).toBe('Beta');
-      expect(savedData.blocks[2].data.text).toBe('Gamma');
-      expect(savedData.blocks[3].data.text).toBe('Delta');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Alpha');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Beta');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Gamma');
+      expect((savedData.blocks[3]?.data as { text: string }).text).toBe('Delta');
     });
   });
 
@@ -2683,9 +2684,9 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks).toHaveLength(3);
-      expect(savedData.blocks[0].data.text).toBe('First');
-      expect(savedData.blocks[1].data.text).toBe('Second');
-      expect(savedData.blocks[2].data.text).toBe('Third');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('First');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Second');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Third');
     });
 
     test('undo after multi-block drag-drop restores all blocks to original positions', async ({ page }) => {
@@ -3296,7 +3297,7 @@ test.describe('yjs undo/redo', () => {
       // Verify starting state
       let savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Block A!');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Block A!');
 
       // Use API to move block - move(toIndex, fromIndex)
       // Keep focus on the input during API call
@@ -3312,9 +3313,9 @@ test.describe('yjs undo/redo', () => {
       // Verify block order changed (Block A! is now at index 2)
       savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Block B');
-      expect(savedData.blocks[1].data.text).toBe('Block C');
-      expect(savedData.blocks[2].data.text).toBe('Block A!');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Block B');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Block C');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Block A!');
 
       // Focus the editor area before undo to ensure keyboard events work
       const blockAtIndex2 = getParagraphByIndex(page, 2);
@@ -3328,9 +3329,9 @@ test.describe('yjs undo/redo', () => {
 
       // Verify block order is restored - this is the main undo behavior
       savedData = await saveBlok(page);
-      expect(savedData.blocks[0].data.text).toBe('Block A!');
-      expect(savedData.blocks[1].data.text).toBe('Block B');
-      expect(savedData.blocks[2].data.text).toBe('Block C');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Block A!');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Block B');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Block C');
 
       // For API-based moves, caret restoration depends on whether currentBlock
       // was set when the move was triggered. We verify the move was undone correctly

@@ -78,7 +78,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
     BlockManager: {
       currentBlock: mockBlock1,
       blocks: [mockBlock1, mockBlock2],
-      getBlockByIndex: vi.fn((index) => [mockBlock1, mockBlock2][index] ?? null),
+      getBlockByIndex: vi.fn((index: number) => [mockBlock1, mockBlock2][index] ?? null),
       getBlockIndex: vi.fn(() => 0),
       currentBlockIndex: 0,
       deleteSelectedBlocksAndInsertReplacement: vi.fn(() => mockParagraph),
@@ -106,10 +106,11 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       moduleOverrides !== null &&
       typeof moduleOverrides === 'object'
     ) {
-      (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = {
-        ...(defaultModule as Record<string, unknown>),
-        ...(moduleOverrides),
-      } as BlokModules[typeof moduleName];
+      (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = Object.assign(
+        {},
+        defaultModule,
+        moduleOverrides
+      ) as BlokModules[typeof moduleName];
     } else if (moduleOverrides !== undefined) {
       (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] =
         moduleOverrides as BlokModules[typeof moduleName];

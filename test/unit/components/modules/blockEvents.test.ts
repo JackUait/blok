@@ -112,13 +112,13 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
       moduleOverrides !== null &&
       typeof moduleOverrides === 'object'
     ) {
-      (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = {
-        ...(defaultModule as Record<string, unknown>),
-        ...(moduleOverrides),
-      } as BlokModules[typeof moduleName];
+      (mergedState as Record<PropertyKey, unknown>)[moduleName] = {
+        ...(defaultModule as unknown as Record<PropertyKey, unknown>),
+        ...(moduleOverrides as Record<PropertyKey, unknown>),
+      } as unknown as BlokModules[typeof moduleName];
     } else if (moduleOverrides !== undefined) {
-      (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] =
-        moduleOverrides as BlokModules[typeof moduleName];
+      (mergedState as Record<PropertyKey, unknown>)[moduleName] =
+        moduleOverrides as unknown as BlokModules[typeof moduleName];
     }
   }
 

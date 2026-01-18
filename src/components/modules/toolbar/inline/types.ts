@@ -29,4 +29,8 @@ export interface InlinePositioningOptions {
  */
 export interface InlineToolbarNodes {
   wrapper: HTMLElement | undefined;
+  /**
+   * Index signature to satisfy ModuleNodes constraint
+   */
+  [key: string]: unknown;
 }

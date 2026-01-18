@@ -781,7 +781,7 @@ export class BlockOperations {
        * @todo make this.insert() awaitable and remove requestIdleCallback
        */
       return void block.ready.then(() => {
-        block.call(BlockToolAPI.ON_PASTE, pasteEvent);
+        block.call(BlockToolAPI.ON_PASTE, pasteEvent as unknown as Record<string, unknown>);
 
         /**
          * onPaste might cause the tool to replace its root element (e.g., Header changing level).

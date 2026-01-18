@@ -95,10 +95,10 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       moduleOverrides !== null &&
       typeof moduleOverrides === 'object'
     ) {
-      (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = {
-        ...(defaultModule as Record<string, unknown>),
-        ...(moduleOverrides),
-      } as BlokModules[typeof moduleName];
+      (mergedState as unknown as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = {
+        ...(defaultModule as unknown as Record<string, unknown>),
+        ...(moduleOverrides as Record<string, unknown>),
+      } as unknown as BlokModules[typeof moduleName];
     } else if (moduleOverrides !== undefined) {
       (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] =
         moduleOverrides as BlokModules[typeof moduleName];
@@ -177,7 +177,9 @@ describe('MarkdownShortcuts', () => {
   describe('checklist shortcut', () => {
     it('converts [] to unchecked checklist', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '[] ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '[] ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -208,7 +210,9 @@ describe('MarkdownShortcuts', () => {
 
     it('converts [x] to checked checklist', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '[x] ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '[x] ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -238,7 +242,9 @@ describe('MarkdownShortcuts', () => {
 
     it('converts [X] to checked checklist', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '[X] ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '[X] ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -270,7 +276,9 @@ describe('MarkdownShortcuts', () => {
   describe('unordered list shortcut', () => {
     it('converts "- " to unordered list', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '- ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '- ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -300,7 +308,9 @@ describe('MarkdownShortcuts', () => {
 
     it('converts "* " to unordered list', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '* ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '* ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -331,7 +341,9 @@ describe('MarkdownShortcuts', () => {
   describe('ordered list shortcut', () => {
     it('converts "1. " to ordered list', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '1. ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '1. ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -361,7 +373,9 @@ describe('MarkdownShortcuts', () => {
 
     it('converts "5. " to ordered list with start number', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '5. ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '5. ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -393,7 +407,9 @@ describe('MarkdownShortcuts', () => {
   describe('header shortcut', () => {
     it('converts "# " to level 1 header', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '# ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '# ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -422,7 +438,9 @@ describe('MarkdownShortcuts', () => {
 
     it('converts "## " to level 2 header', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '## ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '## ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -451,7 +469,9 @@ describe('MarkdownShortcuts', () => {
 
     it('converts "### " to level 3 header', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '### ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '### ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -483,7 +503,9 @@ describe('MarkdownShortcuts', () => {
     it('preserves depth attribute when converting to list', () => {
       const mockBlock = createBlock();
       mockBlock.holder.setAttribute('data-blok-depth', '2');
-      mockBlock.currentInput!.textContent = '- ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '- ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
@@ -514,7 +536,9 @@ describe('MarkdownShortcuts', () => {
   describe('custom header shortcuts', () => {
     it('matches custom header shortcuts when configured', () => {
       const mockBlock = createBlock();
-      mockBlock.currentInput!.textContent = '! ';
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '! ';
+      }
       const replace = vi.fn(() => mockBlock);
       const stopCapturing = vi.fn();
       const blok = createBlokModules({

@@ -27,6 +27,10 @@ interface BlockSettingsNodes {
    * Block Settings wrapper. Undefined when before "make" method called
    */
   wrapper: HTMLElement | undefined;
+  /**
+   * Index signature to satisfy ModuleNodes constraint
+   */
+  [key: string]: unknown;
 }
 
 /**

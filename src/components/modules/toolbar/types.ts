@@ -9,6 +9,10 @@ export interface ToolbarNodes {
   actions: HTMLElement | undefined;
   plusButton: HTMLElement | undefined;
   settingsToggler: HTMLElement | undefined;
+  /**
+   * Index signature to satisfy ModuleNodes constraint
+   */
+  [key: string]: unknown;
 }
 
 /**

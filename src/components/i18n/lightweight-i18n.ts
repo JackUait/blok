@@ -48,7 +48,7 @@ export class LightweightI18n {
     return value.replace(/\{(\w+)\}/g, (match, varName: string) => {
       const replacement = vars[varName];
 
-      return replacement in vars ? String(replacement) : match;
+      return replacement !== undefined ? String(replacement) : match;
     });
   }
 

@@ -13,12 +13,10 @@ import { Dom as $, toggleEmptyMark } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
 import { Flipper } from '../flipper';
 import { SelectionUtils as Selection } from '../selection';
-import { debounce, getValidUrl, isEmpty, openTab , mobileScreenBreakpoint } from '../utils';
-
-
-// Controllers and handlers
+import { debounce, getValidUrl, isEmpty, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 
+// Controllers and handlers
 import { BlockHoverController } from './uiControllers/controllers/blockHover';
 import { KeyboardController } from './uiControllers/controllers/keyboard';
 import { SelectionController } from './uiControllers/controllers/selection';
@@ -287,15 +285,16 @@ export class UI extends Module<UINodes> {
       return true;
     }
 
+    /**
+     * Type guard to check if a module has a flipper property
+     */
+    const hasFlipper = (module: unknown): module is { flipper: Flipper } => {
+      return typeof module === 'object' && module !== null && 'flipper' in module && module.flipper instanceof Flipper;
+    };
 
-    return Object.entries(this.Blok).filter(([_moduleName, moduleClass]) => {
-      return moduleClass.flipper instanceof Flipper;
-    })
-      .some(([_moduleName, moduleClass]) => {
-        return moduleClass.flipper.hasFocus();
-      });
-
-
+    return Object.values(this.Blok).some((moduleClass) => {
+      return hasFlipper(moduleClass) && moduleClass.flipper.hasFocus();
+    });
   }
 
   /**

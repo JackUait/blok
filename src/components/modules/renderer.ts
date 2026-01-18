@@ -56,11 +56,22 @@ export class Renderer extends Module {
         const blocks = processedBlocks.map((blockData: OutputBlockData) => {
           const { tunes, id, parent, content } = blockData;
           const originalTool = blockData.type;
+
+          /**
+           * Validate that block data has the expected shape.
+           * Since OutputBlockData<Data> defaults to `any` for Data, we need to narrow the type.
+           */
+          const isValidBlockData = (data: unknown): data is Record<string, unknown> => {
+            return typeof data === 'object' && data !== null;
+          };
+
+          const blockToolData = isValidBlockData(blockData.data) ? blockData.data : {};
+
           const availabilityResult = (() => {
             if (Tools.available.has(originalTool)) {
               return {
                 tool: originalTool,
-                data: blockData.data,
+                data: blockToolData,
               };
             }
 
@@ -68,7 +79,7 @@ export class Renderer extends Module {
 
             return {
               tool: Tools.stubTool,
-              data: this.composeStubDataForTool(originalTool, blockData.data, id),
+              data: this.composeStubDataForTool(originalTool, blockToolData, id),
             };
           })();
 

@@ -139,6 +139,10 @@ This applies regardless of:
 | "I'll just do it myself" | Did you try `--fix` first? If issues remain, use subagents. |
 | "ESLint --fix handles parallelism" | Yes, run `--fix` first. But if issues remain, YOU still read all files. Context bloat. |
 | "It's just mechanical fixes" | You still read file contents. Subagents keep YOUR context clean. |
+| **"@ts-ignore is fine here"** | **You're hiding errors. Fix the type properly. Suppressions accumulate into invisible debt.** |
+| **"It's a false positive"** | **Maybe. But if you're wrong, you shipped a bug. If right, fix the config, not the code.** |
+| **"eslint-disable is temporary"** | **Temporary is permanent. No one comes back to fix it properly.** |
+| **"Type assertion is safe"** | **Assertions bypass type safety. They're indistinguishable from "I don't know what type this is."** |
 
 ## Common Mistakes
 
@@ -149,6 +153,9 @@ This applies regardless of:
 | Not verifying fixes | Run linter again after fix |
 | Fixing single-file issues | Only use subagents for 2+ files |
 | Using for non-lint changes | This skill is for lint/format/type ONLY |
+| **Monkey-patching fixes** | **Understand the issue, fix root cause, never suppress** |
+| Adding @ts-ignore/eslint-disable | Fix the actual type or logic issue |
+| "It's just a quick fix" | Quick fixes accumulate into tech debt |
 
 ## Red Flags - Wrong Approach
 
@@ -160,18 +167,45 @@ This applies regardless of:
 - "Just quick fixes..." → Remaining issues = subagents. Period.
 - "ESLint --fix is parallel..." → Yes, use it first. But if issues remain, context bloat.
 - "Mostly auto-fixable..." → Did `--fix` clear everything? If not, subagents.
+- **"I'll just add @ts-ignore..."** → You're monkey-patching. Fix the type properly.
+- **"Easiest to just eslint-disable..."** → Suppression is not a fix. Fix the code.
+- **"It's a false positive anyway..."** → Are you sure? If genuinely wrong, fix the CONFIG, not suppress per-line.
+- **"Type assertion is fine here..."** → Assertions hide bugs. Use proper types.
 
 ## Subagent Template
 
 ```text
 Fix all lint, type, and formatting issues in {file_path}.
 
+CRITICAL: Fix issues PROPERLY, not with monkey-patches.
+- Understand WHY the linter is complaining
+- Fix the underlying issue, not just the symptom
+- Never add @ts-ignore, eslint-disable, or any suppression unless the linter is genuinely wrong
+- When fixing type errors, use proper type guards and narrowing - never cast to any
+
 Steps:
-1. Run the linter to identify all issues
-2. Fix each issue
-3. Re-run linter to verify all issues are resolved
-4. Report any issues that couldn't be auto-fixed
+1. Read the file and understand its purpose
+2. Run the linter to identify all issues
+3. For EACH issue:
+   a. Understand what the rule is checking for and WHY it failed
+   b. Determine the PROPER fix (not just the quickest one)
+   c. Apply the fix
+4. Re-run linter to verify ALL issues are resolved
+5. Report any issues that genuinely require config changes (not suppression)
 ```
+
+## Proper Fixes vs. Monkey Patches
+
+| Lint Issue | Monkey Patch (❌) | Proper Fix (✅) |
+|------------|------------------|-----------------|
+| `any` type error | Add `@ts-ignore` or `as any` | Add proper type annotation or type guard |
+| Unused variable | Comment it out "just in case" | Remove it or prefix with `_` if intentional |
+| Missing dependency | `// eslint-disable-next-line` | Import the missing dependency |
+| Complex function | Add `// eslint-disable-line complexity` | Extract helper function or refactor |
+| Undefined type | Cast to `unknown` then `any` | Define proper interface or type |
+| Rule violation | Add suppressive comment | Fix code to comply with rule |
+
+**Principle:** If you find yourself reaching for a suppression comment, stop. You're probably fixing the wrong problem.
 
 ## Real-World Impact
 

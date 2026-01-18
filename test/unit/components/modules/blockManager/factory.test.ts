@@ -278,7 +278,7 @@ describe('BlockFactory', () => {
 
     it('creates a Block with provided data', () => {
       const data: BlockToolData = { text: 'Hello World' };
-      const tunes: BlockTuneData = { alignment: 'center' };
+      const tunes: { [name: string]: BlockTuneData } = { alignment: 'center' };
 
       const block = factory.composeBlock({
         tool: 'paragraph',
@@ -351,7 +351,7 @@ describe('BlockFactory', () => {
 
     it('passes correct parameters to Block constructor', () => {
       const data: BlockToolData = { text: 'Test content' };
-      const tunes: BlockTuneData = { alignment: 'left' };
+      const tunes: { [name: string]: BlockTuneData } = { alignment: 'left' };
 
       const block = factory.composeBlock({
         tool: 'paragraph',

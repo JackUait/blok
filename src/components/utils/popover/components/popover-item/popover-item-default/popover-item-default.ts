@@ -97,7 +97,7 @@ export class PopoverItemDefault extends PopoverItem {
   /**
    * Render params passed during construction, stored for re-rendering
    */
-  private readonly renderParams: PopoverItemRenderParamsMap[PopoverItemType.Default] | undefined;
+  private readonly renderParams: PopoverItemRenderParamsMap[PopoverItemType.Default];
 
   /**
    * Constructs popover item instance

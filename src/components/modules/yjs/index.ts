@@ -1,14 +1,12 @@
 import type * as Y from 'yjs';
 
-import type { OutputBlockData } from '../../../../types/data-formats/output-data';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
 
-
 import { BlockObserver } from './block-observer';
 import { DocumentStore } from './document-store';
-import { YBlockSerializer, isBoundaryCharacter } from './serializer';
+import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
 import type { BlockChangeCallback, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
 
@@ -88,7 +86,7 @@ export class YjsManager extends Module {
    * Clears all history when loading new data.
    * @param blocks - Array of block data to load
    */
-  public fromJSON(blocks: OutputBlockData[]): void {
+  public fromJSON(blocks: YjsOutputBlockData[]): void {
     // Clear all history when loading new data
     this.undoHistory.clear();
 
@@ -99,7 +97,7 @@ export class YjsManager extends Module {
    * Serialize blocks to JSON format.
    * @returns Array of block data
    */
-  public toJSON(): OutputBlockData[] {
+  public toJSON(): YjsOutputBlockData[] {
     return this.documentStore.toJSON();
   }
 
@@ -109,7 +107,7 @@ export class YjsManager extends Module {
    * @param index - Optional index to insert at
    * @returns The created Y.Map
    */
-  public addBlock(blockData: OutputBlockData, index?: number): Y.Map<unknown> {
+  public addBlock(blockData: YjsOutputBlockData, index?: number): Y.Map<unknown> {
     this.undoHistory.markCaretBeforeChange();
 
     return this.documentStore.addBlock(blockData, index);
@@ -318,3 +316,4 @@ export class YjsManager extends Module {
 
 // Re-export types for consumers
 export type { BlockChangeEvent, CaretSnapshot, TransactionOrigin } from './types';
+export type { YjsOutputBlockData };

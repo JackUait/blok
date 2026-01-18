@@ -35,23 +35,24 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   const time = options.time || DEFAULT_TIME;
 
   const notify: HTMLElement = (() => {
-    switch (options.type) {
-      case 'confirm':
-        return confirm(options as ConfirmNotifierOptions);
+    const type = options.type;
 
-      case 'prompt':
-        return prompt(options as PromptNotifierOptions);
-
-      default: {
-        const alertElement = alert(options);
-
-        window.setTimeout(() => {
-          alertElement.remove();
-        }, time);
-
-        return alertElement;
-      }
+    if (type === 'confirm') {
+      return confirm(options as ConfirmNotifierOptions);
     }
+
+    if (type === 'prompt') {
+      return prompt(options as PromptNotifierOptions);
+    }
+
+    // type is 'alert' or undefined
+    const alertElement = alert(options);
+
+    window.setTimeout(() => {
+      alertElement.remove();
+    }, time);
+
+    return alertElement;
   })();
 
   if (wrapper && notify) {

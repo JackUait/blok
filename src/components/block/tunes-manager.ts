@@ -159,7 +159,6 @@ export class TunesManager {
       .forEach(([name, tune]) => {
         if (isFunction(tune.save)) {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             tunesData[name] = tune.save();
           } catch (e) {
             log(`Tune ${tune.constructor.name} save method throws an Error %o`, 'warn', e);

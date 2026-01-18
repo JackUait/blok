@@ -62,6 +62,13 @@ vi.mock('../../src/components/core', () => {
         },
       } as unknown as BlokModules['API']['methods'],
     } as unknown as BlokModules['API'],
+    EventsAPI: {
+      methods: {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      },
+    } as unknown as BlokModules['EventsAPI'],
     Toolbar: {
       blockSettings: undefined,
       inlineToolbar: undefined,
@@ -171,6 +178,13 @@ describe('Blok', () => {
         },
       } as unknown as BlokModules['API']['methods'],
     } as unknown as BlokModules['API'];
+    mocks.mockModuleInstances.EventsAPI = {
+      methods: {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      },
+    } as unknown as BlokModules['EventsAPI'];
     mocks.mockModuleInstances.Toolbar = {
       blockSettings: undefined,
       inlineToolbar: undefined,

@@ -43,8 +43,8 @@ export class SaverAPI extends Module {
       throw lastError;
     }
 
-    const errorMessage = lastError !== undefined
-      ? String(lastError)
+    const errorMessage = lastError !== undefined && typeof lastError === 'string'
+      ? lastError
       : 'Blok\'s content can not be saved because collecting data failed';
 
     throw new Error(errorMessage);

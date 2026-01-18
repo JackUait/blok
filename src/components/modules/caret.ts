@@ -197,7 +197,10 @@ export class Caret extends Module {
 
     BlockManager.setCurrentBlockByChildNode(block.holder);
 
-    BlockManager.currentBlock!.currentInput = element;
+    const updatedBlock = BlockManager.currentBlock;
+    if (updatedBlock) {
+      updatedBlock.currentInput = element;
+    }
   }
 
   /**
@@ -288,7 +291,10 @@ export class Caret extends Module {
     }
 
     BlockManager.setCurrentBlockByChildNode(block.holder);
-    BlockManager.currentBlock!.currentInput = element;
+    const updatedBlock = BlockManager.currentBlock;
+    if (updatedBlock) {
+      updatedBlock.currentInput = element;
+    }
   }
 
   /**

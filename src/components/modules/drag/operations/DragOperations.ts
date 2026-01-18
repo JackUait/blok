@@ -132,10 +132,11 @@ export class DragOperations {
     );
 
     // Select all duplicated blocks
-    if (this.blockSelection) {
-      this.blockSelection.clearSelection();
+    const blockSelection = this.blockSelection;
+    if (blockSelection) {
+      blockSelection.clearSelection();
       duplicatedBlocks.forEach(block => {
-        this.blockSelection!.selectBlock(block);
+        blockSelection.selectBlock(block);
       });
     }
 
@@ -216,10 +217,11 @@ export class DragOperations {
     }
 
     // Clear selection first, then re-select all moved blocks
-    if (this.blockSelection) {
-      this.blockSelection.clearSelection();
+    const blockSelection = this.blockSelection;
+    if (blockSelection) {
+      blockSelection.clearSelection();
       sortedBlocks.forEach(block => {
-        this.blockSelection!.selectBlock(block);
+        blockSelection.selectBlock(block);
       });
     }
 

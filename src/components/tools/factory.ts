@@ -127,13 +127,15 @@ export class ToolsFactory {
    * @param constructable - Tools constructable
    */
   private getConstructor(constructable: ToolConstructable): ToolConstructor {
-    switch (true) {
-      case Boolean(Reflect.get(constructable, InternalInlineToolSettings.IsInline)):
-        return InlineToolAdapter;
-      case Boolean(Reflect.get(constructable, InternalTuneSettings.IsTune)):
-        return BlockTuneAdapter;
-      default:
-        return BlockToolAdapter;
+    const isInline = Boolean(Reflect.get(constructable, InternalInlineToolSettings.IsInline));
+    const isTune = Boolean(Reflect.get(constructable, InternalTuneSettings.IsTune));
+
+    if (isInline) {
+      return InlineToolAdapter;
     }
+    if (isTune) {
+      return BlockTuneAdapter;
+    }
+    return BlockToolAdapter;
   }
 }

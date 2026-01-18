@@ -21,7 +21,6 @@ export class BlockTuneAdapter extends BaseToolAdapter<ToolType.Tune, IBlockTune>
    * @param block - Block API object
    */
   public create(data: BlockTuneData, block: BlockAPI): IBlockTune {
-     
     const BlockTuneClass = this.constructable as BlockTuneConstructable;
 
     return new BlockTuneClass({

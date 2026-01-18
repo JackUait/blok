@@ -298,5 +298,5 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
    * @param args
    */
 
-  public abstract create(...args: any[]): ToolClass;
+  public abstract create(...args: unknown[]): ToolClass;
 }

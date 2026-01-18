@@ -200,6 +200,8 @@ if stuck_errors and all errors are in stuck_errors:
 - "This error is probably from another file" → NO: Check the file path in the error output
 - "The grep pattern should match" → NO: Grep patterns are fragile, use full output
 - "I'll catch remaining errors in the next run" → NO: That's exactly what we're trying to avoid
+- "no-unsafe-assignment isn't a real type error" → NO: It IS a real type error, fix it
+- "This is just test code, no-unsafe-* doesn't matter" → NO: Fix unsafe violations even in tests
 
 **All of these mean: Re-read the full lint output and count EVERY error.**
 
@@ -348,7 +350,7 @@ This catches:
 - Cascade errors from type changes
 - Issues subagents missed
 - Cross-file breakages
-- ESLint TypeScript violations (no-non-null-assertion, no-explicit-any, etc.)
+- ESLint TypeScript violations (no-non-null-assertion, no-explicit-any, no-unsafe-assignment, no-unsafe-member-access, no-unsafe-call, etc.)
 - Subagents that returned incomplete fixes
 
 **Step 3: Update state and check termination**
@@ -471,6 +473,7 @@ Scores (for context):
    - Compiler errors MUST be fixed
    - `any` types MUST be replaced
    - `@ts-ignore` SHOULD be removed if the underlying error is fixable or replace with `@ts-expect-error` with description if the error it's not fixable
+   - `@typescript-eslint/no-unsafe-*` violations MUST be fixed (no-unsafe-assignment, no-unsafe-member-access, no-unsafe-call, no-unsafe-return, no-unsafe-argument)
 
 5. After fixing, run FULL verification again:
    yarn lint:types 2>&1
@@ -523,6 +526,11 @@ Do NOT return with "partial fixes" - either fix the error or explain why it's im
 | TS2531 | Object possibly null | `obj.prop` when `obj` might be null |
 | TS7006 | Parameter implicitly has 'any' type | `function foo(x) {}` |
 | **Any TS error** | **If `lint:types` reports it, fix it** | **No exceptions** |
+| `@typescript-eslint/no-unsafe-assignment` | Unsafe assignment of an `any` value | `const x: string = anyValue` |
+| `@typescript-eslint/no-unsafe-member-access` | Unsafe access of property on `any` | `anyValue.property` |
+| `@typescript-eslint/no-unsafe-call` | Unsafe call of function typed as `any` | `anyValue()` |
+| `@typescript-eslint/no-unsafe-return` | Unsafe return of `any` from typed function | `return anyValue` |
+| `@typescript-eslint/no-unsafe-argument` | Unsafe pass of `any` as typed argument | `foo(anyValue)` |
 
 **Note:** If `lint:types` reports a compiler error, fix it. These are genuine type issues.
 
@@ -548,9 +556,15 @@ For subagents: If cascade errors are in files outside your batch, report them. T
 **Fix or justify:**
 - **`any`** → Use specific type, generic `<T>`, or `unknown` with narrowing
 - **@ts-ignore / @ts-expect-error** → Fix the actual error or document why it's necessary
-
 - **Non-null assertion (x!)** → Use null checks, optional chaining, or early returns
-- **@ts-ignore / @ts-expect-error** → Fix the actual type error
+- **Unsafe assignment/call/member-access** → Fix the underlying type issue that makes ESLint flag this
+
+**Unsafe ESLint violations that MUST be fixed:**
+- `@typescript-eslint/no-unsafe-assignment` → Type the source correctly or use proper narrowing
+- `@typescript-eslint/no-unsafe-member-access` → Type the object or use type guards
+- `@typescript-eslint/no-unsafe-call` → Type the function or validate before calling
+- `@typescript-eslint/no-unsafe-return` → Ensure return type matches or use proper typing
+- `@typescript-eslint/no-unsafe-argument` → Type the argument or fix the parameter type
 
 **Generally acceptable:**
 - **`as Type`** → OK for narrowing after validation, or working with untyped external APIs
@@ -712,9 +726,11 @@ Prefer strong types, but be pragmatic:
 |-----------|----------|
 | New code you're writing | Use proper types |
 | Bug fix in existing function | Fix the bug, don't introduce new `any` |
-| Working with untyped external APIs | `as` assertions are acceptable |
-| Test files | `any` is often fine |
-| Legacy integration layers | Document and move on |
+| Working with untyped external APIs | Use `as` assertions only at the API boundary, then type properly |
+| Test files | `any` is acceptable only for test setup/fixtures, NOT for code under test |
+| Legacy integration layers | Document and add strict types at the boundary |
+
+**CRITICAL:** ESLint `no-unsafe-*` violations (no-unsafe-assignment, no-unsafe-member-access, no-unsafe-call, etc.) MUST be fixed even in test code. These indicate actual type unsafety that can hide bugs.
 
 ### Cascade Errors
 

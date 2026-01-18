@@ -234,7 +234,7 @@ export class DragStateMachine {
       case 'dropped':
       case 'cancelled':
         return this.state.sourceBlocks;
-      default:
+      case 'idle':
         return null;
     }
   }
@@ -249,7 +249,7 @@ export class DragStateMachine {
       case 'dropped':
       case 'cancelled':
         return this.state.sourceBlock;
-      default:
+      case 'idle':
         return null;
     }
   }

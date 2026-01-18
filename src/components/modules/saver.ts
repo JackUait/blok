@@ -4,7 +4,7 @@
  * @author Blok Team
  * @version 2.0.0
  */
-import type { BlockToolData, OutputData, SanitizerConfig } from '../../../types';
+import type { OutputData, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { SavedData, ValidatedData } from '../../../types/data-formats';
 import { Module } from '../__module';

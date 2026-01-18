@@ -3,6 +3,12 @@ import * as Y from 'yjs';
 import type { OutputBlockData } from '../../../../types/data-formats/output-data';
 
 /**
+ * Type alias for OutputBlockData with concrete types for the Yjs serializer.
+ * Uses Record<string, unknown> for data to avoid the default `any` type.
+ */
+export type YjsOutputBlockData = OutputBlockData<string, Record<string, unknown>>;
+
+/**
  * Characters that mark potential undo checkpoint positions.
  */
 export const BOUNDARY_CHARACTERS = new Set([
@@ -38,14 +44,14 @@ export const isBoundaryCharacter = (char: string): boolean => {
 };
 
 /**
- * Serializer for converting between Yjs and OutputBlockData formats.
+ * Serializer for converting between Yjs and YjsOutputBlockData formats.
  * This is a stateless utility class - all methods are pure functions.
  */
 export class YBlockSerializer {
   /**
-   * Convert OutputBlockData to Y.Map
+   * Convert YjsOutputBlockData to Y.Map
    */
-  public outputDataToYBlock(blockData: OutputBlockData): Y.Map<unknown> {
+  public outputDataToYBlock(blockData: YjsOutputBlockData): Y.Map<unknown> {
     const yblock = new Y.Map<unknown>();
 
     yblock.set('id', blockData.id);
@@ -72,10 +78,10 @@ export class YBlockSerializer {
   }
 
   /**
-   * Convert a Y.Map block to OutputBlockData.
+   * Convert a Y.Map block to YjsOutputBlockData.
    * Includes type validation to ensure data integrity.
    */
-  public yBlockToOutputData(yblock: Y.Map<unknown>): OutputBlockData {
+  public yBlockToOutputData(yblock: Y.Map<unknown>): YjsOutputBlockData {
     const id = yblock.get('id');
     const type = yblock.get('type');
     const data = yblock.get('data');
@@ -92,7 +98,7 @@ export class YBlockSerializer {
       throw new Error('Block data must be a Y.Map');
     }
 
-    const block: OutputBlockData = {
+    const block: YjsOutputBlockData = {
       id,
       type,
       data: this.yMapToObject(data),

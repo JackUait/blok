@@ -171,7 +171,7 @@ export class DragController extends Module {
 
     const contentElement = block.holder.querySelector('[data-blok-element-content]');
 
-    if (!contentElement) {
+    if (!contentElement || !(contentElement instanceof HTMLElement)) {
       return;
     }
 
@@ -422,7 +422,10 @@ export class DragController extends Module {
     const isMultiBlockDrag = sourceBlocks.length > 1;
 
     // Execute move operation
-    const result = this.operations!.moveBlocks(sourceBlocks, targetBlock, edge);
+    if (!this.operations) {
+      return;
+    }
+    const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
     // Announce successful drop to screen readers
     const movedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
@@ -446,7 +449,10 @@ export class DragController extends Module {
     targetBlock: Block,
     edge: 'top' | 'bottom'
   ): Promise<void> {
-    const result = await this.operations!.duplicateBlocks(sourceBlocks, targetBlock, edge);
+    if (!this.operations) {
+      return;
+    }
+    const result = await this.operations.duplicateBlocks(sourceBlocks, targetBlock, edge);
 
     if (result.duplicatedBlocks.length === 0) {
       return;

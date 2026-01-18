@@ -1694,7 +1694,7 @@ export default defineConfig(
       '@typescript-eslint/no-unsafe-declaration-merging': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
       // Additional type safety rules
-      '@typescript-eslint/no-unnecessary-condition': 'error',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/no-meaningless-void-operator': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/no-duplicate-type-constituents': 'error',

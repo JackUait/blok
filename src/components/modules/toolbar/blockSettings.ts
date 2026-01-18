@@ -10,7 +10,8 @@ import { SelectionUtils } from '../../selection';
 import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
-import type { PopoverItemParams , type Popover, PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
+import type { PopoverItemParams, Popover } from '../../utils/popover';
+import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
 import { translateToolTitle } from '../../utils/tools';
 
@@ -671,17 +672,27 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       }
 
       /**
+       * Type guard to check if an item is a valid list item with content and nested items
+       */
+      const isValidListItem = (item: unknown): item is { content?: string; items?: unknown[] } => {
+        return typeof item === 'object' && item !== null;
+      };
+
+      /**
        * Extract content from each item, handling nested items recursively
        */
-      const extractContent = (items: Array<{ content?: string; items?: unknown[] }>): string[] => {
+      const extractContent = (items: unknown[]): string[] => {
         const contents: string[] = [];
 
         for (const item of items) {
+          if (!isValidListItem(item)) {
+            continue;
+          }
           if (item.content !== undefined && item.content !== '') {
             contents.push(item.content);
           }
           if (Array.isArray(item.items) && item.items.length > 0) {
-            contents.push(...extractContent(item.items as Array<{ content?: string; items?: unknown[] }>));
+            contents.push(...extractContent(item.items));
           }
         }
 

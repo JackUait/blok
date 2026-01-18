@@ -1,4 +1,3 @@
-/** ./api */
 import { BlocksAPI } from './api/blocks';
 import { CaretAPI } from './api/caret';
 import { EventsAPI } from './api/events';
@@ -16,9 +15,6 @@ import { ToolbarAPI } from './api/toolbar';
 import { ToolsAPI } from './api/tools';
 import { TooltipAPI } from './api/tooltip';
 import { UiAPI } from './api/ui';
-/** ./toolbar */
-
-/** . */
 import { BlockEvents } from './blockEvents';
 import { BlockManager } from './blockManager';
 import { BlockSelection } from './blockSelection';

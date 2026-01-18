@@ -385,7 +385,7 @@ export class BlockOperations {
       id: block.id,
       tool: block.name,
       data: Object.assign({}, existingData, data ?? {}),
-      tunes: tunes ?? block.tunes,
+      tunes: tunes ?? block.preservedTunes,
       bindEventsImmediately: true,
     });
 

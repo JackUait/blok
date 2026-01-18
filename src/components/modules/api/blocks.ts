@@ -114,7 +114,7 @@ export class BlocksAPI extends Module {
     const block = this.Blok.BlockManager.getBlock(element);
 
     if (block === undefined) {
-      logLabeled('There is no block corresponding to element `' + element + '`', 'warn');
+      logLabeled(`There is no block corresponding to element <${element.tagName.toLowerCase()}>`, 'warn');
 
       return;
     }
@@ -352,10 +352,10 @@ export class BlocksAPI extends Module {
       return this.Blok.BlockManager.composeBlock({
         id,
         tool: type || (this.config.defaultBlock as string),
-        data,
+        data: data as BlockToolData,
       });
     });
-
+    
     this.Blok.BlockManager.insertMany(blocksToInsert, index);
 
     return blocksToInsert.map((block) => new BlockAPI(block));

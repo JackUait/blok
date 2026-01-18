@@ -42,7 +42,7 @@ export class BlockObserver {
       const origin = this.mapTransactionOrigin(transaction.origin);
 
       for (const event of events) {
-        this.handleYjsEvent(event, origin);
+        this.handleYjsEvent(event as Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>, origin);
       }
     });
   }
@@ -138,7 +138,7 @@ export class BlockObserver {
           continue;
         }
 
-        const id = yblock.get('id');
+        const id: unknown = yblock.get('id');
 
         if (typeof id === 'string') {
           adds.push(id);
@@ -190,15 +190,15 @@ export class BlockObserver {
       return undefined;
     }
 
-    const yblock = content[0];
+    const yblock: unknown = content[0];
 
     if (!(yblock instanceof Y.Map)) {
       return undefined;
     }
 
     // Access the internal _map to get the id since the Y.Map is deleted
-    const idEntry = yblock._map.get('id');
-    const idContent = idEntry?.content?.getContent()[0];
+    const idEntry: unknown = yblock._map.get('id');
+    const idContent: unknown = idEntry instanceof Y.Item && idEntry.content?.getContent()[0];
 
     return typeof idContent === 'string' ? idContent : undefined;
   }

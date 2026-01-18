@@ -133,6 +133,9 @@ export class BlockEvents extends Module {
         }
         this.keyboardNavigation.handleTab(event);
         break;
+
+      case null:
+        break; // Unknown key code, skip handling
     }
 
     /**

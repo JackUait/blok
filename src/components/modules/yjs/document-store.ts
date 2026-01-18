@@ -1,9 +1,10 @@
 import * as Y from 'yjs';
 
-import type { OutputBlockData } from '../../../../types/data-formats/output-data';
-
-import type { YBlockSerializer } from './serializer';
+import type { YBlockSerializer, YjsOutputBlockData } from './serializer';
 import type { TransactionOrigin } from './types';
+
+// Re-export YjsOutputBlockData as DocumentStoreBlockData for consistency
+type DocumentStoreBlockData = YjsOutputBlockData;
 
 /**
  * DocumentStore manages the Yjs document and provides atomic block operations.
@@ -25,7 +26,7 @@ export class DocumentStore {
   public readonly yblocks: Y.Array<Y.Map<unknown>> = this.ydoc.getArray('blocks');
 
   /**
-   * Serializer for converting between Yjs and OutputBlockData formats
+   * Serializer for converting between Yjs and DocumentStoreBlockData formats
    */
   private serializer: YBlockSerializer;
 
@@ -38,7 +39,7 @@ export class DocumentStore {
    * Clears existing blocks and replaces them with the provided data.
    * Uses 'load' origin which is not tracked by undo manager.
    */
-  public fromJSON(blocks: OutputBlockData[]): void {
+  public fromJSON(blocks: DocumentStoreBlockData[]): void {
     this.ydoc.transact(() => {
       this.yblocks.delete(0, this.yblocks.length);
 
@@ -52,7 +53,7 @@ export class DocumentStore {
   /**
    * Serialize blocks to JSON format.
    */
-  public toJSON(): OutputBlockData[] {
+  public toJSON(): DocumentStoreBlockData[] {
     return this.yblocks.toArray().map((yblock) => this.serializer.yBlockToOutputData(yblock));
   }
 
@@ -62,7 +63,7 @@ export class DocumentStore {
    * @param index - Optional index to insert at (defaults to end)
    * @returns The created Y.Map
    */
-  public addBlock(blockData: OutputBlockData, index?: number): Y.Map<unknown> {
+  public addBlock(blockData: DocumentStoreBlockData, index?: number): Y.Map<unknown> {
     const yblock = this.serializer.outputDataToYBlock(blockData);
 
     this.transact(() => {

@@ -215,47 +215,6 @@ describe('BlockObserver', () => {
     });
   });
 
-  describe('setPerformingUndoRedo', () => {
-    it('prevents event emission when flag is set', () => {
-      const callback = vi.fn();
-      observer.onBlocksChanged(callback);
-
-      // Set the flag
-      observer.setPerformingUndoRedo(true);
-
-      // Trigger an event
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
-
-      // Callback should not be called, but block should be added to document
-      expect(callback).not.toHaveBeenCalled();
-      expect(yblocks.length).toBe(1);
-      expect(yblocks.get(0)?.get('id')).toBe('b1');
-
-      // Reset flag
-      observer.setPerformingUndoRedo(false);
-
-      // Trigger another event
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b2');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
-
-      // Callback should be called now, and document should have 2 blocks
-      expect(callback).toHaveBeenCalled();
-      expect(yblocks.length).toBe(2);
-      expect(yblocks.get(1)?.get('id')).toBe('b2');
-    });
-  });
-
   describe('destroy', () => {
     it('clears callbacks and references', () => {
       const callback = vi.fn();

@@ -58,7 +58,6 @@ export class YjsManager extends Module {
     this.blockObserver = new BlockObserver();
     this.undoHistory = new UndoHistory(
       this.documentStore.yblocks,
-      this.blockObserver,
       this.Blok
     );
 

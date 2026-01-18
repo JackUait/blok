@@ -1,7 +1,6 @@
 import * as Y from 'yjs';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, SingleMoveEntry } from './types';
-import type { BlockObserver } from './block-observer';
 import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS, isBoundaryCharacter } from './serializer';
 import { getCaretOffset } from '../../../components/utils/caret';
 
@@ -24,11 +23,6 @@ export class UndoHistory {
    * Undo manager for history operations
    */
   public readonly undoManager: Y.UndoManager;
-
-  /**
-   * Block observer (for setting undo/redo flag)
-   */
-  private blockObserver: BlockObserver;
 
   /**
    * Blok modules (for caret operations)
@@ -108,11 +102,9 @@ export class UndoHistory {
 
   constructor(
     yblocks: Y.Array<Y.Map<unknown>>,
-    blockObserver: BlockObserver,
     blok: BlokModules
   ) {
     this.yblocks = yblocks;
-    this.blockObserver = blockObserver;
     this.blok = blok;
 
     this.undoManager = new Y.UndoManager(this.yblocks, {
@@ -289,12 +281,10 @@ export class UndoHistory {
    */
   private performYjsUndoRedo(operation: () => void): void {
     this.isPerformingUndoRedo = true;
-    this.blockObserver.setPerformingUndoRedo(true);
     try {
       operation();
     } finally {
       this.isPerformingUndoRedo = false;
-      this.blockObserver.setPerformingUndoRedo(false);
     }
   }
 

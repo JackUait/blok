@@ -1,24 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Y from 'yjs';
 import { UndoHistory } from '../../../../../src/components/modules/yjs/undo-history';
-import { BlockObserver } from '../../../../../src/components/modules/yjs/block-observer';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
 const createMockBlok = (): BlokModules => {
+  const blockManager = {
+    currentBlock: undefined as any,
+    getBlockById: vi.fn(),
+    firstBlock: undefined,
+  };
+
+  const caret = {
+    setToBlock: vi.fn(),
+    setToInput: vi.fn(),
+    positions: {
+      START: 'start',
+      DEFAULT: 'default',
+    },
+  };
+
   return {
-    BlockManager: {
-      currentBlock: undefined,
-      getBlockById: vi.fn(),
-      firstBlock: undefined,
-    } as unknown as BlokModules['BlockManager'],
-    Caret: {
-      setToBlock: vi.fn(),
-      setToInput: vi.fn(),
-      positions: {
-        START: 'start',
-        DEFAULT: 'default',
-      },
-    } as unknown as BlokModules['Caret'],
+    BlockManager: blockManager as unknown as BlokModules['BlockManager'],
+    Caret: caret as unknown as BlokModules['Caret'],
   } as unknown as BlokModules;
 };
 
@@ -26,16 +29,14 @@ describe('UndoHistory', () => {
   let history: UndoHistory;
   let ydoc: Y.Doc;
   let yblocks: Y.Array<Y.Map<unknown>>;
-  let blockObserver: BlockObserver;
   let blok: BlokModules;
 
   beforeEach(() => {
     ydoc = new Y.Doc();
     yblocks = ydoc.getArray('blocks');
-    blockObserver = new BlockObserver();
     blok = createMockBlok();
 
-    history = new UndoHistory(yblocks, blockObserver, blok);
+    history = new UndoHistory(yblocks, blok);
 
     // Set up move callback to actually perform moves
     history.setMoveCallback((blockId, toIndex) => {

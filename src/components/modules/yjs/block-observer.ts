@@ -26,12 +26,6 @@ export class BlockObserver {
   private yblocks: Y.Array<Y.Map<unknown>> | null = null;
 
   /**
-   * Flag to skip event emissions during explicit undo/redo operations.
-   * When true, event handlers won't emit (prevents recursive events).
-   */
-  private isPerformingUndoRedo = false;
-
-  /**
    * Undo manager reference (needed to detect undo/redo state)
    */
   private undoManager: Y.UndoManager | null = null;
@@ -67,14 +61,6 @@ export class BlockObserver {
         this.changeCallbacks.splice(index, 1);
       }
     };
-  }
-
-  /**
-   * Set the flag indicating we're performing undo/redo.
-   * Called by UndoHistory to prevent recursive events.
-   */
-  public setPerformingUndoRedo(value: boolean): void {
-    this.isPerformingUndoRedo = value;
   }
 
   /**

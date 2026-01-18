@@ -1,9 +1,20 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, rmSync, writeFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync, writeFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const LOCK_FILE = '.playwright-build.lock';
 const LOCK_TIMEOUT_MS = 300_000; // 5 minutes max wait for build (handles slower CI runners)
+
+/**
+ * Key source files that affect the build output
+ * If any of these are newer than dist/, we need to rebuild
+ */
+const SOURCE_FILES_TO_CHECK = [
+  'src',
+  'vite.config.mjs',
+  'package.json',
+  'tsconfig.json',
+];
 
 /**
  * Global setup for Playwright tests.
@@ -24,11 +35,17 @@ const globalSetup = async (): Promise<void> => {
     return;
   }
 
-  // Check if dist already exists (another process may have built it)
-  if (hasBuildArtifacts(distPath)) {
+  // Check if dist already exists and is up-to-date
+  if (hasBuildArtifacts(distPath) && areBuildArtifactsUpToDate(projectRoot, distPath)) {
     console.log('Using existing build artifacts...');
     process.env.BLOK_BUILT = 'true';
     return;
+  }
+
+  // If dist exists but is stale, remove it
+  if (existsSync(distPath)) {
+    console.log('Removing stale build artifacts...');
+    rmSync(distPath, { recursive: true, force: true });
   }
 
   // Try to acquire lock for building
@@ -70,6 +87,58 @@ const globalSetup = async (): Promise<void> => {
  */
 const hasBuildArtifacts = (distPath: string): boolean => {
   return existsSync(distPath) && existsSync(path.resolve(distPath, 'blok.js'));
+};
+
+/**
+ * Gets the most recent modification time for a file or directory recursively.
+ */
+const getMtime = (targetPath: string): number => {
+  if (!existsSync(targetPath)) {
+    return 0;
+  }
+
+  const stats = statSync(targetPath);
+
+  if (stats.isFile()) {
+    return stats.mtimeMs;
+  }
+
+  if (stats.isDirectory()) {
+    let maxMtime = stats.mtimeMs;
+    const entries = readdirSync(targetPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      // eslint-disable-next-line max-depth
+      if (entry.name === 'node_modules' || entry.name === '.git') {
+        continue;
+      }
+      const entryPath = path.resolve(targetPath, entry.name);
+      const entryMtime = getMtime(entryPath);
+      maxMtime = Math.max(maxMtime, entryMtime);
+    }
+
+    return maxMtime;
+  }
+
+  return 0;
+};
+
+/**
+ * Checks if build artifacts are up-to-date with source files.
+ */
+const areBuildArtifactsUpToDate = (projectRoot: string, distPath: string): boolean => {
+  const distMtime = getMtime(distPath);
+
+  for (const source of SOURCE_FILES_TO_CHECK) {
+    const sourcePath = path.resolve(projectRoot, source);
+    const sourceMtime = getMtime(sourcePath);
+
+    if (sourceMtime > distMtime) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 /**

@@ -255,13 +255,13 @@ export class BlockObserver {
 
   /**
    * Emit change event to all callbacks.
+   *
+   * Note: We do NOT skip events during undo/redo. The isPerformingUndoRedo flag
+   * is only used in UndoHistory to prevent the stack-item-added listener from
+   * modifying caret stacks. Change events during undo/redo must be emitted so
+   * the DOM can be updated to reflect the Yjs state.
    */
   private emitChange(event: BlockChangeEvent): void {
-    // Skip if we're in the middle of an undo/redo operation
-    if (this.isPerformingUndoRedo) {
-      return;
-    }
-
     for (const callback of this.changeCallbacks) {
       callback(event);
     }

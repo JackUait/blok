@@ -36,7 +36,7 @@ export class InlineToolsManager {
     }
 
     return Array.from(currentBlock.tool.inlineTools.values()).filter((tool) => {
-      return !(ReadOnly.isEnabled && tool.isReadOnlySupported !== true);
+      return !(ReadOnly.isEnabled && !tool.isReadOnlySupported);
     });
   }
 

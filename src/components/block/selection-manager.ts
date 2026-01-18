@@ -42,8 +42,8 @@ export class SelectionManager {
     this.handleFakeCursor(state);
 
     // Handle fake cursor add/remove
-    const fakeCursorWillBeAdded = state === true && SelectionUtils.isRangeInsideContainer(this.holder);
-    const fakeCursorWillBeRemoved = state === false && SelectionUtils.isFakeCursorInsideContainer(this.holder);
+    const fakeCursorWillBeAdded = state && SelectionUtils.isRangeInsideContainer(this.holder);
+    const fakeCursorWillBeRemoved = !state && SelectionUtils.isFakeCursorInsideContainer(this.holder);
 
     if (!fakeCursorWillBeAdded && !fakeCursorWillBeRemoved) {
       return;

@@ -77,7 +77,7 @@ export class BlockSelection extends Module {
   public get allBlocksSelected(): boolean {
     const { BlockManager } = this.Blok;
 
-    return BlockManager.blocks.every((block) => block.selected === true);
+    return BlockManager.blocks.every((block) => block.selected);
   }
 
   /**
@@ -102,7 +102,7 @@ export class BlockSelection extends Module {
     const { BlockManager } = this.Blok;
 
     if (this.anyBlockSelectedCache === null) {
-      this.anyBlockSelectedCache = BlockManager.blocks.some((block) => block.selected === true);
+      this.anyBlockSelectedCache = BlockManager.blocks.some((block) => block.selected);
     }
 
     return this.anyBlockSelectedCache;

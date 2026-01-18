@@ -631,7 +631,7 @@ test.describe('blockToolAdapter', () => {
       const constructable = options.constructable as typeof options.constructable & {
         reset?: () => void;
       };
-      const resetMock = createMock<[]>();
+      const resetMock = createMock();
 
       constructable.reset = resetMock.fn;
 

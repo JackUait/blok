@@ -21,8 +21,6 @@ import { isSameBlockData } from '../utils/blocks';
 import { EventsDispatcher } from '../utils/events';
 
 import { BlockAPI } from './api';
-
-
 import { DataPersistenceManager } from './data-persistence-manager';
 import { InputManager } from './input-manager';
 import { MutationHandler } from './mutation-handler';

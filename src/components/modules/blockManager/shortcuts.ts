@@ -105,6 +105,6 @@ export class BlockShortcuts {
     const target = event.target;
 
     return target instanceof HTMLElement &&
-      this.wrapper.contains(target) === true;
+      this.wrapper.contains(target);
   }
 }

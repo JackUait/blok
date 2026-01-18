@@ -466,7 +466,7 @@ describe('BlockSelection', () => {
       blockSelection.toggleReadOnly();
 
       expect(selectionMock.removeAllRanges).toHaveBeenCalledTimes(1);
-      expect(blocks.every((block) => block.selected === false)).toBe(true);
+      expect(blocks.every((block) => !block.selected)).toBe(true);
     });
   });
 

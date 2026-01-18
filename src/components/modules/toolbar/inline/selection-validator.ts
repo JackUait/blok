@@ -74,7 +74,7 @@ export class InlineSelectionValidator {
     const toolsAvailable = this.getTools();
     const isAtLeastOneToolAvailable = toolsAvailable.some((tool) => currentBlock.tool.inlineTools.has(tool.name));
 
-    if (isAtLeastOneToolAvailable === false) {
+    if (!isAtLeastOneToolAvailable) {
       return { allowed: false, reason: 'No inline tools available for current block' };
     }
 
@@ -136,7 +136,7 @@ export class InlineSelectionValidator {
     }
 
     return Array.from(currentBlock.tool.inlineTools.values()).filter((tool) => {
-      return !(ReadOnly.isEnabled && tool.isReadOnlySupported !== true);
+      return !(ReadOnly.isEnabled && !tool.isReadOnlySupported);
     });
   }
 

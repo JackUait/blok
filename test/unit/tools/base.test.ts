@@ -22,7 +22,7 @@ interface TestToolAdapterOptions extends AdapterOptions {
 /**
  * Test-friendly adapter that lets specs interact with the base implementation.
  */
-class TestToolAdapter extends BaseToolAdapter<ToolType, Tool> {
+class TestToolAdapter extends BaseToolAdapter {
   public type: ToolType;
 
   /**

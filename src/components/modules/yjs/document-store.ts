@@ -1,7 +1,9 @@
 import * as Y from 'yjs';
+
 import type { OutputBlockData } from '../../../../types/data-formats/output-data';
-import type { TransactionOrigin } from './types';
+
 import type { YBlockSerializer } from './serializer';
+import type { TransactionOrigin } from './types';
 
 /**
  * DocumentStore manages the Yjs document and provides atomic block operations.

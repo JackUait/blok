@@ -389,14 +389,14 @@ describe('Core', () => {
       expect(() => render()).toThrow('Renderer module is not initialized');
 
       // Restore for other tests
-      (core.moduleInstances as BlokModules).Renderer = originalRenderer;
+      (core.moduleInstances).Renderer = originalRenderer;
     });
 
     it('throws when blok data is missing', async () => {
       const core = await createReadyCore();
       const render = (core as unknown as { render: () => Promise<void> }).render.bind(core);
 
-      (core.configuration as BlokConfig).data = undefined;
+      (core.configuration).data = undefined;
 
       expect(() => render()).toThrow('Blok data is not initialized');
     });

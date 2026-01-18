@@ -5,11 +5,6 @@
  * Based on @editorjs/paragraph by CodeX
  * @license MIT
  */
-import { IconText } from '../../components/icons';
-import { twMerge } from '../../components/utils/tw';
-import { DATA_ATTR } from '../../components/constants';
-import { PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
-import { stripFakeBackgroundElements } from '../../components/utils';
 import type {
   API,
   BlockTool,
@@ -21,6 +16,11 @@ import type {
   SanitizerConfig,
   PasteConfig,
 } from '../../../types';
+import { DATA_ATTR } from '../../components/constants';
+import { IconText } from '../../components/icons';
+import { stripFakeBackgroundElements } from '../../components/utils';
+import { PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { twMerge } from '../../components/utils/tw';
 
 /**
  * Tool's input and output data format

@@ -1,6 +1,6 @@
 import { Dom } from './dom';
-import { delay } from './utils';
 import { SelectionUtils } from './selection';
+import { delay } from './utils';
 
 /**
  * Iterator above passed Elements list.

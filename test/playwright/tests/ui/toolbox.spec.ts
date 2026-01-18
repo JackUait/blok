@@ -107,7 +107,7 @@ const createBlokWithTools = async (
         return {
           ...accumulator,
           [name]: {
-            class: toolClass as BlockToolConstructable,
+            class: toolClass,
             ...config,
           },
         };

@@ -1,15 +1,15 @@
-import { SelectionUtils } from '../selection';
-import { log } from '../utils';
 import type {
   InlineTool,
   InlineToolConstructorOptions,
   SanitizerConfig
 } from '../../../types';
-import { PopoverItemType } from '../utils/popover';
 import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
-import { IconLink } from '../icons';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
+import { IconLink } from '../icons';
+import { SelectionUtils } from '../selection';
+import { log } from '../utils';
+import { PopoverItemType } from '../utils/popover';
 import { twMerge } from '../utils/tw';
 
 /**
@@ -154,7 +154,7 @@ export class LinkInlineTool implements InlineTool {
    * Input for the link
    */
   private createInput(): HTMLInputElement {
-    const input = document.createElement('input') as HTMLInputElement;
+    const input = document.createElement('input');
 
     input.placeholder = this.i18n.t('tools.link.addLink');
     input.enterKeyHint = 'done';

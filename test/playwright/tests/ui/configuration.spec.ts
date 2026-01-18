@@ -365,7 +365,7 @@ test.describe('blok configuration options', () => {
     });
 
     const paddingBottom = await page.evaluate(({ selector }) => {
-      const redactor = document.querySelector(selector) as HTMLElement | null;
+      const redactor = document.querySelector(selector);
 
       return redactor?.style.paddingBottom ?? null;
     }, { selector: REDACTOR_SELECTOR });
@@ -377,7 +377,7 @@ test.describe('blok configuration options', () => {
     await createBlok(page);
 
     const paddingBottom = await page.evaluate(({ selector }) => {
-      const redactor = document.querySelector(selector) as HTMLElement | null;
+      const redactor = document.querySelector(selector);
 
       return redactor?.style.paddingBottom ?? null;
     }, { selector: REDACTOR_SELECTOR });

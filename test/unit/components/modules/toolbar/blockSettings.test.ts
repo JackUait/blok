@@ -334,7 +334,7 @@ describe('BlockSettings', () => {
 
     (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
 
-    const addEventListenerSpy = vi.spyOn(block.pluginsContent as HTMLElement, 'addEventListener');
+    const addEventListenerSpy = vi.spyOn(block.pluginsContent, 'addEventListener');
     const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
       getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }, 'getTunesItems').mockResolvedValue([
@@ -571,8 +571,8 @@ describe('BlockSettings', () => {
 
   it('attaches and detaches flipper keydown listeners around block content', () => {
     const block = createBlock();
-    const addSpy = vi.spyOn(block.pluginsContent as HTMLElement, 'addEventListener');
-    const removeSpy = vi.spyOn(block.pluginsContent as HTMLElement, 'removeEventListener');
+    const addSpy = vi.spyOn(block.pluginsContent, 'addEventListener');
+    const removeSpy = vi.spyOn(block.pluginsContent, 'removeEventListener');
 
     (blockSettings as unknown as { attachFlipperKeydownListener: (b: Block) => void }).attachFlipperKeydownListener(block);
 

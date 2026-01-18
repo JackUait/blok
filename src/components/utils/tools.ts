@@ -1,6 +1,7 @@
 import type { BlockToolAdapter } from '../tools/block';
-import type { ToolboxConfigEntry } from '@/types';
 import { isFunction, isString } from '../utils';
+
+import type { ToolboxConfigEntry } from '@/types';
 
 /**
  * Interface for i18n instance needed by tool utilities

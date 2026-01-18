@@ -1,4 +1,5 @@
 import type { I18nDictionary } from '../../../types/configs/i18n-dictionary';
+
 import enMessages from './locales/en/messages.json';
 
 /**

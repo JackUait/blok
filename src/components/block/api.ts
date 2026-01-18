@@ -1,7 +1,8 @@
-import type { Block } from './index';
-import type { BlockToolData, ToolConfig, ToolboxConfigEntry } from '../../../types/tools';
-import type { SavedData } from '../../../types/data-formats';
 import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
+import type { SavedData } from '../../../types/data-formats';
+import type { BlockToolData, ToolConfig, ToolboxConfigEntry } from '../../../types/tools';
+
+import type { Block } from './index';
 
 /**
  * Constructs new BlockAPI object

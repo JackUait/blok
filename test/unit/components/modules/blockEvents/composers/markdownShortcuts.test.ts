@@ -97,7 +97,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
     ) {
       (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = {
         ...(defaultModule as object),
-        ...(moduleOverrides as object),
+        ...(moduleOverrides),
       } as BlokModules[typeof moduleName];
     } else if (moduleOverrides !== undefined) {
       (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] =

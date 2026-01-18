@@ -1,8 +1,10 @@
+import { DATA_ATTR } from '../../../../../constants/data-attributes';
 import { twMerge } from '../../../../tw';
 import { PopoverItem } from '../popover-item';
-import type { PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
+
 import { css, cssInline } from './popover-item-separator.const';
-import { DATA_ATTR } from '../../../../../constants/data-attributes';
+
+import type { PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
 
 /**
  * Represents popover separator node

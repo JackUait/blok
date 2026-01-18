@@ -3,8 +3,8 @@
  */
 
 import type { Block } from '../../../block';
-import type { BlockManager } from '../../blockManager';
 import { DATA_ATTR, createSelector } from '../../../constants';
+import type { BlockManager } from '../../blockManager';
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { ListItemDepth } from '../utils/ListItemDepth';
 
@@ -60,7 +60,7 @@ export class DropTargetDetector {
     clientY: number
   ): { block: Block | undefined; holder: HTMLElement | null } {
     // First try: find block holder directly under cursor
-    const directHolder = elementUnderCursor.closest(createSelector(DATA_ATTR.element)) as HTMLElement | null;
+    const directHolder = elementUnderCursor.closest(createSelector(DATA_ATTR.element));
 
     if (directHolder) {
       const block = this.blockManager.blocks.find(b => b.holder === directHolder);

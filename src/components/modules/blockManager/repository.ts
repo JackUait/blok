@@ -4,8 +4,9 @@
  * @module BlockRepository
  */
 import type { Block } from '../../block';
-import { Dom as $ } from '../../dom';
 import { DATA_ATTR, createSelector } from '../../constants';
+import { Dom as $ } from '../../dom';
+
 import type { BlocksStore } from './types';
 
 /**

@@ -1,6 +1,7 @@
 import type { BlockToolAdapter } from './block';
 import type { InlineToolAdapter } from './inline';
 import type { BlockTuneAdapter } from './tune';
+
 import type { ToolsCollection as ToolsCollectionInterface } from '@/types/tools/adapters/tools-collection';
 
 

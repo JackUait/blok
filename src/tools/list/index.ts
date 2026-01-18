@@ -4,11 +4,6 @@
  *
  * @license MIT
  */
-import { IconListBulleted, IconListNumbered, IconListChecklist } from '../../components/icons';
-import { twMerge } from '../../components/utils/tw';
-import { DATA_ATTR } from '../../components/constants';
-import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
-import { stripFakeBackgroundElements } from '../../components/utils';
 import type {
   API,
   BlockTool,
@@ -20,8 +15,13 @@ import type {
   ToolSanitizerConfig,
   PasteConfig,
 } from '../../../types';
-import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { MoveEvent } from '../../../types/tools/hook-events';
+import type { MenuConfig } from '../../../types/tools/menu-config';
+import { DATA_ATTR } from '../../components/constants';
+import { IconListBulleted, IconListNumbered, IconListChecklist } from '../../components/icons';
+import { stripFakeBackgroundElements } from '../../components/utils';
+import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { twMerge } from '../../components/utils/tw';
 
 /**
  * List item styles

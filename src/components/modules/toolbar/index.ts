@@ -1,26 +1,26 @@
-import { Module } from '../../__module';
-import { Dom as $ } from '../../dom';
-import { getUserOS, isMobileScreen, log } from '../../utils';
-import { hide } from '../../utils/tooltip';
-import { DATA_ATTR } from '../../constants';
 import type { ModuleConfig } from '../../../types-internal/module-config';
+import { Module } from '../../__module';
 import { Block } from '../../block';
-import { Toolbox, ToolboxEvent } from '../../ui/toolbox';
+import { DATA_ATTR } from '../../constants';
+import { Dom as $ } from '../../dom';
+import type { BlockChangedPayload } from '../../events/BlockChanged';
+import { BlockChanged } from '../../events/BlockChanged';
 import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
-import type { BlockChangedPayload } from '../../events/BlockChanged';
-import { BlockChanged } from '../../events/BlockChanged';
+import { Toolbox, ToolboxEvent } from '../../ui/toolbox';
+import { getUserOS, isMobileScreen, log } from '../../utils';
+import { hide } from '../../utils/tooltip';
 
 /**
  * Refactored Toolbar module components
  */
-import { ToolbarPositioner } from './positioning';
 import { ClickDragHandler } from './click-handler';
+import { PlusButtonHandler } from './plus-button';
+import { ToolbarPositioner } from './positioning';
+import { SettingsTogglerHandler } from './settings-toggler';
 import { getToolbarStyles } from './styles';
 import type { ToolbarNodes } from './types';
-import { PlusButtonHandler } from './plus-button';
-import { SettingsTogglerHandler } from './settings-toggler';
 
 /**
  *

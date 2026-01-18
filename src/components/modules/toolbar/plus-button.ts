@@ -1,13 +1,14 @@
-import type { Block } from '../../block';
 import type { BlokModules } from '../../../types-internal/blok-modules';
-import { createTooltipContent } from './tooltip';
+import type { Block } from '../../block';
 import { Dom as $ } from '../../dom';
-import { onHover } from '../../utils/tooltip';
 import { IconPlus } from '../../icons';
-import type { ToolbarNodes } from './types';
-import { getUserOS } from '../../utils';
 import { SelectionUtils } from '../../selection';
+import { getUserOS } from '../../utils';
+import { onHover } from '../../utils/tooltip';
 import { twJoin } from '../../utils/tw';
+
+import { createTooltipContent } from './tooltip';
+import type { ToolbarNodes } from './types';
 
 /**
  * PlusButtonHandler manages the plus button creation and behavior.

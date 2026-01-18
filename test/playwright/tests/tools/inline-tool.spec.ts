@@ -50,14 +50,14 @@ const createInlineToolOptions = (): any => {
 test.describe('inlineToolAdapter', () => {
   test('.type returns ToolType.Inline', () => {
     const options = createInlineToolOptions();
-    const tool = new InlineToolAdapter(options as any);
+    const tool = new InlineToolAdapter(options);
 
     expect(tool.type).toBe(ToolType.Inline);
   });
 
   test('.name returns correct value', () => {
     const options = createInlineToolOptions();
-    const tool = new InlineToolAdapter(options as any);
+    const tool = new InlineToolAdapter(options);
 
     expect(tool.name).toBe(options.name);
   });
@@ -65,11 +65,11 @@ test.describe('inlineToolAdapter', () => {
   test('.isInternal returns correct value', () => {
     const options = createInlineToolOptions();
 
-    const tool1 = new InlineToolAdapter(options as any);
+    const tool1 = new InlineToolAdapter(options);
     const tool2 = new InlineToolAdapter({
       ...options,
       isInternal: true,
-    } as any);
+    });
 
     expect(tool1.isInternal).toBe(false);
     expect(tool2.isInternal).toBe(true);
@@ -77,35 +77,35 @@ test.describe('inlineToolAdapter', () => {
 
   test('.settings returns correct value', () => {
     const options = createInlineToolOptions();
-    const tool = new InlineToolAdapter(options as any);
+    const tool = new InlineToolAdapter(options);
 
     expect(tool.settings).toStrictEqual(options.config.config);
   });
 
   test('.sanitizeConfig returns correct value', () => {
     const options = createInlineToolOptions();
-    const tool = new InlineToolAdapter(options as any);
+    const tool = new InlineToolAdapter(options);
 
     expect(tool.sanitizeConfig).toStrictEqual(options.constructable.sanitize);
   });
 
   test('.isBlock() returns false', () => {
     const options = createInlineToolOptions();
-    const tool = new InlineToolAdapter(options as any);
+    const tool = new InlineToolAdapter(options);
 
     expect(tool.isBlock()).toBe(false);
   });
 
   test('.isInline() returns true', () => {
     const options = createInlineToolOptions();
-    const tool = new InlineToolAdapter(options as any);
+    const tool = new InlineToolAdapter(options);
 
     expect(tool.isInline()).toBe(true);
   });
 
   test('.isTune() returns false', () => {
     const options = createInlineToolOptions();
-    const tool = new InlineToolAdapter(options as any);
+    const tool = new InlineToolAdapter(options);
 
     expect(tool.isTune()).toBe(false);
   });
@@ -119,7 +119,7 @@ test.describe('inlineToolAdapter', () => {
         calls.push(data);
       };
 
-      const tool = new InlineToolAdapter(options as any);
+      const tool = new InlineToolAdapter(options);
 
       await tool.prepare();
 
@@ -136,7 +136,7 @@ test.describe('inlineToolAdapter', () => {
       const tool = new InlineToolAdapter({
         ...options,
         constructable: {},
-      } as any);
+      });
 
       const result = await tool.prepare();
 
@@ -153,7 +153,7 @@ test.describe('inlineToolAdapter', () => {
         callCount += 1;
       };
 
-      const tool = new InlineToolAdapter(options as any);
+      const tool = new InlineToolAdapter(options);
 
       await tool.reset();
 
@@ -165,7 +165,7 @@ test.describe('inlineToolAdapter', () => {
       const tool = new InlineToolAdapter({
         ...options,
         constructable: {},
-      } as any);
+      });
 
       const result = await tool.reset();
 
@@ -179,7 +179,7 @@ test.describe('inlineToolAdapter', () => {
       const tool = new InlineToolAdapter({
         ...options,
         constructable: {} as typeof options.constructable,
-      } as any);
+      });
       const requiredMethods = [ 'render' ];
 
       expect(tool.getMissingMethods(requiredMethods)).toStrictEqual(requiredMethods);
@@ -198,7 +198,7 @@ test.describe('inlineToolAdapter', () => {
       const tool = new InlineToolAdapter({
         ...options,
         constructable: ConstructableWithRender,
-      } as any);
+      });
       const requiredMethods = ['render', 'fakeMethod'];
 
       expect(tool.getMissingMethods(requiredMethods)).toStrictEqual([ 'fakeMethod' ]);
@@ -218,7 +218,7 @@ test.describe('inlineToolAdapter', () => {
       const tool = new InlineToolAdapter({
         ...options,
         constructable: ConstructableWithAllMethods,
-      } as any);
+      });
       const requiredMethods = [ 'render' ];
 
       expect(tool.getMissingMethods(requiredMethods)).toStrictEqual([]);
@@ -228,7 +228,7 @@ test.describe('inlineToolAdapter', () => {
   test.describe('.shortcut', () => {
     test('returns user provided shortcut', () => {
       const options = createInlineToolOptions();
-      const tool = new InlineToolAdapter(options as any);
+      const tool = new InlineToolAdapter(options);
 
       expect(tool.shortcut).toBe(options.config.shortcut);
     });
@@ -241,7 +241,7 @@ test.describe('inlineToolAdapter', () => {
           ...options.config,
           shortcut: undefined,
         },
-      } as any);
+      });
 
       expect(tool.shortcut).toBe(options.constructable.shortcut);
     });
@@ -250,14 +250,14 @@ test.describe('inlineToolAdapter', () => {
   test.describe('.create()', () => {
     test('returns Tool instance', () => {
       const options = createInlineToolOptions();
-      const tool = new InlineToolAdapter(options as any);
+      const tool = new InlineToolAdapter(options);
 
       expect(tool.create()).toBeInstanceOf(options.constructable);
     });
 
     test('returns Tool instance with passed API object', () => {
       const options = createInlineToolOptions();
-      const tool = new InlineToolAdapter(options as any);
+      const tool = new InlineToolAdapter(options);
 
       const instance = tool.create() as any;
 
@@ -266,7 +266,7 @@ test.describe('inlineToolAdapter', () => {
 
     test('returns Tool instance with passed config', () => {
       const options = createInlineToolOptions();
-      const tool = new InlineToolAdapter(options as any);
+      const tool = new InlineToolAdapter(options);
 
       const instance = tool.create() as any;
 
@@ -277,7 +277,7 @@ test.describe('inlineToolAdapter', () => {
   test.describe('.isReadOnlySupported', () => {
     test('returns Tool provided value', () => {
       const options = createInlineToolOptions();
-      const tool = new InlineToolAdapter(options as any);
+      const tool = new InlineToolAdapter(options);
 
       expect(tool.isReadOnlySupported).toBe(options.constructable.isReadOnlySupported);
     });
@@ -287,7 +287,7 @@ test.describe('inlineToolAdapter', () => {
       const tool = new InlineToolAdapter({
         ...options,
         constructable: {},
-      } as any);
+      });
 
       expect(tool.isReadOnlySupported).toBe(false);
     });

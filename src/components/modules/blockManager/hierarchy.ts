@@ -4,6 +4,7 @@
  * @module BlockHierarchy
  */
 import type { Block } from '../../block';
+
 import type { BlockRepository } from './repository';
 
 /**

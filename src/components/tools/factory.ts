@@ -1,11 +1,12 @@
+import type { API as ApiMethods, I18n } from '../../../types';
+import type { BlokConfig } from '../../../types/configs';
 import type { ToolConstructable, ToolSettings } from '../../../types/tools';
+import type { API as ApiModule } from '../modules/api';
+
 import { InternalInlineToolSettings, InternalTuneSettings } from './base';
+import { BlockToolAdapter } from './block';
 import { InlineToolAdapter } from './inline';
 import { BlockTuneAdapter } from './tune';
-import { BlockToolAdapter } from './block';
-import type { API as ApiModule } from '../modules/api';
-import type { BlokConfig } from '../../../types/configs';
-import type { API as ApiMethods, I18n } from '../../../types';
 
 type ToolConstructor = typeof InlineToolAdapter | typeof BlockToolAdapter | typeof BlockTuneAdapter;
 

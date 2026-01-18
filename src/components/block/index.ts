@@ -7,28 +7,29 @@ import type {
   ToolboxConfigEntry,
   PopoverItemParams
 } from '../../../types';
-
+import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { SavedData } from '../../../types/data-formats';
 import { Dom as $, toggleEmptyMark } from '../dom';
-import { generateBlockId, isFunction, log } from '../utils';
-import type { API as ApiModules } from '../modules/api';
-import { BlockAPI } from './api';
-import type { BlockToolAdapter } from '../tools/block';
-
-import type { BlockTuneAdapter } from '../tools/tune';
-import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import type { ToolsCollection } from '../tools/collection';
-import { EventsDispatcher } from '../utils/events';
 import type { BlokEventMap } from '../events';
-import { isSameBlockData } from '../utils/blocks';
+import type { API as ApiModules } from '../modules/api';
 import type { DragController } from '../modules/drag/DragController';
+import type { BlockToolAdapter } from '../tools/block';
+import type { ToolsCollection } from '../tools/collection';
+import type { BlockTuneAdapter } from '../tools/tune';
+import { generateBlockId, isFunction, log } from '../utils';
+import { isSameBlockData } from '../utils/blocks';
+import { EventsDispatcher } from '../utils/events';
+
+import { BlockAPI } from './api';
+
+
+import { DataPersistenceManager } from './data-persistence-manager';
 import { InputManager } from './input-manager';
 import { MutationHandler } from './mutation-handler';
-import { TunesManager } from './tunes-manager';
-import { ToolRenderer } from './tool-renderer';
-import { StyleManager } from './style-manager';
 import { SelectionManager } from './selection-manager';
-import { DataPersistenceManager } from './data-persistence-manager';
+import { StyleManager } from './style-manager';
+import { ToolRenderer } from './tool-renderer';
+import { TunesManager } from './tunes-manager';
 
 /**
  * Interface describes Block class constructor argument

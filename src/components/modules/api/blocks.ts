@@ -1,11 +1,13 @@
-import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
 import type { BlockToolData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
-import { logLabeled } from './../../utils';
-import { BlockAPI } from '../../block/api';
+import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
+import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import { Module } from '../../__module';
 import { Block } from '../../block';
+import { BlockAPI } from '../../block/api';
 import { capitalize } from '../../utils';
-import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
+
+import { logLabeled } from './../../utils';
+
 
 /**
  * @class BlocksAPI
@@ -158,7 +160,7 @@ export class BlocksAPI extends Module {
     try {
       await this.Blok.BlockManager.removeBlock(block);
     } catch (error: unknown) {
-      logLabeled(error as unknown as string, 'warn');
+      logLabeled(error as string, 'warn');
 
       return;
     }
@@ -240,7 +242,7 @@ export class BlocksAPI extends Module {
     replace?: boolean,
     id?: string
   ): BlockAPIInterface => {
-    const tool = type ?? (this.config.defaultBlock as string | undefined);
+    const tool = type ?? (this.config.defaultBlock);
 
     const insertedBlock = this.Blok.BlockManager.insert({
       id,

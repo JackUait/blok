@@ -1,7 +1,8 @@
-import { LIST_TOOL_NAME } from '../constants';
-import { BlockEventComposer } from './__base';
-import { SelectionUtils } from '../../../selection';
 import type { Block } from '../../../block';
+import { SelectionUtils } from '../../../selection';
+import { LIST_TOOL_NAME } from '../constants';
+
+import { BlockEventComposer } from './__base';
 
 /**
  * BlockSelectionKeys Composer handles keyboard interactions when blocks are selected.

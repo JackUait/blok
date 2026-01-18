@@ -1,7 +1,8 @@
-import { Controller } from './_base';
+import { selectionChangeDebounceTimeout } from '../../../constants';
 import { SelectionUtils as Selection } from '../../../selection';
 import { debounce } from '../../../utils';
-import { selectionChangeDebounceTimeout } from '../../../constants';
+
+import { Controller } from './_base';
 
 /**
  * SelectionController manages selection changes and coordinates InlineToolbar visibility.

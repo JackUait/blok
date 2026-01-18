@@ -1,13 +1,15 @@
-import { sanitizeBlocks } from '../../../utils/sanitizer';
+import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../../../types/data-formats';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
-import type { HandlerContext, PatternMatch } from '../types';
-import type { ToolRegistry } from '../tool-registry';
+import { sanitizeBlocks } from '../../../utils/sanitizer';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
+import type { ToolRegistry } from '../tool-registry';
+import type { HandlerContext, PatternMatch } from '../types';
+
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 import { PatternHandler } from './pattern-handler';
-import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
+
 
 /**
  * Blok Data Handler Priority.

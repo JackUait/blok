@@ -152,7 +152,7 @@ describe('Blok', () => {
       mocks.mockIsFunction.mockImplementation(utilsModule.defaultIsFunction);
     }
 
-    mocks.mockModuleInstances!.API = {
+    mocks.mockModuleInstances.API = {
       methods: {
         blocks: {
           clear: vi.fn(),
@@ -171,12 +171,12 @@ describe('Blok', () => {
         },
       } as unknown as BlokModules['API']['methods'],
     } as unknown as BlokModules['API'];
-    mocks.mockModuleInstances!.Toolbar = {
+    mocks.mockModuleInstances.Toolbar = {
       blockSettings: undefined,
       inlineToolbar: undefined,
     } as unknown as BlokModules['Toolbar'];
-    mocks.mockModuleInstances!.BlockSettings = {} as unknown as BlokModules['BlockSettings'];
-    mocks.mockModuleInstances!.InlineToolbar = {} as unknown as BlokModules['InlineToolbar'];
+    mocks.mockModuleInstances.BlockSettings = {} as unknown as BlokModules['BlockSettings'];
+    mocks.mockModuleInstances.InlineToolbar = {} as unknown as BlokModules['InlineToolbar'];
   });
 
   afterEach(() => {

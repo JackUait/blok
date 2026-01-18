@@ -1,9 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
-import type { OutputData } from '@/types';
+
+import { Header } from '../tools/header';
+
 import { createEditorContainer, simulateClick, waitForToolbar, selectTextInBlock, waitForPointerEvents } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import { Header } from '../tools/header';
+
+import type { OutputData } from '@/types';
+
 
 interface InlineToolbarArgs extends EditorFactoryOptions {
   minHeight: number;

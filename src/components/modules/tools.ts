@@ -1,16 +1,16 @@
-import { Module } from '../__module';
-import { deepMerge, isFunction, isObject, isUndefined, log } from '../utils';
-import { PromiseQueue } from '../utils/promise-queue';
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
 import { Stub } from '../../tools/stub';
+import { Module } from '../__module';
+import { DeleteTune } from '../block-tunes/block-tune-delete';
+import { CriticalError } from '../errors/critical';
+import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
+import type { BlockToolAdapter } from '../tools/block';
+import { ToolsCollection } from '../tools/collection';
 import { ToolsFactory } from '../tools/factory';
 import type { InlineToolAdapter } from '../tools/inline';
-import type { BlockToolAdapter } from '../tools/block';
 import type { BlockTuneAdapter } from '../tools/tune';
-import { DeleteTune } from '../block-tunes/block-tune-delete';
-import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
-import { ToolsCollection } from '../tools/collection';
-import { CriticalError } from '../errors/critical';
+import { deepMerge, isFunction, isObject, isUndefined, log } from '../utils';
+import { PromiseQueue } from '../utils/promise-queue';
 
 /**
  * @typedef {object} ChainData
@@ -378,7 +378,7 @@ export class Tools extends Module {
    */
   private extractToolConfig(settings: ToolSettings): ToolConfig {
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: reading legacy config for backwards compatibility
-    const nestedConfig = (settings.config ?? {}) as ToolConfig;
+    const nestedConfig = (settings.config ?? {});
 
     // Extract non-Blok keys as tool-specific config
     const flatConfig: Record<string, unknown> = {};
@@ -390,7 +390,7 @@ export class Tools extends Module {
     }
 
     // Merge: nested config first, flat config overrides
-    return { ...nestedConfig, ...flatConfig } as ToolConfig;
+    return { ...nestedConfig, ...flatConfig };
   }
 
   /**

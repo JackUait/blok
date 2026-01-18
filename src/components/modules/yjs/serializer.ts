@@ -1,4 +1,5 @@
 import * as Y from 'yjs';
+
 import type { OutputBlockData } from '../../../../types/data-formats/output-data';
 
 /**

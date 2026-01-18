@@ -1,26 +1,26 @@
+import type { InlineTool as IInlineTool } from '../../../../../types';
+import type { BlokModules } from '../../../../types-internal/blok-modules';
+import type { ModuleConfig } from '../../../../types-internal/module-config';
 import { Module } from '../../../__module';
+import { DATA_ATTR, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../../constants';
 import { Dom as $ } from '../../../dom';
 import { SelectionUtils } from '../../../selection';
+import type { InlineToolAdapter } from '../../../tools/inline';
 import { isMobileScreen } from '../../../utils';
-import type { InlineTool as IInlineTool } from '../../../../../types';
-import type { ModuleConfig } from '../../../../types-internal/module-config';
-import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Popover, PopoverItemParams } from '../../../utils/popover';
 import { PopoverInline } from '../../../utils/popover/popover-inline';
-import type { InlineToolAdapter } from '../../../tools/inline';
-import { DATA_ATTR, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../../constants';
 import { twMerge } from '../../../utils/tw';
 
 /**
  * Refactored InlineToolbar components
  */
-import { InlineShortcutManager } from './shortcuts-manager';
-import { InlinePositioner } from './positioner';
-import { InlineToolsManager } from './tools-manager';
-import { InlineSelectionValidator } from './selection-validator';
-import { InlinePopoverBuilder } from './popover-builder';
 import { InlineKeyboardHandler } from './keyboard-handler';
 import { InlineLifecycleManager } from './lifecycle-manager';
+import { InlinePopoverBuilder } from './popover-builder';
+import { InlinePositioner } from './positioner';
+import { InlineSelectionValidator } from './selection-validator';
+import { InlineShortcutManager } from './shortcuts-manager';
+import { InlineToolsManager } from './tools-manager';
 import type { InlineToolbarNodes } from './types';
 
 /**
@@ -353,7 +353,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
 
     const wrapperOffset = this.Blok.UI.nodes.wrapper.getBoundingClientRect();
     const contentRect = this.Blok.UI.contentRect;
-    const selectionRect = SelectionUtils.rect as DOMRect;
+    const selectionRect = SelectionUtils.rect;
 
     this.positioner.apply({
       wrapper: this.nodes.wrapper,

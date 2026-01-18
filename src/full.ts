@@ -14,6 +14,14 @@
  */
 
 // Re-export everything from core
+// Import tools for defaultTools object
+import { BoldInlineTool as Bold } from './components/inline-tools/inline-tool-bold';
+import { ItalicInlineTool as Italic } from './components/inline-tools/inline-tool-italic';
+import { LinkInlineTool as Link } from './components/inline-tools/inline-tool-link';
+import { Header } from './tools/header';
+import { ListItem as List } from './tools/list';
+import { Paragraph } from './tools/paragraph';
+
 export { Blok, version, DATA_ATTR } from './blok';
 
 // Re-export all tools
@@ -27,14 +35,6 @@ export {
   defaultBlockTools,
   defaultInlineTools,
 } from './tools';
-
-// Import tools for defaultTools object
-import { Paragraph } from './tools/paragraph';
-import { Header } from './tools/header';
-import { ListItem as List } from './tools/list';
-import { BoldInlineTool as Bold } from './components/inline-tools/inline-tool-bold';
-import { ItalicInlineTool as Italic } from './components/inline-tools/inline-tool-italic';
-import { LinkInlineTool as Link } from './components/inline-tools/inline-tool-link';
 
 /**
  * Default tools configuration matching pre-modularization behavior.

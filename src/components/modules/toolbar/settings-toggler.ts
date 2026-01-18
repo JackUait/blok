@@ -1,13 +1,15 @@
-import type { Block } from '../../block';
 import type { BlokModules } from '../../../types-internal/blok-modules';
+import type { Block } from '../../block';
+import { DATA_ATTR } from '../../constants';
+import { Dom as $ } from '../../dom';
+import { IconMenu } from '../../icons';
+import { hide, onHover } from '../../utils/tooltip';
+import { twJoin } from '../../utils/tw';
+
 import type { ClickDragHandler } from './click-handler';
 import { createTooltipContent } from './tooltip';
-import { hide, onHover } from '../../utils/tooltip';
-import { Dom as $ } from '../../dom';
-import { DATA_ATTR } from '../../constants';
-import { IconMenu } from '../../icons';
 import type { ToolbarNodes } from './types';
-import { twJoin } from '../../utils/tw';
+
 
 /**
  * SettingsTogglerHandler manages the settings toggler (drag handle) behavior.

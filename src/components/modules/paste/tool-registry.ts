@@ -1,9 +1,10 @@
-import { isObject, isValidMimeType, log } from '../../utils';
 import type { BlokConfig } from '../../../../types/configs/blok-config';
 import type { BlockToolAdapter } from '../../tools/block';
 import type { ToolsCollection } from '../../tools/collection';
-import type { TagSubstitute, FilesSubstitution, PatternSubstitute } from './types';
+import { isObject, isValidMimeType, log } from '../../utils';
+
 import { collectTagNames } from './constants';
+import type { TagSubstitute, FilesSubstitution, PatternSubstitute } from './types';
 
 /**
  * Tool Registry manages tool paste configurations.

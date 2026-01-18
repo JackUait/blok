@@ -47,7 +47,7 @@ export class DragPreview {
     // Get block holder dimensions to capture actual spacing
     const blockInfo = blocks.map((block) => {
       const holderRect = block.holder.getBoundingClientRect();
-      const contentElement = block.holder.querySelector('[data-blok-element-content]') as HTMLElement | null;
+      const contentElement = block.holder.querySelector('[data-blok-element-content]');
 
       if (!contentElement) {
         return { width: 0, height: 0, element: null, holderHeight: 0 };

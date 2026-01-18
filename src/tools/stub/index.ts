@@ -1,7 +1,7 @@
-import { Dom as $ } from '../../components/dom';
 import type { API, BlockTool, BlockToolConstructorOptions, BlockToolData } from '../../../types';
-import { IconWarning } from '../../components/icons';
 import { DATA_ATTR } from '../../components/constants';
+import { Dom as $ } from '../../components/dom';
+import { IconWarning } from '../../components/icons';
 
 export interface StubData extends BlockToolData {
   title: string;

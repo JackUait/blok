@@ -192,7 +192,7 @@ const flattenInputs = (inputs: ClassValue[]): string[] => {
     }
 
     if (Array.isArray(input)) {
-      strings.push(...input.filter(Boolean) as string[]);
+      strings.push(...input.filter(Boolean));
       continue;
     }
 

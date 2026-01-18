@@ -4,10 +4,11 @@
 import { Module } from '../../__module';
 import { keyCodes } from '../../utils';
 import { YjsManager } from '../yjs';
-import { NavigationMode } from './composers/navigationMode';
-import { MarkdownShortcuts } from './composers/markdownShortcuts';
+
 import { BlockSelectionKeys } from './composers/blockSelectionKeys';
 import { KeyboardNavigation } from './composers/keyboardNavigation';
+import { MarkdownShortcuts } from './composers/markdownShortcuts';
+import { NavigationMode } from './composers/navigationMode';
 import { isPrintableKeyEvent, keyCodeFromEvent } from './utils/keyboard';
 
 /**

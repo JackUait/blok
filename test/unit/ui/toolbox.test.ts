@@ -523,11 +523,11 @@ describe('Toolbox', () => {
 
       document.body.appendChild(element!);
 
-      expect(document.body.contains(element!)).toBe(true);
+      expect(document.body.contains(element)).toBe(true);
 
       toolbox.destroy();
 
-      expect(document.body.contains(element!)).toBe(false);
+      expect(document.body.contains(element)).toBe(false);
     });
 
     it('should remove popover event listener', () => {
@@ -576,7 +576,7 @@ describe('Toolbox', () => {
       toolbox.destroy();
 
       // Verify actual outcome - element should be removed from DOM (side effect of super.destroy())
-      expect(document.body.contains(element!)).toBe(false);
+      expect(document.body.contains(element)).toBe(false);
     });
   });
 

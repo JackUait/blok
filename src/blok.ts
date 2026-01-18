@@ -1,6 +1,7 @@
 'use strict';
 
 import type { BlokConfig, API } from '../types';
+
 import type { BlokModules } from './types-internal/blok-modules';
 
 /**
@@ -155,7 +156,7 @@ class Blok {
         return;
       }
 
-      (this as Record<string, unknown>)[field] = configurationToExport as BlokConfig|string;
+      (this as Record<string, unknown>)[field] = configurationToExport;
     });
 
     this.destroy = destroy;

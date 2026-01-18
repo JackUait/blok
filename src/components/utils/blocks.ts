@@ -5,6 +5,7 @@ import type { BlockToolData } from '../../../types/tools/block-tool-data';
 import type { Block } from '../block';
 import type { BlockToolAdapter } from '../tools/block';
 import { isFunction, isString, log, equals, isEmpty } from '../utils';
+
 import { isToolConvertable } from './tools';
 
 

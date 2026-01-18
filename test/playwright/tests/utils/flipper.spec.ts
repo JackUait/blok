@@ -945,7 +945,7 @@ test.describe('flipper', () => {
 
         const items = Array.from(
           document.querySelectorAll(selector)
-        ) as HTMLElement[];
+        );
 
         blockSettings.flipper.deactivate();
         blockSettings.flipper.activate(items, activeIndex);
@@ -1010,7 +1010,7 @@ test.describe('flipper', () => {
 
       const originalItems = Array.from(
         document.querySelectorAll('[data-blok-testid="popover-item"]')
-      ) as HTMLElement[];
+      );
 
       // Create new items
       const newItem1 = document.createElement('div');

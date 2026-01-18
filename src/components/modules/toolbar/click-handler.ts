@@ -1,5 +1,5 @@
-import type { ClickHandlerOptions } from './types';
 import { DRAG_THRESHOLD } from './constants';
+import type { ClickHandlerOptions } from './types';
 
 /**
  * ClickDragHandler manages click-vs-drag detection for toolbar elements.

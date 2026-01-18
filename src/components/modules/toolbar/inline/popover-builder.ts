@@ -1,10 +1,10 @@
+import type { InlineTool as IInlineTool } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { I18n } from '../../../modules/i18n';
 import type { InlineToolAdapter } from '../../../tools/inline';
-import type { InlineTool as IInlineTool } from '../../../../../types';
+import { beautifyShortcut, capitalize } from '../../../utils';
 import type { PopoverItemParams } from '../../../utils/popover';
 import { PopoverItemType } from '../../../utils/popover';
-import { beautifyShortcut, capitalize } from '../../../utils';
 import { translateToolName } from '../../../utils/tools';
 
 /**

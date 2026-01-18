@@ -217,8 +217,8 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         if (shouldCallSave && typeof (api as { saver?: { save: () => Promise<unknown> } }).saver?.save === 'function') {
           const saveResult = (api as { saver?: { save: () => Promise<unknown> } }).saver?.save();
 
-          if (saveResult && typeof (saveResult as Promise<unknown>).catch === 'function') {
-            void (saveResult as Promise<unknown>).catch(() => {
+          if (saveResult && typeof (saveResult).catch === 'function') {
+            void (saveResult).catch(() => {
               // Swallow errors to match the previous e2e behaviour where Promise rejections were ignored.
             });
           }

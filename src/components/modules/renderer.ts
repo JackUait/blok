@@ -1,9 +1,9 @@
-import { Module } from '../__module';
-import { log, logLabeled } from '../utils';
 import type { BlockId, BlockToolData, OutputBlockData } from '../../../types';
-import type { BlockToolAdapter } from '../tools/block';
 import type { StubData } from '../../tools/stub';
+import { Module } from '../__module';
 import type { Block } from '../block';
+import type { BlockToolAdapter } from '../tools/block';
+import { log, logLabeled } from '../utils';
 import {
   analyzeDataFormat,
   expandToHierarchical,

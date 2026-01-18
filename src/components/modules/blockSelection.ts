@@ -4,15 +4,14 @@
  * @module BlockSelection
  * @version 1.0.0
  */
+import type { SanitizerConfig } from '../../../types/configs';
 import { Module } from '../__module';
 import type { Block } from '../block';
-import { delay } from '../utils';
 import { Dom as $ } from '../dom';
-import { Shortcuts } from '../utils/shortcuts';
-
 import { SelectionUtils } from '../selection';
-import type { SanitizerConfig } from '../../../types/configs';
+import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
+import { Shortcuts } from '../utils/shortcuts';
 
 /**
  *
@@ -273,7 +272,7 @@ export class BlockSelection extends Module {
      * remove selected blocks and insert pressed key
      */
     if (this.anyBlockSelected && isKeyboard && isPrintableKey && !SelectionUtils.isSelectionExists) {
-      this.replaceSelectedBlocksWithPrintableKey(reason as KeyboardEvent);
+      this.replaceSelectedBlocksWithPrintableKey(reason);
     }
 
     this.Blok.CrossBlockSelection.clear(reason);

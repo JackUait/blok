@@ -1,7 +1,7 @@
 import type { Tooltip as ITooltip } from '../../../../types/api';
-import type { TooltipOptions, TooltipContent } from '../../utils/tooltip';
-import { Module } from '../../__module';
 import type { ModuleConfig } from '../../../types-internal/module-config';
+import { Module } from '../../__module';
+import type { TooltipOptions, TooltipContent } from '../../utils/tooltip';
 import { hide, onHover, show } from '../../utils/tooltip';
 /**
  * @class TooltipAPI

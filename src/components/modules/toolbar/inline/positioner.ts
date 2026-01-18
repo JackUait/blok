@@ -1,5 +1,5 @@
-import type { InlinePositioningOptions } from './types';
 import { INLINE_TOOLBAR_VERTICAL_MARGIN_DESKTOP, INLINE_TOOLBAR_VERTICAL_MARGIN_MOBILE } from './constants';
+import type { InlinePositioningOptions } from './types';
 
 /**
  * InlinePositioner handles positioning of the inline toolbar.

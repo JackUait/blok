@@ -110,9 +110,7 @@ class Blok {
         return;
       }
 
-      (this as Record<string, unknown>)[field] = configurationToExport as
-        | BlokConfig
-        | string;
+      (this as Record<string, unknown>)[field] = configurationToExport;
     });
 
     this.destroy = destroy;

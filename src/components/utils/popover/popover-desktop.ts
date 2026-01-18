@@ -1,16 +1,18 @@
-import { Flipper } from '../../flipper';
-import { PopoverAbstract } from './popover-abstract';
-import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
-import { PopoverItemSeparator, css as popoverItemCls } from './components/popover-item';
-import type { PopoverParams } from '@/types/utils/popover/popover';
-import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { keyCodes } from '../../utils';
-import { CSSVariables } from './popover.const';
 import { DATA_ATTR } from '../../constants/data-attributes';
+import { Flipper } from '../../flipper';
+import { keyCodes } from '../../utils';
+
+import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
+import { PopoverItemSeparator, css as popoverItemCls , PopoverItemDefault } from './components/popover-item';
+import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent, matchesSearchQuery } from './components/search-input';
-import { PopoverItemDefault } from './components/popover-item';
-import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
+import { PopoverAbstract } from './popover-abstract';
+import { CSSVariables } from './popover.const';
+
+import type { PopoverParams } from '@/types/utils/popover/popover';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
+
 
 /**
  * Desktop popover.
@@ -335,7 +337,7 @@ export class PopoverDesktop extends PopoverAbstract {
     const itemOffsetTop = (itemEl ? itemEl.offsetTop : 0) - this.scrollTop;
     const topOffset = this.offsetTop + itemOffsetTop;
 
-    const actualPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`) as HTMLElement | null ?? nestedPopoverEl;
+    const actualPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`) ?? nestedPopoverEl;
 
     actualPopoverEl.style.setProperty(CSSVariables.TriggerItemTop, topOffset + 'px');
   }
@@ -442,13 +444,13 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param nestedPopoverEl - the nested popover element (mount element)
    */
   private applyNestedPopoverPositioning(nestedPopoverEl: HTMLElement): void {
-    const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement | null;
+    const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`);
 
     if (!nestedContainer) {
       return;
     }
 
-    const actualPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`) as HTMLElement | null ?? nestedPopoverEl;
+    const actualPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`) ?? nestedPopoverEl;
 
     // Check if parent popover has openTop or openLeft state
     const isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenTop);
@@ -653,7 +655,7 @@ export class PopoverDesktop extends PopoverAbstract {
         const isDefaultItem = item instanceof PopoverItemDefault;
         const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
         const isHidden = isDefaultItem
-          ? !matchingItems.includes(item as PopoverItemDefault)
+          ? !matchingItems.includes(item)
           : isSeparatorOrHtml && (isNothingFound || !isEmptyQuery);
 
         item.toggleHidden(isHidden);

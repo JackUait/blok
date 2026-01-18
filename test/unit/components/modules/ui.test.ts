@@ -236,7 +236,7 @@ describe('UI module', () => {
       expect(nodes.redactor?.getAttribute('data-blok-testid')).toBe('redactor');
       expect(nodes.redactor?.style.paddingBottom).toBe(`${ui['config'].minHeight}px`);
 
-      expect(holder.contains(nodes.wrapper as HTMLElement)).toBe(true);
+      expect(holder.contains(nodes.wrapper)).toBe(true);
       expect(bindSpy).toHaveBeenCalledTimes(1);
     });
 

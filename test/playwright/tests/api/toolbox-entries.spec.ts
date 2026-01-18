@@ -244,7 +244,7 @@ test.describe('blok Tools Api', () => {
           const textContent = el.textContent;
 
           return {
-            text: textContent as string,
+            text: textContent,
           };
         }
       };
@@ -331,7 +331,7 @@ test.describe('blok Tools Api', () => {
           const textContent = el.textContent;
 
           return {
-            text: textContent as string,
+            text: textContent,
           };
         }
       };

@@ -1,11 +1,12 @@
-import { keyCodes, delay, isIosDevice } from '../../../utils';
-import { SelectionUtils } from '../../../selection';
-import { Flipper } from '../../../flipper';
 import type { Block } from '../../../block';
+import { Flipper } from '../../../flipper';
+import { SelectionUtils } from '../../../selection';
+import { keyCodes, delay, isIosDevice } from '../../../utils';
 import { areBlocksMergeable } from '../../../utils/blocks';
 import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret';
 import { EDITABLE_INPUT_SELECTOR } from '../constants';
 import { keyCodeFromEvent } from '../utils/keyboard';
+
 import { BlockEventComposer } from './__base';
 
 /**

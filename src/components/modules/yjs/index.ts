@@ -1,13 +1,16 @@
-import { Module } from '../../__module';
-import type { ModuleConfig } from '../../../types-internal/module-config';
-import type { BlokModules } from '../../../types-internal/blok-modules';
-import type { OutputBlockData } from '../../../../types/data-formats/output-data';
 import type * as Y from 'yjs';
-import { YBlockSerializer, isBoundaryCharacter } from './serializer';
-import { DocumentStore } from './document-store';
+
+import type { OutputBlockData } from '../../../../types/data-formats/output-data';
+import type { BlokModules } from '../../../types-internal/blok-modules';
+import type { ModuleConfig } from '../../../types-internal/module-config';
+import { Module } from '../../__module';
+
+
 import { BlockObserver } from './block-observer';
-import { UndoHistory } from './undo-history';
+import { DocumentStore } from './document-store';
+import { YBlockSerializer, isBoundaryCharacter } from './serializer';
 import type { BlockChangeCallback, CaretSnapshot } from './types';
+import { UndoHistory } from './undo-history';
 
 /**
  * @class YjsManager

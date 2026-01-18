@@ -1,8 +1,9 @@
-import { Controller } from './_base';
+import type { Block } from '../../../block';
+import { BlockHovered } from '../../../events/BlockHovered';
 import { throttle } from '../../../utils';
 import { HOVER_ZONE_SIZE } from '../constants';
-import { BlockHovered } from '../../../events/BlockHovered';
-import type { Block } from '../../../block';
+
+import { Controller } from './_base';
 
 /**
  * BlockHoverController detects when user hovers over blocks, including extended hover zone.

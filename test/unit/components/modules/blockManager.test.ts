@@ -270,13 +270,13 @@ describe('BlockManager', () => {
     expect(removedCalls.some((call: unknown[]) => {
       const payload = call[1] as { event: CustomEvent };
       return payload.event.type === BlockRemovedMutationType &&
-             (payload.event.detail as any).target?.id === existingBlock.id;
+             (payload.event.detail).target?.id === existingBlock.id;
     })).toBe(true);
     // Verify block-added event was dispatched
     expect(removedCalls.some((call: unknown[]) => {
       const payload = call[1] as { event: CustomEvent };
       return payload.event.type === BlockAddedMutationType &&
-             (payload.event.detail as any).target?.id === newBlock.id;
+             (payload.event.detail).target?.id === newBlock.id;
     })).toBe(true);
     expect(composeBlockSpy).toHaveBeenCalledWith(
       expect.objectContaining({ tool: 'paragraph' })
@@ -302,7 +302,7 @@ describe('BlockManager', () => {
     expect(removedCalls.some((call: unknown[]) => {
       const payload = call[1] as { event: CustomEvent };
       return payload.event.type === BlockRemovedMutationType &&
-             (payload.event.detail as any).target?.id === firstBlock.id;
+             (payload.event.detail).target?.id === firstBlock.id;
     })).toBe(true);
     expect(blockManager.blocks).toEqual([ secondBlock ]);
   });
@@ -345,7 +345,7 @@ describe('BlockManager', () => {
     expect(movedCalls.some((call: unknown[]) => {
       const payload = call[1] as { event: CustomEvent };
       return payload.event.type === BlockMovedMutationType &&
-             (payload.event.detail as any).target?.id === secondBlock.id;
+             (payload.event.detail).target?.id === secondBlock.id;
     })).toBe(true);
   });
 
@@ -374,7 +374,7 @@ describe('BlockManager', () => {
     expect(changedCalls.some((call: unknown[]) => {
       const payload = call[1] as { event: CustomEvent };
       return payload.event.type === BlockChangedMutationType &&
-             (payload.event.detail as any).target?.id === newBlock.id;
+             (payload.event.detail).target?.id === newBlock.id;
     })).toBe(true);
     expect(blockManager.blocks[0]).toBe(newBlock);
     expect(result).toBe(newBlock);
@@ -416,7 +416,7 @@ describe('BlockManager', () => {
     expect(addedCalls.some((call: unknown[]) => {
       const payload = call[1] as { event: CustomEvent };
       return payload.event.type === BlockAddedMutationType &&
-             (payload.event.detail as any).target?.id === defaultBlock.id;
+             (payload.event.detail).target?.id === defaultBlock.id;
     })).toBe(true);
   });
 
@@ -621,7 +621,7 @@ describe('BlockManager', () => {
 
     // Verify replace was called (without checking deep equality which causes pretty-format issues)
     expect(operationsReplaceSpy).toHaveBeenCalledTimes(1);
-    const callArgs = operationsReplaceSpy.mock.calls[0] as unknown[];
+    const callArgs = operationsReplaceSpy.mock.calls[0];
     expect(callArgs[0]).toBe(blockToConvert);
     expect(callArgs[1]).toBe('header');
     expect((callArgs[2] as Record<string, unknown>).text).toBe('<P>CONVERTED</P>');

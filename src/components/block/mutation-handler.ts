@@ -1,8 +1,8 @@
-import type { EventsDispatcher } from '../utils/events';
-import type { BlokEventMap } from '../events';
-import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
-import { RedactorDomChanged } from '../events';
 import { Dom as $ } from '../dom';
+import type { BlokEventMap } from '../events';
+import { RedactorDomChanged } from '../events';
+import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
+import type { EventsDispatcher } from '../utils/events';
 import { isMutationBelongsToElement } from '../utils/mutations';
 
 /**

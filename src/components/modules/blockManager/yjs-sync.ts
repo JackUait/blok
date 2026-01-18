@@ -3,14 +3,17 @@
  * @classdesc Handles Yjs synchronization for blocks
  * @module BlockYjsSync
  */
+import type { Map as YMap } from 'yjs';
+
 import type { Block } from '../../block';
-import type { BlocksStore } from './types';
-import type { BlockRepository } from './repository';
+import type { YjsManager } from '../yjs';
+import type { BlockChangeEvent } from '../yjs/types';
+
 import type { BlockFactory } from './factory';
 import type { BlockOperations } from './operations';
-import type { BlockChangeEvent } from '../yjs/types';
-import type { YjsManager } from '../yjs';
-import type { Map as YMap } from 'yjs';
+import type { BlockRepository } from './repository';
+import type { BlocksStore } from './types';
+
 
 /**
  * Dependencies needed by BlockYjsSync

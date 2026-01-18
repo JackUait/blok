@@ -1,6 +1,7 @@
 import type { Block } from '../../block';
-import type { PositioningOptions, ToolbarNodes } from './types';
+
 import { POSITION_TOLERANCE } from './constants';
+import type { PositioningOptions, ToolbarNodes } from './types';
 
 /**
  * ToolbarPositioner handles toolbar positioning calculations and movements.

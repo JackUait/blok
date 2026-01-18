@@ -238,7 +238,7 @@ describe('Tooltip utility', () => {
 
     setWrapperSize(wrapper!, 60, 24);
     setWindowScrollY(undefined);
-    document.documentElement!.scrollTop = 30;
+    document.documentElement.scrollTop = 30;
 
     show(target, 'top', { placement: 'top',
       delay: 0 });

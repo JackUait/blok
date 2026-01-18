@@ -101,7 +101,7 @@ const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub()
     getBlock: vi.fn((element: HTMLElement) => {
       return blockManager.blocks.find((block) => block.holder === element);
     }) as ReturnType<typeof vi.fn>,
-    move: vi.fn() as ReturnType<typeof vi.fn>,
+    move: vi.fn(),
     removeBlock: vi.fn((block?: BlockStub) => {
       if (!block) {
         throw new Error('Block not found');
@@ -273,14 +273,14 @@ const createBlokStub = (
       },
     },
     Toolbar: {
-      close: vi.fn() as ReturnType<typeof vi.fn>,
+      close: vi.fn(),
     },
     InlineToolbar: {
-      close: vi.fn() as ReturnType<typeof vi.fn>,
+      close: vi.fn(),
     },
     ModificationsObserver: {
-      disable: vi.fn() as ReturnType<typeof vi.fn>,
-      enable: vi.fn() as ReturnType<typeof vi.fn>,
+      disable: vi.fn(),
+      enable: vi.fn(),
     },
     Renderer: {
       render: vi.fn(async (_blocks: OutputBlockData[]) => {}) as ReturnType<typeof vi.fn>,
@@ -292,7 +292,7 @@ const createBlokStub = (
       blockTools: new Map(),
     },
     YjsManager: {
-      stopCapturing: vi.fn() as ReturnType<typeof vi.fn>,
+      stopCapturing: vi.fn(),
     },
     API: {},
   };

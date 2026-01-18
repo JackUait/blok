@@ -4,14 +4,14 @@
  * @author Blok Team
  * @version 2.0.0
  */
-import { Module } from '../__module';
 import type { BlockToolData, OutputData, SanitizerConfig } from '../../../types';
-import type { SavedData, ValidatedData } from '../../../types/data-formats';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
+import type { SavedData, ValidatedData } from '../../../types/data-formats';
+import { Module } from '../__module';
 import type { Block } from '../block';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
-import { sanitizeBlocks } from '../utils/sanitizer';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
+import { sanitizeBlocks } from '../utils/sanitizer';
 
 type SaverValidatedData = ValidatedData & {
   tunes?: Record<string, BlockTuneData>;

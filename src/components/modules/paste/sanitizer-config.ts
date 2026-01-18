@@ -1,12 +1,12 @@
-import { isObject } from '../../utils';
-import { clean } from '../../utils/sanitizer';
-import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
 import type { BlokConfig } from '../../../../types/configs/blok-config';
+import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
 import type { BlockToolAdapter } from '../../tools/block';
 import type { ToolsCollection } from '../../tools/collection';
-import { composeSanitizerConfig } from '../../utils/sanitizer';
-import type { TagSubstitute } from './types';
+import { isObject } from '../../utils';
+import { clean , composeSanitizerConfig } from '../../utils/sanitizer';
+
 import { SAFE_STRUCTURAL_TAGS, collectTagNames } from './constants';
+import type { TagSubstitute } from './types';
 
 /**
  * Sanitizer Config Builder builds sanitizer configs from tool configurations.
@@ -72,7 +72,7 @@ export class SanitizerConfigBuilder {
 
       tags.forEach((tag) => {
         const sanitizationConfig = isObject(tagOrSanitizeConfig)
-          ? (tagOrSanitizeConfig as SanitizerConfig)[tag]
+          ? (tagOrSanitizeConfig)[tag]
           : null;
 
         toolTags[tag.toLowerCase()] = sanitizationConfig ?? {};

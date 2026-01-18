@@ -1,10 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
-import type { OutputData, ToolSettings } from '@/types';
+
+import type { ListConfig } from '../../types/tools/list';
+import { Paragraph, List } from '../tools';
+
 import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import { Paragraph, List } from '../tools';
-import type { ListConfig } from '../../types/tools/list';
+
+import type { OutputData, ToolSettings } from '@/types';
+
 
 // Constants
 const TIMEOUT_INIT = { timeout: 5000 };

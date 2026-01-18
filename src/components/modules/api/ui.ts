@@ -1,5 +1,5 @@
-import { Module } from '../../__module';
 import type { Ui, UiNodes } from '../../../../types/api';
+import { Module } from '../../__module';
 
 /**
  * API module allowing to access some Blok UI elements

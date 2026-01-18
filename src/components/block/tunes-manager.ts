@@ -1,13 +1,15 @@
-import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
 import type { BlockTune as IBlockTune } from '../../../types';
+import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import type { BlockTuneAdapter } from '../tools/tune';
-import type { ToolsCollection } from '../tools/collection';
 import type { MenuConfigItem } from '../../../types/tools';
+import { Dom as $ } from '../dom';
+import type { ToolsCollection } from '../tools/collection';
+import type { BlockTuneAdapter } from '../tools/tune';
+import { isFunction, log } from '../utils';
+
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
-import { Dom as $ } from '../dom';
-import { isFunction, log } from '../utils';
+
 
 /**
  * Manages block tunes for a Block instance.

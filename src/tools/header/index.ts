@@ -5,11 +5,6 @@
  * Based on @editorjs/header by CodeX
  * @license MIT
  */
-import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../../components/icons';
-import { twMerge } from '../../components/utils/tw';
-import { DATA_ATTR } from '../../components/constants';
-import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
-import { translateToolTitle } from '../../components/utils/tools';
 import type {
   API,
   BlockTool,
@@ -23,6 +18,11 @@ import type {
   PasteConfig,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
+import { DATA_ATTR } from '../../components/constants';
+import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../../components/icons';
+import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { translateToolTitle } from '../../components/utils/tools';
+import { twMerge } from '../../components/utils/tw';
 
 /**
  * Tool's input and output data format

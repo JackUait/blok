@@ -1,21 +1,22 @@
-import { Module } from '../../__module';
-import { Dom as $ } from '../../dom';
-import { SelectionUtils } from '../../selection';
-import type { Block } from '../../block';
-import { Flipper } from '../../flipper';
 import type { MenuConfigItem } from '../../../../types/tools';
-import type { PopoverItemParams } from '../../utils/popover';
-import { type Popover, PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
+import { Module } from '../../__module';
+import type { Block } from '../../block';
+import { BlockAPI } from '../../block/api';
+import { Dom as $ } from '../../dom';
+import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
+import { Flipper } from '../../flipper';
+import { IconReplace, IconCross } from '../../icons';
+import { SelectionUtils } from '../../selection';
+import type { BlockToolAdapter } from '../../tools/block';
+import { isMobileScreen, keyCodes } from '../../utils';
+import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
+import type { PopoverItemParams , type Popover, PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
+import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
+import { translateToolTitle } from '../../utils/tools';
+
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { isMobileScreen, keyCodes } from '../../utils';
-import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
-import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
-import { IconReplace, IconCross } from '../../icons';
-import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
-import { translateToolTitle } from '../../utils/tools';
-import { BlockAPI } from '../../block/api';
-import type { BlockToolAdapter } from '../../tools/block';
+
 
 /**
  * HTML Elements that used for BlockSettings
@@ -736,7 +737,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
        */
       const importedData = typeof conversionImport === 'function'
         ? conversionImport(content, targetTool?.settings)
-        : { [conversionImport as string]: content };
+        : { [conversionImport]: content };
 
       const newBlockData = toolboxData
         ? Object.assign(importedData, toolboxData)

@@ -1,9 +1,9 @@
 /**
  * TextRange interface for IE9-
  */
-import { log } from './utils';
-import { Dom as $ } from './dom';
 import { DATA_ATTR, createSelector } from './constants';
+import { Dom as $ } from './dom';
+import { log } from './utils';
 
 interface TextRange {
   boundingTop: number;
@@ -210,8 +210,8 @@ export class SelectionUtils {
     } as DOMRect;
 
     if (ieSel && ieSel.type !== 'Control') {
-      const msSel = ieSel as MSSelection;
-      const range = msSel.createRange() as TextRange;
+      const msSel = ieSel;
+      const range = msSel.createRange();
 
       rect.x = range.boundingLeft;
       rect.y = range.boundingTop;
@@ -239,9 +239,9 @@ export class SelectionUtils {
       return rect;
     }
 
-    const range = sel.getRangeAt(0).cloneRange() as Range;
+    const range = sel.getRangeAt(0).cloneRange();
 
-    const initialRect = range.getBoundingClientRect() as DOMRect;
+    const initialRect = range.getBoundingClientRect();
 
     // Fall back to inserting a temporary element
     if (initialRect.x === 0 && initialRect.y === 0) {
@@ -251,7 +251,7 @@ export class SelectionUtils {
       // adding a zero-width space character
       span.appendChild(document.createTextNode('\u200b'));
       range.insertNode(span);
-      const boundingRect = span.getBoundingClientRect() as DOMRect;
+      const boundingRect = span.getBoundingClientRect();
 
       const spanParent = span.parentNode;
 
@@ -302,7 +302,7 @@ export class SelectionUtils {
     }
 
     if (isNativeInput) {
-      const inputElement = element as HTMLInputElement | HTMLTextAreaElement;
+      const inputElement = element;
 
       inputElement.focus();
       inputElement.selectionStart = offset;

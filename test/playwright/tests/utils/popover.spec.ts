@@ -197,7 +197,7 @@ const createBlokWithBlocks = async (
           }
 
           if (typeof toolConfig === 'object' && toolConfig !== null && 'fromGlobal' in toolConfig) {
-            const { fromGlobal, config, ...rest } = toolConfig as GlobalToolConfig;
+            const { fromGlobal, config, ...rest } = toolConfig;
 
             // Handle dot notation (e.g., 'Blok.Header')
             const globalTool = fromGlobal.split('.').reduce(
@@ -233,7 +233,7 @@ const createBlokWithBlocks = async (
             throw new Error(`Global tool "${fromGlobal}" must be a function or object.`);
           }
 
-          const { menu, isTune } = toolConfig as SerializableToolConfig;
+          const { menu, isTune } = toolConfig;
 
           // Check if menu is a function (for HTML render)
           if (typeof menu === 'object' && menu !== null && 'render' in menu && typeof (menu as { render: unknown }).render === 'function') {

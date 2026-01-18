@@ -1,9 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
-import type { OutputData } from '@/types';
+
+import { Header } from '../tools/header';
+
 import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID, dispatchKeyboardEvent, focusSearchInput, waitForPointerEvents } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import { Header } from '../tools/header';
+
+import type { OutputData } from '@/types';
+
 
 interface PopoverArgs extends EditorFactoryOptions {
   minHeight: number;

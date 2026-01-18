@@ -127,7 +127,7 @@ const createBlokWithI18n = async (
       };
 
       const { tools, ...restConfig } = blokConfig ?? {};
-      const normalizedTools = normalizeTools(tools as Record<string, unknown> | undefined);
+      const normalizedTools = normalizeTools(tools);
 
       const blok = new window.Blok({
         holder: holder,

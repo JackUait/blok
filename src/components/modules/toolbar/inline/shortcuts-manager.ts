@@ -1,7 +1,7 @@
-import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { InlineTool as IInlineTool } from '../../../../../types';
-import { Shortcuts } from '../../../utils/shortcuts';
+import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { CommonInternalSettings } from '../../../tools/base';
+import { Shortcuts } from '../../../utils/shortcuts';
 
 /**
  * InlineShortcutManager manages keyboard shortcuts for inline tools.

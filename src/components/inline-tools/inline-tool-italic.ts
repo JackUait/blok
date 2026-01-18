@@ -1,6 +1,7 @@
 import type { InlineTool, SanitizerConfig } from '../../../types';
-import { IconItalic } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
+import { IconItalic } from '../icons';
+
 import {
   isRangeFormatted,
   findFormattingAncestor,

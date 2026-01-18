@@ -1,7 +1,7 @@
-import type { BlockToolAdapter } from '../../tools/block';
 import type { PasteEvent } from '../../../../types';
 import type { SanitizerRule } from '../../../../types/configs/sanitizer-config';
 import type { Block } from '../../block';
+import type { BlockToolAdapter } from '../../tools/block';
 
 /**
  * Tag substitute object.

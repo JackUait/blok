@@ -1,4 +1,5 @@
 import { isPrintableKeyEvent } from '../utils/keyboard';
+
 import { BlockEventComposer } from './__base';
 
 /**

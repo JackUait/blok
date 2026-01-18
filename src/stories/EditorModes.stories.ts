@@ -11,9 +11,11 @@
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { waitFor, expect } from 'storybook/test';
-import type { OutputData, API } from '@/types';
+
 import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID } from './helpers';
 import type { EditorFactoryOptions, EditorContainer } from './helpers';
+
+import type { OutputData, API } from '@/types';
 
 interface EditorModesArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -344,7 +346,7 @@ export const DraggingState: Story = {
     readOnly: false,
   },
   play: async ({ canvasElement, step }) => {
-    const container = canvasElement.querySelector('[data-story-container]') as EditorContainer | null;
+    const container = canvasElement.querySelector('[data-story-container]');
 
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(

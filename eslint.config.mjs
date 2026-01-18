@@ -1677,6 +1677,16 @@ export default defineConfig(
         },
       ],
       '@typescript-eslint/no-floating-promises': 'error',
+      // Strict type safety rules
+      '@typescript-eslint/no-unsafe-argument': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-call': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
+      '@typescript-eslint/no-unsafe-return': 'error',
+      '@typescript-eslint/no-unsafe-unary-minus': 'error',
+      '@typescript-eslint/no-unsafe-enum-comparison': 'error',
+      '@typescript-eslint/no-unsafe-declaration-merging': 'error',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
       'no-unused-vars': 'off',
     },
   },
@@ -1698,6 +1708,25 @@ export default defineConfig(
       // Prevent UMD module patterns
       'import/no-amd': 'error',
       'import/no-commonjs': 'error',
+      // Import organization and quality
+      'import/no-duplicates': 'error',
+      'import/no-cycle': 'warn',
+      'import/no-extraneous-dependencies': 'error',
+      'import/no-self-import': 'error',
+      'import/order': ['error', {
+        groups: [
+          'builtin',
+          'external',
+          'internal',
+          'parent',
+          'sibling',
+          'index',
+        ],
+        'newlines-between': 'always',
+        alphabetize: { order: 'asc', caseInsensitive: true },
+      }],
+      'import/first': 'error',
+      'import/newline-after-import': 'error',
       // Tailwind CSS rules - best practices
       'tailwindcss/classnames-order': 'error', // Enforce consistent class ordering for readability
       'tailwindcss/enforces-negative-arbitrary-values': 'error', // Use -mt-[5px] instead of mt-[-5px]

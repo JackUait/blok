@@ -1,5 +1,6 @@
 import { DATA_ATTR, createSelector } from '../../constants';
 import { isBoldElement, ensureStrongElement, isNodeWithin } from '../utils/bold-dom-utils';
+
 import { CollapsedBoldManager } from './collapsed-bold-manager';
 
 /**

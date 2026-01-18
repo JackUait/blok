@@ -1,10 +1,10 @@
-import type { BlockTool as IBlockTool } from '../../../types';
-import type { TunesManager } from './tunes-manager';
-import type { ToolConfig } from '../../../types';
+import type { BlockTool as IBlockTool , ToolConfig } from '../../../types';
+import { DATA_ATTR } from '../constants';
 import { Dom as $ } from '../dom';
 import { log } from '../utils';
-import { DATA_ATTR } from '../constants';
+
 import { StyleManager } from './style-manager';
+import type { TunesManager } from './tunes-manager';
 
 /**
  * Handles tool element composition, rendering, and DOM lifecycle.

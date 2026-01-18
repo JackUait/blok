@@ -3,13 +3,15 @@
  * @classdesc Handles event binding/unbinding for blocks
  * @module BlockEventBinder
  */
-import type { Block } from '../../block';
 import type { BlockMutationType } from '../../../../types/events/block';
-import type { BlockMutationEventDetailWithoutTarget } from './types';
-import type { BlockEvents } from '../blockEvents';
-import type { EventsDispatcher } from '../../utils/events';
-import type { BlokEventMap } from '../../events';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
+import type { Block } from '../../block';
+import type { BlokEventMap } from '../../events';
+import type { EventsDispatcher } from '../../utils/events';
+import type { BlockEvents } from '../blockEvents';
+
+import type { BlockMutationEventDetailWithoutTarget } from './types';
+
 
 /**
  * Callback for when a block is mutated

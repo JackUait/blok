@@ -1,13 +1,15 @@
+import { DATA_ATTR } from '../../../../../constants/data-attributes';
+import { IconChevronRight } from '../../../../../icons';
+import { twMerge } from '../../../../tw';
+import { PopoverItem } from '../popover-item';
+
+import { css, cssInline, cssNestedInline } from './popover-item-default.const';
+
 import type {
   PopoverItemDefaultParams,
   PopoverItemRenderParamsMap,
   PopoverItemType
 } from '@/types/utils/popover/popover-item';
-import { PopoverItem } from '../popover-item';
-import { css, cssInline, cssNestedInline } from './popover-item-default.const';
-import { DATA_ATTR } from '../../../../../constants/data-attributes';
-import { twMerge } from '../../../../tw';
-import { IconChevronRight } from '../../../../../icons';
 
 /**
  * Represents single popover item node

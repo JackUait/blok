@@ -114,7 +114,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     ) {
       (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] = {
         ...(defaultModule as object),
-        ...(moduleOverrides as object),
+        ...(moduleOverrides),
       } as BlokModules[typeof moduleName];
     } else if (moduleOverrides !== undefined) {
       (mergedState as Record<keyof BlokModules, BlokModules[keyof BlokModules]>)[moduleName] =
@@ -256,7 +256,7 @@ describe('BlockEvents', () => {
       const event = new Event('cut') as ClipboardEvent;
 
       blockEvents.handleCommandX(event);
-      await copySelectedBlocks.mock.results[0]!.value;
+      await copySelectedBlocks.mock.results[0].value;
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(copySelectedBlocks).toHaveBeenCalledWith(event);

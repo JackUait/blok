@@ -1,8 +1,10 @@
 import * as Y from 'yjs';
-import type { BlokModules } from '../../../types-internal/blok-modules';
-import type { CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, SingleMoveEntry } from './types';
-import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS, isBoundaryCharacter } from './serializer';
+
 import { getCaretOffset } from '../../../components/utils/caret';
+import type { BlokModules } from '../../../types-internal/blok-modules';
+
+import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS, isBoundaryCharacter } from './serializer';
+import type { CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, SingleMoveEntry } from './types';
 
 /**
  * UndoHistory manages all undo/redo state.

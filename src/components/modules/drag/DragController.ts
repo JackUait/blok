@@ -6,20 +6,20 @@
  */
 import { Module } from '../../__module';
 import type { Block } from '../../block';
-import { hide as hideTooltip } from '../../utils/tooltip';
 import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
+import { hide as hideTooltip } from '../../utils/tooltip';
 
 // Drag components
-import { DragStateMachine, isActuallyDragging, isDragActive } from './state/DragStateMachine';
-import { DragPreview } from './preview/DragPreview';
-import { DropTargetDetector } from './target/DropTargetDetector';
-import { DragOperations } from './operations/DragOperations';
 import { DragA11y } from './a11y/DragA11y';
+import { DragOperations } from './operations/DragOperations';
+import { DragPreview } from './preview/DragPreview';
+import { DragStateMachine, isActuallyDragging, isDragActive } from './state/DragStateMachine';
+import { DropTargetDetector } from './target/DropTargetDetector';
 import { AutoScroll } from './utils/AutoScroll';
-import { ListItemDescendants } from './utils/ListItemDescendants';
-import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { hasPassedThreshold } from './utils/drag.constants';
+import { findScrollableAncestor } from './utils/findScrollableAncestor';
+import { ListItemDescendants } from './utils/ListItemDescendants';
 
 /**
  * Bound event handlers for cleanup
@@ -169,7 +169,7 @@ export class DragController extends Module {
     // Initialize dependencies lazily on first drag
     this.lazyInit();
 
-    const contentElement = block.holder.querySelector('[data-blok-element-content]') as HTMLElement | null;
+    const contentElement = block.holder.querySelector('[data-blok-element-content]');
 
     if (!contentElement) {
       return;

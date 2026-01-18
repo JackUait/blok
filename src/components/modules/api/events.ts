@@ -1,5 +1,5 @@
-import { Module } from '../../__module';
 import type { Events } from '../../../../types/api';
+import { Module } from '../../__module';
 import type { BlokEventMap } from '../../events';
 
 /**

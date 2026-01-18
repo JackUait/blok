@@ -1,6 +1,7 @@
-import { Controller } from './_base';
 import { SelectionUtils as Selection } from '../../../selection';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
+
+import { Controller } from './_base';
 
 /**
  * KeyboardController handles all document-level keyboard events.

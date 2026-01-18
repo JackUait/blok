@@ -1,8 +1,9 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
-import type { InlineToolAdapter } from '../../../tools/inline';
-import type { SelectionValidationResult } from './types';
 import { Dom as $ } from '../../../dom';
 import { SelectionUtils } from '../../../selection';
+import type { InlineToolAdapter } from '../../../tools/inline';
+
+import type { SelectionValidationResult } from './types';
 
 /**
  * InlineSelectionValidator determines if inline toolbar should be shown based on selection.

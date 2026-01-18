@@ -1,10 +1,12 @@
 import { Dom } from '../../../../dom';
-import { Listeners } from '../../../listeners';
 import { IconSearch } from '../../../../icons';
+import { EventsDispatcher } from '../../../events';
+import { Listeners } from '../../../listeners';
+
+import { css } from './search-input.const';
 import type { SearchInputEventMap, SearchableItem } from './search-input.types';
 import { SearchInputEvent, matchesSearchQuery } from './search-input.types';
-import { css } from './search-input.const';
-import { EventsDispatcher } from '../../../events';
+
 
 /**
  * Provides search input element and search logic

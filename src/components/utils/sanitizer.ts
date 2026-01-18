@@ -11,7 +11,6 @@
  * {@link SanitizerConfig}
  */
 
-import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
 
 /**
  * @typedef {object} SanitizerConfig
@@ -29,9 +28,11 @@ import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '.
  */
 
 import HTMLJanitor from 'html-janitor';
+
 import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../types';
 import type { TagConfig } from '../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../types/data-formats';
+import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
 
 type DeepSanitizerRule = SanitizerConfig | SanitizerRule | boolean;
 
@@ -386,12 +387,12 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
     }
 
     if (fieldValue !== undefined) {
-      merged[tag] = cloneTagConfig(fieldValue as SanitizerRule);
+      merged[tag] = cloneTagConfig(fieldValue);
 
       continue;
     }
 
-    merged[tag] = cloneTagConfig(globalValue as SanitizerRule);
+    merged[tag] = cloneTagConfig(globalValue);
   }
 
   return merged;

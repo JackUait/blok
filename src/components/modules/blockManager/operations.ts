@@ -3,31 +3,31 @@
  * @classdesc Handles state-changing operations on blocks
  * @module BlockOperations
  */
-import type { Block } from '../../block';
+import type { BlockToolData, PasteEvent, SanitizerConfig , BlokConfig } from '../../../../types';
+import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
+import type { BlockMutationType } from '../../../../types/events/block';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
-import type { BlockToolData, PasteEvent, SanitizerConfig } from '../../../../types';
-import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
-import { isEmpty, isObject, isString, log, generateBlockId } from '../../utils';
-import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
-import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
-import type { BlockMutationType } from '../../../../types/events/block';
-import type { YjsManager } from '../yjs';
-import type { BlockRepository } from './repository';
-import type { BlockFactory } from './factory';
-import type { BlockHierarchy } from './hierarchy';
-import type { BlockYjsSync } from './yjs-sync';
-import type { InsertBlockOptions, BlockMutationEventDetailWithoutTarget, BlocksStore } from './types';
-import type { BlokConfig } from '../../../../types';
-import type { Caret } from '../caret';
-import type { I18n } from '../i18n';
-import { announce } from '../../utils/announcer';
-import type { EventsDispatcher } from '../../utils/events';
-import type { BlokEventMap } from '../../events';
+import type { Block } from '../../block';
 import { BlockToolAPI } from '../../block';
 import { Dom as $ } from '../../dom';
+import type { BlokEventMap } from '../../events';
+import { isEmpty, isObject, isString, log, generateBlockId } from '../../utils';
+import { announce } from '../../utils/announcer';
+import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
+import type { EventsDispatcher } from '../../utils/events';
+import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
+import type { Caret } from '../caret';
+import type { I18n } from '../i18n';
+import type { YjsManager } from '../yjs';
+
+import type { BlockFactory } from './factory';
+import type { BlockHierarchy } from './hierarchy';
+import type { BlockRepository } from './repository';
+import type { InsertBlockOptions, BlockMutationEventDetailWithoutTarget, BlocksStore } from './types';
+import type { BlockYjsSync } from './yjs-sync';
 
 /**
  * Dependencies needed by BlockOperations

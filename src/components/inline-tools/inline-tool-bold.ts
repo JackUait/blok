@@ -1,8 +1,11 @@
 import type { InlineTool, SanitizerConfig } from '../../../types';
-import { IconBold } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector } from '../constants';
+import { IconBold } from '../icons';
+
+import { BoldNormalizationPass } from './services/bold-normalization-pass';
 import { CollapsedBoldManager } from './services/collapsed-bold-manager';
+import { InlineToolEventManager } from './services/inline-tool-event-manager';
 import {
   isBoldTag,
   isBoldElement,
@@ -14,8 +17,6 @@ import {
   isRangeFormatted,
   collectFormattingAncestors,
 } from './utils/formatting-range-utils';
-import { InlineToolEventManager } from './services/inline-tool-event-manager';
-import { BoldNormalizationPass } from './services/bold-normalization-pass';
 
 /**
  * Bold Tool

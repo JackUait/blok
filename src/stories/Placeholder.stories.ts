@@ -10,9 +10,11 @@
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
-import type { OutputData } from '@/types';
+
 import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
+
+import type { OutputData } from '@/types';
 
 interface PlaceholderArgs extends EditorFactoryOptions {
   placeholder: string;

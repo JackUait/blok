@@ -1159,7 +1159,7 @@ test.describe('tooltip API', () => {
       await expect(tooltip).toHaveAttribute('aria-hidden', 'false');
 
       const shownState = await page.evaluate((selector) => {
-        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+        const tooltipElement = document.querySelector(selector);
 
         if (!tooltipElement) {
           return null;
@@ -1186,7 +1186,7 @@ test.describe('tooltip API', () => {
       await waitForTooltipToHide(page);
 
       const hiddenState = await page.evaluate((selector) => {
-        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+        const tooltipElement = document.querySelector(selector);
 
         if (!tooltipElement) {
           return null;
@@ -1232,7 +1232,7 @@ test.describe('tooltip API', () => {
 
       // Remove the opacity-100 class which triggers the MutationObserver to update aria-hidden
       await page.evaluate((selector) => {
-        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+        const tooltipElement = document.querySelector(selector);
 
         tooltipElement?.classList.remove('opacity-100');
       }, TOOLTIP_INTERFACE_SELECTOR);
@@ -1244,7 +1244,7 @@ test.describe('tooltip API', () => {
       }, TOOLTIP_INTERFACE_SELECTOR);
 
       const state = await page.evaluate((selector) => {
-        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+        const tooltipElement = document.querySelector(selector);
 
         if (!tooltipElement) {
           return null;
@@ -1294,7 +1294,7 @@ test.describe('tooltip API', () => {
       await waitForTooltip(page);
 
       const leftPlacement = await page.evaluate((selector) => {
-        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+        const tooltipElement = document.querySelector(selector);
 
         if (!tooltipElement) {
           return null;
@@ -1326,7 +1326,7 @@ test.describe('tooltip API', () => {
       await waitForTooltip(page);
 
       const leftPlacementWithMargin = await page.evaluate((selector) => {
-        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+        const tooltipElement = document.querySelector(selector);
 
         if (!tooltipElement) {
           return null;
@@ -1354,7 +1354,7 @@ test.describe('tooltip API', () => {
       await waitForTooltip(page);
 
       const rightPlacement = await page.evaluate((selector) => {
-        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+        const tooltipElement = document.querySelector(selector);
 
         if (!tooltipElement) {
           return null;
@@ -1386,7 +1386,7 @@ test.describe('tooltip API', () => {
       await waitForTooltip(page);
 
       const rightPlacementWithMargin = await page.evaluate((selector) => {
-        const tooltipElement = document.querySelector(selector) as HTMLElement | null;
+        const tooltipElement = document.querySelector(selector);
 
         if (!tooltipElement) {
           return null;

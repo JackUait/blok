@@ -1,15 +1,16 @@
-import { Module } from '../../__module';
-import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
-import { Dom as dom$ } from '../../dom';
 import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
-import { ToolRegistry } from './tool-registry';
-import { SanitizerConfigBuilder } from './sanitizer-config';
+import { Module } from '../../__module';
+import { Dom as dom$ } from '../../dom';
+import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
+
+import type { PasteHandler } from './handlers/base';
 import { BlokDataHandler } from './handlers/blok-data-handler';
 import { FilesHandler } from './handlers/files-handler';
 import { HtmlHandler } from './handlers/html-handler';
 import { PatternHandler } from './handlers/pattern-handler';
 import { TextHandler } from './handlers/text-handler';
-import type { PasteHandler } from './handlers/base';
+import { SanitizerConfigBuilder } from './sanitizer-config';
+import { ToolRegistry } from './tool-registry';
 import type { HandlerContext } from './types';
 
 /**

@@ -378,11 +378,11 @@ describe('PopoverDesktop', () => {
       vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 150,
         width: 100 });
       vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
-        createRect({ top: 50 }) as DOMRect
+        createRect({ top: 50 })
       );
       vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
         createRect({ top: 40,
-          bottom: 500 }) as DOMRect
+          bottom: 500 })
       );
 
       expect((instance as unknown as { shouldOpenBottom: boolean }).shouldOpenBottom).toBe(true);
@@ -396,11 +396,11 @@ describe('PopoverDesktop', () => {
       vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 300,
         width: 100 });
       vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
-        createRect({ top: 400 }) as DOMRect
+        createRect({ top: 400 })
       );
       vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
         createRect({ top: 0,
-          bottom: 600 }) as DOMRect
+          bottom: 600 })
       );
 
       const originalInnerHeight = window.innerHeight;
@@ -431,11 +431,11 @@ describe('PopoverDesktop', () => {
         width: 200 });
       vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
         createRect({ left: 50,
-          right: 150 }) as DOMRect
+          right: 150 })
       );
       vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
         createRect({ left: 0,
-          right: 600 }) as DOMRect
+          right: 600 })
       );
 
       expect((instance as unknown as { shouldOpenRight: boolean }).shouldOpenRight).toBe(true);
@@ -450,11 +450,11 @@ describe('PopoverDesktop', () => {
         width: 300 });
       vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
         createRect({ left: 400,
-          right: 500 }) as DOMRect
+          right: 500 })
       );
       vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
         createRect({ left: 0,
-          right: 650 }) as DOMRect
+          right: 650 })
       );
 
       const originalInnerWidth = window.innerWidth;

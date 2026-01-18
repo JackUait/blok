@@ -1,5 +1,6 @@
 import type { Toolbar } from '../../../../types/api';
 import { Module } from '../../__module';
+
 import { logLabeled } from './../../utils';
 /**
  * @class ToolbarAPI

@@ -4,29 +4,29 @@
  * @module BlockManager
  * @version 2.0.0
  */
-import type { Block } from '../../block';
-import { Module } from '../../__module';
-import { Dom as $ } from '../../dom';
-import { Blocks } from '../../blocks';
 import type { BlockToolData, OutputBlockData, PasteEvent } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
-import { BlockAPI } from '../../block/api';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../../types/events/block';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
-import { BlockChanged } from '../../events';
+import { Module } from '../../__module';
+import type { Block } from '../../block';
+import { BlockAPI } from '../../block/api';
+import { Blocks } from '../../blocks';
 import { DATA_ATTR } from '../../constants';
+import { Dom as $ } from '../../dom';
+import { BlockChanged } from '../../events';
 import { generateBlockId } from '../../utils';
 
 // Imported modules
-import { BlockRepository } from './repository';
+import { BlockEventBinder } from './event-binder';
 import { BlockFactory } from './factory';
 import { BlockHierarchy } from './hierarchy';
-import { BlockYjsSync } from './yjs-sync';
 import { BlockOperations } from './operations';
-import type { BlocksStore, BlockMutationEventDetailWithoutTarget } from './types';
-import { BlockEventBinder } from './event-binder';
+import { BlockRepository } from './repository';
 import { BlockShortcuts } from './shortcuts';
+import type { BlocksStore, BlockMutationEventDetailWithoutTarget } from './types';
+import { BlockYjsSync } from './yjs-sync';
 
 type BlocksStoreProxy = BlocksStore & {
   [index: number]: Block | undefined;
@@ -892,7 +892,7 @@ export class BlockManager extends Module {
   ): Block {
     const eventDetail = {
       target: new BlockAPI(block),
-      ...detailData as BlockMutationEventDetailWithoutTarget<Type>,
+      ...detailData,
     };
 
     const event = new CustomEvent(mutationType, {

@@ -832,7 +832,7 @@ export const setCaretAtXPosition = (element: HTMLElement, targetX: number, atFir
    * For native inputs, we need to find the character position that best matches the X coordinate
    */
   if ($.isNativeInput(element)) {
-    setCaretAtXPositionInNativeInput(element as HTMLInputElement | HTMLTextAreaElement, targetX, atFirstLine);
+    setCaretAtXPositionInNativeInput(element, targetX, atFirstLine);
 
     return;
   }

@@ -1,15 +1,17 @@
-import { Dom as dom$ } from '../../../dom';
-import { clean } from '../../../utils/sanitizer';
-import { isObject } from '../../../utils';
 import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
-import type { HandlerContext, PasteData } from '../types';
+import { Dom as dom$ } from '../../../dom';
 import type { BlockToolAdapter } from '../../../tools/block';
-import type { ToolRegistry } from '../tool-registry';
+import { isObject } from '../../../utils';
+import { clean } from '../../../utils/sanitizer';
+import { SAFE_STRUCTURAL_TAGS, collectTagNames } from '../constants';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
+import type { ToolRegistry } from '../tool-registry';
+import type { HandlerContext, PasteData } from '../types';
+
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
-import { SAFE_STRUCTURAL_TAGS, collectTagNames } from '../constants';
+
 
 /**
  * HTML Handler Priority.
@@ -150,7 +152,7 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
 
       tags.forEach((tag) => {
         const sanitizationConfig = isObject(tagOrSanitizeConfig)
-          ? (tagOrSanitizeConfig as SanitizerConfig)[tag]
+          ? (tagOrSanitizeConfig)[tag]
           : null;
 
         nextResult[tag.toLowerCase()] = sanitizationConfig ?? {};

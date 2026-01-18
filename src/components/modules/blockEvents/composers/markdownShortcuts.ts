@@ -1,6 +1,7 @@
-import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../constants';
-import { BlockEventComposer } from './__base';
 import type { Block } from '../../../block';
+import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../constants';
+
+import { BlockEventComposer } from './__base';
 
 /**
  * MarkdownShortcuts Composer handles markdown-like shortcuts for auto-converting to lists or headers.

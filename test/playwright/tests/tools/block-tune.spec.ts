@@ -58,14 +58,14 @@ const createBlockTuneOptions = (): any => {
 test.describe('blockTuneAdapter', () => {
   test('.type returns ToolType.Tune', () => {
     const options = createBlockTuneOptions();
-    const tool = new BlockTuneAdapter(options as any);
+    const tool = new BlockTuneAdapter(options);
 
     expect(tool.type).toBe(ToolType.Tune);
   });
 
   test('.name returns correct value', () => {
     const options = createBlockTuneOptions();
-    const tool = new BlockTuneAdapter(options as any);
+    const tool = new BlockTuneAdapter(options);
 
     expect(tool.name).toBe(options.name);
   });
@@ -73,11 +73,11 @@ test.describe('blockTuneAdapter', () => {
   test('.isInternal returns correct value', () => {
     const options = createBlockTuneOptions();
 
-    const tool1 = new BlockTuneAdapter(options as any);
+    const tool1 = new BlockTuneAdapter(options);
     const tool2 = new BlockTuneAdapter({
       ...options,
       isInternal: true,
-    } as any);
+    });
 
     expect(tool1.isInternal).toBe(false);
     expect(tool2.isInternal).toBe(true);
@@ -85,28 +85,28 @@ test.describe('blockTuneAdapter', () => {
 
   test('.settings returns correct value', () => {
     const options = createBlockTuneOptions();
-    const tool = new BlockTuneAdapter(options as any);
+    const tool = new BlockTuneAdapter(options);
 
     expect(tool.settings).toStrictEqual(options.config.config);
   });
 
   test('.isBlock() returns false', () => {
     const options = createBlockTuneOptions();
-    const tool = new BlockTuneAdapter(options as any);
+    const tool = new BlockTuneAdapter(options);
 
     expect(tool.isBlock()).toBe(false);
   });
 
   test('.isInline() returns false', () => {
     const options = createBlockTuneOptions();
-    const tool = new BlockTuneAdapter(options as any);
+    const tool = new BlockTuneAdapter(options);
 
     expect(tool.isInline()).toBe(false);
   });
 
   test('.isTune() returns true', () => {
     const options = createBlockTuneOptions();
-    const tool = new BlockTuneAdapter(options as any);
+    const tool = new BlockTuneAdapter(options);
 
     expect(tool.isTune()).toBe(true);
   });
@@ -123,7 +123,7 @@ test.describe('blockTuneAdapter', () => {
         calls.push(data);
       };
 
-      const tool = new BlockTuneAdapter(options as any);
+      const tool = new BlockTuneAdapter(options);
 
       await tool.prepare();
 
@@ -140,7 +140,7 @@ test.describe('blockTuneAdapter', () => {
       const tool = new BlockTuneAdapter({
         ...options,
         constructable: {},
-      } as any);
+      });
 
       const result = await tool.prepare();
 
@@ -157,7 +157,7 @@ test.describe('blockTuneAdapter', () => {
         callCount += 1;
       };
 
-      const tool = new BlockTuneAdapter(options as any);
+      const tool = new BlockTuneAdapter(options);
 
       await tool.reset();
 
@@ -169,7 +169,7 @@ test.describe('blockTuneAdapter', () => {
       const tool = new BlockTuneAdapter({
         ...options,
         constructable: {},
-      } as any);
+      });
 
       const result = await tool.reset();
 
@@ -180,7 +180,7 @@ test.describe('blockTuneAdapter', () => {
   test.describe('.create()', () => {
     test('returns Tool instance', () => {
       const options = createBlockTuneOptions();
-      const tool = new BlockTuneAdapter(options as any);
+      const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
       const blockApi = {
         method(): void {},
@@ -193,7 +193,7 @@ test.describe('blockTuneAdapter', () => {
 
     test('returns Tool instance with passed data', () => {
       const options = createBlockTuneOptions();
-      const tool = new BlockTuneAdapter(options as any);
+      const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
       const blockApi = {
         method(): void {},
@@ -206,7 +206,7 @@ test.describe('blockTuneAdapter', () => {
 
     test('returns Tool instance with passed BlockAPI object', () => {
       const options = createBlockTuneOptions();
-      const tool = new BlockTuneAdapter(options as any);
+      const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
       const blockApi = {
         method(): void {},
@@ -219,7 +219,7 @@ test.describe('blockTuneAdapter', () => {
 
     test('returns Tool instance with passed API object', () => {
       const options = createBlockTuneOptions();
-      const tool = new BlockTuneAdapter(options as any);
+      const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
       const blockApi = {
         method(): void {},
@@ -232,7 +232,7 @@ test.describe('blockTuneAdapter', () => {
 
     test('returns Tool instance with passed settings', () => {
       const options = createBlockTuneOptions();
-      const tool = new BlockTuneAdapter(options as any);
+      const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
       const blockApi = {
         method(): void {},

@@ -1,7 +1,9 @@
-import { array } from './utils';
+import type { MoveEvent } from '../../types/tools';
+
 import type { Block } from './block';
 import { BlockToolAPI } from './block';
-import type { MoveEvent } from '../../types/tools';
+import { array } from './utils';
+
 
 /**
  * @class Blocks

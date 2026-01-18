@@ -1,5 +1,5 @@
-import type { CollapsedExitRecord } from '../types';
 import { DATA_ATTR, createSelector } from '../../constants';
+import type { CollapsedExitRecord } from '../types';
 import { ensureStrongElement, findBoldElement, isElementEmpty, isNodeWithin, resolveBoundary } from '../utils/bold-dom-utils';
 
 /**

@@ -1,12 +1,13 @@
-import { Dom as $ } from './dom';
-import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import type { BlokConfig, SanitizerConfig } from '../../types';
 import type { BlokModules } from '../types-internal/blok-modules';
+
+import { Dom as $ } from './dom';
 import { CriticalError } from './errors/critical';
-import { EventsDispatcher } from './utils/events';
-import { Modules } from './modules';
 import type { BlokEventMap } from './events';
+import { Modules } from './modules';
 import type { Renderer } from './modules/renderer';
+import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
+import { EventsDispatcher } from './utils/events';
 
 /**
  * Blok core class. Bootstraps modules.
@@ -57,7 +58,7 @@ export class Core {
           UI.checkEmptiness();
           ModificationsObserver.enable();
 
-          if ((this.configuration as BlokConfig).autofocus === true && this.configuration.readOnly !== true) {
+          if ((this.configuration).autofocus === true && this.configuration.readOnly !== true) {
             Caret.setToBlock(BlockManager.blocks[0], Caret.positions.START);
           }
 
@@ -300,7 +301,7 @@ export class Core {
         (this.moduleInstances as unknown as Record<string, BlokModules[keyof BlokModules]>)[key] = new module({
           config: this.configuration,
           eventsDispatcher: this.eventsDispatcher,
-        }) as BlokModules[keyof BlokModules];
+        });
       } catch (e) {
         log(`[constructModules] Module ${key} skipped because`, 'error', e);
       }
@@ -380,7 +381,7 @@ export class Core {
       if (moduleName === name) {
         continue;
       }
-      (diff as unknown as Record<string, BlokModules[keyof BlokModules]>)[moduleName] = this.moduleInstances[moduleName as keyof BlokModules] as BlokModules[keyof BlokModules];
+      (diff as unknown as Record<string, BlokModules[keyof BlokModules]>)[moduleName] = this.moduleInstances[moduleName as keyof BlokModules];
     }
 
     return diff;

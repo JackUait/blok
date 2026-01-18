@@ -6,9 +6,11 @@
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { waitFor, expect } from 'storybook/test';
-import type { OutputData } from '@/types';
+
 import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
+
+import type { OutputData } from '@/types';
 
 interface StubBlockArgs extends EditorFactoryOptions {
   minHeight: number;

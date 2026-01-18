@@ -1,7 +1,8 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
-import type { HandlerContext, PatternMatch } from '../types';
-import type { ToolRegistry } from '../tool-registry';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
+import type { ToolRegistry } from '../tool-registry';
+import type { HandlerContext, PatternMatch } from '../types';
+
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 

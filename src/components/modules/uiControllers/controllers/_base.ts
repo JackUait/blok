@@ -1,8 +1,8 @@
-import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { BlokConfig } from '../../../../../types/configs/blok-config';
+import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { ModuleConfig } from '../../../../types-internal/module-config';
-import type { EventsDispatcher } from '../../../utils/events';
 import type { BlokEventMap } from '../../../events';
+import type { EventsDispatcher } from '../../../utils/events';
 import { Listeners } from '../../../utils/listeners';
 
 /**

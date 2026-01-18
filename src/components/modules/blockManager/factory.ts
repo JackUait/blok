@@ -4,12 +4,13 @@
  * @module BlockFactory
  */
 import { Block } from '../../block';
-import type { EventsDispatcher } from '../../utils/events';
-import type { ComposeBlockOptions } from './types';
+import type { BlokEventMap } from '../../events';
 import type { BlockToolAdapter } from '../../tools/block';
 import type { ToolsCollection } from '../../tools/collection';
-import type { BlokEventMap } from '../../events';
+import type { EventsDispatcher } from '../../utils/events';
 import type { API } from '../api';
+
+import type { ComposeBlockOptions } from './types';
 
 /**
  * Dependencies needed by BlockFactory

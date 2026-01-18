@@ -1,6 +1,8 @@
 import type { i18n as I18nextInstance, InitOptions } from 'i18next';
-import type { I18nDictionary } from '../../../types/configs/i18n-dictionary';
+
 import type { SupportedLocale } from '../../../types/configs/i18n-config';
+import type { I18nDictionary } from '../../../types/configs/i18n-dictionary';
+
 import { englishDictionary } from './lightweight-i18n';
 
 /**

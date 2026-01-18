@@ -1,14 +1,18 @@
-import { PopoverAbstract } from './popover-abstract';
-import { ScrollLocker } from '../scroll-locker';
-import { PopoverHeader } from './components/popover-header';
-import { PopoverStatesHistory } from './utils/popover-states-history';
-import type { PopoverMobileNodes, PopoverParams } from '@/types/utils/popover/popover';
-import type { PopoverItemDefault, PopoverItemParams } from './components/popover-item';
-import { PopoverItemType } from './components/popover-item';
-import { css } from './popover.const';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { Dom } from '../../dom';
+import { ScrollLocker } from '../scroll-locker';
 import { twMerge } from '../tw';
+
+import { PopoverHeader } from './components/popover-header';
+import type { PopoverItemDefault, PopoverItemParams } from './components/popover-item';
+import { PopoverItemType } from './components/popover-item';
+import { PopoverAbstract } from './popover-abstract';
+import { css } from './popover.const';
+import { PopoverStatesHistory } from './utils/popover-states-history';
+
+import type { PopoverMobileNodes, PopoverParams } from '@/types/utils/popover/popover';
+
+
 
 
 /**

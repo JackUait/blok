@@ -1,4 +1,10 @@
+import { isEmpty, isObject } from '../utils';
+
 import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
+import { ToolsCollection } from './collection';
+import type { InlineToolAdapter } from './inline';
+import type { BlockTuneAdapter } from './tune';
+
 import type {
   BlockAPI,
   BlockTool as IBlockTool,
@@ -8,10 +14,6 @@ import type {
   PasteConfig, SanitizerConfig, ToolboxConfig,
   ToolboxConfigEntry
 } from '@/types';
-import { isEmpty, isObject } from '../utils';
-import type { InlineToolAdapter } from './inline';
-import type { BlockTuneAdapter } from './tune';
-import { ToolsCollection } from './collection';
 import type { BlockToolAdapter as BlockToolAdapterInterface } from '@/types/tools/adapters/block-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 
@@ -101,7 +103,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * whose `data.style` matches one of the specified styles will be included.
    */
   public get toolbox(): ToolboxConfigEntry[] | undefined {
-    const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox] as ToolboxConfig | undefined;
+    const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox];
     const userToolboxSettings = this.config[UserSettings.Toolbox];
 
     if (!toolToolboxSettings || isEmpty(toolToolboxSettings)) {

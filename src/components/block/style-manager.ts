@@ -1,5 +1,5 @@
-import { twMerge } from '../utils/tw';
 import { DATA_ATTR } from '../constants';
+import { twMerge } from '../utils/tw';
 
 /**
  * Manages block visual state including stretched mode and CSS classes.

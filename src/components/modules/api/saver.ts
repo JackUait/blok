@@ -1,7 +1,7 @@
-import type { Saver } from '../../../../types/api';
 import type { OutputData } from '../../../../types';
-import { logLabeled } from '../../utils';
+import type { Saver } from '../../../../types/api';
 import { Module } from '../../__module';
+import { logLabeled } from '../../utils';
 
 /**
  * @class SaverAPI

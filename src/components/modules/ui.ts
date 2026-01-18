@@ -3,28 +3,28 @@
  * Module UI
  * @type {UI}
  */
-import { Module } from '../__module';
-import { Dom as $, toggleEmptyMark } from '../dom';
-import { debounce, getValidUrl, isEmpty, openTab } from '../utils';
-
-import { SelectionUtils as Selection } from '../selection';
-import { Flipper } from '../flipper';
-import { mobileScreenBreakpoint } from '../utils';
-
-// Controllers and handlers
-import { KeyboardController } from './uiControllers/controllers/keyboard';
-import { SelectionController } from './uiControllers/controllers/selection';
-import { BlockHoverController } from './uiControllers/controllers/blockHover';
-import { createDocumentClickedHandler } from './uiControllers/handlers/click';
-import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
-
 import styles from '../../styles/main.css?inline';
+import { Module } from '../__module';
 import {
   DATA_ATTR,
   BLOK_INTERFACE_VALUE,
 } from '../constants';
+import { Dom as $, toggleEmptyMark } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
+import { Flipper } from '../flipper';
+import { SelectionUtils as Selection } from '../selection';
+import { debounce, getValidUrl, isEmpty, openTab , mobileScreenBreakpoint } from '../utils';
+
+
+// Controllers and handlers
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
+
+import { BlockHoverController } from './uiControllers/controllers/blockHover';
+import { KeyboardController } from './uiControllers/controllers/keyboard';
+import { SelectionController } from './uiControllers/controllers/selection';
+import { createDocumentClickedHandler } from './uiControllers/handlers/click';
+import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
+
 /**
  * HTML Elements used for UI
  */

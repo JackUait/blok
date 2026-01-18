@@ -642,7 +642,7 @@ export const deepMerge = <T extends object> (target: T, ...sources: Partial<T>[]
       return acc;
     }
 
-    return deepMergeTwo(acc as Record<string, unknown>, source as Record<string, unknown>);
+    return deepMergeTwo(acc, source as Record<string, unknown>);
   }, target as Record<string, unknown>);
 
   Object.assign(target, merged);
@@ -886,7 +886,7 @@ const applyStage3CacheableDecorator = (
   }
 
   if (context.kind === 'accessor' && typeof value === 'object' && value !== null) {
-    const accessor = value as CacheableAccessor<unknown>;
+    const accessor = value;
     const fallbackGetter = accessor.get ?? context.access?.get;
     const fallbackSetter = accessor.set ?? context.access?.set;
 

@@ -1,11 +1,12 @@
 import type { BlokConfig } from '../../../../../types/configs/blok-config';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import { Dom } from '../../../dom';
+import type { SanitizerConfigBuilder } from '../sanitizer-config';
+import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PasteData } from '../types';
+
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
-import type { ToolRegistry } from '../tool-registry';
-import type { SanitizerConfigBuilder } from '../sanitizer-config';
-import { Dom } from '../../../dom';
 
 /**
  * Text Handler Priority.

@@ -3,13 +3,14 @@ import type {
   BlockToolData,
   ConversionConfig,
 } from '../../../types';
-import type { SavedData } from '../../../types/data-formats';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import type { TunesManager } from './tunes-manager';
-import type { InputManager } from './input-manager';
+import type { SavedData } from '../../../types/data-formats';
 import { Dom as $ } from '../dom';
 import { isEmpty, log } from '../utils';
 import { convertBlockDataToString } from '../utils/blocks';
+
+import type { InputManager } from './input-manager';
+import type { TunesManager } from './tunes-manager';
 
 /**
  * Result of saving block data

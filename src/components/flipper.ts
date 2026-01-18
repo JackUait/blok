@@ -368,6 +368,9 @@ export class Flipper {
       case keyCodes.ENTER:
         this.handleEnterPress(event);
         break;
+      case null:
+        // keyCode is null - unrecognized key, nothing to do
+        break;
     }
   };
 

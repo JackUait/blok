@@ -387,7 +387,7 @@ export const isPrintableKey = (keyCode: number): boolean => {
  * @param {ArrayLike} collection - collection to convert to array
  * @returns {Array}
  */
-export const array = (collection: ArrayLike<any>): any[] => {
+export const array = <T extends unknown>(collection: ArrayLike<T>): T[] => {
   return Array.from(collection);
 };
 

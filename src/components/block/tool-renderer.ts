@@ -7,6 +7,13 @@ import { StyleManager } from './style-manager';
 import type { TunesManager } from './tunes-manager';
 
 /**
+ * Type for tool config that may contain a placeholder property
+ */
+interface ToolConfigWithPlaceholder {
+  placeholder?: string | false;
+}
+
+/**
  * Handles tool element composition, rendering, and DOM lifecycle.
  * Manages the wrapper, content element, and tool rendered element.
  */
@@ -43,7 +50,7 @@ export class ToolRenderer {
     private readonly name: string,
     private readonly id: string,
     private readonly tunesManager: TunesManager,
-    private readonly config: ToolConfig
+    private readonly config: ToolConfig<ToolConfigWithPlaceholder>
   ) {
     this.ready = new Promise((resolve) => {
       this.readyResolver = resolve;
@@ -180,7 +187,7 @@ export class ToolRenderer {
     }
 
     const placeholderAttribute = 'data-blok-placeholder';
-    const placeholder = this.config?.placeholder;
+    const placeholder = this.config.placeholder;
     const placeholderText = typeof placeholder === 'string' ? placeholder.trim() : '';
 
     // Paragraph tool handles its own placeholder via data-blok-placeholder-active attribute

@@ -24,8 +24,8 @@ export class Module<T extends ModuleNodes = Record<string, HTMLElement>> {
   /**
    * Each module can provide some UI elements that will be stored in this property
    */
-   
-  public nodes: T = {} as any;
+
+  public nodes: T = {} as T;
 
   /**
    * Blok modules list

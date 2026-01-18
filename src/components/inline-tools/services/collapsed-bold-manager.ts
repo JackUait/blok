@@ -117,7 +117,7 @@ export class CollapsedBoldManager {
     return merged.firstChild instanceof Text ? (() => {
       const caretRange = document.createRange();
 
-      caretRange.setStart(merged.firstChild, merged.firstChild.textContent?.length ?? 0);
+      caretRange.setStart(merged.firstChild, merged.firstChild.textContent.length);
       caretRange.collapse(true);
 
       return caretRange;
@@ -134,7 +134,7 @@ export class CollapsedBoldManager {
       return false;
     }
 
-    const content = text.textContent ?? '';
+    const content = text.textContent;
     const before = content.slice(0, offset);
     const after = content.slice(offset);
 
@@ -198,7 +198,7 @@ export class CollapsedBoldManager {
   }
 
   private exitBoldWithContent(selection: Selection, boldElement: HTMLElement, parent: ParentNode): Range {
-    boldElement.setAttribute(ATTR.COLLAPSED_LENGTH, (boldElement.textContent?.length ?? 0).toString());
+    boldElement.setAttribute(ATTR.COLLAPSED_LENGTH, boldElement.textContent.length.toString());
     boldElement.removeAttribute(ATTR.PREV_LENGTH);
     boldElement.removeAttribute(ATTR.COLLAPSED_ACTIVE);
     boldElement.removeAttribute(ATTR.LEADING_WHITESPACE);
@@ -213,12 +213,12 @@ export class CollapsedBoldManager {
 
     const boundary = (newNode ?? initialNextSibling) as Text;
 
-    if (!needsNewNode && (boundary.textContent ?? '').length === 0) {
+    if (!needsNewNode && boundary.textContent.length === 0) {
       boundary.textContent = '\u200B';
     }
 
     const newRange = document.createRange();
-    const boundaryContent = boundary.textContent ?? '';
+    const boundaryContent = boundary.textContent;
     const caretOffset = boundaryContent.startsWith('\u200B') ? 1 : 0;
 
     newRange.setStart(boundary, caretOffset);
@@ -230,7 +230,7 @@ export class CollapsedBoldManager {
     this.records.add({
       boundary,
       boldElement,
-      allowedLength: boldElement.textContent?.length ?? 0,
+      allowedLength: boldElement.textContent.length,
       hasLeadingSpace: false,
       hasTypedContent: false,
       leadingWhitespace: '',
@@ -267,20 +267,20 @@ export class CollapsedBoldManager {
 
   private enforceTextBoundary(record: CollapsedExitRecord): void {
     const { boundary, boldElement, allowedLength } = record;
-    const currentText = boldElement.textContent ?? '';
+    const currentText = boldElement.textContent;
 
     if (currentText.length > allowedLength) {
       const preserved = currentText.slice(0, allowedLength);
       const extra = currentText.slice(allowedLength);
 
       boldElement.textContent = preserved;
-      boundary.textContent = extra + (boundary.textContent ?? '');
+      boundary.textContent = extra + boundary.textContent;
     }
   }
 
   private cleanupZeroWidthSpace(record: CollapsedExitRecord): void {
     const { boundary } = record;
-    const boundaryContent = boundary.textContent ?? '';
+    const boundaryContent = boundary.textContent;
 
     if (boundaryContent.length > 1 && boundaryContent.startsWith('\u200B')) {
       boundary.textContent = boundaryContent.slice(1);
@@ -289,7 +289,7 @@ export class CollapsedBoldManager {
 
   private updateRecordState(record: CollapsedExitRecord): void {
     const { boundary } = record;
-    const boundaryText = boundary.textContent ?? '';
+    const boundaryText = boundary.textContent;
     const sanitizedBoundary = boundaryText.replace(/\u200B/g, '');
     const leadingMatch = sanitizedBoundary.match(/^\s+/);
     const containsTypedContent = /\S/.test(sanitizedBoundary);
@@ -309,14 +309,14 @@ export class CollapsedBoldManager {
 
   private checkForRecordDeletion(record: CollapsedExitRecord): void {
     const { boundary, boldElement, allowedLength } = record;
-    const boundaryText = boundary.textContent ?? '';
+    const boundaryText = boundary.textContent;
     const sanitizedBoundary = boundaryText.replace(/\u200B/g, '');
     const selectionStartsWithZws = boundaryText.startsWith('\u200B');
     const boundaryHasVisibleLeading = /^\s/.test(sanitizedBoundary);
 
     const meetsDeletionCriteria = record.hasTypedContent &&
       !selectionStartsWithZws &&
-      (boldElement.textContent ?? '').length <= allowedLength;
+      boldElement.textContent.length <= allowedLength;
 
     const shouldRestoreLeadingSpace = record.hasLeadingSpace &&
       record.hasTypedContent &&
@@ -364,7 +364,7 @@ export class CollapsedBoldManager {
       }
 
       const prevTextNode = prevNode as Text;
-      const prevText = prevTextNode.textContent ?? '';
+      const prevText = prevTextNode.textContent;
 
       if (prevText.length <= prevLength) {
         return;
@@ -385,7 +385,7 @@ export class CollapsedBoldManager {
         return;
       }
 
-      const existingContent = boldElement.textContent ?? '';
+      const existingContent = boldElement.textContent;
       const newContent = existingContent + extra;
       const storedLeading = boldElement.getAttribute(ATTR.LEADING_WHITESPACE) ?? '';
       const shouldPrefixLeading = storedLeading.length > 0 && existingContent.length === 0 && !newContent.startsWith(storedLeading);
@@ -403,7 +403,7 @@ export class CollapsedBoldManager {
       }
 
       const newRange = document.createRange();
-      const caretOffset = updatedTextNode.textContent?.length ?? 0;
+      const caretOffset = updatedTextNode.textContent.length;
 
       newRange.setStart(updatedTextNode, caretOffset);
       newRange.collapse(true);
@@ -441,7 +441,7 @@ export class CollapsedBoldManager {
       }
 
       const allowedLength = Number(lengthAttr);
-      const currentText = boldEl.textContent ?? '';
+      const currentText = boldEl.textContent;
 
       if (!Number.isFinite(allowedLength)) {
         return;
@@ -480,7 +480,7 @@ export class CollapsedBoldManager {
 
       if (selection?.isCollapsed && newTextNodeAfterSplit && isNodeWithin(selection.focusNode, boldEl)) {
         const caretRange = document.createRange();
-        const caretOffset = newTextNodeAfterSplit.textContent?.length ?? 0;
+        const caretOffset = newTextNodeAfterSplit.textContent.length;
 
         caretRange.setStart(newTextNodeAfterSplit, caretOffset);
         caretRange.collapse(true);
@@ -547,7 +547,7 @@ export class CollapsedBoldManager {
     }
 
     const textNode = range.startContainer as Text;
-    const textContent = textNode.textContent ?? '';
+    const textContent = textNode.textContent;
 
     if (textContent.length === 0 || range.startOffset !== 0) {
       return;
@@ -656,7 +656,7 @@ export class CollapsedBoldManager {
       return false;
     }
 
-    const textOffset = textNode.textContent?.length ?? 0;
+    const textOffset = textNode.textContent.length;
 
     this.setCaret(selection, textNode, textOffset);
 
@@ -701,7 +701,7 @@ export class CollapsedBoldManager {
 
     const textNode = range.startContainer as Text;
     const previousSibling = textNode.previousSibling;
-    const textContent = textNode.textContent ?? '';
+    const textContent = textNode.textContent;
     const startsWithWhitespace = /^\s/.test(textContent);
 
     if (
@@ -716,7 +716,7 @@ export class CollapsedBoldManager {
 
     const boldElement = findBoldElement(textNode);
 
-    if (!boldElement || range.startOffset !== (textNode.textContent?.length ?? 0)) {
+    if (!boldElement || range.startOffset !== textNode.textContent.length) {
       return;
     }
 

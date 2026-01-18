@@ -254,7 +254,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * These are merged with library-defined searchTerms in the toolbox config.
    */
   public get searchTerms(): string[] | undefined {
-    return this.settings.searchTerms;
+    return (this.config as Record<string, unknown>).searchTerms as string[] | undefined;
   }
 
   /**

@@ -1797,7 +1797,7 @@ export class ListItem implements BlockTool {
     return fragment;
   }
 
-  public static get conversionConfig(): ConversionConfig {
+  public static get conversionConfig(): ConversionConfig<ListItemData> {
     return {
       export: (data: ListItemData): string => {
         return data.text;

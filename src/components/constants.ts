@@ -59,7 +59,7 @@ export const INLINE_TOOLBAR_INTERFACE_SELECTOR = '[data-blok-interface=inline-to
  */
 export const MODIFIER_KEY = (() => {
   // Check if we're in a Node.js environment
-  if (typeof process !== 'undefined' && process.platform) {
+  if (typeof process !== 'undefined') {
     return process.platform === 'darwin' ? 'Meta' : 'Control';
   }
 

@@ -205,7 +205,7 @@ export class BoldNormalizationPass {
    * @param textNode - The text node to process
    */
   private replaceNbspInTextNode(textNode: Text): void {
-    const text = textNode.textContent ?? '';
+    const text = textNode.textContent;
 
     if (!text.includes('\u00A0')) {
       return;
@@ -223,7 +223,7 @@ export class BoldNormalizationPass {
    * @returns true if the element is empty and doesn't contain the preserved node
    */
   private isEmptyAndSafe(strong: HTMLElement): boolean {
-    const isEmpty = (strong.textContent ?? '').length === 0;
+    const isEmpty = strong.textContent.length === 0;
 
     if (!isEmpty) {
       return false;

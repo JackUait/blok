@@ -198,7 +198,7 @@ export class BoldInlineTool implements InlineTool {
    * @param selection - The Selection object to check
    */
   private isSelectionVisuallyBold(selection: Selection): boolean {
-    if (!selection || selection.rangeCount === 0) {
+    if (selection.rangeCount === 0) {
       return false;
     }
 
@@ -434,11 +434,7 @@ export class BoldInlineTool implements InlineTool {
    * @param root - The root node to process
    */
   private removeNestedBold(root: ParentNode): void {
-    const boldNodes = root.querySelectorAll?.('b,strong');
-
-    if (!boldNodes) {
-      return;
-    }
+    const boldNodes = root.querySelectorAll('b,strong');
 
     boldNodes.forEach((node) => {
       this.unwrapElement(node);
@@ -667,7 +663,7 @@ export class BoldInlineTool implements InlineTool {
             processScope(BoldInlineTool.findBlokScopeFromNode(node));
           });
 
-          if (mutation.type === 'characterData' && mutation.target) {
+          if (mutation.type === 'characterData') {
             processScope(BoldInlineTool.findBlokScopeFromNode(mutation.target));
           }
         });
@@ -726,7 +722,7 @@ export class BoldInlineTool implements InlineTool {
    * @param textNode - Text container
    */
   private static getBoundaryBoldForText(range: Range, textNode: Text): HTMLElement | null {
-    const length = textNode.textContent?.length ?? 0;
+    const length = textNode.textContent.length;
 
     if (range.startOffset === length) {
       return findBoldElement(textNode);

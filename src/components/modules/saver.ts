@@ -242,7 +242,7 @@ export class Saver extends Module {
    * Check that stub data matches OutputBlockData format
    * @param data - saved stub data that should represent original block payload
    */
-  private isStubSavedData(data: BlockToolData): data is OutputData['blocks'][number] {
+  private isStubSavedData(data: unknown): data is OutputData['blocks'][number] {
     if (!isObject(data)) {
       return false;
     }

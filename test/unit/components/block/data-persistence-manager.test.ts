@@ -278,7 +278,7 @@ describe('DataPersistenceManager', () => {
     });
 
     it('data returns empty object when save returns undefined', async () => {
-      vi.mocked(toolInstance.save).mockResolvedValue(undefined);
+      vi.mocked(toolInstance.save).mockResolvedValue(undefined as unknown as Record<string, unknown>);
 
       const data = await dataPersistenceManager.data;
 
@@ -340,7 +340,7 @@ describe('DataPersistenceManager', () => {
     });
 
     it('handles non-object save result for empty blocks', async () => {
-      vi.mocked(toolInstance.save).mockResolvedValue(null);
+      vi.mocked(toolInstance.save).mockResolvedValue(null as unknown as Record<string, unknown>);
 
       const result = await dataPersistenceManager.save();
 

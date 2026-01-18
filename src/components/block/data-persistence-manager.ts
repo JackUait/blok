@@ -1,6 +1,5 @@
 import type {
   BlockTool as IBlockTool,
-  BlockToolData,
   ConversionConfig,
 } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
@@ -13,9 +12,17 @@ import type { InputManager } from './input-manager';
 import type { TunesManager } from './tunes-manager';
 
 /**
- * Result of saving block data
+ * Result of saving block data with type-safe data field
  */
-type BlockSaveResult = SavedData & { tunes: { [name: string]: BlockTuneData } };
+type BlockSaveResult = Omit<SavedData, 'data'> & {
+  data: SafeBlockToolData;
+  tunes: { [name: string]: BlockTuneData };
+};
+
+/**
+ * Type-safe block tool data that doesn't default to `any`
+ */
+type SafeBlockToolData = Record<string, unknown>;
 
 /**
  * Handles all data extraction, caching, and in-place updates for a Block.
@@ -25,7 +32,7 @@ export class DataPersistenceManager {
   /**
    * Stores last successfully extracted block data
    */
-  private lastSavedDataInternal: BlockToolData;
+  private lastSavedDataInternal: SafeBlockToolData;
 
   /**
    * Stores last successfully extracted tunes data
@@ -53,7 +60,7 @@ export class DataPersistenceManager {
     private readonly inputManager: InputManager,
     private readonly callToolUpdated: () => void,
     private readonly toggleEmptyMark: () => void,
-    initialData: BlockToolData,
+    initialData: SafeBlockToolData,
     initialTunesData: { [name: string]: BlockTuneData }
   ) {
     this.lastSavedDataInternal = initialData;
@@ -94,9 +101,9 @@ export class DataPersistenceManager {
    * @param newData - the new data to apply to the block
    * @returns true if the update was performed in-place, false if a full re-render is needed
    */
-  public async setData(newData: BlockToolData): Promise<boolean> {
+  public async setData(newData: SafeBlockToolData): Promise<boolean> {
     // Check if tool supports setData method
-    const toolSetData = (this.toolInstance as { setData?: (data: BlockToolData) => void | Promise<void> }).setData;
+    const toolSetData = (this.toolInstance as { setData?: (data: SafeBlockToolData) => void | Promise<void> }).setData;
 
     if (typeof toolSetData === 'function') {
       try {
@@ -118,11 +125,12 @@ export class DataPersistenceManager {
 
     // Handle simple text-based blocks (like paragraph) with a 'text' property
     const isContentEditable = pluginsContent.getAttribute('contenteditable') === 'true';
-    const hasTextProperty = typeof newData.text === 'string';
+    const textValue = newData.text;
+    const hasTextProperty = typeof textValue === 'string';
     const isEmptyParagraphData = Object.keys(newData).length === 0 && this.name === 'paragraph';
 
     if (isContentEditable && (hasTextProperty || isEmptyParagraphData)) {
-      const newText = hasTextProperty ? newData.text : '';
+      const newText = hasTextProperty ? textValue : '';
 
       pluginsContent.innerHTML = newText;
       this.lastSavedDataInternal = newData;
@@ -143,7 +151,7 @@ export class DataPersistenceManager {
    * @param data - data to validate
    * @returns true if data is valid or no validation method exists
    */
-  public async validate(data: BlockToolData): Promise<boolean> {
+  public async validate(data: SafeBlockToolData): Promise<boolean> {
     if (this.toolInstance.validate instanceof Function) {
       return await this.toolInstance.validate(data);
     }
@@ -166,7 +174,7 @@ export class DataPersistenceManager {
    * Get Block's JSON data
    * @returns Promise resolving to the block data
    */
-  public get data(): Promise<BlockToolData> {
+  public get data(): Promise<SafeBlockToolData> {
     return this.save().then((savedObject) => {
       if (savedObject && !isEmpty(savedObject.data)) {
         return savedObject.data;
@@ -179,7 +187,7 @@ export class DataPersistenceManager {
   /**
    * Get last saved data (internal accessor)
    */
-  public get lastSavedData(): BlockToolData {
+  public get lastSavedData(): SafeBlockToolData {
     return this.lastSavedDataInternal;
   }
 
@@ -193,7 +201,7 @@ export class DataPersistenceManager {
   /**
    * Returns last successfully extracted block data
    */
-  public get preservedData(): BlockToolData {
+  public get preservedData(): SafeBlockToolData {
     return this.lastSavedDataInternal;
   }
 
@@ -207,7 +215,7 @@ export class DataPersistenceManager {
   /**
    * Safely executes tool.save capturing possible errors without breaking the saver pipeline
    */
-  private async extractToolData(): Promise<BlockToolData | undefined> {
+  private async extractToolData(): Promise<SafeBlockToolData | undefined> {
     try {
       const pluginsContent = this.getToolRenderedElement();
 
@@ -215,16 +223,35 @@ export class DataPersistenceManager {
         return undefined;
       }
 
-      const extracted = await this.toolInstance.save(pluginsContent);
+      // Cast the result from tool.save() to unknown first to avoid the `any` type,
+      // then narrow it properly for type safety
+      const extracted = await this.toolInstance.save(pluginsContent) as unknown;
 
-      if (!this.getIsEmpty() || extracted === undefined || extracted === null || typeof extracted !== 'object') {
-        return extracted;
+      // If the block is not empty, return the extracted data as-is
+      // (it could be string, number, etc. for non-object types)
+      if (!this.getIsEmpty()) {
+        return extracted as SafeBlockToolData;
       }
 
-      const normalized = { ...extracted } as Record<string, unknown>;
+      // For empty blocks, skip further processing for null/undefined
+      if (extracted === null) {
+        return undefined;
+      }
+
+      if (extracted === undefined) {
+        return undefined;
+      }
+
+      // For non-object types, return as-is
+      if (typeof extracted !== 'object') {
+        return extracted as SafeBlockToolData;
+      }
+
+      // Normalize empty fields for object types
+      const normalized: Record<string, unknown> = { ...(extracted as Record<string, unknown>) };
       this.sanitizeEmptyFields(normalized);
 
-      return normalized as BlockToolData;
+      return normalized;
     } catch (error) {
       const normalizedError = error instanceof Error ? error : new Error(String(error));
 

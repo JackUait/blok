@@ -21,7 +21,7 @@ export const isBoldElement = (node: Node | null): node is Element => {
  * @param element - The element to check
  */
 export const isElementEmpty = (element: HTMLElement): boolean => {
-  return (element.textContent ?? '').length === 0;
+  return element.textContent.length === 0;
 };
 
 /**
@@ -100,13 +100,7 @@ export const ensureTextNodeAfter = (boldElement: HTMLElement): Text | null => {
     return null;
   }
 
-  const documentRef = boldElement.ownerDocument ?? (typeof document !== 'undefined' ? document : null);
-
-  if (!documentRef) {
-    return null;
-  }
-
-  const newNode = documentRef.createTextNode('');
+  const newNode = boldElement.ownerDocument.createTextNode('');
 
   parent.insertBefore(newNode, existingNext);
 

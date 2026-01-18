@@ -29,8 +29,10 @@ export class TunesManager {
   /**
    * If there is saved data for Tune which is not available at the moment,
    * we will store it here and provide back on save so data is not lost
+   *
+   * Using unknown to avoid unsafe any type; values are cast to BlockTuneData when returned
    */
-  private unavailableTunesData: { [name: string]: BlockTuneData } = {};
+  private unavailableTunesData: Record<string, unknown> = {};
 
   /**
    * @param tunes - Collection of tune adapters
@@ -147,7 +149,8 @@ export class TunesManager {
    * @returns Object mapping tune names to their data
    */
   public extractTunesData(): { [name: string]: BlockTuneData } {
-    const tunesData: { [name: string]: BlockTuneData } = { ...this.unavailableTunesData };
+    const tunesData: { [name: string]: BlockTuneData } =
+      { ...this.unavailableTunesData } as { [name: string]: BlockTuneData };
 
     [
       ...this.tunesInstances.entries(),
@@ -156,6 +159,7 @@ export class TunesManager {
       .forEach(([name, tune]) => {
         if (isFunction(tune.save)) {
           try {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             tunesData[name] = tune.save();
           } catch (e) {
             log(`Tune ${tune.constructor.name} save method throws an Error %o`, 'warn', e);

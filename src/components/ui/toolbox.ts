@@ -516,7 +516,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      */
     const index = shouldReplaceBlock ? currentBlockIndex : currentBlockIndex + 1;
 
-    const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides as Record<string, unknown>).length > 0;
+    const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides).length > 0;
 
     const blockData: BlockToolData | undefined = hasBlockDataOverrides
       ? Object.assign(await this.api.blocks.composeBlockData(toolName), blockDataOverrides)

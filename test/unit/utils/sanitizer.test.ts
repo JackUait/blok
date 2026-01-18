@@ -160,7 +160,7 @@ describe('sanitizer', () => {
 
         const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-        const data = result[0].data as Record<string, unknown>;
+        const data = result[0].data;
 
         expect(data.title).toContain('<strong>');
         expect(data.title).not.toContain('<span>');
@@ -198,7 +198,7 @@ describe('sanitizer', () => {
 
         const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-        const data = result[0].data as Record<string, unknown>;
+        const data = result[0].data;
         const items = data.items as string[];
 
         expect(items[0]).toContain('<strong>');
@@ -227,7 +227,7 @@ describe('sanitizer', () => {
 
         const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-        const data = result[0].data as Record<string, unknown>;
+        const data = result[0].data;
 
         expect(data.count).toBe(expectedCount);
         expect(data.active).toBe(true);
@@ -934,7 +934,7 @@ describe('sanitizer', () => {
 
       const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-      const data = result[0].data as Record<string, unknown>;
+      const data = result[0].data;
 
       expect(data.title).toContain('<strong>');
       expect(data.title).not.toContain('<span>');

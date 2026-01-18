@@ -100,7 +100,7 @@ export const isRangeFormatted = (
 
   while (walker.nextNode()) {
     const textNode = walker.currentNode as Text;
-    const value = textNode.textContent ?? '';
+    const value = textNode.textContent;
 
     if (options.ignoreWhitespace && value.trim().length === 0) {
       continue;

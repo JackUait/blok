@@ -149,7 +149,7 @@ export class ItalicInlineTool implements InlineTool {
    * @param selection - The Selection object to check
    */
   private isSelectionVisuallyItalic(selection: Selection): boolean {
-    if (!selection || selection.rangeCount === 0) {
+    if (selection.rangeCount === 0) {
       return false;
     }
 
@@ -240,7 +240,7 @@ export class ItalicInlineTool implements InlineTool {
     }
 
     italicAncestors.forEach((element) => {
-      if ((element.textContent ?? '').length === 0) {
+      if (element.textContent.length === 0) {
         element.remove();
       }
     });
@@ -291,11 +291,7 @@ export class ItalicInlineTool implements InlineTool {
    * @param root - The root node to process
    */
   private removeNestedItalic(root: ParentNode): void {
-    const italicNodes = root.querySelectorAll?.('i,em');
-
-    if (!italicNodes) {
-      return;
-    }
+    const italicNodes = root.querySelectorAll('i,em');
 
     italicNodes.forEach((node) => {
       this.unwrapElement(node);

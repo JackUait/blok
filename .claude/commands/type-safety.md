@@ -16,6 +16,8 @@ This means:
 
 **CRITICAL: Preserve public API contracts.** Don't change exported function signatures, interface shapes, or type definitions in ways that break downstream consumers.
 
+**CRITICAL: NEVER use grep filtering to check for errors.** Grep patterns are fragile and silently drop errors that don't match. Always run full `yarn lint:types` and `yarn lint` and parse the complete output.
+
 **Pragmatic approach:** Focus on real type safety issues.
 
 ## Public API Preservation
@@ -136,7 +138,7 @@ Each round executes Phases 1-4 (Scoring → Batching → Distribution → Verifi
 - Errors remain AND progress was made AND no errors are stuck
 
 **Stop with SUCCESS if:**
-- Zero errors remain (both `check-types` and `check:eslint` pass)
+- Zero errors remain (both `lint:types` and `lint` pass)
 
 **Stop with IMPOSSIBLE if:**
 - Zero progress: Current round resolved 0 points
@@ -187,16 +189,35 @@ if stuck_errors and all errors are in stuck_errors:
 - For directories, glob `**/*.ts` and `**/*.tsx`
 - Validate each file exists before proceeding
 
+## Red Flags - You're About to Miss Errors
+
+**STOP and reconsider if you're thinking:**
+
+- "Grep filtering is good enough" → NO: Use full output, grep drops errors
+- "That file looks clean" → NO: Only lint:types output counts, visual inspection misses things
+- "The subagent said it fixed the file" → NO: Verify with actual lint output, not trust
+- "Most errors are fixed, that's good enough" → NO: Either ALL errors are fixed or continue to next round
+- "This error is probably from another file" → NO: Check the file path in the error output
+- "The grep pattern should match" → NO: Grep patterns are fragile, use full output
+- "I'll catch remaining errors in the next run" → NO: That's exactly what we're trying to avoid
+
+**All of these mean: Re-read the full lint output and count EVERY error.**
+
 ## Phase 1: Scoring
 
-**Step 1: Run compiler and ESLint checks**
+**Step 1: Run compiler and ESLint checks (CAPTURE FULL OUTPUT)**
 ```bash
-# TypeScript compiler errors
-$HOME/.bun/bin/bun run check-types 2>&1
+# TypeScript compiler errors - capture FULL output, NO grep filtering
+yarn lint:types 2>&1
 
-# ESLint TypeScript rules (catches issues grep may miss)
-$HOME/.bun/bin/bun run check:eslint -- --format compact 2>&1
+# ESLint TypeScript rules - capture FULL output, NO grep filtering
+yarn lint 2>&1
 ```
+
+**CRITICAL: Do NOT use grep filtering at this stage.** The full output is needed to:
+- Catch all errors regardless of format
+- Handle edge cases in error messages
+- Ensure nothing is silently dropped
 
 Parse output to count:
 - Compiler errors per file (TS*)
@@ -312,17 +333,23 @@ Each subagent reports:
 
 ```bash
 # TypeScript compiler - capture ALL errors, not just target files
-$HOME/.bun/bin/bun run check-types 2>&1
+yarn lint:types 2>&1
 
 # ESLint TypeScript rules
-$HOME/.bun/bin/bun run check:eslint -- --format compact 2>&1
+yarn lint 2>&1
 ```
+
+**CRITICAL: Parse the full output to verify:**
+1. For EACH file that was assigned to a subagent, check it appears ZERO times in the error output
+2. If ANY assigned file still has errors, the subagent failed - add it to the next round
+3. Do NOT accept "partial fixes" - either the file has zero errors or it needs more work
 
 This catches:
 - Cascade errors from type changes
 - Issues subagents missed
 - Cross-file breakages
 - ESLint TypeScript violations (no-non-null-assertion, no-explicit-any, etc.)
+- Subagents that returned incomplete fixes
 
 **Step 3: Update state and check termination**
 
@@ -372,12 +399,12 @@ Type Safety Complete ✓
 
 Rounds: 3
 Round 1: 76 pts → 23 pts (53 resolved)
-Round 2: 23 pts → 5 pts (18 resolved)  
+Round 2: 23 pts → 5 pts (18 resolved)
 Round 3: 5 pts → 0 pts (5 resolved)
 
 Total: 76 points resolved across 4 files
-Final check-types: PASS
-Final check:eslint: PASS
+Final lint:types: PASS
+Final lint: PASS
 ```
 
 **On IMPOSSIBLE (no progress):**
@@ -429,24 +456,29 @@ Scores (for context):
 
 ## Process
 
-1. For each file, run BOTH checks:
-   $HOME/.bun/bin/bun run check-types 2>&1 | grep -E "{file_pattern}"
-   $HOME/.bun/bin/bun run check:eslint {file_path} -- --format compact
+1. Run FULL checks WITHOUT grep filtering - capture all errors:
+   yarn lint:types 2>&1
+   yarn lint 2>&1
 
-2. Scan each file for critical weak patterns (any, @ts-ignore)
+2. From the output, extract ONLY errors related to your files:
+   - Match file paths exactly (e.g., "src/components/Modal.tsx")
+   - Capture the full error message and line number
+   - Create a TodoWrite checklist of ALL errors found
 
-3. Create TodoWrite checklist with issues across your files
+3. Scan each file for critical weak patterns (any, @ts-ignore, ! assertions)
 
 4. Fix issues pragmatically:
    - Compiler errors MUST be fixed
    - `any` types MUST be replaced
    - `@ts-ignore` SHOULD be removed if the underlying error is fixable or replace with `@ts-expect-error` with description if the error it's not fixable
 
-5. After fixing files, verify checks pass:
-   $HOME/.bun/bin/bun run check-types 2>&1 | grep -E "{file_pattern}"
-   $HOME/.bun/bin/bun run check:eslint {file_path} -- --format compact
+5. After fixing, run FULL verification again:
+   yarn lint:types 2>&1
+   yarn lint 2>&1
 
-6. Report:
+6. Verify that NONE of your assigned files appear in the error output. If any do, return to step 2.
+
+7. Report:
    - Files fixed
    - Issues resolved (compiler errors, ESLint errors, weak patterns)
    - Any cascade errors discovered in OTHER files (main agent handles these)
@@ -468,6 +500,10 @@ DON'T change exported function signatures, interfaces, or types that have multip
 
 **Cascade Rule (RESTRICTED):**
 Only fix cascade errors in direct imports of modified files. Don't chase errors beyond level 3.
+
+**ZERO TOLERANCE FOR ERRORS IN YOUR FILES:**
+If after your fixes, ANY error appears in lint:types or lint output for a file you were assigned, you are NOT done.
+Do NOT return with "partial fixes" - either fix the error or explain why it's impossible.
 ```
 
 ## Core Rules
@@ -486,9 +522,9 @@ Only fix cascade errors in direct imports of modified files. Don't chase errors 
 | TS2532 | Object possibly undefined | `obj.prop` when `obj` might be undefined |
 | TS2531 | Object possibly null | `obj.prop` when `obj` might be null |
 | TS7006 | Parameter implicitly has 'any' type | `function foo(x) {}` |
-| **Any TS error** | **If `check-types` reports it, fix it** | **No exceptions** |
+| **Any TS error** | **If `lint:types` reports it, fix it** | **No exceptions** |
 
-**Note:** If `check-types` reports a compiler error, fix it. These are genuine type issues.
+**Note:** If `lint:types` reports a compiler error, fix it. These are genuine type issues.
 
 ### Cascade Rule: Fix What You Break (RESTRICTED)
 

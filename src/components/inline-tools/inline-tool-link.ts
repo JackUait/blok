@@ -137,7 +137,8 @@ export class LinkInlineTool implements InlineTool {
         items: [
           {
             type: PopoverItemType.Html,
-            element: this.nodes.input!,
+            // Input is created in constructor, so it's always available here
+            element: this.nodes.input as HTMLInputElement,
           },
         ],
         onOpen: () => {
@@ -465,9 +466,9 @@ export class LinkInlineTool implements InlineTool {
     /**
      * Edit all link, not selected part
      */
-    const anchorTag = this.selection.findParentTag('A') as HTMLAnchorElement;
+    const anchorTag = this.selection.findParentTag('A');
 
-    if (anchorTag) {
+    if (anchorTag instanceof HTMLAnchorElement) {
       this.selection.expandToTag(anchorTag);
 
       anchorTag.href = link;

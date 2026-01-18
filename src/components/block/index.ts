@@ -278,13 +278,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     );
 
     // Compose the block and get the holder
-    const holderElement = this.toolRenderer.compose();
-
-    if (holderElement == null) {
-      throw new Error(`Tool "${this.name}" did not return a block holder element during render()`);
-    }
-
-    this.holder = holderElement;
+    this.holder = this.toolRenderer.compose();
     this.ready = this.toolRenderer.ready;
 
     // Initialize StyleManager with holder and content element
@@ -325,8 +319,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
       this.inputManager,
       () => this.call(BlockToolAPI.UPDATED),
       () => this.toggleInputsEmptyMark(),
-      data ?? {},
-      tunesData ?? {}
+      data,
+      tunesData
     );
 
     // Bind block mutation watchers and input events
@@ -551,7 +545,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     const blockData = await this.data;
 
     return toolboxSettings.find((item) => {
-      return isSameBlockData(item.data, blockData);
+      return item.data !== undefined && isSameBlockData(item.data, blockData);
     });
   }
 

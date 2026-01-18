@@ -1,4 +1,4 @@
-import { array, isNumber, isString } from './utils';
+import { isNumber, isString } from './utils';
 
 /**
  * DOM manipulations helper
@@ -37,7 +37,7 @@ export class Dom {
    * @returns {boolean}
    */
   public static isLineBreakTag(element: HTMLElement): element is HTMLBRElement {
-    return !!element && ['BR', 'WBR'].includes(element.tagName);
+    return ['BR', 'WBR'].includes(element.tagName);
   }
 
   /**
@@ -237,17 +237,22 @@ export class Dom {
    * @param holder - element where to find inputs
    */
   public static findAllInputs(holder: Element): HTMLElement[] {
-    return array(holder.querySelectorAll(Dom.allInputsSelector))
-      /**
-       * If contenteditable element contains block elements, treat them as inputs.
-       */
-      .reduce((result, input) => {
-        if (Dom.isNativeInput(input) || Dom.containsOnlyInlineElements(input)) {
-          return [...result, input];
-        }
+    const elements = Array.from(holder.querySelectorAll(Dom.allInputsSelector));
+    const htmlElements: HTMLElement[] = [];
 
-        return [...result, ...Dom.getDeepestBlockElements(input)];
-      }, []);
+    for (const element of elements) {
+      if (element instanceof HTMLElement) {
+        htmlElements.push(element);
+      }
+    }
+
+    return htmlElements.reduce((result, input) => {
+      if (Dom.isNativeInput(input) || Dom.containsOnlyInlineElements(input)) {
+        return [...result, input];
+      }
+
+      return [...result, ...Dom.getDeepestBlockElements(input)];
+    }, [] as HTMLElement[]);
   }
 
   /**
@@ -310,12 +315,12 @@ export class Dom {
    * @returns {boolean}
    */
 
-  public static isElement(node: any): node is Element {
+  public static isElement(node: unknown): node is Element {
     if (isNumber(node)) {
       return false;
     }
 
-    return node != null && node.nodeType != null && node.nodeType === Node.ELEMENT_NODE;
+    return node != null && typeof node === 'object' && 'nodeType' in node && node.nodeType === Node.ELEMENT_NODE;
   }
 
   /**
@@ -324,12 +329,12 @@ export class Dom {
    * @returns {boolean}
    */
 
-  public static isFragment(node: any): node is DocumentFragment {
+  public static isFragment(node: unknown): node is DocumentFragment {
     if (isNumber(node)) {
       return false;
     }
 
-    return node != null && node.nodeType != null && node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
+    return node != null && typeof node === 'object' && 'nodeType' in node && node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
   }
 
   /**
@@ -347,13 +352,13 @@ export class Dom {
    * @returns {boolean}
    */
 
-  public static isNativeInput(target: any): target is HTMLInputElement | HTMLTextAreaElement {
+  public static isNativeInput(target: unknown): target is HTMLInputElement | HTMLTextAreaElement {
     const nativeInputs = [
       'INPUT',
       'TEXTAREA',
     ];
 
-    return target != null && typeof target.tagName === 'string' ? nativeInputs.includes(target.tagName) : false;
+    return target != null && typeof target === 'object' && 'tagName' in target && typeof target.tagName === 'string' ? nativeInputs.includes(target.tagName) : false;
   }
 
   /**
@@ -409,10 +414,6 @@ export class Dom {
    * @returns {boolean}
    */
   public static isLeaf(node: Node): boolean {
-    if (!node) {
-      return false;
-    }
-
     return node.childNodes.length === 0;
   }
 
@@ -438,9 +439,7 @@ export class Dom {
         return false;
       }
 
-      if (currentNode.childNodes) {
-        treeWalker.push(...Array.from(currentNode.childNodes));
-      }
+      treeWalker.push(...Array.from(currentNode.childNodes));
     }
 
     return true;

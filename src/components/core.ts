@@ -1,4 +1,4 @@
-import type { BlokConfig, SanitizerConfig } from '../../types';
+import type { BlokConfig } from '../../types';
 import type { BlokModules } from '../types-internal/blok-modules';
 
 import { Dom as $ } from './dom';
@@ -119,7 +119,7 @@ export class Core {
     const toolsConfig = this.config.tools;
     const defaultBlockName = this.config.defaultBlock;
     const hasDefaultBlockTool = toolsConfig != null &&
-      Object.prototype.hasOwnProperty.call(toolsConfig, defaultBlockName ?? '');
+      Object.prototype.hasOwnProperty.call(toolsConfig, defaultBlockName);
     const initialBlocks = this.config.data?.blocks;
     const hasInitialBlocks = Array.isArray(initialBlocks) && initialBlocks.length > 0;
 
@@ -167,7 +167,7 @@ export class Core {
     if (this.config.placeholder === undefined) {
       this.config.placeholder = false;
     }
-    this.config.sanitizer = this.config.sanitizer ?? {} as SanitizerConfig;
+    this.config.sanitizer = this.config.sanitizer ?? {};
 
     this.config.hideToolbar = this.config.hideToolbar ?? false;
     this.config.tools = this.config.tools || {};
@@ -182,11 +182,11 @@ export class Core {
     /**
      * Initialize default Block to pass data to the Renderer
      */
-    if (isEmpty(this.config.data) || !this.config.data.blocks || this.config.data.blocks.length === 0) {
+    if (isEmpty(this.config.data) || this.config.data.blocks.length === 0) {
       this.config.data = { blocks: [ defaultBlockData ] };
     }
 
-    this.config.readOnly = this.config.readOnly as boolean || false;
+    this.config.readOnly = this.config.readOnly ?? false;
   }
 
   /**

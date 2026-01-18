@@ -88,7 +88,7 @@ export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools
        * When a tool has several toolbox entries, we need to make sure we do not add
        * toolbox item with the same data to the resulting array. This helps exclude duplicates
        */
-      if (hasToolboxData && isSameBlockData(toolboxItem.data, blockData)) {
+      if (hasToolboxData && toolboxItem.data !== undefined && isSameBlockData(toolboxItem.data, blockData)) {
         return false;
       }
 
@@ -236,11 +236,11 @@ export const convertBlockDataToString = (blockData: BlockToolData, conversionCon
   const exportProp = conversionConfig?.export;
 
   if (isFunction(exportProp)) {
-    return exportProp(blockData);
+    return exportProp(blockData) as string;
   }
 
   if (isString(exportProp)) {
-    return blockData[exportProp];
+    return blockData[exportProp] as string;
   }
 
   /**
@@ -264,7 +264,7 @@ export const convertStringToBlockData = (stringToImport: string, conversionConfi
   const importProp = conversionConfig?.import;
 
   if (isFunction(importProp)) {
-    return importProp(stringToImport, targetToolConfig);
+    return importProp(stringToImport, targetToolConfig) as BlockToolData;
   }
 
   if (isString(importProp)) {

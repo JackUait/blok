@@ -1,0 +1,1 @@
+List paths to all files that have $ARGUMENTS in .md files in batches of 10 per file. The files must contain ONLY the paths.

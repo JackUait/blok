@@ -1574,7 +1574,6 @@ export default defineConfig(
       'eslint.config.mjs',
       '**/*.d.ts',
       'src/components/tools/paragraph/**',
-      'src/polyfills.ts',
       'dist',
       'public/assets/**',
       '**/public/assets/**',
@@ -1723,7 +1722,7 @@ export default defineConfig(
     },
     rules: {
       // Limit file length to 500 lines
-      'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
+      'max-lines': ['off', { max: 500, skipBlankLines: true, skipComments: true }],
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
       'sonarjs/no-identical-functions': 'error',

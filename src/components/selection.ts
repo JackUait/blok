@@ -1,33 +1,6 @@
-/**
- * TextRange interface for IE9-
- */
 import { DATA_ATTR, createSelector } from './constants';
 import { Dom as $ } from './dom';
 import { log } from './utils';
-
-interface TextRange {
-  boundingTop: number;
-  boundingLeft: number;
-  boundingBottom: number;
-  boundingRight: number;
-  boundingHeight: number;
-  boundingWidth: number;
-}
-
-/**
- * Interface for object returned by document.selection in IE9-
- */
-interface MSSelection {
-  createRange: () => TextRange;
-  type: string;
-}
-
-/**
- * Extends Document interface for IE9-
- */
-interface Document {
-  selection?: MSSelection;
-}
 
 /**
  * Working with selection
@@ -200,26 +173,12 @@ export class SelectionUtils {
    * @returns {DOMRect}
    */
   public static get rect(): DOMRect {
-    const ieSel: Selection | MSSelection | undefined | null = (document as Document).selection;
-
     const rect = {
       x: 0,
       y: 0,
       width: 0,
       height: 0,
     } as DOMRect;
-
-    if (ieSel && ieSel.type !== 'Control') {
-      const msSel = ieSel;
-      const range = msSel.createRange();
-
-      rect.x = range.boundingLeft;
-      rect.y = range.boundingTop;
-      rect.width = range.boundingWidth;
-      rect.height = range.boundingHeight;
-
-      return rect;
-    }
 
     const sel = window.getSelection();
 

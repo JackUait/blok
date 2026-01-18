@@ -143,6 +143,13 @@ export class UI extends Module<UINodes> {
      * Initialize controllers after Blok modules are ready
      */
     this.initializeControllers();
+
+    /**
+     * Enable selection controller after initialization.
+     * This is needed because bindReadOnlyInsensitiveListeners() is called in make()
+     * before initializeControllers(), so the selectionController doesn't exist yet.
+     */
+    this.selectionController?.enable();
   }
 
   /**
@@ -471,10 +478,6 @@ export class UI extends Module<UINodes> {
       passive: true,
     });
 
-    /**
-     * Enable selection controller for selection change handling
-     */
-    this.selectionController?.enable();
   }
 
   /**

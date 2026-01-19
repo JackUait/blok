@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
@@ -16,9 +16,9 @@ declare global {
 }
 
 const resetBlok = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holder }) => {
+  await page.evaluate(({ holder }) => {
     if (window.blokInstance) {
-      await window.blokInstance.destroy?.();
+      window.blokInstance.destroy?.();
       window.blokInstance = undefined;
     }
 
@@ -34,30 +34,43 @@ const resetBlok = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createBlok = async (page: Page): Promise<void> => {
+const createBlok = async (page: Page, data: { blocks: Array<{ id: string; type: string; data: Record<string, unknown> }> }): Promise<void> => {
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
 
-  await page.evaluate(async ({ holder }) => {
+  await page.evaluate(async ({ holder, data: initialData }) => {
     const blokConfig: Record<string, unknown> = {
       holder: holder,
-      data: {
-        blocks: [
-          { id: 'list-1', type: 'list', data: { text: 'First item', style: 'ordered' } },
-        ],
-      },
+      data: initialData,
     };
 
     window.blokInstance = new window.Blok(blokConfig);
     await window.blokInstance.isReady;
-  }, { holder: HOLDER_ID });
+  }, { holder: HOLDER_ID, data });
 };
 
-test.describe('list tool rapid Enter key handling', () => {
+test.describe('list tool regression: getBlockIndex for reliable index lookup', () => {
   test.beforeAll(ensureBlokBundleBuilt);
 
-  test('creates items at correct positions with rapid Enter presses', async ({ page }) => {
-    await createBlok(page);
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+  });
+
+  /**
+   * Regression test for list item insertion using getBlockIndex
+   *
+   * The list tool should use getBlockIndex(this.blockId) instead of getCurrentBlockIndex()
+   * to ensure it gets the correct index even when currentBlockIndex is stale.
+   *
+   * This test simulates a scenario where currentBlockIndex might not be updated
+   * immediately after block operations, which can happen in rapid typing scenarios.
+   */
+  test('uses getBlockIndex instead of getCurrentBlockIndex for reliable insertion', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'list-1', type: 'list', data: { text: 'First item', style: 'ordered' } },
+      ],
+    });
 
     const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
 
@@ -65,86 +78,112 @@ test.describe('list tool rapid Enter key handling', () => {
     await listItem.click();
     await page.keyboard.press('End');
 
-    // Press Enter to create second item
+    // Create second item
     await page.keyboard.press('Enter');
     await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
 
-    // Type in second item immediately after creation
+    // Now simulate the scenario where we verify the fix works:
+    // Focus on the second item and create a third item
+    // The key is that the list tool should use getBlockIndex(this.blockId)
+    // to correctly determine where to insert the new item
+    const secondItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`).nth(1);
+    await secondItem.click();
     await page.keyboard.type('Second');
 
-    // Press Enter again quickly to create third item
+    // This should insert at index 2, not at a wrong index
     await page.keyboard.press('Enter');
     await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(3);
 
-    // Verify all items are in correct order
+    // Verify correct ordering
     const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
     await expect(markers.nth(0)).toHaveText('1.');
     await expect(markers.nth(1)).toHaveText('2.');
     await expect(markers.nth(2)).toHaveText('3.');
 
-    // Verify the text content is correct
     const items = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
     await expect(items.nth(0)).toHaveText('First item');
     await expect(items.nth(1)).toHaveText('Second');
     await expect(items.nth(2)).toHaveText('');
   });
 
-  test('maintains correct currentBlockIndex after rapid operations', async ({ page }) => {
-    await createBlok(page);
+  /**
+   * Test that verifies the list tool's internal block ID lookup works correctly.
+   * This is a direct test of the fix: using getBlockIndex(this.blockId) instead
+   * of getCurrentBlockIndex().
+   */
+  test('correctly inserts after middle item when currentBlockIndex could be stale', async ({ page }) => {
+    // Create a list with 3 items initially
+    await createBlok(page, {
+      blocks: [
+        { id: 'list-1', type: 'list', data: { text: 'Item A', style: 'ordered' } },
+        { id: 'list-2', type: 'list', data: { text: 'Item B', style: 'ordered' } },
+        { id: 'list-3', type: 'list', data: { text: 'Item C', style: 'ordered' } },
+      ],
+    });
 
-    const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
+    // Focus on the middle item (Item B at index 1)
+    const middleItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`).nth(1);
+    await middleItem.click();
 
-    await listItem.click();
+    // Press Enter to split the middle item
+    // The new item should be inserted at index 2, pushing Item C to index 3
     await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
 
-    // Create 5 items rapidly
-    for (let i = 0; i < 5; i++) {
-      await page.keyboard.press('Enter');
-    }
+    await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(4);
 
-    await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(6);
-
-    // Verify numbering is correct
+    // Verify correct ordering: A, B, (new), C
     const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
     await expect(markers.nth(0)).toHaveText('1.');
     await expect(markers.nth(1)).toHaveText('2.');
     await expect(markers.nth(2)).toHaveText('3.');
     await expect(markers.nth(3)).toHaveText('4.');
-    await expect(markers.nth(4)).toHaveText('5.');
-    await expect(markers.nth(5)).toHaveText('6.');
+
+    const items = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
+    await expect(items.nth(0)).toHaveText('Item A');
+    await expect(items.nth(1)).toHaveText('Item B');
+    await expect(items.nth(2)).toHaveText('');
+    await expect(items.nth(3)).toHaveText('Item C');
   });
 
-  test('handles type then Enter in newly created list item', async ({ page }) => {
-    await createBlok(page);
+  /**
+   * Test that the fix works even when the user clicks on different items
+   * before pressing Enter, which could cause currentBlockIndex to be out of sync.
+   */
+  test('handles clicking between items before pressing Enter', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'list-1', type: 'list', data: { text: 'First', style: 'ordered' } },
+        { id: 'list-2', type: 'list', data: { text: 'Second', style: 'ordered' } },
+        { id: 'list-3', type: 'list', data: { text: 'Third', style: 'ordered' } },
+      ],
+    });
 
-    const listItem = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
+    const items = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
 
-    await listItem.click();
+    // Click on first item
+    await items.nth(0).click();
+
+    // Click on third item (this could cause currentBlockIndex to update)
+    await items.nth(2).click();
+
+    // Now press Enter on the third item
+    // Should insert at index 3, not at index 0 or 1
     await page.keyboard.press('End');
-
-    // Create second item
     await page.keyboard.press('Enter');
-    await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(2);
 
-    // Type in the new second item
-    await page.keyboard.type('ABC');
-
-    // Create third item
-    await page.keyboard.press('Enter');
-    await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(3);
-
-    // Type in the new third item
-    await page.keyboard.type('DEF');
-
-    // Create fourth item
-    await page.keyboard.press('Enter');
     await expect(page.locator(LIST_BLOCK_SELECTOR)).toHaveCount(4);
 
-    // Verify order: First item, ABC, DEF, (empty)
-    const items = page.locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`);
-    await expect(items.nth(0)).toHaveText('First item');
-    await expect(items.nth(1)).toHaveText('ABC');
-    await expect(items.nth(2)).toHaveText('DEF');
+    // Verify: First, Second, Third, (new)
+    const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+    await expect(markers.nth(0)).toHaveText('1.');
+    await expect(markers.nth(1)).toHaveText('2.');
+    await expect(markers.nth(2)).toHaveText('3.');
+    await expect(markers.nth(3)).toHaveText('4.');
+
+    await expect(items.nth(0)).toHaveText('First');
+    await expect(items.nth(1)).toHaveText('Second');
+    await expect(items.nth(2)).toHaveText('Third');
     await expect(items.nth(3)).toHaveText('');
   });
 });

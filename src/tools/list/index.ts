@@ -308,7 +308,7 @@ export class ListItem implements BlockTool {
    * then updates the marker to reflect the new position.
    */
   public moved(event: MoveEvent): void {
-    this.validateAndAdjustDepthAfterMove(event.detail.toIndex);
+    this.validateAndAdjustDepthAfterMove(event.toIndex);
     this.updateMarkersAfterPositionChange();
   }
 

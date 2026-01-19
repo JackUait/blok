@@ -12,6 +12,14 @@ import { getCaretNodeAndOffset } from './selection';
 const NBSP_CHAR = '\u00A0';
 
 /**
+ * Node type constants for use with nodeType property.
+ * Using numeric values directly for jsdom compatibility.
+ */
+const ELEMENT_NODE = 1;
+const TEXT_NODE = 3;
+const SHOW_TEXT = 4; // NodeFilter.SHOW_TEXT
+
+/**
  * WeakSet tracking text nodes that follow removed empty inline elements.
  * Used to detect when whitespace should be preserved after inline deletion.
  */
@@ -27,19 +35,22 @@ const inlineRemovalObserver = typeof window !== 'undefined' && typeof window.Mut
       const referenceNextSibling = record.nextSibling;
 
       record.removedNodes.forEach((node) => {
-        if (!(node instanceof Element)) {
+        // Use nodeType check instead of instanceof Element for jsdom compatibility
+        if (node.nodeType !== ELEMENT_NODE) {
           return;
         }
 
-        if (!isElementVisuallyEmpty(node)) {
+        if (!isElementVisuallyEmpty(node as Element)) {
           return;
         }
 
-        const candidate = referenceNextSibling instanceof Text ? referenceNextSibling : null;
+        const candidateNode = referenceNextSibling?.nodeType === TEXT_NODE ? referenceNextSibling : null;
 
-        if (candidate === null) {
+        if (candidateNode === null) {
           return;
         }
+
+        const candidate = candidateNode as Text;
 
         if (!candidate.isConnected) {
           return;
@@ -63,6 +74,14 @@ const inlineRemovalObserver = typeof window !== 'undefined' && typeof window.Mut
     }
   })
   : null;
+
+/**
+ * Type guard to check if an Element is an HTMLElement.
+ *HTMLElements have a style property, while other Elements (like SVGElement) do not.
+ */
+const isHTMLElement = (element: Element): element is HTMLElement => {
+  return 'style' in element;
+};
 
 const observedDocuments = new WeakSet<Document>();
 
@@ -111,7 +130,7 @@ if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
  * @returns true if the element is visually empty
  */
 export const isElementVisuallyEmpty = (element: Element): boolean => {
-  if (!(element instanceof HTMLElement)) {
+  if (!isHTMLElement(element)) {
     return false;
   }
 
@@ -154,11 +173,11 @@ export const findNbspAfterEmptyInline = (root: HTMLElement): { node: Text; offse
     return null;
   }
 
-  if (caretNode.nodeType === Node.TEXT_NODE && caretOffset < ((caretNode.textContent ?? '').length)) {
+  if (caretNode.nodeType === TEXT_NODE && caretOffset < ((caretNode.textContent ?? '').length)) {
     return null;
   }
 
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const walker = document.createTreeWalker(root, SHOW_TEXT);
 
   walker.currentNode = caretNode;
 

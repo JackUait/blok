@@ -66,9 +66,10 @@ export class OrderedMarkerManager {
     const startValue = this.markerCalculator.getGroupStartValue(blockIndex, blockDepth, siblingIndex, 'ordered');
 
     // If this is the first item in the group, read its start value from the data attribute
+    // The data-list-start attribute is on the blockHolder wrapper
     const actualStartValue = (siblingIndex === 0 && startValue === 1)
       ? (() => {
-        const startAttr = blockHolder.querySelector('[data-list-style]')?.getAttribute('data-list-start');
+        const startAttr = blockHolder.getAttribute('data-list-start');
         if (!startAttr) return startValue;
         const parsedStart = parseInt(startAttr, 10);
         return isNaN(parsedStart) ? startValue : parsedStart;
@@ -228,9 +229,11 @@ export class OrderedMarkerManager {
     const startValue = this.markerCalculator.getGroupStartValue(blockIndex, blockDepth, siblingIndex, blockStyle);
 
     // If this is the first item in the group, read its start value from the data attribute
+    // The data-list-start attribute is on the wrapper (parent of listItemEl)
     const actualStartValue = (siblingIndex === 0 && startValue === 1)
       ? (() => {
-        const startAttr = listItemEl.getAttribute('data-list-start');
+        const wrapper = listItemEl.closest('[data-list-start]');
+        const startAttr = wrapper?.getAttribute('data-list-start');
         if (!startAttr) return startValue;
         const parsedStart = parseInt(startAttr, 10);
         return isNaN(parsedStart) ? startValue : parsedStart;

@@ -9,13 +9,15 @@ import type { ListItemConfig, ListItemData, ListItemStyle } from './types';
 /**
  * Type guard for legacy list item format
  */
-function isLegacyFormat(data: unknown): data is { items: Array<{ content: string; checked?: boolean }>, style?: ListItemStyle, start?: number } {
+const isLegacyFormat = (
+  data: unknown,
+): data is { items: Array<{ content: string; checked?: boolean }>, style?: ListItemStyle, start?: number } => {
   if (typeof data !== 'object' || data === null || !('items' in data)) {
     return false;
   }
   const potentialData = data as { items: unknown };
   return Array.isArray(potentialData.items);
-}
+};
 
 /**
  * Normalize incoming data to the standard ListItemData format.
@@ -25,7 +27,10 @@ function isLegacyFormat(data: unknown): data is { items: Array<{ content: string
  * @param settings - The list tool configuration
  * @returns Normalized ListItemData
  */
-export function normalizeListItemData(data: ListItemData | Record<string, never>, settings: ListItemConfig): ListItemData {
+export const normalizeListItemData = (
+  data: ListItemData | Record<string, never>,
+  settings: ListItemConfig,
+): ListItemData => {
   const defaultStyle = settings.defaultStyle || 'unordered';
 
   if (!data || typeof data !== 'object') {

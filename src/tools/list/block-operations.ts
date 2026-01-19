@@ -28,7 +28,7 @@ export interface RerenderContext {
 /**
  * Rerender the list item
  */
-export function rerenderListItem(context: RerenderContext): HTMLElement | null {
+export const rerenderListItem = (context: RerenderContext): HTMLElement | null => {
   const { data, readOnly, placeholder, itemColor, itemSize, element, setupItemPlaceholder, onCheckboxChange, keydownHandler } = context;
 
   if (!element) return null;
@@ -65,11 +65,11 @@ export function rerenderListItem(context: RerenderContext): HTMLElement | null {
 /**
  * Save the list item data
  */
-export function saveListItem(
+export const saveListItem = (
   data: ListItemData,
   element: HTMLElement | null,
   getContentElement: () => HTMLElement | null
-): ListItemData {
+): ListItemData => {
   if (!element) return data;
 
   const contentEl = getContentElement();
@@ -95,7 +95,7 @@ export function saveListItem(
 /**
  * Set data on the list item (for undo/redo)
  */
-export function setListItemData(
+export const setListItemData = (
   currentData: ListItemData,
   newData: ListItemData,
   element: HTMLElement | null,
@@ -105,7 +105,7 @@ export function setListItemData(
     updateMarkerForDepth: (newDepth: number, style: ListItemStyle) => void;
     updateCheckboxState: (checked: boolean) => void;
   }
-): { newData: ListItemData; inPlace: boolean } {
+): { newData: ListItemData; inPlace: boolean } => {
   if (!element) {
     return { newData: currentData, inPlace: false };
   }
@@ -167,7 +167,7 @@ export interface MergeContext {
   parseHTML: (html: string) => DocumentFragment;
 }
 
-export function mergeListItemData(context: MergeContext, data: ListItemData): void {
+export const mergeListItemData = (context: MergeContext, data: ListItemData): void => {
   const { element, getContentElement, parseHTML, data: contextData } = context;
 
   if (!element) {
@@ -187,12 +187,12 @@ export function mergeListItemData(context: MergeContext, data: ListItemData): vo
 /**
  * Render settings menu
  */
-export function renderListSettings(
+export const renderListSettings = (
   availableStyles: StyleConfig[],
   currentStyle: ListItemStyle,
   t: (key: string) => string,
   setStyle: (style: ListItemStyle) => void
-): MenuConfig {
+): MenuConfig => {
   return availableStyles.map(styleConfig => ({
     icon: styleConfig.icon,
     label: t(`toolNames.${styleConfig.titleKey}`),

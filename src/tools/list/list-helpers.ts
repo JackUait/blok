@@ -4,7 +4,6 @@
  * Extracted from ListItem to reduce file size.
  */
 
-
 import { INDENT_PER_LEVEL, TOOL_NAME } from './constants';
 import type { ListDepthValidator } from './depth-validator';
 import type { BlocksAPI , ListMarkerCalculator } from './marker-calculator';
@@ -13,10 +12,10 @@ import type { ListItemStyle } from './types';
 /**
  * Get the content element from a list item wrapper
  */
-export function getContentElement(
+export const getContentElement = (
   element: HTMLElement | null,
   style: ListItemStyle
-): HTMLElement | null {
+): HTMLElement | null => {
   if (!element) return null;
 
   if (style === 'checklist') {
@@ -31,10 +30,10 @@ export function getContentElement(
 /**
  * Update the checkbox state for checklist items
  */
-export function updateCheckboxState(
+export const updateCheckboxState = (
   element: HTMLElement | null,
   checked: boolean
-): void {
+): void => {
   const checkbox = element?.querySelector('input[type="checkbox"]');
 
   if (!(checkbox instanceof HTMLInputElement)) {
@@ -74,43 +73,43 @@ export const adjustDepthTo = (
 /**
  * Get the depth of a block by reading from its DOM
  */
-export function getBlockDepth(
+export const getBlockDepth = (
   block: ReturnType<BlocksAPI['getBlockByIndex']>,
   depthValidator: ListDepthValidator
-): number {
+): number => {
   return depthValidator.getBlockDepth(block);
 }
 
 /**
  * Get the style of a block by reading from its DOM
  */
-export function getBlockStyle(
+export const getBlockStyle = (
   block: ReturnType<BlocksAPI['getBlockByIndex']>,
   markerCalculator: ListMarkerCalculator
-): ListItemStyle | null {
+): ListItemStyle | null => {
   return markerCalculator.getBlockStyle(block);
 }
 
 /**
  * Get the appropriate bullet character based on nesting depth
  */
-export function getBulletCharacter(
+export const getBulletCharacter = (
   depth: number,
   markerCalculator: ListMarkerCalculator
-): string {
+): string => {
   return markerCalculator.getBulletCharacter(depth);
 }
 
 /**
  * Get the sibling index for marker calculation
  */
-export function getSiblingIndex(
+export const getSiblingIndex = (
   blockId: string | undefined,
   currentDepth: number,
   style: ListItemStyle,
   blocks: BlocksAPI,
   markerCalculator: ListMarkerCalculator
-): number {
+): number => {
   const currentBlockIndex = blockId
     ? blocks.getBlockIndex(blockId) ?? blocks.getCurrentBlockIndex()
     : blocks.getCurrentBlockIndex();
@@ -125,14 +124,14 @@ export function getSiblingIndex(
 /**
  * Get the starting number for this list group
  */
-export function getListStartValue(
+export const getListStartValue = (
   siblingIndex: number,
   targetDepth: number,
   blockId: string | undefined,
   data: { start?: number; style: ListItemStyle },
   blocks: BlocksAPI,
   markerCalculator: ListMarkerCalculator
-): number {
+): number => {
   if (siblingIndex === 0) {
     return data.start ?? 1;
   }
@@ -157,14 +156,14 @@ export function getListStartValue(
 /**
  * Get the ordered list marker text based on depth and index
  */
-export function getOrderedMarkerText(
+export const getOrderedMarkerText = (
   index: number,
   depth: number,
   data: { start?: number; style: ListItemStyle },
   blockId: string | undefined,
   blocks: BlocksAPI,
   markerCalculator: ListMarkerCalculator
-): string {
+): string => {
   const startValue = getListStartValue(index, depth, blockId, data, blocks, markerCalculator);
   const actualNumber = startValue + index;
   return markerCalculator.formatNumber(actualNumber, depth);
@@ -173,24 +172,24 @@ export function getOrderedMarkerText(
 /**
  * Find the starting index of a list group by walking backwards
  */
-export function findListGroupStartIndex(
+export const findListGroupStartIndex = (
   currentBlockIndex: number,
   currentDepth: number,
   currentStyle: ListItemStyle,
   markerCalculator: ListMarkerCalculator
-): number {
+): number => {
   return markerCalculator.findGroupStart(currentBlockIndex, currentDepth, currentStyle);
 }
 
 /**
  * Update the marker of a specific block
  */
-export function updateBlockMarker(
+export const updateBlockMarker = (
   block: ReturnType<BlocksAPI['getBlockByIndex']>,
   blocks: BlocksAPI,
   depthValidator: ListDepthValidator,
   markerCalculator: ListMarkerCalculator
-): void {
+): void => {
   if (!block) {
     return;
   }
@@ -225,7 +224,7 @@ export function updateBlockMarker(
 /**
  * Update markers for all list items in a range
  */
-export function updateMarkersInRange(
+export const updateMarkersInRange = (
   startIndex: number,
   endIndex: number,
   skipIndex: number,
@@ -234,7 +233,7 @@ export function updateMarkersInRange(
   blocks: BlocksAPI,
   depthValidator: ListDepthValidator,
   markerCalculator: ListMarkerCalculator
-): void {
+): void => {
   const processBlock = (index: number): void => {
     if (index >= endIndex) {
       return;
@@ -276,11 +275,11 @@ export function updateMarkersInRange(
 /**
  * Update markers on all ordered list items
  */
-export function updateAllOrderedListMarkers(
+export const updateAllOrderedListMarkers = (
   blocks: BlocksAPI,
   depthValidator: ListDepthValidator,
   markerCalculator: ListMarkerCalculator
-): void {
+): void => {
   const blocksCount = blocks.getBlocksCount();
 
   Array.from({ length: blocksCount }, (_, i) => i).forEach(i => {

@@ -138,6 +138,7 @@ export class ListMarkerCalculator {
 
   /**
    * Get the start value from a block's data-list-start attribute.
+   * The data-list-start attribute is on the element with data-list-style inside block.holder.
    */
   getBlockStartValue(blockIndex: number): number {
     const block = this.blocks.getBlockByIndex(blockIndex);
@@ -145,7 +146,13 @@ export class ListMarkerCalculator {
       return 1;
     }
 
-    const startAttr = block.holder?.querySelector('[data-list-style]')?.getAttribute('data-list-start');
+    // First find the element with data-list-style, then get its data-list-start attribute
+    const listStyleEl = block.holder?.querySelector('[data-list-style]');
+    if (!listStyleEl) {
+      return 1;
+    }
+
+    const startAttr = listStyleEl.getAttribute('data-list-start');
     return startAttr ? parseInt(startAttr, 10) : 1;
   }
 

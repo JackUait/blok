@@ -40,7 +40,6 @@ const createMockBlock = (
   marker.setAttribute('data-blok-mutation-free', 'true');
 
   const content = document.createElement('div');
-  content.className = 'flex-1';
   content.contentEditable = 'true';
   content.textContent = 'Test';
 

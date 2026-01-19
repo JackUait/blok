@@ -14,11 +14,11 @@ import type { API } from '../../../types';
  * @param block - BlockAPI to set caret to
  * @param position - 'start' or 'end' position (defaults to 'end')
  */
-export function setCaretToBlockContent(
+export const setCaretToBlockContent = (
   api: API,
   block: ReturnType<API['blocks']['insert']>,
   position: 'start' | 'end' = 'end'
-): void {
+): void => {
   // Use requestAnimationFrame to ensure DOM has been updated
   requestAnimationFrame(() => {
     const holder = block.holder;

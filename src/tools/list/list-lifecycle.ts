@@ -24,7 +24,7 @@ export interface RenderContext {
 /**
  * Render the list item
  */
-export function renderListItem(context: RenderContext): HTMLElement {
+export const renderListItem = (context: RenderContext): HTMLElement => {
   const { data, readOnly, placeholder, itemColor, itemSize, setupItemPlaceholder, onCheckboxChange, keydownHandler } = context;
 
   const result = buildListItem({

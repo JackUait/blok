@@ -12,7 +12,7 @@ import { INDENT_PER_LEVEL } from './constants';
  * @param element - The element to extract margin-left from
  * @returns Object with left offset if valid margin-left found, undefined otherwise
  */
-export function getMarginLeftFromElement(element: Element | null): { left: number } | undefined {
+export const getMarginLeftFromElement = (element: Element | null): { left: number } | undefined => {
   if (!element) {
     return undefined;
   }
@@ -35,7 +35,7 @@ export function getMarginLeftFromElement(element: Element | null): { left: numbe
  * @param hoveredElement - The element to start searching from
  * @returns Object with left offset based on depth, undefined if depth is 0 or not found
  */
-export function getOffsetFromDepthAttribute(hoveredElement: Element): { left: number } | undefined {
+export const getOffsetFromDepthAttribute = (hoveredElement: Element): { left: number } | undefined => {
   const wrapper = hoveredElement.closest('[data-list-depth]');
 
   if (!wrapper) {
@@ -60,11 +60,11 @@ export function getOffsetFromDepthAttribute(hoveredElement: Element): { left: nu
  * @param hoveredElement - The element that is currently being hovered
  * @returns Object with left offset in pixels based on the list item's depth
  */
-export function getContentOffset(hoveredElement: Element): { left: number } | undefined {
+export const getContentOffset = (hoveredElement: Element): { left: number } | undefined => {
   // First try: find listitem in ancestors (when hovering content)
   // Second try: find listitem in descendants (when hovering wrapper)
-  const listItemEl = hoveredElement.closest('[role="listitem"]')
-    ?? hoveredElement.querySelector('[role="listitem"]');
+  const listItemEl = hoveredElement.closest('[role="listitem"]') ||
+    hoveredElement.querySelector('[role="listitem"]');
 
   const marginLeftOffset = getMarginLeftFromElement(listItemEl);
 

@@ -153,7 +153,19 @@ export class ToolRenderer {
     this.toolRenderedElementInternal = pluginsContent;
     this.addToolDataAttributes(pluginsContent, wrapper);
     contentNode.appendChild(pluginsContent);
-    this.readyResolver?.();
+
+    // Call the tool's rendered lifecycle method if it exists
+    // Defer to next frame to ensure all blocks are registered
+    const rendered = this.toolInstance.rendered;
+    if (typeof rendered === 'function') {
+      const resolver = this.readyResolver;
+      requestAnimationFrame(() => {
+        rendered();
+        resolver?.();
+      });
+    } else {
+      this.readyResolver?.();
+    }
   }
 
   /**
@@ -169,7 +181,19 @@ export class ToolRenderer {
         this.toolRenderedElementInternal = resolvedElement;
         this.addToolDataAttributes(resolvedElement, wrapper);
         contentNode.appendChild(resolvedElement);
-        this.readyResolver?.();
+
+        // Call the tool's rendered lifecycle method if it exists
+        // Defer to next frame to ensure all blocks are registered
+        const rendered = this.toolInstance.rendered;
+        if (typeof rendered === 'function') {
+          const resolver = this.readyResolver;
+          requestAnimationFrame(() => {
+            rendered();
+            resolver?.();
+          });
+        } else {
+          this.readyResolver?.();
+        }
       })
       .catch((error) => {
         log(`Tool render promise rejected: %o`, 'error', error);

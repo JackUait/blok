@@ -32,7 +32,7 @@ export interface KeyboardContext {
 /**
  * Handle Enter key - split content or exit list
  */
-export async function handleEnter(context: KeyboardContext): Promise<void> {
+export const handleEnter = async (context: KeyboardContext): Promise<void> => {
   const { api, blockId, data, element, getContentElement } = context;
 
   const selection = window.getSelection();
@@ -93,12 +93,12 @@ export async function handleEnter(context: KeyboardContext): Promise<void> {
 
   // Set caret to the start of the new block's content element
   setCaretToBlockContent(api, newBlock, 'start');
-}
+};
 
 /**
  * Exit list or outdent when pressing Enter on empty item
  */
-async function exitListOrOutdent(context: KeyboardContext): Promise<void> {
+const exitListOrOutdent = async (context: KeyboardContext): Promise<void> => {
   const { api, blockId, getDepth } = context;
   const currentDepth = getDepth();
 
@@ -114,15 +114,15 @@ async function exitListOrOutdent(context: KeyboardContext): Promise<void> {
   }
   const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: '' });
   setCaretToBlockContent(api, newBlock, 'start');
-}
+};
 
 /**
  * Handle Backspace key - convert to paragraph or clear content
  */
-export async function handleBackspace(
+export const handleBackspace = async(
   context: KeyboardContext,
   event: KeyboardEvent
-): Promise<void> {
+): Promise<void> => {
   const { api, blockId, data, element, getContentElement, getDepth, syncContentFromDOM } = context;
 
   const selection = window.getSelection();
@@ -181,15 +181,15 @@ export async function handleBackspace(
   }
 
   setCaretToBlockContent(api, newBlock, 'start');
-}
+};
 
 /**
  * Handle Tab key - indent the list item
  */
-export async function handleIndent(
+export const handleIndent = async(
   context: KeyboardContext,
   depthValidator: ListDepthValidator
-): Promise<void> {
+): Promise<void> => {
   const { api, blockId, data, syncContentFromDOM, getDepth } = context;
 
   const currentBlockIndex = api.blocks.getCurrentBlockIndex();
@@ -219,12 +219,12 @@ export async function handleIndent(
 
   // Restore focus to the updated block after DOM has been updated
   setCaretToBlockContent(api, updatedBlock);
-}
+};
 
 /**
  * Handle Shift+Tab key - outdent the list item
  */
-export async function handleOutdent(context: KeyboardContext): Promise<void> {
+export const handleOutdent = async(context: KeyboardContext): Promise<void> => {
   const { api, blockId, data, syncContentFromDOM, getDepth } = context;
 
   const currentDepth = getDepth();
@@ -247,4 +247,4 @@ export async function handleOutdent(context: KeyboardContext): Promise<void> {
 
   // Restore focus to the updated block after DOM has been updated
   setCaretToBlockContent(api, updatedBlock);
-}
+};

@@ -20,11 +20,37 @@ import {
 import type { ListItemData, ListItemStyle } from './types';
 
 /**
+ * Test ID constants for DOM elements
+ */
+export const LIST_TEST_IDS = {
+  contentContainer: 'list-content-container',
+  checklistContent: 'list-checklist-content',
+} as const;
+
+/**
  * Interface for elements that can store placeholder text before setup
  */
 export interface PlaceholderElement extends HTMLElement {
   _placeholder?: string;
+  /**
+   * Get the placeholder text for this element
+   */
+  getPlaceholder(): string | undefined;
 }
+
+/**
+ * Set placeholder on an element and add public getter method
+ */
+export const setPlaceholder = (element: HTMLElement, placeholder: string): void => {
+  const placeholderElement = element as PlaceholderElement;
+  placeholderElement._placeholder = placeholder;
+  Object.defineProperty(placeholderElement, 'getPlaceholder', {
+    value: () => placeholderElement._placeholder,
+    writable: false,
+    enumerable: true,
+    configurable: false,
+  });
+};
 
 /**
  * Context object for DOM building operations
@@ -64,7 +90,7 @@ export interface BuildResult {
  * @param context - The builder context
  * @returns Object containing the created elements
  */
-export function buildListItem(context: DOMBuilderContext): BuildResult {
+export const buildListItem = (context: DOMBuilderContext): BuildResult => {
   const { data, keydownHandler, readOnly } = context;
 
   const wrapper = buildWrapper(context);
@@ -90,7 +116,7 @@ export function buildListItem(context: DOMBuilderContext): BuildResult {
     markerElement,
     checkboxElement,
   };
-}
+};
 
 /**
  * Build the outer wrapper element.
@@ -98,7 +124,7 @@ export function buildListItem(context: DOMBuilderContext): BuildResult {
  * @param context - The builder context
  * @returns The wrapper element
  */
-export function buildWrapper(context: DOMBuilderContext): HTMLElement {
+export const buildWrapper = (context: DOMBuilderContext): HTMLElement => {
   const { data } = context;
 
   const wrapper = document.createElement('div');
@@ -113,7 +139,7 @@ export function buildWrapper(context: DOMBuilderContext): HTMLElement {
   }
 
   return wrapper;
-}
+};
 
 /**
  * Build standard content (for unordered and ordered lists).
@@ -121,7 +147,7 @@ export function buildWrapper(context: DOMBuilderContext): HTMLElement {
  * @param context - The builder context
  * @returns The list item element containing marker and content
  */
-export function buildStandardContent(context: DOMBuilderContext): HTMLElement {
+export const buildStandardContent = (context: DOMBuilderContext): HTMLElement => {
   const { data, itemColor, itemSize, placeholder } = context;
 
   const item = document.createElement('div');
@@ -151,16 +177,17 @@ export function buildStandardContent(context: DOMBuilderContext): HTMLElement {
   // Create content container
   const contentContainer = document.createElement('div');
   contentContainer.className = twMerge('flex-1 min-w-0 outline-none', ...PLACEHOLDER_CLASSES);
+  contentContainer.setAttribute('data-blok-testid', LIST_TEST_IDS.contentContainer);
   contentContainer.contentEditable = context.readOnly ? 'false' : 'true';
   contentContainer.innerHTML = data.text;
 
   // Store placeholder for setup by caller
-  (contentContainer as PlaceholderElement)._placeholder = placeholder;
+  setPlaceholder(contentContainer, placeholder);
 
   item.appendChild(contentContainer);
 
   return item;
-}
+};
 
 /**
  * Build checklist content with checkbox.
@@ -168,7 +195,7 @@ export function buildStandardContent(context: DOMBuilderContext): HTMLElement {
  * @param context - The builder context
  * @returns The checklist item element
  */
-export function buildChecklistContent(context: DOMBuilderContext): HTMLElement {
+export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement => {
   const { data, itemColor, itemSize, placeholder, readOnly } = context;
 
   const wrapper = document.createElement('div');
@@ -201,17 +228,19 @@ export function buildChecklistContent(context: DOMBuilderContext): HTMLElement {
     data.checked ? 'line-through opacity-60' : '',
     ...PLACEHOLDER_CLASSES
   );
+  content.setAttribute('data-blok-testid', LIST_TEST_IDS.checklistContent);
+  content.setAttribute('data-checked', String(data.checked));
   content.contentEditable = readOnly ? 'false' : 'true';
   content.innerHTML = data.text;
 
   // Store placeholder for setup by caller
-  (content as PlaceholderElement)._placeholder = placeholder;
+  setPlaceholder(content, placeholder);
 
   wrapper.appendChild(checkbox);
   wrapper.appendChild(content);
 
   return wrapper;
-}
+};
 
 /**
  * Create the marker element (bullet or number) for a list item.
@@ -220,10 +249,11 @@ export function buildChecklistContent(context: DOMBuilderContext): HTMLElement {
  * @param depth - The nesting depth
  * @returns The marker element
  */
-export function createMarker(style: ListItemStyle, depth: number): HTMLElement {
+export const createMarker = (style: ListItemStyle, depth: number): HTMLElement => {
   const marker = document.createElement('span');
   marker.className = 'flex-shrink-0 select-none';
   marker.setAttribute('aria-hidden', 'true');
+  marker.setAttribute('data-list-style', style);
   marker.contentEditable = 'false';
 
   if (style === 'ordered') {
@@ -243,7 +273,7 @@ export function createMarker(style: ListItemStyle, depth: number): HTMLElement {
   }
 
   return marker;
-}
+};
 
 /**
  * Get the bullet character based on nesting depth.
@@ -251,7 +281,7 @@ export function createMarker(style: ListItemStyle, depth: number): HTMLElement {
  * @param depth - The nesting depth
  * @returns The bullet character
  */
-export function getBulletCharacter(depth: number): string {
+export const getBulletCharacter = (depth: number): string => {
   const bullets = ['•', '◦', '▪'];
   return bullets[depth % bullets.length];
-}
+};

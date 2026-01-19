@@ -6,8 +6,8 @@ import {
   buildChecklistContent,
   createMarker,
   getBulletCharacter,
+  LIST_TEST_IDS,
   type DOMBuilderContext,
-  type PlaceholderElement,
 } from '../../../../src/tools/list/dom-builder';
 
 const createContext = (overrides: Partial<DOMBuilderContext> = {}): DOMBuilderContext => ({
@@ -26,7 +26,6 @@ describe('dom-builder', () => {
 
       const wrapper = buildWrapper(context);
 
-      expect(wrapper.className).toBe('outline-none');
       expect(wrapper).toHaveAttribute('data-blok-tool', 'list');
       expect(wrapper).toHaveAttribute('data-list-style', 'ordered');
       expect(wrapper).toHaveAttribute('data-list-depth', '1');
@@ -82,8 +81,8 @@ describe('dom-builder', () => {
       const content = buildStandardContent(context);
 
       expect(content).toHaveAttribute('role', 'listitem');
-      expect(content.className).toContain('flex');
-      expect(content.className).toContain('outline-none');
+      // Verify content container exists via data-testid
+      expect(content.querySelector(`[data-blok-testid="${LIST_TEST_IDS.contentContainer}"]`)).toBeInstanceOf(HTMLElement);
     });
 
     it('creates marker element', () => {
@@ -105,7 +104,7 @@ describe('dom-builder', () => {
       });
 
       const content = buildStandardContent(context);
-      const contentContainer = content.querySelector('.flex-1') as HTMLElement;
+      const contentContainer = content.querySelector(`[data-blok-testid="${LIST_TEST_IDS.contentContainer}"]`) as HTMLElement;
 
       expect(contentContainer).toBeInstanceOf(HTMLElement);
       expect(contentContainer.contentEditable).toBe('true');
@@ -153,9 +152,9 @@ describe('dom-builder', () => {
       });
 
       const content = buildStandardContent(context);
-      const contentContainer = content.querySelector('.flex-1') as PlaceholderElement;
+      const contentContainer = content.querySelector(`[data-blok-testid="${LIST_TEST_IDS.contentContainer}"]`) as HTMLElement & { getPlaceholder(): string | undefined };
 
-      expect(contentContainer?._placeholder).toBe('Type something...');
+      expect(contentContainer?.getPlaceholder()).toBe('Type something...');
     });
 
     it('makes content non-editable in read-only mode', () => {
@@ -165,7 +164,7 @@ describe('dom-builder', () => {
       });
 
       const content = buildStandardContent(context);
-      const contentContainer = content.querySelector('.flex-1') as HTMLElement;
+      const contentContainer = content.querySelector(`[data-blok-testid="${LIST_TEST_IDS.contentContainer}"]`) as HTMLElement;
 
       expect(contentContainer?.contentEditable).toBe('false');
     });
@@ -201,10 +200,11 @@ describe('dom-builder', () => {
       });
 
       const content = buildChecklistContent(context);
-      const textContent = content.querySelector('.flex-1');
+      const textContent = content.querySelector(`[data-blok-testid="${LIST_TEST_IDS.checklistContent}"]`) as HTMLElement;
 
-      expect(textContent?.className).toContain('line-through');
-      expect(textContent?.className).toContain('opacity-60');
+      // Verify checked state via data attribute rather than class names
+      expect(textContent).toBeInstanceOf(HTMLElement);
+      expect(textContent?.getAttribute('data-checked')).toBe('true');
     });
 
     it('disables checkbox in read-only mode', () => {
@@ -236,7 +236,7 @@ describe('dom-builder', () => {
       });
 
       const content = buildChecklistContent(context);
-      const textContent = content.querySelector('.flex-1') as HTMLElement;
+      const textContent = content.querySelector(`[data-blok-testid="${LIST_TEST_IDS.checklistContent}"]`) as HTMLElement;
 
       expect(textContent).toBeInstanceOf(HTMLElement);
       expect(textContent?.contentEditable).toBe('true');
@@ -249,7 +249,7 @@ describe('dom-builder', () => {
       const marker = createMarker('unordered', 0);
 
       expect(marker).toHaveTextContent('•');
-      expect(marker.className).toContain('select-none');
+      expect(marker).toHaveAttribute('data-list-style', 'unordered');
       expect(marker).toHaveAttribute('aria-hidden', 'true');
       expect(marker.contentEditable).toBe('false');
     });
@@ -258,7 +258,9 @@ describe('dom-builder', () => {
       const marker = createMarker('ordered', 0);
 
       expect(marker).toHaveTextContent('1.');
-      expect(marker.className).toContain('text-right');
+      expect(marker).toHaveAttribute('data-list-style', 'ordered');
+      expect(marker.style.paddingRight).toBe('11px');
+      expect(marker.style.minWidth).toBe('fit-content');
     });
 
     it('uses different bullets at different depths', () => {

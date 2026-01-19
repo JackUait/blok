@@ -3,7 +3,7 @@ import { Flipper } from '../../../flipper';
 import { SelectionUtils } from '../../../selection';
 import { keyCodes, delay, isIosDevice } from '../../../utils';
 import { areBlocksMergeable } from '../../../utils/blocks';
-import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret';
+import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret/index';
 import { EDITABLE_INPUT_SELECTOR } from '../constants';
 import { keyCodeFromEvent } from '../utils/keyboard';
 

@@ -3,7 +3,7 @@ import { KeyboardNavigation } from '../../../../../../src/components/modules/blo
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 import type { Block } from '../../../../../../src/components/block';
 import { keyCodes } from '../../../../../../src/components/utils';
-import * as caretUtils from '../../../../../../src/components/utils/caret';
+import * as caretUtils from '../../../../../../src/components/utils/caret/index';
 
 const createKeyboardEvent = (options: Partial<KeyboardEvent> = {}): KeyboardEvent => {
   return {

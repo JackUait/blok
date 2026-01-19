@@ -6,7 +6,7 @@ import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../types';
 import type { Block } from '../../../../src/components/block';
 import { SelectionUtils as Selection } from '../../../../src/components/selection';
-import * as caretUtils from '../../../../src/components/utils/caret';
+import * as caretUtils from '../../../../src/components/utils/caret/index';
 
 type BlockManagerStub = {
   currentBlock?: Block;

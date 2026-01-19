@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 
-import { getCaretOffset } from '../../../components/utils/caret';
+import { getCaretOffset } from '../../../components/utils/caret/index';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
 import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS, isBoundaryCharacter } from './serializer';

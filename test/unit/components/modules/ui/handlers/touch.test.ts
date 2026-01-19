@@ -6,6 +6,10 @@ import {
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 
 const createBlokStub = (): BlokModules => {
+  const readOnlyStub = {
+    isEnabled: false,
+  };
+
   return {
     BlockManager: {
       setCurrentBlockByChildNode: vi.fn(),
@@ -16,9 +20,7 @@ const createBlokStub = (): BlokModules => {
     Caret: {
       setToTheLastBlock: vi.fn(),
     },
-    ReadOnly: {
-      isEnabled: false,
-    },
+    ReadOnly: readOnlyStub,
     Toolbar: {
       moveAndOpen: vi.fn(),
       contains: vi.fn(() => false),
@@ -36,7 +38,7 @@ describe('Touch Handler', () => {
 
     // Mock document.elementFromPoint which is not always available in jsdom
     originalElementFromPoint = document.elementFromPoint;
-    (document as any).elementFromPoint = vi.fn(() => null);
+    document.elementFromPoint = vi.fn(() => null) as unknown as Document['elementFromPoint'];
 
     redactorElement = document.createElement('div');
     document.body.appendChild(redactorElement);
@@ -46,7 +48,7 @@ describe('Touch Handler', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
-    (document as any).elementFromPoint = originalElementFromPoint;
+    document.elementFromPoint = originalElementFromPoint;
     vi.restoreAllMocks();
   });
 
@@ -182,7 +184,7 @@ describe('Touch Handler', () => {
     });
 
     it('does not move toolbar when read-only is enabled', () => {
-      (blok.ReadOnly as any).isEnabled = true;
+      (blok.ReadOnly as { isEnabled: boolean }).isEnabled = true;
 
       const handler = createRedactorTouchHandler({
         Blok: blok,

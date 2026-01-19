@@ -93,8 +93,10 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
           }
 
           if (!toolClass && classCode) {
-
-            toolClass = new Function(`return (${classCode});`)();
+            // eslint-disable-next-line no-new-func -- Required for dynamic tool instantiation in tests
+            const createToolClass = new Function('code', `return (${classCode});`);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Function constructor returns `Function`, unsafe call is necessary for dynamic instantiation
+            toolClass = createToolClass(classCode) as unknown;
           }
 
           if (!toolClass) {

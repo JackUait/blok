@@ -259,7 +259,7 @@ describe('DocumentStore', () => {
 
   describe('fromJSON', () => {
     it('loads blocks from JSON data', () => {
-      const blocks: OutputBlockData[] = [
+      const blocks: OutputBlockData<string, Record<string, unknown>>[] = [
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
         { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
       ];

@@ -158,7 +158,11 @@ describe('Tooltip utility', () => {
 
     expect(wrapper).not.toBeNull();
 
-    setWrapperSize(wrapper!, 80, 30);
+    if (wrapper === null) {
+      throw new Error('Tooltip wrapper should exist');
+    }
+
+    setWrapperSize(wrapper, 80, 30);
     setWindowScrollY(5);
 
     show(target, 'bottom', { placement: 'bottom',
@@ -184,7 +188,11 @@ describe('Tooltip utility', () => {
 
     expect(wrapper).not.toBeNull();
 
-    setWrapperSize(wrapper!, 50, 30);
+    if (wrapper === null) {
+      throw new Error('Tooltip wrapper should exist');
+    }
+
+    setWrapperSize(wrapper, 50, 30);
     setWindowScrollY(0);
 
     show(target, 'left', { placement: 'left',
@@ -211,7 +219,11 @@ describe('Tooltip utility', () => {
 
     expect(wrapper).not.toBeNull();
 
-    setWrapperSize(wrapper!, 40, 20);
+    if (wrapper === null) {
+      throw new Error('Tooltip wrapper should exist');
+    }
+
+    setWrapperSize(wrapper, 40, 20);
 
     show(target, 'right', { placement: 'right',
       marginRight: 6,
@@ -236,7 +248,11 @@ describe('Tooltip utility', () => {
 
     expect(wrapper).not.toBeNull();
 
-    setWrapperSize(wrapper!, 60, 24);
+    if (wrapper === null) {
+      throw new Error('Tooltip wrapper should exist');
+    }
+
+    setWrapperSize(wrapper, 60, 24);
     setWindowScrollY(undefined);
     document.documentElement.scrollTop = 30;
 

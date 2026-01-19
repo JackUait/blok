@@ -5,13 +5,19 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { ListItemDepth } from '../../../../../../src/components/modules/drag/utils/ListItemDepth';
 import type { Block } from '../../../../../../src/components/block';
+import type { BlockManager } from '../../../../../../src/components/modules/blockManager';
+
+/**
+ * Minimal interface matching what ListItemDepth needs from BlockManager
+ */
+interface MockBlockManager {
+  blocks: Block[];
+  getBlockIndex: (block: Block) => number;
+  getBlockByIndex: (index: number) => Block | undefined;
+}
 
 describe('ListItemDepth', () => {
-  let mockBlockManager: {
-    blocks: Block[];
-    getBlockIndex: (block: Block) => number;
-    getBlockByIndex: (index: number) => Block | null;
-  };
+  let mockBlockManager: MockBlockManager;
   let listItemDepth: ListItemDepth;
 
   // Helper to create a mock block
@@ -41,11 +47,11 @@ describe('ListItemDepth', () => {
         return mockBlockManager.blocks.findIndex(b => b.id === block.id);
       }),
       getBlockByIndex: vi.fn((index: number) => {
-        return mockBlockManager.blocks[index] || null;
+        return mockBlockManager.blocks[index];
       }),
     };
 
-    listItemDepth = new ListItemDepth(mockBlockManager as any);
+    listItemDepth = new ListItemDepth(mockBlockManager as unknown as BlockManager);
   });
 
   describe('getDepth', () => {

@@ -290,6 +290,20 @@ describe('List Tool - Backward Compatibility', () => {
 });
 
 describe('Data Model Transform - List Compatibility', () => {
+  /**
+   * Type guard for list block data with text and style properties
+   */
+  const isListBlockData = (data: unknown): data is { text: string; style: string; depth?: number; checked?: boolean; start?: number } => {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'text' in data &&
+      typeof (data as { text: unknown }).text === 'string' &&
+      'style' in data &&
+      typeof (data as { style: unknown }).style === 'string'
+    );
+  };
+
   describe('analyzeDataFormat', () => {
     it('detects legacy format with nested items', () => {
       const blocks: OutputBlockData[] = [
@@ -393,9 +407,19 @@ describe('Data Model Transform - List Compatibility', () => {
 
       expect(expanded).toHaveLength(2);
       expect(expanded[0].type).toBe('list');
+
+      if (!isListBlockData(expanded[0].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[0].data.text).toBe('Item 1');
       expect(expanded[0].data.style).toBe('unordered');
       expect(expanded[1].type).toBe('list');
+
+      if (!isListBlockData(expanded[1].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[1].data.text).toBe('Item 2');
     });
 
@@ -419,8 +443,18 @@ describe('Data Model Transform - List Compatibility', () => {
       const expanded = expandToHierarchical(blocks);
 
       expect(expanded).toHaveLength(2);
+
+      if (!isListBlockData(expanded[0].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[0].data.text).toBe('Parent');
       expect(expanded[0].data.depth).toBeUndefined(); // depth 0 is omitted
+
+      if (!isListBlockData(expanded[1].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[1].data.text).toBe('Child');
       expect(expanded[1].data.depth).toBe(1);
     });
@@ -439,6 +473,10 @@ describe('Data Model Transform - List Compatibility', () => {
       ];
 
       const expanded = expandToHierarchical(blocks);
+
+      if (!isListBlockData(expanded[0].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
 
       expect(expanded[0].data.start).toBe(5);
     });
@@ -460,7 +498,16 @@ describe('Data Model Transform - List Compatibility', () => {
 
       const expanded = expandToHierarchical(blocks);
 
+      if (!isListBlockData(expanded[0].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[0].data.checked).toBe(true);
+
+      if (!isListBlockData(expanded[1].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[1].data.checked).toBe(false);
     });
 
@@ -480,9 +527,24 @@ describe('Data Model Transform - List Compatibility', () => {
 
       expect(expanded).toHaveLength(3);
       expect(expanded[0].type).toBe('list');
+
+      if (!isListBlockData(expanded[0].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[0].data.text).toBe('Item 1');
       expect(expanded[0].data.style).toBe('unordered');
+
+      if (!isListBlockData(expanded[1].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[1].data.text).toBe('Item 2');
+
+      if (!isListBlockData(expanded[2].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[2].data.text).toBe('Item 3');
     });
 
@@ -504,8 +566,18 @@ describe('Data Model Transform - List Compatibility', () => {
       const expanded = expandToHierarchical(blocks);
 
       expect(expanded).toHaveLength(2);
+
+      if (!isListBlockData(expanded[0].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[0].data.text).toBe('Task 1');
       expect(expanded[0].data.checked).toBe(true);
+
+      if (!isListBlockData(expanded[1].data)) {
+        throw new Error('Expected list block data with text and style properties');
+      }
+
       expect(expanded[1].data.text).toBe('Task 2');
       expect(expanded[1].data.checked).toBe(false);
     });
@@ -531,7 +603,19 @@ describe('Data Model Transform - List Compatibility', () => {
       expect(collapsed).toHaveLength(2);
       // Each root item becomes a separate list block
       expect(collapsed[0].type).toBe('list');
-      expect(collapsed[0].data.items[0].content).toBe('Item 1');
+
+      const firstBlock = collapsed[0];
+      const firstData: unknown = firstBlock.data;
+      if (typeof firstData === 'object' && firstData !== null && 'items' in firstData && Array.isArray(firstData.items)) {
+        const firstItem: unknown = firstData.items[0];
+        if (typeof firstItem === 'object' && firstItem !== null && 'content' in firstItem) {
+          expect((firstItem as { content: string }).content).toBe('Item 1');
+        } else {
+          throw new Error('Expected list item object with content property');
+        }
+      } else {
+        throw new Error('Expected list data with items property');
+      }
     });
 
     it('preserves non-list blocks unchanged', () => {
@@ -552,7 +636,13 @@ describe('Data Model Transform - List Compatibility', () => {
 
       expect(collapsed).toHaveLength(2);
       expect(collapsed[0].type).toBe('paragraph');
-      expect(collapsed[0].data.text).toBe('Hello');
+
+      const firstData: unknown = collapsed[0].data;
+      if (typeof firstData === 'object' && firstData !== null && 'text' in firstData) {
+        expect((firstData as { text: string }).text).toBe('Hello');
+      } else {
+        throw new Error('Expected block data with text property');
+      }
     });
   });
 });

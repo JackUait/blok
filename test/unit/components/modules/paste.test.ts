@@ -565,12 +565,12 @@ describe('Paste module', () => {
 
       expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
 
-      const [tool, event, shouldReplace] = mocks.BlockManager.paste.mock.calls[0];
+      const [tool, event, shouldReplace] = mocks.BlockManager.paste.mock.calls[0] as [string, CustomEvent, boolean];
 
       expect(tool).toBe('imageTool');
       expect(event).toBeInstanceOf(CustomEvent);
       expect(event.type).toBe('file');
-      expect(event.detail.file).toBe(file);
+      expect((event.detail as { file: File }).file).toBe(file);
       expect(shouldReplace).toBe(true);
     });
   });
@@ -620,13 +620,13 @@ describe('Paste module', () => {
 
       expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
 
-      const [tool, event] = mocks.BlockManager.paste.mock.calls[0];
+      const [tool, event] = mocks.BlockManager.paste.mock.calls[0] as [string, CustomEvent];
 
       expect(tool).toBe('link');
       expect(event).toBeInstanceOf(CustomEvent);
       expect(event.type).toBe('pattern');
-      expect(event.detail.data).toBe('https://example.com');
-      expect(event.detail.key).toBe('link');
+      expect((event.detail as { data: string; key: string }).data).toBe('https://example.com');
+      expect((event.detail as { data: string; key: string }).key).toBe('link');
       expect(mocks.Caret.setToBlock).toHaveBeenCalledWith({ id: 'link-block' }, mocks.Caret.positions.END);
     });
 
@@ -794,7 +794,12 @@ describe('Paste module', () => {
       expect(tool).toBe('embed');
       expect(event).toBeInstanceOf(CustomEvent);
       expect(event.type).toBe('pattern');
-      expect(event.detail.data).toBe('https://example.com');
+      if (event instanceof CustomEvent && event.detail) {
+        const detail = event.detail as { data: unknown };
+        expect(detail.data).toBe('https://example.com');
+      } else {
+        throw new Error('Event.detail is not accessible');
+      }
     });
 
     it('uses Blok data directly when no pattern matches', async () => {

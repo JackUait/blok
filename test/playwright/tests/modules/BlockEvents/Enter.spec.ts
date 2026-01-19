@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import type { Blok } from '../../../../../types';
-import type { OutputData } from '../../../../../types';
+import type { Blok, OutputData } from '../../../../../types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
@@ -188,13 +187,24 @@ test.describe('enter keydown', () => {
     await resetBlok(page);
 
     await page.evaluate(async ({ holder, toolSource }) => {
-      // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment -- Dynamic tool creation for testing
+      /**
+       * Dynamically create a tool class from source string.
+       * The Function constructor is necessary here to create tools at runtime for testing.
+       * We validate the result is a proper constructor by ensuring it's a function.
+       */
+      // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment -- Dynamic tool creation for testing; validated at runtime
       const PreventDefaultTool = new Function(`return (${toolSource});`)();
+
+      // Runtime validation: ensure the result is a constructor function
+      if (typeof PreventDefaultTool !== 'function') {
+        throw new Error('Tool source did not evaluate to a constructor function');
+      }
 
       const blok = new window.Blok({
         holder: holder,
         tools: {
           preventDefaultTool: {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Tool class from Function constructor, validated above
             class: PreventDefaultTool,
           },
         },

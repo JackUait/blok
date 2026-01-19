@@ -118,9 +118,13 @@ describe('ToolbarPositioner', () => {
     });
 
     it('returns null when targetBlock is null', () => {
+      if (!mockNodes.plusButton) {
+        throw new Error('plusButton is undefined');
+      }
+
       const result = positioner.calculateToolbarY(
         { targetBlock: null as unknown as Block, hoveredTarget: null, isMobile: false },
-        mockNodes.plusButton!
+        mockNodes.plusButton
       );
 
       expect(result).toBeNull();
@@ -136,18 +140,26 @@ describe('ToolbarPositioner', () => {
     });
 
     it('calculates Y position for mobile', () => {
+      if (!mockNodes.plusButton) {
+        throw new Error('plusButton is undefined');
+      }
+
       const result = positioner.calculateToolbarY(
         { targetBlock: mockBlock, hoveredTarget: null, isMobile: true },
-        mockNodes.plusButton!
+        mockNodes.plusButton
       );
 
       expect(result).toBeTypeOf('number');
     });
 
     it('calculates Y position for desktop', () => {
+      if (!mockNodes.plusButton) {
+        throw new Error('plusButton is undefined');
+      }
+
       const result = positioner.calculateToolbarY(
         { targetBlock: mockBlock, hoveredTarget: null, isMobile: false },
-        mockNodes.plusButton!
+        mockNodes.plusButton
       );
 
       expect(result).toBeTypeOf('number');
@@ -193,10 +205,14 @@ describe('ToolbarPositioner', () => {
 
   describe('repositionToolbar', () => {
     it('returns false when wrapper is null', () => {
+      if (!mockNodes.plusButton) {
+        throw new Error('plusButton is undefined');
+      }
+
       const result = positioner.repositionToolbar(
         { wrapper: undefined, content: undefined, actions: undefined, plusButton: undefined, settingsToggler: undefined },
         { targetBlock: mockBlock, hoveredTarget: null, isMobile: false },
-        mockNodes.plusButton!
+        mockNodes.plusButton
       );
 
       expect(result).toBe(false);
@@ -213,14 +229,14 @@ describe('ToolbarPositioner', () => {
     });
 
     it('updates position when lastToolbarY is null (first call)', () => {
-      if (!mockNodes.wrapper) {
-        throw new Error('wrapper is undefined');
+      if (!mockNodes.wrapper || !mockNodes.plusButton) {
+        throw new Error('wrapper or plusButton is undefined');
       }
 
       const result = positioner.repositionToolbar(
         mockNodes,
         { targetBlock: mockBlock, hoveredTarget: null, isMobile: false },
-        mockNodes.plusButton!
+        mockNodes.plusButton
       );
 
       expect(result).toBeTypeOf('boolean');
@@ -239,10 +255,14 @@ describe('ToolbarPositioner', () => {
         };
       }));
 
+      if (!mockNodes.plusButton) {
+        throw new Error('plusButton is undefined');
+      }
+
       const result = positioner.repositionToolbar(
         mockNodes,
         { targetBlock: mockBlock, hoveredTarget: null, isMobile: false },
-        mockNodes.plusButton!
+        mockNodes.plusButton
       );
 
       expect(result).toBeTypeOf('boolean');

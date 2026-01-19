@@ -2,17 +2,17 @@
  * Tests for DropTargetDetector
  */
 
-import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi, type Mock } from 'vitest';
 import { DropTargetDetector } from '../../../../../../src/components/modules/drag/target/DropTargetDetector';
 import type { Block } from '../../../../../../src/components/block';
 import { DATA_ATTR } from '../../../../../../src/components/constants';
+import type { BlockManagerAdapter } from '../../../../../../src/components/modules/drag/target/DropTargetDetector';
 
 describe('DropTargetDetector', () => {
   let detector: DropTargetDetector;
-  let mockBlockManager: {
-    getBlockByIndex: any;
-    getBlockIndex: any;
-    blocks: Block[];
+  let mockBlockManager: BlockManagerAdapter & {
+    getBlockByIndex: Mock<(index: number) => Block | undefined>;
+    getBlockIndex: Mock<(block: Block) => number>;
   };
   let mockUI: { contentRect: { left: number } };
 
@@ -41,7 +41,7 @@ describe('DropTargetDetector', () => {
   describe('setSourceBlocks', () => {
     it('should set source blocks for exclusion', () => {
       const blocks = [createMockBlock('block-1'), createMockBlock('block-2')];
-      detector.setSourceBlocks(blocks as Block[]);
+      detector.setSourceBlocks(blocks);
       // Source blocks are now set for exclusion
       expect(blocks).toHaveLength(2);
     });
@@ -50,8 +50,8 @@ describe('DropTargetDetector', () => {
   describe('findDropTargetBlock', () => {
     it('should find block holder via data attribute', () => {
       const block = createMockBlock('block-1');
-      mockBlockManager.blocks = [block as Block];
-      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index]);
+      mockBlockManager.blocks = [block];
+      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index] ?? undefined);
 
       // The element itself has the data attribute (closest should return the element itself)
       const element = document.createElement('div');
@@ -73,7 +73,7 @@ describe('DropTargetDetector', () => {
       const block2 = createMockBlock('block-2');
 
       // Setup getBoundingClientRect for vertical position check
-      vi.spyOn(block2.holder as any, 'getBoundingClientRect').mockReturnValue({
+      vi.spyOn(block2.holder, 'getBoundingClientRect').mockReturnValue({
         top: 50,
         bottom: 100,
         left: 0,
@@ -85,9 +85,9 @@ describe('DropTargetDetector', () => {
         toJSON: () => ({}),
       });
 
-      mockBlockManager.blocks = [block as Block, block2 as Block];
+      mockBlockManager.blocks = [block, block2];
 
-      detector.setSourceBlocks([block as Block]);
+      detector.setSourceBlocks([block]);
 
       // Element without data attribute - triggers fallback
       const element = document.createElement('div');
@@ -133,7 +133,7 @@ describe('DropTargetDetector', () => {
       const block1 = createMockBlock('block-1');
       const block2 = createMockBlock('block-2');
 
-      vi.spyOn(block1.holder as any, 'getBoundingClientRect').mockReturnValue({
+      vi.spyOn(block1.holder, 'getBoundingClientRect').mockReturnValue({
         top: 50,
         bottom: 100,
         left: 0,
@@ -145,7 +145,7 @@ describe('DropTargetDetector', () => {
         toJSON: () => ({}),
       });
 
-      mockBlockManager.blocks = [block1 as Block, block2 as Block];
+      mockBlockManager.blocks = [block1, block2];
       mockUI.contentRect = { left: 100 };
 
       const result = detector.findBlockInLeftDropZone(70, 75);
@@ -157,7 +157,7 @@ describe('DropTargetDetector', () => {
       const block1 = createMockBlock('block-1');
       const block2 = createMockBlock('block-2');
 
-      vi.spyOn(block1.holder as any, 'getBoundingClientRect').mockReturnValue({
+      vi.spyOn(block1.holder, 'getBoundingClientRect').mockReturnValue({
         top: 50,
         bottom: 100,
         left: 0,
@@ -168,7 +168,7 @@ describe('DropTargetDetector', () => {
         y: 50,
         toJSON: () => ({}),
       });
-      vi.spyOn(block2.holder as any, 'getBoundingClientRect').mockReturnValue({
+      vi.spyOn(block2.holder, 'getBoundingClientRect').mockReturnValue({
         top: 100,
         bottom: 150,
         left: 0,
@@ -180,8 +180,8 @@ describe('DropTargetDetector', () => {
         toJSON: () => ({}),
       });
 
-      mockBlockManager.blocks = [block1 as Block, block2 as Block];
-      detector.setSourceBlocks([block1 as Block]);
+      mockBlockManager.blocks = [block1, block2];
+      detector.setSourceBlocks([block1]);
       mockUI.contentRect = { left: 100 };
 
       // Cursor at block1's Y position, but block1 is a source block
@@ -193,7 +193,7 @@ describe('DropTargetDetector', () => {
     it('should return null when no block at Y position', () => {
       const block1 = createMockBlock('block-1');
 
-      vi.spyOn(block1.holder as any, 'getBoundingClientRect').mockReturnValue({
+      vi.spyOn(block1.holder, 'getBoundingClientRect').mockReturnValue({
         top: 50,
         bottom: 100,
         left: 0,
@@ -205,7 +205,7 @@ describe('DropTargetDetector', () => {
         toJSON: () => ({}),
       });
 
-      mockBlockManager.blocks = [block1 as Block];
+      mockBlockManager.blocks = [block1];
       mockUI.contentRect = { left: 100 };
 
       // Cursor at Y position with no block
@@ -221,17 +221,17 @@ describe('DropTargetDetector', () => {
       const previousBlock = createMockBlock('previous');
       const targetBlock = createMockBlock('target');
 
-      mockBlockManager.blocks = [previousBlock as Block, targetBlock as Block];
+      mockBlockManager.blocks = [previousBlock, targetBlock];
       mockBlockManager.getBlockIndex = vi.fn((block) => {
         if (block === previousBlock) return 0;
         if (block === targetBlock) return 1;
         return -1;
       });
-      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index]);
+      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index] ?? undefined);
 
       // The target block's holder needs to be in the DOM for closest to work
       // and getBoundingClientRect needs to be mocked
-      vi.spyOn(targetBlock.holder as any, 'getBoundingClientRect').mockReturnValue({
+      vi.spyOn(targetBlock.holder, 'getBoundingClientRect').mockReturnValue({
         top: 100,
         bottom: 200,
         left: 0,
@@ -242,31 +242,31 @@ describe('DropTargetDetector', () => {
         y: 100,
         toJSON: () => ({}),
       });
-      document.body.appendChild(targetBlock.holder!);
+      document.body.appendChild(targetBlock.holder);
 
       // Create element that is inside the holder (so closest finds holder)
       const targetElement = document.createElement('div');
-      targetBlock.holder!.appendChild(targetElement);
+      targetBlock.holder.appendChild(targetElement);
 
-      const result = detector.determineDropTarget(targetElement, 50, 120, sourceBlock as Block);
+      const result = detector.determineDropTarget(targetElement, 50, 120, sourceBlock);
 
       expect(result).not.toBeNull();
       expect(result?.block).toBe(previousBlock);
       expect(result?.edge).toBe('bottom');
 
       // Clean up
-      document.body.removeChild(targetBlock.holder!);
+      document.body.removeChild(targetBlock.holder);
     });
 
     it('should determine top edge for first block', () => {
       const sourceBlock = createMockBlock('source');
       const targetBlock = createMockBlock('target');
 
-      mockBlockManager.blocks = [targetBlock as Block];
+      mockBlockManager.blocks = [targetBlock];
       mockBlockManager.getBlockIndex = vi.fn(() => 0);
-      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index]);
+      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index] ?? undefined);
 
-      vi.spyOn(targetBlock.holder as any, 'getBoundingClientRect').mockReturnValue({
+      vi.spyOn(targetBlock.holder, 'getBoundingClientRect').mockReturnValue({
         top: 100,
         bottom: 200,
         left: 0,
@@ -277,30 +277,30 @@ describe('DropTargetDetector', () => {
         y: 100,
         toJSON: () => ({}),
       });
-      document.body.appendChild(targetBlock.holder!);
+      document.body.appendChild(targetBlock.holder);
 
       const targetElement = document.createElement('div');
-      targetBlock.holder!.appendChild(targetElement);
+      targetBlock.holder.appendChild(targetElement);
 
-      const result = detector.determineDropTarget(targetElement, 50, 120, sourceBlock as Block);
+      const result = detector.determineDropTarget(targetElement, 50, 120, sourceBlock);
 
       expect(result).not.toBeNull();
       expect(result?.block).toBe(targetBlock);
       expect(result?.edge).toBe('top');
 
       // Clean up
-      document.body.removeChild(targetBlock.holder!);
+      document.body.removeChild(targetBlock.holder);
     });
 
     it('should determine bottom edge for bottom half of block', () => {
       const sourceBlock = createMockBlock('source');
       const targetBlock = createMockBlock('target');
 
-      mockBlockManager.blocks = [targetBlock as Block];
+      mockBlockManager.blocks = [targetBlock];
       mockBlockManager.getBlockIndex = vi.fn(() => 0);
-      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index]);
+      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index] ?? undefined);
 
-      vi.spyOn(targetBlock.holder as any, 'getBoundingClientRect').mockReturnValue({
+      vi.spyOn(targetBlock.holder, 'getBoundingClientRect').mockReturnValue({
         top: 100,
         bottom: 200,
         left: 0,
@@ -311,31 +311,31 @@ describe('DropTargetDetector', () => {
         y: 100,
         toJSON: () => ({}),
       });
-      document.body.appendChild(targetBlock.holder!);
+      document.body.appendChild(targetBlock.holder);
 
       const targetElement = document.createElement('div');
-      targetBlock.holder!.appendChild(targetElement);
+      targetBlock.holder.appendChild(targetElement);
 
-      const result = detector.determineDropTarget(targetElement, 50, 170, sourceBlock as Block);
+      const result = detector.determineDropTarget(targetElement, 50, 170, sourceBlock);
 
       expect(result).not.toBeNull();
       expect(result?.block).toBe(targetBlock);
       expect(result?.edge).toBe('bottom');
 
       // Clean up
-      document.body.removeChild(targetBlock.holder!);
+      document.body.removeChild(targetBlock.holder);
     });
 
     it('should return null when target is source block', () => {
       const sourceBlock = createMockBlock('source');
 
-      mockBlockManager.blocks = [sourceBlock as Block];
+      mockBlockManager.blocks = [sourceBlock];
       mockBlockManager.getBlockIndex = vi.fn(() => 0);
 
       const targetElement = document.createElement('div');
       targetElement.setAttribute(DATA_ATTR.element, 'block');
 
-      const result = detector.determineDropTarget(targetElement, 50, 120, sourceBlock as Block);
+      const result = detector.determineDropTarget(targetElement, 50, 120, sourceBlock);
 
       expect(result).toBeNull();
     });
@@ -344,8 +344,8 @@ describe('DropTargetDetector', () => {
       const sourceBlock = createMockBlock('source');
       const targetBlock = createMockBlock('target');
 
-      detector.setSourceBlocks([sourceBlock as Block, targetBlock as Block]);
-      mockBlockManager.blocks = [sourceBlock as Block, targetBlock as Block];
+      detector.setSourceBlocks([sourceBlock, targetBlock]);
+      mockBlockManager.blocks = [sourceBlock, targetBlock];
       mockBlockManager.getBlockIndex = vi.fn((block) => {
         if (block === targetBlock) return 1;
         return 0;
@@ -354,7 +354,7 @@ describe('DropTargetDetector', () => {
       const targetElement = document.createElement('div');
       targetElement.setAttribute(DATA_ATTR.element, 'block');
 
-      const result = detector.determineDropTarget(targetElement, 50, 120, sourceBlock as Block);
+      const result = detector.determineDropTarget(targetElement, 50, 120, sourceBlock);
 
       expect(result).toBeNull();
     });
@@ -365,7 +365,7 @@ describe('DropTargetDetector', () => {
       const targetBlock = createMockBlock('target');
       mockBlockManager.getBlockIndex = vi.fn(() => 0);
 
-      const depth = detector.calculateTargetDepth(targetBlock as Block, 'top');
+      const depth = detector.calculateTargetDepth(targetBlock, 'top');
 
       expect(depth).toBe(0);
     });
@@ -375,7 +375,7 @@ describe('DropTargetDetector', () => {
       mockBlockManager.getBlockIndex = vi.fn(() => 0);
       mockBlockManager.getBlockByIndex = vi.fn(() => undefined);
 
-      const depth = detector.calculateTargetDepth(targetBlock as Block, 'bottom');
+      const depth = detector.calculateTargetDepth(targetBlock, 'bottom');
 
       expect(depth).toBe(0);
     });
@@ -392,7 +392,7 @@ describe('DropTargetDetector', () => {
         return undefined;
       });
 
-      const depth = detector.calculateTargetDepth(targetBlock as Block, 'top');
+      const depth = detector.calculateTargetDepth(targetBlock, 'top');
 
       expect(depth).toBe(2);
     });
@@ -409,7 +409,7 @@ describe('DropTargetDetector', () => {
         return undefined;
       });
 
-      const depth = detector.calculateTargetDepth(targetBlock as Block, 'top');
+      const depth = detector.calculateTargetDepth(targetBlock, 'top');
 
       // Should match previous depth since next is too deep
       expect(depth).toBe(1);
@@ -429,7 +429,7 @@ describe('DropTargetDetector', () => {
         return undefined;
       });
 
-      const depth = detector.calculateTargetDepth(targetBlock as Block, 'bottom');
+      const depth = detector.calculateTargetDepth(targetBlock, 'bottom');
 
       expect(depth).toBe(2);
     });
@@ -444,7 +444,7 @@ describe('DropTargetDetector', () => {
         return undefined;
       });
 
-      const depth = detector.calculateTargetDepth(targetBlock as Block, 'bottom');
+      const depth = detector.calculateTargetDepth(targetBlock, 'bottom');
 
       expect(depth).toBe(0);
     });
@@ -454,7 +454,7 @@ describe('DropTargetDetector', () => {
 /**
  * Helper to create a mock block
  */
-const createMockBlock = (id: string): Partial<Block> => {
+const createMockBlock = (id: string): Block => {
   const holder = document.createElement('div');
   holder.setAttribute(DATA_ATTR.element, 'block');
 
@@ -469,7 +469,7 @@ const createMockBlock = (id: string): Partial<Block> => {
 /**
  * Helper to create a mock list block with depth
  */
-const createMockListBlock = (id: string, depth: number): Partial<Block> => {
+const createMockListBlock = (id: string, depth: number): Block => {
   const holder = document.createElement('div');
   holder.setAttribute(DATA_ATTR.element, 'block');
 

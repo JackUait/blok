@@ -1,10 +1,17 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
+import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { BlockToolConstructable } from '@/types/tools';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+
+declare global {
+  interface Window {
+    blokInstance?: Blok;
+  }
+}
 
 
 const HOLDER_ID = 'blok';
@@ -115,7 +122,11 @@ const createBlokWithBlocks = async (
   await page.evaluate(
     async ({ holder, blokBlocks, blokTools, blokTunes, PopoverItemTypeValues }) => {
 
-      const testWindow = window as typeof window & Record<string, any>;
+      interface TestWindow extends Window {
+        edjsTestActivations?: string[];
+      }
+
+      const testWindow = window as TestWindow;
 
       testWindow.edjsTestActivations = [];
 
@@ -277,7 +288,7 @@ const createBlokWithBlocks = async (
           return [toolName, { class: DynamicTune } ] as const;
         });
 
-        return Object.fromEntries(toolEntries);
+        return Object.fromEntries(toolEntries) as Record<string, unknown>;
       };
 
       // Automatically add tool names to tunes list if they're tunes

@@ -109,7 +109,7 @@ describe('AutoScroll', () => {
       expect(mockRaf).toHaveBeenCalledTimes(1);
 
       // Manually call the scroll callback to test behavior
-      const callback = (mockRaf.mock.calls[0] as unknown[] | undefined)?.[0] as () => void | undefined;
+      const callback = (mockRaf.mock.calls[0] as unknown[] | undefined)?.[0] as () => void;
       if (callback) {
         callback();
       }
@@ -130,7 +130,7 @@ describe('AutoScroll', () => {
       autoScroll.start(970); // Scroll down
 
       // Simulate RAF callback
-      const callback = (mockRaf.mock.calls[0] as unknown[] | undefined)?.[0] as () => void | undefined;
+      const callback = (mockRaf.mock.calls[0] as unknown[] | undefined)?.[0] as () => void;
       if (callback) {
         callback();
       }

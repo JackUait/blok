@@ -521,13 +521,15 @@ describe('Toolbox', () => {
 
       const element = toolbox.getElement();
 
-      document.body.appendChild(element!);
+      if (element) {
+        document.body.appendChild(element);
 
-      expect(document.body.contains(element)).toBe(true);
+        expect(document.body.contains(element)).toBe(true);
 
-      toolbox.destroy();
+        toolbox.destroy();
 
-      expect(document.body.contains(element)).toBe(false);
+        expect(document.body.contains(element)).toBe(false);
+      }
     });
 
     it('should remove popover event listener', () => {
@@ -571,12 +573,14 @@ describe('Toolbox', () => {
       });
 
       const element = toolbox.getElement();
-      document.body.appendChild(element!);
+      if (element) {
+        document.body.appendChild(element);
 
-      toolbox.destroy();
+        toolbox.destroy();
 
-      // Verify actual outcome - element should be removed from DOM (side effect of super.destroy())
-      expect(document.body.contains(element)).toBe(false);
+        // Verify actual outcome - element should be removed from DOM (side effect of super.destroy())
+        expect(document.body.contains(element)).toBe(false);
+      }
     });
   });
 
@@ -594,7 +598,7 @@ describe('Toolbox', () => {
 
       // Simulate popover close event
       const closeHandler = (mockPopoverInstance.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        (call) => call[0] === PopoverEvent.Closed
+        (call): call is [string, () => void] => call[0] === PopoverEvent.Closed
       )?.[1];
 
       if (closeHandler) {

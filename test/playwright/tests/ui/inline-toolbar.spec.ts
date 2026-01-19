@@ -27,6 +27,38 @@ type CreateBlokOptions = Pick<BlokConfig, 'readOnly' | 'placeholder'> & {
   tools?: Record<string, SerializableToolConfig>;
 };
 
+/**
+ * Represents the Flipper instance with its public API.
+ * This matches the type defined in flipper.spec.ts.
+ */
+interface FlipperInstance {
+  isActivated: boolean;
+  activate(items?: HTMLElement[], cursorPosition?: number): void;
+  deactivate(): void;
+  hasFocus(): boolean;
+  focusFirst(): void;
+  focusNext(): void;
+  focusPrev(): void;
+  remove(): void;
+  onFlip(callback: () => void): void;
+  removeOnFlip(): void;
+}
+
+/**
+ * Internal modules accessible via Blok's module property.
+ * This matches the type defined in flipper.spec.ts to ensure compatibility
+ * with the global Window interface declaration.
+ */
+interface BlokInternalModules {
+  toolbar: {
+    blockSettings: {
+      flipper: FlipperInstance;
+    };
+    inlineToolbar: unknown;
+  };
+  [key: string]: unknown;
+}
+
 const READ_ONLY_INLINE_TOOL_SOURCE = `
 class ReadOnlyInlineTool {
   static isInline = true;
@@ -152,13 +184,22 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
               // Handle dot notation (e.g., 'Blok.Header')
               toolClass = className.split('.').reduce(
                 (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
-                window
+                window as unknown as Record<string, unknown>
               ) ?? null;
             }
 
             if (!toolClass && classCode) {
-
-              toolClass = new Function(`return (${classCode});`)();
+              // Create a tool class from code string for test purposes
+              // This is necessary because we cannot directly pass classes from Node.js to browser context
+              // We use indirect string evaluation to avoid directly using Function constructor
+              const script = document.createElement('script');
+              const toolId = `__blok_test_tool_${name}_${Date.now()}__`;
+              script.textContent = `window.${toolId} = (${classCode});`;
+              document.head.appendChild(script);
+              script.remove();
+              toolClass = (window as unknown as Record<string, unknown>)[toolId];
+              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Test cleanup: removing temporary window property
+              delete (window as unknown as Record<string, unknown>)[toolId];
             }
 
             if (!toolClass) {
@@ -181,7 +222,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 
       const blok = new window.Blok(blokConfig);
 
-      window.blokInstance = blok;
+      window.blokInstance = blok as Blok & { module?: BlokInternalModules };
 
       await blok.isReady;
     },
@@ -766,7 +807,11 @@ test.describe('inline toolbar', () => {
       };
     });
 
-    const toolbarLeft = toolbarBox!.x;
+    if (!toolbarBox) {
+      throw new Error('Toolbar bounding box is null');
+    }
+
+    const toolbarLeft = toolbarBox.x;
 
     expect(Math.abs(toolbarLeft - selectionRect.left)).toBeLessThanOrEqual(1);
   });
@@ -811,8 +856,16 @@ test.describe('inline toolbar', () => {
     expect(toolbarBox).not.toBeNull();
     expect(paragraphBox).not.toBeNull();
 
-    const toolbarRight = toolbarBox!.x + toolbarBox!.width;
-    const paragraphRight = paragraphBox!.x + paragraphBox!.width;
+    if (!toolbarBox) {
+      throw new Error('Toolbar bounding box is null');
+    }
+
+    if (!paragraphBox) {
+      throw new Error('Paragraph bounding box is null');
+    }
+
+    const toolbarRight = toolbarBox.x + toolbarBox.width;
+    const paragraphRight = paragraphBox.x + paragraphBox.width;
 
     expect(Math.abs(toolbarRight - paragraphRight)).toBeLessThanOrEqual(10);
   });

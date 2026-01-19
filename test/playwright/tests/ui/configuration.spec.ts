@@ -172,6 +172,33 @@ const getSelectionState = async (page: Page): Promise<{ isInsideParagraph: boole
   }, { paragraphSelector: PARAGRAPH_SELECTOR });
 };
 
+/**
+ * Extracts the 'text' property from the first block's data in the saved Blok output
+ * Using Object.entries to avoid unsafe property access on unknown types
+ */
+const extractFirstBlockText = (data: { blocks?: unknown[] }): string => {
+  if (!data.blocks || !Array.isArray(data.blocks) || data.blocks.length === 0) {
+    return '';
+  }
+
+  const firstBlock = data.blocks[0];
+  if (!firstBlock || typeof firstBlock !== 'object') {
+    return '';
+  }
+
+  const blockEntries = Object.entries(firstBlock as Record<string, unknown>);
+  const dataEntry = blockEntries.find(([key]) => key === 'data');
+
+  if (!dataEntry || !dataEntry[1] || typeof dataEntry[1] !== 'object' || dataEntry[1] === null || Array.isArray(dataEntry[1])) {
+    return '';
+  }
+
+  const dataEntries = Object.entries(dataEntry[1] as Record<string, unknown>);
+  const textEntry = dataEntries.find(([key]) => key === 'text');
+
+  return typeof textEntry?.[1] === 'string' ? textEntry[1] : '';
+};
+
 const openToolbox = async (page: Page): Promise<void> => {
   const paragraph = getParagraphByIndex(page);
 
@@ -687,8 +714,7 @@ test.describe('blok configuration options', () => {
       },
     });
 
-    type SavedHtml = string;
-    const savedHtmlResult = await page.evaluate<SavedHtml>(async () => {
+    const savedDataJson = await page.evaluate(async () => {
       const blok = window.blokInstance;
 
       if (!blok) {
@@ -697,28 +723,11 @@ test.describe('blok configuration options', () => {
 
       const data = await blok.save();
 
-      // Extract text from first block using Object.entries to safely access properties
-      if (data.blocks && Array.isArray(data.blocks) && data.blocks.length > 0) {
-        const firstBlock = data.blocks[0];
-        if (firstBlock && typeof firstBlock === 'object') {
-          const blockEntries = Object.entries(firstBlock);
-          const dataEntry = blockEntries.find(([key]) => key === 'data');
-          if (dataEntry && dataEntry[1] && typeof dataEntry[1] === 'object' && dataEntry[1] !== null && !Array.isArray(dataEntry[1])) {
-            // After the above checks, we know dataEntry[1] is a plain object, safe to pass to Object.entries
-            const dataValue = dataEntry[1] as Record<string, unknown>;
-            const dataEntries = Object.entries(dataValue);
-            const textEntry = dataEntries.find(([key]) => key === 'text');
-            if (textEntry && typeof textEntry[1] === 'string') {
-              return textEntry[1];
-            }
-          }
-        }
-      }
-
-      return '';
+      return JSON.stringify(data);
     });
 
-    const savedHtml = savedHtmlResult;
+    const savedData = JSON.parse(savedDataJson) as { blocks?: unknown[] };
+    const savedHtml = extractFirstBlockText(savedData);
 
     expect(savedHtml).toContain('<span');
     expect(savedHtml).toContain('data-blok-test="allowed"');
@@ -738,8 +747,7 @@ test.describe('blok configuration options', () => {
       },
     });
 
-    type SavedHtml = string;
-    const savedHtmlResult = await page.evaluate<SavedHtml>(async () => {
+    const savedDataJson = await page.evaluate(async () => {
       const blok = window.blokInstance;
 
       if (!blok) {
@@ -748,28 +756,11 @@ test.describe('blok configuration options', () => {
 
       const data = await blok.save();
 
-      // Extract text from first block using Object.entries to safely access properties
-      if (data.blocks && Array.isArray(data.blocks) && data.blocks.length > 0) {
-        const firstBlock = data.blocks[0];
-        if (firstBlock && typeof firstBlock === 'object') {
-          const blockEntries = Object.entries(firstBlock);
-          const dataEntry = blockEntries.find(([key]) => key === 'data');
-          if (dataEntry && dataEntry[1] && typeof dataEntry[1] === 'object' && dataEntry[1] !== null && !Array.isArray(dataEntry[1])) {
-            // After the above checks, we know dataEntry[1] is a plain object, safe to pass to Object.entries
-            const dataValue = dataEntry[1] as Record<string, unknown>;
-            const dataEntries = Object.entries(dataValue);
-            const textEntry = dataEntries.find(([key]) => key === 'text');
-            if (textEntry && typeof textEntry[1] === 'string') {
-              return textEntry[1];
-            }
-          }
-        }
-      }
-
-      return '';
+      return JSON.stringify(data);
     });
 
-    const savedHtml = savedHtmlResult;
+    const savedData = JSON.parse(savedDataJson) as { blocks?: unknown[] };
+    const savedHtml = extractFirstBlockText(savedData);
 
     expect(savedHtml).not.toContain('<script');
     expect(savedHtml).toContain('Safe text');

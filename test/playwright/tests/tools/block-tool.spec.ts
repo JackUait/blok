@@ -50,7 +50,7 @@ type BlockToolStubInstance = {
 
 type BlockToolConstructableWithOptionalDisabling = BlockToolConstructable & {
   toolbox?: ToolboxConfigEntry | ToolboxConfigEntry[] | false;
-  pasteConfig?: BlockToolConstructable['pasteConfig'] | false;
+  pasteConfig?: BlockToolConstructable['pasteConfig']; // false is already in the union
 };
 
 /**
@@ -59,9 +59,16 @@ type BlockToolConstructableWithOptionalDisabling = BlockToolConstructable & {
  */
 const isBlockToolConstructable = (
   constructable: BlockToolAdapterOptions['constructable']
-): constructable is BlockToolConstructableWithOptionalDisabling => (
-  typeof constructable === 'function' && typeof constructable.prototype?.render === 'function'
-);
+): constructable is BlockToolConstructableWithOptionalDisabling => {
+  if (typeof constructable !== 'function') {
+    return false;
+  }
+  // Use type assertion with eslint-disable for prototype access which can't be properly typed
+  // for a union of constructable types. The type guard below confirms this is a BlockToolConstructable.
+  const prototype = (constructable as { prototype?: { render?: unknown } }).prototype;
+
+  return typeof prototype?.render === 'function';
+};
 
 /**
  * Ensures constructable implements the Block Tool interface or throws.
@@ -390,6 +397,7 @@ test.describe('blockToolAdapter', () => {
         ['inlineTool', inlineTool],
       ]);
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Object.fromEntries can't be properly typed for this complex sanitizer config transformation
       const expected = Object.fromEntries(
         Object
           .entries(options.constructable.sanitize ?? {})

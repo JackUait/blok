@@ -6,6 +6,74 @@ import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
+/**
+ * Type for a block with unknown data that can be narrowed
+ */
+type BlockWithUnknownData = {
+  id?: string;
+  type: string;
+  data: unknown;
+  tunes?: Record<string, unknown>;
+  parent?: string;
+  content?: string[];
+};
+
+/**
+ * Type guard to check if block data has a 'level' property (for header blocks)
+ */
+const hasLevelProperty = (data: unknown): data is { level: number } & Record<string, unknown> => {
+  return typeof data === 'object' && data !== null && 'level' in data && typeof (data as { level: unknown }).level === 'number';
+};
+
+/**
+ * Type guard to check if block data has a 'text' property
+ */
+const hasTextProperty = (data: unknown): data is { text: string } & Record<string, unknown> => {
+  return typeof data === 'object' && data !== null && 'text' in data && typeof (data as { text: unknown }).text === 'string';
+};
+
+/**
+ * Get block data with narrowed type for header blocks
+ * Returns the data if it has the expected properties, throws otherwise
+ */
+const getHeaderBlockData = (block: BlockWithUnknownData): { level: number; text: string } => {
+  if (!hasLevelProperty(block.data) || !hasTextProperty(block.data)) {
+    throw new Error(`Block data does not have expected header properties: ${JSON.stringify(block.data)}`);
+  }
+  return { level: block.data.level, text: block.data.text };
+};
+
+/**
+ * Get just the level from block data with proper type narrowing
+ */
+const getBlockLevel = (block: BlockWithUnknownData): number => {
+  if (!hasLevelProperty(block.data)) {
+    throw new Error(`Block data does not have a level property: ${JSON.stringify(block.data)}`);
+  }
+  return block.data.level;
+};
+
+/**
+ * Get just the text from block data with proper type narrowing
+ */
+const getBlockText = (block: BlockWithUnknownData): string => {
+  if (!hasTextProperty(block.data)) {
+    throw new Error(`Block data does not have a text property: ${JSON.stringify(block.data)}`);
+  }
+  return block.data.text;
+};
+
+/**
+ * Assert that saved data exists and has at least one block
+ * Returns the saved data for further use
+ */
+const assertSavedDataExists = (savedData: OutputData | null | undefined): OutputData => {
+  if (!savedData || !savedData.blocks || savedData.blocks.length === 0) {
+    throw new Error('Expected saved data to exist with at least one block');
+  }
+  return savedData;
+};
+
 const HOLDER_ID = 'blok';
 const HEADER_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="header"]`;
 const PARAGRAPH_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`;
@@ -167,8 +235,10 @@ test.describe('header shortcuts', () => {
 
       expect(savedData?.blocks).toHaveLength(1);
       expect(savedData?.blocks[0].type).toBe('header');
-      expect(savedData?.blocks[0].data.level).toBe(1);
-      expect(savedData?.blocks[0].data.text).toBe('Heading');
+      const data = assertSavedDataExists(savedData);
+      const blockData = getHeaderBlockData(data.blocks[0]);
+      expect(blockData.level).toBe(1);
+      expect(blockData.text).toBe('Heading');
     });
 
     test('converts "## " to H2', async ({ page }) => {
@@ -190,7 +260,7 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.level).toBe(2);
+      expect(getBlockLevel(assertSavedDataExists(savedData).blocks[0])).toBe(2);
     });
 
     test('converts "### " to H3', async ({ page }) => {
@@ -212,7 +282,7 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.level).toBe(3);
+      expect(getBlockLevel(assertSavedDataExists(savedData).blocks[0])).toBe(3);
     });
 
     test('converts "#### " to H4', async ({ page }) => {
@@ -234,7 +304,7 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.level).toBe(4);
+      expect(getBlockLevel(assertSavedDataExists(savedData).blocks[0])).toBe(4);
     });
 
     test('converts "##### " to H5', async ({ page }) => {
@@ -256,7 +326,7 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.level).toBe(5);
+      expect(getBlockLevel(assertSavedDataExists(savedData).blocks[0])).toBe(5);
     });
 
     test('converts "###### " to H6', async ({ page }) => {
@@ -278,7 +348,7 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.level).toBe(6);
+      expect(getBlockLevel(assertSavedDataExists(savedData).blocks[0])).toBe(6);
     });
   });
 
@@ -328,8 +398,9 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.text).toBe('Hello World');
-      expect(savedData?.blocks[0].data.level).toBe(2);
+      const data = assertSavedDataExists(savedData);
+      expect(getBlockText(data.blocks[0])).toBe('Hello World');
+      expect(getBlockLevel(data.blocks[0])).toBe(2);
     });
 
     test('preserves HTML formatting when converting', async ({ page }) => {
@@ -476,7 +547,7 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.level).toBe(3);
+      expect(getBlockLevel(assertSavedDataExists(savedData).blocks[0])).toBe(3);
     });
 
     test('does not convert when level is not in allowed levels config', async ({ page }) => {
@@ -529,7 +600,7 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.level).toBe(6);
+      expect(getBlockLevel(assertSavedDataExists(savedData).blocks[0])).toBe(6);
     });
   });
 
@@ -563,8 +634,10 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.level).toBe(1);
-      expect(savedData?.blocks[0].data.text).toBe('Custom Heading');
+      const data = assertSavedDataExists(savedData);
+      const headerData = getHeaderBlockData(data.blocks[0]);
+      expect(headerData.level).toBe(1);
+      expect(headerData.text).toBe('Custom Heading');
     });
 
     test('default markdown shortcuts do not work when custom shortcuts are configured', async ({ page }) => {
@@ -650,7 +723,7 @@ test.describe('header shortcuts', () => {
         return await window.blokInstance?.save();
       });
 
-      expect(savedData?.blocks[0].data.level).toBe(3);
+      expect(getBlockLevel(assertSavedDataExists(savedData).blocks[0])).toBe(3);
     });
 
     test('omitted levels have no shortcut', async ({ page }) => {
@@ -700,7 +773,8 @@ test.describe('header shortcuts', () => {
       // First block should be paragraph with "# Should Stay Paragraph"
       expect(savedData?.blocks[0].type).toBe('paragraph');
       // Second block should be H2
-      expect(savedData?.blocks[1].data.level).toBe(2);
+      const data = assertSavedDataExists(savedData);
+      expect(getBlockLevel(data.blocks[1])).toBe(2);
     });
   });
 });

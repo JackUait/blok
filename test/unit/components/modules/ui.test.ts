@@ -288,7 +288,7 @@ describe('UI module', () => {
 
       expect(bindSpy).toHaveBeenCalledTimes(1);
       expect(idleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2000 });
-      const scheduled = idleCallback.mock.calls[0][0];
+      const scheduled = idleCallback.mock.calls[0][0] as () => void;
 
       bindSpy.mockClear();
       scheduled();

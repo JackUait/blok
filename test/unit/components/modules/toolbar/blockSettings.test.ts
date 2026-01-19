@@ -623,10 +623,11 @@ describe('BlockSettings', () => {
 
     (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
 
-    // Create a promise that we can control
-    let resolveGetTunesItems: (value: unknown) => void;
+    // Create a promise that we can control - use an object wrapper to avoid definite assignment issues
+    type Resolver = (value: unknown) => void;
+    const resolverRef: { resolve: Resolver | null } = { resolve: null };
     const getTunesItemsPromise = new Promise((resolve) => {
-      resolveGetTunesItems = resolve;
+      resolverRef.resolve = resolve;
     });
 
     const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
@@ -641,7 +642,7 @@ describe('BlockSettings', () => {
     expect(blockSettings.opened).toBe(false);
 
     // Resolve the async operation
-    resolveGetTunesItems!([]);
+    resolverRef.resolve?.([]);
 
     // Wait for open to complete
     await openPromise;

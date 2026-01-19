@@ -4,10 +4,19 @@
  */
 
 import type { Block } from '../../../block';
-import type { BlockManager } from '../../blockManager';
+
+/**
+ * Minimal interface for BlockManager dependency
+ * Used by ListItemDescendants to access block collection
+ */
+export interface BlockManagerAdapter {
+  blocks: Block[];
+  getBlockIndex(block: Block): number;
+  getBlockByIndex(index: number): Block | null | undefined;
+}
 
 export class ListItemDescendants {
-  constructor(private blockManager: BlockManager) {}
+  constructor(private blockManager: BlockManagerAdapter) {}
 
   /**
    * Gets the depth of a list item block from its DOM.

@@ -5,10 +5,14 @@ import { ToolsCollection } from '../../../../src/components/tools/collection';
 import type { BlockTuneAdapter } from '../../../../src/components/tools/tune';
 import type { BlockAPI } from '@/types/api';
 import type { BlockTuneData } from '@/types/block-tunes/block-tune-data';
+import type { MenuConfigItem } from '@/types/tools/menu-config';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 
+// Type for tune render return values matching what TunesManager accepts
+type TuneRenderReturn = HTMLElement | MenuConfigItem | MenuConfigItem[];
+
 interface MockTuneInstance {
-  render: Mock<() => HTMLElement | { title: string }>;
+  render: Mock<() => TuneRenderReturn>;
   wrap: Mock<(node: HTMLElement) => HTMLElement>;
   save: Mock<() => BlockTuneData>;
 }
@@ -25,11 +29,11 @@ const createTuneAdapter = (name: string, {
   saveReturn,
 }: {
   isInternal?: boolean;
-  renderReturn?: HTMLElement | { title: string };
+  renderReturn?: TuneRenderReturn;
   saveReturn?: BlockTuneData;
 } = {}): CreateTuneAdapterResult => {
   const instance = {
-    render: vi.fn((): HTMLElement | { title: string } => renderReturn ?? { title: `${name}-action` }),
+    render: vi.fn((): TuneRenderReturn => renderReturn ?? { title: `${name}-action`, onActivate: () => {} }),
     wrap: vi.fn((node: HTMLElement): HTMLElement => node),
     save: vi.fn((): BlockTuneData => saveReturn ?? { [`${name}Enabled`]: true }),
   };
@@ -131,8 +135,8 @@ describe('TunesManager', () => {
 
       const manager = new TunesManager(tunesCollection, {}, mockBlockAPI);
 
-      const toolSettings = [{ title: 'Tool Action' }];
-      const config = manager.getMenuConfig(toolSettings as any);
+      const toolSettings: MenuConfigItem[] = [{ title: 'Tool Action', onActivate: () => {} }];
+      const config = manager.getMenuConfig(toolSettings);
 
       expect(config.toolTunes).toEqual(toolSettings);
     });
@@ -152,8 +156,8 @@ describe('TunesManager', () => {
       const config = manager.getMenuConfig();
 
       expect(config.commonTunes).toHaveLength(2);
-      expect(config.commonTunes).toContainEqual({ title: 'userTune-action' });
-      expect(config.commonTunes).toContainEqual({ title: 'internalTune-action' });
+      expect(config.commonTunes).toContainEqual(expect.objectContaining({ title: 'userTune-action' }));
+      expect(config.commonTunes).toContainEqual(expect.objectContaining({ title: 'internalTune-action' }));
     });
 
     it('handles HTMLElement return from render', () => {
@@ -175,8 +179,11 @@ describe('TunesManager', () => {
     });
 
     it('handles array return from render', () => {
-      const arrayReturn = [{ title: 'Action 1' }, { title: 'Action 2' }];
-      const userTune = createTuneAdapter('userTune', { renderReturn: arrayReturn as any });
+      const arrayReturn: MenuConfigItem[] = [
+        { title: 'Action 1', onActivate: () => {} },
+        { title: 'Action 2', onActivate: () => {} },
+      ];
+      const userTune = createTuneAdapter('userTune', { renderReturn: arrayReturn });
       const tunesCollection = new ToolsCollection<BlockTuneAdapter>(
         [[userTune.adapter.name, userTune.adapter]]
       );
@@ -189,7 +196,7 @@ describe('TunesManager', () => {
     });
 
     it('handles single MenuConfigItem return from render', () => {
-      const itemReturn = { title: 'Single Action' };
+      const itemReturn: MenuConfigItem = { title: 'Single Action', onActivate: () => {} };
       const userTune = createTuneAdapter('userTune', { renderReturn: itemReturn });
       const tunesCollection = new ToolsCollection<BlockTuneAdapter>(
         [[userTune.adapter.name, userTune.adapter]]

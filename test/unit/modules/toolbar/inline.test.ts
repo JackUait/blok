@@ -219,11 +219,16 @@ describe('InlineToolbar', () => {
     // Mock requestIdleCallback and setTimeout to execute immediately but asynchronously to avoid recursion in constructor
     vi.useFakeTimers();
 
-
-    (global as any).requestIdleCallback = vi.fn((callback: () => void) => {
+    const requestIdleCallbackMock = vi.fn((callback: () => void) => {
       setTimeout(callback, 0);
 
       return 1;
+    });
+
+    Object.defineProperty(global, 'requestIdleCallback', {
+      value: requestIdleCallbackMock,
+      writable: true,
+      configurable: true,
     });
 
     // Ensure window exists for the module logic
@@ -231,7 +236,7 @@ describe('InlineToolbar', () => {
       vi.stubGlobal('window', {
         setTimeout: setTimeout,
         clearTimeout: clearTimeout,
-        requestIdleCallback: (global as unknown as { requestIdleCallback: (callback: () => void) => number }).requestIdleCallback,
+        requestIdleCallback: requestIdleCallbackMock,
       });
     }
 

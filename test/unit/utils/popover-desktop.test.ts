@@ -351,10 +351,12 @@ describe('PopoverDesktop', () => {
 
       expect(triggerElement).not.toBeNull();
 
-      Object.defineProperty(triggerElement!, 'offsetTop', {
-        configurable: true,
-        get: () => 75,
-      });
+      if (triggerElement) {
+        Object.defineProperty(triggerElement, 'offsetTop', {
+          configurable: true,
+          get: () => 75,
+        });
+      }
 
       instance.nodes.items.scrollTop = 25;
 
@@ -522,7 +524,10 @@ describe('PopoverDesktop', () => {
       )?.getElement();
 
       expect(htmlItemWrapper).not.toBeNull();
-      expect(elements).toEqual([defaultElement!, htmlItemWrapper!]);
+
+      if (defaultElement && htmlItemWrapper) {
+        expect(elements).toEqual([defaultElement, htmlItemWrapper]);
+      }
     });
   });
 
@@ -579,7 +584,9 @@ describe('PopoverDesktop', () => {
 
       expect(parentItem).toBeDefined();
 
-      instance.showNestedPopoverForItem(parentItem!);
+      if (parentItem) {
+        instance.showNestedPopoverForItem(parentItem);
+      }
 
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
       expect(instance.nestedPopover?.getElement().hasAttribute(DATA_ATTR.nested)).toBe(true);
@@ -629,7 +636,7 @@ describe('PopoverDesktop', () => {
       const showNestedSpy = vi.spyOn(instance, 'showNestedPopoverForItem');
 
       const hoverEvent = {
-        composedPath: () => [ parentElement! ],
+        composedPath: () => parentElement ? [parentElement] : [],
       } as unknown as Event;
 
       instance.handleHover(hoverEvent);

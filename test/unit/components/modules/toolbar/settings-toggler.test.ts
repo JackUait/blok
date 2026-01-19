@@ -3,6 +3,22 @@ import { SettingsTogglerHandler } from '../../../../../src/components/modules/to
 import { ClickDragHandler } from '../../../../../src/components/modules/toolbar/click-handler';
 import type { Block } from '../../../../../src/components/block';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type { BlockSettings } from '../../../../../src/components/modules/toolbar/blockSettings';
+
+/**
+ * Test helper type to expose private handleClick method for testing
+ * Double cast is needed because the private property is not part of the public type
+ */
+const exposeHandleClick = (handler: SettingsTogglerHandler): { handleClick: () => void } => {
+  return handler as unknown as { handleClick: () => void };
+};
+
+/**
+ * Test helper type to mock BlockSettings open method
+ */
+type MockBlockSettings = Partial<Pick<BlockSettings, 'open' | 'close'>> & {
+  opened: boolean;
+};
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
   createTooltipContent: vi.fn(() => 'tooltip content'),
@@ -50,7 +66,7 @@ describe('SettingsTogglerHandler', () => {
         opened: false,
         close: vi.fn(),
         open: vi.fn(),
-      },
+      } satisfies MockBlockSettings,
       BlockManager: {
         currentBlock: mockBlock,
         blocks: [mockBlock],
@@ -96,7 +112,7 @@ describe('SettingsTogglerHandler', () => {
       // This should NOT throw even though blok.Toolbar is undefined
       // This is the core fix - the handler now uses stored element reference
       expect(() => {
-        (settingsTogglerHandler as unknown as { handleClick: () => void }).handleClick();
+        exposeHandleClick(settingsTogglerHandler).handleClick();
       }).not.toThrow();
     });
 
@@ -104,9 +120,9 @@ describe('SettingsTogglerHandler', () => {
       settingsTogglerHandler.setHoveredBlock(mockBlock);
       const blok = getBlok();
       const blockSettingsOpenSpy = vi.fn();
-      (blok.BlockSettings as any).open = blockSettingsOpenSpy;
+      (blok.BlockSettings as MockBlockSettings).open = blockSettingsOpenSpy;
 
-      (settingsTogglerHandler as unknown as { handleClick: () => void }).handleClick();
+      exposeHandleClick(settingsTogglerHandler).handleClick();
 
       // Verify BlockSettings.open was called with the target block and settings toggler element
       expect(blockSettingsOpenSpy).toHaveBeenCalledWith(mockBlock, expect.any(HTMLSpanElement));

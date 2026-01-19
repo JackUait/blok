@@ -250,7 +250,8 @@ describe('InlineShortcutManager', () => {
 
       // Get the handler that was passed to Shortcuts.add
       const addCall = (Shortcuts.add as ReturnType<typeof vi.fn>).mock.calls[0];
-      const handler = addCall[0].handler;
+      const shortcutConfig = addCall[0] as { name: string; handler: (event: Event) => void };
+      const handler = shortcutConfig.handler;
 
       const mockEvent = { preventDefault: vi.fn() } as unknown as Event;
       handler(mockEvent);
@@ -268,7 +269,8 @@ describe('InlineShortcutManager', () => {
       vi.runAllTimers();
 
       const addCall = (Shortcuts.add as ReturnType<typeof vi.fn>).mock.calls[0];
-      const handler = addCall[0].handler;
+      const shortcutConfig = addCall[0] as { name: string; handler: (event: Event) => void };
+      const handler = shortcutConfig.handler;
 
       const mockEvent = { preventDefault: vi.fn() } as unknown as Event;
       handler(mockEvent);
@@ -291,7 +293,8 @@ describe('InlineShortcutManager', () => {
       vi.runAllTimers();
 
       const addCall = (Shortcuts.add as ReturnType<typeof vi.fn>).mock.calls[0];
-      const handler = addCall[0].handler;
+      const shortcutConfig = addCall[0] as { name: string; handler: (event: Event) => void };
+      const handler = shortcutConfig.handler;
 
       const mockEvent = { preventDefault: vi.fn() } as unknown as Event;
       handler(mockEvent);
@@ -314,7 +317,8 @@ describe('InlineShortcutManager', () => {
       vi.runAllTimers();
 
       const addCall = (Shortcuts.add as ReturnType<typeof vi.fn>).mock.calls[0];
-      const handler = addCall[0].handler;
+      const shortcutConfig = addCall[0] as { name: string; handler: (event: Event) => void };
+      const handler = shortcutConfig.handler;
 
       const mockEvent = { preventDefault: vi.fn() } as unknown as Event;
       handler(mockEvent);

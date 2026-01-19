@@ -1,43 +1,73 @@
- 
+
 import { expect, test } from '@playwright/test';
 import { BlockTuneAdapter } from '../../../../src/components/tools/tune';
 import { ToolType } from '../../../../types/tools/adapters/tool-type';
-import type { ToolSettings } from '../../../../types';
+import type { API, ToolConfig } from '../../../../types';
+import type { BlockAPI } from '../../../../types/api';
+import type { BlockTune, BlockTuneConstructable } from '../../../../types/block-tunes';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 
-const createBlockTuneOptions = (): any => {
-  class Constructable {
-    public static reset?: () => void | Promise<void>;
-    public static prepare?: (
-      data: { toolName: string; config: ToolSettings }
-    ) => void | Promise<void>;
+/**
+ * Mock BlockTune class for testing
+ * We create our own constructable since mocking the exact BlockTuneConstructable
+ * interface is complex due to API and BlockAPI dependencies
+ */
+class MockBlockTune implements BlockTune {
+  public static isTune = true;
 
-    public api: Record<string, unknown>;
-    public config: ToolSettings;
-    public data: BlockTuneData;
-    public block: Record<string, unknown>;
+  public static reset?: () => void | Promise<void>;
+  public static prepare?: (
+    data: { toolName: string; config: ToolConfig }
+  ) => void | Promise<void>;
 
-    constructor({
-      api,
-      config,
-      block,
-      data,
-    }: {
-      api: Record<string, unknown>;
-      config: ToolSettings;
-      block: Record<string, unknown>;
-      data: BlockTuneData;
-    }) {
-      this.api = api;
-      this.config = config;
-      this.block = block;
-      this.data = data;
-    }
+  public api: API;
+  public config: ToolConfig;
+  public data: BlockTuneData;
+  public block: BlockAPI;
+
+  constructor({
+    api,
+    config,
+    block,
+    data,
+  }: {
+    api: API;
+    config: ToolConfig;
+    block: BlockAPI;
+    data: BlockTuneData;
+  }) {
+    this.api = api;
+    this.config = config;
+    this.block = block;
+    this.data = data;
   }
+
+  public render(): HTMLElement {
+    return document.createElement('div');
+  }
+}
+
+/**
+ * Helper function to create mock BlockTune options
+ * We cast to BlockTuneConstructable since our mock matches the interface structure
+ * The TypeScript compiler can't verify class static methods match an interface,
+ * so we need to assert the type for test purposes
+ */
+const createBlockTuneOptions = (): {
+  name: string;
+  constructable: BlockTuneConstructable;
+  config: Record<string, unknown>;
+  api: API;
+  isDefault: boolean;
+  isInternal: boolean;
+  defaultPlaceholder: string;
+} => {
+  // Test mock: class structure matches BlockTuneConstructable interface
+  const constructable = MockBlockTune as unknown as BlockTuneConstructable;
 
   return {
     name: 'blockTune',
-    constructable: Constructable,
+    constructable,
     config: {
       config: {
         option1: 'option1',
@@ -45,10 +75,11 @@ const createBlockTuneOptions = (): any => {
       },
       shortcut: 'CMD+SHIFT+B',
     },
-    api: {
+    // Test mock: partial API object for testing
+    api: ({
       prop1: 'prop1',
       prop2: 'prop2',
-    },
+    }) as unknown as API,
     isDefault: false,
     isInternal: false,
     defaultPlaceholder: 'Default placeholder',
@@ -114,11 +145,11 @@ test.describe('blockTuneAdapter', () => {
   test.describe('.prepare()', () => {
     test('calls Tool prepare method', async () => {
       const options = createBlockTuneOptions();
-      const calls: Array<{ toolName: string; config: ToolSettings }> = [];
+      const calls: Array<{ toolName: string; config: ToolConfig }> = [];
 
       options.constructable.prepare = (data: {
         toolName: string;
-        config: ToolSettings;
+        config: ToolConfig;
       }) => {
         calls.push(data);
       };
@@ -139,7 +170,8 @@ test.describe('blockTuneAdapter', () => {
       const options = createBlockTuneOptions();
       const tool = new BlockTuneAdapter({
         ...options,
-        constructable: {},
+        // Test mock: empty constructable to test missing prepare method
+        constructable: {} as unknown as BlockTuneConstructable,
       });
 
       const result = await tool.prepare();
@@ -168,7 +200,8 @@ test.describe('blockTuneAdapter', () => {
       const options = createBlockTuneOptions();
       const tool = new BlockTuneAdapter({
         ...options,
-        constructable: {},
+        // Test mock: empty constructable to test missing reset method
+        constructable: {} as unknown as BlockTuneConstructable,
       });
 
       const result = await tool.reset();
@@ -178,16 +211,23 @@ test.describe('blockTuneAdapter', () => {
   });
 
   test.describe('.create()', () => {
+    // Helper to create mock BlockAPI for testing
+    const createMockBlockApi = (): BlockAPI => {
+      // Test mock: partial BlockAPI object for testing
+      return ({
+        method(): void {},
+      }) as unknown as BlockAPI;
+    };
+
     test('returns Tool instance', () => {
       const options = createBlockTuneOptions();
       const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
-      const blockApi = {
-        method(): void {},
-      };
+      const blockApi = createMockBlockApi();
 
-      expect(tool.create(data, blockApi as any)).toBeInstanceOf(
-        options.constructable
+      expect(tool.create(data, blockApi)).toBeInstanceOf(
+        // Test: checking instance of mock class, cast to class type
+        options.constructable as unknown as typeof MockBlockTune
       );
     });
 
@@ -195,11 +235,9 @@ test.describe('blockTuneAdapter', () => {
       const options = createBlockTuneOptions();
       const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
-      const blockApi = {
-        method(): void {},
-      };
+      const blockApi = createMockBlockApi();
 
-      const instance = tool.create(data, blockApi as any) as any;
+      const instance = tool.create(data, blockApi) as MockBlockTune;
 
       expect(instance.data).toStrictEqual(data);
     });
@@ -208,11 +246,9 @@ test.describe('blockTuneAdapter', () => {
       const options = createBlockTuneOptions();
       const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
-      const blockApi = {
-        method(): void {},
-      };
+      const blockApi = createMockBlockApi();
 
-      const instance = tool.create(data, blockApi as any) as any;
+      const instance = tool.create(data, blockApi) as MockBlockTune;
 
       expect(instance.block).toStrictEqual(blockApi);
     });
@@ -221,11 +257,9 @@ test.describe('blockTuneAdapter', () => {
       const options = createBlockTuneOptions();
       const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
-      const blockApi = {
-        method(): void {},
-      };
+      const blockApi = createMockBlockApi();
 
-      const instance = tool.create(data, blockApi as any) as any;
+      const instance = tool.create(data, blockApi) as MockBlockTune;
 
       expect(instance.api).toStrictEqual(options.api);
     });
@@ -234,15 +268,12 @@ test.describe('blockTuneAdapter', () => {
       const options = createBlockTuneOptions();
       const tool = new BlockTuneAdapter(options);
       const data: BlockTuneData = { text: 'text' };
-      const blockApi = {
-        method(): void {},
-      };
+      const blockApi = createMockBlockApi();
 
-      const instance = tool.create(data, blockApi as any) as any;
+      const instance = tool.create(data, blockApi) as MockBlockTune;
 
       expect(instance.config).toStrictEqual(options.config.config);
     });
   });
 });
-
 

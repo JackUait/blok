@@ -294,12 +294,10 @@ describe('Blocks', () => {
 
       expect(block2.call).toHaveBeenCalledWith(
         BlockToolAPI.MOVED,
-        expect.objectContaining({
-          detail: expect.objectContaining({
-            fromIndex: 1,
-            toIndex: 0,
-          }),
-        })
+        {
+          fromIndex: 1,
+          toIndex: 0,
+        }
       );
     });
 

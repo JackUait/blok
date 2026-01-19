@@ -3,12 +3,13 @@ import { InlinePopoverBuilder } from '../../../../../src/components/modules/tool
 import type { InlineToolAdapter } from '../../../../../src/components/tools/inline';
 import type { InlineTool } from '../../../../../types';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type { I18n } from '../../../../../src/components/modules/i18n';
 import { PopoverItemType } from '../../../../../src/components/utils/popover';
 
 vi.mock('../../../../../src/components/utils', () => ({
   beautifyShortcut: (shortcut: string) => `⌘${shortcut.slice(-1)}`,
   capitalize: (str: string) => str.charAt(0).toUpperCase() + str.slice(1),
-  translateToolName: (i18n: any, _key: string, title: string) => title,
+  translateToolName: (i18n: I18n, _key: string, title: string) => title,
 }));
 
 describe('InlinePopoverBuilder', () => {
@@ -64,7 +65,7 @@ describe('InlinePopoverBuilder', () => {
     } as unknown as typeof mockI18n;
 
     const getBlok = () => mockBlok;
-    const getI18n = () => mockI18n as any;
+    const getI18n = () => mockI18n as unknown as I18n;
     popoverBuilder = new InlinePopoverBuilder(getBlok, getI18n);
   });
 

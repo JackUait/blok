@@ -3,15 +3,11 @@
  */
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { ListItemDescendants } from '../../../../../../src/components/modules/drag/utils/ListItemDescendants';
+import { ListItemDescendants, type BlockManagerAdapter } from '../../../../../../src/components/modules/drag/utils/ListItemDescendants';
 import type { Block } from '../../../../../../src/components/block';
 
 describe('ListItemDescendants', () => {
-  let mockBlockManager: {
-    blocks: Block[];
-    getBlockIndex: (block: Block) => number;
-    getBlockByIndex: (index: number) => Block | null;
-  };
+  let mockBlockManager: BlockManagerAdapter;
   let listItemDescendants: ListItemDescendants;
 
   // Helper to create a mock block
@@ -45,7 +41,7 @@ describe('ListItemDescendants', () => {
       }),
     };
 
-    listItemDescendants = new ListItemDescendants(mockBlockManager as any);
+    listItemDescendants = new ListItemDescendants(mockBlockManager);
   });
 
   describe('getDescendants', () => {

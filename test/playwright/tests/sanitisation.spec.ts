@@ -7,6 +7,34 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
 const HOLDER_ID = 'blok';
 const INITIAL_BLOCK_ID = 'sanitisation-initial-block';
 
+/**
+ * Type-safe helper to extract text property from block data.
+ * In test code, we know the blocks have specific data structures.
+ * We use unknown to break the 'any' chain and then narrow to the expected type.
+ */
+const getBlockText = (blockData: unknown): string => {
+  const data = blockData as Record<string, unknown>;
+  return data.text as string;
+};
+
+/**
+ * Type-safe helper to extract items array from block data.
+ * Used for custom tools with array data structures.
+ */
+const getBlockItems = (blockData: unknown): string[] => {
+  const data = blockData as Record<string, unknown>;
+  return data.items as string[];
+};
+
+/**
+ * Type-safe helper to extract nested items with content property.
+ * Used for custom tools with nested object structures.
+ */
+const getBlockNestedItems = (blockData: unknown): Array<{ content: string }> => {
+  const data = blockData as Record<string, unknown>;
+  return data.items as Array<{ content: string }>;
+};
+
 const getBlockById = (page: Page, blockId: string): Locator => {
   return page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-id="${blockId}"]`);
 };
@@ -240,7 +268,7 @@ test.describe('sanitizing', () => {
 
       const output = await saveBlok(page);
 
-      expect(output.blocks[0].data.text).toBe('<strong>Bold text</strong>');
+      expect(getBlockText(output.blocks[0].data)).toBe('<strong>Bold text</strong>');
     });
 
     test('should save formatting for paragraph', async ({ page }) => {
@@ -269,7 +297,7 @@ test.describe('sanitizing', () => {
       await boldButton.waitFor({ state: 'hidden' });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toMatch(/<strong>This text should be bold\.(<br>)?<\/strong>/);
     });
@@ -287,7 +315,7 @@ test.describe('sanitizing', () => {
 
       const output = await saveBlok(page);
 
-      expect(output.blocks[1].data.text).toBe('<strong>Bold text</strong>');
+      expect(getBlockText(output.blocks[1].data)).toBe('<strong>Bold text</strong>');
     });
   });
 
@@ -321,7 +349,7 @@ test.describe('sanitizing', () => {
     const { blocks } = await saveBlok(page);
 
     // text has been merged, span has been removed
-    expect(blocks[0].data.text).toBe('First blockSecond XSS block');
+    expect(getBlockText(blocks[0].data)).toBe('First blockSecond XSS block');
   });
 
   test.describe('other inline tools', () => {
@@ -335,7 +363,7 @@ test.describe('sanitizing', () => {
 
       const output = await saveBlok(page);
 
-      expect(output.blocks[0].data.text).toBe('<i>Italic text</i>');
+      expect(getBlockText(output.blocks[0].data)).toBe('<i>Italic text</i>');
     });
 
     test('should save italic formatting applied via toolbar', async ({ page }) => {
@@ -362,7 +390,7 @@ test.describe('sanitizing', () => {
       await italicButton.waitFor({ state: 'hidden' });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toMatch(/<i>This text should be italic\.(<br>)?<\/i>/);
     });
@@ -377,8 +405,8 @@ test.describe('sanitizing', () => {
 
       const output = await saveBlok(page);
 
-      expect(output.blocks[0].data.text).toContain('<a href="https://example.com">');
-      expect(output.blocks[0].data.text).toContain('Link text');
+      expect(getBlockText(output.blocks[0].data)).toContain('<a href="https://example.com">');
+      expect(getBlockText(output.blocks[0].data)).toContain('Link text');
     });
 
     test('should save link formatting applied via toolbar', async ({ page }) => {
@@ -409,7 +437,7 @@ test.describe('sanitizing', () => {
       await linkInput.waitFor({ state: 'hidden' });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toMatch(/<a href="https:\/\/example\.com"[^>]*>Link text<\/a>/);
     });
@@ -425,7 +453,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('href="https://example.com"');
       expect(text).not.toContain('onclick');
@@ -442,7 +470,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('href="https://example.com"');
       expect(text).toContain('target="_blank"');
@@ -458,7 +486,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('<strong>');
       expect(text).toContain('Bold');
@@ -478,9 +506,9 @@ test.describe('sanitizing', () => {
 
       const output = await saveBlok(page);
 
-      expect(output.blocks[0].data.text).not.toContain('<script>');
-      expect(output.blocks[0].data.text).not.toContain('alert');
-      expect(output.blocks[0].data.text).toBe('TextMore text');
+      expect(getBlockText(output.blocks[0].data)).not.toContain('<script>');
+      expect(getBlockText(output.blocks[0].data)).not.toContain('alert');
+      expect(getBlockText(output.blocks[0].data)).toBe('TextMore text');
     });
 
     test('should remove event handlers', async ({ page }) => {
@@ -492,7 +520,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).not.toContain('onclick');
       expect(text).not.toContain('onerror');
@@ -509,7 +537,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       // The link should be removed or href should be sanitized
       expect(text).not.toContain('javascript:');
@@ -524,7 +552,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).not.toContain('data:text/html');
       expect(text).not.toContain('<script>');
@@ -539,7 +567,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).not.toContain('style');
       expect(text).not.toContain('expression');
@@ -554,7 +582,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).not.toContain('onmouseover');
       expect(text).not.toContain('onfocus');
@@ -572,9 +600,9 @@ test.describe('sanitizing', () => {
 
       const output = await saveBlok(page);
 
-      expect(output.blocks[0].data.text).toContain('<i>');
-      expect(output.blocks[0].data.text).toContain('<strong>');
-      expect(output.blocks[0].data.text).toContain('and bold');
+      expect(getBlockText(output.blocks[0].data)).toContain('<i>');
+      expect(getBlockText(output.blocks[0].data)).toContain('<strong>');
+      expect(getBlockText(output.blocks[0].data)).toContain('and bold');
     });
 
     test('should save multiple levels of nesting', async ({ page }) => {
@@ -586,7 +614,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('<strong>');
       expect(text).toContain('<i>');
@@ -603,7 +631,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('<strong>');
       expect(text).not.toContain('<span>');
@@ -631,7 +659,7 @@ test.describe('sanitizing', () => {
       });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       // With empty config, all HTML should be preserved
       expect(text).toContain('<strong>Bold</strong> <i>italic</i>');
@@ -660,7 +688,7 @@ test.describe('sanitizing', () => {
 
       const output = await saveBlok(page);
 
-      expect(output.blocks[0].data.text).toBeTruthy();
+      expect(getBlockText(output.blocks[0].data)).toBeTruthy();
     });
 
     test('should handle HTML entities', async ({ page }) => {
@@ -672,7 +700,7 @@ test.describe('sanitizing', () => {
       ]);
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('<strong>');
       // Entities should be preserved or decoded appropriately
@@ -704,7 +732,7 @@ test.describe('sanitizing', () => {
       });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('<strong>');
       expect(text).toContain('<i>');
@@ -733,7 +761,7 @@ test.describe('sanitizing', () => {
       });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       // Custom config should allow span and div, even when blok adds safe attributes
       expect(text).toMatch(/<span\b[^>]*>Span<\/span>/);
@@ -768,8 +796,8 @@ test.describe('sanitizing', () => {
 
       const { blocks } = await saveBlok(page);
 
-      expect(blocks[0].data.text).toBe('First blockSecond block');
-      expect(blocks[0].data.text).not.toContain('<span>');
+      expect(getBlockText(blocks[0].data)).toBe('First blockSecond block');
+      expect(getBlockText(blocks[0].data)).not.toContain('<span>');
     });
 
     test('should sanitize nested structures when merging', async ({ page }) => {
@@ -802,7 +830,7 @@ test.describe('sanitizing', () => {
       // Verify that merge happened
       expect(blocks).toHaveLength(1);
 
-      const text = blocks[0].data.text;
+      const text = getBlockText(blocks[0].data);
 
       // The span should be sanitized out, but strong and content preserved
       expect(text).toContain('<strong>');
@@ -828,7 +856,7 @@ test.describe('sanitizing', () => {
       });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).not.toContain('<script>');
       expect(text).not.toContain('alert');
@@ -846,7 +874,7 @@ test.describe('sanitizing', () => {
       });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('<strong>');
       expect(text).toContain('<i>');
@@ -866,7 +894,7 @@ test.describe('sanitizing', () => {
       });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('<strong>');
       expect(text).not.toContain('<span>');
@@ -885,7 +913,7 @@ test.describe('sanitizing', () => {
       });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('<strong>');
       expect(text).not.toContain('onclick');
@@ -968,12 +996,13 @@ test.describe('sanitizing', () => {
       }, { holder: HOLDER_ID });
 
       const output = await saveBlok(page);
-      const blockData = output.blocks[0].data;
+      const blockData = output.blocks[0].data as unknown;
+      const nestedItems = getBlockNestedItems(blockData);
 
-      expect(blockData.text).toContain('<strong>');
-      expect(blockData.text).not.toContain('<span>');
-      expect(blockData.items[0].content).toContain('<strong>');
-      expect(blockData.items[0].content).not.toContain('<span>');
+      expect(getBlockText(blockData)).toContain('<strong>');
+      expect(getBlockText(blockData)).not.toContain('<span>');
+      expect(nestedItems[0].content).toContain('<strong>');
+      expect(nestedItems[0].content).not.toContain('<span>');
     });
 
     test('should sanitize arrays containing HTML strings', async ({ page }) => {
@@ -1052,11 +1081,12 @@ test.describe('sanitizing', () => {
       }, { holder: HOLDER_ID });
 
       const output = await saveBlok(page);
-      const blockData = output.blocks[0].data;
+      const blockData = output.blocks[0].data as unknown;
+      const items = getBlockItems(blockData);
 
-      expect(blockData.items[0]).toContain('<strong>');
-      expect(blockData.items[1]).not.toContain('<span>');
-      expect(blockData.items[2]).not.toContain('<i>'); // Not in sanitize config
+      expect(items[0]).toContain('<strong>');
+      expect(items[1]).not.toContain('<span>');
+      expect(items[2]).not.toContain('<i>'); // Not in sanitize config
     });
   });
 
@@ -1143,7 +1173,7 @@ test.describe('sanitizing', () => {
       }, { holder: HOLDER_ID });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('href="https://example.com"');
       expect(text).toContain('target="_blank"');
@@ -1223,7 +1253,7 @@ test.describe('sanitizing', () => {
       }, { holder: HOLDER_ID });
 
       const output = await saveBlok(page);
-      const text = output.blocks[0].data.text;
+      const text = getBlockText(output.blocks[0].data);
 
       expect(text).toContain('<strong>Valid</strong>');
       // Empty strong should be removed

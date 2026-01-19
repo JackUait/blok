@@ -238,8 +238,12 @@ describe('Blok', () => {
         onReady,
       };
 
-      mocks.mockIsObject!.mockReturnValue(true);
-      mocks.mockIsFunction!.mockReturnValue(true);
+      if (mocks.mockIsObject) {
+        mocks.mockIsObject.mockReturnValue(true);
+      }
+      if (mocks.mockIsFunction) {
+        mocks.mockIsFunction.mockReturnValue(true);
+      }
 
       const blok = new Blok(config);
 
@@ -255,8 +259,12 @@ describe('Blok', () => {
         holder: 'blok',
       };
 
-      mocks.mockIsObject!.mockReturnValue(true);
-      mocks.mockIsFunction!.mockReturnValue(false);
+      if (mocks.mockIsObject) {
+        mocks.mockIsObject.mockReturnValue(true);
+      }
+      if (mocks.mockIsFunction) {
+        mocks.mockIsFunction.mockReturnValue(false);
+      }
 
       const blok = new Blok(config);
 
@@ -647,14 +655,16 @@ describe('Blok', () => {
       const mockModule2 = { destroy: mockDestroy2 };
       const mockModule3 = { noDestroy: true };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule1 as unknown as BlokModules['Toolbar'];
-      mocks.mockModuleInstances!.BlockSettings = mockModule2 as unknown as BlokModules['BlockSettings'];
-      mocks.mockModuleInstances!.InlineToolbar = mockModule3 as unknown as BlokModules['InlineToolbar'];
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule1 as unknown as BlokModules['Toolbar'];
+        mocks.mockModuleInstances.BlockSettings = mockModule2 as unknown as BlokModules['BlockSettings'];
+        mocks.mockModuleInstances.InlineToolbar = mockModule3 as unknown as BlokModules['InlineToolbar'];
+      }
 
       const blok = new Blok();
 
       await blok.isReady;
-      const prototypeBeforeDestroy = Object.getPrototypeOf(blok);
+      const prototypeBeforeDestroy = Object.getPrototypeOf(blok) as Record<string, unknown> | null;
 
       blok.destroy();
 
@@ -674,7 +684,9 @@ describe('Blok', () => {
         },
       };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      }
 
       const blok = new Blok();
 
@@ -725,7 +737,10 @@ describe('Blok', () => {
       await blok.isReady;
 
       // Before destroy, prototype should be API methods
-      expect(Object.getPrototypeOf(blok)).toBe(mocks.mockModuleInstances!.API?.methods);
+      const apiMethods = mocks.mockModuleInstances?.API?.methods;
+      if (apiMethods) {
+        expect(Object.getPrototypeOf(blok)).toBe(apiMethods);
+      }
 
       blok.destroy();
 
@@ -739,7 +754,9 @@ describe('Blok', () => {
         // No listeners property
       };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      }
 
       const blok = new Blok();
 
@@ -757,7 +774,9 @@ describe('Blok', () => {
         // No destroy method
       };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      }
 
       const blok = new Blok();
 

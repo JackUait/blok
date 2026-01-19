@@ -30,6 +30,7 @@ type SerializedToolConfig = {
 declare global {
   interface Window {
     blokInstance?: Blok;
+    Blok: new (...args: unknown[]) => Blok;
     __inlineShortcutLog?: string[];
     __lastShortcutEvent?: { metaKey: boolean; ctrlKey: boolean } | null;
   }
@@ -105,13 +106,21 @@ const extractSerializableStaticProps = (toolClass: ToolDefinition['class']): Rec
 
     const descriptor = Object.getOwnPropertyDescriptor(toolClass, propName);
 
-    if (!descriptor || typeof descriptor.value === 'function' || descriptor.value === undefined) {
+    if (!descriptor) {
+      return props;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- PropertyDescriptor.value is typed as `any`
+    const { value } = descriptor;
+
+    if (typeof value === 'function' || value === undefined) {
       return props;
     }
 
     return {
       ...props,
-      [propName]: descriptor.value,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Value type is checked above before assignment
+      [propName]: value,
     };
   }, {});
 };
@@ -173,10 +182,12 @@ const createBlokWithTools = async (
 
   await page.evaluate(
     async ({ holder, serializedTools: toolConfigs, initialData }) => {
+      /* eslint-disable no-new-func -- Using Function constructor to revive class from string for test purposes */
       const reviveToolClass = (classSource: string): unknown => {
-         
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Using Function constructor to revive class from string for test purposes
         return new Function(`return (${classSource});`)();
       };
+      /* eslint-enable no-new-func */
 
       const inlineToolNames: string[] = [];
       const revivedTools = toolConfigs.reduce<Record<string, Record<string, unknown>>>((accumulator, toolConfig) => {

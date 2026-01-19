@@ -2,10 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Y from 'yjs';
 import { UndoHistory } from '../../../../../src/components/modules/yjs/undo-history';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type { CaretHistoryEntry } from '../../../../../src/components/modules/yjs/types';
 
 const createMockBlok = (): BlokModules => {
   const blockManager = {
-    currentBlock: undefined as any,
+    currentBlock: undefined,
     getBlockById: vi.fn(),
     firstBlock: undefined,
   };
@@ -382,15 +383,17 @@ describe('UndoHistory', () => {
       (blok.BlockManager as unknown as { currentBlock: typeof mockBlock }).currentBlock = mockBlock;
 
       // Manually push a caret entry (normally done by UndoHistory internally)
-      (history as any).caretUndoStack.push({
+      const testCaretEntry: CaretHistoryEntry = {
         before: { blockId: 'b1', inputIndex: 0, offset: 0 },
         after: { blockId: 'b1', inputIndex: 0, offset: 5 },
-      });
+      };
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push(testCaretEntry);
 
       history.updateLastCaretAfterPosition();
 
       // Should not throw
-      expect((history as any).caretUndoStack[0].after).toBeDefined();
+      const stack = (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack;
+      expect(stack[0].after).toBeDefined();
     });
   });
 });

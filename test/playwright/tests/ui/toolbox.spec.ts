@@ -113,11 +113,33 @@ const createBlokWithTools = async (
         };
       }, {});
 
+      // The runtime Blok instance has a 'module' property not reflected in the public API
+      // Type assertion to satisfy BlokInstanceWithModules interface from flipper.spec.ts
       const blok = new window.Blok({
         holder: holder,
         tools: toolsMap,
         ...(blokData ? { data: blokData } : {}),
-      });
+      }) as Blok & {
+        module?: {
+          toolbar: {
+            blockSettings: {
+              flipper: {
+                isActivated: boolean;
+                activate(items?: unknown, cursorPosition?: number): void;
+                deactivate(): void;
+                hasFocus(): boolean;
+                focusFirst(): void;
+                onFlip(callback: () => void): void;
+                removeOnFlip(callback: () => void): void;
+              };
+              [key: string]: unknown;
+            };
+            inlineToolbar: unknown;
+          };
+          [key: string]: unknown;
+        };
+        destroy?(): void;
+      };
 
       window.blokInstance = blok;
       await blok.isReady;
@@ -331,7 +353,13 @@ test.describe('toolbox', () => {
 
       expect(blokData.blocks).toHaveLength(1);
       expect(blokData.blocks[0].type).toBe('convertableTool');
-      expect(blokData.blocks[0].data.text).toBe('Some text');
+
+      type ConvertableToolData = { text: string };
+      const hasTextProperty = (data: unknown): data is ConvertableToolData => {
+        return typeof data === 'object' && data !== null && 'text' in data;
+      };
+      const blockData: unknown = blokData.blocks[0].data;
+      expect(hasTextProperty(blockData) ? blockData.text : undefined).toBe('Some text');
 
       /**
        * Check that caret belongs to the new block after conversion
@@ -340,7 +368,11 @@ test.describe('toolbox', () => {
 
       expect(blockId).toBeDefined();
 
-      const caretInBlock = await isCaretInBlock(page, blockId!);
+      if (!blockId) {
+        throw new Error('Block ID is undefined');
+      }
+
+      const caretInBlock = await isCaretInBlock(page, blockId);
 
       expect(caretInBlock).toBe(true);
     });
@@ -622,7 +654,6 @@ test.describe('toolbox', () => {
 
 declare global {
   interface Window {
-
     __playwrightToolRegistry?: Record<string, BlockToolConstructable>;
     blokInstance?: Blok;
     Blok: new (...args: unknown[]) => Blok;

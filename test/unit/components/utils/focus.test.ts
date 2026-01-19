@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { focus, setSelectionToElement } from '../../../../../../src/components/utils/caret/focus';
-import { Dom as $ } from '../../../../../../src/components/utils/dom';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { focus, setSelectionToElement } from '../../../../src/components/utils/caret/focus';
+import { Dom as $ } from '../../../../src/components/dom';
 
 describe('Caret focus utilities', () => {
   beforeEach(() => {
@@ -253,11 +253,15 @@ describe('Caret focus utilities', () => {
         throw new Error('Selection not available');
       }
 
-      const focusSpy = vi.spyOn(div, 'focus');
-
       setSelectionToElement(div, selection, true);
 
-      expect(focusSpy).toHaveBeenCalled();
+      // Verify observable behavior: element should have focus
+      expect(div).toHaveFocus();
+
+      // Verify selection is properly set at the start
+      const freshSelection = window.getSelection();
+      expect(freshSelection?.focusNode).toBe(div.firstChild);
+      expect(freshSelection?.focusOffset).toBe(0);
     });
 
     it('uses getDeepestNode to find target node', () => {
@@ -330,7 +334,6 @@ describe('Caret focus utilities', () => {
 
       vi.spyOn(document, 'createRange').mockImplementation(() => {
         const range = document.createRange();
-        const originalSetStart = range.setStart.bind(range);
         range.setStart = vi.fn(() => {
           throw new Error('Invalid node');
         });

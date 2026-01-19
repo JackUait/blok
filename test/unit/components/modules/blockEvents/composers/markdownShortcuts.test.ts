@@ -602,12 +602,12 @@ describe('MarkdownShortcuts', () => {
 
       expect(result).toBe(true);
       expect(replace).toHaveBeenCalled();
-      const replaceCall = replace.mock.calls[0];
+      const replaceCall = replace.mock.calls[0] as unknown as [Block, string, { text: string }];
       expect(replaceCall).toHaveLength(3);
       expect(replaceCall[0]).toBe(mockBlock);
       expect(replaceCall[1]).toBe('list');
       // The text data should contain the HTML content after the shortcut
-      const textData = replaceCall[2] as { text: string };
+      const textData = replaceCall[2];
       expect(textData.text).toContain('bold text');
       expect(textData.text).toContain('remaining');
     });
@@ -634,7 +634,8 @@ describe('MarkdownShortcuts', () => {
       const result = markdownShortcuts.handleInput(event);
 
       expect(result).toBe(true);
-      const textData = replace.mock.calls[0][2] as { text: string };
+      const replaceCall = replace.mock.calls[0] as unknown as [Block, string, { text: string }];
+      const textData = replaceCall[2];
       expect(textData.text).toBe('Just text');
     });
 
@@ -660,7 +661,8 @@ describe('MarkdownShortcuts', () => {
       const result = markdownShortcuts.handleInput(event);
 
       expect(result).toBe(true);
-      const textData = replace.mock.calls[0][2] as { text: string };
+      const replaceCall = replace.mock.calls[0] as unknown as [Block, string, { text: string }];
+      const textData = replaceCall[2];
       expect(textData.text).toContain('italic');
       expect(textData.text).toContain('bold');
     });
@@ -738,7 +740,7 @@ describe('MarkdownShortcuts', () => {
 
       // When caret offset is at or after the shortcut, setToBlock should be called
       expect(setToBlock).toHaveBeenCalled();
-      const setToBlockCall = setToBlock.mock.calls[0];
+      const setToBlockCall = setToBlock.mock.calls[0] as unknown as [Block, string];
       expect(setToBlockCall[1]).toBe('start');
     });
 
@@ -770,7 +772,7 @@ describe('MarkdownShortcuts', () => {
 
       // Should set caret - when there's no selection, offset is 0, so START position is used
       expect(setToBlock).toHaveBeenCalled();
-      const setToBlockCall = setToBlock.mock.calls[0];
+      const setToBlockCall = setToBlock.mock.calls[0] as unknown as [Block, string];
       expect(setToBlockCall[1]).toBe('start');
     });
   });

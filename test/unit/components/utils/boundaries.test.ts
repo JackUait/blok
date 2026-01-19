@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   checkContenteditableSliceForEmptiness,
   isCaretAtStartOfInput,
   isCaretAtEndOfInput,
-} from '../../../../../../src/components/utils/caret/boundaries';
-import { Dom as $ } from '../../../../../../src/components/utils/dom';
+} from '../../../../src/components/utils/caret/boundaries';
+import { Dom as $ } from '../../../../src/components/dom';
 
 describe('Caret boundary utilities', () => {
   beforeEach(() => {

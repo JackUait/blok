@@ -3,14 +3,13 @@ import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
-import { createSelector } from '../../../../src/components/constants';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
-const BLOCK_SELECTOR = `${createSelector('interface')} [data-blok-testid="block-wrapper"]`;
-const LIST_ITEM_SELECTOR = `${createSelector('interface')} [role="listitem"]`;
-const TOOLBAR_SELECTOR = `${createSelector('interface')} [data-blok-testid="toolbar"]`;
-const PLUS_BUTTON_SELECTOR = `${createSelector('interface')} [data-blok-testid="plus-button"]`;
-const SETTINGS_TOGGLER_SELECTOR = `${createSelector('interface')} [data-blok-testid="settings-toggler"]`;
+const LIST_ITEM_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [role="listitem"]`;
+const TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
+const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const SETTINGS_TOGGLER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 
 declare global {
   interface Window {
@@ -166,6 +165,7 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     // Nested item should have a transform offset (translateX)
     // while top-level may not have one or have a different value
     expect(nestedTransform).toBeDefined();
+    expect(nestedTransform).not.toBe(initialTransform);
   });
 
   test('should position toolbar correctly on deeply nested list', async ({ page }) => {
@@ -234,25 +234,25 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     });
 
     const listItems = page.locator(LIST_ITEM_SELECTOR);
+    const toolbar = page.locator(TOOLBAR_SELECTOR);
 
     // Rapidly hover over different items
     // eslint-disable-next-line playwright/no-nth-methods
     await listItems.nth(0).hover();
-    await page.waitForTimeout(50);
+    await expect(toolbar).toBeVisible();
 
     // eslint-disable-next-line playwright/no-nth-methods
     await listItems.nth(1).hover();
-    await page.waitForTimeout(50);
+    await expect(toolbar).toBeVisible();
 
     // eslint-disable-next-line playwright/no-nth-methods
     await listItems.nth(2).hover();
-    await page.waitForTimeout(50);
+    await expect(toolbar).toBeVisible();
 
     // eslint-disable-next-line playwright/no-nth-methods
     await listItems.nth(3).hover();
 
     // Toolbar should still work correctly
-    const toolbar = page.locator(TOOLBAR_SELECTOR);
     await expect(toolbar).toBeVisible();
 
     const plusButton = page.locator(PLUS_BUTTON_SELECTOR);

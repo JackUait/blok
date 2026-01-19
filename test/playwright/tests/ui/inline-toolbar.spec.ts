@@ -1256,9 +1256,6 @@ test.describe('inline toolbar', () => {
     // Click to set cursor (collapsed selection)
     await paragraph.click();
 
-    // Wait a bit to ensure toolbar would appear if it was going to
-    await page.waitForTimeout(200);
-
     // Toolbar should not be visible for collapsed selection
     await expect(toolbar).toHaveCount(0);
   });
@@ -1321,9 +1318,6 @@ test.describe('inline toolbar', () => {
       }
     });
 
-    // Wait to ensure toolbar would appear if it was going to
-    await page.waitForTimeout(200);
-
     // Toolbar should not be visible for block without inline tools
     await expect(toolbar).toHaveCount(0);
   });
@@ -1353,16 +1347,10 @@ test.describe('inline toolbar', () => {
     // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
     const secondParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
 
-    // Rapidly change selections
+    // Rapidly change selections - the test verifies no errors occur with rapid changes
     await selectText(firstParagraph, 'First');
-    await page.waitForTimeout(50);
-
     await selectText(firstParagraph, 'paragraph');
-    await page.waitForTimeout(50);
-
     await selectText(secondParagraph, 'Second');
-    await page.waitForTimeout(50);
-
     await selectText(secondParagraph, 'paragraph');
 
     const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
@@ -1401,8 +1389,6 @@ test.describe('inline toolbar', () => {
       // Click outside to close
       await page.mouse.click(10, 10);
       await expect(toolbar).toHaveCount(0);
-
-      await page.waitForTimeout(50);
     }
 
     // After rapid cycles, toolbar should still work

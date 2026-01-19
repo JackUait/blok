@@ -541,12 +541,23 @@ describe('BlockObserver', () => {
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
+      // Verify initial state - block exists
+      expect(yblocks.length).toBe(1);
+      expect(yblocks.get(0)?.get('id')).toBe('b1');
+
       // Delete should work without errors
       ydoc.transact(() => {
         yblocks.delete(0);
       }, 'local');
 
+      // Verify observable behavior: the document state after deletion
+      expect(yblocks.length).toBe(0);
+
+      // Verify the event was emitted with correct data
       expect(callback).toHaveBeenCalled();
+      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      expect(event.type).toBe('remove');
+      expect(event.blockId).toBe('b1');
     });
 
     it('does not emit update for changes to unrelated maps', () => {
@@ -580,8 +591,22 @@ describe('BlockObserver', () => {
         }, 'local');
       }
 
-      // All changes should have been recorded
+      // Verify observable behavior: the document state after all changes
+      expect(yblocks.length).toBe(10);
+      for (let i = 0; i < 10; i++) {
+        expect(yblocks.get(i)?.get('id')).toBe(`b${i}`);
+      }
+
+      // Verify all events were emitted with correct data
       expect(callback).toHaveBeenCalledTimes(10);
+      const eventTypes = callback.mock.calls.map((call) => (call[0] as BlockChangeEvent).type);
+      expect(eventTypes.every((type) => type === 'add')).toBe(true);
+
+      // Verify specific events contain correct block IDs
+      const blockIds = callback.mock.calls.map((call) => (call[0] as BlockChangeEvent).blockId);
+      for (let i = 0; i < 10; i++) {
+        expect(blockIds).toContain(`b${i}`);
+      }
     });
   });
 });

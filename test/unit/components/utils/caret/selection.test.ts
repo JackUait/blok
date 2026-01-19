@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getCaretNodeAndOffset, getCaretOffset } from '../../../../../../src/components/utils/caret/index';
+import { getCaretNodeAndOffset, getCaretOffset } from '../../../../../src/components/utils/caret/index';
 
 describe('Caret selection utilities', () => {
   beforeEach(() => {

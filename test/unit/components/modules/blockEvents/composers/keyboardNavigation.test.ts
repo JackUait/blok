@@ -7,7 +7,12 @@ import * as caretUtils from '../../../../../../src/components/utils/caret/index'
 import { SelectionUtils } from '../../../../../../src/components/selection';
 
 const createKeyboardEvent = (options: Partial<KeyboardEvent> = {}): KeyboardEvent => {
-  return {
+  let defaultPrevented = false;
+  const preventDefaultFn = vi.fn(() => {
+    defaultPrevented = true;
+  });
+
+  const mockEvent = {
     keyCode: options.keyCode ?? 0,
     key: options.key ?? '',
     code: options.code ?? '',
@@ -16,11 +21,16 @@ const createKeyboardEvent = (options: Partial<KeyboardEvent> = {}): KeyboardEven
     altKey: options.altKey ?? false,
     shiftKey: options.shiftKey ?? false,
     target: options.target ?? null,
-    preventDefault: vi.fn(),
+    get defaultPrevented() {
+      return defaultPrevented;
+    },
+    preventDefault: preventDefaultFn,
     stopPropagation: vi.fn(),
     stopImmediatePropagation: vi.fn(),
     ...options,
-  } as KeyboardEvent;
+  };
+
+  return mockEvent as unknown as KeyboardEvent;
 };
 
 const createBlock = (overrides: Partial<Block> = {}): Block => {
@@ -416,11 +426,22 @@ describe('KeyboardNavigation', () => {
     it('returns early when at first block with no previous block', () => {
       const mockBlock = createBlock();
       const close = vi.fn();
+      const removeBlock = vi.fn();
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const setToBlock = vi.fn();
+      const navigatePrevious = vi.fn();
       const blok = createBlokModules({
         BlockManager: {
           currentBlock: mockBlock,
           previousBlock: null,
+          removeBlock,
+          mergeBlocks,
         } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          navigatePrevious,
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
         Toolbar: {
           close,
         } as unknown as BlokModules['Toolbar'],
@@ -432,10 +453,16 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleBackspace(event);
 
+      // Toolbar is closed (observable side effect)
       expect(close).toHaveBeenCalled();
+      // Default behavior is prevented - verify observable DOM event state
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
-      // No further action when at first block
-      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+      // No block state changes occur when at first block (observable: no mutations)
+      expect(removeBlock).not.toHaveBeenCalled();
+      expect(mergeBlocks).not.toHaveBeenCalled();
+      expect(setToBlock).not.toHaveBeenCalled();
+      expect(navigatePrevious).not.toHaveBeenCalled();
 
       isCaretAtStartOfInputSpy.mockRestore();
     });
@@ -475,7 +502,6 @@ describe('KeyboardNavigation', () => {
       const close = vi.fn();
       const removeBlock = vi.fn();
       const setToBlock = vi.fn();
-      const newCurrentBlock = createBlock({ id: 'new-current' });
       const blok = createBlokModules({
         BlockManager: {
           currentBlock: emptyCurrentBlock,
@@ -510,7 +536,10 @@ describe('KeyboardNavigation', () => {
 
     it('merges blocks when both are mergeable', () => {
       const previousBlock = createBlock({ id: 'previous-block', isEmpty: false, mergeable: true });
-      previousBlock.lastInput = document.createElement('div');
+      Object.defineProperty(previousBlock, 'lastInput', {
+        value: document.createElement('div'),
+        writable: false,
+      });
       const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true });
       const close = vi.fn();
       const mergeBlocks = vi.fn(() => Promise.resolve());
@@ -688,11 +717,22 @@ describe('KeyboardNavigation', () => {
     it('returns early when at last block with no next block', () => {
       const mockBlock = createBlock();
       const close = vi.fn();
+      const removeBlock = vi.fn();
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const setToBlock = vi.fn();
+      const navigateNext = vi.fn();
       const blok = createBlokModules({
         BlockManager: {
           currentBlock: mockBlock,
           nextBlock: null,
+          removeBlock,
+          mergeBlocks,
         } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          navigateNext,
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
         Toolbar: {
           close,
         } as unknown as BlokModules['Toolbar'],
@@ -704,8 +744,16 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleDelete(event);
 
+      // Toolbar is closed (observable side effect)
       expect(close).toHaveBeenCalled();
+      // Default behavior is prevented - verify observable DOM event state
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+      // No block state changes occur when at last block (observable: no mutations)
+      expect(removeBlock).not.toHaveBeenCalled();
+      expect(mergeBlocks).not.toHaveBeenCalled();
+      expect(setToBlock).not.toHaveBeenCalled();
+      expect(navigateNext).not.toHaveBeenCalled();
 
       isCaretAtEndOfInputSpy.mockRestore();
     });
@@ -777,7 +825,10 @@ describe('KeyboardNavigation', () => {
 
     it('merges blocks when both are mergeable', () => {
       const nextBlock = createBlock({ id: 'next-block', isEmpty: false, mergeable: true });
-      nextBlock.lastInput = document.createElement('div');
+      Object.defineProperty(nextBlock, 'lastInput', {
+        value: document.createElement('div'),
+        writable: false,
+      });
       const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true });
       const close = vi.fn();
       const mergeBlocks = vi.fn(() => Promise.resolve());

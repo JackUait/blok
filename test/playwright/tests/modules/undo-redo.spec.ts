@@ -4724,7 +4724,7 @@ test.describe('yjs undo/redo', () => {
       await alignmentOption.click();
 
       // Click away to close settings
-      await page.locator('body').click();
+      await page.mouse.click(10, 10);
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
@@ -4761,14 +4761,14 @@ test.describe('yjs undo/redo', () => {
       // First tune change: align center
       await settingsToggler.click();
       await page.locator('[data-blok-toolbar-button="align-center"]').click();
-      await page.locator('body').click();
+      await page.mouse.click(10, 10);
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
       // Second tune change: align right
       await settingsToggler.click();
       await page.locator('[data-blok-toolbar-button="align-right"]').click();
-      await page.locator('body').click();
+      await page.mouse.click(10, 10);
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
@@ -4809,7 +4809,7 @@ test.describe('yjs undo/redo', () => {
       // Change tune
       await settingsToggler.click();
       await page.locator('[data-blok-toolbar-button="align-center"]').click();
-      await page.locator('body').click();
+      await page.mouse.click(10, 10);
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
@@ -4818,7 +4818,7 @@ test.describe('yjs undo/redo', () => {
       await waitForDelay(page, 100);
 
       let data = await saveBlok(page);
-      expect(data.blocks[0].data.text).toBe('Original Modified');
+      expect((data.blocks[0]?.data as { text?: string }).text).toBe('Original Modified');
       expect(data.blocks[0].tunes).toBeUndefined();
 
       // Undo again should restore original text
@@ -4826,7 +4826,7 @@ test.describe('yjs undo/redo', () => {
       await waitForDelay(page, 100);
 
       data = await saveBlok(page);
-      expect(data.blocks[0].data.text).toBe('Original');
+      expect((data.blocks[0]?.data as { text?: string }).text).toBe('Original');
     });
   });
 });

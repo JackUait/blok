@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   getValidCaretRect,
   isCaretAtFirstLine,
   isCaretAtLastLine,
-} from '../../../../../../src/components/utils/caret/lines';
-import { Dom as $ } from '../../../../../../src/components/utils/dom';
+} from '../../../../src/components/utils/caret/lines';
+import { Dom as $ } from '../../../../src/components/dom';
 
 describe('Caret line detection utilities', () => {
   beforeEach(() => {
@@ -41,7 +41,6 @@ describe('Caret line detection utilities', () => {
       range.setStart(div, 0);
       range.setEnd(div, 0);
 
-      const divRect = div.getBoundingClientRect();
       const rect = getValidCaretRect(range, div);
 
       // Should fall back to element rect
@@ -53,7 +52,6 @@ describe('Caret line detection utilities', () => {
       const input = document.createElement('input');
       document.body.appendChild(input);
 
-      const inputRect = input.getBoundingClientRect();
       const rect = getValidCaretRect(range, input);
 
       expect(rect).toBeDefined();

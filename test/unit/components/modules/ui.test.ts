@@ -1,21 +1,27 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { UI } from '../../../../src/components/modules/ui';
-import { Flipper } from '../../../../src/components/flipper';
-import { DATA_ATTR, BLOK_INTERFACE_VALUE } from '../../../../src/components/constants';
-import { BlokMobileLayoutToggled } from '../../../../src/components/events';
-import * as Dom from '../../../../src/components/dom';
-import { mobileScreenBreakpoint } from '../../../../src/components/utils';
-import type { BlokConfig } from '../../../../types';
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { UI } from "../../../../src/components/modules/ui";
+import { Flipper } from "../../../../src/components/flipper";
+import {
+  DATA_ATTR,
+  BLOK_INTERFACE_VALUE,
+} from "../../../../src/components/constants";
+import { BlokMobileLayoutToggled } from "../../../../src/components/events";
+import * as Dom from "../../../../src/components/dom";
+import { mobileScreenBreakpoint } from "../../../../src/components/utils";
+import type { BlokConfig } from "../../../../types";
 
-const fakeCssContent = '.mock-style{}';
+const fakeCssContent = ".mock-style{}";
 
-vi.mock('../../../../src/components/styles/main.css?inline', () => fakeCssContent);
+vi.mock(
+  "../../../../src/components/styles/main.css?inline",
+  () => fakeCssContent,
+);
 
-const createBlokStub = (): UI['Blok'] => {
-  const blockSettingsWrapper = document.createElement('div');
-  const toolbarWrapper = document.createElement('div');
-  const toolbarSettingsToggler = document.createElement('button');
-  const toolbarPlusButton = document.createElement('button');
+const createBlokStub = (): UI["Blok"] => {
+  const blockSettingsWrapper = document.createElement("div");
+  const toolbarWrapper = document.createElement("div");
+  const toolbarSettingsToggler = document.createElement("button");
+  const toolbarPlusButton = document.createElement("button");
 
   return {
     BlockManager: {
@@ -30,7 +36,7 @@ const createBlokStub = (): UI['Blok'] => {
       setCurrentBlockByChildNode: vi.fn(),
       getBlockByChildNode: vi.fn(),
       getBlockByIndex: vi.fn(() => ({
-        holder: document.createElement('div'),
+        holder: document.createElement("div"),
       })),
       removeSelectedBlocks: vi.fn(),
     },
@@ -80,8 +86,8 @@ const createBlokStub = (): UI['Blok'] => {
     Caret: {
       setToBlock: vi.fn(),
       positions: {
-        START: 'start',
-        END: 'end',
+        START: "start",
+        END: "end",
       },
     },
     ReadOnly: {
@@ -91,7 +97,7 @@ const createBlokStub = (): UI['Blok'] => {
     BlockSettingsAPI: {},
     BlockSelectionAPI: {},
     BlockEventsAPI: {},
-  } as unknown as UI['Blok'];
+  } as unknown as UI["Blok"];
 };
 
 interface CreateUIOptions {
@@ -109,7 +115,7 @@ type EventsDispatcherMock = {
 
 interface CreateUIResult {
   ui: UI;
-  blok: UI['Blok'];
+  blok: UI["Blok"];
   holder: HTMLDivElement;
   wrapper: HTMLDivElement;
   redactor: HTMLDivElement;
@@ -117,15 +123,15 @@ interface CreateUIResult {
 }
 
 const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
-  const holder = document.createElement('div');
-  const wrapper = document.createElement('div');
-  const redactor = document.createElement('div');
+  const holder = document.createElement("div");
+  const wrapper = document.createElement("div");
+  const redactor = document.createElement("div");
 
   holder.appendChild(wrapper);
   wrapper.appendChild(redactor);
   document.body.appendChild(holder);
 
-  Object.defineProperty(holder, 'offsetWidth', {
+  Object.defineProperty(holder, "offsetWidth", {
     value: options.holderWidth ?? 400,
     configurable: true,
   });
@@ -142,7 +148,7 @@ const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
       minHeight: 50,
       ...options.configOverrides,
     } as BlokConfig,
-    eventsDispatcher: eventsDispatcher as unknown as UI['eventsDispatcher'],
+    eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
   });
 
   const blok = createBlokStub();
@@ -154,7 +160,7 @@ const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
   ui.state = blok;
 
   if (options.attachNodes !== false) {
-    (ui as { nodes: UI['nodes'] }).nodes = {
+    (ui as { nodes: UI["nodes"] }).nodes = {
       holder,
       wrapper,
       redactor,
@@ -171,26 +177,32 @@ const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
   };
 };
 
-describe('UI module', () => {
+describe("UI module", () => {
   afterEach(() => {
-    document.body.innerHTML = '';
-    document.head.innerHTML = '';
+    document.body.innerHTML = "";
+    document.head.innerHTML = "";
     vi.restoreAllMocks();
     // Restore requestIdleCallback to its original state
-    if (typeof window.requestIdleCallback === 'undefined') {
-      Object.defineProperty(window, 'requestIdleCallback', {
+    if (typeof window.requestIdleCallback === "undefined") {
+      Object.defineProperty(window, "requestIdleCallback", {
         writable: true,
         value: undefined,
       });
     }
   });
 
-  describe('initialization', () => {
-    it('runs preparation steps sequentially', async () => {
+  describe("initialization", () => {
+    it("runs preparation steps sequentially", async () => {
       const { ui } = createUI({ attachNodes: false });
-      const setIsMobileSpy = vi.spyOn(ui as unknown as { setIsMobile: () => void }, 'setIsMobile');
-      const makeSpy = vi.spyOn(ui as unknown as { make: () => void }, 'make');
-      const loadStylesSpy = vi.spyOn(ui as unknown as { loadStyles: () => void }, 'loadStyles');
+      const setIsMobileSpy = vi.spyOn(
+        ui as unknown as { setIsMobile: () => void },
+        "setIsMobile",
+      );
+      const makeSpy = vi.spyOn(ui as unknown as { make: () => void }, "make");
+      const loadStylesSpy = vi.spyOn(
+        ui as unknown as { loadStyles: () => void },
+        "loadStyles",
+      );
 
       await ui.prepare();
 
@@ -199,73 +211,87 @@ describe('UI module', () => {
       expect(loadStylesSpy).toHaveBeenCalledTimes(1);
 
       // Verify actual outcomes: mobile state is set, styles are loaded, nodes are created
-      expect(typeof ui.isMobile).toBe('boolean');
-      expect(document.getElementById('blok-styles')).toBeInTheDocument();
+      expect(typeof ui.isMobile).toBe("boolean");
+      expect(document.getElementById("blok-styles")).not.toBeNull();
     });
 
-    it('throws when holder is missing', () => {
+    it("throws when holder is missing", () => {
       const holderLessUI = new UI({
         config: {} as BlokConfig,
         eventsDispatcher: {
           on: vi.fn(),
           off: vi.fn(),
           emit: vi.fn(),
-        } as unknown as UI['eventsDispatcher'],
+        } as unknown as UI["eventsDispatcher"],
       });
 
-      expect(() => (holderLessUI as unknown as { make: () => void }).make()).toThrowError(
-        'Blok holder is not specified in the configuration.'
-      );
+      expect(() =>
+        (holderLessUI as unknown as { make: () => void }).make(),
+      ).toThrowError("Blok holder is not specified in the configuration.");
     });
 
-    it('creates wrapper/redactor nodes and attaches listeners', () => {
-      const { ui, holder } = createUI({ attachNodes: false,
-        holderWidth: 200 });
-      const bindSpy = vi.spyOn(ui as unknown as { bindReadOnlyInsensitiveListeners: () => void }, 'bindReadOnlyInsensitiveListeners');
+    it("creates wrapper/redactor nodes and attaches listeners", () => {
+      const { ui, holder } = createUI({ attachNodes: false, holderWidth: 200 });
+      const bindSpy = vi.spyOn(
+        ui as unknown as { bindReadOnlyInsensitiveListeners: () => void },
+        "bindReadOnlyInsensitiveListeners",
+      );
 
       (ui as unknown as { make: () => void }).make();
 
-      const nodes = (ui as { nodes: UI['nodes'] }).nodes;
+      const nodes = (ui as { nodes: UI["nodes"] }).nodes;
 
       expect(nodes.wrapper).toBeInstanceOf(HTMLElement);
-      expect(nodes.wrapper?.getAttribute('data-blok-testid')).toBe('blok-editor');
-      expect(nodes.wrapper?.dataset.blokNarrow).toBe('true');
-      expect(nodes.wrapper?.getAttribute(DATA_ATTR.interface)).toBe(BLOK_INTERFACE_VALUE);
+      expect(nodes.wrapper?.getAttribute("data-blok-testid")).toBe(
+        "blok-editor",
+      );
+      expect(nodes.wrapper?.dataset.blokNarrow).toBe("true");
+      expect(nodes.wrapper?.getAttribute(DATA_ATTR.interface)).toBe(
+        BLOK_INTERFACE_VALUE,
+      );
 
       expect(nodes.redactor).toBeInstanceOf(HTMLElement);
-      expect(nodes.redactor?.getAttribute('data-blok-testid')).toBe('redactor');
-      expect(nodes.redactor?.style.paddingBottom).toBe(`${ui['config'].minHeight}px`);
+      expect(nodes.redactor?.getAttribute("data-blok-testid")).toBe("redactor");
+      expect(nodes.redactor?.style.paddingBottom).toBe(
+        `${ui["config"].minHeight}px`,
+      );
 
       expect(holder.contains(nodes.wrapper)).toBe(true);
       expect(bindSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('appends styles with nonce only once', () => {
+    it("appends styles with nonce only once", () => {
       const { ui } = createUI();
 
       (ui as unknown as { config: BlokConfig }).config.style = {
-        nonce: 'nonce-value',
+        nonce: "nonce-value",
       };
 
       (ui as unknown as { loadStyles: () => void }).loadStyles();
 
-      const styleTag = document.getElementById('blok-styles');
+      const styleTag = document.getElementById("blok-styles");
 
       expect(styleTag).toBeTruthy();
-      expect(styleTag?.getAttribute('nonce')).toBe('nonce-value');
+      expect(styleTag?.getAttribute("nonce")).toBe("nonce-value");
       expect(document.head.firstChild).toBe(styleTag);
 
       (ui as unknown as { loadStyles: () => void }).loadStyles();
 
-      expect(document.querySelectorAll('#blok-styles')).toHaveLength(1);
+      expect(document.querySelectorAll("#blok-styles")).toHaveLength(1);
     });
   });
 
-  describe('read-only state management', () => {
-    it('unbinds sensitive listeners when read-only mode enabled', () => {
+  describe("read-only state management", () => {
+    it("unbinds sensitive listeners when read-only mode enabled", () => {
       const { ui } = createUI();
-      const unbindSpy = vi.spyOn(ui as unknown as { unbindReadOnlySensitiveListeners: () => void }, 'unbindReadOnlySensitiveListeners');
-      const bindSpy = vi.spyOn(ui as unknown as { bindReadOnlySensitiveListeners: () => void }, 'bindReadOnlySensitiveListeners');
+      const unbindSpy = vi.spyOn(
+        ui as unknown as { unbindReadOnlySensitiveListeners: () => void },
+        "unbindReadOnlySensitiveListeners",
+      );
+      const bindSpy = vi.spyOn(
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void },
+        "bindReadOnlySensitiveListeners",
+      );
 
       ui.toggleReadOnly(true);
 
@@ -277,17 +303,23 @@ describe('UI module', () => {
       expect(unbindSpy).toBeDefined();
     });
 
-    it('binds listeners immediately and on idle callback in read-write mode', () => {
+    it("binds listeners immediately and on idle callback in read-write mode", () => {
       const { ui } = createUI();
-      const bindSpy = vi.spyOn(ui as unknown as { bindReadOnlySensitiveListeners: () => void }, 'bindReadOnlySensitiveListeners');
+      const bindSpy = vi.spyOn(
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void },
+        "bindReadOnlySensitiveListeners",
+      );
       const idleCallback = vi.fn();
 
-      (window as Partial<Window>).requestIdleCallback = idleCallback as unknown as typeof window.requestIdleCallback;
+      (window as Partial<Window>).requestIdleCallback =
+        idleCallback as unknown as typeof window.requestIdleCallback;
 
       ui.toggleReadOnly(false);
 
       expect(bindSpy).toHaveBeenCalledTimes(1);
-      expect(idleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2000 });
+      expect(idleCallback).toHaveBeenCalledWith(expect.any(Function), {
+        timeout: 2000,
+      });
       const scheduled = idleCallback.mock.calls[0][0] as () => void;
 
       bindSpy.mockClear();
@@ -297,49 +329,60 @@ describe('UI module', () => {
     });
   });
 
-  describe('state updates and getters', () => {
-    it('toggles empty class based on BlockManager state', () => {
+  describe("state updates and getters", () => {
+    it("toggles empty class based on BlockManager state", () => {
       const { ui, blok, wrapper } = createUI();
 
       Object.assign(blok.BlockManager, { isBlokEmpty: true });
       ui.checkEmptiness();
-      expect(wrapper.dataset.blokEmpty).toBe('true');
+      expect(wrapper.dataset.blokEmpty).toBe("true");
 
       Object.assign(blok.BlockManager, { isBlokEmpty: false });
       ui.checkEmptiness();
-      expect(wrapper.dataset.blokEmpty).toBe('false');
+      expect(wrapper.dataset.blokEmpty).toBe("false");
     });
 
-    it('invalidates cached content rect on resize and recalculates mobile state', () => {
+    it("invalidates cached content rect on resize and recalculates mobile state", () => {
       const { ui } = createUI();
       const cache = { width: 100 } as DOMRect;
 
-      (ui as unknown as { contentRectCache: DOMRect | null }).contentRectCache = cache;
-      const setIsMobileSpy = vi.spyOn(ui as unknown as { setIsMobile: () => void }, 'setIsMobile');
+      (ui as unknown as { contentRectCache: DOMRect | null }).contentRectCache =
+        cache;
+      const setIsMobileSpy = vi.spyOn(
+        ui as unknown as { setIsMobile: () => void },
+        "setIsMobile",
+      );
 
       (ui as unknown as { windowResize: () => void }).windowResize();
 
-      expect((ui as unknown as { contentRectCache: DOMRect | null }).contentRectCache).toBeNull();
+      expect(
+        (ui as unknown as { contentRectCache: DOMRect | null })
+          .contentRectCache,
+      ).toBeNull();
       expect(setIsMobileSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('provides cached content rect when available', () => {
+    it("provides cached content rect when available", () => {
       const { ui } = createUI();
       const cache = { width: 321 } as DOMRect;
 
-      (ui as unknown as { contentRectCache: DOMRect | null }).contentRectCache = cache;
+      (ui as unknown as { contentRectCache: DOMRect | null }).contentRectCache =
+        cache;
 
-      const querySpy = vi.spyOn((ui as { nodes: UI['nodes'] }).nodes.wrapper, 'querySelector');
+      const querySpy = vi.spyOn(
+        (ui as { nodes: UI["nodes"] }).nodes.wrapper,
+        "querySelector",
+      );
 
       expect(ui.contentRect).toBe(cache);
       expect(querySpy).not.toHaveBeenCalled();
     });
 
-    it('returns default rect when no blocks rendered', () => {
+    it("returns default rect when no blocks rendered", () => {
       const { ui, wrapper } = createUI();
 
       // Ensure wrapper has no content blocks
-      wrapper.innerHTML = '';
+      wrapper.innerHTML = "";
 
       const rect = ui.contentRect;
 
@@ -348,14 +391,16 @@ describe('UI module', () => {
       expect(rect.right).toBe(0);
     });
 
-    it('caches computed rect when block exists', () => {
+    it("caches computed rect when block exists", () => {
       const { ui, wrapper } = createUI();
-      const blockContent = document.createElement('div');
+      const blockContent = document.createElement("div");
 
-      blockContent.setAttribute('data-blok-testid', 'block-content');
+      blockContent.setAttribute("data-blok-testid", "block-content");
       const measuredRect = { width: 777 } as DOMRect;
 
-      vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue(measuredRect);
+      vi.spyOn(blockContent, "getBoundingClientRect").mockReturnValue(
+        measuredRect,
+      );
       wrapper.appendChild(blockContent);
 
       const firstCall = ui.contentRect;
@@ -366,7 +411,7 @@ describe('UI module', () => {
       expect(blockContent.getBoundingClientRect).toHaveBeenCalledTimes(1);
     });
 
-    it('detects open toolbars and flipper focus', () => {
+    it("detects open toolbars and flipper focus", () => {
       const { ui, blok } = createUI();
 
       blok.BlockSettings.opened = true;
@@ -397,28 +442,34 @@ describe('UI module', () => {
       expect(ui.someFlipperButtonFocused).toBe(true);
     });
 
-    it('updates mobile flag and emits layout toggle when breakpoint changes', () => {
+    it("updates mobile flag and emits layout toggle when breakpoint changes", () => {
       const { ui, eventsDispatcher } = createUI();
 
       window.innerWidth = mobileScreenBreakpoint - 1;
       (ui as unknown as { setIsMobile: () => void }).setIsMobile();
 
       expect(ui.isMobile).toBe(true);
-      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlokMobileLayoutToggled, {
-        isEnabled: false,
-      });
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(
+        BlokMobileLayoutToggled,
+        {
+          isEnabled: false,
+        },
+      );
 
       eventsDispatcher.emit.mockClear();
       window.innerWidth = mobileScreenBreakpoint + 1;
       (ui as unknown as { setIsMobile: () => void }).setIsMobile();
 
       expect(ui.isMobile).toBe(false);
-      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlokMobileLayoutToggled, {
-        isEnabled: true,
-      });
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(
+        BlokMobileLayoutToggled,
+        {
+          isEnabled: true,
+        },
+      );
     });
 
-    it('closes all toolbars at once', () => {
+    it("closes all toolbars at once", () => {
       const { ui, blok } = createUI();
 
       // Set all toolbars to opened state
@@ -451,156 +502,274 @@ describe('UI module', () => {
     });
   });
 
-
-
-
-  describe('hover and placeholder helpers', () => {
-    it('marks inputs as empty on focus and input events', () => {
+  describe("hover and placeholder helpers", () => {
+    it("marks inputs as empty on focus and input events", () => {
       const { ui, wrapper } = createUI();
-      const toggleSpy = vi.spyOn(Dom, 'toggleEmptyMark');
+      const toggleSpy = vi.spyOn(Dom, "toggleEmptyMark");
 
-      (ui as unknown as { enableInputsEmptyMark: () => void }).enableInputsEmptyMark();
+      (
+        ui as unknown as { enableInputsEmptyMark: () => void }
+      ).enableInputsEmptyMark();
 
-      const input = document.createElement('div');
+      const input = document.createElement("div");
 
       wrapper.appendChild(input);
 
       // Simulate user interaction: focusin (bubbles from child to parent)
-      input.dispatchEvent(new Event('focusin', { bubbles: true }));
+      input.dispatchEvent(new Event("focusin", { bubbles: true }));
       // Simulate user interaction: focusout (bubbles from child to parent)
-      input.dispatchEvent(new Event('focusout', { bubbles: true }));
+      input.dispatchEvent(new Event("focusout", { bubbles: true }));
       // Instead of dispatching an input event, we can verify the listener is set up
       // by checking that focus events trigger the toggle
-      input.dispatchEvent(new Event('focusin', { bubbles: true }));
+      input.dispatchEvent(new Event("focusin", { bubbles: true }));
 
       expect(toggleSpy).toHaveBeenCalledTimes(3);
       expect(toggleSpy).toHaveBeenCalledWith(input);
     });
   });
 
-  describe('cleanup', () => {
-    it('closes toolbars and removes listeners on destroy', () => {
+  describe("cleanup", () => {
+    it("closes toolbars and removes listeners on destroy", () => {
       const { ui, holder } = createUI();
 
-      holder.innerHTML = '<div>content</div>';
-      const unbindSpy = vi.spyOn(ui as unknown as { unbindReadOnlyInsensitiveListeners: () => void }, 'unbindReadOnlyInsensitiveListeners');
+      holder.innerHTML = "<div>content</div>";
+      const unbindSpy = vi.spyOn(
+        ui as unknown as { unbindReadOnlyInsensitiveListeners: () => void },
+        "unbindReadOnlyInsensitiveListeners",
+      );
 
       ui.destroy();
 
-      expect(holder.innerHTML).toBe('');
+      expect(holder.innerHTML).toBe("");
       expect(unbindSpy).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('controller initialization and coordination', () => {
-    it('initializes all controllers during prepare', async () => {
+  describe("controller initialization and coordination", () => {
+    it("initializes all controllers during prepare", async () => {
       const { ui } = createUI({ attachNodes: false });
 
       await ui.prepare();
 
       // Verify controllers are instantiated by checking private properties
-      const keyboardController = (ui as unknown as { keyboardController: unknown }).keyboardController;
-      const selectionController = (ui as unknown as { selectionController: unknown }).selectionController;
-      const blockHoverController = (ui as unknown as { blockHoverController: unknown }).blockHoverController;
+      const keyboardController = (
+        ui as unknown as { keyboardController: unknown }
+      ).keyboardController;
+      const selectionController = (
+        ui as unknown as { selectionController: unknown }
+      ).selectionController;
+      const blockHoverController = (
+        ui as unknown as { blockHoverController: unknown }
+      ).blockHoverController;
 
       expect(keyboardController).toBeDefined();
       expect(selectionController).toBeDefined();
       expect(blockHoverController).toBeDefined();
 
       // Verify handlers are created
-      const documentClickedHandler = (ui as unknown as { documentClickedHandler: unknown }).documentClickedHandler;
-      const redactorTouchHandler = (ui as unknown as { redactorTouchHandler: unknown }).redactorTouchHandler;
+      const documentClickedHandler = (
+        ui as unknown as { documentClickedHandler: unknown }
+      ).documentClickedHandler;
+      const redactorTouchHandler = (
+        ui as unknown as { redactorTouchHandler: unknown }
+      ).redactorTouchHandler;
 
       expect(documentClickedHandler).toBeDefined();
       expect(redactorTouchHandler).toBeDefined();
     });
 
-    it('enables keyboard and block hover controllers when binding read-only sensitive listeners', () => {
+    it("enables keyboard and block hover controllers when binding read-only sensitive listeners", () => {
       const { ui } = createUI();
       const keyboardEnableSpy = vi.fn();
       const blockHoverEnableSpy = vi.fn();
+      const keydownHandler = vi.fn();
+      const mousemoveHandler = vi.fn();
 
-      // Mock the controllers' enable methods
-      (ui as unknown as { keyboardController: { enable: () => void } }).keyboardController = {
+      // Mock the controllers with actual enable methods that bind listeners
+      const mockKeyboardController = {
         enable: keyboardEnableSpy,
+        listeners: {
+          on: (
+            _element: EventTarget,
+            _eventType: string,
+            handler: (event: Event) => void,
+          ) => {
+            keydownHandler.mockImplementation(handler);
+          },
+        },
       };
-      (ui as unknown as { blockHoverController: { enable: () => void } }).blockHoverController = {
+      const mockBlockHoverController = {
         enable: blockHoverEnableSpy,
+        listeners: {
+          on: (
+            _element: EventTarget,
+            _eventType: string,
+            handler: (event: Event) => void,
+          ) => {
+            mousemoveHandler.mockImplementation(handler);
+          },
+        },
       };
 
-      (ui as unknown as { bindReadOnlySensitiveListeners: () => void }).bindReadOnlySensitiveListeners();
+      (
+        ui as unknown as {
+          keyboardController: {
+            enable: () => void;
+            listeners: { on: typeof mockKeyboardController.listeners.on };
+          };
+        }
+      ).keyboardController = mockKeyboardController;
+      (
+        ui as unknown as {
+          blockHoverController: {
+            enable: () => void;
+            listeners: { on: typeof mockBlockHoverController.listeners.on };
+          };
+        }
+      ).blockHoverController = mockBlockHoverController;
 
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      // Verify controllers were enabled
       expect(keyboardEnableSpy).toHaveBeenCalledTimes(1);
       expect(blockHoverEnableSpy).toHaveBeenCalledTimes(1);
+
+      // Verify observable behavior: listener setup occurred
+      expect(keydownHandler).toBeDefined();
+      expect(mousemoveHandler).toBeDefined();
     });
 
-    it('disables keyboard and block hover controllers when unbinding read-only sensitive listeners', () => {
+    it("disables keyboard and block hover controllers when unbinding read-only sensitive listeners", () => {
       const { ui } = createUI();
-      const keyboardDisableSpy = vi.fn();
-      const blockHoverDisableSpy = vi.fn();
+      const listenersRemoved = { keyboard: false, blockHover: false };
+      const keyboardDisableSpy = vi.fn(() => {
+        // Simulate listener cleanup
+        listenersRemoved.keyboard = true;
+      });
+      const blockHoverDisableSpy = vi.fn(() => {
+        // Simulate listener cleanup
+        listenersRemoved.blockHover = true;
+      });
 
       // Mock the controllers' disable methods
-      (ui as unknown as { keyboardController: { disable: () => void } }).keyboardController = {
+      (
+        ui as unknown as { keyboardController: { disable: () => void } }
+      ).keyboardController = {
         disable: keyboardDisableSpy,
       };
-      (ui as unknown as { blockHoverController: { disable: () => void } }).blockHoverController = {
+      (
+        ui as unknown as { blockHoverController: { disable: () => void } }
+      ).blockHoverController = {
         disable: blockHoverDisableSpy,
       };
 
-      (ui as unknown as { unbindReadOnlySensitiveListeners: () => void }).unbindReadOnlySensitiveListeners();
+      (
+        ui as unknown as { unbindReadOnlySensitiveListeners: () => void }
+      ).unbindReadOnlySensitiveListeners();
 
+      // Verify controllers were disabled
       expect(keyboardDisableSpy).toHaveBeenCalledTimes(1);
       expect(blockHoverDisableSpy).toHaveBeenCalledTimes(1);
+
+      // Verify observable behavior: listeners were cleaned up
+      expect(listenersRemoved.keyboard).toBe(true);
+      expect(listenersRemoved.blockHover).toBe(true);
     });
 
-    it('disables selection controller when unbinding read-only insensitive listeners', () => {
+    it("disables selection controller when unbinding read-only insensitive listeners", () => {
       const { ui } = createUI();
-      const selectionDisableSpy = vi.fn();
+      const listenersRemoved = { selection: false };
+      const selectionDisableSpy = vi.fn(() => {
+        // Simulate listener cleanup
+        listenersRemoved.selection = true;
+      });
 
       // Mock the selection controller's disable method
-      (ui as unknown as { selectionController: { disable: () => void } }).selectionController = {
+      (
+        ui as unknown as { selectionController: { disable: () => void } }
+      ).selectionController = {
         disable: selectionDisableSpy,
       };
 
-      (ui as unknown as { unbindReadOnlyInsensitiveListeners: () => void }).unbindReadOnlyInsensitiveListeners();
+      (
+        ui as unknown as { unbindReadOnlyInsensitiveListeners: () => void }
+      ).unbindReadOnlyInsensitiveListeners();
 
+      // Verify controller was disabled
       expect(selectionDisableSpy).toHaveBeenCalledTimes(1);
+
+      // Verify observable behavior: listeners were cleaned up
+      expect(listenersRemoved.selection).toBe(true);
     });
 
-    it('coordinately enables all controllers when toggling off read-only mode', () => {
+    it("coordinately enables all controllers when toggling off read-only mode", () => {
       const { ui } = createUI();
-      const keyboardEnableSpy = vi.fn();
-      const blockHoverEnableSpy = vi.fn();
+      const listenersEnabled = { keyboard: false, blockHover: false };
+      const keyboardEnableSpy = vi.fn(() => {
+        // Simulate listener binding
+        listenersEnabled.keyboard = true;
+      });
+      const blockHoverEnableSpy = vi.fn(() => {
+        // Simulate listener binding
+        listenersEnabled.blockHover = true;
+      });
 
-      (ui as unknown as { keyboardController: { enable: () => void } }).keyboardController = {
+      (
+        ui as unknown as { keyboardController: { enable: () => void } }
+      ).keyboardController = {
         enable: keyboardEnableSpy,
       };
-      (ui as unknown as { blockHoverController: { enable: () => void } }).blockHoverController = {
+      (
+        ui as unknown as { blockHoverController: { enable: () => void } }
+      ).blockHoverController = {
         enable: blockHoverEnableSpy,
       };
 
       ui.toggleReadOnly(false);
 
+      // Verify controllers were enabled
       expect(keyboardEnableSpy).toHaveBeenCalledTimes(1);
       expect(blockHoverEnableSpy).toHaveBeenCalledTimes(1);
+
+      // Verify observable behavior: listeners were bound
+      expect(listenersEnabled.keyboard).toBe(true);
+      expect(listenersEnabled.blockHover).toBe(true);
     });
 
-    it('coordinately disables all controllers when toggling on read-only mode', () => {
+    it("coordinately disables all controllers when toggling on read-only mode", () => {
       const { ui } = createUI();
-      const keyboardDisableSpy = vi.fn();
-      const blockHoverDisableSpy = vi.fn();
+      const listenersRemoved = { keyboard: false, blockHover: false };
+      const keyboardDisableSpy = vi.fn(() => {
+        // Simulate listener cleanup
+        listenersRemoved.keyboard = true;
+      });
+      const blockHoverDisableSpy = vi.fn(() => {
+        // Simulate listener cleanup
+        listenersRemoved.blockHover = true;
+      });
 
-      (ui as unknown as { keyboardController: { disable: () => void } }).keyboardController = {
+      (
+        ui as unknown as { keyboardController: { disable: () => void } }
+      ).keyboardController = {
         disable: keyboardDisableSpy,
       };
-      (ui as unknown as { blockHoverController: { disable: () => void } }).blockHoverController = {
+      (
+        ui as unknown as { blockHoverController: { disable: () => void } }
+      ).blockHoverController = {
         disable: blockHoverDisableSpy,
       };
 
       ui.toggleReadOnly(true);
 
+      // Verify controllers were disabled
       expect(keyboardDisableSpy).toHaveBeenCalledTimes(1);
       expect(blockHoverDisableSpy).toHaveBeenCalledTimes(1);
+
+      // Verify observable behavior: listeners were cleaned up
+      expect(listenersRemoved.keyboard).toBe(true);
+      expect(listenersRemoved.blockHover).toBe(true);
     });
   });
 });

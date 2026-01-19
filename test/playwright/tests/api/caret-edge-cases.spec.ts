@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 const HOLDER_ID = 'blok-';
-const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 
 type BlokSetupOptions = {
   data?: Record<string, unknown>;
@@ -89,7 +87,7 @@ test.describe('caret edge cases - NBSP and boundary detection', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -108,13 +106,11 @@ test.describe('caret edge cases - NBSP and boundary detection', () => {
         throw new Error('Selection was not set');
       }
 
-      const range = selection.getRangeAt(0);
-
       return {
-        focusOffset: range.focusOffset,
-        focusTextContent: range.focusNode?.textContent ?? '',
+        focusOffset: selection.focusOffset,
+        focusTextContent: selection.focusNode?.textContent ?? '',
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     // Should handle NBSP correctly
     expect(result.focusTextContent).toContain('\u00A0text after nbsp');
@@ -135,7 +131,7 @@ test.describe('caret edge cases - NBSP and boundary detection', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -154,13 +150,11 @@ test.describe('caret edge cases - NBSP and boundary detection', () => {
         throw new Error('Selection was not set');
       }
 
-      const range = selection.getRangeAt(0);
-
       return {
-        focusOffset: range.focusOffset,
-        focusTextContent: range.focusNode?.textContent ?? '',
+        focusOffset: selection.focusOffset,
+        focusTextContent: selection.focusNode?.textContent ?? '',
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.focusTextContent).toBe('text before nbsp\u00A0');
     expect(result.focusOffset).toBe(result.focusTextContent.length);
@@ -180,7 +174,7 @@ test.describe('caret edge cases - NBSP and boundary detection', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -198,12 +192,10 @@ test.describe('caret edge cases - NBSP and boundary detection', () => {
         throw new Error('Selection was not set');
       }
 
-      const range = selection.getRangeAt(0);
-
       return {
-        focusOffset: range.focusOffset,
+        focusOffset: selection.focusOffset,
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.focusOffset).toBe(4);
   });
@@ -222,7 +214,7 @@ test.describe('caret edge cases - NBSP and boundary detection', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -240,13 +232,11 @@ test.describe('caret edge cases - NBSP and boundary detection', () => {
         throw new Error('Selection was not set');
       }
 
-      const range = selection.getRangeAt(0);
-
       return {
-        focusOffset: range.focusOffset,
+        focusOffset: selection.focusOffset,
         hasSelection: true,
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.hasSelection).toBe(true);
   });
@@ -275,7 +265,7 @@ test.describe('caret edge cases - Nested elements', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -285,11 +275,12 @@ test.describe('caret edge cases - Nested elements', () => {
         throw new Error('Block not found');
       }
 
+      const blok = window.blokInstance;
       // Try to set caret at different positions
       const positions = [0, 5, 10, 15];
 
       return positions.map(pos => {
-        window.blokInstance.caret.setToBlock(block, 'default', pos);
+        blok.caret.setToBlock(block, 'default', pos);
 
         const selection = window.getSelection();
 
@@ -297,16 +288,14 @@ test.describe('caret edge cases - Nested elements', () => {
           return { position: pos, success: false };
         }
 
-        const range = selection.getRangeAt(0);
-
         return {
           position: pos,
           success: true,
-          offset: range.focusOffset,
-          nodeName: range.focusNode?.parentNode?.nodeName ?? '',
+          offset: selection.focusOffset,
+          nodeName: selection.focusNode?.parentNode?.nodeName ?? '',
         };
       });
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     // All positions should be set successfully
     result.forEach(r => {
@@ -328,7 +317,7 @@ test.describe('caret edge cases - Nested elements', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -338,6 +327,7 @@ test.describe('caret edge cases - Nested elements', () => {
         throw new Error('Block not found');
       }
 
+      const blok = window.blokInstance;
       // Test boundaries
       const tests = [
         { pos: 0, name: 'start' },
@@ -347,7 +337,7 @@ test.describe('caret edge cases - Nested elements', () => {
       ];
 
       return tests.map(test => {
-        window.blokInstance.caret.setToBlock(block, 'default', test.pos);
+        blok.caret.setToBlock(block, 'default', test.pos);
 
         const selection = window.getSelection();
 
@@ -355,16 +345,14 @@ test.describe('caret edge cases - Nested elements', () => {
           return { name: test.name, success: false };
         }
 
-        const range = selection.getRangeAt(0);
-
         return {
           name: test.name,
           success: true,
-          offset: range.focusOffset,
-          textContent: range.focusNode?.textContent ?? '',
+          offset: selection.focusOffset,
+          textContent: selection.focusNode?.textContent ?? '',
         };
       });
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     result.forEach(r => {
       expect(r.success).toBe(true);
@@ -395,7 +383,7 @@ test.describe('caret edge cases - Multi-line content', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -413,13 +401,11 @@ test.describe('caret edge cases - Multi-line content', () => {
         throw new Error('Selection was not set');
       }
 
-      const range = selection.getRangeAt(0);
-
       return {
         hasSelection: true,
-        offset: range.focusOffset,
+        offset: selection.focusOffset,
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.hasSelection).toBe(true);
   });
@@ -442,7 +428,7 @@ test.describe('caret edge cases - Multi-line content', () => {
 
     await createBlok(page, { data: blockData });
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -464,16 +450,15 @@ test.describe('caret edge cases - Multi-line content', () => {
         return { movedToNext, hasSelection: false };
       }
 
-      const range = selection.getRangeAt(0);
       const currentBlockIndex = window.blokInstance.blocks.getCurrentBlockIndex();
 
       return {
         movedToNext,
         hasSelection: true,
         currentBlockIndex,
-        textContent: range.focusNode?.textContent ?? '',
+        textContent: selection.focusNode?.textContent ?? '',
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.movedToNext).toBe(true);
     expect(result.hasSelection).toBe(true);
@@ -504,7 +489,7 @@ test.describe('caret edge cases - Special characters', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -522,13 +507,11 @@ test.describe('caret edge cases - Special characters', () => {
         throw new Error('Selection was not set');
       }
 
-      const range = selection.getRangeAt(0);
-
       return {
-        offset: range.focusOffset,
-        textContent: range.focusNode?.textContent ?? '',
+        offset: selection.focusOffset,
+        textContent: selection.focusNode?.textContent ?? '',
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.textContent).toBe('Hello\u2014world');
   });
@@ -547,7 +530,7 @@ test.describe('caret edge cases - Special characters', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -565,13 +548,11 @@ test.describe('caret edge cases - Special characters', () => {
         throw new Error('Selection was not set');
       }
 
-      const range = selection.getRangeAt(0);
-
       return {
         hasSelection: true,
-        textContent: range.focusNode?.textContent ?? '',
+        textContent: selection.focusNode?.textContent ?? '',
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.hasSelection).toBe(true);
     expect(result.textContent).toContain('Hello');
@@ -591,7 +572,7 @@ test.describe('caret edge cases - Special characters', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -609,13 +590,11 @@ test.describe('caret edge cases - Special characters', () => {
         throw new Error('Selection was not set');
       }
 
-      const range = selection.getRangeAt(0);
-
       return {
         hasSelection: true,
-        textContent: range.focusNode?.textContent ?? '',
+        textContent: selection.focusNode?.textContent ?? '',
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.hasSelection).toBe(true);
   });
@@ -644,7 +623,7 @@ test.describe('caret edge cases - Empty and whitespace-only content', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -661,7 +640,7 @@ test.describe('caret edge cases - Empty and whitespace-only content', () => {
       return {
         hasSelection: selection !== null && selection.rangeCount > 0,
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.hasSelection).toBe(true);
   });
@@ -680,7 +659,7 @@ test.describe('caret edge cases - Empty and whitespace-only content', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -698,13 +677,11 @@ test.describe('caret edge cases - Empty and whitespace-only content', () => {
         throw new Error('Selection was not set');
       }
 
-      const range = selection.getRangeAt(0);
-
       return {
         hasSelection: true,
-        offset: range.focusOffset,
+        offset: selection.focusOffset,
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.hasSelection).toBe(true);
   });
@@ -723,7 +700,7 @@ test.describe('caret edge cases - Empty and whitespace-only content', () => {
     await createBlok(page, { data: blockData });
     await clearSelection(page);
 
-    const result = await page.evaluate(({ blockSelector }) => {
+    const result = await page.evaluate(() => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
@@ -740,7 +717,7 @@ test.describe('caret edge cases - Empty and whitespace-only content', () => {
       return {
         hasSelection: selection !== null && selection.rangeCount > 0,
       };
-    }, { blockSelector: BLOCK_SELECTOR });
+    });
 
     expect(result.hasSelection).toBe(true);
   });

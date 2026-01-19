@@ -78,7 +78,7 @@ test.describe('mobile viewport detection and layout toggle', () => {
 
     // Set up event listener to track BlokMobileLayoutToggled events
     await page.evaluate(() => {
-      (window as unknown).__mobileLayoutToggledEvents = [];
+      window.__mobileLayoutToggledEvents = [];
     });
   });
 
@@ -90,7 +90,7 @@ test.describe('mobile viewport detection and layout toggle', () => {
 
     const isMobile = await page.evaluate(() => {
       const blok = window.blokInstance;
-      return blok ? (blok as unknown as { isMobile: boolean }).isMobile : false;
+      return blok ? (blok as { isMobile?: boolean }).isMobile : false;
     });
 
     expect(isMobile).toBe(true);
@@ -104,7 +104,7 @@ test.describe('mobile viewport detection and layout toggle', () => {
 
     const isMobile = await page.evaluate(() => {
       const blok = window.blokInstance;
-      return blok ? (blok as unknown as { isMobile: boolean }).isMobile : false;
+      return blok ? (blok as { isMobile?: boolean }).isMobile : false;
     });
 
     expect(isMobile).toBe(false);
@@ -118,7 +118,7 @@ test.describe('mobile viewport detection and layout toggle', () => {
 
     let isMobile = await page.evaluate(() => {
       const blok = window.blokInstance;
-      return blok ? (blok as unknown as { isMobile: boolean }).isMobile : false;
+      return blok ? (blok as { isMobile?: boolean }).isMobile : false;
     });
 
     expect(isMobile).toBe(false);
@@ -137,7 +137,7 @@ test.describe('mobile viewport detection and layout toggle', () => {
 
     isMobile = await page.evaluate(() => {
       const blok = window.blokInstance;
-      return blok ? (blok as unknown as { isMobile: boolean }).isMobile : false;
+      return blok ? (blok as { isMobile?: boolean }).isMobile : false;
     });
 
     expect(isMobile).toBe(true);
@@ -151,7 +151,7 @@ test.describe('mobile viewport detection and layout toggle', () => {
 
     let isMobile = await page.evaluate(() => {
       const blok = window.blokInstance;
-      return blok ? (blok as unknown as { isMobile: boolean }).isMobile : false;
+      return blok ? (blok as { isMobile?: boolean }).isMobile : false;
     });
 
     expect(isMobile).toBe(true);
@@ -170,7 +170,7 @@ test.describe('mobile viewport detection and layout toggle', () => {
 
     isMobile = await page.evaluate(() => {
       const blok = window.blokInstance;
-      return blok ? (blok as unknown as { isMobile: boolean }).isMobile : false;
+      return blok ? (blok as { isMobile?: boolean }).isMobile : false;
     });
 
     expect(isMobile).toBe(false);
@@ -211,7 +211,7 @@ test.describe('read-only toggle coordination with controllers', () => {
       return blok ? await blok.save() : { blocks: [] };
     });
 
-    expect(savedData.blocks[0]?.data?.text).toBe('First block - more text');
+    expect((savedData.blocks[0]?.data as { text?: string } | undefined)?.text).toBe('First block - more text');
   });
 
   test('keyboard shortcuts are disabled in read-only mode', async ({ page }) => {
@@ -234,7 +234,7 @@ test.describe('read-only toggle coordination with controllers', () => {
 
     await createBlok(page, { data: initialData, readOnly: true });
 
-    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'First block' });
     await firstParagraph.click();
 
     // Try to type - in read-only mode, this should not work
@@ -374,7 +374,7 @@ test.describe('read-only toggle coordination with controllers', () => {
       const blok = window.blokInstance;
       if (blok) {
         // Access the internal UI module to call toggleReadOnly
-        const module = (blok as unknown as { module?: { ui?: { toggleReadOnly: (readOnly: boolean) => void } } }).module;
+        const module = (blok as { module?: { ui?: { toggleReadOnly: (readOnly: boolean) => void } } }).module;
         if (module?.ui) {
           module.ui.toggleReadOnly(false);
         }
@@ -429,7 +429,7 @@ test.describe('read-only toggle coordination with controllers', () => {
     await page.evaluate(async () => {
       const blok = window.blokInstance;
       if (blok) {
-        const module = (blok as unknown as { module?: { ui?: { toggleReadOnly: (readOnly: boolean) => void } } }).module;
+        const module = (blok as { module?: { ui?: { toggleReadOnly: (readOnly: boolean) => void } } }).module;
         if (module?.ui) {
           module.ui.toggleReadOnly(true);
         }
@@ -473,17 +473,20 @@ test.describe('read-only toggle coordination with controllers', () => {
 
     expect(blocksCountBefore).toBe(1);
 
-    // Click in the bottom zone
+    // Click in the bottom zone - get bounds directly from the element
     const redactor = page.locator(REDACTOR_SELECTOR);
-    const redactorBounds = await redactor.boundingBox();
+    await expect(redactor).toBeVisible();
 
-    if (redactorBounds) {
-      // Click near the bottom of the redactor
-      await page.mouse.click(
-        redactorBounds.x + redactorBounds.width / 2,
-        redactorBounds.y + redactorBounds.height - 10
-      );
-    }
+    const { x, y, width, height } = await redactor.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    });
+
+    // Click near the bottom of the redactor
+    await page.mouse.click(
+      x + width / 2,
+      y + height - 10
+    );
 
     // In read-write mode, a new block should be created
     const blocksCountAfter = await page.evaluate(() => {
@@ -497,7 +500,7 @@ test.describe('read-only toggle coordination with controllers', () => {
     await page.evaluate(async () => {
       const blok = window.blokInstance;
       if (blok) {
-        const module = (blok as unknown as { module?: { ui?: { toggleReadOnly: (readOnly: boolean) => void } } }).module;
+        const module = (blok as { module?: { ui?: { toggleReadOnly: (readOnly: boolean) => void } } }).module;
         if (module?.ui) {
           module.ui.toggleReadOnly(true);
         }
@@ -507,16 +510,18 @@ test.describe('read-only toggle coordination with controllers', () => {
     // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(100);
 
-    // Click in the bottom zone again
+    // Click in the bottom zone again - get bounds directly from the element
     const redactor2 = page.locator(REDACTOR_SELECTOR);
-    const redactorBounds2 = await redactor2.boundingBox();
 
-    if (redactorBounds2) {
-      await page.mouse.click(
-        redactorBounds2.x + redactorBounds2.width / 2,
-        redactorBounds2.y + redactorBounds2.height - 10
-      );
-    }
+    const { x: x2, y: y2, width: width2, height: height2 } = await redactor2.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    });
+
+    await page.mouse.click(
+      x2 + width2 / 2,
+      y2 + height2 - 10
+    );
 
     // In read-only mode, no new block should be created
     const blocksCountReadOnly = await page.evaluate(() => {

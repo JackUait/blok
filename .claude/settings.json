@@ -16,11 +16,23 @@
       "Bash(cat:*)",
       "Bash(npx tsc:*)",
       "Bash(git stash:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)",
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)"
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/start-chat.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

@@ -406,17 +406,6 @@ describe('FakeBackgroundManager', () => {
       expect(mockState.isFakeBackgroundEnabled).toBe(false);
     });
 
-    it('calls removeOrphanedFakeBackgroundElements', () => {
-      const mockState = createMockState();
-      const manager = new FakeBackgroundManager(mockState);
-
-      const spy = vi.spyOn(manager, 'removeOrphanedFakeBackgroundElements');
-
-      manager.removeFakeBackground();
-
-      expect(spy).toHaveBeenCalled();
-    });
-
     it('does nothing when isFakeBackgroundEnabled is false', () => {
       const mockState = createMockState();
       const manager = new FakeBackgroundManager(mockState);

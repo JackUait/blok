@@ -1,34 +1,45 @@
 ---
-description: Use when finishing a task to review and clean up code changes made in the current chat session
+description: MANDATORY - ALWAYS run after completing any work. Use when finishing any task to review and clean up code changes made in the current chat session
 ---
 
 # Refactor Current Session Changes
+
+**MANDATORY:** This skill MUST be run after completing ANY implementation work. No exceptions.
 
 Review and fix issues in code changed during this chat session only.
 
 ## Scope
 
-**CRITICAL:** Only analyze files changed in the current chat session. Use git to establish a baseline.
+**CRITICAL:** Only analyze files changed in the current chat session. Use the baseline state captured at session start.
 
 ## Process
 
-1. **Establish baseline:** Run `git diff --name-only HEAD` to capture files already changed before this session
-2. **Get current changes:** Run `git diff --name-only HEAD` again (in parallel with step 1 if this is first check)
-3. **Compare:** Changed files = current minus baseline. Skip files that were already modified
-4. If working tree is clean at baseline, use `git diff --name-only HEAD~1..HEAD` for session files
-5. Read each changed file
-6. Analyze for issues using the categories below
-7. Auto-fix all high-priority issues directly
-8. Report lower-priority issues at the end without fixing
+1. **Read baseline state:** The SessionStart hook captures initial git state to `.claude/hooks/session-state.json`
+2. **Get current changes:** Run `git diff --name-only HEAD` to see all currently modified files
+3. **Compare:** Session-only changes = current files minus baseline files
+4. Read each session-only changed file
+5. Analyze for issues using the categories below
+6. Auto-fix all high-priority issues directly
+7. Report lower-priority issues at the end without fixing
 
-**Example baseline capture (run once per session):**
+**The start-chat hook automatically creates the baseline.** To get session-only files:
+
 ```bash
-# Capture initial state - files changed before this chat
-BEFORE_FILES=$(git diff --name-only HEAD) || echo ""
+# Read baseline files (captured at session start)
+if [ -f ".claude/hooks/session-state.json" ]; then
+  BEFORE_FILES=$(jq -r '.modified_files[]?' .claude/hooks/session-state.json 2>/dev/null || echo "")
+fi
 
-# Later - get current state and filter to session changes only
+# Get current changes
 CURRENT_FILES=$(git diff --name-only HEAD)
-SESSION_FILES=$(comm -13 <(echo "$BEFORE_FILES" | sort) <(echo "$CURRENT_FILES" | sort))
+
+# Filter to session-only changes (files changed since baseline)
+if [ -n "$BEFORE_FILES" ]; then
+  SESSION_FILES=$(comm -13 <(echo "$BEFORE_FILES" | sort) <(echo "$CURRENT_FILES" | sort))
+else
+  # No baseline = use all changes
+  SESSION_FILES="$CURRENT_FILES"
+fi
 ```
 
 ## Issue Categories

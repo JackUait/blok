@@ -1169,7 +1169,6 @@ test.describe('modules/selection', () => {
       ]);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const secondParagraph = getParagraphByIndex(page, 1);
 
       // Select text across both blocks using shift+arrow
       await firstParagraph.click();

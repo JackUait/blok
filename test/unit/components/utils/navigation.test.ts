@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   getTargetYPosition,
   getCaretPositionFromPoint,
@@ -7,9 +7,9 @@ import {
   setCaretAtXPositionInNativeInput,
   setCaretAtXPosition,
   getCaretXPosition,
-} from '../../../../../../src/components/utils/caret/navigation';
-import * as navigation from '../../../../../../src/components/utils/caret/navigation';
-import { Dom as $ } from '../../../../../../src/components/utils/dom';
+} from '../../../../src/components/utils/caret/navigation';
+import * as navigation from '../../../../src/components/utils/caret/navigation';
+import { Dom as $ } from '../../../../src/components/dom';
 
 describe('Caret navigation utilities', () => {
   beforeEach(() => {
@@ -68,8 +68,6 @@ describe('Caret navigation utilities', () => {
       const textNode = div.firstChild as Node;
       const range = document.createRange();
 
-      // Mock range to remove getBoundingClientRect
-      const originalGetBBox = range.getBoundingClientRect;
       vi.spyOn(range, 'getBoundingClientRect').mockImplementation(() => {
         throw new Error('Not available');
       });
@@ -107,7 +105,7 @@ describe('Caret navigation utilities', () => {
 
   describe('getCaretPositionFromPoint', () => {
     it('returns null when caretPositionFromPoint is not available', () => {
-      vi.spyOn(document, 'caretPositionFromPoint' as keyof Document).mockReturnValue(undefined);
+      vi.spyOn(document as unknown as { caretPositionFromPoint: () => unknown }, 'caretPositionFromPoint').mockReturnValue(undefined);
 
       const result = getCaretPositionFromPoint(100, 100);
 
@@ -193,17 +191,21 @@ describe('Caret navigation utilities', () => {
       expect(true).toBe(true);
     });
 
-    it('focuses element before setting caret', () => {
+    it('focuses element and creates selection', () => {
       const div = document.createElement('div');
       div.contentEditable = 'true';
       div.textContent = 'text';
       document.body.appendChild(div);
 
-      const focusSpy = vi.spyOn(div, 'focus');
-
       setCaretAtXPositionInContentEditable(div, 100, true);
 
-      expect(focusSpy).toHaveBeenCalled();
+      // Verify observable behavior: selection was created and element contains selection
+      const selection = window.getSelection();
+      expect(selection?.rangeCount).toBeGreaterThan(0);
+
+      // Verify the selection is within the element
+      const range = selection?.getRangeAt(0);
+      expect(div.contains(range?.startContainer ?? null)).toBe(true);
     });
 
     it('handles caret position outside element boundaries', () => {
@@ -320,7 +322,6 @@ describe('Caret navigation utilities', () => {
       setCaretAtXPositionInNativeInput(textarea, targetX, false);
 
       expect(textarea).toHaveFocus();
-      const textLength = textarea.value.length;
       const selectionStart = textarea.selectionStart ?? 0;
       expect(selectionStart).toBeGreaterThan('First line\nSecond line\n'.length - 1);
     });

@@ -1,26 +1,23 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   whitespaceFollowingRemovedEmptyInline,
   ensureInlineRemovalObserver,
   isElementVisuallyEmpty,
   findNbspAfterEmptyInline,
-} from '../../../../../../src/components/utils/caret/inline-removal';
-import { isCollapsedWhitespaces, Dom as $ } from '../../../../../../src/components/utils/dom';
+} from '../../../../src/components/utils/caret/inline-removal';
 
 describe('Caret inline removal utilities', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     vi.restoreAllMocks();
     window.getSelection()?.removeAllRanges();
-    // Clear the WeakSet before each test
-    whitespaceFollowingRemovedEmptyInline.clear();
   });
 
   describe('isElementVisuallyEmpty', () => {
-    it('returns false for non-HTMLElement', () => {
-      const textNode = document.createTextNode('text');
+    it('returns false for SVGElement (non-HTMLElement)', () => {
+      const svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 
-      const result = isElementVisuallyEmpty(textNode);
+      const result = isElementVisuallyEmpty(svgElement);
 
       expect(result).toBe(false);
     });
@@ -275,7 +272,7 @@ describe('Caret inline removal utilities', () => {
       // Manually add the text node to the WeakSet to simulate it being tracked
       whitespaceFollowingRemovedEmptyInline.add(textNode);
 
-      const result = findNbspAfterEmptyInline(div);
+      findNbspAfterEmptyInline(div);
 
       // Should find and remove from WeakSet
       expect(whitespaceFollowingRemovedEmptyInline.has(textNode)).toBe(false);
@@ -294,7 +291,7 @@ describe('Caret inline removal utilities', () => {
       // Manually add the text node to the WeakSet
       whitespaceFollowingRemovedEmptyInline.add(textNode);
 
-      const result = findNbspAfterEmptyInline(div);
+      findNbspAfterEmptyInline(div);
 
       // Should remove from WeakSet when checked
       expect(whitespaceFollowingRemovedEmptyInline.has(textNode)).toBe(false);

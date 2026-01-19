@@ -420,8 +420,9 @@ describe('UndoHistory', () => {
     });
 
     it('clears selection when snapshot is null and no first block exists', () => {
-      const removeSelectionSpy = vi.spyOn(window, 'getSelection').mockReturnValue({
-        removeAllRanges: vi.fn(),
+      const removeAllRangesFn = vi.fn();
+      vi.spyOn(window, 'getSelection').mockReturnValue({
+        removeAllRanges: removeAllRangesFn,
       } as unknown as ReturnType<typeof window.getSelection>);
 
       const snapshot = null;
@@ -439,8 +440,8 @@ describe('UndoHistory', () => {
 
       history.undo();
 
-      expect(removeSelectionSpy).toHaveBeenCalled();
-      removeSelectionSpy.mockRestore();
+      // Verify observable behavior: selection was cleared
+      expect(removeAllRangesFn).toHaveBeenCalledWith();
     });
 
     it('falls back to block start when input no longer exists', () => {

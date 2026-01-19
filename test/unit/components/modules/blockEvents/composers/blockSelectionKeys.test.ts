@@ -483,7 +483,7 @@ describe('BlockSelectionKeys', () => {
     });
 
     describe('updateSelectedListItemsDepth', () => {
-      it('updates depth of all selected list items', async () => {
+      it('updates depth of all selected list items and marks them as selected', async () => {
         const mockListBlock1 = createBlock({ name: 'list', id: 'list-1' });
         const mockListBlock2 = createBlock({ name: 'list', id: 'list-2' });
 
@@ -497,8 +497,20 @@ describe('BlockSelectionKeys', () => {
         mockListBlock2.holder.appendChild(depthAttr2);
 
         // Make save return proper data structure
-        mockListBlock1.save = vi.fn(() => Promise.resolve({ text: 'item 1', style: 'unordered' }));
-        mockListBlock2.save = vi.fn(() => Promise.resolve({ text: 'item 2', style: 'unordered' }));
+        mockListBlock1.save = vi.fn(() => Promise.resolve({
+          id: 'list-1',
+          tool: 'list',
+          data: { text: 'item 1', style: 'unordered' },
+          time: 0,
+          tunes: {},
+        }));
+        mockListBlock2.save = vi.fn(() => Promise.resolve({
+          id: 'list-2',
+          tool: 'list',
+          data: { text: 'item 2', style: 'unordered' },
+          time: 0,
+          tunes: {},
+        }));
 
         const updatedBlock1 = createBlock({ name: 'list', id: 'list-1-updated' });
         const updatedBlock2 = createBlock({ name: 'list', id: 'list-2-updated' });
@@ -519,8 +531,6 @@ describe('BlockSelectionKeys', () => {
           } as unknown as BlokModules['BlockManager'],
         });
 
-        // Create a spy to call the private method through the public API
-        // Since we can't directly call private methods, we test through handleIndent
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
 
@@ -529,8 +539,20 @@ describe('BlockSelectionKeys', () => {
         // Wait for the async update operation to complete (it's fire-and-forget in the code)
         await new Promise(resolve => setTimeout(resolve, 10));
 
-        // The update should have been called for both blocks
+        // Verify observable behavior: the update calls include the new depth value
         expect(update).toHaveBeenCalledTimes(2);
+        expect(update).toHaveBeenCalledWith(mockListBlock1, expect.objectContaining({
+          depth: 0, // Outdent from depth 1 to 0
+        }));
+        expect(update).toHaveBeenCalledWith(mockListBlock2, expect.objectContaining({
+          depth: 0, // Outdent from depth 1 to 0
+        }));
+
+        // Verify observable behavior: the returned blocks have selected set to true
+        expect(updatedBlock1.selected).toBe(true);
+        expect(updatedBlock2.selected).toBe(true);
+
+        // Verify observable behavior: the cache was cleared to reflect changes
         expect(clearCache).toHaveBeenCalled();
       });
     });

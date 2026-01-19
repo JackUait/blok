@@ -1,14 +1,15 @@
 #!/bin/bash
-# Hook script to auto-trigger /refactor after code changes
-# Outputs a directive for the model to run refactor (and compact if needed)
+# Hook script to auto-trigger /refactor after EVERY response
+# MANDATORY: Always runs refactor after agent completes any work
 
 set -e
 
 # Configuration (override via environment)
-CONTEXT_THRESHOLD_DEFAULT=60  # percentage
-CONTEXT_THRESHOLD=${REFACTOR_CONTEXT_THRESHOLD:-$CONTEXT_THRESHOLD_DEFAULT}
 DEBUG=${REFACTOR_HOOK_DEBUG:-0}
 LOG_FILE=".claude/hooks/refactor-hook.log"
+
+# MANDATORY REFACTOR: Always true, never skip
+ALWAYS_REFACTOR=${ALWAYS_REFACTOR:-1}
 
 debug_log() {
     if [ "$DEBUG" = "1" ]; then
@@ -17,60 +18,23 @@ debug_log() {
     fi
 }
 
-# Read JSON input from stdin
+# Read JSON input from stdin (required by hook protocol)
 input=$(cat)
 
-# Extract paths from JSON
-transcript_path=$(echo "$input" | grep -o '"transcript_path":[^,}]*' | cut -d'"' -f4)
+# Extract paths from JSON for logging
 working_dir=$(echo "$input" | grep -o '"working_directory":[^,}]*' | cut -d'"' -f4)
-
 if [ -z "$working_dir" ]; then
     working_dir="$CLAUDE_PROJECT_DIR"
 fi
 
-if [ -z "$transcript_path" ] || [ ! -f "$transcript_path" ]; then
-    debug_log "No valid transcript_path"
-    exit 0
-fi
+# MANDATORY: Always output refactor directive
+# No conditions, no early exits, no exceptions
+debug_log "MANDATORY: Triggering refactor"
 
-# Calculate context usage
-# Claude context ~200K tokens, 1 token ≈ 4 chars
-# 60% threshold = 120K tokens ≈ 480K chars
-CONTEXT_MAX_CHARS=800000  # 200K tokens * 4
-threshold_chars=$(( CONTEXT_MAX_CHARS * CONTEXT_THRESHOLD / 100 ))
+# Always output the directive - agent must run /refactor
+cat <<'EOF'
 
-file_size=$(wc -c < "$transcript_path" 2>/dev/null || echo 0)
-context_percent=$(( file_size * 100 / CONTEXT_MAX_CHARS ))
+<!-- MANDATORY: Run /refactor now -->
+<system-reminder>MANDATORY: Run /refactor command to review and clean up code changes from this session.</system-reminder>
 
-debug_log "Context: ${context_percent}% (${file_size} chars), threshold: ${CONTEXT_THRESHOLD}%"
-
-# Check for code changes via git
-cd "$working_dir" 2>/dev/null || exit 0
-
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
-    debug_log "Not a git repository"
-    exit 0
-fi
-
-# Get modified files (excluding .claude/, node_modules, etc.)
-changed_files=$(git diff --name-only HEAD 2>/dev/null | grep -v -E '^(\.claude/|node_modules/|dist/|\.git/)' || true)
-
-if [ -z "$changed_files" ]; then
-    debug_log "No code changes detected"
-    exit 0
-fi
-
-debug_log "Code changes: $(echo "$changed_files" | wc -l | tr -d ' ') files"
-
-# Output directive for the model to run commands
-if [ "$file_size" -gt "$threshold_chars" ]; then
-    debug_log "Context exceeds threshold - directing compact + refactor"
-    cat <<'EOF'
-<run_refactor>
 EOF
-else
-    debug_log "Context within threshold - directing refactor only"
-    cat <<'EOF'
-<run_refactor>
-EOF
-fi

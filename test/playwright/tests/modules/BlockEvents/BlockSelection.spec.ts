@@ -50,11 +50,11 @@ const createParagraphBlok = async (page: Page, textBlocks: string[]): Promise<vo
   await createBlokWithBlocks(page, blocks);
 };
 
-const getBlockByIndex = (page: Page, index: number) => {
+const getBlockByIndex = (page: Page, index: number): ReturnType<Page['locator']> => {
   return page.locator(`:nth-match(${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"], ${index + 1})`);
 };
 
-const getBlockWrapper = (page: Page, index: number) => {
+const getBlockWrapper = (page: Page, index: number): ReturnType<Page['locator']> => {
   return page.locator(`:nth-match(${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"], ${index + 1})`);
 };
 
@@ -171,7 +171,7 @@ test.describe('block selection keyboard shortcuts', () => {
       const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
 
       expect(blocks).toHaveLength(2);
-      expect(blocks.map((b) => (b.data as { text: string }).text)).toEqual(['First', 'Fourth']);
+      expect(blocks.map((b) => (b.data as { text: string }).text)).toStrictEqual(['First', 'Fourth']);
     });
 
     test('deletes selected blocks with Delete key', async ({ page }) => {
@@ -192,7 +192,7 @@ test.describe('block selection keyboard shortcuts', () => {
       const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
 
       expect(blocks).toHaveLength(2);
-      expect(blocks.map((b) => (b.data as { text: string }).text)).toEqual(['First', 'Fourth']);
+      expect(blocks.map((b) => (b.data as { text: string }).text)).toStrictEqual(['First', 'Fourth']);
     });
 
     test('places caret in replacement block after deletion', async ({ page }) => {
@@ -263,7 +263,7 @@ test.describe('block selection keyboard shortcuts', () => {
       const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
 
       expect(blocks).toHaveLength(2);
-      expect(blocks.map((b) => (b.data as { text: string }).text)).toEqual(['First', 'Fourth']);
+      expect(blocks.map((b) => (b.data as { text: string }).text)).toStrictEqual(['First', 'Fourth']);
     });
   });
 

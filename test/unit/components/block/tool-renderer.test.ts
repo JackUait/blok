@@ -295,4 +295,130 @@ describe('ToolRenderer', () => {
       expect(toolRenderer.toolRenderedElement).toBe(newRootElement);
     });
   });
+
+  describe('rendered lifecycle method', () => {
+    it('calls rendered() with correct this context for sync render', async () => {
+      const renderedSpy = vi.fn(function(this: { testProperty: string }) {
+        // This will throw if 'this' is undefined or doesn't have the expected property
+        expect(this.testProperty).toBe('test-value');
+      });
+
+      const toolWithRendered = {
+        render: vi.fn(() => mockRenderedElement),
+        save: vi.fn(() => ({ text: 'content' })),
+        rendered: renderedSpy,
+        testProperty: 'test-value',
+      } as unknown as BlockTool;
+
+      const renderer = new ToolRenderer(
+        toolWithRendered,
+        'paragraph',
+        'test-block-id',
+        tunesManager,
+        {}
+      );
+
+      renderer.compose();
+
+      // Wait for requestAnimationFrame to execute
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      expect(renderedSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls rendered() with correct this context for async render', async () => {
+      const renderedSpy = vi.fn(function(this: { testProperty: string }) {
+        expect(this.testProperty).toBe('async-value');
+      });
+
+      const asyncElement = document.createElement('div');
+      asyncElement.innerHTML = '<p>Async content</p>';
+
+      const toolWithAsyncRenderAndRendered = {
+        render: vi.fn(() => Promise.resolve(asyncElement)),
+        save: vi.fn(() => ({ text: 'content' })),
+        rendered: renderedSpy,
+        testProperty: 'async-value',
+      } as unknown as BlockTool;
+
+      const renderer = new ToolRenderer(
+        toolWithAsyncRenderAndRendered,
+        'paragraph',
+        'test-block-id',
+        tunesManager,
+        {}
+      );
+
+      renderer.compose();
+
+      // Wait for promise and requestAnimationFrame to execute
+      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      expect(renderedSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('resolves ready promise after rendered() callback for sync render', async () => {
+      let readyResolved = false;
+      let renderedCalled = false;
+
+      const toolWithRendered = {
+        render: vi.fn(() => mockRenderedElement),
+        save: vi.fn(() => ({ text: 'content' })),
+        rendered: vi.fn(() => {
+          renderedCalled = true;
+        }),
+      } as unknown as BlockTool;
+
+      const renderer = new ToolRenderer(
+        toolWithRendered,
+        'paragraph',
+        'test-block-id',
+        tunesManager,
+        {}
+      );
+
+      renderer.compose();
+
+      void renderer.ready.then(() => {
+        readyResolved = true;
+      });
+
+      // Wait for requestAnimationFrame
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      expect(renderedCalled).toBe(true);
+      expect(readyResolved).toBe(true);
+    });
+
+    it('does not call rendered() when tool does not implement it', async () => {
+      const toolWithoutRendered = {
+        render: vi.fn(() => mockRenderedElement),
+        save: vi.fn(() => ({ text: 'content' })),
+      } as unknown as BlockTool;
+
+      const renderer = new ToolRenderer(
+        toolWithoutRendered,
+        'paragraph',
+        'test-block-id',
+        tunesManager,
+        {}
+      );
+
+      renderer.compose();
+
+      // Wait for requestAnimationFrame
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      // Should not throw - ready should still resolve
+      let readyResolved = false;
+      void renderer.ready.then(() => {
+        readyResolved = true;
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(readyResolved).toBe(true);
+    });
+  });
 });

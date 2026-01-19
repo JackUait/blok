@@ -159,8 +159,9 @@ export class ToolRenderer {
     const rendered = this.toolInstance.rendered;
     if (typeof rendered === 'function') {
       const resolver = this.readyResolver;
+      const toolInstance = this.toolInstance;
       requestAnimationFrame(() => {
-        rendered();
+        rendered.call(toolInstance);
         resolver?.();
       });
     } else {
@@ -187,8 +188,9 @@ export class ToolRenderer {
         const rendered = this.toolInstance.rendered;
         if (typeof rendered === 'function') {
           const resolver = this.readyResolver;
+          const toolInstance = this.toolInstance;
           requestAnimationFrame(() => {
-            rendered();
+            rendered.call(toolInstance);
             resolver?.();
           });
         } else {

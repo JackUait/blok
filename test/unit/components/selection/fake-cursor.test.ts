@@ -274,7 +274,7 @@ describe('SelectionFakeCursor', () => {
     });
 
     it('removes only the fake cursor element', () => {
-      const { element, textNode } = createContentEditable('Hello world');
+      const { element } = createContentEditable('Hello world');
 
       SelectionCursor.setCursor(element, 0);
       SelectionFakeCursor.addFakeCursor();
@@ -286,7 +286,7 @@ describe('SelectionFakeCursor', () => {
 
       // Verify fake cursor is gone but content remains
       expect(SelectionFakeCursor.isFakeCursorInsideContainer(element)).toBe(false);
-      expect(element.textContent).toBe('Hello world');
+      expect(element).toHaveTextContent('Hello world');
     });
 
     it('handles multiple fake cursors by removing from container', () => {
@@ -365,7 +365,7 @@ describe('SelectionFakeCursor', () => {
 
       SelectionFakeCursor.removeFakeCursor(element);
 
-      expect(element.textContent).toBe('Some existing text');
+      expect(element).toHaveTextContent('Some existing text');
     });
   });
 });

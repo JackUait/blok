@@ -33,7 +33,7 @@ export class SelectionUtils {
   /**
    * Fake background manager instance
    */
-  private fakeBackgroundManager: FakeBackgroundManager;
+  public fakeBackgroundManager: FakeBackgroundManager;
 
   constructor() {
     this.fakeBackgroundManager = new FakeBackgroundManager(this);

@@ -29,42 +29,18 @@ const createContentEditable = (text = 'Hello world'): HTMLDivElement => {
 };
 
 /**
- * Test helper to update Selection properties
+ * Test helper to create a DOMRectList from an array of DOMRects
  */
-const updateSelectionProperties = (
-  selection: Selection,
-  state: {
-    anchorNode: Node | null;
-    focusNode: Node | null;
-    anchorOffset: number;
-    focusOffset: number;
-    isCollapsed: boolean;
-  }
-): void => {
-  Object.defineProperty(selection, 'anchorNode', {
-    value: state.anchorNode,
-    configurable: true,
-  });
-
-  Object.defineProperty(selection, 'focusNode', {
-    value: state.focusNode,
-    configurable: true,
-  });
-
-  Object.defineProperty(selection, 'anchorOffset', {
-    value: state.anchorOffset,
-    configurable: true,
-  });
-
-  Object.defineProperty(selection, 'focusOffset', {
-    value: state.focusOffset,
-    configurable: true,
-  });
-
-  Object.defineProperty(selection, 'isCollapsed', {
-    value: state.isCollapsed,
-    configurable: true,
-  });
+const createDOMRectList = (rects: DOMRect[]): DOMRectList => {
+  return {
+    length: rects.length,
+    item: (index: number) => rects[index] ?? null,
+    [0]: rects[0] ?? null,
+    [1]: rects[1] ?? null,
+    [2]: rects[2] ?? null,
+    [3]: rects[3] ?? null,
+    [4]: rects[4] ?? null,
+  } as unknown as DOMRectList;
 };
 
 describe('FakeBackgroundWrappers', () => {
@@ -163,7 +139,7 @@ describe('FakeBackgroundWrappers', () => {
       expect(wrapper?.textContent).toBe('Hello');
       // After extractContents and insertNode, the DOM structure changes
       // The wrapper is inserted at the range position, and remaining text follows
-      expect(container.textContent).toBe('Hello world'); // Full text preserved
+      expect(container).toHaveTextContent('Hello world'); // Full text preserved
     });
 
     it('inserts wrapper at range position', () => {
@@ -231,10 +207,12 @@ describe('FakeBackgroundWrappers', () => {
 
       expect(wrapper).not.toBeNull();
 
-      FakeBackgroundWrappers.unwrapFakeBackground(wrapper!);
+      if (wrapper) {
+        FakeBackgroundWrappers.unwrapFakeBackground(wrapper);
+      }
 
       expect(container.querySelector('[data-blok-fake-background]')).toBeNull();
-      expect(container.textContent).toBe('Hello world');
+      expect(container).toHaveTextContent('Hello world');
     });
 
     it('does nothing when wrapper has no parent', () => {
@@ -260,7 +238,7 @@ describe('FakeBackgroundWrappers', () => {
       FakeBackgroundWrappers.unwrapFakeBackground(wrapper);
 
       expect(parent.querySelector('[data-blok-fake-background]')).toBeNull();
-      expect(parent.textContent).toBe('FirstSecond');
+      expect(parent).toHaveTextContent('FirstSecond');
     });
 
     it('preserves element order when unwrapping', () => {
@@ -296,7 +274,11 @@ describe('FakeBackgroundWrappers', () => {
 
       const wrapper = FakeBackgroundWrappers.wrapRangeWithHighlight(range);
 
-      const result = FakeBackgroundWrappers.postProcessHighlightWrappers([wrapper!]);
+      if (!wrapper) {
+        throw new Error('Wrapper should not be null');
+      }
+
+      const result = FakeBackgroundWrappers.postProcessHighlightWrappers([wrapper]);
 
       expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThanOrEqual(1);
@@ -313,11 +295,15 @@ describe('FakeBackgroundWrappers', () => {
 
       const wrapper = FakeBackgroundWrappers.wrapRangeWithHighlight(range);
 
+      if (!wrapper) {
+        throw new Error('Wrapper should not be null');
+      }
+
       const spy = vi.spyOn(FakeBackgroundWrappers, 'splitMultiLineWrapper');
 
-      FakeBackgroundWrappers.postProcessHighlightWrappers([wrapper!]);
+      FakeBackgroundWrappers.postProcessHighlightWrappers([wrapper]);
 
-      expect(spy).toHaveBeenCalledWith(wrapper!);
+      expect(spy).toHaveBeenCalledWith(wrapper);
 
       spy.mockRestore();
     });
@@ -346,7 +332,11 @@ describe('FakeBackgroundWrappers', () => {
       const wrapper1 = FakeBackgroundWrappers.wrapRangeWithHighlight(range1);
       const wrapper2 = FakeBackgroundWrappers.wrapRangeWithHighlight(range2);
 
-      const result = FakeBackgroundWrappers.postProcessHighlightWrappers([wrapper1!, wrapper2!]);
+      if (!wrapper1 || !wrapper2) {
+        throw new Error('Wrappers should not be null');
+      }
+
+      const result = FakeBackgroundWrappers.postProcessHighlightWrappers([wrapper1, wrapper2]);
 
       expect(result.length).toBeGreaterThanOrEqual(2);
     });
@@ -369,7 +359,7 @@ describe('FakeBackgroundWrappers', () => {
       }
 
       // Mock getClientRects to return single rect
-      vi.spyOn(wrapper, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 50, 16)]);
+      vi.spyOn(wrapper, 'getClientRects').mockReturnValue(createDOMRectList([new DOMRect(0, 0, 50, 16)]));
 
       const result = FakeBackgroundWrappers.splitMultiLineWrapper(wrapper);
 
@@ -392,7 +382,7 @@ describe('FakeBackgroundWrappers', () => {
         throw new Error('Wrapper should not be null');
       }
 
-      vi.spyOn(wrapper, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 30, 16)]);
+      vi.spyOn(wrapper, 'getClientRects').mockReturnValue(createDOMRectList([new DOMRect(0, 0, 30, 16)]));
 
       const spy = vi.spyOn(FakeBackgroundShadows, 'applyBoxShadowToWrapper');
 
@@ -489,10 +479,12 @@ describe('FakeBackgroundWrappers', () => {
       }
 
       // Mock to simulate multi-line
-      vi.spyOn(wrapper, 'getClientRects').mockReturnValue([
-        new DOMRect(0, 0, 50, 16),
-        new DOMRect(0, 20, 50, 16),
-      ]);
+      vi.spyOn(wrapper, 'getClientRects').mockReturnValue(
+        createDOMRectList([
+          new DOMRect(0, 0, 50, 16),
+          new DOMRect(0, 20, 50, 16),
+        ])
+      );
 
       vi.spyOn(FakeBackgroundTextNodes, 'findLineBreakPositions').mockReturnValue([5]);
 
@@ -518,18 +510,20 @@ describe('FakeBackgroundWrappers', () => {
         throw new Error('Wrapper should not be null');
       }
 
-      vi.spyOn(wrapper, 'getClientRects').mockReturnValue([
-        new DOMRect(0, 0, 30, 16),
-        new DOMRect(0, 20, 30, 16),
-      ]);
+      vi.spyOn(wrapper, 'getClientRects').mockReturnValue(
+        createDOMRectList([
+          new DOMRect(0, 0, 30, 16),
+          new DOMRect(0, 20, 30, 16),
+        ])
+      );
 
       vi.spyOn(FakeBackgroundTextNodes, 'findLineBreakPositions').mockReturnValue([2]);
 
       const result = FakeBackgroundWrappers.splitMultiLineWrapper(wrapper);
 
       result.forEach((span) => {
-        expect(span.getAttribute('data-blok-fake-background')).toBe('true');
-        expect(span.getAttribute('data-blok-mutation-free')).toBe('true');
+        expect(span).toHaveAttribute('data-blok-fake-background', 'true');
+        expect(span).toHaveAttribute('data-blok-mutation-free', 'true');
         expect(span.style.color).toBe('inherit');
       });
 

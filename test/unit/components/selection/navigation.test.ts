@@ -1,4 +1,4 @@
-import { beforeEach, afterEach, describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import { SelectionNavigation } from '../../../../src/components/selection/navigation';
 import { SelectionCore } from '../../../../src/components/selection/core';
 
@@ -142,9 +142,9 @@ describe('SelectionNavigation', () => {
     });
 
     it('finds parent tag with matching class name', () => {
-      const container = createNestedStructure('<p><span class="highlight">Text</span></p>');
+      const container = createNestedStructure('<p><span class="highlight" data-blok-testid="highlight-span">Text</span></p>');
 
-      const span = container.querySelector('.highlight');
+      const span = container.querySelector('[data-blok-testid="highlight-span"]');
 
       if (!(span instanceof HTMLElement) || !(span.firstChild instanceof Text)) {
         throw new Error('Expected span with highlight class and text node');
@@ -156,9 +156,9 @@ describe('SelectionNavigation', () => {
     });
 
     it('returns null when class name does not match', () => {
-      const container = createNestedStructure('<p><span class="other">Text</span></p>');
+      const container = createNestedStructure('<p><span class="other" data-blok-testid="other-span">Text</span></p>');
 
-      const span = container.querySelector('.other');
+      const span = container.querySelector('[data-blok-testid="other-span"]');
 
       if (!(span instanceof HTMLElement) || !(span.firstChild instanceof Text)) {
         throw new Error('Expected span element with a text node');

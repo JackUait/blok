@@ -1,14 +1,12 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { SelectionUtils } from '../../../../src/components/selection';
-import { SelectionCore } from '../../../../src/components/selection/core';
 import { SelectionCursor } from '../../../../src/components/selection/cursor';
-import { SelectionNavigation } from '../../../../src/components/selection/navigation';
 import { SelectionFakeCursor } from '../../../../src/components/selection/fake-cursor';
 import { FakeBackgroundManager } from '../../../../src/components/selection/fake-background';
-import * as coreModule from '../../../../src/components/selection/core';
-import * as cursorModule from '../../../../src/components/selection/cursor';
-import * as navigationModule from '../../../../src/components/selection/navigation';
-import * as fakeCursorModule from '../../../../src/components/selection/fake-cursor';
+import { SelectionCore } from '../../../../src/components/selection/core';
+import { SelectionCursor as CursorModule } from '../../../../src/components/selection/cursor';
+import { SelectionNavigation } from '../../../../src/components/selection/navigation';
+import { SelectionFakeCursor as FakeCursorModule } from '../../../../src/components/selection/fake-cursor';
 
 /**
  * Test helper to ensure Selection API is available
@@ -166,7 +164,7 @@ describe('SelectionUtils (Facade)', () => {
 
       setSelectionRange(textNode, 2);
 
-      const spy = vi.spyOn(coreModule.SelectionCore, 'getAnchorNode').mockReturnValue(textNode);
+      const spy = vi.spyOn(SelectionCore, 'getAnchorNode').mockReturnValue(textNode);
 
       expect(SelectionUtils.anchorNode).toBe(textNode);
       expect(spy).toHaveBeenCalled();
@@ -177,7 +175,7 @@ describe('SelectionUtils (Facade)', () => {
     it('delegates anchorElement to SelectionCore', () => {
       const { element } = createContentEditable();
 
-      const spy = vi.spyOn(coreModule.SelectionCore, 'getAnchorElement').mockReturnValue(element);
+      const spy = vi.spyOn(SelectionCore, 'getAnchorElement').mockReturnValue(element);
 
       expect(SelectionUtils.anchorElement).toBe(element);
       expect(spy).toHaveBeenCalled();
@@ -186,7 +184,7 @@ describe('SelectionUtils (Facade)', () => {
     });
 
     it('delegates anchorOffset to SelectionCore', () => {
-      const spy = vi.spyOn(coreModule.SelectionCore, 'getAnchorOffset').mockReturnValue(5);
+      const spy = vi.spyOn(SelectionCore, 'getAnchorOffset').mockReturnValue(5);
 
       expect(SelectionUtils.anchorOffset).toBe(5);
       expect(spy).toHaveBeenCalled();
@@ -195,7 +193,7 @@ describe('SelectionUtils (Facade)', () => {
     });
 
     it('delegates isCollapsed to SelectionCore', () => {
-      const spy = vi.spyOn(coreModule.SelectionCore, 'getIsCollapsed').mockReturnValue(true);
+      const spy = vi.spyOn(SelectionCore, 'getIsCollapsed').mockReturnValue(true);
 
       expect(SelectionUtils.isCollapsed).toBe(true);
       expect(spy).toHaveBeenCalled();
@@ -204,7 +202,7 @@ describe('SelectionUtils (Facade)', () => {
     });
 
     it('delegates isAtBlok to SelectionCore', () => {
-      const spy = vi.spyOn(coreModule.SelectionCore, 'getIsAtBlok').mockReturnValue(true);
+      const spy = vi.spyOn(SelectionCore, 'getIsAtBlok').mockReturnValue(true);
 
       expect(SelectionUtils.isAtBlok).toBe(true);
       expect(spy).toHaveBeenCalled();
@@ -213,7 +211,7 @@ describe('SelectionUtils (Facade)', () => {
     });
 
     it('delegates isSelectionExists to SelectionCore', () => {
-      const spy = vi.spyOn(coreModule.SelectionCore, 'getIsSelectionExists').mockReturnValue(true);
+      const spy = vi.spyOn(SelectionCore, 'getIsSelectionExists').mockReturnValue(true);
 
       expect(SelectionUtils.isSelectionExists).toBe(true);
       expect(spy).toHaveBeenCalled();
@@ -222,10 +220,9 @@ describe('SelectionUtils (Facade)', () => {
     });
 
     it('delegates range to SelectionCore', () => {
-      const { textNode } = createContentEditable();
       const range = document.createRange();
 
-      const spy = vi.spyOn(coreModule.SelectionCore, 'getRange').mockReturnValue(range);
+      const spy = vi.spyOn(SelectionCore, 'getRange').mockReturnValue(range);
 
       expect(SelectionUtils.range).toBe(range);
       expect(spy).toHaveBeenCalled();
@@ -236,7 +233,7 @@ describe('SelectionUtils (Facade)', () => {
     it('delegates rect to SelectionCore', () => {
       const rect = new DOMRect(10, 20, 100, 50);
 
-      const spy = vi.spyOn(coreModule.SelectionCore, 'getRect').mockReturnValue(rect);
+      const spy = vi.spyOn(SelectionCore, 'getRect').mockReturnValue(rect);
 
       expect(SelectionUtils.rect).toBe(rect);
       expect(spy).toHaveBeenCalled();
@@ -245,7 +242,7 @@ describe('SelectionUtils (Facade)', () => {
     });
 
     it('delegates text to SelectionCore', () => {
-      const spy = vi.spyOn(coreModule.SelectionCore, 'getText').mockReturnValue('selected');
+      const spy = vi.spyOn(SelectionCore, 'getText').mockReturnValue('selected');
 
       expect(SelectionUtils.text).toBe('selected');
       expect(spy).toHaveBeenCalled();
@@ -261,7 +258,7 @@ describe('SelectionUtils (Facade)', () => {
   describe('Static Methods (module delegation)', () => {
     it('delegates get() to SelectionCore', () => {
       const selection = ensureSelection();
-      const spy = vi.spyOn(coreModule.SelectionCore, 'get').mockReturnValue(selection);
+      const spy = vi.spyOn(SelectionCore, 'get').mockReturnValue(selection);
 
       expect(SelectionUtils.get()).toBe(selection);
       expect(spy).toHaveBeenCalled();
@@ -273,7 +270,7 @@ describe('SelectionUtils (Facade)', () => {
       const { element } = createContentEditable();
       const rect = new DOMRect(0, 0, 100, 20);
 
-      const spy = vi.spyOn(cursorModule.SelectionCursor, 'setCursor').mockReturnValue(rect);
+      const spy = vi.spyOn(CursorModule, 'setCursor').mockReturnValue(rect);
 
       expect(SelectionUtils.setCursor(element, 0)).toBe(rect);
       expect(spy).toHaveBeenCalledWith(element, 0);
@@ -284,7 +281,7 @@ describe('SelectionUtils (Facade)', () => {
     it('delegates isRangeInsideContainer to SelectionCursor', () => {
       const container = document.createElement('div');
 
-      const spy = vi.spyOn(cursorModule.SelectionCursor, 'isRangeInsideContainer').mockReturnValue(true);
+      const spy = vi.spyOn(CursorModule, 'isRangeInsideContainer').mockReturnValue(true);
 
       expect(SelectionUtils.isRangeInsideContainer(container)).toBe(true);
       expect(spy).toHaveBeenCalledWith(container);
@@ -296,7 +293,7 @@ describe('SelectionUtils (Facade)', () => {
       const selection = ensureSelection();
 
       const spy = vi
-        .spyOn(coreModule.SelectionCore, 'isSelectionAtBlok')
+        .spyOn(SelectionCore, 'isSelectionAtBlok')
         .mockReturnValue(true);
 
       expect(SelectionUtils.isSelectionAtBlok(selection)).toBe(true);
@@ -308,7 +305,7 @@ describe('SelectionUtils (Facade)', () => {
     it('delegates isRangeAtBlok to SelectionCore', () => {
       const range = document.createRange();
 
-      const spy = vi.spyOn(coreModule.SelectionCore, 'isRangeAtBlok').mockReturnValue(true);
+      const spy = vi.spyOn(SelectionCore, 'isRangeAtBlok').mockReturnValue(true);
 
       expect(SelectionUtils.isRangeAtBlok(range)).toBe(true);
       expect(spy).toHaveBeenCalledWith(range);
@@ -321,7 +318,7 @@ describe('SelectionUtils (Facade)', () => {
       const range = document.createRange();
 
       const spy = vi
-        .spyOn(coreModule.SelectionCore, 'getRangeFromSelection')
+        .spyOn(SelectionCore, 'getRangeFromSelection')
         .mockReturnValue(range);
 
       expect(SelectionUtils.getRangeFromSelection(selection)).toBe(range);
@@ -331,20 +328,21 @@ describe('SelectionUtils (Facade)', () => {
     });
 
     it('delegates addFakeCursor to SelectionFakeCursor', () => {
-      const spy = vi.spyOn(fakeCursorModule.SelectionFakeCursor, 'addFakeCursor').mockImplementation(() => undefined);
+      const { textNode } = createContentEditable();
+      setSelectionRange(textNode, 2);
 
       SelectionUtils.addFakeCursor();
 
-      expect(spy).toHaveBeenCalled();
-
-      spy.mockRestore();
+      // Verify the fake cursor element was added to the DOM
+      const fakeCursor = document.querySelector('[data-blok-fake-cursor]');
+      expect(fakeCursor).toBeInstanceOf(HTMLSpanElement);
     });
 
     it('delegates isFakeCursorInsideContainer to SelectionFakeCursor', () => {
       const container = document.createElement('div');
 
       const spy = vi
-        .spyOn(fakeCursorModule.SelectionFakeCursor, 'isFakeCursorInsideContainer')
+        .spyOn(FakeCursorModule, 'isFakeCursorInsideContainer')
         .mockReturnValue(true);
 
       expect(SelectionUtils.isFakeCursorInsideContainer(container)).toBe(true);
@@ -355,7 +353,7 @@ describe('SelectionUtils (Facade)', () => {
 
     it('delegates removeFakeCursor to SelectionFakeCursor with default container', () => {
       const spy = vi
-        .spyOn(fakeCursorModule.SelectionFakeCursor, 'removeFakeCursor')
+        .spyOn(FakeCursorModule, 'removeFakeCursor')
         .mockImplementation(() => undefined);
 
       SelectionUtils.removeFakeCursor();
@@ -369,7 +367,7 @@ describe('SelectionUtils (Facade)', () => {
       const container = document.createElement('div');
 
       const spy = vi
-        .spyOn(fakeCursorModule.SelectionFakeCursor, 'removeFakeCursor')
+        .spyOn(FakeCursorModule, 'removeFakeCursor')
         .mockImplementation(() => undefined);
 
       SelectionUtils.removeFakeCursor(container);
@@ -394,52 +392,70 @@ describe('SelectionUtils (Facade)', () => {
 
     it('delegates setFakeBackground to FakeBackgroundManager', () => {
       const utils = new SelectionUtils();
-      const spy = vi.spyOn(utils.fakeBackgroundManager, 'setFakeBackground').mockImplementation(() => undefined);
+      const { element } = createContentEditable();
+      const textNode = element.firstChild as Text;
+
+      setSelectionRange(textNode, 0, 5);
 
       utils.setFakeBackground();
 
-      expect(spy).toHaveBeenCalled();
-
-      spy.mockRestore();
+      // Verify the fake background was enabled on the instance
+      expect(utils.isFakeBackgroundEnabled).toBe(true);
     });
 
     it('delegates removeFakeBackground to FakeBackgroundManager', () => {
       const utils = new SelectionUtils();
-      const spy = vi
-        .spyOn(utils.fakeBackgroundManager, 'removeFakeBackground')
-        .mockImplementation(() => undefined);
+      const { element } = createContentEditable();
+      const textNode = element.firstChild as Text;
+
+      setSelectionRange(textNode, 0, 5);
+      utils.setFakeBackground();
+      expect(utils.isFakeBackgroundEnabled).toBe(true);
 
       utils.removeFakeBackground();
 
-      expect(spy).toHaveBeenCalled();
-
-      spy.mockRestore();
+      // Verify the fake background was disabled
+      expect(utils.isFakeBackgroundEnabled).toBe(false);
     });
 
     it('delegates removeOrphanedFakeBackgroundElements to FakeBackgroundManager', () => {
       const utils = new SelectionUtils();
-      const spy = vi
-        .spyOn(utils.fakeBackgroundManager, 'removeOrphanedFakeBackgroundElements')
-        .mockImplementation(() => undefined);
+      const { element } = createContentEditable();
+      const textNode = element.firstChild as Text;
+
+      setSelectionRange(textNode, 0, 5);
+      utils.setFakeBackground();
+
+      // Add an orphaned fake background element directly (with value "true" to match the selector)
+      const orphan = document.createElement('span');
+      orphan.textContent = 'orphaned';
+      orphan.setAttribute('data-blok-fake-background', 'true');
+      document.body.appendChild(orphan);
+
+      expect(document.querySelector('[data-blok-fake-background="true"]')).not.toBeNull();
 
       utils.removeOrphanedFakeBackgroundElements();
 
-      expect(spy).toHaveBeenCalled();
-
-      spy.mockRestore();
+      // Verify orphaned elements were removed (unwrapped, so the span is gone but text remains)
+      expect(document.querySelector('[data-blok-fake-background="true"]')).toBeNull();
+      // The orphaned text should still exist in the DOM (unwrapped)
+      expect(document.body).toHaveTextContent('orphaned');
     });
 
     it('delegates clearFakeBackground to FakeBackgroundManager', () => {
       const utils = new SelectionUtils();
-      const spy = vi
-        .spyOn(utils.fakeBackgroundManager, 'clearFakeBackground')
-        .mockImplementation(() => undefined);
+      const { element } = createContentEditable();
+      const textNode = element.firstChild as Text;
+
+      setSelectionRange(textNode, 0, 5);
+      utils.setFakeBackground();
+      expect(utils.isFakeBackgroundEnabled).toBe(true);
 
       utils.clearFakeBackground();
 
-      expect(spy).toHaveBeenCalled();
-
-      spy.mockRestore();
+      // Verify all fake background elements were removed and state reset
+      expect(utils.isFakeBackgroundEnabled).toBe(false);
+      expect(document.querySelector('[data-blok-fake-background]')).toBeNull();
     });
 
     it('saves selection range to instance state', () => {
@@ -496,14 +512,12 @@ describe('SelectionUtils (Facade)', () => {
       const { textNode } = createContentEditable();
 
       setSelectionRange(textNode, 0, 5);
-
-      const spy = vi.spyOn(cursorModule.SelectionCursor, 'collapseToEnd').mockImplementation(() => undefined);
+      expect(ensureSelection().toString()).toBe('Hello');
 
       utils.collapseToEnd();
 
-      expect(spy).toHaveBeenCalled();
-
-      spy.mockRestore();
+      // Verify the cursor is now at the end of the text (no text is selected)
+      expect(ensureSelection().toString()).toBe('');
     });
 
     it('delegates findParentTag to SelectionNavigation', () => {
@@ -513,7 +527,7 @@ describe('SelectionUtils (Facade)', () => {
       const textNode = container.textNode;
       setSelectionRange(textNode, 0, 4);
 
-      const spy = vi.spyOn(navigationModule.SelectionNavigation, 'findParentTag').mockReturnValue(container.paragraph);
+      const spy = vi.spyOn(SelectionNavigation, 'findParentTag').mockReturnValue(container.paragraph);
 
       expect(utils.findParentTag('P')).toBe(container.paragraph);
       expect(spy).toHaveBeenCalledWith('P', undefined, 10);
@@ -524,7 +538,7 @@ describe('SelectionUtils (Facade)', () => {
     it('delegates findParentTag with className to SelectionNavigation', () => {
       const utils = new SelectionUtils();
 
-      const spy = vi.spyOn(navigationModule.SelectionNavigation, 'findParentTag').mockReturnValue(null);
+      const spy = vi.spyOn(SelectionNavigation, 'findParentTag').mockReturnValue(null);
 
       utils.findParentTag('STRONG', 'highlight', 5);
 
@@ -537,7 +551,7 @@ describe('SelectionUtils (Facade)', () => {
       const utils = new SelectionUtils();
       const container = createBlokZone();
 
-      const spy = vi.spyOn(navigationModule.SelectionNavigation, 'expandToTag').mockImplementation(() => undefined);
+      const spy = vi.spyOn(SelectionNavigation, 'expandToTag').mockImplementation(() => undefined);
 
       utils.expandToTag(container.paragraph);
 
@@ -675,7 +689,7 @@ describe('SelectionUtils (Facade)', () => {
 
   describe('Integration', () => {
     it('works end-to-end with real selection operations', () => {
-      const { element, textNode } = createContentEditable();
+      const { element } = createContentEditable();
 
       // Set cursor
       SelectionUtils.setCursor(element, 0);

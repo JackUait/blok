@@ -228,7 +228,7 @@ describe('SelectionCursor', () => {
     });
 
     it('returns false when range is outside the container', () => {
-      const { element, textNode } = createContentEditable();
+      const { textNode } = createContentEditable();
 
       setSelectionRange(textNode, 0, 1);
 

@@ -1,6 +1,5 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { SelectionCore } from '../../../../src/components/selection/core';
-import { DATA_ATTR, createSelector } from '../../../../src/components/constants';
 import * as utils from '../../../../src/components/utils';
 
 /**

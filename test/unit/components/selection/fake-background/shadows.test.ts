@@ -1,6 +1,26 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { FakeBackgroundShadows } from '../../../../../src/components/selection/fake-background/shadows';
-import type { LineGroup, LineRect } from '../../../../../src/components/selection/fake-background/types';
+import type { LineRect } from '../../../../../src/components/selection/fake-background/types';
+
+/**
+ * Test helper to convert DOMRect array to DOMRectList
+ */
+const toDOMRectList = (rects: DOMRect[]): DOMRectList => {
+  return {
+    length: rects.length,
+    item: (index: number) => rects[index] ?? null,
+    [Symbol.iterator]: function* () {
+      for (const rect of rects) {
+        yield rect;
+      }
+    },
+    // Array-like indexing
+    ...rects.reduce<Record<number, DOMRect>>((acc, rect, i) => ({
+      ...acc,
+      [i]: rect,
+    }), {}),
+  } as DOMRectList;
+};
 
 /**
  * Test helper to create a span element
@@ -136,12 +156,12 @@ describe('FakeBackgroundShadows', () => {
       const span2 = createSpan('Second');
 
       // Mock getClientRects to return multiple rects
-      vi.spyOn(span1, 'getClientRects').mockReturnValue([
+      vi.spyOn(span1, 'getClientRects').mockReturnValue(toDOMRectList([
         new DOMRect(0, 0, 50, 16),
         new DOMRect(0, 20, 50, 16),
-      ]);
+      ]));
 
-      vi.spyOn(span2, 'getClientRects').mockReturnValue([new DOMRect(0, 40, 50, 16)]);
+      vi.spyOn(span2, 'getClientRects').mockReturnValue(toDOMRectList([new DOMRect(0, 40, 50, 16)]));
 
       const collectSpy = vi.spyOn(FakeBackgroundShadows, 'collectAllLineRects');
 
@@ -156,24 +176,31 @@ describe('FakeBackgroundShadows', () => {
       const span1 = createSpan('First');
       const span2 = createSpan('Second');
 
-      vi.spyOn(span1, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 50, 16)]);
-      vi.spyOn(span2, 'getClientRects').mockReturnValue([new DOMRect(0, 20, 50, 16)]);
+      vi.spyOn(span1, 'getClientRects').mockReturnValue(toDOMRectList([new DOMRect(0, 0, 50, 16)]));
+      vi.spyOn(span2, 'getClientRects').mockReturnValue(toDOMRectList([new DOMRect(0, 20, 50, 16)]));
 
-      const groupSpy = vi.spyOn(FakeBackgroundShadows, 'groupRectsByLine');
+      // Create parent with line-height for shadow calculation
+      const parent = createParentWithLineHeight('24px');
+      parent.appendChild(span1);
+      parent.appendChild(span2);
 
       FakeBackgroundShadows.applyLineHeightExtensions([span1, span2]);
 
-      expect(groupSpy).toHaveBeenCalled();
+      // Verify the actual outcome - box-shadow should be applied to each span
+      expect(span1.style.boxShadow).toBeDefined();
+      expect(span2.style.boxShadow).toBeDefined();
 
-      groupSpy.mockRestore();
+      // Verify the shadows contain the expected color and inset
+      expect(span1.style.boxShadow).toContain('rgba(0, 0, 0, 0.08)');
+      expect(span2.style.boxShadow).toContain('rgba(0, 0, 0, 0.08)');
     });
 
     it('applies multi-line box shadow to each span', () => {
       const span1 = createSpan('First');
       const span2 = createSpan('Second');
 
-      vi.spyOn(span1, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 50, 16)]);
-      vi.spyOn(span2, 'getClientRects').mockReturnValue([new DOMRect(0, 20, 50, 16)]);
+      vi.spyOn(span1, 'getClientRects').mockReturnValue(toDOMRectList([new DOMRect(0, 0, 50, 16)]));
+      vi.spyOn(span2, 'getClientRects').mockReturnValue(toDOMRectList([new DOMRect(0, 20, 50, 16)]));
 
       // Create parent elements
       const parent = createParentWithLineHeight('24px');
@@ -199,7 +226,7 @@ describe('FakeBackgroundShadows', () => {
     it('collects rects from single span with single rect', () => {
       const span = createSpan('Single');
 
-      vi.spyOn(span, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 50, 16)]);
+      vi.spyOn(span, 'getClientRects').mockReturnValue(toDOMRectList([new DOMRect(0, 0, 50, 16)]));
 
       const result = FakeBackgroundShadows.collectAllLineRects([span]);
 
@@ -214,11 +241,11 @@ describe('FakeBackgroundShadows', () => {
     it('collects rects from single span with multiple rects', () => {
       const span = createSpan('Multi');
 
-      vi.spyOn(span, 'getClientRects').mockReturnValue([
+      vi.spyOn(span, 'getClientRects').mockReturnValue(toDOMRectList([
         new DOMRect(0, 0, 50, 16),
         new DOMRect(0, 20, 50, 16),
         new DOMRect(0, 40, 50, 16),
-      ]);
+      ]));
 
       const result = FakeBackgroundShadows.collectAllLineRects([span]);
 
@@ -232,8 +259,8 @@ describe('FakeBackgroundShadows', () => {
       const span1 = createSpan('First');
       const span2 = createSpan('Second');
 
-      vi.spyOn(span1, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 50, 16)]);
-      vi.spyOn(span2, 'getClientRects').mockReturnValue([new DOMRect(0, 20, 50, 16)]);
+      vi.spyOn(span1, 'getClientRects').mockReturnValue(toDOMRectList([new DOMRect(0, 0, 50, 16)]));
+      vi.spyOn(span2, 'getClientRects').mockReturnValue(toDOMRectList([new DOMRect(0, 20, 50, 16)]));
 
       const result = FakeBackgroundShadows.collectAllLineRects([span1, span2]);
 

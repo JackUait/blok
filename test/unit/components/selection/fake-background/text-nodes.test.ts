@@ -127,7 +127,6 @@ describe('FakeBackgroundTextNodes', () => {
       const container = createNestedStructure('<p>First</p><p>Second</p><p>Third</p>');
 
       const paragraphs = container.querySelectorAll('p');
-      const firstP = paragraphs[0];
       const secondP = paragraphs[1];
       const thirdP = paragraphs[2];
 
@@ -154,9 +153,15 @@ describe('FakeBackgroundTextNodes', () => {
     it('handles inline elements with text', () => {
       const container = createNestedStructure('<p>Start <strong>middle</strong> end</p>');
 
+      const paragraph = container.querySelector('p');
+
+      if (!paragraph) {
+        throw new Error('Expected paragraph element');
+      }
+
       const range = document.createRange();
 
-      range.selectNodeContents(container.querySelector('p')!);
+      range.selectNodeContents(paragraph);
 
       const result = FakeBackgroundTextNodes.collectTextNodes(range);
 
@@ -182,9 +187,15 @@ describe('FakeBackgroundTextNodes', () => {
         '<div>Text <span>nested</span> more</div>'
       );
 
+      const firstElementChild = container.firstElementChild;
+
+      if (!firstElementChild) {
+        throw new Error('Expected first element child');
+      }
+
       const range = document.createRange();
 
-      range.selectNodeContents(container.firstElementChild!);
+      range.selectNodeContents(firstElementChild);
 
       const result = FakeBackgroundTextNodes.collectTextNodes(range);
 

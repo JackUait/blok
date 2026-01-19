@@ -1284,6 +1284,13 @@ export class ListItem implements BlockTool {
     const range = selection.getRangeAt(0);
     const { beforeContent, afterContent } = this.splitContentAtCursor(contentEl, range);
 
+    // Get the current block's index using this.blockId for reliability.
+    // Using getBlockIndex(this.blockId) instead of getCurrentBlockIndex() ensures
+    // we get the correct index even if currentBlockIndex is stale due to timing issues.
+    const currentBlockIndex = this.blockId
+      ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
+      : this.api.blocks.getCurrentBlockIndex();
+
     // Guard: blockId is always provided by Blok when instantiating tools,
     // but we keep this fallback for defensive programming in case the tool
     // is instantiated outside the normal Blok flow (e.g., in tests or external usage)
@@ -1291,7 +1298,6 @@ export class ListItem implements BlockTool {
       contentEl.innerHTML = beforeContent;
       this._data.text = beforeContent;
 
-      const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
       const newBlock = this.api.blocks.insert(ListItem.TOOL_NAME, {
         text: afterContent,
         style: this._data.style,
@@ -1305,7 +1311,6 @@ export class ListItem implements BlockTool {
     }
 
     // Use atomic splitBlock API to ensure undo works correctly
-    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     const newBlock = this.api.blocks.splitBlock(
       this.blockId,
       { text: beforeContent },

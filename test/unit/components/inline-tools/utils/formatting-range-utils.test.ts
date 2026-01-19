@@ -43,7 +43,10 @@ describe('formatting-range-utils', () => {
       container.innerHTML = 'Before <span>Inside</span> After';
       document.body.appendChild(container);
 
-      const span = container.querySelector('span')!;
+      const span = container.querySelector('span');
+      if (!span) {
+        throw new Error('span element not found');
+      }
       const range = document.createRange();
       range.selectNodeContents(span);
 
@@ -65,7 +68,11 @@ describe('formatting-range-utils', () => {
       container.innerHTML = '<strong>bold text</strong>';
       document.body.appendChild(container);
 
-      const textNode = container.querySelector('strong')!.firstChild!;
+      const strong = container.querySelector('strong');
+      if (!strong?.firstChild) {
+        throw new Error('strong element or its firstChild not found');
+      }
+      const textNode = strong.firstChild;
       const isBold = (el: Element) => el.tagName === 'STRONG' || el.tagName === 'B';
 
       const result = findFormattingAncestor(textNode, isBold);
@@ -79,7 +86,11 @@ describe('formatting-range-utils', () => {
       container.innerHTML = '<span>plain text</span>';
       document.body.appendChild(container);
 
-      const textNode = container.querySelector('span')!.firstChild!;
+      const span = container.querySelector('span');
+      if (!span?.firstChild) {
+        throw new Error('span element or its firstChild not found');
+      }
+      const textNode = span.firstChild;
       const isBold = (el: Element) => el.tagName === 'STRONG' || el.tagName === 'B';
 
       const result = findFormattingAncestor(textNode, isBold);
@@ -111,7 +122,11 @@ describe('formatting-range-utils', () => {
       container.innerHTML = '<em>italic text</em>';
       document.body.appendChild(container);
 
-      const textNode = container.querySelector('em')!.firstChild!;
+      const em = container.querySelector('em');
+      if (!em?.firstChild) {
+        throw new Error('em element or its firstChild not found');
+      }
+      const textNode = em.firstChild;
       const isItalic = (el: Element) => el.tagName === 'EM' || el.tagName === 'I';
 
       expect(hasFormattingAncestor(textNode, isItalic)).toBe(true);
@@ -122,7 +137,11 @@ describe('formatting-range-utils', () => {
       container.innerHTML = '<span>plain</span>';
       document.body.appendChild(container);
 
-      const textNode = container.querySelector('span')!.firstChild!;
+      const span = container.querySelector('span');
+      if (!span?.firstChild) {
+        throw new Error('span element or its firstChild not found');
+      }
+      const textNode = span.firstChild;
       const isItalic = (el: Element) => el.tagName === 'EM' || el.tagName === 'I';
 
       expect(hasFormattingAncestor(textNode, isItalic)).toBe(false);
@@ -143,8 +162,12 @@ describe('formatting-range-utils', () => {
       container.innerHTML = '<strong>all bold</strong>';
       document.body.appendChild(container);
 
+      const strong = container.querySelector('strong');
+      if (!strong) {
+        throw new Error('strong element not found');
+      }
       const range = document.createRange();
-      range.selectNodeContents(container.querySelector('strong')!);
+      range.selectNodeContents(strong);
 
       expect(isRangeFormatted(range, isBold)).toBe(true);
     });
@@ -165,7 +188,11 @@ describe('formatting-range-utils', () => {
       container.innerHTML = '<strong>bold</strong>';
       document.body.appendChild(container);
 
-      const textNode = container.querySelector('strong')!.firstChild as Text;
+      const strong = container.querySelector('strong');
+      if (!strong?.firstChild) {
+        throw new Error('strong element or its firstChild not found');
+      }
+      const textNode = strong.firstChild as Text;
       const range = document.createRange();
       range.setStart(textNode, 2);
       range.collapse(true);
@@ -203,7 +230,10 @@ describe('formatting-range-utils', () => {
       container.innerHTML = '<strong></strong>';
       document.body.appendChild(container);
 
-      const strong = container.querySelector('strong')!;
+      const strong = container.querySelector('strong');
+      if (!strong) {
+        throw new Error('strong element not found');
+      }
       const range = document.createRange();
       range.selectNodeContents(strong);
 

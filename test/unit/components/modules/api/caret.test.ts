@@ -73,14 +73,16 @@ describe('CaretAPI', () => {
   it('exposes caret helpers via methods getter', () => {
     const { caretApi } = createCaretApi();
 
-    expect(caretApi.methods).toEqual(expect.objectContaining({
-      setToFirstBlock: expect.any(Function),
-      setToLastBlock: expect.any(Function),
-      setToPreviousBlock: expect.any(Function),
-      setToNextBlock: expect.any(Function),
-      setToBlock: expect.any(Function),
-      focus: expect.any(Function),
-    }));
+    const expectedMethods = {
+      setToFirstBlock: expect.any(Function) as unknown,
+      setToLastBlock: expect.any(Function) as unknown,
+      setToPreviousBlock: expect.any(Function) as unknown,
+      setToNextBlock: expect.any(Function) as unknown,
+      setToBlock: expect.any(Function) as unknown,
+      focus: expect.any(Function) as unknown,
+    };
+
+    expect(caretApi.methods).toEqual(expect.objectContaining(expectedMethods));
   });
 
   describe('setToFirstBlock', () => {

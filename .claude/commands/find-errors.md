@@ -55,9 +55,9 @@ Collect all matching file paths and split into batches of 10.
 
 Create numbered output files:
 ```
-errors-batch-1.md
-errors-batch-2.md
-errors-batch-3.md
+errors_001.md
+errors_002.md
+errors_003.md
 ...
 ```
 
@@ -75,9 +75,9 @@ Report number of batches created and total files found:
 ```
 Found 25 files with "$ARGUMENTS"
 Created 3 batch files:
-- errors-batch-1.md (10 files)
-- errors-batch-2.md (10 files)
-- errors-batch-3.md (5 files)
+- errors_001.md (10 files)
+- errors_002.md (10 files)
+- errors_003.md (5 files)
 ```
 
 ## Quick Reference

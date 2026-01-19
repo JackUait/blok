@@ -355,11 +355,10 @@ test.describe('toolbox', () => {
       expect(blokData.blocks[0].type).toBe('convertableTool');
 
       type ConvertableToolData = { text: string };
-      const hasTextProperty = (data: unknown): data is ConvertableToolData => {
-        return typeof data === 'object' && data !== null && 'text' in data;
-      };
-      const blockData: unknown = blokData.blocks[0].data;
-      expect(hasTextProperty(blockData) ? blockData.text : undefined).toBe('Some text');
+      const blockData = blokData.blocks[0].data as ConvertableToolData;
+
+      expect(blockData).toBeDefined();
+      expect(blockData.text).toBe('Some text');
 
       /**
        * Check that caret belongs to the new block after conversion
@@ -368,11 +367,7 @@ test.describe('toolbox', () => {
 
       expect(blockId).toBeDefined();
 
-      if (!blockId) {
-        throw new Error('Block ID is undefined');
-      }
-
-      const caretInBlock = await isCaretInBlock(page, blockId);
+      const caretInBlock = await isCaretInBlock(page, blockId as string);
 
       expect(caretInBlock).toBe(true);
     });

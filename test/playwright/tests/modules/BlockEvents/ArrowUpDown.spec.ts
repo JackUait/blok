@@ -426,12 +426,9 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
 
-      // Early return for type safety if positions are null
-      if (xBefore === null || xAfter === null) {
-        return;
-      }
-
-      expect(Math.abs(xAfter - xBefore)).toBeLessThan(50);
+      // Coerce to numbers (null becomes 0, but assertions above ensure we have valid values)
+      // The difference should be within 50px
+      expect(Math.abs((xAfter ?? 0) - (xBefore ?? 0))).toBeLessThan(50);
     });
 
     test('should preserve horizontal position when moving up between blocks', async ({ page }) => {
@@ -463,12 +460,8 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
 
-      // Early return for type safety if positions are null
-      if (xBefore === null || xAfter === null) {
-        return;
-      }
-
-      expect(Math.abs(xAfter - xBefore)).toBeLessThan(50);
+      // Coerce to numbers (null becomes 0, but assertions above ensure we have valid values)
+      expect(Math.abs((xAfter ?? 0) - (xBefore ?? 0))).toBeLessThan(50);
     });
 
     test('should clamp to end of shorter block when target X exceeds block length', async ({ page }) => {
@@ -821,12 +814,8 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
 
-      // Early return for type safety if positions are null
-      if (xBefore === null || xAfter === null) {
-        return;
-      }
-
-      expect(Math.abs(xAfter - xBefore)).toBeLessThan(50);
+      // Coerce to numbers (null becomes 0, but assertions above ensure we have valid values)
+      expect(Math.abs((xAfter ?? 0) - (xBefore ?? 0))).toBeLessThan(50);
     });
   });
 });

@@ -40,7 +40,7 @@ describe('DragOperations', () => {
     };
 
     mockYjsManager = {
-      transactMoves: vi.fn((fn) => fn()),
+      transactMoves: vi.fn((fn: () => void): void => fn()),
     };
 
     mockBlockSelection = {
@@ -218,7 +218,13 @@ describe('DragOperations', () => {
         return -1;
       });
 
-      mockBlockManager.insert = vi.fn((config) => {
+      mockBlockManager.insert = vi.fn((config: {
+        tool: string;
+        data: Record<string, unknown>;
+        tunes: Record<string, unknown>;
+        index: number;
+        needToFocus: boolean;
+      }): Block => {
         if (config.index === 4) return newBlock1;
         if (config.index === 5) return newBlock2;
         return targetBlock;

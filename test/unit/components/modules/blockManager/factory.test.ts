@@ -8,8 +8,8 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import { Block } from '../../../../../src/components/block';
 import type { ComposeBlockOptions } from '../../../../../src/components/modules/blockManager/types';
-import type { API as APIInterface, BlockToolData, SanitizerConfig, ConversionConfig } from '@/types';
-import type { BlockTool, BlockToolConstructorOptions } from '@/types/tools/block-tool';
+import type { API as APIInterface, BlockAPI, BlockToolData, SanitizerConfig, ConversionConfig } from '@/types';
+import type { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from '@/types/tools/block-tool';
 import type { BlockTuneData } from '@/types/block-tunes/block-tune-data';
 
 /**
@@ -148,14 +148,24 @@ const createMockAPI = (): API => {
   const apiMethods = createMockAPIMethods();
 
   // Create a mock that extends API.prototype with necessary properties
-  const api = Object.create(API.prototype, {
-    Blok: { value: {}, writable: false },
-    config: { value: {}, writable: false },
-    eventsDispatcher: { value: null, writable: false },
-    listeners: { value: null, writable: false },
-    nodes: { value: {}, writable: false },
-    readOnlyMutableListeners: { value: null, writable: false },
-  });
+  // Property descriptors must be properly typed to avoid unsafe assignment
+  const propertyDescriptors: PropertyDescriptorMap & {
+    Blok: PropertyDescriptor;
+    config: PropertyDescriptor;
+    eventsDispatcher: PropertyDescriptor;
+    listeners: PropertyDescriptor;
+    nodes: PropertyDescriptor;
+    readOnlyMutableListeners: PropertyDescriptor;
+  } = {
+    Blok: { value: {}, writable: false, enumerable: true, configurable: true },
+    config: { value: {}, writable: false, enumerable: true, configurable: true },
+    eventsDispatcher: { value: null, writable: false, enumerable: true, configurable: true },
+    listeners: { value: null, writable: false, enumerable: true, configurable: true },
+    nodes: { value: {}, writable: false, enumerable: true, configurable: true },
+    readOnlyMutableListeners: { value: null, writable: false, enumerable: true, configurable: true },
+  };
+
+  const api = Object.create(API.prototype, propertyDescriptors) as API;
 
   // Override the methods getter to return our mock methods
   Object.defineProperty(api, 'methods', {
@@ -171,16 +181,20 @@ const createMockAPI = (): API => {
  * Create a mock BlockToolConstructable class
  * Direct return without type assertion - the class implements BlockTool
  * and has the required constructor signature
+ *
+ * Uses explicit generic parameter to avoid 'any' type inference from defaults
  */
-const createMockConstructable = () => {
+const createMockConstructable = (): BlockToolConstructable => {
+  // Create a type-safe constructable that satisfies the BlockTool interface
   class MockBlockTool implements BlockTool {
     public data: BlockToolData;
-    public block: BlockToolConstructorOptions['block'];
+    public block: BlockAPI;
     public readOnly: boolean;
     public api: APIInterface;
-    public config?: BlockToolConstructorOptions['config'];
+    public config?: Record<string, unknown>;
 
-    constructor(options: BlockToolConstructorOptions) {
+    constructor(options: BlockToolConstructorOptions<BlockToolData, Record<string, unknown>>) {
+      // Explicitly type the assignments to avoid unsafe assignment from generic defaults
       this.data = options.data;
       this.block = options.block;
       this.readOnly = options.readOnly;
@@ -199,8 +213,7 @@ const createMockConstructable = () => {
     rendered?(): void {}
   }
 
-  // Return with type annotation (not assertion) - the compiler infers this correctly
-  return MockBlockTool;
+  return MockBlockTool as BlockToolConstructable;
 };
 
 /**

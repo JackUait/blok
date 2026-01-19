@@ -12,6 +12,8 @@ import type { Block } from '../../../../../src/components/block';
 import type { BlockToolAdapter } from '../../../../../src/components/tools/block';
 import { ToolsCollection } from '../../../../../src/components/tools/collection';
 import { ToolType } from '@/types/tools/adapters/tool-type';
+import type { BlockTool } from '@/types/tools/block-tool';
+import type { BlockToolConstructable } from '@/types/tools/block-tool';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokConfig } from '@/types/configs';
@@ -146,36 +148,30 @@ const createMockDependencies = (): BlockOperationsDependencies => {
 };
 
 /**
- * Create mock BlockFactory
+ * Create a properly typed mock BlockToolAdapter for testing
  */
-const createMockBlockFactory = (): BlockFactory => {
-  const mockAPI = {} as unknown as API;
-  const mockEventsDispatcher = new EventsDispatcher<BlokEventMap>();
-  const mockTools = new ToolsCollection<BlockToolAdapter>();
-
-  // Create a mock BlockTool class
-  const MockBlockTool = class {
+const createMockBlockToolAdapter = (name: string): BlockToolAdapter => {
+  // Create a mock BlockTool constructable class
+  const MockBlockTool = class implements BlockTool {
     render = vi.fn(() => {
       const div = document.createElement('div');
       div.contentEditable = 'true';
-      div.setAttribute('contenteditable', 'true'); // Set attribute for querySelector to work in JSDOM
+      div.setAttribute('contenteditable', 'true');
       return div;
     });
 
     save = vi.fn(() => ({}));
 
     rendered() {}
+
+    sanitize = {};
   };
 
-  // Add default tool
-  const defaultAdapter = {
-    type: ToolType.Block,
-    name: 'paragraph',
-    constructable: MockBlockTool as any,
-    create: vi.fn(function(this: BlockToolAdapter) {
-      // @ts-expect-error - Creating instance for testing
-      return new this.constructable();
-    }),
+  // Build a partial adapter object then cast to BlockToolAdapter
+  // Using a flexible type first to avoid property conflicts
+  const partialAdapter = {
+    constructable: MockBlockTool as BlockToolConstructable,
+    create: vi.fn((_data, _block, _readOnly) => new MockBlockTool()),
     sanitizeConfig: {},
     conversionConfig: {
       import: 'text',
@@ -183,11 +179,53 @@ const createMockBlockFactory = (): BlockFactory => {
     },
     settings: {},
     toolbox: undefined,
-    tunes: new ToolsCollection<any>(),
-    inlineTools: new ToolsCollection<any>(),
+    tunes: new ToolsCollection(),
+    inlineTools: new ToolsCollection(),
+    api: {},
+    config: {},
+    isInternal: false,
+    isDefault: false,
+    prepare: vi.fn(),
+    reset: vi.fn(),
+    enabledInlineTools: true,
+    enabledBlockTunes: undefined,
+    pasteConfig: {},
+    hasOnPasteHandler: false,
+    isReadOnlySupported: false,
+    isLineBreaksEnabled: false,
+    baseSanitizeConfig: {},
+  };
+
+  // Cast to BlockToolAdapter with proper method signatures
+  const adapter = {
+    type: ToolType.Block,
+    name,
+    ...partialAdapter,
+    isBlock(this: BlockToolAdapter): this is BlockToolAdapter {
+      return this.type === ToolType.Block;
+    },
+    isInline(this: { type: ToolType }): this is { type: ToolType.Inline } {
+      return this.type === ToolType.Inline;
+    },
+    isTune(this: { type: ToolType }): this is { type: ToolType.Tune } {
+      return this.type === ToolType.Tune;
+    },
   } as unknown as BlockToolAdapter;
 
-  (mockTools as any).set('paragraph', defaultAdapter);
+  return adapter;
+};
+
+/**
+ * Create mock BlockFactory
+ */
+const createMockBlockFactory = (): BlockFactory => {
+  const mockAPI = {} as unknown as API;
+  const mockEventsDispatcher = new EventsDispatcher<BlokEventMap>();
+  const mockTools = new ToolsCollection<BlockToolAdapter>();
+
+  // Add default tool
+  const defaultAdapter = createMockBlockToolAdapter('paragraph');
+  mockTools.set('paragraph', defaultAdapter);
 
   const bindBlockEvents = vi.fn();
 
@@ -395,11 +433,15 @@ describe('BlockOperations', () => {
     it('dispatches block-added event', () => {
       operations.insert({ tool: 'paragraph' }, blocksStore);
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest matchers return 'any', this is expected
+      const expectedDetail = expect.objectContaining({ index: expect.any(Number) });
+
       expect(blockDidMutatedSpy).toHaveBeenCalledWith(
         BlockAddedMutationType,
         expect.any(Object),
-        expect.objectContaining({ index: expect.any(Number) })
+        expectedDetail
       );
+      expect(blockDidMutatedSpy).toHaveBeenCalledTimes(1);
     });
 
     it('updates currentBlockIndex when needToFocus is true', () => {
@@ -451,7 +493,10 @@ describe('BlockOperations', () => {
 
   describe('removeBlock', () => {
     it('removes the specified block', async () => {
-      const blockToRemove = repository.getBlockById('block-1')!;
+      const blockToRemove = repository.getBlockById('block-1');
+      if (!blockToRemove) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       await operations.removeBlock(blockToRemove, false, false, blocksStore);
 
@@ -468,7 +513,10 @@ describe('BlockOperations', () => {
     });
 
     it('dispatches block-removed event', async () => {
-      const blockToRemove = repository.getBlockById('block-1')!;
+      const blockToRemove = repository.getBlockById('block-1');
+      if (!blockToRemove) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       await operations.removeBlock(blockToRemove, false, false, blocksStore);
 
@@ -480,7 +528,10 @@ describe('BlockOperations', () => {
     });
 
     it('syncs to Yjs when skipYjsSync is false', async () => {
-      const blockToRemove = repository.getBlockById('block-1')!;
+      const blockToRemove = repository.getBlockById('block-1');
+      if (!blockToRemove) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       await operations.removeBlock(blockToRemove, false, false, blocksStore);
 
@@ -488,7 +539,10 @@ describe('BlockOperations', () => {
     });
 
     it('does not sync to Yjs when skipYjsSync is true', async () => {
-      const blockToRemove = repository.getBlockById('block-1')!;
+      const blockToRemove = repository.getBlockById('block-1');
+      if (!blockToRemove) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       await operations.removeBlock(blockToRemove, false, true, blocksStore);
 
@@ -497,7 +551,10 @@ describe('BlockOperations', () => {
 
     it('decrements currentBlockIndex when removing block before current', async () => {
       operations.currentBlockIndexValue = 2;
-      const blockToRemove = repository.getBlockById('block-1')!;
+      const blockToRemove = repository.getBlockById('block-1');
+      if (!blockToRemove) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       await operations.removeBlock(blockToRemove, false, false, blocksStore);
 
@@ -509,7 +566,10 @@ describe('BlockOperations', () => {
       repository.initialize(singleBlockStore);
       operations.currentBlockIndexValue = 0;
 
-      const singleBlock = repository.getBlockById('single')!;
+      const singleBlock = repository.getBlockById('single');
+      if (!singleBlock) {
+        throw new Error('Test setup failed: single block not found');
+      }
       await operations.removeBlock(singleBlock, true, false, singleBlockStore);
 
       expect(repository.length).toBeGreaterThan(0);
@@ -518,7 +578,10 @@ describe('BlockOperations', () => {
 
   describe('update', () => {
     it('returns original block when no data or tunes provided', async () => {
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       const result = await operations.update(block, blocksStore);
 
@@ -526,7 +589,10 @@ describe('BlockOperations', () => {
     });
 
     it('creates new block with updated data', async () => {
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
       const newData = { text: 'Updated text' };
 
       const result = await operations.update(block, blocksStore, newData);
@@ -536,7 +602,10 @@ describe('BlockOperations', () => {
     });
 
     it('creates new block with updated tunes', async () => {
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
       const newTunes = { alignment: 'center' };
 
       await operations.update(block, blocksStore, undefined, newTunes);
@@ -545,7 +614,10 @@ describe('BlockOperations', () => {
     });
 
     it('dispatches block-changed event', async () => {
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       await operations.update(block, blocksStore, { text: 'New' });
 
@@ -557,7 +629,10 @@ describe('BlockOperations', () => {
     });
 
     it('replaces block in blocksStore', async () => {
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
       const oldId = block.id;
 
       const newBlock = await operations.update(block, blocksStore, { text: 'New' });
@@ -569,7 +644,10 @@ describe('BlockOperations', () => {
 
   describe('replace', () => {
     it('replaces block with new tool', () => {
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
@@ -579,7 +657,10 @@ describe('BlockOperations', () => {
     });
 
     it('uses Yjs transaction for atomic undo', () => {
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
@@ -588,7 +669,10 @@ describe('BlockOperations', () => {
     });
 
     it('inserts with skipYjsSync since transaction handles sync', () => {
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
       const transactSpy = vi.fn((fn: () => void) => fn());
 
       (dependencies.YjsManager.transact as ReturnType<typeof vi.fn>).mockImplementation(transactSpy);
@@ -736,7 +820,10 @@ describe('BlockOperations', () => {
 
     it('updates current block content element when text is provided', () => {
       operations.currentBlockIndexValue = 0;
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
 
       operations.splitBlockWithData('block-1', { text: 'New content' }, 'paragraph', {}, 1, blocksStore);
 
@@ -772,7 +859,10 @@ describe('BlockOperations', () => {
 
     it('converts block using conversion config', async () => {
       // Use existing block from store instead of creating a new one
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
       (block.exportDataAsString as ReturnType<typeof vi.fn>).mockResolvedValue('<p>Hello</p>');
 
       const result = await operations.convert(block, 'paragraph', blocksStore);
@@ -782,7 +872,10 @@ describe('BlockOperations', () => {
 
     it('applies block data overrides', async () => {
       // Use existing block from store instead of creating a new one
-      const block = repository.getBlockById('block-1')!;
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
       (block.exportDataAsString as ReturnType<typeof vi.fn>).mockResolvedValue('<p>Hello</p>');
 
       const result = await operations.convert(block, 'paragraph', blocksStore, { level: 2 });

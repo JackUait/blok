@@ -241,7 +241,10 @@ describe('bold-dom-utils', () => {
       document.body.appendChild(div);
       div.focus();
 
-      const selection = window.getSelection()!;
+      const selection = window.getSelection();
+      if (!selection) {
+        throw new Error('Selection not available');
+      }
 
       setCaret(selection, text, 2);
 
@@ -264,7 +267,10 @@ describe('bold-dom-utils', () => {
       document.body.appendChild(div);
       div.focus();
 
-      const selection = window.getSelection()!;
+      const selection = window.getSelection();
+      if (!selection) {
+        throw new Error('Selection not available');
+      }
 
       setCaretAfterNode(selection, strong);
 
@@ -274,7 +280,10 @@ describe('bold-dom-utils', () => {
     });
 
     it('does nothing for null node', () => {
-      const selection = window.getSelection()!;
+      const selection = window.getSelection();
+      if (!selection) {
+        throw new Error('Selection not available');
+      }
       const initialRangeCount = selection.rangeCount;
 
       setCaretAfterNode(selection, null);

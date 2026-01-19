@@ -4,6 +4,12 @@ import type { BlockEventBinderDependencies } from '../../../../../src/components
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { Block } from '../../../../../src/components/block';
+import type { BlockMutationType } from '../../../../../types/events/block';
+
+/**
+ * Type for a mock callback from Block.on('didMutated', callback)
+ */
+type DidMutatedCallback = (block: Block) => Block;
 
 /**
  * Create a mock BlockEvents module
@@ -27,7 +33,11 @@ const createMockListeners = (): ModuleListeners => {
   }> = [];
 
   return {
-    on: vi.fn((element, eventType, handler) => {
+    on: vi.fn((
+      element: EventTarget,
+      eventType: string,
+      handler: (event: Event) => void
+    ) => {
       boundListeners.push({ element, eventType, handler });
       // Actually bind the event so we can test it
       element.addEventListener(eventType, handler);
@@ -74,7 +84,12 @@ const createMockDependencies = (): BlockEventBinderDependencies => ({
   listeners: createMockListeners(),
   eventsDispatcher: createMockEventsDispatcher(),
   getBlockIndex: vi.fn(() => 0),
-  onBlockMutated: vi.fn((_, block) => block),
+  onBlockMutated: vi.fn(
+    <Type extends BlockMutationType>(
+      _mutationType: Type,
+      block: Block
+    ): Block => block
+  ),
 });
 
 describe('BlockEventBinder', () => {
@@ -139,9 +154,10 @@ describe('BlockEventBinder', () => {
       );
 
       // Get the callback and invoke it
-      const didMutatedCallback = (block.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        call => call[0] === 'didMutated'
-      )?.[1];
+      const call = (block.on as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c): c is [string, DidMutatedCallback] => c[0] === 'didMutated'
+      );
+      const didMutatedCallback = call?.[1];
 
       if (didMutatedCallback) {
         didMutatedCallback(block);
@@ -345,7 +361,7 @@ describe('BlockEventBinder', () => {
       const block1 = createMockBlock('block-1');
       const block2 = createMockBlock('block-2');
 
-      dependencies.getBlockIndex = vi.fn((block) => {
+      dependencies.getBlockIndex = vi.fn((block: Block) => {
         return block.id === 'block-1' ? 0 : 1;
       });
 
@@ -353,9 +369,10 @@ describe('BlockEventBinder', () => {
       binder.bindBlockEvents(block2);
 
       // Trigger didMutated for block1
-      const block1Callback = (block1.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        call => call[0] === 'didMutated'
-      )?.[1];
+      const block1Call = (block1.on as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c): c is [string, DidMutatedCallback] => c[0] === 'didMutated'
+      );
+      const block1Callback = block1Call?.[1];
 
       if (block1Callback) {
         block1Callback(block1);
@@ -368,9 +385,10 @@ describe('BlockEventBinder', () => {
       );
 
       // Trigger didMutated for block2
-      const block2Callback = (block2.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        call => call[0] === 'didMutated'
-      )?.[1];
+      const block2Call = (block2.on as ReturnType<typeof vi.fn>).mock.calls.find(
+        (c): c is [string, DidMutatedCallback] => c[0] === 'didMutated'
+      );
+      const block2Callback = block2Call?.[1];
 
       if (block2Callback) {
         block2Callback(block2);

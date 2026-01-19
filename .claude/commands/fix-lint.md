@@ -1,13 +1,13 @@
 ---
 name: parallel-lint-fixes
-description: Use when fixing lint, type, or formatter issues across multiple files. Symptoms: ESLint/TSC/Prettier errors, "files have lint issues," or need to run --fix on multiple files.
+description: Use when fixing lint, type, or formatter issues (errors OR warnings) across multiple files. Symptoms: ESLint/TSC/Prettier errors/warnings, "files have lint issues," or need to run --fix on multiple files.
 ---
 
 # Parallel Lint Fixes
 
 ## Overview
 
-Fix lint/type/format issues across multiple files. First try auto-fix, then deploy one subagent per file with remaining issues. Parallel subagents prevent context bloat and fix issues faster.
+Fix lint/type/format issues (both errors AND warnings) across multiple files. First try auto-fix, then deploy one subagent per file with remaining issues. Parallel subagents prevent context bloat and fix issues faster.
 
 ## When to Use
 
@@ -61,10 +61,10 @@ eslint src/file3.ts --fix  # read → fix → verify
 
 | Linter | Command | Notes |
 |--------|---------|-------|
-| ESLint | `eslint path/to/file --fix` | Run from package directory |
-| TSC | `tsc --noEmit` | Fix revealed issues |
+| ESLint | `eslint path/to/file --fix` | Run from package directory (fixes errors + warnings) |
+| TSC | `tsc --noEmit` | Fix revealed issues (includes warnings) |
 | Prettier | `prettier --write path/to/file` | Auto-format |
-| Biome | `biome check --write path/to/file` | Lint + format |
+| Biome | `biome check --write path/to/file` | Lint + format (errors + warnings) |
 | Rustfmt | `rustfmt path/to/file` | Auto-format |
 | Black | `black path/to/file` | Python formatter |
 
@@ -115,11 +115,11 @@ Wait for all subagents to complete. Report summary:
 
 ## Iron Rule
 
-**2+ files with lint issues AFTER `--fix`? Deploy subagents. No exceptions.**
+**2+ files with lint issues (errors OR warnings) AFTER `--fix`? Deploy subagents. No exceptions.**
 
 **Workflow:**
 1. Run `linter --fix` on all files
-2. If ALL issues resolved → done, report success
+2. If ALL issues (errors + warnings) resolved → done, report success
 3. If ANY issues remain → deploy subagents for those files
 
 This applies regardless of:
@@ -139,6 +139,7 @@ This applies regardless of:
 | "I'll just do it myself" | Did you try `--fix` first? If issues remain, use subagents. |
 | "ESLint --fix handles parallelism" | Yes, run `--fix` first. But if issues remain, YOU still read all files. Context bloat. |
 | "It's just mechanical fixes" | You still read file contents. Subagents keep YOUR context clean. |
+| **"They're just warnings, not errors"** | **Warnings accumulate into bugs. Fix them now. Subagents handle them the same as errors.** |
 | **"@ts-ignore is fine here"** | **You're hiding errors. Fix the type properly. Suppressions accumulate into invisible debt.** |
 | **"It's a false positive"** | **Maybe. But if you're wrong, you shipped a bug. If right, fix the config, not the code.** |
 | **"eslint-disable is temporary"** | **Temporary is permanent. No one comes back to fix it properly.** |
@@ -153,6 +154,7 @@ This applies regardless of:
 | Not verifying fixes | Run linter again after fix |
 | Fixing single-file issues | Only use subagents for 2+ files |
 | Using for non-lint changes | This skill is for lint/format/type ONLY |
+| Ignoring warnings | Warnings are issues too. Fix them like errors. |
 | **Monkey-patching fixes** | **Understand the issue, fix root cause, never suppress** |
 | Adding @ts-ignore/eslint-disable | Fix the actual type or logic issue |
 | "It's just a quick fix" | Quick fixes accumulate into tech debt |
@@ -167,6 +169,7 @@ This applies regardless of:
 - "Just quick fixes..." → Remaining issues = subagents. Period.
 - "ESLint --fix is parallel..." → Yes, use it first. But if issues remain, context bloat.
 - "Mostly auto-fixable..." → Did `--fix` clear everything? If not, subagents.
+- **"They're just warnings..."** → Warnings are issues. Fix them now or they become bugs.
 - **"I'll just add @ts-ignore..."** → You're monkey-patching. Fix the type properly.
 - **"Easiest to just eslint-disable..."** → Suppression is not a fix. Fix the code.
 - **"It's a false positive anyway..."** → Are you sure? If genuinely wrong, fix the CONFIG, not suppress per-line.
@@ -175,22 +178,23 @@ This applies regardless of:
 ## Subagent Template
 
 ```text
-Fix all lint, type, and formatting issues in {file_path}.
+Fix all lint, type, and formatting issues (errors AND warnings) in {file_path}.
 
 CRITICAL: Fix issues PROPERLY, not with monkey-patches.
 - Understand WHY the linter is complaining
 - Fix the underlying issue, not just the symptom
 - Never add @ts-ignore, eslint-disable, or any suppression unless the linter is genuinely wrong
 - When fixing type errors, use proper type guards and narrowing - never cast to any
+- Treat warnings the same as errors - both need fixing
 
 Steps:
 1. Read the file and understand its purpose
-2. Run the linter to identify all issues
+2. Run the linter to identify all issues (errors + warnings)
 3. For EACH issue:
    a. Understand what the rule is checking for and WHY it failed
    b. Determine the PROPER fix (not just the quickest one)
    c. Apply the fix
-4. Re-run linter to verify ALL issues are resolved
+4. Re-run linter to verify ALL issues (errors + warnings) are resolved
 5. Report any issues that genuinely require config changes (not suppression)
 ```
 

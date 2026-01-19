@@ -16,6 +16,20 @@ const INLINE_TOOLBAR_CONTAINER_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} 
 const INLINE_TOOL_SELECTOR = `${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-testid="popover-item"]`;
 const NESTED_BLOK_ID = 'nested-blok';
 
+/**
+ * Get the bounding box of a locator, throwing an error if it's null.
+ * This helper function encapsulates the null check to avoid conditionals in tests.
+ */
+const getRequiredBoundingBox = async (locator: Locator): Promise<Exclude<Awaited<ReturnType<Locator['boundingBox']>>, null>> => {
+  const box = await locator.boundingBox();
+
+  if (!box) {
+    throw new Error('Could not get bounding box');
+  }
+
+  return box;
+};
+
 type SerializableToolConfig = {
   className?: string;
   classCode?: string;
@@ -789,10 +803,6 @@ test.describe('inline toolbar', () => {
 
     await expect(toolbar).toBeVisible();
 
-    const toolbarBox = await toolbar.boundingBox();
-
-    expect(toolbarBox).not.toBeNull();
-
     const selectionRect = await page.evaluate(() => {
       const selection = window.getSelection();
 
@@ -807,13 +817,9 @@ test.describe('inline toolbar', () => {
       };
     });
 
-    if (!toolbarBox) {
-      throw new Error('Toolbar bounding box is null');
-    }
+    const toolbarBox = await getRequiredBoundingBox(toolbar);
 
-    const toolbarLeft = toolbarBox.x;
-
-    expect(Math.abs(toolbarLeft - selectionRect.left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(toolbarBox.x - selectionRect.left)).toBeLessThanOrEqual(1);
   });
 
   // Firefox has different text layout behavior for selections near line wraps,
@@ -849,20 +855,9 @@ test.describe('inline toolbar', () => {
 
     await expect(toolbar).toBeVisible();
 
-    const toolbarBox = await toolbar.boundingBox();
+    const toolbarBox = await getRequiredBoundingBox(toolbar);
     // Use the contenteditable element's bounding box for more accurate comparison
-    const paragraphBox = await paragraph.boundingBox();
-
-    expect(toolbarBox).not.toBeNull();
-    expect(paragraphBox).not.toBeNull();
-
-    if (!toolbarBox) {
-      throw new Error('Toolbar bounding box is null');
-    }
-
-    if (!paragraphBox) {
-      throw new Error('Paragraph bounding box is null');
-    }
+    const paragraphBox = await getRequiredBoundingBox(paragraph);
 
     const toolbarRight = toolbarBox.x + toolbarBox.width;
     const paragraphRight = paragraphBox.x + paragraphBox.width;

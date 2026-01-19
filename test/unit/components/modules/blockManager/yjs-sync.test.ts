@@ -378,7 +378,10 @@ describe('BlockYjsSync', () => {
   });
 
   describe('Yjs sync event handling', () => {
-    let callback: (event: BlockChangeEvent) => void;
+    // Initialize callback with a no-op function to avoid undefined issues
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
 
     beforeEach(() => {
       // Capture the callback passed to onBlocksChanged
@@ -434,7 +437,7 @@ describe('BlockYjsSync', () => {
 
         mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
 
-        callback!({ blockId: 'test-block', type: 'update', origin: 'undo' });
+        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
 
         // Wait for the async setData call
         await new Promise(resolve => setTimeout(resolve, 0));
@@ -446,7 +449,7 @@ describe('BlockYjsSync', () => {
         mockGetBlockById(mockYjsManager).mockReturnValue(undefined);
 
         expect(() => {
-          callback!({ blockId: 'unknown', type: 'update', origin: 'undo' });
+          callback({ blockId: 'unknown', type: 'update', origin: 'undo' });
         }).not.toThrow();
       });
 
@@ -454,7 +457,7 @@ describe('BlockYjsSync', () => {
         const block = createMockBlock({ id: 'test-block' });
         mockGetBlockById(mockYjsManager).mockReturnValue(undefined);
 
-        callback!({ blockId: 'test-block', type: 'update', origin: 'undo' });
+        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
 
         expect(block.setData).not.toHaveBeenCalled();
       });
@@ -483,8 +486,8 @@ describe('BlockYjsSync', () => {
         });
 
         // Trigger multiple move events
-        callback!({ blockId: 'block-1', type: 'move', origin: 'undo' });
-        callback!({ blockId: 'block-2', type: 'move', origin: 'undo' });
+        callback({ blockId: 'block-1', type: 'move', origin: 'undo' });
+        callback({ blockId: 'block-2', type: 'move', origin: 'undo' });
 
         // Moves should be batched
       });
@@ -508,7 +511,7 @@ describe('BlockYjsSync', () => {
           createMockBlock({ id: 'new-block' })
         );
 
-        callback!({ blockId: 'new-block', type: 'add', origin: 'undo' });
+        callback({ blockId: 'new-block', type: 'add', origin: 'undo' });
 
         expect(composeBlockSpy).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -539,7 +542,7 @@ describe('BlockYjsSync', () => {
           createMockYMap({ type: 'paragraph' })
         );
 
-        callback!({ blockId: 'existing', type: 'add', origin: 'undo' });
+        callback({ blockId: 'existing', type: 'add', origin: 'undo' });
 
         expect(composeBlockSpy).not.toHaveBeenCalled();
       });
@@ -564,7 +567,7 @@ describe('BlockYjsSync', () => {
         );
         yjsSync.subscribe();
 
-        callback!({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
+        callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
 
         expect(testBlocksStore.length).toBe(0);
       });
@@ -586,7 +589,7 @@ describe('BlockYjsSync', () => {
         );
         yjsSync.subscribe();
 
-        callback!({ blockId: 'last', type: 'remove', origin: 'undo' });
+        callback({ blockId: 'last', type: 'remove', origin: 'undo' });
 
         expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true);
       });
@@ -594,7 +597,10 @@ describe('BlockYjsSync', () => {
   });
 
   describe('origin filtering', () => {
-    let callback: (event: BlockChangeEvent) => void;
+    // Initialize callback with a no-op function to avoid undefined issues
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
 
     beforeEach(() => {
       mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
@@ -613,7 +619,7 @@ describe('BlockYjsSync', () => {
       mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
 
       expect(() => {
-        callback!({ blockId: 'test', type: 'update', origin: 'undo' });
+        callback({ blockId: 'test', type: 'update', origin: 'undo' });
       }).not.toThrow();
     });
 
@@ -625,7 +631,7 @@ describe('BlockYjsSync', () => {
       mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
 
       expect(() => {
-        callback!({ blockId: 'test', type: 'update', origin: 'redo' });
+        callback({ blockId: 'test', type: 'update', origin: 'redo' });
       }).not.toThrow();
     });
   });

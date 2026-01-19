@@ -9,12 +9,31 @@ import { BlockChanged } from '../../../../src/components/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { Block } from '../../../../src/components/block';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
+import type { InlineToolAdapter } from '../../../../src/components/tools/inline';
+import type { BlockTuneAdapter } from '../../../../src/components/tools/tune';
 import { ToolsCollection } from '../../../../src/components/tools/collection';
 import { ToolType } from '@/types/tools/adapters/tool-type';
+import type { BlockToolConstructable } from '@/types/tools/block-tool';
+import type { ConversionConfig } from '@/types/configs/conversion-config';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
+import type { BlockMutationEventDetail } from '../../../../types/events/block/Base';
+
+interface BlockManagerInternalAccess {
+  factory: {
+    composeBlock(): Block;
+  };
+  operations: {
+    replace(block: Block, tool: string, data: Record<string, unknown>): Block;
+  };
+  blockDidMutated<Type extends string>(
+    mutationType: Type,
+    block: Block,
+    detailData: Record<string, unknown>
+  ): Block;
+}
 
 type BlockManagerContext = {
   blockManager: BlockManager;
@@ -34,26 +53,30 @@ type CreateBlockManagerOptions = {
 const createMockToolAdapter = (options: {
   name?: string;
   sanitizeConfig?: Record<string, boolean>;
-  conversionConfig?: Record<string, unknown>;
+  conversionConfig?: ConversionConfig;
   settings?: Record<string, unknown>;
 } = {}): BlockToolAdapter => {
   const mockTool = {
     render: vi.fn(() => document.createElement('div')),
     save: vi.fn(() => ({})),
     rendered: () => {},
-  } as any;
+  };
 
   const adapter = {
     type: ToolType.Block,
     name: options.name ?? 'paragraph',
-    constructable: () => mockTool,
+    constructable: class {
+      render = mockTool.render;
+      save = mockTool.save;
+      rendered = mockTool.rendered;
+    } as unknown as BlockToolConstructable,
     create: vi.fn(() => mockTool),
     sanitizeConfig: options.sanitizeConfig ?? {},
-    conversionConfig: options.conversionConfig ?? {},
+    conversionConfig: options.conversionConfig,
     settings: options.settings ?? {},
     toolbox: undefined,
-    tunes: new ToolsCollection<any>(),
-    inlineTools: new ToolsCollection<any>(),
+    tunes: new ToolsCollection<BlockTuneAdapter>(),
+    inlineTools: new ToolsCollection<InlineToolAdapter>(),
   } as unknown as BlockToolAdapter;
 
   return adapter;
@@ -67,7 +90,7 @@ const createMockToolsCollection = (toolNames: string[] = ['paragraph']): ToolsCo
 
   for (const name of toolNames) {
     const adapter = createMockToolAdapter({ name });
-    (collection as any).set(name, adapter);
+    collection.set(name, adapter);
   }
 
   return collection;
@@ -229,7 +252,7 @@ const createBlockManager = (
 
   // Spy on factory.composeBlock to intercept block creation
   const composeBlockSpy = vi.spyOn(
-    (blockManager as any).factory,
+    (blockManager as unknown as BlockManagerInternalAccess).factory,
     'composeBlock'
   );
 
@@ -268,13 +291,13 @@ describe('BlockManager', () => {
     // Verify block-removed event was dispatched
     const removedCalls = emitSpy.mock.calls.filter((call: unknown[]) => call[0] === BlockChanged);
     expect(removedCalls.some((call: unknown[]) => {
-      const payload = call[1] as { event: CustomEvent };
+      const payload = call[1] as { event: CustomEvent<BlockMutationEventDetail> };
       return payload.event.type === BlockRemovedMutationType &&
              (payload.event.detail).target?.id === existingBlock.id;
     })).toBe(true);
     // Verify block-added event was dispatched
     expect(removedCalls.some((call: unknown[]) => {
-      const payload = call[1] as { event: CustomEvent };
+      const payload = call[1] as { event: CustomEvent<BlockMutationEventDetail> };
       return payload.event.type === BlockAddedMutationType &&
              (payload.event.detail).target?.id === newBlock.id;
     })).toBe(true);
@@ -300,7 +323,7 @@ describe('BlockManager', () => {
     // Verify block-removed event was dispatched
     const removedCalls = emitSpy.mock.calls.filter((call: unknown[]) => call[0] === BlockChanged);
     expect(removedCalls.some((call: unknown[]) => {
-      const payload = call[1] as { event: CustomEvent };
+      const payload = call[1] as { event: CustomEvent<BlockMutationEventDetail> };
       return payload.event.type === BlockRemovedMutationType &&
              (payload.event.detail).target?.id === firstBlock.id;
     })).toBe(true);
@@ -343,7 +366,7 @@ describe('BlockManager', () => {
     // Verify block-moved event was dispatched
     const movedCalls = emitSpy.mock.calls.filter((call: unknown[]) => call[0] === BlockChanged);
     expect(movedCalls.some((call: unknown[]) => {
-      const payload = call[1] as { event: CustomEvent };
+      const payload = call[1] as { event: CustomEvent<BlockMutationEventDetail> };
       return payload.event.type === BlockMovedMutationType &&
              (payload.event.detail).target?.id === secondBlock.id;
     })).toBe(true);
@@ -372,7 +395,7 @@ describe('BlockManager', () => {
     // Verify block-changed event was dispatched
     const changedCalls = emitSpy.mock.calls.filter((call: unknown[]) => call[0] === BlockChanged);
     expect(changedCalls.some((call: unknown[]) => {
-      const payload = call[1] as { event: CustomEvent };
+      const payload = call[1] as { event: CustomEvent<BlockMutationEventDetail> };
       return payload.event.type === BlockChangedMutationType &&
              (payload.event.detail).target?.id === newBlock.id;
     })).toBe(true);
@@ -414,7 +437,7 @@ describe('BlockManager', () => {
     // Verify block-added event was dispatched
     const addedCalls = emitSpy.mock.calls.filter((call: unknown[]) => call[0] === BlockChanged);
     expect(addedCalls.some((call: unknown[]) => {
-      const payload = call[1] as { event: CustomEvent };
+      const payload = call[1] as { event: CustomEvent<BlockMutationEventDetail> };
       return payload.event.type === BlockAddedMutationType &&
              (payload.event.detail).target?.id === defaultBlock.id;
     })).toBe(true);
@@ -590,18 +613,17 @@ describe('BlockManager', () => {
       name: 'header',
       sanitizeConfig: { p: true },
       settings: { level: 2 },
+      conversionConfig: {
+        import: (text: string, config?: Record<string, unknown>) => ({
+          text: text.toUpperCase(),
+          level: (config?.level as number) ?? 1,
+        }),
+      },
     });
-    // Add conversionConfig to the adapter
-    (headerAdapter as any).conversionConfig = {
-      import: (text: string, settings?: { level?: number }) => ({
-        text: text.toUpperCase(),
-        level: settings?.level ?? 1,
-      }),
-    };
 
     const headerToolsCollection = createMockToolsCollection(['paragraph', 'header']);
     // Override the header tool with our custom adapter
-    (headerToolsCollection as any).set('header', headerAdapter);
+    headerToolsCollection.set('header', headerAdapter);
 
     const { blockManager } = createBlockManager({
       initialBlocks: [ blockToConvert ],
@@ -615,17 +637,20 @@ describe('BlockManager', () => {
     const replacedBlock = createBlockStub({ id: 'header',
       name: 'header' });
     // Spy on operations.replace instead of blockManager.replace
-    const operationsReplaceSpy = vi.spyOn((blockManager as any).operations, 'replace').mockReturnValue(replacedBlock);
+    const operationsReplaceSpy = vi.spyOn(
+      (blockManager as unknown as BlockManagerInternalAccess).operations,
+      'replace'
+    ).mockReturnValue(replacedBlock);
 
     const result = await blockManager.convert(blockToConvert, 'header', { level: 4 });
 
     // Verify replace was called (without checking deep equality which causes pretty-format issues)
     expect(operationsReplaceSpy).toHaveBeenCalledTimes(1);
-    const callArgs = operationsReplaceSpy.mock.calls[0];
+    const callArgs = operationsReplaceSpy.mock.calls[0] as [Block, string, Record<string, unknown>];
     expect(callArgs[0]).toBe(blockToConvert);
     expect(callArgs[1]).toBe('header');
-    expect((callArgs[2] as Record<string, unknown>).text).toBe('<P>CONVERTED</P>');
-    expect((callArgs[2] as Record<string, unknown>).level).toBe(4);
+    expect(callArgs[2].text).toBe('<P>CONVERTED</P>');
+    expect(callArgs[2].level).toBe(4);
     expect(result).toBe(replacedBlock);
   });
 
@@ -756,7 +781,7 @@ describe('BlockManager', () => {
     const emitSpy = vi.spyOn(_eventsDispatcher, 'emit');
 
     const detail = { index: 0 };
-    const result = (blockManager as any).blockDidMutated(
+    const result = (blockManager as unknown as BlockManagerInternalAccess).blockDidMutated(
       BlockAddedMutationType,
       block,
       detail
@@ -765,7 +790,7 @@ describe('BlockManager', () => {
     expect(result).toBe(block);
     expect(emitSpy).toHaveBeenCalledTimes(1);
 
-    const [eventName, payload] = emitSpy.mock.calls[0] as [string, { event: CustomEvent }];
+    const [eventName, payload] = emitSpy.mock.calls[0] as [string, { event: CustomEvent<BlockMutationEventDetail> }];
 
     expect(eventName).toBe(BlockChanged);
     expect(payload.event).toBeInstanceOf(CustomEvent);

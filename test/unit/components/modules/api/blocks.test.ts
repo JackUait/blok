@@ -462,7 +462,7 @@ describe('BlocksAPI', () => {
 
       expect(blocksApi.getBlockByElement(element)).toBeUndefined();
       expect(logSpy).toHaveBeenCalledWith(
-        'There is no block corresponding to element `' + element + '`',
+        `There is no block corresponding to element <${element.tagName.toLowerCase()}>`,
         'warn'
       );
 
@@ -608,7 +608,7 @@ describe('BlocksAPI', () => {
         replace: false,
       });
       expect(blockAPIConstructorSpy).toHaveBeenCalled();
-      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ id: 'custom' }) });
+      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ id: 'custom' }) as unknown });
     });
 
     it('uses default block type when insert arguments are omitted', () => {
@@ -699,14 +699,14 @@ describe('BlocksAPI', () => {
       const { blocksApi, blockManager } = createBlocksApi({ blocks: [ block ] });
       const newData: Partial<BlockToolData> = { text: 'updated' };
 
-      blockManager.update.mockImplementationOnce(async (current, data?: Partial<BlockToolData>, _tunes?: Record<string, BlockTuneData>) => {
+      blockManager.update.mockImplementationOnce(async (current: BlockStub, data?: Partial<BlockToolData>, _tunes?: Record<string, BlockTuneData>) => {
         return {
           ...current,
           data: {
             ...current.data,
             ...data,
           },
-        };
+        } as BlockStub;
       });
 
       const result = await blocksApi.update('to-update', newData);
@@ -714,7 +714,7 @@ describe('BlocksAPI', () => {
       expect(blockManager.getBlockById).toHaveBeenCalledWith('to-update');
       expect(blockManager.update).toHaveBeenCalledWith(block, newData, undefined);
       expect(blockAPIConstructorSpy).toHaveBeenCalled();
-      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ id: 'to-update' }) });
+      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ id: 'to-update' }) as unknown });
     });
 
     it('throws when updating block that does not exist', async () => {
@@ -743,7 +743,7 @@ describe('BlocksAPI', () => {
         undefined
       );
       expect(blockAPIConstructorSpy).toHaveBeenCalled();
-      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ name: 'header' }) });
+      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ name: 'header' }) as unknown });
     });
 
     it('throws when conversion target tool lacks conversionConfig', async () => {
@@ -791,7 +791,7 @@ describe('BlocksAPI', () => {
         1
       );
       expect(blockAPIConstructorSpy).toHaveBeenCalled();
-      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ name: 'list' }) });
+      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ name: 'list' }) as unknown });
     });
 
     it('throws when splitBlock receives unknown block id', () => {

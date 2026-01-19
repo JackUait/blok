@@ -27,15 +27,15 @@ describe('list-helpers', () => {
       expect(result).toBe(contentEl);
     });
 
-    it('returns div with flex-1 class for non-checklist styles', () => {
+    it('returns content container for non-checklist styles', () => {
       const element = document.createElement('div');
-      const flexDiv = document.createElement('div');
-      flexDiv.className = 'flex-1';
-      element.appendChild(flexDiv);
+      const contentContainer = document.createElement('div');
+      contentContainer.setAttribute('data-blok-testid', 'list-content-container');
+      element.appendChild(contentContainer);
 
       const result = getContentElement(element, 'unordered');
 
-      expect(result).toBe(flexDiv);
+      expect(result).toBe(contentContainer);
     });
 
     it('returns null when contenteditable not found for checklist', () => {
@@ -48,10 +48,10 @@ describe('list-helpers', () => {
       expect(result).toBeNull();
     });
 
-    it('returns null when flex-1 div not found for non-checklist', () => {
+    it('returns null when content container not found for non-checklist', () => {
       const element = document.createElement('div');
       const regularDiv = document.createElement('div');
-      regularDiv.className = 'other-class';
+      regularDiv.setAttribute('data-blok-testid', 'some-other-id');
       element.appendChild(regularDiv);
 
       const result = getContentElement(element, 'unordered');
@@ -61,13 +61,13 @@ describe('list-helpers', () => {
 
     it('handles ordered list style', () => {
       const element = document.createElement('div');
-      const flexDiv = document.createElement('div');
-      flexDiv.className = 'flex-1';
-      element.appendChild(flexDiv);
+      const contentContainer = document.createElement('div');
+      contentContainer.setAttribute('data-blok-testid', 'list-content-container');
+      element.appendChild(contentContainer);
 
       const result = getContentElement(element, 'ordered');
 
-      expect(result).toBe(flexDiv);
+      expect(result).toBe(contentContainer);
     });
   });
 
@@ -136,7 +136,7 @@ describe('list-helpers', () => {
 
       adjustDepthTo(element, data, 2);
 
-      expect(element.getAttribute('data-list-depth')).toBe('2');
+      expect(element).toHaveAttribute('data-list-depth', '2');
     });
 
     it('does not throw when element is null', () => {
@@ -223,7 +223,7 @@ describe('list-helpers', () => {
 
       adjustDepthTo(element, data, -1);
 
-      expect(element.getAttribute('data-list-depth')).toBe('-1');
+      expect(element).toHaveAttribute('data-list-depth', '-1');
       // marginLeft is cleared (set to empty string) when newDepth <= 0
       expect(listItem.style.marginLeft).toBe('');
     });

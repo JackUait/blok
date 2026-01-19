@@ -1,9 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderListItem } from '../../../../src/tools/list/list-lifecycle';
+import { describe, it, expect, vi, type Mock } from 'vitest';
+import { renderListItem, type RenderContext } from '../../../../src/tools/list/list-lifecycle';
 import type { ListItemData } from '../../../../src/tools/list/types';
 
 describe('list-lifecycle', () => {
-  const createMockContext = (overrides: Partial<ListItemData> = {}) => {
+  const createMockContext = (
+    overrides: Partial<ListItemData> = {},
+    extraOverrides: Partial<Pick<RenderContext, 'readOnly' | 'placeholder' | 'itemColor' | 'itemSize'>> = {}
+  ): RenderContext => {
     const data: ListItemData = {
       text: 'Test item',
       style: 'unordered',
@@ -18,10 +21,10 @@ describe('list-lifecycle', () => {
 
     return {
       data,
-      readOnly: false,
-      placeholder: 'List item',
-      itemColor: undefined,
-      itemSize: undefined,
+      readOnly: extraOverrides.readOnly ?? false,
+      placeholder: extraOverrides.placeholder ?? 'List item',
+      itemColor: extraOverrides.itemColor,
+      itemSize: extraOverrides.itemSize,
       setupItemPlaceholder,
       onCheckboxChange,
       keydownHandler,
@@ -33,17 +36,22 @@ describe('list-lifecycle', () => {
     const result = renderListItem(context);
 
     expect(result).toBeInstanceOf(HTMLElement);
-    expect(result.getAttribute('data-blok-tool')).toBe('list');
+    expect(result).toHaveAttribute('data-blok-tool', 'list');
   });
 
-  it('calls setupItemPlaceholder on content element', () => {
+  it('passes content element to setupItemPlaceholder', () => {
     const context = createMockContext();
-    const result = renderListItem(context);
+    renderListItem(context);
 
-    // The content element is passed to setupItemPlaceholder
-    expect(context.setupItemPlaceholder).toHaveBeenCalled();
-    const calledWithElement = context.setupItemPlaceholder.mock.calls[0][0] as HTMLElement;
-    expect(calledWithElement.querySelector('[data-blok-testid="list-content-container"]')).not.toBeNull();
+    // Verify setupItemPlaceholder was called with the actual content element
+    const mockFn = context.setupItemPlaceholder as Mock;
+    expect(mockFn).toHaveBeenCalledTimes(1);
+    const contentElement = mockFn.mock.calls[0][0] as HTMLElement;
+
+    // Verify observable behavior: the element has the expected structure
+    expect(contentElement).toBeInstanceOf(HTMLElement);
+    expect(contentElement).toHaveAttribute('data-blok-testid', 'list-content-container');
+    expect(contentElement.contentEditable).toBe('true');
   });
 
   it('attaches keydown handler to wrapper', () => {
@@ -83,9 +91,8 @@ describe('list-lifecycle', () => {
     const checkbox = result.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(checkbox).toBeInstanceOf(HTMLInputElement);
 
-    // Simulate checkbox change
-    checkbox.checked = true;
-    checkbox.dispatchEvent(new Event('change'));
+    // Simulate checkbox change via user interaction
+    checkbox.click();
 
     expect(onCheckboxChange).toHaveBeenCalledWith(true, expect.any(HTMLElement));
   });
@@ -103,8 +110,7 @@ describe('list-lifecycle', () => {
     expect(checkbox.disabled).toBe(true);
 
     // Simulate checkbox change - listener should not be attached
-    checkbox.checked = true;
-    checkbox.dispatchEvent(new Event('change'));
+    checkbox.click();
 
     expect(onCheckboxChange).not.toHaveBeenCalled();
   });
@@ -113,40 +119,39 @@ describe('list-lifecycle', () => {
     const context = createMockContext({ style: 'unordered' });
     const result = renderListItem(context);
 
-    expect(result.getAttribute('data-list-style')).toBe('unordered');
+    expect(result).toHaveAttribute('data-list-style', 'unordered');
   });
 
   it('sets correct style attribute for ordered list', () => {
     const context = createMockContext({ style: 'ordered' });
     const result = renderListItem(context);
 
-    expect(result.getAttribute('data-list-style')).toBe('ordered');
+    expect(result).toHaveAttribute('data-list-style', 'ordered');
   });
 
   it('sets correct style attribute for checklist', () => {
     const context = createMockContext({ style: 'checklist' });
     const result = renderListItem(context);
 
-    expect(result.getAttribute('data-list-style')).toBe('checklist');
+    expect(result).toHaveAttribute('data-list-style', 'checklist');
   });
 
   it('sets depth attribute when depth is provided', () => {
     const context = createMockContext({ depth: 2 });
     const result = renderListItem(context);
 
-    expect(result.getAttribute('data-list-depth')).toBe('2');
+    expect(result).toHaveAttribute('data-list-depth', '2');
   });
 
   it('does not set depth attribute when depth is 0', () => {
     const context = createMockContext({ depth: 0 });
     const result = renderListItem(context);
 
-    expect(result.getAttribute('data-list-depth')).toBe('0');
+    expect(result).toHaveAttribute('data-list-depth', '0');
   });
 
   it('passes item color to buildListItem', () => {
-    const context = createMockContext();
-    context.itemColor = '#ff0000';
+    const context = createMockContext({}, { itemColor: '#ff0000' });
 
     const result = renderListItem(context);
 
@@ -156,8 +161,7 @@ describe('list-lifecycle', () => {
   });
 
   it('passes item size to buildListItem', () => {
-    const context = createMockContext();
-    context.itemSize = '18px';
+    const context = createMockContext({}, { itemSize: '18px' });
 
     const result = renderListItem(context);
 
@@ -260,8 +264,7 @@ describe('list-lifecycle', () => {
     const result = renderListItem(context);
 
     const checkbox = result.querySelector('input[type="checkbox"]') as HTMLInputElement;
-    checkbox.checked = true;
-    checkbox.dispatchEvent(new Event('change'));
+    checkbox.click();
 
     expect(onCheckboxChange).toHaveBeenCalledWith(
       true,

@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(npm run:*)",
+      "Bash(lsof:*)",
+      "Bash(yarn lint:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"Run $i:\")",
+      "Bash(done)",
+      "Bash(yarn test:*)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git stash:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-response.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

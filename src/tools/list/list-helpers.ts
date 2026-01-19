@@ -23,7 +23,7 @@ export const getContentElement = (
     return contentEditable instanceof HTMLElement ? contentEditable : null;
   }
 
-  const contentContainer = element.querySelector('div.flex-1');
+  const contentContainer = element.querySelector('[data-blok-testid="list-content-container"]');
   return contentContainer instanceof HTMLElement ? contentContainer : null;
 }
 

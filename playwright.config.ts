@@ -95,6 +95,9 @@ const LOGIC_TESTS = [
   // UI utilities (generic components)
   '**/utils/**/*.spec.ts',
 
+  // Block component tests
+  '**/block/**/*.spec.ts',
+
   // Editor state and configuration
   '**/error-handling.spec.ts',
   '**/i18n.spec.ts',

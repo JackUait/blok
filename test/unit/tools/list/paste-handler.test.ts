@@ -4,7 +4,6 @@ import {
   detectStyleFromPastedContent,
   extractPastedContent,
 } from '../../../../src/tools/list/paste-handler';
-import type { ListItemStyle } from '../../../../src/tools/list/types';
 
 describe('paste-handler', () => {
   describe('isPasteEventHTMLElement', () => {

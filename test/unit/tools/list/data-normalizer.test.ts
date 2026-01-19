@@ -31,87 +31,87 @@ describe('data-normalizer', () => {
     });
 
     it('preserves provided text', () => {
-      const data: Partial<ListItemData> = { text: 'Hello world' };
+      const data = { text: 'Hello world' };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.text).toBe('Hello world');
     });
 
     it('defaults to empty string when text is not provided', () => {
-      const data: Partial<ListItemData> = { style: 'unordered' };
+      const data = { style: 'unordered' as const };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.text).toBe('');
     });
 
     it('preserves provided style', () => {
-      const data: Partial<ListItemData> = { style: 'checklist' };
+      const data = { style: 'checklist' as const };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.style).toBe('checklist');
     });
 
     it('preserves provided checked state', () => {
-      const data: Partial<ListItemData> = { checked: true };
+      const data = { checked: true };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.checked).toBe(true);
     });
 
     it('defaults checked to false when not provided', () => {
-      const data: Partial<ListItemData> = { text: 'Item' };
+      const data = { text: 'Item' };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.checked).toBe(false);
     });
 
     it('converts checked to boolean', () => {
-      const data1 = { checked: 1 } as unknown as ListItemData;
+      const data1 = { checked: 1 };
       const result1 = normalizeListItemData(data1, defaultSettings);
       expect(result1.checked).toBe(true);
 
-      const data2 = { checked: 0 } as unknown as ListItemData;
+      const data2 = { checked: 0 };
       const result2 = normalizeListItemData(data2, defaultSettings);
       expect(result2.checked).toBe(false);
     });
 
     it('preserves provided depth', () => {
-      const data: Partial<ListItemData> = { depth: 2 };
+      const data = { depth: 2 };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.depth).toBe(2);
     });
 
     it('defaults depth to 0 when not provided', () => {
-      const data: Partial<ListItemData> = { text: 'Item' };
+      const data = { text: 'Item' };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.depth).toBe(0);
     });
 
     it('uses nullish coalescing for depth (undefined becomes 0)', () => {
-      const data: Partial<ListItemData> = { depth: undefined };
+      const data = { depth: undefined };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.depth).toBe(0);
     });
 
     it('includes start value when not equal to 1', () => {
-      const data: Partial<ListItemData> = { start: 5 };
+      const data = { start: 5 };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.start).toBe(5);
     });
 
     it('omits start value when equal to 1', () => {
-      const data: Partial<ListItemData> = { start: 1 };
+      const data = { start: 1 };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.start).toBeUndefined();
     });
 
     it('omits start value when not provided', () => {
-      const data: Partial<ListItemData> = { text: 'Item' };
+      const data = { text: 'Item' };
       const result = normalizeListItemData(data, defaultSettings);
 
       expect(result.start).toBeUndefined();
@@ -121,7 +121,7 @@ describe('data-normalizer', () => {
       it('extracts text from first item in legacy items array', () => {
         const legacyData = {
           items: [{ content: 'First item' }, { content: 'Second item' }],
-        } as unknown as ListItemData;
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -131,8 +131,8 @@ describe('data-normalizer', () => {
       it('extracts checked state from first item in legacy items array', () => {
         const legacyData = {
           items: [{ content: 'Task', checked: true }],
-          style: 'checklist',
-        } as unknown as ListItemData;
+          style: 'checklist' as const,
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -142,8 +142,8 @@ describe('data-normalizer', () => {
       it('defaults checked to false when not in legacy item', () => {
         const legacyData = {
           items: [{ content: 'Task' }],
-          style: 'checklist',
-        } as unknown as ListItemData;
+          style: 'checklist' as const,
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -153,8 +153,8 @@ describe('data-normalizer', () => {
       it('preserves style from legacy format', () => {
         const legacyData = {
           items: [{ content: 'Item' }],
-          style: 'ordered',
-        } as unknown as ListItemData;
+          style: 'ordered' as const,
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -164,7 +164,7 @@ describe('data-normalizer', () => {
       it('uses default style when legacy format has no style', () => {
         const legacyData = {
           items: [{ content: 'Item' }],
-        } as unknown as ListItemData;
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -175,7 +175,7 @@ describe('data-normalizer', () => {
         const legacyData = {
           items: [{ content: 'Item' }],
           start: 10,
-        } as unknown as ListItemData;
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -186,7 +186,7 @@ describe('data-normalizer', () => {
         const legacyData = {
           items: [{ content: 'Item' }],
           start: 1,
-        } as unknown as ListItemData;
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -196,7 +196,7 @@ describe('data-normalizer', () => {
       it('handles empty legacy items array', () => {
         const legacyData = {
           items: [],
-        } as unknown as ListItemData;
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -206,7 +206,7 @@ describe('data-normalizer', () => {
       it('handles legacy item with no content property', () => {
         const legacyData = {
           items: [{}],
-        } as unknown as ListItemData;
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -216,7 +216,7 @@ describe('data-normalizer', () => {
       it('sets depth to 0 for legacy format', () => {
         const legacyData = {
           items: [{ content: 'Item' }],
-        } as unknown as ListItemData;
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -226,7 +226,7 @@ describe('data-normalizer', () => {
       it('converts checked to boolean in legacy format', () => {
         const legacyData = {
           items: [{ content: 'Task', checked: 'true' }],
-        } as unknown as ListItemData;
+        };
 
         const result = normalizeListItemData(legacyData, defaultSettings);
 
@@ -236,7 +236,7 @@ describe('data-normalizer', () => {
 
     describe('edge cases', () => {
       it('handles null input', () => {
-        const result = normalizeListItemData(null as unknown as ListItemData, defaultSettings);
+        const result = normalizeListItemData(null, defaultSettings);
 
         expect(result).toEqual({
           text: '',
@@ -247,7 +247,7 @@ describe('data-normalizer', () => {
       });
 
       it('handles undefined input', () => {
-        const result = normalizeListItemData(undefined as unknown as ListItemData, defaultSettings);
+        const result = normalizeListItemData(undefined, defaultSettings);
 
         expect(result).toEqual({
           text: '',
@@ -258,7 +258,7 @@ describe('data-normalizer', () => {
       });
 
       it('handles non-object input', () => {
-        const result = normalizeListItemData('string' as unknown as ListItemData, defaultSettings);
+        const result = normalizeListItemData('string', defaultSettings);
 
         expect(result).toEqual({
           text: '',
@@ -289,14 +289,14 @@ describe('data-normalizer', () => {
       });
 
       it('handles zero as start value', () => {
-        const data: Partial<ListItemData> = { start: 0 };
+        const data = { start: 0 };
         const result = normalizeListItemData(data, defaultSettings);
 
         expect(result.start).toBe(0);
       });
 
       it('handles negative depth', () => {
-        const data: Partial<ListItemData> = { depth: -1 };
+        const data = { depth: -1 };
         const result = normalizeListItemData(data, defaultSettings);
 
         expect(result.depth).toBe(-1);

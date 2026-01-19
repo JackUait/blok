@@ -274,8 +274,16 @@ describe('ListMarkerCalculator', () => {
   });
 
   describe('getGroupStartValue', () => {
-    it('returns 1 for first item (siblingIndex 0)', () => {
+    it('reads start value from DOM for first item (siblingIndex 0)', () => {
       const blocks = [createMockBlock({ start: 5 })];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      expect(calc.getGroupStartValue(0, 0, 0, 'ordered')).toBe(5);
+    });
+
+    it('returns 1 when start value is 1 (not stored in DOM)', () => {
+      const blocks = [createMockBlock({ start: 1 })];
       const blocksAPI = createMockBlocksAPI(blocks);
       const calc = new ListMarkerCalculator(blocksAPI);
 

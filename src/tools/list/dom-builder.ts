@@ -253,7 +253,6 @@ export const createMarker = (style: ListItemStyle, depth: number): HTMLElement =
   const marker = document.createElement('span');
   marker.className = 'flex-shrink-0 select-none';
   marker.setAttribute('aria-hidden', 'true');
-  marker.setAttribute('data-list-style', style);
   marker.contentEditable = 'false';
 
   if (style === 'ordered') {

@@ -249,7 +249,6 @@ describe('dom-builder', () => {
       const marker = createMarker('unordered', 0);
 
       expect(marker).toHaveTextContent('•');
-      expect(marker).toHaveAttribute('data-list-style', 'unordered');
       expect(marker).toHaveAttribute('aria-hidden', 'true');
       expect(marker.contentEditable).toBe('false');
     });
@@ -258,7 +257,7 @@ describe('dom-builder', () => {
       const marker = createMarker('ordered', 0);
 
       expect(marker).toHaveTextContent('1.');
-      expect(marker).toHaveAttribute('data-list-style', 'ordered');
+      expect(marker).toHaveAttribute('aria-hidden', 'true');
       expect(marker.style.paddingRight).toBe('11px');
       expect(marker.style.minWidth).toBe('fit-content');
     });

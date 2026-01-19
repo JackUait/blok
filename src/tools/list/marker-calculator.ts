@@ -125,7 +125,8 @@ export class ListMarkerCalculator {
    */
   getGroupStartValue(blockIndex: number, depth: number, siblingIndex: number, style: ListItemStyle): number {
     if (siblingIndex === 0) {
-      return 1; // Caller should provide their own start value
+      // When we're the first item in the group, read our own start value from the DOM
+      return this.getBlockStartValue(blockIndex);
     }
 
     const firstItemIndex = this.findFirstItemIndex(blockIndex - 1, depth, siblingIndex, style);

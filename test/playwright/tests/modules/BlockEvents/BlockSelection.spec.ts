@@ -58,6 +58,60 @@ const getBlockWrapper = (page: Page, index: number): ReturnType<Page['locator']>
   return page.locator(`:nth-match(${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"], ${index + 1})`);
 };
 
+/**
+ * Place caret at the start of a contenteditable element
+ */
+const placeCaretAtStart = async (locator: ReturnType<Page['locator']>): Promise<void> => {
+  await locator.evaluate((element) => {
+    const doc = element.ownerDocument;
+    const selection = doc?.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
+    const range = doc.createRange();
+    const walker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const firstTextNode = walker.nextNode() as Text | null;
+
+    if (firstTextNode) {
+      range.setStart(firstTextNode, 0);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  });
+};
+
+/**
+ * Place caret at the end of a contenteditable element
+ */
+const placeCaretAtEnd = async (locator: ReturnType<Page['locator']>): Promise<void> => {
+  await locator.evaluate((element) => {
+    const doc = element.ownerDocument;
+    const selection = doc?.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
+    const range = doc.createRange();
+    const walker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let lastTextNode: Text | null = null;
+
+    while (walker.nextNode()) {
+      lastTextNode = walker.currentNode as Text;
+    }
+
+    if (lastTextNode) {
+      range.setStart(lastTextNode, lastTextNode.length ?? 0);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  });
+};
+
 test.describe('block selection keyboard shortcuts', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -76,6 +130,7 @@ test.describe('block selection keyboard shortcuts', () => {
       const firstBlockInput = firstBlock.locator('[contenteditable="true"]');
 
       await firstBlockInput.click();
+      await placeCaretAtEnd(firstBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
@@ -97,6 +152,7 @@ test.describe('block selection keyboard shortcuts', () => {
       const firstBlockInput = firstBlock.locator('[contenteditable="true"]');
 
       await firstBlockInput.click();
+      await placeCaretAtEnd(firstBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.press('ArrowDown');
@@ -118,6 +174,7 @@ test.describe('block selection keyboard shortcuts', () => {
       const lastBlockInput = lastBlock.locator('[contenteditable="true"]');
 
       await lastBlockInput.click();
+      await placeCaretAtStart(lastBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowUp');
       await page.keyboard.up('Shift');
@@ -139,6 +196,7 @@ test.describe('block selection keyboard shortcuts', () => {
       const lastBlockInput = lastBlock.locator('[contenteditable="true"]');
 
       await lastBlockInput.click();
+      await placeCaretAtStart(lastBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowUp');
       await page.keyboard.press('ArrowUp');
@@ -161,6 +219,7 @@ test.describe('block selection keyboard shortcuts', () => {
 
       // Select two blocks (Second and Third)
       await secondBlockInput.click();
+      await placeCaretAtEnd(secondBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
@@ -182,6 +241,7 @@ test.describe('block selection keyboard shortcuts', () => {
 
       // Select two blocks (Second and Third)
       await secondBlockInput.click();
+      await placeCaretAtEnd(secondBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
@@ -202,6 +262,7 @@ test.describe('block selection keyboard shortcuts', () => {
       const firstBlockInput = firstBlock.locator('[contenteditable="true"]');
 
       await firstBlockInput.click();
+      await placeCaretAtEnd(firstBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
@@ -225,6 +286,7 @@ test.describe('block selection keyboard shortcuts', () => {
 
       // Select two blocks
       await secondBlockInput.click();
+      await placeCaretAtEnd(secondBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
@@ -253,6 +315,7 @@ test.describe('block selection keyboard shortcuts', () => {
 
       // Select two blocks
       await secondBlockInput.click();
+      await placeCaretAtEnd(secondBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
@@ -276,6 +339,7 @@ test.describe('block selection keyboard shortcuts', () => {
 
       // Select two blocks
       await secondBlockInput.click();
+      await placeCaretAtEnd(secondBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
@@ -301,6 +365,7 @@ test.describe('block selection keyboard shortcuts', () => {
 
       // Select two blocks
       await secondBlockInput.click();
+      await placeCaretAtEnd(secondBlockInput);
       await page.keyboard.down('Shift');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');

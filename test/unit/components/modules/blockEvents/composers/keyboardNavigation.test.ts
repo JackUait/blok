@@ -4,6 +4,7 @@ import type { BlokModules } from '../../../../../../src/types-internal/blok-modu
 import type { Block } from '../../../../../../src/components/block';
 import { keyCodes } from '../../../../../../src/components/utils';
 import * as caretUtils from '../../../../../../src/components/utils/caret/index';
+import { SelectionUtils } from '../../../../../../src/components/selection';
 
 const createKeyboardEvent = (options: Partial<KeyboardEvent> = {}): KeyboardEvent => {
   return {
@@ -45,6 +46,7 @@ const createBlock = (overrides: Partial<Block> = {}): Block => {
     },
     isEmpty: false,
     hasMedia: false,
+    mergeable: true, // Blocks are mergeable by default in tests
     updateCurrentInput: vi.fn(),
     save: vi.fn(() => Promise.resolve({})),
     render: vi.fn(),
@@ -310,6 +312,48 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
+    it('returns early when selection is not collapsed', () => {
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(false);
+
+      const mockBlock = createBlock();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          previousBlock: createBlock({ id: 'previous-block' }),
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
+
+    it('returns early when caret is not at start of input', () => {
+      const mockBlock = createBlock();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          previousBlock: createBlock({ id: 'previous-block' }),
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
+
     it('navigates to previous input when not at first input', () => {
       const firstInput = document.createElement('div');
       firstInput.contentEditable = 'true';
@@ -368,6 +412,166 @@ describe('KeyboardNavigation', () => {
 
       isCaretAtStartOfInputSpy.mockRestore();
     });
+
+    it('returns early when at first block with no previous block', () => {
+      const mockBlock = createBlock();
+      const close = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          previousBlock: null,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      // No further action when at first block
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
+
+    it('removes previous empty block', () => {
+      const emptyPreviousBlock = createBlock({ id: 'empty-previous', isEmpty: true });
+      const mockBlock = createBlock();
+      const close = vi.fn();
+      const removeBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          previousBlock: emptyPreviousBlock,
+          removeBlock,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(removeBlock).toHaveBeenCalledWith(emptyPreviousBlock);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
+
+    it('removes current empty block and sets caret to end of previous block', () => {
+      const previousBlock = createBlock({ id: 'previous-block', isEmpty: false });
+      const emptyCurrentBlock = createBlock({ id: 'empty-current', isEmpty: true });
+      const close = vi.fn();
+      const removeBlock = vi.fn();
+      const setToBlock = vi.fn();
+      const newCurrentBlock = createBlock({ id: 'new-current' });
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyCurrentBlock,
+          previousBlock,
+          removeBlock,
+          currentBlockIndex: 1,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(removeBlock).toHaveBeenCalledWith(emptyCurrentBlock);
+      expect(setToBlock).toHaveBeenCalled();
+      const setToBlockCall = setToBlock.mock.calls[0] as [Block, string];
+      expect(setToBlockCall[1]).toBe('end');
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
+
+    it('merges blocks when both are mergeable', () => {
+      const previousBlock = createBlock({ id: 'previous-block', isEmpty: false, mergeable: true });
+      previousBlock.lastInput = document.createElement('div');
+      const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true });
+      const close = vi.fn();
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          previousBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(mergeBlocks).toHaveBeenCalledWith(previousBlock, mockBlock);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
+
+    it('navigates to previous block when blocks are not mergeable', () => {
+      const previousBlock = createBlock({ id: 'previous-block', isEmpty: false, mergeable: false });
+      const mockBlock = createBlock({ id: 'current-block', isEmpty: false });
+      const close = vi.fn();
+      const setToBlock = vi.fn();
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          previousBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(mergeBlocks).not.toHaveBeenCalled();
+      expect(setToBlock).toHaveBeenCalledWith(previousBlock, 'end');
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
   });
 
   describe('handleDelete', () => {
@@ -383,6 +587,257 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleDelete(event);
 
       expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('returns early when selection is not collapsed', () => {
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(false);
+
+      const mockBlock = createBlock();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock: createBlock({ id: 'next-block' }),
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('returns early when caret is not at end of input', () => {
+      const mockBlock = createBlock();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock: createBlock({ id: 'next-block' }),
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+
+      keyboardNavigation.handleDelete(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('navigates to next input when not at last input', () => {
+      const firstInput = document.createElement('div');
+      firstInput.contentEditable = 'true';
+      const secondInput = document.createElement('div');
+      secondInput.contentEditable = 'true';
+
+      const mockBlock = createBlock({
+        inputs: [firstInput, secondInput],
+        firstInput,
+        lastInput: secondInput,
+        currentInput: firstInput,
+      });
+
+      let navigationOccurred = false;
+      const navigateNext = vi.fn(() => {
+        navigationOccurred = true;
+        return true;
+      });
+      const close = vi.fn();
+      const removeBlock = vi.fn();
+      const mergeBlocks = vi.fn();
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock: createBlock({ id: 'next-block' }),
+          removeBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          navigateNext,
+          setToBlock,
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(navigationOccurred).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(removeBlock).not.toHaveBeenCalled();
+      expect(mergeBlocks).not.toHaveBeenCalled();
+      expect(setToBlock).not.toHaveBeenCalled();
+
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('returns early when at last block with no next block', () => {
+      const mockBlock = createBlock();
+      const close = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock: null,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('removes next empty block', () => {
+      const emptyNextBlock = createBlock({ id: 'empty-next', isEmpty: true });
+      const mockBlock = createBlock();
+      const close = vi.fn();
+      const removeBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock: emptyNextBlock,
+          removeBlock,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(removeBlock).toHaveBeenCalledWith(emptyNextBlock);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('removes current empty block and sets caret to start of next block', () => {
+      const nextBlock = createBlock({ id: 'next-block', isEmpty: false });
+      const emptyCurrentBlock = createBlock({ id: 'empty-current', isEmpty: true });
+      const close = vi.fn();
+      const removeBlock = vi.fn();
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyCurrentBlock,
+          nextBlock,
+          removeBlock,
+          currentBlockIndex: 0,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(removeBlock).toHaveBeenCalledWith(emptyCurrentBlock);
+      expect(setToBlock).toHaveBeenCalledWith(nextBlock, 'start');
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('merges blocks when both are mergeable', () => {
+      const nextBlock = createBlock({ id: 'next-block', isEmpty: false, mergeable: true });
+      nextBlock.lastInput = document.createElement('div');
+      const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true });
+      const close = vi.fn();
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(mergeBlocks).toHaveBeenCalledWith(mockBlock, nextBlock);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('navigates to next block when blocks are not mergeable', () => {
+      const nextBlock = createBlock({ id: 'next-block', isEmpty: false, name: 'other-tool' });
+      const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: false });
+      const close = vi.fn();
+      const setToBlock = vi.fn();
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      expect(close).toHaveBeenCalled();
+      expect(mergeBlocks).not.toHaveBeenCalled();
+      expect(setToBlock).toHaveBeenCalledWith(nextBlock, 'start');
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtEndOfInputSpy.mockRestore();
     });
   });
 

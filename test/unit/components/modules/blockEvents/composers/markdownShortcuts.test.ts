@@ -577,4 +577,251 @@ describe('MarkdownShortcuts', () => {
       );
     });
   });
+
+  describe('HTML extraction edge cases', () => {
+    it('preserves HTML content when converting shortcuts', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.innerHTML = '- <b>bold text</b> remaining';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalled();
+      const replaceCall = replace.mock.calls[0];
+      expect(replaceCall).toHaveLength(3);
+      expect(replaceCall[0]).toBe(mockBlock);
+      expect(replaceCall[1]).toBe('list');
+      // The text data should contain the HTML content after the shortcut
+      const textData = replaceCall[2] as { text: string };
+      expect(textData.text).toContain('bold text');
+      expect(textData.text).toContain('remaining');
+    });
+
+    it('handles block with only text content (no HTML)', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '# Just text';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      const textData = replace.mock.calls[0][2] as { text: string };
+      expect(textData.text).toBe('Just text');
+    });
+
+    it('handles block with mixed content and inline elements', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.innerHTML = '- <em>italic</em> and <strong>bold</strong>';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      const textData = replace.mock.calls[0][2] as { text: string };
+      expect(textData.text).toContain('italic');
+      expect(textData.text).toContain('bold');
+    });
+
+    it('returns false when shortcut pattern is not matched', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'No shortcut here';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('returns false when text content is empty', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('caret handling', () => {
+    it('sets caret to block start when offset is zero', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.innerHTML = '# ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      // Mock getCaretOffset to return 2 (length of "# ")
+      markdownShortcuts.handleInput(event);
+
+      // When caret offset is at or after the shortcut, setToBlock should be called
+      expect(setToBlock).toHaveBeenCalled();
+      const setToBlockCall = setToBlock.mock.calls[0];
+      expect(setToBlockCall[1]).toBe('start');
+    });
+
+    it('preserves caret offset for remaining content', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.innerHTML = '# Header text';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      markdownShortcuts.handleInput(event);
+
+      // Should set caret - when there's no selection, offset is 0, so START position is used
+      expect(setToBlock).toHaveBeenCalled();
+      const setToBlockCall = setToBlock.mock.calls[0];
+      expect(setToBlockCall[1]).toBe('start');
+    });
+  });
+
+  describe('header tool availability', () => {
+    it('returns false when header tool is not available', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '# ';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map(), // No header tool
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('returns false when list tool is not available', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '- ';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map(), // No list tool
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+  });
 });

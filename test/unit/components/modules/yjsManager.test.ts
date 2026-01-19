@@ -422,4 +422,219 @@ describe('YjsManager', () => {
       vi.useRealTimers();
     });
   });
+
+  describe('updateBlockTune', () => {
+    it('adds new tune to block', () => {
+      manager.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+      manager.updateBlockTune('block1', 'alignment', 'center');
+
+      const result = manager.toJSON();
+      expect(result[0].tunes).toEqual({ alignment: 'center' });
+    });
+
+    it('updates existing tune', () => {
+      manager.fromJSON([
+        {
+          id: 'block1',
+          type: 'paragraph',
+          data: { text: 'Hello' },
+          tunes: { alignment: 'left' },
+        },
+      ]);
+
+      manager.updateBlockTune('block1', 'alignment', 'center');
+
+      const result = manager.toJSON();
+      expect(result[0].tunes?.alignment).toBe('center');
+    });
+
+    it('does nothing if block not found', () => {
+      manager.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+      manager.updateBlockTune('nonexistent', 'alignment', 'center');
+
+      expect(manager.toJSON()[0].tunes).toBeUndefined();
+    });
+  });
+
+  describe('transact', () => {
+    it('wraps operations in a single transaction', () => {
+      manager.transact(() => {
+        manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'First' } });
+        manager.addBlock({ id: 'block2', type: 'paragraph', data: { text: 'Second' } });
+      });
+
+      expect(manager.toJSON()).toHaveLength(2);
+    });
+  });
+
+  describe('transactMoves', () => {
+    it('groups multiple moves into a single undo entry', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+        { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
+        { id: 'block4', type: 'paragraph', data: { text: 'Fourth' } },
+      ]);
+
+      const originalOrder = manager.toJSON().map((b) => b.id);
+      expect(originalOrder).toEqual(['block1', 'block2', 'block3', 'block4']);
+
+      // Group multiple moves
+      manager.transactMoves(() => {
+        manager.moveBlock('block4', 0);
+        manager.moveBlock('block3', 1);
+      });
+
+      const movedOrder = manager.toJSON().map((b) => b.id);
+      expect(movedOrder).toEqual(['block4', 'block3', 'block1', 'block2']);
+
+      // Single undo should reverse both moves
+      manager.undo();
+
+      const undoneOrder = manager.toJSON().map((b) => b.id);
+      expect(undoneOrder).toEqual(['block1', 'block2', 'block3', 'block4']);
+    });
+
+    it('handles exception cleanly', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+      ]);
+
+      // Should not throw even if function throws
+      expect(() => {
+        manager.transactMoves(() => {
+          manager.moveBlock('block2', 0);
+          throw new Error('Test error');
+        });
+      }).toThrow('Test error');
+
+      // The state should still be consistent
+      expect(() => manager.toJSON()).not.toThrow();
+    });
+
+    it('can be nested (uses counter for isMoveGroupActive)', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+        { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
+      ]);
+
+      // Nested transactMoves - outermost one controls the group
+      manager.transactMoves(() => {
+        manager.moveBlock('block3', 0);
+        manager.transactMoves(() => {
+          manager.moveBlock('block2', 1);
+        });
+      });
+
+      // Both moves should be recorded
+      expect(manager.toJSON().map((b) => b.id)).toEqual(['block3', 'block2', 'block1']);
+    });
+  });
+
+  describe('markCaretBeforeChange', () => {
+    it('marks caret position before a change', () => {
+      expect(() => manager.markCaretBeforeChange()).not.toThrow();
+    });
+
+    it('can be called multiple times without error', () => {
+      manager.markCaretBeforeChange();
+      manager.markCaretBeforeChange();
+      manager.markCaretBeforeChange();
+
+      // Should not throw
+      expect(() => manager.undo()).not.toThrow();
+    });
+  });
+
+  describe('captureCaretSnapshot', () => {
+    it('returns null when no Blok modules are available', () => {
+      const snapshot = manager.captureCaretSnapshot();
+      expect(snapshot).toBeNull();
+    });
+
+    it('does not throw when called without Blok initialization', () => {
+      expect(() => manager.captureCaretSnapshot()).not.toThrow();
+    });
+  });
+
+  describe('updateLastCaretAfterPosition', () => {
+    it('does not throw when called without Blok initialization', () => {
+      expect(() => manager.updateLastCaretAfterPosition()).not.toThrow();
+    });
+
+    it('does not throw when caret stack is empty', () => {
+      manager.updateLastCaretAfterPosition();
+      expect(() => manager.undo()).not.toThrow();
+    });
+  });
+
+  describe('moveBlock edge cases', () => {
+    it('does nothing when moving to same index', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+      ]);
+
+      const originalOrder = manager.toJSON().map((b) => b.id);
+
+      manager.moveBlock('block2', 1);
+
+      expect(manager.toJSON().map((b) => b.id)).toEqual(originalOrder);
+    });
+
+    it('does nothing when block is not found', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+      ]);
+
+      manager.moveBlock('nonexistent', 0);
+
+      expect(manager.toJSON()).toHaveLength(1);
+      expect(manager.toJSON()[0].id).toBe('block1');
+    });
+
+    it('records move for undo even when moved to end', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+      ]);
+
+      manager.moveBlock('block1', 1);
+
+      expect(manager.toJSON().map((b) => b.id)).toEqual(['block2', 'block1']);
+
+      manager.undo();
+
+      expect(manager.toJSON().map((b) => b.id)).toEqual(['block1', 'block2']);
+    });
+  });
+
+  describe('set state (Blok modules)', () => {
+    it('allows setting Blok modules', () => {
+      const mockBlok = {
+        BlockManager: {},
+        Caret: {},
+      };
+
+      expect(() => {
+        manager.state = mockBlok as unknown as typeof manager.state;
+      }).not.toThrow();
+    });
+  });
+
+  describe('destroy', () => {
+    it('cleans up all resources', () => {
+      manager.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'Test' } });
+
+      expect(() => manager.destroy()).not.toThrow();
+
+      // After destroy, operations should still work without errors
+      // (though the Yjs doc is destroyed)
+      expect(() => manager.toJSON()).not.toThrow();
+    });
+  });
 });

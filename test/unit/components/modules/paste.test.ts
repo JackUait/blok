@@ -2,16 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 
 import { Paste } from '../../../../src/components/modules/paste';
-import type { ToolRegistry } from '../../../../src/components/modules/paste/tool-registry';
+import { ToolRegistry } from '../../../../src/components/modules/paste/tool-registry';
 import { SanitizerConfigBuilder } from '../../../../src/components/modules/paste/sanitizer-config';
 import type { TagSubstitute } from '../../../../src/components/modules/paste/types';
+import { collectTagNames, SAFE_STRUCTURAL_TAGS } from '../../../../src/components/modules/paste/constants';
 import { BlokDataHandler } from '../../../../src/components/modules/paste/handlers/blok-data-handler';
 import { FilesHandler } from '../../../../src/components/modules/paste/handlers/files-handler';
 import { HtmlHandler } from '../../../../src/components/modules/paste/handlers/html-handler';
 import { PatternHandler } from '../../../../src/components/modules/paste/handlers/pattern-handler';
 import { TextHandler } from '../../../../src/components/modules/paste/handlers/text-handler';
+import { ToolsCollection } from '../../../../src/components/tools/collection';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
 import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
+import type { BlokConfig } from '../../../../types/configs/blok-config';
 import * as sanitizer from '../../../../src/components/utils/sanitizer';
 import { Listeners } from '../../../../src/components/utils/listeners';
 import * as utils from '../../../../src/components/utils';
@@ -1247,6 +1250,193 @@ describe('Paste module', () => {
     });
   });
 
+  describe('ToolRegistry edge cases', () => {
+    it('returns undefined when finding tool for non-existent tag', async () => {
+      const { paste } = createPaste();
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.findToolForTag('NONEXISTENT')).toBeUndefined();
+      expect(toolRegistry.findToolForTag('')).toBeUndefined();
+    });
+
+    it('returns undefined when finding tool for file with no matching tool', () => {
+      const toolsCollection = new ToolsCollection<BlockToolAdapter>();
+      const toolRegistry = new ToolRegistry(toolsCollection, {} as BlokConfig);
+
+      const unknownFile = new File(['content'], 'unknown.xyz', { type: 'application/unknown' });
+      expect(toolRegistry.findToolForFile(unknownFile)).toBeUndefined();
+    });
+
+    it('finds tool for file by extension only', async () => {
+      const fileTool = {
+        name: 'image',
+        pasteConfig: {
+          files: {
+            extensions: ['png', 'jpg'],
+            mimeTypes: [],
+          },
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const toolsCollection = new ToolsCollection<BlockToolAdapter>([['image', fileTool]]);
+      const toolRegistry = new ToolRegistry(toolsCollection, {} as BlokConfig);
+
+      await toolRegistry.processTools();
+
+      const pngFile = new File(['content'], 'test.png', { type: 'image/png' });
+      const jpgFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
+      const txtFile = new File(['content'], 'test.txt', { type: 'text/plain' });
+
+      expect(toolRegistry.findToolForFile(pngFile)).toBe('image');
+      expect(toolRegistry.findToolForFile(jpgFile)).toBe('image');
+      expect(toolRegistry.findToolForFile(txtFile)).toBeUndefined();
+    });
+
+    it('finds tool for file by MIME type with wildcard', async () => {
+      const fileTool = {
+        name: 'image',
+        pasteConfig: {
+          files: {
+            extensions: [],
+            mimeTypes: ['image/*'],
+          },
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const toolsCollection = new ToolsCollection<BlockToolAdapter>([['image', fileTool]]);
+      const toolRegistry = new ToolRegistry(toolsCollection, {} as BlokConfig);
+
+      await toolRegistry.processTools();
+
+      const pngFile = new File(['content'], 'test.png', { type: 'image/png' });
+      const jpegFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
+      const txtFile = new File(['content'], 'test.txt', { type: 'text/plain' });
+
+      expect(toolRegistry.findToolForFile(pngFile)).toBe('image');
+      expect(toolRegistry.findToolForFile(jpegFile)).toBe('image');
+      expect(toolRegistry.findToolForFile(txtFile)).toBeUndefined();
+    });
+
+    it('returns undefined when finding tool for non-existent pattern', async () => {
+      const { paste } = createPaste();
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.findToolForPattern('no match here')).toBeUndefined();
+      expect(toolRegistry.findToolForPattern('')).toBeUndefined();
+    });
+
+    it('returns empty array for tool with no tags', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tool = {
+        name: 'no-tags',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('no-tags', tool);
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.getToolTags('no-tags')).toEqual([]);
+      expect(toolRegistry.getToolTags('nonexistent')).toEqual([]);
+    });
+
+    it('returns true for tool in exception list', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tool = {
+        name: 'exception-tool',
+        pasteConfig: false,
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('exception-tool', tool);
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.isException('exception-tool')).toBe(true);
+      expect(toolRegistry.isException('nonexistent')).toBe(false);
+    });
+  });
+
+  describe('Paste constants utilities', () => {
+    describe('collectTagNames', () => {
+      it('returns array with single tag name when input is string', () => {
+        expect(collectTagNames('DIV')).toEqual(['DIV']);
+        expect(collectTagNames('p')).toEqual(['p']);
+      });
+
+      it('returns array of keys when input is object', () => {
+        const config1: SanitizerConfig = { 'p': {}, 'div': { class: 'test' } };
+        const config2: SanitizerConfig = { 'table': {} };
+
+        expect(collectTagNames(config1)).toEqual(['p', 'div']);
+        expect(collectTagNames(config2)).toEqual(['table']);
+      });
+
+      it('returns empty array for null input at runtime', () => {
+        expect(collectTagNames(null as unknown as SanitizerConfig)).toEqual([]);
+      });
+
+      it('returns empty array for undefined input at runtime', () => {
+        expect(collectTagNames(undefined as unknown as SanitizerConfig)).toEqual([]);
+      });
+
+      it('returns empty array for non-object non-string input at runtime', () => {
+        expect(collectTagNames(123 as unknown as SanitizerConfig)).toEqual([]);
+        expect(collectTagNames(true as unknown as SanitizerConfig)).toEqual([]);
+        expect(collectTagNames([] as unknown as SanitizerConfig)).toEqual([]);
+      });
+    });
+
+    describe('SAFE_STRUCTURAL_TAGS', () => {
+      it('contains all expected table tags', () => {
+        expect(SAFE_STRUCTURAL_TAGS.has('table')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('thead')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('tbody')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('tfoot')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('tr')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('th')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('td')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('caption')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('colgroup')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('col')).toBe(true);
+      });
+
+      it('contains all expected list tags', () => {
+        expect(SAFE_STRUCTURAL_TAGS.has('ul')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('ol')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('li')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('dl')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('dt')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('dd')).toBe(true);
+      });
+
+      it('does not contain non-structural tags', () => {
+        expect(SAFE_STRUCTURAL_TAGS.has('div')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('span')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('p')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('h1')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('b')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('i')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('a')).toBe(false);
+      });
+    });
+  });
+
   describe('SanitizerConfigBuilder', () => {
     let builder: SanitizerConfigBuilder;
 
@@ -1565,6 +1755,368 @@ describe('Paste module', () => {
       expect(builder.isStructuralTag('Table')).toBe(true);
       expect(builder.isStructuralTag('UL')).toBe(true);
       expect(builder.isStructuralTag('DIV')).toBe(false);
+    });
+  });
+
+  describe('Handler edge cases', () => {
+    describe('BlokDataHandler edge cases', () => {
+      it('returns priority 0 for non-string data', () => {
+        const { paste } = createPaste();
+
+        const handler = new BlokDataHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          {}
+        );
+
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+        expect(handler.canHandle([])).toBe(0);
+      });
+
+      it('returns priority 0 for invalid JSON strings', () => {
+        const { paste } = createPaste();
+
+        const handler = new BlokDataHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          {}
+        );
+
+        expect(handler.canHandle('not json')).toBe(0);
+        expect(handler.canHandle('{invalid}')).toBe(0);
+        expect(handler.canHandle('')).toBe(0);
+      });
+
+      it('handles empty Blok JSON array', async () => {
+        const { paste, mocks } = createPaste();
+        await paste.prepare();
+
+        const sanitizeBlocksSpy = vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([]);
+
+        mocks.BlockManager.currentBlock = {
+          tool: { isDefault: true },
+          isEmpty: true,
+        };
+
+        const dataTransfer = new MockDataTransfer(
+          {
+            'application/x-blok': JSON.stringify([]),
+            'text/plain': '',
+          },
+          { length: 0 } as FileList,
+          ['application/x-blok', 'text/plain']
+        );
+
+        await paste.processDataTransfer(dataTransfer);
+
+        // Verify sanitizer was called with the empty Blok blocks array
+        expect(sanitizeBlocksSpy).toHaveBeenCalledWith(
+          [],  // Empty Blok data array
+          expect.any(Function),
+          {}
+        );
+        // Verify no blocks were inserted since array was empty
+        expect(mocks.BlockManager.insert).not.toHaveBeenCalled();
+      });
+
+      it('handles Blok data with missing required fields gracefully', async () => {
+        const { paste, mocks } = createPaste();
+        await paste.prepare();
+
+        const malformedBlocks = [
+          { id: '1', tool: 'paragraph', data: {} },
+          { tool: 'paragraph', data: { text: 'hello' } },
+          { tool: 'paragraph', data: { text: 'world' } },
+        ] as Array<{ tool: string; data: Record<string, unknown>; id?: string }>;
+
+        vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue(malformedBlocks);
+
+        mocks.BlockManager.currentBlock = {
+          tool: { isDefault: true },
+          isEmpty: true,
+        };
+
+        const insertedBlocks: Array<{ tool: string; data: Record<string, unknown> }> = [];
+        mocks.BlockManager.insert.mockImplementation((block) => {
+          insertedBlocks.push({
+            tool: (block as { tool: string }).tool,
+            data: (block as { data: Record<string, unknown> }).data,
+          });
+          return { id: 'block-id' };
+        });
+
+        const dataTransfer = new MockDataTransfer(
+          {
+            'application/x-blok': JSON.stringify(malformedBlocks),
+            'text/plain': '',
+          },
+          { length: 0 } as FileList,
+          ['application/x-blok', 'text/plain']
+        );
+
+        await paste.processDataTransfer(dataTransfer);
+
+        // Verify all 3 blocks were inserted despite missing id field
+        expect(insertedBlocks).toHaveLength(3);
+        expect(insertedBlocks[0]).toEqual({ tool: 'paragraph', data: {} });
+        expect(insertedBlocks[1]).toEqual({ tool: 'paragraph', data: { text: 'hello' } });
+        expect(insertedBlocks[2]).toEqual({ tool: 'paragraph', data: { text: 'world' } });
+      });
+    });
+
+    describe('FilesHandler edge cases', () => {
+      it('returns priority 0 for non-DataTransfer data', () => {
+        const { paste } = createPaste();
+
+        const handler = new FilesHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle('string')).toBe(0);
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+      });
+
+      it('returns priority 0 for DataTransfer without files', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const handler = new FilesHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        const dataTransferWithoutFiles = new MockDataTransfer({}, { length: 0 } as FileList, ['text/plain']);
+
+        expect(handler.canHandle(dataTransferWithoutFiles)).toBe(0);
+      });
+
+      it('handles empty FileList', async () => {
+        const { paste, mocks } = createPaste();
+        await paste.prepare();
+
+        const emptyFileList = {
+          length: 0,
+          item: () => null,
+        } as unknown as FileList;
+
+        const dataTransfer = new MockDataTransfer({}, emptyFileList, []);
+
+        await paste.processDataTransfer(dataTransfer);
+
+        expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('PatternHandler edge cases', () => {
+      it('returns priority 0 for text exceeding max length', async () => {
+        const { paste, mocks } = createPaste();
+
+        const patternTool = {
+          name: 'link',
+          pasteConfig: {
+            patterns: {
+              link: /https:\/\/example\.com/,
+            },
+          },
+          baseSanitizeConfig: {},
+          hasOnPasteHandler: true,
+        } as unknown as BlockToolAdapter;
+
+        mocks.Tools.blockTools.set('link', patternTool);
+        await paste.prepare();
+
+        const handler = new PatternHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        const longText = 'a'.repeat(PatternHandler.PATTERN_PROCESSING_MAX_LENGTH + 1);
+
+        expect(handler.canHandle(longText)).toBe(0);
+      });
+
+      it('returns priority 0 for empty string', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const handler = new PatternHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle('')).toBe(0);
+      });
+
+      it('returns priority 0 for non-string data', async () => {
+        const { paste } = createPaste();
+
+        const handler = new PatternHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+      });
+    });
+
+    describe('HtmlHandler edge cases', () => {
+      it('returns priority 0 for empty string', () => {
+        const { paste } = createPaste();
+
+        const handler = new HtmlHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle('')).toBe(0);
+        expect(handler.canHandle('   ')).toBe(0);
+      });
+
+      it('returns priority 0 for non-HTML string', () => {
+        const { paste } = createPaste();
+
+        const handler = new HtmlHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle('plain text')).toBe(0);
+        expect(handler.canHandle('just words')).toBe(0);
+      });
+
+      it('returns priority 0 for non-string data', () => {
+        const { paste } = createPaste();
+
+        const handler = new HtmlHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+      });
+    });
+
+    describe('TextHandler edge cases', () => {
+      it('returns priority 0 for empty string', () => {
+        const { paste } = createPaste();
+
+        const handler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        expect(handler.canHandle('')).toBe(0);
+        // Note: TextHandler returns 10 for non-empty strings (including spaces)
+        // The whitespace filtering happens in processPlain()
+        expect(handler.canHandle('   ')).toBe(10);
+      });
+
+      it('returns priority 0 for non-string data', () => {
+        const { paste } = createPaste();
+
+        const handler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+      });
+
+      it('handles mixed line endings (\\r\\n and \\n)', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const textHandler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('line1\r\nline2\nline3');
+
+        expect(result).toHaveLength(3);
+        expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('line1');
+        expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('line2');
+        expect((result[2] as { content: HTMLElement }).content).toHaveTextContent('line3');
+      });
+
+      it('handles string with only newlines', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const textHandler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('\n\n\n');
+
+        expect(result).toHaveLength(0);
+      });
+
+      it('handles Unicode and emoji characters', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const textHandler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        const text = 'Hello 🚀 World\n你好\nمرحبا';
+
+        const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain(text);
+
+        expect(result).toHaveLength(3);
+        expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('Hello 🚀 World');
+        expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('你好');
+        expect((result[2] as { content: HTMLElement }).content).toHaveTextContent('مرحبا');
+      });
     });
   });
 });

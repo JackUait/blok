@@ -491,4 +491,116 @@ describe('UI module', () => {
       expect(unbindSpy).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('controller initialization and coordination', () => {
+    it('initializes all controllers during prepare', async () => {
+      const { ui } = createUI({ attachNodes: false });
+
+      await ui.prepare();
+
+      // Verify controllers are instantiated by checking private properties
+      const keyboardController = (ui as unknown as { keyboardController: unknown }).keyboardController;
+      const selectionController = (ui as unknown as { selectionController: unknown }).selectionController;
+      const blockHoverController = (ui as unknown as { blockHoverController: unknown }).blockHoverController;
+
+      expect(keyboardController).toBeDefined();
+      expect(selectionController).toBeDefined();
+      expect(blockHoverController).toBeDefined();
+
+      // Verify handlers are created
+      const documentClickedHandler = (ui as unknown as { documentClickedHandler: unknown }).documentClickedHandler;
+      const redactorTouchHandler = (ui as unknown as { redactorTouchHandler: unknown }).redactorTouchHandler;
+
+      expect(documentClickedHandler).toBeDefined();
+      expect(redactorTouchHandler).toBeDefined();
+    });
+
+    it('enables keyboard and block hover controllers when binding read-only sensitive listeners', () => {
+      const { ui } = createUI();
+      const keyboardEnableSpy = vi.fn();
+      const blockHoverEnableSpy = vi.fn();
+
+      // Mock the controllers' enable methods
+      (ui as unknown as { keyboardController: { enable: () => void } }).keyboardController = {
+        enable: keyboardEnableSpy,
+      };
+      (ui as unknown as { blockHoverController: { enable: () => void } }).blockHoverController = {
+        enable: blockHoverEnableSpy,
+      };
+
+      (ui as unknown as { bindReadOnlySensitiveListeners: () => void }).bindReadOnlySensitiveListeners();
+
+      expect(keyboardEnableSpy).toHaveBeenCalledTimes(1);
+      expect(blockHoverEnableSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables keyboard and block hover controllers when unbinding read-only sensitive listeners', () => {
+      const { ui } = createUI();
+      const keyboardDisableSpy = vi.fn();
+      const blockHoverDisableSpy = vi.fn();
+
+      // Mock the controllers' disable methods
+      (ui as unknown as { keyboardController: { disable: () => void } }).keyboardController = {
+        disable: keyboardDisableSpy,
+      };
+      (ui as unknown as { blockHoverController: { disable: () => void } }).blockHoverController = {
+        disable: blockHoverDisableSpy,
+      };
+
+      (ui as unknown as { unbindReadOnlySensitiveListeners: () => void }).unbindReadOnlySensitiveListeners();
+
+      expect(keyboardDisableSpy).toHaveBeenCalledTimes(1);
+      expect(blockHoverDisableSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables selection controller when unbinding read-only insensitive listeners', () => {
+      const { ui } = createUI();
+      const selectionDisableSpy = vi.fn();
+
+      // Mock the selection controller's disable method
+      (ui as unknown as { selectionController: { disable: () => void } }).selectionController = {
+        disable: selectionDisableSpy,
+      };
+
+      (ui as unknown as { unbindReadOnlyInsensitiveListeners: () => void }).unbindReadOnlyInsensitiveListeners();
+
+      expect(selectionDisableSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('coordinately enables all controllers when toggling off read-only mode', () => {
+      const { ui } = createUI();
+      const keyboardEnableSpy = vi.fn();
+      const blockHoverEnableSpy = vi.fn();
+
+      (ui as unknown as { keyboardController: { enable: () => void } }).keyboardController = {
+        enable: keyboardEnableSpy,
+      };
+      (ui as unknown as { blockHoverController: { enable: () => void } }).blockHoverController = {
+        enable: blockHoverEnableSpy,
+      };
+
+      ui.toggleReadOnly(false);
+
+      expect(keyboardEnableSpy).toHaveBeenCalledTimes(1);
+      expect(blockHoverEnableSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('coordinately disables all controllers when toggling on read-only mode', () => {
+      const { ui } = createUI();
+      const keyboardDisableSpy = vi.fn();
+      const blockHoverDisableSpy = vi.fn();
+
+      (ui as unknown as { keyboardController: { disable: () => void } }).keyboardController = {
+        disable: keyboardDisableSpy,
+      };
+      (ui as unknown as { blockHoverController: { disable: () => void } }).blockHoverController = {
+        disable: blockHoverDisableSpy,
+      };
+
+      ui.toggleReadOnly(true);
+
+      expect(keyboardDisableSpy).toHaveBeenCalledTimes(1);
+      expect(blockHoverDisableSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });

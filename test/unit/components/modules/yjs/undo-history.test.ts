@@ -396,4 +396,293 @@ describe('UndoHistory', () => {
       expect(stack[0].after).toBeDefined();
     });
   });
+
+  describe('caret restoration edge cases', () => {
+    it('restores to first block when snapshot block no longer exists', () => {
+      const firstBlock = { id: 'first-block', inputs: [] };
+      const snapshot = { blockId: 'deleted-block', inputIndex: 0, offset: 5 };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn; firstBlock: typeof firstBlock })
+        .getBlockById = vi.fn().mockReturnValue(undefined);
+      (blok.BlockManager as unknown as { firstBlock: typeof firstBlock }).firstBlock = firstBlock;
+
+      // Manually trigger the internal restoreCaretSnapshot logic by pushing to caret stack
+      const testEntry: CaretHistoryEntry = {
+        before: snapshot,
+        after: null,
+      };
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push(testEntry);
+
+      history.undo();
+
+      // Should fall back to first block
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(firstBlock, 'start');
+    });
+
+    it('clears selection when snapshot is null and no first block exists', () => {
+      const removeSelectionSpy = vi.spyOn(window, 'getSelection').mockReturnValue({
+        removeAllRanges: vi.fn(),
+      } as unknown as ReturnType<typeof window.getSelection>);
+
+      const snapshot = null;
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn; firstBlock: undefined })
+        .getBlockById = vi.fn().mockReturnValue(undefined);
+      (blok.BlockManager as unknown as { firstBlock: undefined }).firstBlock = undefined;
+
+      // Manually trigger the internal restoreCaretSnapshot logic
+      const testEntry: CaretHistoryEntry = {
+        before: snapshot,
+        after: null,
+      };
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push(testEntry);
+
+      history.undo();
+
+      expect(removeSelectionSpy).toHaveBeenCalled();
+      removeSelectionSpy.mockRestore();
+    });
+
+    it('falls back to block start when input no longer exists', () => {
+      const block = { id: 'b1', inputs: [] };
+      const snapshot = { blockId: 'b1', inputIndex: 5, offset: 10 }; // input at index 5 doesn't exist
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
+
+      // Manually trigger the internal restoreCaretSnapshot logic
+      const testEntry: CaretHistoryEntry = {
+        before: snapshot,
+        after: null,
+      };
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push(testEntry);
+
+      history.undo();
+
+      // Should fall back to block start
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(block, 'start');
+    });
+
+    it('restores to specific input when input exists', () => {
+      const input = document.createElement('div');
+      const block = { id: 'b1', inputs: [input] };
+      const snapshot = { blockId: 'b1', inputIndex: 0, offset: 5 };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
+
+      // Manually trigger the internal restoreCaretSnapshot logic
+      const testEntry: CaretHistoryEntry = {
+        before: snapshot,
+        after: null,
+      };
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push(testEntry);
+
+      history.undo();
+
+      // Should restore to specific input
+      expect(blok.Caret.setToInput).toHaveBeenCalledWith(input, 'default', 5);
+    });
+
+    it('does nothing when snapshot is null and no block manager available', () => {
+      // Test the edge case where Blok is not fully initialized
+      const emptyBlok: BlokModules = {} as unknown as BlokModules;
+      history.setBlok(emptyBlok);
+
+      expect(() => history.undo()).not.toThrow();
+    });
+  });
+
+  describe('move undo/redo with real Yjs operations', () => {
+    it('correctly undoes a single block move', () => {
+      // Create blocks in Yjs
+      ydoc.transact(() => {
+        for (let i = 1; i <= 3; i++) {
+          const yblock = new Y.Map<unknown>();
+          yblock.set('id', `b${i}`);
+          yblock.set('type', 'paragraph');
+          yblock.set('data', new Y.Map<unknown>());
+          yblocks.push([yblock]);
+        }
+      }, 'local');
+
+      const initialOrder = yblocks.toArray().map((b) => b.get('id'));
+      expect(initialOrder).toEqual(['b1', 'b2', 'b3']);
+
+      // Record and perform a move
+      history.recordMove('b3', 2, 0, false);
+
+      // Verify the move was recorded
+      expect(history.canUndo()).toBe(true);
+
+      // Undo should restore original order
+      history.undo();
+
+      const undoOrder = yblocks.toArray().map((b) => b.get('id'));
+      expect(undoOrder).toEqual(['b1', 'b2', 'b3']);
+    });
+
+    it('correctly redoes a single block move', () => {
+      // Create blocks in Yjs
+      ydoc.transact(() => {
+        for (let i = 1; i <= 3; i++) {
+          const yblock = new Y.Map<unknown>();
+          yblock.set('id', `b${i}`);
+          yblock.set('type', 'paragraph');
+          yblock.set('data', new Y.Map<unknown>());
+          yblocks.push([yblock]);
+        }
+      }, 'local');
+
+      // Record and perform a move
+      history.recordMove('b3', 2, 0, false);
+      history.undo();
+
+      const undoOrder = yblocks.toArray().map((b) => b.get('id'));
+      expect(undoOrder).toEqual(['b1', 'b2', 'b3']);
+
+      // Redo should restore moved order
+      history.redo();
+
+      const redoOrder = yblocks.toArray().map((b) => b.get('id'));
+      expect(redoOrder).toEqual(['b3', 'b1', 'b2']);
+    });
+
+    it('undoes multiple moves in reverse order when grouped', () => {
+      // Create blocks
+      ydoc.transact(() => {
+        for (let i = 1; i <= 5; i++) {
+          const yblock = new Y.Map<unknown>();
+          yblock.set('id', `b${i}`);
+          yblock.set('type', 'paragraph');
+          yblock.set('data', new Y.Map<unknown>());
+          yblocks.push([yblock]);
+        }
+      }, 'local');
+
+      const initialOrder = yblocks.toArray().map((b) => b.get('id'));
+      expect(initialOrder).toEqual(['b1', 'b2', 'b3', 'b4', 'b5']);
+
+      // Helper to perform a move
+      const performMove = (_blockId: string, fromIndex: number, toIndex: number): void => {
+        const yblock = yblocks.get(fromIndex);
+        const blockData = yblock.toJSON();
+        yblocks.delete(fromIndex);
+        const newYblock = new Y.Map<unknown>();
+        (Object.keys(blockData) as Array<keyof typeof blockData>).forEach((key) => {
+          newYblock.set(key as string, blockData[key]);
+        });
+        yblocks.insert(toIndex, [newYblock]);
+      };
+
+      // Perform and record a group of moves
+      history.startMoveGroup();
+      // Move b5 from 4 to 0
+      performMove('b5', 4, 0);
+      history.recordMove('b5', 4, 0, true);
+      // Now b4 is at index 4, move it to index 1
+      performMove('b4', 4, 1);
+      history.recordMove('b4', 4, 1, true);
+      // Now b3 is at index 4, move it to index 2
+      performMove('b3', 4, 2);
+      history.recordMove('b3', 4, 2, true);
+      history.endMoveGroup();
+
+      const movedOrder = yblocks.toArray().map((b) => b.get('id'));
+      expect(movedOrder).toEqual(['b5', 'b4', 'b3', 'b1', 'b2']);
+
+      // Single undo should reverse all moves in reverse order
+      history.undo();
+
+      const undoOrder = yblocks.toArray().map((b) => b.get('id'));
+      expect(undoOrder).toEqual(['b1', 'b2', 'b3', 'b4', 'b5']);
+    });
+
+    it('clears redo stack when new move is recorded', () => {
+      // Create blocks
+      ydoc.transact(() => {
+        for (let i = 1; i <= 3; i++) {
+          const yblock = new Y.Map<unknown>();
+          yblock.set('id', `b${i}`);
+          yblock.set('type', 'paragraph');
+          yblock.set('data', new Y.Map<unknown>());
+          yblocks.push([yblock]);
+        }
+      }, 'local');
+
+      // Record first move
+      history.recordMove('b3', 2, 0, false);
+      history.undo();
+
+      expect(history.canRedo()).toBe(true);
+
+      // Record new move - should clear redo stack
+      history.recordMove('b2', 1, 2, false);
+
+      expect(history.canRedo()).toBe(false);
+      expect(history.canUndo()).toBe(true);
+    });
+
+    it('transactMoves handles exceptions cleanly', () => {
+      // Create blocks
+      ydoc.transact(() => {
+        for (let i = 1; i <= 3; i++) {
+          const yblock = new Y.Map<unknown>();
+          yblock.set('id', `b${i}`);
+          yblock.set('type', 'paragraph');
+          yblock.set('data', new Y.Map<unknown>());
+          yblocks.push([yblock]);
+        }
+      }, 'local');
+
+      // Get initial canUndo state
+      const initialCanUndo = history.canUndo();
+
+      // Test that transactMoves cleans up even when function throws
+      expect(() => {
+        history.transactMoves(() => {
+          // Since we're in a group, recordMove won't call markCaretBeforeChange
+          history.recordMove('b1', 0, 1, true);
+          throw new Error('Test error');
+        });
+      }).toThrow('Test error');
+
+      // Despite the error, the move group should be closed
+      // (no pending move group state - moves inside transactMoves are grouped)
+      // The move itself was recorded in the moveUndoStack since we called endMoveGroup
+      // But the test is checking that transactMoves properly cleans up the group
+      // The key behavior is that endMoveGroup is called even on exception
+      expect(history.canUndo()).toBe(initialCanUndo); // Should be same as initial since no actual move happened
+    });
+  });
+
+  describe('move undo/redo edge cases', () => {
+    it('handles move to same index (no-op)', () => {
+      ydoc.transact(() => {
+        const yblock = new Y.Map<unknown>();
+        yblock.set('id', 'b1');
+        yblock.set('type', 'paragraph');
+        yblock.set('data', new Y.Map<unknown>());
+        yblocks.push([yblock]);
+      }, 'local');
+
+      // Recording a move to the same index should still work
+      history.recordMove('b1', 0, 0, false);
+
+      expect(history.canUndo()).toBe(true);
+    });
+
+    it('handles move of non-existent block gracefully', () => {
+      // Recording a move for a block that doesn't exist should not throw
+      expect(() => {
+        history.recordMove('nonexistent', 0, 1, false);
+      }).not.toThrow();
+    });
+
+    it('handles empty move group', () => {
+      history.startMoveGroup();
+      // End group without recording any moves
+      history.endMoveGroup();
+
+      expect(history.canUndo()).toBe(false);
+    });
+  });
 });

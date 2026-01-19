@@ -4592,5 +4592,241 @@ test.describe('yjs undo/redo', () => {
 
       await expect(paragraphInput).toHaveText('');
     });
+
+    test('boundary character with no timeout does not create checkpoint', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type "Hello " (with space - boundary character)
+      await page.keyboard.type('Hello ');
+      // Immediately continue typing before timeout (less than 100ms)
+      await waitForDelay(page, 50);
+      await page.keyboard.type('world');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Both words should be in same undo group
+      await expect(paragraphInput).toHaveText('Hello world');
+
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      // Both should undo together
+      await expect(paragraphInput).toHaveText('');
+    });
+
+    test('multiple rapid boundaries without typing between them', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type boundary characters rapidly without actual text
+      await page.keyboard.type(' ');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.type(' ');
+      await page.keyboard.press('Backspace');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should handle gracefully without errors
+      await expect(paragraphInput).toHaveText('');
+    });
+
+    test('undo after deleting all content in block restores content', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Content to delete' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+      await page.keyboard.press('Control+a');
+      await page.keyboard.press('Backspace');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      await expect(paragraphInput).toHaveText('');
+
+      // Undo should restore content
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('Content to delete');
+    });
+
+    test('redo after undoing select all and delete restores empty state', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Content' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+      await page.keyboard.press('Control+a');
+      await page.keyboard.press('Backspace');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('Content');
+
+      // Redo should restore empty state
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('');
+    });
+
+    test('undo/redo with tune change works correctly', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Text' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      // Click block settings toggler
+      const settingsToggler = paragraph.locator('[data-blok-testid="block-settings-toggler"]');
+      await settingsToggler.click();
+
+      // Change alignment to center
+      const alignmentOption = page.locator('[data-blok-toolbar-button="align-center"]');
+      await alignmentOption.click();
+
+      // Click away to close settings
+      await page.locator('body').click();
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Get the saved data
+      const beforeUndo = await saveBlok(page);
+      expect(beforeUndo.blocks[0].tunes?.alignment).toBe('center');
+
+      // Undo the tune change
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      const afterUndo = await saveBlok(page);
+      expect(afterUndo.blocks[0].tunes).toBeUndefined();
+
+      // Redo the tune change
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      const afterRedo = await saveBlok(page);
+      expect(afterRedo.blocks[0].tunes?.alignment).toBe('center');
+    });
+
+    test('undo/redo cycle with multiple tune changes', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Text' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const settingsToggler = paragraph.locator('[data-blok-testid="block-settings-toggler"]');
+
+      // First tune change: align center
+      await settingsToggler.click();
+      await page.locator('[data-blok-toolbar-button="align-center"]').click();
+      await page.locator('body').click();
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Second tune change: align right
+      await settingsToggler.click();
+      await page.locator('[data-blok-toolbar-button="align-right"]').click();
+      await page.locator('body').click();
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should restore to center
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      let data = await saveBlok(page);
+      expect(data.blocks[0].tunes?.alignment).toBe('right');
+
+      // Undo again should remove alignment
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      data = await saveBlok(page);
+      expect(data.blocks[0].tunes).toBeUndefined();
+    });
+
+    test('undo after changing block text and then tunes restores both', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Original' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+      const settingsToggler = paragraph.locator('[data-blok-testid="block-settings-toggler"]');
+
+      // Change text
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' Modified');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Change tune
+      await settingsToggler.click();
+      await page.locator('[data-blok-toolbar-button="align-center"]').click();
+      await page.locator('body').click();
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should remove tune
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      let data = await saveBlok(page);
+      expect(data.blocks[0].data.text).toBe('Original Modified');
+      expect(data.blocks[0].tunes).toBeUndefined();
+
+      // Undo again should restore original text
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      data = await saveBlok(page);
+      expect(data.blocks[0].data.text).toBe('Original');
+    });
   });
 });

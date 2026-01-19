@@ -1235,6 +1235,264 @@ test.describe('inline toolbar', () => {
     // Verify the inline toolbar is closed
     await expect(toolbar).toHaveCount(0);
   });
+
+  test('should not show toolbar when selection is collapsed', async ({ page }) => {
+    await createBlok(page, {
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Text for collapsed selection test',
+            },
+          },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    // Click to set cursor (collapsed selection)
+    await paragraph.click();
+
+    // Wait a bit to ensure toolbar would appear if it was going to
+    await page.waitForTimeout(200);
+
+    // Toolbar should not be visible for collapsed selection
+    await expect(toolbar).toHaveCount(0);
+  });
+
+  test('should not show toolbar when selection is in block without inline tools', async ({ page }) => {
+    // Create a custom block tool that doesn't support inline tools
+    const NO_INLINE_TOOLS_BLOCK_SOURCE = `
+      class NoInlineToolsBlock {
+        constructor({ data }) {
+          this.data = data || {};
+        }
+
+        render() {
+          const wrapper = document.createElement('div');
+          wrapper.textContent = this.data.text || '';
+          wrapper.setAttribute('data-blok-testid', 'no-inline-tools-block');
+          return wrapper;
+        }
+
+        save() {
+          return { text: this.data.text || '' };
+        }
+      }
+    `;
+
+    await createBlok(page, {
+      tools: {
+        noInlineTools: {
+          classCode: NO_INLINE_TOOLS_BLOCK_SOURCE,
+        },
+      },
+      data: {
+        blocks: [
+          {
+            type: 'noInlineTools',
+            data: {
+              text: 'Block without inline tools',
+            },
+          },
+        ],
+      },
+    });
+
+    const blockContent = page.locator('[data-blok-testid="no-inline-tools-block"]');
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    // Try to select text in the block
+    await blockContent.click();
+
+    // Select text using the browser selection
+    await page.evaluate(() => {
+      const block = document.querySelector('[data-blok-testid="no-inline-tools-block"]');
+      if (block && block.firstChild) {
+        const range = document.createRange();
+        range.setStart(block.firstChild, 0);
+        range.setEnd(block.firstChild, 10);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    });
+
+    // Wait to ensure toolbar would appear if it was going to
+    await page.waitForTimeout(200);
+
+    // Toolbar should not be visible for block without inline tools
+    await expect(toolbar).toHaveCount(0);
+  });
+
+  test('should handle rapid selection changes without errors', async ({ page }) => {
+    await createBlok(page, {
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'First paragraph with some text',
+            },
+          },
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Second paragraph with other text',
+            },
+          },
+        ],
+      },
+    });
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
+
+    // Rapidly change selections
+    await selectText(firstParagraph, 'First');
+    await page.waitForTimeout(50);
+
+    await selectText(firstParagraph, 'paragraph');
+    await page.waitForTimeout(50);
+
+    await selectText(secondParagraph, 'Second');
+    await page.waitForTimeout(50);
+
+    await selectText(secondParagraph, 'paragraph');
+
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    // Toolbar should still be visible and functional after rapid changes
+    await expect(toolbar).toBeVisible();
+
+    // Verify toolbar items are present
+    const toolbarItems = page.locator(INLINE_TOOL_SELECTOR);
+    const itemsCount = await toolbarItems.count();
+    expect(itemsCount).toBeGreaterThan(0);
+  });
+
+  test('should handle multiple rapid open/close cycles', async ({ page }) => {
+    await createBlok(page, {
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Text for rapid open close test',
+            },
+          },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    // Perform multiple open/close cycles rapidly
+    for (let i = 0; i < 5; i++) {
+      await selectText(paragraph, 'Text');
+      await expect(toolbar).toBeVisible();
+
+      // Click outside to close
+      await page.mouse.click(10, 10);
+      await expect(toolbar).toHaveCount(0);
+
+      await page.waitForTimeout(50);
+    }
+
+    // After rapid cycles, toolbar should still work
+    await selectText(paragraph, 'open');
+    await expect(toolbar).toBeVisible();
+  });
+
+  test('should show toolbar when selecting in different paragraphs', async ({ page }) => {
+    await createBlok(page, {
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'First paragraph with text here',
+            },
+          },
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Second paragraph further down with more text',
+            },
+          },
+        ],
+      },
+    });
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    // Select text in first paragraph
+    await selectText(firstParagraph, 'text here');
+    await expect(toolbar).toBeVisible();
+
+    // Select text in second paragraph - toolbar should still appear correctly
+    await selectText(secondParagraph, 'text');
+    await expect(toolbar).toBeVisible();
+
+    // Verify toolbar has items (it's properly initialized)
+    const toolbarItems = page.locator(INLINE_TOOL_SELECTOR);
+    const itemsCount = await toolbarItems.count();
+    expect(itemsCount).toBeGreaterThan(0);
+  });
+
+  test('should not show toolbar when selection is in disabled block', async ({ page }) => {
+    await createBlok(page, {
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Enabled paragraph with text',
+            },
+          },
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Disabled paragraph with other text',
+            },
+          },
+        ],
+      },
+    });
+
+    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
+
+    await selectText(firstParagraph, 'text');
+
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+    await expect(toolbar).toBeVisible();
+
+    // Disable inline tools for the current block programmatically
+    await page.evaluate(() => {
+      const blok = (window as unknown as { blokInstance?: { module?: { BlockManager?: { currentBlock?: { tool: { enabledInlineTools: boolean } } } } } }).blokInstance;
+      const block = blok?.module?.BlockManager?.currentBlock;
+      if (block) {
+        block.tool.enabledInlineTools = false;
+      }
+    });
+
+    // Trigger selection change to re-evaluate toolbar visibility
+    await page.keyboard.press('ArrowRight');
+
+    // Toolbar should close when inline tools are disabled
+    await expect(toolbar).toHaveCount(0);
+  });
 });
 
 declare global {

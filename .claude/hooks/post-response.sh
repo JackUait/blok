@@ -1,13 +1,12 @@
 #!/bin/bash
 # Hook script to auto-trigger /refactor after code changes
-# Triggers /compact first if context exceeds threshold
+# Outputs a directive for the model to run refactor (and compact if needed)
 
 set -e
 
 # Configuration (override via environment)
 CONTEXT_THRESHOLD_DEFAULT=60  # percentage
 CONTEXT_THRESHOLD=${REFACTOR_CONTEXT_THRESHOLD:-$CONTEXT_THRESHOLD_DEFAULT}
-DRY_RUN=${REFACTOR_HOOK_DRY_RUN:-0}
 DEBUG=${REFACTOR_HOOK_DEBUG:-0}
 LOG_FILE=".claude/hooks/refactor-hook.log"
 
@@ -63,12 +62,15 @@ fi
 
 debug_log "Code changes: $(echo "$changed_files" | wc -l | tr -d ' ') files"
 
-# Output commands for auto-execution
+# Output directive for the model to run commands
 if [ "$file_size" -gt "$threshold_chars" ]; then
-    debug_log "Context exceeds threshold - triggering compact + refactor"
-    echo "<!-- /compact -->"
-    echo "<!-- /refactor -->"
+    debug_log "Context exceeds threshold - directing compact + refactor"
+    cat <<'EOF'
+<run_refactor>
+EOF
 else
-    debug_log "Context within threshold - triggering refactor only"
-    echo "<!-- /refactor -->"
+    debug_log "Context within threshold - directing refactor only"
+    cat <<'EOF'
+<run_refactor>
+EOF
 fi

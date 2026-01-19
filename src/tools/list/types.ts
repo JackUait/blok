@@ -84,5 +84,6 @@ export interface ListItemConfig {
 export interface StyleConfig {
   style: ListItemStyle;
   name: string;
+  titleKey: string;
   icon: string;
 }

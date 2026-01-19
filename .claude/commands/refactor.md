@@ -1,22 +1,35 @@
 ---
-description: Run after completing a task to clean up your changes
+description: Use when finishing a task to review and clean up code changes made in the current chat session
 ---
 
-# Refactor Recent Changes
+# Refactor Current Session Changes
 
-Review and fix issues in your recent changes.
+Review and fix issues in code changed during this chat session only.
 
 ## Scope
 
-Analyze uncommitted changes (staged + unstaged). If working tree is clean, analyze changes since the last commit.
+**CRITICAL:** Only analyze files changed in the current chat session. Use git to establish a baseline.
 
 ## Process
 
-1. Run `git diff HEAD` to identify changed files (or `git diff HEAD~1` if working tree is clean)
-2. Read each changed file
-3. Analyze for issues using the categories below
-4. Auto-fix all high-priority issues directly
-5. Report lower-priority issues at the end without fixing
+1. **Establish baseline:** Run `git diff --name-only HEAD` to capture files already changed before this session
+2. **Get current changes:** Run `git diff --name-only HEAD` again (in parallel with step 1 if this is first check)
+3. **Compare:** Changed files = current minus baseline. Skip files that were already modified
+4. If working tree is clean at baseline, use `git diff --name-only HEAD~1..HEAD` for session files
+5. Read each changed file
+6. Analyze for issues using the categories below
+7. Auto-fix all high-priority issues directly
+8. Report lower-priority issues at the end without fixing
+
+**Example baseline capture (run once per session):**
+```bash
+# Capture initial state - files changed before this chat
+BEFORE_FILES=$(git diff --name-only HEAD) || echo ""
+
+# Later - get current state and filter to session changes only
+CURRENT_FILES=$(git diff --name-only HEAD)
+SESSION_FILES=$(comm -13 <(echo "$BEFORE_FILES" | sort) <(echo "$CURRENT_FILES" | sort))
+```
 
 ## Issue Categories
 

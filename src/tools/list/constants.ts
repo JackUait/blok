@@ -2,10 +2,6 @@
  * Constants for the List tool
  */
 
-import { IconListBulleted, IconListNumbered, IconListChecklist } from '../../components/icons';
-
-import type { StyleConfig } from './types';
-
 /**
  * Indentation padding per depth level in pixels
  */
@@ -40,12 +36,3 @@ export const PLACEHOLDER_KEY = 'tools.list.placeholder';
  * Tool name used when registering this tool with Blok
  */
 export const TOOL_NAME = 'list';
-
-/**
- * Style configurations for different list types
- */
-export const STYLE_CONFIGS: StyleConfig[] = [
-  { style: 'unordered', name: 'bulletedList', icon: IconListBulleted },
-  { style: 'ordered', name: 'numberedList', icon: IconListNumbered },
-  { style: 'checklist', name: 'todoList', icon: IconListChecklist },
-];

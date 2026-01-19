@@ -759,8 +759,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
     const result = this.mutationHandler.handleMutation(mutationsOrInputEvent);
 
     if (result.newToolRoot) {
-      // The tool renderer's reference will be updated when next accessed via getter
-      // No action needed here as toolRenderer.toolRenderedElement is a getter
+      // Update the tool renderer's reference to the new root element
+      this.toolRenderer.toolRenderedElement = result.newToolRoot;
     }
 
     if (!result.shouldFireUpdate) {

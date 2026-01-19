@@ -6,7 +6,7 @@ set -e
 
 # Configuration
 DEBUG=${REFACTOR_HOOK_DEBUG:-0}
-STATE_FILE=".claude/hooks/session-state.json"
+# STATE_FILE=".claude/hooks/session-state.json"
 LOG_FILE=".claude/hooks/start-chat.log"
 
 debug_log() {

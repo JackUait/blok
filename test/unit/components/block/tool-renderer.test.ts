@@ -233,6 +233,40 @@ describe('ToolRenderer', () => {
     });
   });
 
+  describe('toolRenderedElement setter', () => {
+    it('updates the tool root element reference', () => {
+      toolRenderer.compose();
+
+      const newRootElement = document.createElement('ul');
+      toolRenderer.toolRenderedElement = newRootElement;
+
+      expect(toolRenderer.toolRenderedElement).toBe(newRootElement);
+      expect(toolRenderer.pluginsContent).toBe(newRootElement);
+    });
+
+    it('can set to null', () => {
+      toolRenderer.compose();
+
+      toolRenderer.toolRenderedElement = null;
+
+      expect(toolRenderer.toolRenderedElement).toBeNull();
+    });
+
+    it('is used when tool replaces its root element (e.g., list type conversion)', () => {
+      toolRenderer.compose();
+
+      // Simulate list type conversion: ul → ol
+      const oldElement = toolRenderer.toolRenderedElement;
+      const newElement = document.createElement('ol');
+      newElement.innerHTML = '<li>Converted</li>';
+
+      toolRenderer.toolRenderedElement = newElement;
+
+      expect(toolRenderer.toolRenderedElement).toBe(newElement);
+      expect(toolRenderer.toolRenderedElement).not.toBe(oldElement);
+    });
+  });
+
   describe('contentElement getter', () => {
     it('returns null before compose is called', () => {
       const renderer = new ToolRenderer(

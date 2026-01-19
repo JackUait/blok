@@ -65,6 +65,15 @@ export class ToolRenderer {
   }
 
   /**
+   * Update the tool's rendered element reference.
+   * Called when the tool replaces its root element (e.g., list type conversion UL → OL).
+   * @param element - The new tool root element
+   */
+  public set toolRenderedElement(element: HTMLElement | null) {
+    this.toolRenderedElementInternal = element;
+  }
+
+  /**
    * Get the content wrapper element
    */
   public get contentElement(): HTMLElement | null {

@@ -1,5 +1,5 @@
 import type { Block } from '../../../block';
-import { SelectionUtils } from '../../../selection';
+import { SelectionUtils } from '../../../selection/index';
 import { LIST_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';

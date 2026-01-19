@@ -1,6 +1,6 @@
 import type { Selection as SelectionAPIInterface } from '../../../../types/api';
 import { Module } from '../../__module';
-import { SelectionUtils } from '../../selection';
+import { SelectionUtils } from '../../selection/index';
 
 /**
  * @class SelectionAPI

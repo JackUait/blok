@@ -7,7 +7,7 @@ import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api'
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
 import { IconLink } from '../icons';
-import { SelectionUtils } from '../selection';
+import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
 import { twMerge } from '../utils/tw';

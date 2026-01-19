@@ -4,7 +4,7 @@ import type { ModuleConfig } from '../../../../types-internal/module-config';
 import { Module } from '../../../__module';
 import { DATA_ATTR, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../../constants';
 import { Dom as $ } from '../../../dom';
-import { SelectionUtils } from '../../../selection';
+import { SelectionUtils } from '../../../selection/index';
 import type { InlineToolAdapter } from '../../../tools/inline';
 import { isMobileScreen } from '../../../utils';
 import type { Popover, PopoverItemParams } from '../../../utils/popover';

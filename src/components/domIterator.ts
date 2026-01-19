@@ -1,5 +1,5 @@
 import { Dom } from './dom';
-import { SelectionUtils } from './selection';
+import { SelectionUtils } from './selection/index';
 import { delay } from './utils';
 
 /**

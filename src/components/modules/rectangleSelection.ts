@@ -11,7 +11,7 @@ import {
   createSelector,
 } from '../constants';
 import { Dom as $ } from '../dom';
-import { SelectionUtils } from '../selection';
+import { SelectionUtils } from '../selection/index';
 import { throttle } from '../utils';
 
 /**

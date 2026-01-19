@@ -1,5 +1,5 @@
 import { selectionChangeDebounceTimeout } from '../../../constants';
-import { SelectionUtils as Selection } from '../../../selection';
+import { SelectionUtils as Selection } from '../../../selection/index';
 import { debounce } from '../../../utils';
 
 import { Controller } from './_base';

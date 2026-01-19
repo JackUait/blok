@@ -1,7 +1,7 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { Dom as $ } from '../dom';
-import { SelectionUtils as Selection } from '../selection';
+import { SelectionUtils as Selection } from '../selection/index';
 import { getCaretXPosition, isCaretAtEndOfInput, isCaretAtFirstLine, isCaretAtLastLine, isCaretAtStartOfInput, setCaretAtXPosition } from '../utils/caret';
 
 const ASCII_MAX_CODE_POINT = 0x7f;

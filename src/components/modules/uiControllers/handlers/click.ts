@@ -1,5 +1,5 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
-import { SelectionUtils as Selection } from '../../../selection';
+import { SelectionUtils as Selection } from '../../../selection/index';
 
 /**
  * Dependencies for the click handler

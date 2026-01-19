@@ -1,5 +1,5 @@
 import { Dom as $ } from '../dom';
-import { SelectionUtils } from '../selection';
+import { SelectionUtils } from '../selection/index';
 
 /**
  * Manages input elements within a Block.

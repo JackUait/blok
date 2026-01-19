@@ -1,7 +1,7 @@
 import { DATA_ATTR } from '../constants';
 import type { BlokEventMap } from '../events';
 import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet } from '../events';
-import { SelectionUtils } from '../selection';
+import { SelectionUtils } from '../selection/index';
 import type { EventsDispatcher } from '../utils/events';
 
 import type { StyleManager } from './style-manager';

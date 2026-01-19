@@ -2,7 +2,7 @@ import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { Block } from '../../block';
 import { Dom as $ } from '../../dom';
 import { IconPlus } from '../../icons';
-import { SelectionUtils } from '../../selection';
+import { SelectionUtils } from '../../selection/index';
 import { getUserOS } from '../../utils';
 import { onHover } from '../../utils/tooltip';
 import { twJoin } from '../../utils/tw';

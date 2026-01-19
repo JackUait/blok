@@ -1,7 +1,7 @@
 import type { InlineTool, API } from '../../../types';
 import type { Blocks, Selection, Tools, Caret, I18n } from '../../../types/api';
 import type { MenuConfig, MenuConfigItem } from '../../../types/tools';
-import { SelectionUtils } from '../selection';
+import { SelectionUtils } from '../selection/index';
 import type { BlockToolAdapter } from '../tools/block';
 import { capitalize, isMobileScreen } from '../utils';
 import { getConvertibleToolsForBlock } from '../utils/blocks';

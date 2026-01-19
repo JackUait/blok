@@ -1,6 +1,6 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { Dom as $ } from '../../../dom';
-import { SelectionUtils } from '../../../selection';
+import { SelectionUtils } from '../../../selection/index';
 import type { InlineToolAdapter } from '../../../tools/inline';
 
 import type { SelectionValidationResult } from './types';

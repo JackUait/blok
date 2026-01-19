@@ -1,4 +1,4 @@
-import { SelectionUtils as Selection } from '../../../selection';
+import { SelectionUtils as Selection } from '../../../selection/index';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
 
 import { Controller } from './_base';

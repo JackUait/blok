@@ -8,7 +8,7 @@ import type { SanitizerConfig } from '../../../types/configs';
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { Dom as $ } from '../dom';
-import { SelectionUtils } from '../selection';
+import { SelectionUtils } from '../selection/index';
 import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
 import { Shortcuts } from '../utils/shortcuts';

@@ -1,7 +1,7 @@
 import type { InlineTool as IInlineTool } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { Dom as $ } from '../../../dom';
-import { SelectionUtils } from '../../../selection';
+import { SelectionUtils } from '../../../selection/index';
 import { CommonInternalSettings } from '../../../tools/base';
 import type { InlineToolAdapter } from '../../../tools/inline';
 

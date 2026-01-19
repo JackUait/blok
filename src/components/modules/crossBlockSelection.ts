@@ -1,6 +1,6 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
-import { SelectionUtils } from '../selection';
+import { SelectionUtils } from '../selection/index';
 import { mouseButtons } from '../utils';
 
 /**

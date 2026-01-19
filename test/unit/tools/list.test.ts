@@ -90,9 +90,9 @@ describe('List Tool - i18n', () => {
       const settings = toMenuArray(list.renderSettings());
 
       expect(settings).toHaveLength(3);
-      expect(settings[0].label).toBe('Liste à puces');
-      expect(settings[1].label).toBe('Liste numérotée');
-      expect(settings[2].label).toBe('Liste de contrôle');
+      expect(settings[0].title).toBe('Liste à puces');
+      expect(settings[1].title).toBe('Liste numérotée');
+      expect(settings[2].title).toBe('Liste de contrôle');
     });
 
     it('falls back to original key when translation is missing', () => {
@@ -103,9 +103,9 @@ describe('List Tool - i18n', () => {
       const settings = toMenuArray(list.renderSettings());
 
       // Falls back to the full key when translation is missing
-      expect(settings[0].label).toBe('toolNames.bulletedList');
-      expect(settings[1].label).toBe('toolNames.numberedList');
-      expect(settings[2].label).toBe('toolNames.todoList');
+      expect(settings[0].title).toBe('toolNames.bulletedList');
+      expect(settings[1].title).toBe('toolNames.numberedList');
+      expect(settings[2].title).toBe('toolNames.todoList');
     });
 
     it('respects configured styles when translating', () => {
@@ -120,8 +120,8 @@ describe('List Tool - i18n', () => {
       const settings = toMenuArray(list.renderSettings());
 
       expect(settings).toHaveLength(2);
-      expect(settings[0].label).toBe('Aufzählung');
-      expect(settings[1].label).toBe('Aufgabenliste');
+      expect(settings[0].title).toBe('Aufzählung');
+      expect(settings[1].title).toBe('Aufgabenliste');
     });
   });
 

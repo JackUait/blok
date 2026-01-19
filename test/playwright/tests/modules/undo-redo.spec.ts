@@ -4715,8 +4715,11 @@ test.describe('yjs undo/redo', () => {
 
       const paragraph = getParagraphByIndex(page, 0);
 
+      // Click paragraph to focus it and move toolbar
+      await paragraph.click();
+
       // Click block settings toggler
-      const settingsToggler = paragraph.locator('[data-blok-testid="block-settings-toggler"]');
+      const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
       await settingsToggler.click();
 
       // Change alignment to center
@@ -4755,8 +4758,10 @@ test.describe('yjs undo/redo', () => {
         },
       ]);
 
-      const paragraph = getParagraphByIndex(page, 0);
-      const settingsToggler = paragraph.locator('[data-blok-testid="block-settings-toggler"]');
+      // Click paragraph to focus it and move toolbar
+      await getParagraphByIndex(page, 0).click();
+
+      const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
       // First tune change: align center
       await settingsToggler.click();
@@ -4797,7 +4802,7 @@ test.describe('yjs undo/redo', () => {
 
       const paragraph = getParagraphByIndex(page, 0);
       const paragraphInput = paragraph.locator('[contenteditable="true"]');
-      const settingsToggler = paragraph.locator('[data-blok-testid="block-settings-toggler"]');
+      const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
       // Change text
       await paragraphInput.click();
@@ -4806,7 +4811,8 @@ test.describe('yjs undo/redo', () => {
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Change tune
+      // Change tune - need to click on paragraph wrapper first to bring toolbar
+      await paragraph.click();
       await settingsToggler.click();
       await page.locator('[data-blok-toolbar-button="align-center"]').click();
       await page.mouse.click(10, 10);

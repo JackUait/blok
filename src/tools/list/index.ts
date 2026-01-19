@@ -8,7 +8,6 @@ import type {
   API,
   BlockTool,
   BlockToolConstructorOptions,
-  BlockToolData,
   PasteEvent,
   ToolboxConfig,
   ConversionConfig,
@@ -23,88 +22,19 @@ import { stripFakeBackgroundElements } from '../../components/utils';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
-/**
- * List item styles
- */
-export type ListItemStyle = 'unordered' | 'ordered' | 'checklist';
-
-/**
- * Tool's input and output data format
- */
-export interface ListItemData extends BlockToolData {
-  /** Item text content (can include HTML) */
-  text: string;
-  /** List style: unordered, ordered, or checklist */
-  style: ListItemStyle;
-  /** Checked state for checklist items */
-  checked?: boolean;
-  /** Starting number for ordered lists (only applies to root items) */
-  start?: number;
-  /** Nesting depth level (0 = root, 1 = first indent, etc.) */
-  depth?: number;
-}
-
-/**
- * Tool's config from Editor
- */
-export interface ListItemConfig {
-  /** Default list style */
-  defaultStyle?: ListItemStyle;
-  /**
-   * Available list styles for the settings menu.
-   * When specified, only these styles will be available in the block settings dropdown.
-   */
-  styles?: ListItemStyle[];
-  /**
-   * List styles to show in the toolbox.
-   * When specified, only these list types will appear as separate entries in the toolbox.
-   * If not specified, all list types (unordered, ordered, checklist) will be shown.
-   *
-   * @example
-   * // Show only bulleted and numbered lists in toolbox
-   * toolboxStyles: ['unordered', 'ordered']
-   *
-   * @example
-   * // Show only checklist in toolbox
-   * toolboxStyles: ['checklist']
-   */
-  toolboxStyles?: ListItemStyle[];
-  /**
-   * Custom color for list items.
-   * Accepts any valid CSS color value (hex, rgb, hsl, named colors, etc.)
-   *
-   * @example
-   * // Set list items to a hex color
-   * itemColor: '#3b82f6'
-   *
-   * @example
-   * // Set list items to an rgb color
-   * itemColor: 'rgb(59, 130, 246)'
-   */
-  itemColor?: string;
-  /**
-   * Custom font size for list items.
-   * Accepts any valid CSS font-size value (px, rem, em, etc.)
-   *
-   * @example
-   * // Set list items to 18px
-   * itemSize: '18px'
-   *
-   * @example
-   * // Set list items to 1.25rem
-   * itemSize: '1.25rem'
-   */
-  itemSize?: string;
-}
-
-/**
- * Style configuration
- */
-interface StyleConfig {
-  style: ListItemStyle;
-  name: string;
-  icon: string;
-}
+import {
+  INDENT_PER_LEVEL,
+  BASE_STYLES,
+  ITEM_STYLES,
+  CHECKLIST_ITEM_STYLES,
+  CHECKBOX_STYLES,
+  PLACEHOLDER_KEY,
+  TOOL_NAME,
+  STYLE_CONFIGS,
+} from './constants';
+import { ListDepthValidator } from './depth-validator';
+import { ListMarkerCalculator } from './marker-calculator';
+import type { ListItemStyle, ListItemConfig, StyleConfig, ListItemData } from './types';
 
 /**
  * ListItem block for the Blok Editor.
@@ -116,30 +46,21 @@ export class ListItem implements BlockTool {
   private _settings: ListItemConfig;
   private _data: ListItemData;
   private _element: HTMLElement | null = null;
+  private depthValidator: ListDepthValidator;
+  private markerCalculator: ListMarkerCalculator;
 
   /**
    * Block instance properties for hierarchy
    */
   private blockId?: string;
-  private parentId?: string | null;
-  private contentIds?: string[];
-
-  private static readonly BASE_STYLES = 'outline-none';
-  private static readonly ITEM_STYLES = 'outline-none py-0.5 pl-0.5 leading-[1.6em]';
-  private static readonly CHECKLIST_ITEM_STYLES = 'flex items-start py-0.5 pl-0.5';
-  private static readonly CHECKBOX_STYLES = 'mt-1 w-4 mr-2 h-4 cursor-pointer accent-current';
-
-  private static readonly STYLE_CONFIGS: StyleConfig[] = [
-    { style: 'unordered', name: 'bulletedList', icon: IconListBulleted },
-    { style: 'ordered', name: 'numberedList', icon: IconListNumbered },
-    { style: 'checklist', name: 'todoList', icon: IconListChecklist },
-  ];
 
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<ListItemData, ListItemConfig>) {
     this.api = api;
     this.readOnly = readOnly;
     this._settings = config || {};
     this._data = this.normalizeData(data);
+    this.depthValidator = new ListDepthValidator(api.blocks);
+    this.markerCalculator = new ListMarkerCalculator(api.blocks);
 
     // Store block hierarchy info
     if (block) {
@@ -244,16 +165,12 @@ export class ListItem implements BlockTool {
     };
   }
 
-  private get currentStyleConfig(): StyleConfig {
-    return ListItem.STYLE_CONFIGS.find(s => s.style === this._data.style) || ListItem.STYLE_CONFIGS[0];
-  }
-
   private get availableStyles(): StyleConfig[] {
     const configuredStyles = this._settings.styles;
     if (!configuredStyles || configuredStyles.length === 0) {
-      return ListItem.STYLE_CONFIGS;
+      return STYLE_CONFIGS;
     }
-    return ListItem.STYLE_CONFIGS.filter(s => configuredStyles.includes(s.style));
+    return STYLE_CONFIGS.filter(s => configuredStyles.includes(s.style));
   }
 
   private get itemColor(): string | undefined {
@@ -264,10 +181,8 @@ export class ListItem implements BlockTool {
     return this._settings.itemSize;
   }
 
-  private static readonly PLACEHOLDER_KEY = 'tools.list.placeholder';
-
   private get placeholder(): string {
-    return this.api.i18n.t(ListItem.PLACEHOLDER_KEY);
+    return this.api.i18n.t(PLACEHOLDER_KEY);
   }
 
   private applyItemStyles(element: HTMLElement): void {
@@ -339,92 +254,14 @@ export class ListItem implements BlockTool {
    */
   private validateAndAdjustDepthAfterMove(newIndex: number): void {
     const currentDepth = this.getDepth();
-    const maxAllowedDepth = this.calculateMaxAllowedDepth(newIndex);
-    const targetDepth = this.calculateTargetDepthForPosition(newIndex, maxAllowedDepth);
+    const targetDepth = this.depthValidator.getTargetDepthForMove({
+      blockIndex: newIndex,
+      currentDepth,
+    });
 
     if (currentDepth !== targetDepth) {
       this.adjustDepthTo(targetDepth);
     }
-  }
-
-  /**
-   * Calculates the target depth for a list item dropped at the given index.
-   * When dropping into a nested context, the item should match the sibling's depth.
-   *
-   * @param blockIndex - The index where the block was dropped
-   * @param maxAllowedDepth - The maximum allowed depth at this position
-   * @returns The target depth for the dropped item
-   */
-  private calculateTargetDepthForPosition(blockIndex: number, maxAllowedDepth: number): number {
-    const currentDepth = this.getDepth();
-
-    // If current depth exceeds max, cap it
-    if (currentDepth > maxAllowedDepth) {
-      return maxAllowedDepth;
-    }
-
-    // Check if we're inserting before a list item (next block)
-    const nextBlock = this.api.blocks.getBlockByIndex(blockIndex + 1);
-    const nextIsListItem = nextBlock && nextBlock.name === ListItem.TOOL_NAME;
-    const nextBlockDepth = nextIsListItem ? this.getBlockDepth(nextBlock) : 0;
-
-    // If next block is a deeper list item, match its depth (become a sibling)
-    // This prevents breaking list structure by inserting a shallower item
-    const shouldMatchNextDepth = nextIsListItem
-      && nextBlockDepth > currentDepth
-      && nextBlockDepth <= maxAllowedDepth;
-
-    if (shouldMatchNextDepth) {
-      return nextBlockDepth;
-    }
-
-    // Check if previous block is a list item at a deeper level
-    const previousBlock = blockIndex > 0 ? this.api.blocks.getBlockByIndex(blockIndex - 1) : null;
-    const previousIsListItem = previousBlock && previousBlock.name === ListItem.TOOL_NAME;
-    const previousBlockDepth = previousIsListItem ? this.getBlockDepth(previousBlock) : 0;
-
-    // If previous block is deeper and there's no next list item to guide us,
-    // match the previous block's depth (append as sibling in the nested list)
-    const shouldMatchPreviousDepth = previousIsListItem
-      && !nextIsListItem
-      && previousBlockDepth > currentDepth
-      && previousBlockDepth <= maxAllowedDepth;
-
-    if (shouldMatchPreviousDepth) {
-      return previousBlockDepth;
-    }
-
-    return currentDepth;
-  }
-
-  /**
-   * Calculates the maximum allowed depth for a list item at the given index.
-   *
-   * Rules:
-   * 1. First item (index 0) must be at depth 0
-   * 2. For other items: maxDepth = previousListItem.depth + 1
-   * 3. If previous block is not a list item, maxDepth = 0
-   *
-   * @param blockIndex - The index of the block
-   * @returns The maximum allowed depth (0 or more)
-   */
-  private calculateMaxAllowedDepth(blockIndex: number): number {
-    // First item must be at depth 0
-    if (blockIndex === 0) {
-      return 0;
-    }
-
-    const previousBlock = this.api.blocks.getBlockByIndex(blockIndex - 1);
-
-    // If previous block doesn't exist or isn't a list item, max depth is 0
-    if (!previousBlock || previousBlock.name !== ListItem.TOOL_NAME) {
-      return 0;
-    }
-
-    // Max depth is previous item's depth + 1
-    const previousBlockDepth = this.getBlockDepth(previousBlock);
-
-    return previousBlockDepth + 1;
   }
 
   /**
@@ -446,7 +283,7 @@ export class ListItem implements BlockTool {
 
     if (listItemEl instanceof HTMLElement) {
       listItemEl.style.marginLeft = newDepth > 0
-        ? `${newDepth * ListItem.INDENT_PER_LEVEL}px`
+        ? `${newDepth * INDENT_PER_LEVEL}px`
         : '';
     }
   }
@@ -480,7 +317,7 @@ export class ListItem implements BlockTool {
 
     Array.from({ length: blocksCount }, (_, i) => i).forEach(i => {
       const block = this.api.blocks.getBlockByIndex(i);
-      if (!block || block.name !== ListItem.TOOL_NAME) {
+      if (!block || block.name !== TOOL_NAME) {
         return;
       }
 
@@ -492,17 +329,6 @@ export class ListItem implements BlockTool {
 
       this.updateBlockMarker(block);
     });
-  }
-
-  /**
-   * Update marker if this is an ordered list item.
-   */
-  private updateMarkerIfOrdered(): void {
-    if (this._data.style !== 'ordered' || !this._element) {
-      return;
-    }
-
-    this.updateMarker();
   }
 
   /**
@@ -548,37 +374,7 @@ export class ListItem implements BlockTool {
    * Items at deeper depths are skipped regardless of their style.
    */
   private findListGroupStartIndex(currentBlockIndex: number, currentDepth: number, currentStyle?: ListItemStyle): number {
-    const findStart = (index: number, startIndex: number): number => {
-      if (index < 0) {
-        return startIndex;
-      }
-
-      const block = this.api.blocks.getBlockByIndex(index);
-      if (!block || block.name !== ListItem.TOOL_NAME) {
-        return startIndex;
-      }
-
-      const blockDepth = this.getBlockDepth(block);
-      if (blockDepth < currentDepth) {
-        return startIndex; // Hit a parent, stop
-      }
-
-      // If at deeper depth, skip it and continue (ignore style at deeper depths)
-      if (blockDepth > currentDepth) {
-        return findStart(index - 1, startIndex);
-      }
-
-      // At same depth - check style boundary if currentStyle is provided
-      const blockStyle = this.getBlockStyle(block);
-      if (currentStyle !== undefined && blockStyle !== currentStyle) {
-        return startIndex; // Style boundary at same depth - treat as separate list
-      }
-
-      // Same depth and same style - update startIndex and continue
-      return findStart(index - 1, index);
-    };
-
-    return findStart(currentBlockIndex - 1, currentBlockIndex);
+    return this.markerCalculator.findGroupStart(currentBlockIndex, currentDepth, currentStyle ?? this._data.style);
   }
 
   /**
@@ -604,7 +400,7 @@ export class ListItem implements BlockTool {
       }
 
       const block = this.api.blocks.getBlockByIndex(index);
-      if (!block || block.name !== ListItem.TOOL_NAME) {
+      if (!block || block.name !== TOOL_NAME) {
         return; // Stop when we hit a non-list block
       }
 
@@ -638,38 +434,14 @@ export class ListItem implements BlockTool {
    * Get the depth of a block by reading from its DOM
    */
   private getBlockDepth(block: ReturnType<typeof this.api.blocks.getBlockByIndex>): number {
-    if (!block) {
-      return 0;
-    }
-
-    const blockHolder = block.holder;
-    const listItemEl = blockHolder?.querySelector('[role="listitem"]');
-    const styleAttr = listItemEl?.getAttribute('style');
-
-    const marginMatch = styleAttr?.match(/margin-left:\s*(\d+)px/);
-    return marginMatch ? Math.round(parseInt(marginMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
-  }
-
-  /**
-   * Type guard to check if a string is a valid ListItemStyle
-   */
-  private isValidListItemStyle(style: string | null | undefined): style is ListItemStyle {
-    return style === 'unordered' || style === 'ordered' || style === 'checklist';
+    return this.depthValidator.getBlockDepth(block);
   }
 
   /**
    * Get the style of a block by reading from its DOM
    */
   private getBlockStyle(block: ReturnType<typeof this.api.blocks.getBlockByIndex>): ListItemStyle | null {
-    if (!block) {
-      return null;
-    }
-
-    const blockHolder = block.holder;
-    const listItemEl = blockHolder?.querySelector('[data-list-style]');
-    const style = listItemEl?.getAttribute('data-list-style');
-
-    return this.isValidListItemStyle(style) ? style : null;
+    return this.markerCalculator.getBlockStyle(block);
   }
 
   /**
@@ -699,12 +471,12 @@ export class ListItem implements BlockTool {
 
     const blockDepth = this.getBlockDepth(block);
     const blockStyle = this.getBlockStyle(block) || 'ordered';
-    const siblingIndex = this.countPrecedingSiblingsAtDepth(blockIndex, blockDepth, blockStyle);
+    const siblingIndex = this.markerCalculator.getSiblingIndex(blockIndex, blockDepth, blockStyle);
 
     // Get the start value for this list group
-    const startValue = this.getListStartValueForBlock(blockIndex, blockDepth, siblingIndex, blockStyle);
+    const startValue = this.markerCalculator.getGroupStartValue(blockIndex, blockDepth, siblingIndex, blockStyle);
     const actualNumber = startValue + siblingIndex;
-    const markerText = this.formatOrderedMarker(actualNumber, blockDepth);
+    const markerText = this.markerCalculator.formatNumber(actualNumber, blockDepth);
 
     marker.textContent = markerText;
   }
@@ -745,142 +517,12 @@ export class ListItem implements BlockTool {
     checkbox.checked = checked;
   }
 
-  /**
-   * Format an ordered list marker based on the number and depth
-   */
-  private formatOrderedMarker(number: number, depth: number): string {
-    const style = depth % 3;
-
-    if (style === 1) {
-      return `${this.numberToLowerAlpha(number)}.`;
-    }
-    if (style === 2) {
-      return `${this.numberToLowerRoman(number)}.`;
-    }
-    return `${number}.`;
-  }
-
-  /**
-   * Count preceding list items at the same depth and style for a given block index
-   */
-  private countPrecedingSiblingsAtDepth(blockIndex: number, targetDepth: number, targetStyle?: ListItemStyle): number {
-    if (blockIndex <= 0) {
-      return 0;
-    }
-
-    return this.countPrecedingListItemsAtDepthFromIndex(blockIndex - 1, targetDepth, targetStyle);
-  }
-
-  /**
-   * Recursively count preceding list items at the given depth and style starting from index.
-   * Stops at style boundaries at the same depth (when encountering a different list style).
-   * Items at deeper depths are skipped regardless of their style.
-   */
-  private countPrecedingListItemsAtDepthFromIndex(index: number, targetDepth: number, targetStyle?: ListItemStyle): number {
-    if (index < 0) {
-      return 0;
-    }
-
-    const block = this.api.blocks.getBlockByIndex(index);
-    if (!block || block.name !== ListItem.TOOL_NAME) {
-      return 0;
-    }
-
-    const blockDepth = this.getBlockDepth(block);
-
-    if (blockDepth < targetDepth) {
-      return 0; // Hit a parent
-    }
-
-    // If at deeper depth, skip it and continue (ignore style at deeper depths)
-    if (blockDepth > targetDepth) {
-      return this.countPrecedingListItemsAtDepthFromIndex(index - 1, targetDepth, targetStyle);
-    }
-
-    // At same depth - check style boundary if targetStyle is provided
-    const blockStyle = this.getBlockStyle(block);
-    if (targetStyle !== undefined && blockStyle !== targetStyle) {
-      return 0; // Style boundary at same depth - treat as separate list
-    }
-
-    // Same depth and same style (or no style check) - count it and continue
-    return 1 + this.countPrecedingListItemsAtDepthFromIndex(index - 1, targetDepth, targetStyle);
-  }
-
-  /**
-   * Get the list start value for a block at a given index and depth
-   */
-  private getListStartValueForBlock(blockIndex: number, targetDepth: number, siblingIndex: number, targetStyle?: ListItemStyle): number {
-    if (siblingIndex === 0) {
-      return this.getBlockStartValue(blockIndex);
-    }
-
-    // Find the first item in this list group
-    const firstItemIndex = this.findFirstListItemIndexFromBlock(blockIndex - 1, targetDepth, siblingIndex, targetStyle);
-    if (firstItemIndex === null) {
-      return 1;
-    }
-
-    return this.getBlockStartValue(firstItemIndex);
-  }
-
-  /**
-   * Get the start value from a block's data-list-start attribute
-   */
-  private getBlockStartValue(blockIndex: number): number {
-    const block = this.api.blocks.getBlockByIndex(blockIndex);
-    if (!block) {
-      return 1;
-    }
-
-    const blockHolder = block.holder;
-    const listItemEl = blockHolder?.querySelector('[data-list-style]');
-    const startAttr = listItemEl?.getAttribute('data-list-start');
-    return startAttr ? parseInt(startAttr, 10) : 1;
-  }
-
-  /**
-   * Find the first list item in a consecutive group.
-   * Stops at style boundaries at the same depth (when encountering a different list style).
-   * Items at deeper depths are skipped regardless of their style.
-   */
-  private findFirstListItemIndexFromBlock(index: number, targetDepth: number, remainingCount: number, targetStyle?: ListItemStyle): number | null {
-    if (index < 0 || remainingCount <= 0) {
-      return index + 1;
-    }
-
-    const block = this.api.blocks.getBlockByIndex(index);
-    if (!block || block.name !== ListItem.TOOL_NAME) {
-      return index + 1;
-    }
-
-    const blockDepth = this.getBlockDepth(block);
-
-    if (blockDepth < targetDepth) {
-      return index + 1;
-    }
-
-    // If at deeper depth, skip it and continue (ignore style at deeper depths)
-    if (blockDepth > targetDepth) {
-      return this.findFirstListItemIndexFromBlock(index - 1, targetDepth, remainingCount, targetStyle);
-    }
-
-    // At same depth - check style boundary if targetStyle is provided
-    const blockStyle = this.getBlockStyle(block);
-    if (targetStyle !== undefined && blockStyle !== targetStyle) {
-      return index + 1; // Style boundary at same depth - treat as separate list
-    }
-
-    // Same depth and same style - decrement count and continue
-    return this.findFirstListItemIndexFromBlock(index - 1, targetDepth, remainingCount - 1, targetStyle);
-  }
-
   private createItemElement(): HTMLElement {
     const { style } = this._data;
 
     const wrapper = document.createElement('div');
-    wrapper.className = ListItem.BASE_STYLES;
-    wrapper.setAttribute(DATA_ATTR.tool, ListItem.TOOL_NAME);
+    wrapper.className = BASE_STYLES;
+    wrapper.setAttribute(DATA_ATTR.tool, TOOL_NAME);
     wrapper.setAttribute('data-list-style', style);
     wrapper.setAttribute('data-list-depth', String(this.getDepth()));
 
@@ -902,21 +544,16 @@ export class ListItem implements BlockTool {
     return wrapper;
   }
 
-  /**
-   * Indentation padding per depth level in pixels
-   */
-  private static readonly INDENT_PER_LEVEL = 24;
-
   private createStandardContent(): HTMLElement {
     const item = document.createElement('div');
     item.setAttribute('role', 'listitem');
-    item.className = twMerge(ListItem.ITEM_STYLES, 'flex', ...PLACEHOLDER_CLASSES);
+    item.className = twMerge(ITEM_STYLES, 'flex', ...PLACEHOLDER_CLASSES);
     this.applyItemStyles(item);
 
     // Apply indentation based on depth
     const depth = this.getDepth();
     if (depth > 0) {
-      item.style.marginLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
+      item.style.marginLeft = `${depth * INDENT_PER_LEVEL}px`;
     }
 
     // Create marker element (will be updated in rendered() with correct index)
@@ -941,18 +578,18 @@ export class ListItem implements BlockTool {
   private createChecklistContent(): HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.setAttribute('role', 'listitem');
-    wrapper.className = ListItem.CHECKLIST_ITEM_STYLES;
+    wrapper.className = CHECKLIST_ITEM_STYLES;
     this.applyItemStyles(wrapper);
 
     // Apply indentation based on depth
     const depth = this.getDepth();
     if (depth > 0) {
-      wrapper.style.marginLeft = `${depth * ListItem.INDENT_PER_LEVEL}px`;
+      wrapper.style.marginLeft = `${depth * INDENT_PER_LEVEL}px`;
     }
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.className = ListItem.CHECKBOX_STYLES;
+    checkbox.className = CHECKBOX_STYLES;
     checkbox.checked = Boolean(this._data.checked);
     checkbox.disabled = this.readOnly;
 
@@ -1030,61 +667,7 @@ export class ListItem implements BlockTool {
     const currentDepth = this.getDepth();
 
     // Count consecutive preceding listItem blocks at the same depth
-    return this.countPrecedingListItemsAtDepth(currentBlockIndex - 1, currentDepth);
-  }
-
-  /**
-   * The tool name used when registering this tool with Blok.
-   * Used to identify list blocks when counting siblings.
-   */
-  private static readonly TOOL_NAME = 'list';
-
-  /**
-   * Recursively count consecutive preceding list blocks at the same depth and style.
-   * Stops when encountering a block that's not a list, a list at a shallower depth (parent),
-   * or a list with a different style at the same depth (treating style changes as list boundaries).
-   * Items at deeper depths are skipped regardless of their style.
-   */
-  private countPrecedingListItemsAtDepth(index: number, targetDepth: number): number {
-    if (index < 0) {
-      return 0;
-    }
-
-    const block = this.api.blocks.getBlockByIndex(index);
-    if (!block || block.name !== ListItem.TOOL_NAME) {
-      return 0;
-    }
-
-    // We need to get the block's data to check its depth and style
-    // Since we can't directly access another block's tool data,
-    // we'll check via the DOM for the depth and style attributes
-    const blockHolder = block.holder;
-    const listItemEl = blockHolder?.querySelector('[data-list-style]');
-
-    const depthAttr = listItemEl?.querySelector('[role="listitem"]')?.getAttribute('style');
-
-    // Calculate depth from margin (marginLeft = depth * 24px)
-    const marginMatch = depthAttr?.match(/margin-left:\s*(\d+)px/);
-    const blockDepth = marginMatch ? Math.round(parseInt(marginMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
-
-    // If this block is at a shallower depth, it's a "parent" - stop counting
-    if (blockDepth < targetDepth) {
-      return 0;
-    }
-
-    // If at deeper depth, skip it and continue checking (ignore style at deeper depths)
-    if (blockDepth > targetDepth) {
-      return this.countPrecedingListItemsAtDepth(index - 1, targetDepth);
-    }
-
-    // At same depth - check style boundary
-    const blockStyle = listItemEl?.getAttribute('data-list-style');
-    if (blockStyle !== this._data.style) {
-      return 0; // Style boundary at same depth - treat as separate list
-    }
-
-    // Same depth and same style - count it and continue
-    return 1 + this.countPrecedingListItemsAtDepth(index - 1, targetDepth);
+    return this.markerCalculator.getSiblingIndex(currentBlockIndex, currentDepth, this._data.style);
   }
 
   /**
@@ -1098,8 +681,7 @@ export class ListItem implements BlockTool {
    * Get the appropriate bullet character based on nesting depth
    */
   private getBulletCharacter(depth: number): string {
-    const bullets = ['•', '◦', '▪'];
-    return bullets[depth % bullets.length];
+    return this.markerCalculator.getBulletCharacter(depth);
   }
 
   /**
@@ -1109,18 +691,7 @@ export class ListItem implements BlockTool {
     // Get the start value from the first item in this list group
     const startValue = this.getListStartValue(index, depth);
     const actualNumber = startValue + index;
-    const style = depth % 3;
-
-    switch (style) {
-      case 0:
-        return `${actualNumber}.`;
-      case 1:
-        return `${this.numberToLowerAlpha(actualNumber)}.`;
-      case 2:
-        return `${this.numberToLowerRoman(actualNumber)}.`;
-      default:
-        return `${actualNumber}.`;
-    }
+    return this.markerCalculator.formatNumber(actualNumber, depth);
   }
 
   /**
@@ -1138,94 +709,12 @@ export class ListItem implements BlockTool {
       ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
       : this.api.blocks.getCurrentBlockIndex();
 
-    const firstItemIndex = this.findFirstListItemIndex(currentBlockIndex - 1, targetDepth, siblingIndex);
+    const firstItemIndex = this.markerCalculator.findFirstItemIndex(currentBlockIndex - 1, targetDepth, siblingIndex, this._data.style);
     if (firstItemIndex === null) {
       return 1;
     }
 
-    const firstBlock = this.api.blocks.getBlockByIndex(firstItemIndex);
-    if (!firstBlock) {
-      return 1;
-    }
-
-    // Get the start value from the first block's data attribute
-    const blockHolder = firstBlock.holder;
-    const listItemEl = blockHolder?.querySelector('[data-list-style]');
-    const startAttr = listItemEl?.getAttribute('data-list-start');
-
-    return startAttr ? parseInt(startAttr, 10) : 1;
-  }
-
-  /**
-   * Find the index of the first list item in this consecutive group.
-   * Walks backwards through the blocks counting items at the same depth and style.
-   * Stops at style boundaries at the same depth (when encountering a different list style).
-   * Items at deeper depths are skipped regardless of their style.
-   */
-  private findFirstListItemIndex(index: number, targetDepth: number, remainingCount: number): number | null {
-    if (index < 0 || remainingCount <= 0) {
-      return index + 1;
-    }
-
-    const block = this.api.blocks.getBlockByIndex(index);
-    if (!block || block.name !== ListItem.TOOL_NAME) {
-      return index + 1;
-    }
-
-    const blockHolder = block.holder;
-    const listItemEl = blockHolder?.querySelector('[data-list-style]');
-
-    const depthAttr = listItemEl?.querySelector('[role="listitem"]')?.getAttribute('style');
-
-    const marginMatch = depthAttr?.match(/margin-left:\s*(\d+)px/);
-    const blockDepth = marginMatch ? Math.round(parseInt(marginMatch[1], 10) / ListItem.INDENT_PER_LEVEL) : 0;
-
-    // If this block is at a shallower depth, we've reached the boundary
-    if (blockDepth < targetDepth) {
-      return index + 1;
-    }
-
-    // If at deeper depth, skip it and continue checking (ignore style at deeper depths)
-    if (blockDepth > targetDepth) {
-      return this.findFirstListItemIndex(index - 1, targetDepth, remainingCount);
-    }
-
-    // At same depth - check style boundary
-    const blockStyle = listItemEl?.getAttribute('data-list-style');
-    if (blockStyle !== this._data.style) {
-      return index + 1; // Style boundary at same depth - treat as separate list
-    }
-
-    // Same depth and same style - decrement count and continue
-    return this.findFirstListItemIndex(index - 1, targetDepth, remainingCount - 1);
-  }
-
-  private numberToLowerAlpha(num: number): string {
-    const convertRecursive = (n: number): string => {
-      if (n <= 0) return '';
-      const adjusted = n - 1;
-      return convertRecursive(Math.floor(adjusted / 26)) + String.fromCharCode(97 + (adjusted % 26));
-    };
-    return convertRecursive(num);
-  }
-
-  private numberToLowerRoman(num: number): string {
-    const romanNumerals: [number, string][] = [
-      [1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'],
-      [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'],
-      [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']
-    ];
-
-    const convertRecursive = (remaining: number, idx: number): string => {
-      if (remaining <= 0 || idx >= romanNumerals.length) return '';
-      const [value, numeral] = romanNumerals[idx];
-      if (remaining >= value) {
-        return numeral + convertRecursive(remaining - value, idx);
-      }
-      return convertRecursive(remaining, idx + 1);
-    };
-
-    return convertRecursive(num, 0);
+    return this.markerCalculator.getBlockStartValue(firstItemIndex);
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -1298,7 +787,7 @@ export class ListItem implements BlockTool {
       contentEl.innerHTML = beforeContent;
       this._data.text = beforeContent;
 
-      const newBlock = this.api.blocks.insert(ListItem.TOOL_NAME, {
+      const newBlock = this.api.blocks.insert(TOOL_NAME, {
         text: afterContent,
         style: this._data.style,
         checked: false,
@@ -1314,7 +803,7 @@ export class ListItem implements BlockTool {
     const newBlock = this.api.blocks.splitBlock(
       this.blockId,
       { text: beforeContent },
-      ListItem.TOOL_NAME,
+      TOOL_NAME,
       {
         text: afterContent,
         style: this._data.style,
@@ -1403,69 +892,13 @@ export class ListItem implements BlockTool {
       requestAnimationFrame(() => {
         const holder = newBlock.holder;
         if (holder) {
-          holder.style.marginLeft = `${currentDepth * ListItem.INDENT_PER_LEVEL}px`;
+          holder.style.marginLeft = `${currentDepth * INDENT_PER_LEVEL}px`;
           holder.setAttribute('data-blok-depth', String(currentDepth));
         }
       });
     }
 
     this.setCaretToBlockContent(newBlock, 'start');
-  }
-
-  /**
-   * Type guard to check if a node is a Text node
-   */
-  private isTextNode(node: Node): node is Text {
-    return node.nodeType === Node.TEXT_NODE;
-  }
-
-  /**
-   * Collect all text nodes from an element
-   * @param node - Node to collect text nodes from
-   * @returns Array of text nodes
-   */
-  private collectTextNodes(node: Node): Text[] {
-    if (this.isTextNode(node)) {
-      return [node];
-    }
-
-    if (!node.hasChildNodes?.()) {
-      return [];
-    }
-
-    return Array.from(node.childNodes).flatMap((child) => this.collectTextNodes(child));
-  }
-
-  /**
-   * Find the text node and offset for a given character position
-   * @param textNodes - Array of text nodes to search through
-   * @param targetPosition - Character position to find
-   * @returns Object with node and offset, or null if not found
-   */
-  private findCaretPosition(textNodes: Text[], targetPosition: number): { node: Text; offset: number } | null {
-    const result = textNodes.reduce<{ found: boolean; charCount: number; node: Text | null; offset: number }>(
-      (acc, node) => {
-        if (acc.found) return acc;
-
-        const nodeLength = node.textContent?.length ?? 0;
-        if (acc.charCount + nodeLength >= targetPosition) {
-          return {
-            found: true,
-            charCount: acc.charCount,
-            node,
-            offset: targetPosition - acc.charCount,
-          };
-        }
-
-        return {
-          ...acc,
-          charCount: acc.charCount + nodeLength,
-        };
-      },
-      { found: false, charCount: 0, node: null, offset: 0 }
-    );
-
-    return result.node ? { node: result.node, offset: result.offset } : null;
   }
 
   /**
@@ -1488,47 +921,15 @@ export class ListItem implements BlockTool {
     }
   }
 
-  /**
-   * Get the depth of the parent list item by walking backwards through preceding items.
-   * A parent is the first preceding list item with a depth less than the current item.
-   * @param blockIndex - The index of the current block
-   * @returns The parent's depth, or -1 if no parent exists (at root level)
-   */
-  private getParentDepth(blockIndex: number): number {
-    const currentDepth = this.getDepth();
-
-    const findParentDepth = (index: number): number => {
-      if (index < 0) {
-        return -1;
-      }
-
-      const block = this.api.blocks.getBlockByIndex(index);
-      if (!block || block.name !== ListItem.TOOL_NAME) {
-        // Hit a non-list block, no parent in this list
-        return -1;
-      }
-
-      const blockDepth = this.getBlockDepth(block);
-      if (blockDepth < currentDepth) {
-        // Found a parent (shallower depth)
-        return blockDepth;
-      }
-
-      return findParentDepth(index - 1);
-    };
-
-    return findParentDepth(blockIndex - 1);
-  }
-
   private async handleIndent(): Promise<void> {
     const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     if (currentBlockIndex === 0) return;
 
     const previousBlock = this.api.blocks.getBlockByIndex(currentBlockIndex - 1);
-    if (!previousBlock || previousBlock.name !== ListItem.TOOL_NAME) return;
+    if (!previousBlock || previousBlock.name !== TOOL_NAME) return;
 
     const currentDepth = this.getDepth();
-    const previousBlockDepth = this.getBlockDepth(previousBlock);
+    const previousBlockDepth = this.depthValidator.getBlockDepth(previousBlock);
 
     // Can only indent to at most one level deeper than the previous item
     // This ensures proper parent-child hierarchy
@@ -1983,7 +1384,7 @@ export class ListItem implements BlockTool {
 
     const depth = parseInt(depthAttr, 10);
 
-    return depth > 0 ? { left: depth * ListItem.INDENT_PER_LEVEL } : undefined;
+    return depth > 0 ? { left: depth * INDENT_PER_LEVEL } : undefined;
   }
 
   public static get toolbox(): ToolboxConfig {
@@ -2018,3 +1419,5 @@ export class ListItem implements BlockTool {
     ];
   }
 }
+
+export type { ListItemConfig, ListItemData };

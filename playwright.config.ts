@@ -36,7 +36,7 @@ const AMOUNT_OF_LOCAL_WORKERS = 3;
 // Cross-browser critical tests - require validation on all browsers
 const CROSS_BROWSER_TESTS = [
   // Browser-specific event handling
-  '**/drag-drop.spec.ts',
+  '**/drag-drop*.spec.ts',
   '**/copy-paste.spec.ts',
 
   // Keyboard navigation (Firefox has known Tab/Shift+Tab issues)

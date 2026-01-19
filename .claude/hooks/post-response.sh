@@ -1,37 +1,74 @@
 #!/bin/bash
-# Hook script to run refactor skill after response completes
-# Only suggests refactor if context is getting large (>50% estimated)
+# Hook script to auto-trigger /refactor after code changes
+# Triggers /compact first if context exceeds threshold
 
-# Read stdin for JSON context
+set -e
+
+# Configuration (override via environment)
+CONTEXT_THRESHOLD_DEFAULT=60  # percentage
+CONTEXT_THRESHOLD=${REFACTOR_CONTEXT_THRESHOLD:-$CONTEXT_THRESHOLD_DEFAULT}
+DRY_RUN=${REFACTOR_HOOK_DRY_RUN:-0}
+DEBUG=${REFACTOR_HOOK_DEBUG:-0}
+LOG_FILE=".claude/hooks/refactor-hook.log"
+
+debug_log() {
+    if [ "$DEBUG" = "1" ]; then
+        mkdir -p "$(dirname "$LOG_FILE")"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
+    fi
+}
+
+# Read JSON input from stdin
 input=$(cat)
 
-# Extract transcript_path from JSON input
+# Extract paths from JSON
 transcript_path=$(echo "$input" | grep -o '"transcript_path":[^,}]*' | cut -d'"' -f4)
+working_dir=$(echo "$input" | grep -o '"working_directory":[^,}]*' | cut -d'"' -f4)
 
-# Get the project directory from environment
-PROJECT_DIR="${CLAUDE_PROJECT_DIR}"
-
-# Estimate context usage by checking transcript file size
-# Claude's context window is ~200K tokens, roughly 1 token = 4 chars
-# 50% = 100K tokens = ~400K characters
-CONTEXT_THRESHOLD=400000
-
-if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
-    # Get file size in bytes (approximate character count)
-    file_size=$(wc -c < "$transcript_path" 2>/dev/null || echo 0)
-
-    # Only suggest refactor if context is over 50%
-    if [ "$file_size" -gt "$CONTEXT_THRESHOLD" ]; then
-        cat <<EOF
-Context is at ~$(( (file_size * 100) / CONTEXT_THRESHOLD / 2 ))% capacity. Consider running /compact to reduce size, then /refactor to review recent changes.
-EOF
-        exit 0
-    fi
+if [ -z "$working_dir" ]; then
+    working_dir="$CLAUDE_PROJECT_DIR"
 fi
 
-# For smaller context, just suggest refactor
-cat <<EOF
-Run /refactor to review recent changes.
-EOF
+if [ -z "$transcript_path" ] || [ ! -f "$transcript_path" ]; then
+    debug_log "No valid transcript_path"
+    exit 0
+fi
 
-exit 0
+# Calculate context usage
+# Claude context ~200K tokens, 1 token ≈ 4 chars
+# 60% threshold = 120K tokens ≈ 480K chars
+CONTEXT_MAX_CHARS=800000  # 200K tokens * 4
+threshold_chars=$(( CONTEXT_MAX_CHARS * CONTEXT_THRESHOLD / 100 ))
+
+file_size=$(wc -c < "$transcript_path" 2>/dev/null || echo 0)
+context_percent=$(( file_size * 100 / CONTEXT_MAX_CHARS ))
+
+debug_log "Context: ${context_percent}% (${file_size} chars), threshold: ${CONTEXT_THRESHOLD}%"
+
+# Check for code changes via git
+cd "$working_dir" 2>/dev/null || exit 0
+
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    debug_log "Not a git repository"
+    exit 0
+fi
+
+# Get modified files (excluding .claude/, node_modules, etc.)
+changed_files=$(git diff --name-only HEAD 2>/dev/null | grep -v -E '^(\.claude/|node_modules/|dist/|\.git/)' || true)
+
+if [ -z "$changed_files" ]; then
+    debug_log "No code changes detected"
+    exit 0
+fi
+
+debug_log "Code changes: $(echo "$changed_files" | wc -l | tr -d ' ') files"
+
+# Output commands for auto-execution
+if [ "$file_size" -gt "$threshold_chars" ]; then
+    debug_log "Context exceeds threshold - triggering compact + refactor"
+    echo "<!-- /compact -->"
+    echo "<!-- /refactor -->"
+else
+    debug_log "Context within threshold - triggering refactor only"
+    echo "<!-- /refactor -->"
+fi

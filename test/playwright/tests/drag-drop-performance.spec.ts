@@ -47,6 +47,9 @@ const performDragDrop = async (
       ? targetBox.y + 1
       : targetBox.y + targetBox.height - 1;
 
+  // Check if target is outside viewport (negative Y)
+  const isTargetOffPage = targetY < 0;
+
   const startTime = Date.now();
 
   // Move to source and press down
@@ -59,8 +62,9 @@ const performDragDrop = async (
   // Move to target position with steps to trigger drag threshold
   await page.mouse.move(targetX, targetY, { steps: 15 });
 
+  // Wait longer for auto-scroll when target is off the page
   // eslint-disable-next-line playwright/no-wait-for-timeout
-  await page.waitForTimeout(50);
+  await page.waitForTimeout(isTargetOffPage ? 1000 : 50);
 
   // Release to complete the drop
   await page.mouse.up();
@@ -371,6 +375,22 @@ test.describe("drag and drop performance", () => {
     const firstBlock = page
       .getByTestId("block-wrapper")
       .filter({ hasText: "Block 0" });
+
+    // Get the first block's bounding box BEFORE scrolling back
+    // This will have negative Y since we're at the bottom
+    const firstBlockBoxBeforeScroll = await firstBlock
+      .boundingBox();
+
+    // If the first block is off the top of the page (negative Y),
+    // scroll partially back so it becomes visible for the drag
+    // eslint-disable-next-line playwright/no-conditional-in-test
+    if (firstBlockBoxBeforeScroll && firstBlockBoxBeforeScroll.y < 0) {
+      // Scroll to make the first block visible at the top of the viewport
+      await page.evaluate(() => window.scrollTo(0, 0));
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+    }
 
     // Perform drag and measure time
     const dragTime = await performDragDrop(

@@ -385,7 +385,27 @@ export class DragController extends Module {
       return;
     }
 
+    const initialState = this.stateMachine.getState();
+
+    // Fallback: if no target is set (e.g., when dragging to off-page target),
+    // use the first visible block as the target
+    const needsFallback = initialState.type === 'dragging' && !initialState.targetBlock;
+    const firstVisibleBlock = needsFallback
+      ? this.Blok.BlockManager.blocks.find(b => {
+          if (b === sourceBlock || sourceBlocks.includes(b)) {
+            return false;
+          }
+          const rect = b.holder.getBoundingClientRect();
+          return rect.bottom > 0 && rect.top < window.innerHeight;
+        })
+      : undefined;
+
+    if (firstVisibleBlock !== undefined) {
+      this.stateMachine.updateTarget(firstVisibleBlock, 'top');
+    }
+
     const currentState = this.stateMachine.getState();
+
     if (currentState.type !== 'dragging' || !currentState.targetBlock || !currentState.targetEdge) {
       this.cleanup();
       return;

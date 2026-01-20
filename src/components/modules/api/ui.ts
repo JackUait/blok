@@ -9,8 +9,14 @@ export class UiAPI extends Module {
    * Available methods / getters
    */
   public get methods(): Ui {
+    // Capture the UI module reference in a closure
+    const uiModule = this.Blok.UI;
+
     return {
       nodes: this.blokNodes,
+      get isMobile(): boolean {
+        return uiModule.isMobile;
+      },
       /**
        * There can be added some UI methods, like toggleThinMode() etc
        */

@@ -259,6 +259,16 @@ class Blok {
             (this as Record<string, unknown>)[alias] = apiMethodGroup[name];
           });
       });
+
+    // Expose isMobile property directly on the Blok instance
+    const uiMethods = blok.moduleInstances.API.methods.ui as unknown as Record<string, unknown>;
+    Object.defineProperty(this, 'isMobile', {
+      configurable: true,
+      enumerable: true,
+      get(): boolean {
+        return uiMethods.isMobile as boolean;
+      },
+    });
   }
 }
 

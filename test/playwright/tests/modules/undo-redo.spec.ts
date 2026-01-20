@@ -4706,74 +4706,198 @@ test.describe('yjs undo/redo', () => {
     });
 
     test('undo/redo with tune change works correctly', async ({ page }) => {
-      await createBlokWithBlocks(page, [
-        {
-          type: 'paragraph',
-          data: { text: 'Text' },
+      // Create a custom tune for testing
+      const EXAMPLE_TUNE_SOURCE = `class ExampleTune {
+        constructor({ data }) {
+          this.data = data;
+        }
+
+        static get isTune() {
+          return true;
+        }
+
+        static get CSS() {
+          return {};
+        }
+
+        render() {
+          return document.createElement('div');
+        }
+
+        save() {
+          return this.data ?? '';
+        }
+      }`;
+
+      await resetBlok(page);
+      await page.evaluate(
+        async ({ holder, tuneSource }) => {
+          // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+          const TuneClass = new Function(`return ${tuneSource}`)();
+
+          const blok = new window.Blok({
+            holder: holder,
+            data: {
+              blocks: [
+                {
+                  type: 'paragraph',
+                  data: { text: 'Text' },
+                  tunes: {
+                    exampleTune: 'left',
+                  },
+                },
+              ],
+            },
+            tools: {
+              exampleTune: {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                class: TuneClass,
+              },
+            },
+            tunes: ['exampleTune'],
+          });
+
+          window.blokInstance = blok;
+          await blok.isReady;
         },
-      ]);
+        { holder: HOLDER_ID, tuneSource: EXAMPLE_TUNE_SOURCE }
+      );
 
-      const paragraph = getParagraphByIndex(page, 0);
+      // Verify initial state
+      const savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('left');
 
-      // Click paragraph to focus it and move toolbar
-      await paragraph.click();
+      // Change tune via API
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
 
-      // Click block settings toggler
-      const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
-      await settingsToggler.click();
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
 
-      // Change alignment to center
-      const alignmentOption = page.locator('[data-blok-toolbar-button="align-center"]');
-      await alignmentOption.click();
+        if (!block) {
+          throw new Error('Block not found');
+        }
 
-      // Click away to close settings
-      await page.mouse.click(10, 10);
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'center',
+        });
+      });
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
       // Get the saved data
       const beforeUndo = await saveBlok(page);
-      expect(beforeUndo.blocks[0].tunes?.alignment).toBe('center');
+      expect(beforeUndo.blocks[0].tunes?.exampleTune).toBe('center');
 
       // Undo the tune change
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
       const afterUndo = await saveBlok(page);
-      expect(afterUndo.blocks[0].tunes).toBeUndefined();
+      expect(afterUndo.blocks[0].tunes?.exampleTune).toBe('left');
 
       // Redo the tune change
       await page.keyboard.press(REDO_SHORTCUT);
       await waitForDelay(page, 100);
 
       const afterRedo = await saveBlok(page);
-      expect(afterRedo.blocks[0].tunes?.alignment).toBe('center');
+      expect(afterRedo.blocks[0].tunes?.exampleTune).toBe('center');
     });
 
     test('undo/redo cycle with multiple tune changes', async ({ page }) => {
-      await createBlokWithBlocks(page, [
-        {
-          type: 'paragraph',
-          data: { text: 'Text' },
+      // Create a custom tune for testing
+      const EXAMPLE_TUNE_SOURCE = `class ExampleTune {
+        constructor({ data }) {
+          this.data = data;
+        }
+
+        static get isTune() {
+          return true;
+        }
+
+        static get CSS() {
+          return {};
+        }
+
+        render() {
+          return document.createElement('div');
+        }
+
+        save() {
+          return this.data ?? '';
+        }
+      }`;
+
+      await resetBlok(page);
+      await page.evaluate(
+        async ({ holder, tuneSource }) => {
+          // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+          const TuneClass = new Function(`return ${tuneSource}`)();
+
+          const blok = new window.Blok({
+            holder: holder,
+            data: {
+              blocks: [
+                {
+                  type: 'paragraph',
+                  data: { text: 'Text' },
+                  tunes: {
+                    exampleTune: 'left',
+                  },
+                },
+              ],
+            },
+            tools: {
+              exampleTune: {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                class: TuneClass,
+              },
+            },
+            tunes: ['exampleTune'],
+          });
+
+          window.blokInstance = blok;
+          await blok.isReady;
         },
-      ]);
+        { holder: HOLDER_ID, tuneSource: EXAMPLE_TUNE_SOURCE }
+      );
 
-      // Click paragraph to focus it and move toolbar
-      await getParagraphByIndex(page, 0).click();
+      // First tune change: center
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
 
-      const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
 
-      // First tune change: align center
-      await settingsToggler.click();
-      await page.locator('[data-blok-toolbar-button="align-center"]').click();
-      await page.mouse.click(10, 10);
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'center',
+        });
+      });
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Second tune change: align right
-      await settingsToggler.click();
-      await page.locator('[data-blok-toolbar-button="align-right"]').click();
-      await page.mouse.click(10, 10);
+      // Second tune change: right
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'right',
+        });
+      });
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
@@ -4782,27 +4906,76 @@ test.describe('yjs undo/redo', () => {
       await waitForDelay(page, 100);
 
       let data = await saveBlok(page);
-      expect(data.blocks[0].tunes?.alignment).toBe('right');
+      expect(data.blocks[0].tunes?.exampleTune).toBe('center');
 
-      // Undo again should remove alignment
+      // Undo again should restore to left
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
       data = await saveBlok(page);
-      expect(data.blocks[0].tunes).toBeUndefined();
+      expect(data.blocks[0].tunes?.exampleTune).toBe('left');
     });
 
     test('undo after changing block text and then tunes restores both', async ({ page }) => {
-      await createBlokWithBlocks(page, [
-        {
-          type: 'paragraph',
-          data: { text: 'Original' },
+      // Create a custom tune for testing
+      const EXAMPLE_TUNE_SOURCE = `class ExampleTune {
+        constructor({ data }) {
+          this.data = data;
+        }
+
+        static get isTune() {
+          return true;
+        }
+
+        static get CSS() {
+          return {};
+        }
+
+        render() {
+          return document.createElement('div');
+        }
+
+        save() {
+          return this.data ?? '';
+        }
+      }`;
+
+      await resetBlok(page);
+      await page.evaluate(
+        async ({ holder, tuneSource }) => {
+          // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+          const TuneClass = new Function(`return ${tuneSource}`)();
+
+          const blok = new window.Blok({
+            holder: holder,
+            data: {
+              blocks: [
+                {
+                  type: 'paragraph',
+                  data: { text: 'Original' },
+                  tunes: {
+                    exampleTune: 'left',
+                  },
+                },
+              ],
+            },
+            tools: {
+              exampleTune: {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                class: TuneClass,
+              },
+            },
+            tunes: ['exampleTune'],
+          });
+
+          window.blokInstance = blok;
+          await blok.isReady;
         },
-      ]);
+        { holder: HOLDER_ID, tuneSource: EXAMPLE_TUNE_SOURCE }
+      );
 
       const paragraph = getParagraphByIndex(page, 0);
       const paragraphInput = paragraph.locator('[contenteditable="true"]');
-      const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
       // Change text
       await paragraphInput.click();
@@ -4811,11 +4984,22 @@ test.describe('yjs undo/redo', () => {
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Change tune - need to click on paragraph wrapper first to bring toolbar
-      await paragraph.click();
-      await settingsToggler.click();
-      await page.locator('[data-blok-toolbar-button="align-center"]').click();
-      await page.mouse.click(10, 10);
+      // Change tune via API
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'center',
+        });
+      });
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
@@ -4825,7 +5009,7 @@ test.describe('yjs undo/redo', () => {
 
       let data = await saveBlok(page);
       expect((data.blocks[0]?.data as { text?: string }).text).toBe('Original Modified');
-      expect(data.blocks[0].tunes).toBeUndefined();
+      expect(data.blocks[0].tunes?.exampleTune).toBe('left');
 
       // Undo again should restore original text
       await page.keyboard.press(UNDO_SHORTCUT);

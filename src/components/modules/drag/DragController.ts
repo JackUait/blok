@@ -77,6 +77,11 @@ export class DragController extends Module {
   private boundHandlers: BoundHandlers | null = null;
 
   /**
+   * Flag indicating toolbar was already reopened by a handler
+   */
+  private toolbarHandled = false;
+
+  /**
    * Returns true if a drag operation is currently in progress
    */
   public get isDragging(): boolean {
@@ -432,10 +437,6 @@ export class DragController extends Module {
     if (this.a11y && movedBlock) {
       this.a11y.announceDropComplete(movedBlock, sourceBlocks, isMultiBlockDrag);
     }
-
-    // Re-open toolbar on the dropped block
-    this.Blok.Toolbar.skipNextSettingsToggle();
-    this.Blok.Toolbar.moveAndOpen(sourceBlock);
   }
 
   /**
@@ -463,9 +464,13 @@ export class DragController extends Module {
       this.a11y.announceDuplicateComplete(result.duplicatedBlocks);
     }
 
-    // Re-open toolbar on the first duplicated block
+    // Store the duplicated block for toolbar reopening in cleanup
+    // We can't pass it through stateMachine, so we reopen directly here
     this.Blok.Toolbar.skipNextSettingsToggle();
     this.Blok.Toolbar.moveAndOpen(result.duplicatedBlocks[0]);
+
+    // Signal cleanup that toolbar was already handled
+    this.toolbarHandled = true;
   }
 
   /**
@@ -558,12 +563,33 @@ export class DragController extends Module {
     }
 
     // Reset state machine
+    const sourceBlock = this.stateMachine.getSourceBlock();
     this.stateMachine.reset();
 
     // Reset target detector
     if (this.targetDetector) {
       this.targetDetector.setSourceBlocks([]);
     }
+
+    /**
+     * Reopen toolbar on the moved block after drag completes
+     * This ensures the toolbar is available for further interactions
+     */
+    if (wasCancelled) {
+      return;
+    }
+
+    // Skip if toolbar was already handled (e.g., for duplication)
+    if (this.toolbarHandled) {
+      this.toolbarHandled = false;
+      return;
+    }
+
+    const blockToShow = sourceBlock ?? this.Blok.BlockManager.currentBlock;
+    if (!blockToShow) {
+      return;
+    }
+    this.Blok.Toolbar.moveAndOpen(blockToShow);
   }
 
   /**

@@ -39,3 +39,6 @@ bundle-size-*.md
 .performance-history/
 performance-dashboard/
 test-results/*.json
+
+# bv (beads viewer) local config and caches
+.bv/

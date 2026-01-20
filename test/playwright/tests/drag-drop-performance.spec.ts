@@ -249,7 +249,7 @@ test.describe("drag and drop performance", () => {
 
       const sourceBlock = page
         .getByTestId("block-wrapper")
-        .filter({ hasText: `Block ${sourceIndex}` });
+        .filter({ hasText: new RegExp(`^Block ${sourceIndex}$`) });
 
       await sourceBlock.hover();
 
@@ -259,7 +259,7 @@ test.describe("drag and drop performance", () => {
 
       const targetBlock = page
         .getByTestId("block-wrapper")
-        .filter({ hasText: `Block ${targetIndex}` });
+        .filter({ hasText: new RegExp(`^Block ${targetIndex}$`) });
 
       const dragTime = await performDragDrop(
         page,
@@ -425,7 +425,7 @@ test.describe("drag and drop stress tests", () => {
     for (const op of operations) {
       const sourceBlock = page
         .getByTestId("block-wrapper")
-        .filter({ hasText: `Block ${op.from}` });
+        .filter({ hasText: new RegExp(`^Block ${op.from}$`) });
 
       await sourceBlock.hover();
 
@@ -435,12 +435,14 @@ test.describe("drag and drop stress tests", () => {
 
       const targetBlock = page
         .getByTestId("block-wrapper")
-        .filter({ hasText: `Block ${op.to}` });
+        .filter({ hasText: new RegExp(`^Block ${op.to}$`) });
 
       await performDragDrop(page, settingsButton, targetBlock, "bottom");
 
+      // Wait for toolbar to reopen after drag
+      // Firefox may need additional time for DOM to settle
       // eslint-disable-next-line playwright/no-wait-for-timeout
-      await page.waitForTimeout(50);
+      await page.waitForTimeout(300);
     }
 
     // Verify data integrity
@@ -599,7 +601,7 @@ test.describe("drag and drop stress tests", () => {
 
       const sourceBlock = page
         .getByTestId("block-wrapper")
-        .filter({ hasText: `Block ${sourceIndex}` });
+        .filter({ hasText: new RegExp(`^Block ${sourceIndex}$`) });
 
       await sourceBlock.hover();
 
@@ -609,7 +611,7 @@ test.describe("drag and drop stress tests", () => {
 
       const targetBlock = page
         .getByTestId("block-wrapper")
-        .filter({ hasText: `Block ${targetIndex}` });
+        .filter({ hasText: new RegExp(`^Block ${targetIndex}$`) });
 
       await performDragDrop(page, settingsButton, targetBlock, "bottom");
     }

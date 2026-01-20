@@ -65,6 +65,11 @@ const CROSS_BROWSER_TESTS = [
 
   // Keyboard shortcuts (contenteditable + keyboard behavior varies)
   '**/tools/header-shortcut.spec.ts',
+
+  // UI interactions involving hover, viewport, mouse events
+  '**/ui/mobile-and-readonly-coordination.spec.ts',
+  '**/ui/toolbar-nested-list-positioning.spec.ts',
+  '**/ui/settings-toggler-after-drag.spec.ts',
 ] as const;
 
 // Logic/API tests - browser-agnostic, run once on Chromium

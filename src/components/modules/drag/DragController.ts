@@ -589,6 +589,7 @@ export class DragController extends Module {
     if (!blockToShow) {
       return;
     }
+    this.Blok.Toolbar.skipNextSettingsToggle();
     this.Blok.Toolbar.moveAndOpen(blockToShow);
   }
 

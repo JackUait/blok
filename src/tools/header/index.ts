@@ -309,13 +309,13 @@ export class Header implements BlockTool {
 
   /**
    * Validate Text block data:
-   * - check for emptiness
+   * - check that text is a string
    *
    * @param blockData - data received after saving
    * @returns false if saved data is not correct, otherwise true
    */
   public validate(blockData: HeaderData): boolean {
-    return blockData.text.trim() !== '';
+    return typeof blockData.text === 'string';
   }
 
   /**

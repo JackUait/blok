@@ -48,9 +48,12 @@ export class Saver extends Module {
     const blocks = BlockManager.blocks;
 
     /**
-     * If there is only one block and it is empty, we should return empty blocks array
+     * If there is only one block and it is empty and it's the default tool, return empty blocks array.
+     * Non-default blocks (like headers or lists created via shortcuts) should be preserved even when empty.
      */
-    if (blocks.length === 1 && blocks[0].isEmpty) {
+    const shouldFilterSingleBlock = blocks.length === 1 && blocks[0].isEmpty && blocks[0].tool.isDefault;
+
+    if (shouldFilterSingleBlock) {
       return {
         time: +new Date(),
         blocks: [],

@@ -165,12 +165,12 @@ yarn test -t "pattern"        # By name
 yarn e2e [file] -g "pattern"  # Single E2E test
 ```
 
-**CRITICAL**: E2E tests load from `dist/`. Run `yarn build:test` after core changes.
+**NOTE**: E2E tests automatically build before running (`yarn build:test`). No manual build needed.
 
 ### Critical Rules (Violations = Wrong Work)
 
 **E2E:**
-- Always `yarn build:test` after modifying core code (tests load from `dist/`)
+- Build runs automatically before tests - no manual step needed
 - NEVER use CSS class selectors → use semantic locators or `data-blok-testid`
 - NEVER forget async/await → Playwright is async
 - NEVER assume immediate availability → use waitFor or auto-waiting
@@ -253,7 +253,7 @@ const CUSTOM_TOOL = `(() => {
 | Flaky E2E with arbitrary waits | Use Playwright's auto-waiting |
 | Mock pollution between tests | `vi.clearAllMocks()` in beforeEach, `vi.restoreAllMocks()` in afterEach |
 | DOM elements leak | Clean up in afterEach or use destroy() |
-| Testing stale bundle | Always `yarn build:test` after core changes |
+| Testing stale bundle | Build runs automatically - just run `yarn e2e` |
 | Over-mocking | Mock dependencies, test real behavior |
 | Forgetting assertions | Always verify expected outcome |
 | Not testing errors | Test both happy path and error cases |

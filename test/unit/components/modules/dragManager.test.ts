@@ -89,6 +89,8 @@ const createBlockStub = (options: {
     id: options.id ?? `block-${Math.random().toString(16).slice(2)}`,
     holder,
     stretched: options.stretched ?? false,
+    name: 'paragraph',
+    save: vi.fn().mockResolvedValue({ data: {}, tunes: {} }),
   };
 
   Object.defineProperty(block, 'selected', {
@@ -171,6 +173,7 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
 
   const yjsManager = {
     transact: vi.fn((callback: () => void) => callback()),
+    transactMoves: vi.fn((callback: () => void) => callback()),
   };
 
   const mergedState = {
@@ -187,6 +190,9 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
 
   // Call prepare to initialize internal components
   void dragManager.prepare();
+
+  // Track drag manager for cleanup
+  activeDragManagers.push(dragManager);
 
   return {
     dragManager,
@@ -210,7 +216,13 @@ const createMouseEvent = (type: string, options: Partial<MouseEventInit> = {}): 
   });
 };
 
+/**
+ * Track all drag managers created during tests to ensure proper cleanup
+ */
+const activeDragManagers: Array<{ destroy: () => void }> = [];
+
 describe('DragManager', () => {
+
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(tooltip, 'hide').mockImplementation(() => undefined);
@@ -222,6 +234,16 @@ describe('DragManager', () => {
   });
 
   afterEach(() => {
+    // Clean up all active drag managers to remove event listeners
+    activeDragManagers.forEach(dragManager => {
+      try {
+        dragManager.destroy();
+      } catch {
+        // Ignore errors during cleanup
+      }
+    });
+    activeDragManagers.length = 0;
+
     document.body.innerHTML = '';
     document.elementFromPoint = originalElementFromPoint;
   });
@@ -1539,18 +1561,42 @@ describe('DragManager', () => {
       document.body.appendChild(wrapper);
       wrapper.appendChild(blocks[0].holder);
 
+      // Make other blocks not visible (not in viewport) so fallback doesn't find them
+      (blocks[1].holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: -100,
+        bottom: -50,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: -100,
+        toJSON: () => ({}),
+      });
+      (blocks[2].holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: -100,
+        bottom: -50,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: -100,
+        toJSON: () => ({}),
+      });
+
       const dragHandle = document.createElement('div');
 
       dragManager.setupDragHandle(dragHandle, blocks[0]);
 
       // Start drag
-       
+
       dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
-       
+
       document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
 
       // Drop with Alt key held but no target
-       
+
       document.dispatchEvent(createMouseEvent('mouseup', { altKey: true } as MouseEventInit));
 
       // Wait for async duplication

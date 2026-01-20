@@ -255,8 +255,8 @@ export class BlockManager extends Module {
       {
         API: this.Blok.API,
         eventsDispatcher: this.eventsDispatcher,
-        readOnly: this.Blok.ReadOnly.isEnabled,
         tools: this.Blok.Tools.blockTools,
+        moduleInstances: this.Blok,
       },
       this.bindBlockEvents.bind(this)
     );
@@ -352,10 +352,6 @@ export class BlockManager extends Module {
       this.eventBinder.enableBindings(this.blocks);
     } else {
       this.eventBinder.disableBindings();
-    }
-
-    if (this.factory) {
-      this.factory.setReadOnly(readOnlyEnabled);
     }
   }
 

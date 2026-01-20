@@ -133,6 +133,7 @@ const createMockAPIMethods = (): APIInterface => ({
     isEnabled: false,
   },
   ui: {
+    isMobile: false,
     nodes: {
       wrapper: document.createElement('div'),
       redactor: document.createElement('div'),
@@ -255,13 +256,22 @@ const createMockToolsCollection = (toolNames: string[] = ['paragraph']): ToolsCo
 };
 
 /**
+ * Create mock module instances with ReadOnly
+ */
+const createMockModuleInstances = () => ({
+  ReadOnly: {
+    isEnabled: false,
+  },
+});
+
+/**
  * Create mock dependencies for BlockFactory
  */
 const createMockDependencies = (): BlockFactoryDependencies => ({
   API: createMockAPI(),
   eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
-  readOnly: false,
   tools: createMockToolsCollection(['paragraph', 'header', 'list']),
+  moduleInstances: createMockModuleInstances() as never,
 });
 
 describe('BlockFactory', () => {
@@ -350,8 +360,9 @@ describe('BlockFactory', () => {
     });
 
     it('does not bind events in read-only mode', () => {
-      dependencies.readOnly = true;
-      const readOnlyFactory = new BlockFactory(dependencies, bindBlockEventsFn);
+      const readOnlyDependencies = createMockDependencies();
+      (readOnlyDependencies.moduleInstances as { ReadOnly: { isEnabled: boolean } }).ReadOnly.isEnabled = true;
+      const readOnlyFactory = new BlockFactory(readOnlyDependencies, bindBlockEventsFn);
 
       const block = readOnlyFactory.composeBlock({
         tool: 'paragraph',
@@ -417,37 +428,6 @@ describe('BlockFactory', () => {
       const tool = factory.getTool('unknown-tool');
 
       expect(tool).toBeUndefined();
-    });
-  });
-
-  describe('setReadOnly', () => {
-    it('updates read-only state for factory', () => {
-      expect(dependencies.readOnly).toBe(false);
-
-      factory.setReadOnly(true);
-
-      // Create a new block after setting read-only
-      const block = factory.composeBlock({
-        tool: 'paragraph',
-        bindEventsImmediately: true,
-      });
-
-      // In read-only mode, events should not be bound
-      expect(block.name).toBe('paragraph');
-      expect(bindBlockEventsFn).not.toHaveBeenCalled();
-    });
-
-    it('toggles read-only state back to writable', () => {
-      factory.setReadOnly(true);
-      factory.setReadOnly(false);
-
-      const block = factory.composeBlock({
-        tool: 'paragraph',
-        bindEventsImmediately: true,
-      });
-
-      expect(block.name).toBe('paragraph');
-      expect(bindBlockEventsFn).toHaveBeenCalledTimes(1);
     });
   });
 

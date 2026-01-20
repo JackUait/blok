@@ -3,6 +3,7 @@
  * @classdesc Creates Block instances with proper configuration
  * @module BlockFactory
  */
+import type { BlokModules } from '../../../types-internal/blok-modules';
 import { Block } from '../../block';
 import type { BlokEventMap } from '../../events';
 import type { BlockToolAdapter } from '../../tools/block';
@@ -20,10 +21,10 @@ export interface BlockFactoryDependencies {
   API: API;
   /** Events dispatcher */
   eventsDispatcher: EventsDispatcher<BlokEventMap>;
-  /** Read-only state flag */
-  readOnly: boolean;
   /** Map of available block tools */
   tools: ToolsCollection<BlockToolAdapter>;
+  /** All module instances */
+  moduleInstances: BlokModules;
 }
 
 /**
@@ -32,7 +33,13 @@ export interface BlockFactoryDependencies {
 export class BlockFactory {
   private readonly dependencies: BlockFactoryDependencies;
   private readonly bindBlockEvents: (block: Block) => void;
-  private readOnlyState: boolean;
+
+  /**
+   * Get the current read-only state from ReadOnly module
+   */
+  private get readOnlyState(): boolean {
+    return this.dependencies.moduleInstances.ReadOnly.isEnabled;
+  }
 
   /**
    * @param dependencies - Required dependencies
@@ -41,7 +48,6 @@ export class BlockFactory {
   constructor(dependencies: BlockFactoryDependencies, bindBlockEvents: (block: Block) => void) {
     this.dependencies = dependencies;
     this.bindBlockEvents = bindBlockEvents;
-    this.readOnlyState = dependencies.readOnly;
   }
 
   /**
@@ -109,13 +115,5 @@ export class BlockFactory {
    */
   public getTool(name: string): ReturnType<BlockFactoryDependencies['tools']['get']> {
     return this.dependencies.tools.get(name);
-  }
-
-  /**
-   * Update read-only state for factory
-   * @param readOnly - new read-only state
-   */
-  public setReadOnly(readOnly: boolean): void {
-    this.readOnlyState = readOnly;
   }
 }

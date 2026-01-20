@@ -241,7 +241,8 @@ test.describe('read-only toggle coordination with controllers', () => {
     await page.keyboard.type(' - should not appear');
 
     const textContent = await firstParagraph.evaluate((el) => {
-      const contentEditable = el.querySelector('[contenteditable="true"]');
+      // In read-only mode, contenteditable is "false", so query for the element with any contenteditable attribute
+      const contentEditable = el.querySelector('[contenteditable]');
       return contentEditable?.textContent ?? '';
     });
 
@@ -363,14 +364,15 @@ test.describe('read-only toggle coordination with controllers', () => {
     await page.keyboard.type(' - should not appear');
 
     let textContent = await paragraph.evaluate((el) => {
-      const contentEditable = el.querySelector('[contenteditable="true"]');
+      // In read-only mode, contenteditable="false", so query for element with any contenteditable attribute
+      const contentEditable = el.querySelector('[contenteditable]');
       return contentEditable?.textContent ?? '';
     });
 
     expect(textContent).toBe('Test block');
 
     // Toggle to read-write mode
-    await page.evaluate(async () => {
+    await page.evaluate(() => {
       const blok = window.blokInstance;
       if (blok) {
         // Access the internal UI module to call toggleReadOnly
@@ -390,7 +392,8 @@ test.describe('read-only toggle coordination with controllers', () => {
     await page.keyboard.type(' - now it works');
 
     textContent = await paragraph.evaluate((el) => {
-      const contentEditable = el.querySelector('[contenteditable="true"]');
+      // In read-write mode, contenteditable="true"
+      const contentEditable = el.querySelector('[contenteditable]');
       return contentEditable?.textContent ?? '';
     });
 
@@ -419,14 +422,14 @@ test.describe('read-only toggle coordination with controllers', () => {
     await page.keyboard.type(' - initial edit');
 
     let textContent = await paragraph.evaluate((el) => {
-      const contentEditable = el.querySelector('[contenteditable="true"]');
+      const contentEditable = el.querySelector('[contenteditable]');
       return contentEditable?.textContent ?? '';
     });
 
     expect(textContent).toBe('Test block - initial edit');
 
     // Toggle to read-only mode
-    await page.evaluate(async () => {
+    await page.evaluate(() => {
       const blok = window.blokInstance;
       if (blok) {
         const module = (blok as { module?: { ui?: { toggleReadOnly: (readOnly: boolean) => void } } }).module;
@@ -445,7 +448,8 @@ test.describe('read-only toggle coordination with controllers', () => {
     await page.keyboard.type(' - should not appear');
 
     textContent = await paragraph.evaluate((el) => {
-      const contentEditable = el.querySelector('[contenteditable="true"]');
+      // In read-only mode, contenteditable="false"
+      const contentEditable = el.querySelector('[contenteditable]');
       return contentEditable?.textContent ?? '';
     });
 
@@ -497,7 +501,7 @@ test.describe('read-only toggle coordination with controllers', () => {
     expect(blocksCountAfter).toBe(2);
 
     // Now switch to read-only mode
-    await page.evaluate(async () => {
+    await page.evaluate(() => {
       const blok = window.blokInstance;
       if (blok) {
         const module = (blok as { module?: { ui?: { toggleReadOnly: (readOnly: boolean) => void } } }).module;

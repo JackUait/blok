@@ -232,8 +232,10 @@ const createMockBlockFactory = (): BlockFactory => {
   return new BlockFactory({
     API: mockAPI,
     eventsDispatcher: mockEventsDispatcher,
-    readOnly: false,
     tools: mockTools,
+    moduleInstances: {
+      ReadOnly: { isEnabled: false },
+    } as never,
   }, bindBlockEvents);
 };
 

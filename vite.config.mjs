@@ -80,6 +80,22 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3303,
       open: true,
+      headers: {
+        // Disable caching for local development
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    },
+
+    optimizeDeps: {
+      // Force re-bundling of dependencies in development
+      force: true,
+    },
+
+    // Clear Vite's cache on startup
+    cache: {
+      dir: undefined, // Disables cache dir
     },
 
     plugins: [

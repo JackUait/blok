@@ -28,9 +28,12 @@ export class BlockHoverController extends Controller {
   /**
    * Used to not emit the same block multiple times to the 'block-hovered' event on every mousemove.
    * Stores block ID to ensure consistent comparison regardless of how the block was detected.
+   * Also stores the last hovered target element to support repositioning within the same block
+   * (e.g., when hovering over different nested list items).
    */
-  private blockHoveredState: { lastHoveredBlockId: string | null } = {
+  private blockHoveredState: { lastHoveredBlockId: string | null; lastHoveredTarget: Element | null } = {
     lastHoveredBlockId: null,
+    lastHoveredTarget: null,
   };
 
   /**
@@ -71,6 +74,18 @@ export class BlockHoverController extends Controller {
     }, {
       passive: true,
     });
+
+    /**
+     * Also listen to mouseover events to catch programmatic hovers (e.g., from Playwright tests).
+     * This is especially important for Firefox where programmatic hovers may not trigger mousemove.
+     */
+    this.readOnlyMutableListeners.on(document, 'mouseover', (event: Event) => {
+      if (this.throttledHandleBlockHovered) {
+        this.throttledHandleBlockHovered(event);
+      }
+    }, {
+      passive: true,
+    });
   }
 
   /**
@@ -92,6 +107,7 @@ export class BlockHoverController extends Controller {
 
     if (zoneBlock !== undefined && this.blockHoveredState.lastHoveredBlockId !== zoneBlock.id) {
       this.blockHoveredState.lastHoveredBlockId = zoneBlock.id;
+      this.blockHoveredState.lastHoveredTarget = zoneBlock.holder;
 
       this.eventsDispatcher.emit(BlockHovered, {
         block: zoneBlock,
@@ -114,19 +130,62 @@ export class BlockHoverController extends Controller {
     }
 
     /**
+     * Normalize the target to a meaningful element for comparison.
+     * For nested elements like list items, we use the closest listitem or contenteditable element.
+     * This ensures that hovering over different parts of the same list item (text, marker, etc.)
+     * doesn't trigger unnecessary events, while hovering over different list items does.
+     */
+    const rawTarget = event.target as Element;
+    const normalizedTarget = this.normalizeHoverTarget(rawTarget);
+
+    /**
      * For multi-block selection, still emit 'block-hovered' event so toolbar can follow the hovered block.
      * The toolbar module will handle the logic of whether to move or not.
+     *
+     * Also emit if the normalized target element changes within the same block (e.g., nested list items).
      */
-    if (this.blockHoveredState.lastHoveredBlockId === block.id) {
+    const targetChanged = this.blockHoveredState.lastHoveredTarget !== normalizedTarget;
+
+    if (this.blockHoveredState.lastHoveredBlockId === block.id && !targetChanged) {
       return;
     }
 
     this.blockHoveredState.lastHoveredBlockId = block.id;
+    this.blockHoveredState.lastHoveredTarget = normalizedTarget;
 
     this.eventsDispatcher.emit(BlockHovered, {
       block,
-      target: event.target as Element,
+      target: rawTarget,
     });
+  }
+
+  /**
+   * Normalizes the hover target to a meaningful element for comparison.
+   * This helps detect when the user moves to a different nested element (like a list item)
+   * while avoiding false positives when moving between child elements.
+   *
+   * @param element - The raw target element from the event
+   * @returns The normalized element for comparison
+   */
+  private normalizeHoverTarget(element: Element | null): Element | null {
+    if (!element) {
+      return null;
+    }
+
+    // For list items, use the closest listitem element as the normalized target
+    const listItem = element.closest('[role="listitem"]');
+    if (listItem) {
+      return listItem;
+    }
+
+    // For contenteditable elements, use the contenteditable itself
+    const contentEditable = element.closest('[contenteditable="true"]');
+    if (contentEditable) {
+      return contentEditable;
+    }
+
+    // For other elements, use the element itself
+    return element;
   }
 
   /**
@@ -170,5 +229,6 @@ export class BlockHoverController extends Controller {
    */
   public resetHoverState(): void {
     this.blockHoveredState.lastHoveredBlockId = null;
+    this.blockHoveredState.lastHoveredTarget = null;
   }
 }

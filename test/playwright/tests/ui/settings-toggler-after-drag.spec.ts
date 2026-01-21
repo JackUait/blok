@@ -140,17 +140,21 @@ test.describe("ui.settings-toggler-after-drag", () => {
     // eslint-disable-next-line playwright/no-nth-methods
     const secondBlock = page.locator(BLOCK_SELECTOR).nth(1);
 
-    // Get settings button for the first block
-    const firstSettingsButton = firstBlock.locator(SETTINGS_BUTTON_SELECTOR);
+    // Get the visible settings button
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    // Hover over the first block to make the toolbar visible
+    await firstBlock.hover();
+    await expect(settingsButton).toBeVisible();
 
     // Perform drag-drop: move first block below second block
-    await performDragDrop(page, firstSettingsButton, secondBlock, "bottom");
+    await performDragDrop(page, settingsButton, secondBlock, "bottom");
 
     // The block settings menu should NOT be open after drag-drop
     await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toHaveCount(0);
 
     // Now click on the settings button - it should open the menu
-    await firstSettingsButton.click();
+    await settingsButton.click();
 
     await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
   });
@@ -168,16 +172,21 @@ test.describe("ui.settings-toggler-after-drag", () => {
 
     // eslint-disable-next-line playwright/no-nth-methods
     const firstBlock = page.locator(BLOCK_SELECTOR).first();
-    const firstSettingsButton = firstBlock.locator(SETTINGS_BUTTON_SELECTOR);
     // eslint-disable-next-line playwright/no-nth-methods
     const secondBlock = page.locator(BLOCK_SELECTOR).nth(1);
-    const secondSettingsButton = secondBlock.locator(SETTINGS_BUTTON_SELECTOR);
+
+    // Get the visible settings button
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    // Hover over the second block to make the toolbar visible
+    await secondBlock.hover();
+    await expect(settingsButton).toBeVisible();
 
     // Perform drag-drop to reorder blocks
-    await performDragDrop(page, secondSettingsButton, firstBlock, "top");
+    await performDragDrop(page, settingsButton, firstBlock, "top");
 
-    // Click on the first block's settings button
-    await firstSettingsButton.click();
+    // Click on the settings button - it should open the menu for the current block
+    await settingsButton.click();
 
     // Now the menu should open
     await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
@@ -195,12 +204,18 @@ test.describe("ui.settings-toggler-after-drag", () => {
 
     // eslint-disable-next-line playwright/no-nth-methods
     const firstBlock = page.locator(BLOCK_SELECTOR).first();
-    const firstSettingsButton = firstBlock.locator(SETTINGS_BUTTON_SELECTOR);
     // eslint-disable-next-line playwright/no-nth-methods
     const secondBlock = page.locator(BLOCK_SELECTOR).nth(1);
 
+    // Get the visible settings button
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    // Hover over the first block to make the toolbar visible
+    await firstBlock.hover();
+    await expect(settingsButton).toBeVisible();
+
     // Perform a quick click (minimal mouse movement)
-    const buttonBox = await getBoundingBox(firstSettingsButton);
+    const buttonBox = await getBoundingBox(settingsButton);
     const clickX = buttonBox.x + buttonBox.width / 2;
     const clickY = buttonBox.y + buttonBox.height / 2;
 
@@ -214,8 +229,12 @@ test.describe("ui.settings-toggler-after-drag", () => {
     // Close the menu
     await page.mouse.click(clickX + 10, clickY + 10);
 
+    // Hover again to make the toolbar visible for the drag
+    await firstBlock.hover();
+    await expect(settingsButton).toBeVisible();
+
     // Now perform a drag (movement beyond threshold)
-    await performDragDrop(page, firstSettingsButton, secondBlock, "bottom");
+    await performDragDrop(page, settingsButton, secondBlock, "bottom");
 
     // Block settings should NOT open after drag
     await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toHaveCount(0);
@@ -233,15 +252,21 @@ test.describe("ui.settings-toggler-after-drag", () => {
 
     // eslint-disable-next-line playwright/no-nth-methods
     const firstBlock = page.locator(BLOCK_SELECTOR).first();
-    const firstSettingsButton = firstBlock.locator(SETTINGS_BUTTON_SELECTOR);
     // eslint-disable-next-line playwright/no-nth-methods
     const secondBlock = page.locator(BLOCK_SELECTOR).nth(1);
 
+    // Get the visible settings button
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    // Hover over the first block to make the toolbar visible
+    await firstBlock.hover();
+    await expect(settingsButton).toBeVisible();
+
     // Perform drag-drop
-    await performDragDrop(page, firstSettingsButton, secondBlock, "bottom");
+    await performDragDrop(page, settingsButton, secondBlock, "bottom");
 
     // Now click should work
-    await firstSettingsButton.click();
+    await settingsButton.click();
 
     await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
   });
@@ -259,30 +284,43 @@ test.describe("ui.settings-toggler-after-drag", () => {
     });
 
     const blocks = page.locator(BLOCK_SELECTOR);
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    // Hover over the first block to make the toolbar visible
+    // eslint-disable-next-line playwright/no-nth-methods
+    await blocks.nth(0).hover();
+    await expect(settingsButton).toBeVisible();
 
     // Perform multiple drag operations
     await performDragDrop(
       page,
-      // eslint-disable-next-line playwright/no-nth-methods
-      blocks.nth(0).locator(SETTINGS_BUTTON_SELECTOR),
+      settingsButton,
       // eslint-disable-next-line playwright/no-nth-methods
       blocks.nth(1),
       "bottom",
     );
 
+    // Hover over the current block (now block 2) for the next drag
+    // eslint-disable-next-line playwright/no-nth-methods
+    await blocks.nth(2).hover();
+    await expect(settingsButton).toBeVisible();
+
     await performDragDrop(
       page,
-      // eslint-disable-next-line playwright/no-nth-methods
-      blocks.nth(2).locator(SETTINGS_BUTTON_SELECTOR),
+      settingsButton,
       // eslint-disable-next-line playwright/no-nth-methods
       blocks.nth(3),
       "bottom",
     );
 
+    // Hover over the current block for the final drag
+    // eslint-disable-next-line playwright/no-nth-methods
+    await blocks.nth(1).hover();
+    await expect(settingsButton).toBeVisible();
+
     await performDragDrop(
       page,
-      // eslint-disable-next-line playwright/no-nth-methods
-      blocks.nth(1).locator(SETTINGS_BUTTON_SELECTOR),
+      settingsButton,
       // eslint-disable-next-line playwright/no-nth-methods
       blocks.nth(2),
       "bottom",
@@ -292,8 +330,7 @@ test.describe("ui.settings-toggler-after-drag", () => {
     await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toHaveCount(0);
 
     // But clicking should still work
-    // eslint-disable-next-line playwright/no-nth-methods
-    await blocks.nth(1).locator(SETTINGS_BUTTON_SELECTOR).click();
+    await settingsButton.click();
 
     await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
   });

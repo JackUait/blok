@@ -106,20 +106,41 @@ export class BlockYjsSync {
    * Use this for operations that need to update both Yjs and DOM atomically.
    *
    * @param fn - Function to execute
+   * @param options - Options for controlling the atomic operation behavior
    */
-  public withAtomicOperation<T>(fn: () => T): T {
+  public withAtomicOperation<T>(fn: () => T, options?: { extendThroughRAF?: boolean }): T {
     this.yjsSyncCount++;
     const operations = this.dependencies.operations;
+    const shouldExtend = options?.extendThroughRAF === true;
+
     if (operations) {
       operations.suppressStopCapturing = true;
     }
-    try {
-      return fn();
-    } finally {
+
+    const decrementSyncCount = (): void => {
       this.yjsSyncCount--;
-      if (operations) {
+      if (operations && this.yjsSyncCount === 0) {
         operations.suppressStopCapturing = false;
       }
+    };
+
+    try {
+      const result = fn();
+
+      // If extendThroughRAF is true, delay decrementing yjsSyncCount until after requestAnimationFrame callbacks
+      // This ensures that DOM updates scheduled by rendered() hooks don't trigger
+      // block data sync to Yjs, which would create new undo entries and clear the redo stack
+      if (shouldExtend) {
+        requestAnimationFrame(decrementSyncCount);
+      } else {
+        decrementSyncCount();
+      }
+
+      return result;
+    } catch (error) {
+      // If an error occurs, decrement immediately
+      decrementSyncCount();
+      throw error;
     }
   }
 
@@ -239,23 +260,28 @@ export class BlockYjsSync {
       return;
     }
 
-    // Create the block with immediate event binding for undo/redo responsiveness
-    const block = this.factory.composeBlock({
-      id: blockId,
-      tool: toolName,
-      data,
-      parentId: parentId ?? undefined,
-      bindEventsImmediately: true,
-    });
+    // Wrap all operations in atomic context to prevent DOM updates from syncing back to Yjs
+    // This is critical for preserving the redo stack during undo operations
+    // Use extendThroughRAF to handle DOM updates scheduled by rendered() hooks
+    this.withAtomicOperation(() => {
+      // Create the block with immediate event binding for undo/redo responsiveness
+      const block = this.factory.composeBlock({
+        id: blockId,
+        tool: toolName,
+        data,
+        parentId: parentId ?? undefined,
+        bindEventsImmediately: true,
+      });
 
-    // Insert into blocks store at correct position - caller must handle this
-    // This is a limitation - we need the blocksStore.insert method
-    this.blocksStore.insert(targetIndex, block);
+      // Insert into blocks store at correct position - caller must handle this
+      // This is a limitation - we need the blocksStore.insert method
+      this.blocksStore.insert(targetIndex, block);
 
-    // Apply indentation if needed
-    if (parentId !== undefined) {
-      this.handlers.updateIndentation(block);
-    }
+      // Apply indentation if needed
+      if (parentId !== undefined) {
+        this.handlers.updateIndentation(block);
+      }
+    }, { extendThroughRAF: true });
   }
 
   /**

@@ -1,16 +1,9 @@
-/**
- * @class DragController
- * @classdesc Main orchestrator for pointer-based drag and drop for blocks
- * Coordinates all drag-related components to provide a clean API
- * @module DragController
- */
 import { Module } from '../../__module';
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
 import { hide as hideTooltip } from '../../utils/tooltip';
 
-// Drag components
 import { DragA11y } from './a11y/DragA11y';
 import { DragOperations } from './operations/DragOperations';
 import { DragPreview } from './preview/DragPreview';
@@ -21,9 +14,6 @@ import { hasPassedThreshold } from './utils/drag.constants';
 import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
 
-/**
- * Bound event handlers for cleanup
- */
 interface BoundHandlers {
   onMouseMove: (e: MouseEvent) => void;
   onMouseUp: (e: MouseEvent) => void;
@@ -31,76 +21,24 @@ interface BoundHandlers {
   onKeyUp: (e: KeyboardEvent) => void;
 }
 
-/**
- * DragController - Main orchestrator for drag and drop operations
- * Extends Module to integrate with the Blok module system
- */
 export class DragController extends Module {
-  /**
-   * State machine for managing drag state transitions
-   */
   private stateMachine: DragStateMachine = new DragStateMachine();
-
-  /**
-   * Preview element manager
-   */
   private preview: DragPreview = new DragPreview();
-
-  /**
-   * Drop target detector
-   */
   private targetDetector: DropTargetDetector | null = null;
-
-  /**
-   * Drag operations executor
-   */
   private operations: DragOperations | null = null;
-
-  /**
-   * Accessibility announcer
-   */
   private a11y: DragA11y | null = null;
-
-  /**
-   * Auto-scroll handler
-   */
   private autoScroll: AutoScroll | null = null;
-
-  /**
-   * List item descendants finder
-   */
   private listItemDescendants: ListItemDescendants | null = null;
-
-  /**
-   * Bound event handlers for cleanup
-   */
   private boundHandlers: BoundHandlers | null = null;
 
-  /**
-   * Flag indicating toolbar was already reopened by a handler
-   */
-  private toolbarHandled = false;
-
-  /**
-   * Returns true if a drag operation is currently in progress
-   */
   public get isDragging(): boolean {
     return isActuallyDragging(this.stateMachine.getState());
   }
 
-  /**
-   * Module preparation
-   * Note: DragManager is not in the modulesToPrepare list, so this method is never called.
-   * Initialization happens lazily in startDragTracking instead.
-   */
   public async prepare(): Promise<void> {
     // No preparation needed - initialization happens lazily
   }
 
-  /**
-   * Lazily initialize dependencies that require Blok modules
-   * This is called when the first drag operation begins
-   */
   private lazyInit(): void {
     if (this.targetDetector && this.operations && this.a11y && this.listItemDescendants) {
       return; // Already initialized
@@ -126,23 +64,12 @@ export class DragController extends Module {
     this.listItemDescendants = new ListItemDescendants(this.Blok.BlockManager);
   }
 
-  /**
-   * Cancels any pending drag tracking without performing a drop
-   * Call this when something else (like opening a menu) should take precedence
-   */
   public cancelTracking(): void {
     if (isDragActive(this.stateMachine.getState()) && !isActuallyDragging(this.stateMachine.getState())) {
       this.cleanup();
     }
   }
 
-  /**
-   * Starts listening for drag on the given drag handle
-   * Called by Block when toolbar moves to it
-   * @param dragHandle - Element to use as drag handle
-   * @param block - Block that will be dragged
-   * @returns Cleanup function
-   */
   public setupDragHandle(dragHandle: HTMLElement, block: Block): () => void {
     const onMouseDown = (e: MouseEvent): void => {
       // Only handle left mouse button
@@ -165,11 +92,6 @@ export class DragController extends Module {
     };
   }
 
-  /**
-   * Starts tracking mouse for potential drag
-   * @param e - Mouse event
-   * @param block - Block to drag
-   */
   private startDragTracking(e: MouseEvent, block: Block): void {
     // Initialize dependencies lazily on first drag
     this.lazyInit();
@@ -241,10 +163,6 @@ export class DragController extends Module {
     document.addEventListener('keyup', this.boundHandlers.onKeyUp);
   }
 
-  /**
-   * Handles mouse move during drag
-   * @param e - Mouse event
-   */
   private onMouseMove(e: MouseEvent): void {
     const state = this.stateMachine.getState();
     const sourceBlock = this.stateMachine.getSourceBlock();
@@ -274,10 +192,6 @@ export class DragController extends Module {
     }
   }
 
-  /**
-   * Starts the actual drag operation (after threshold is passed)
-   * @param blockCount - Number of blocks being dragged
-   */
   private startActualDrag(blockCount: number): void {
     this.stateMachine.startDrag();
 
@@ -315,11 +229,6 @@ export class DragController extends Module {
     );
   }
 
-  /**
-   * Updates the drop target based on cursor position
-   * @param clientX - Cursor X position
-   * @param clientY - Cursor Y position
-   */
   private updateDropTarget(clientX: number, clientY: number): void {
     const state = this.stateMachine.getState();
     const sourceBlock = this.stateMachine.getSourceBlock();
@@ -371,10 +280,6 @@ export class DragController extends Module {
     }
   }
 
-  /**
-   * Handles mouse up to complete or cancel drag
-   * @param e - Mouse event
-   */
   private onMouseUp(e: MouseEvent): void {
     const state = this.stateMachine.getState();
     const sourceBlock = this.stateMachine.getSourceBlock();
@@ -385,38 +290,15 @@ export class DragController extends Module {
       return;
     }
 
-    const initialState = this.stateMachine.getState();
+    const { targetBlock, targetEdge } = state as { targetBlock: Block | null; targetEdge: 'top' | 'bottom' | null };
 
-    // Fallback: if no target is set (e.g., when dragging to off-page target),
-    // use the first visible block as the target
-    const needsFallback = initialState.type === 'dragging' && !initialState.targetBlock;
-    const firstVisibleBlock = needsFallback
-      ? this.Blok.BlockManager.blocks.find(b => {
-          if (b === sourceBlock || sourceBlocks.includes(b)) {
-            return false;
-          }
-          const rect = b.holder.getBoundingClientRect();
-          return rect.bottom > 0 && rect.top < window.innerHeight;
-        })
-      : undefined;
-
-    if (firstVisibleBlock !== undefined) {
-      this.stateMachine.updateTarget(firstVisibleBlock, 'top');
-    }
-
-    const currentState = this.stateMachine.getState();
-
-    if (currentState.type !== 'dragging' || !currentState.targetBlock || !currentState.targetEdge) {
+    if (!targetBlock || !targetEdge) {
       this.cleanup();
       return;
     }
 
-    const { targetBlock, targetEdge } = currentState;
-
-    // Drop to complete the state transition
     this.stateMachine.drop();
 
-    // Check Alt key state at drop time to determine operation
     if (!this.operations) {
       this.cleanup();
       return;
@@ -428,16 +310,9 @@ export class DragController extends Module {
       this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge);
     }
 
-    this.cleanup();
+    this.cleanup(false, e.altKey);
   }
 
-  /**
-   * Handles the actual block drop
-   * @param sourceBlock - Primary block being dragged
-   * @param sourceBlocks - All blocks being dragged
-   * @param targetBlock - Block dropped onto
-   * @param edge - Edge of target ('top' or 'bottom')
-   */
   private handleDrop(
     sourceBlock: Block,
     sourceBlocks: Block[],
@@ -459,12 +334,6 @@ export class DragController extends Module {
     }
   }
 
-  /**
-   * Handles block duplication instead of move
-   * @param sourceBlocks - Blocks to duplicate
-   * @param targetBlock - Block to insert duplicates near
-   * @param edge - Edge of target ('top' or 'bottom')
-   */
   private async handleDuplicate(
     sourceBlocks: Block[],
     targetBlock: Block,
@@ -479,24 +348,14 @@ export class DragController extends Module {
       return;
     }
 
-    // Announce duplication to screen readers
     if (this.a11y) {
       this.a11y.announceDuplicateComplete(result.duplicatedBlocks);
     }
 
-    // Store the duplicated block for toolbar reopening in cleanup
-    // We can't pass it through stateMachine, so we reopen directly here
     this.Blok.Toolbar.skipNextSettingsToggle();
     this.Blok.Toolbar.moveAndOpen(result.duplicatedBlocks[0]);
-
-    // Signal cleanup that toolbar was already handled
-    this.toolbarHandled = true;
   }
 
-  /**
-   * Handles escape key to cancel drag and Alt key to toggle duplication mode
-   * @param e - Keyboard event
-   */
   private onKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
       this.cleanup(true);
@@ -509,20 +368,12 @@ export class DragController extends Module {
     }
   }
 
-  /**
-   * Handles Alt key release to toggle off duplication mode
-   * @param e - Keyboard event
-   */
   private onKeyUp(e: KeyboardEvent): void {
     if (e.key === 'Alt' && isActuallyDragging(this.stateMachine.getState())) {
       this.setDuplicationMode(false);
     }
   }
 
-  /**
-   * Sets duplication mode visual feedback on or off
-   * @param isDuplicating - Whether duplication mode should be visually indicated
-   */
   private setDuplicationMode(isDuplicating: boolean): void {
     const wrapper = this.Blok.UI.nodes.wrapper;
 
@@ -533,12 +384,7 @@ export class DragController extends Module {
     }
   }
 
-  /**
-   * Cleans up drag state and event listeners
-   * @param wasCancelled - Whether the drag was cancelled (not dropped)
-   */
-  private cleanup(wasCancelled = false): void {
-    // Announce cancellation to screen readers if drag was in progress and cancelled
+  private cleanup(wasCancelled = false, skipToolbarReopen = false): void {
     if (wasCancelled && isActuallyDragging(this.stateMachine.getState())) {
       announce(
         this.Blok.I18n.t('a11y.dropCancelled'),
@@ -546,34 +392,28 @@ export class DragController extends Module {
       );
     }
 
-    // Stop auto-scroll
     if (this.autoScroll) {
       this.autoScroll.destroy();
       this.autoScroll = null;
     }
 
-    // Reset a11y state
     if (this.a11y) {
       this.a11y.reset();
     }
 
-    // Clear drop indicator
     const state = this.stateMachine.getState();
     if ((state.type === 'dragging' || state.type === 'dropped') && state.targetBlock) {
       state.targetBlock.holder.removeAttribute('data-drop-indicator');
       state.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
     }
 
-    // Destroy preview
     this.preview.destroy();
 
-    // Remove global dragging state
     const wrapper = this.Blok.UI.nodes.wrapper;
     wrapper.removeAttribute(DATA_ATTR.dragging);
     wrapper.removeAttribute(DATA_ATTR.draggingMulti);
     wrapper.removeAttribute(DATA_ATTR.duplicating);
 
-    // Remove event listeners
     if (this.boundHandlers) {
       document.removeEventListener('mousemove', this.boundHandlers.onMouseMove);
       document.removeEventListener('mouseup', this.boundHandlers.onMouseUp);
@@ -582,26 +422,14 @@ export class DragController extends Module {
       this.boundHandlers = null;
     }
 
-    // Reset state machine
     const sourceBlock = this.stateMachine.getSourceBlock();
     this.stateMachine.reset();
 
-    // Reset target detector
     if (this.targetDetector) {
       this.targetDetector.setSourceBlocks([]);
     }
 
-    /**
-     * Reopen toolbar on the moved block after drag completes
-     * This ensures the toolbar is available for further interactions
-     */
-    if (wasCancelled) {
-      return;
-    }
-
-    // Skip if toolbar was already handled (e.g., for duplication)
-    if (this.toolbarHandled) {
-      this.toolbarHandled = false;
+    if (wasCancelled || skipToolbarReopen) {
       return;
     }
 
@@ -609,13 +437,9 @@ export class DragController extends Module {
     if (!blockToShow) {
       return;
     }
-    this.Blok.Toolbar.skipNextSettingsToggle();
     this.Blok.Toolbar.moveAndOpen(blockToShow);
   }
 
-  /**
-   * Module destruction
-   */
   public destroy(): void {
     this.cleanup();
   }

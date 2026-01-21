@@ -55,24 +55,11 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 **Write code before test?** Delete it. Start over.
 
-### Final Verification Commands (Copy-Paste)
+### Session End Commands
+
+Run `/final-verification` for verification commands. Then:
 
 ```bash
-# After refactor, ALWAYS run this:
-git worktree add ../blok-master master 2>/dev/null || true
-cd ../blok-master
-git checkout master
-git diff ../blok
-
-# Test SOMETHING in both branches to catch behavioral regressions
-cd ../blok-master && yarn test [affected-test]
-cd ../blok && yarn test [affected-test]
-```
-
-### Session End Commands (Copy-Paste)
-
-```bash
-# ALWAYS run before saying "done":
 git pull --rebase
 bd sync
 git push
@@ -118,19 +105,19 @@ bd sync               # Sync with git
 
 Scroll up to "IMMEDIATE COMPLETION CHECKLIST" and verify ALL items before declaring work done.
 
-**If you're reading this section instead of the checklist:** Go to the TOP of the file. The checklist has the exact copy-paste commands you need.
+**If you're reading this section instead of the checklist:** Go to the TOP of the file.
 
 **Summary (detail is at top):**
 1. File issues for remaining work
 2. Run quality gates (tests, lint, build)
-3. Final verification against master (AFTER refactor - commands at top)
+3. Final verification against master - run `/final-verification`
 4. Update issue status
-5. **PUSH TO REMOTE** (commands at top - MANDATORY)
+5. **PUSH TO REMOTE** (MANDATORY)
 6. Clean up
 7. Verify `git status` shows "up to date with origin"
 8. Hand off context
 
-**Remember:** Every code change needs `/refactor` → final verification → push. No exceptions.
+**Remember:** Every code change needs `/refactor` → `/final-verification` → push. No exceptions.
 
 ## Project Overview
 

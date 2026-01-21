@@ -34,6 +34,7 @@ digraph when_lint_parallel {
 - Single file issues (fix directly)
 - Non-lint fixes (refactors, features - use other skills)
 - Issues requiring cross-file changes
+- max-line / line-length issues (just report - need structural decisions, not mechanical fixes)
 
 ## Core Pattern
 
@@ -86,6 +87,8 @@ eslint file1.ts file2.ts file3.ts --fix
 Get the list of files with remaining issues:
 - Re-run linter after `--fix`
 - Identify which files still have errors
+
+**max-line problems:** For line-length issues (e.g., `max-len`, `line-max-length`), do NOT deploy subagents. These require structural refactoring decisions beyond mechanical fixes. Just report them with file paths and line numbers.
 
 ### Step 2: Dispatch Subagents (Parallel)
 
@@ -155,6 +158,7 @@ This applies regardless of:
 | Fixing single-file issues | Only use subagents for 2+ files |
 | Using for non-lint changes | This skill is for lint/format/type ONLY |
 | Ignoring warnings | Warnings are issues too. Fix them like errors. |
+| Deploying subagents for max-line issues | Line-length needs structural refactoring decisions, not mechanical fixes. Just report. |
 | **Monkey-patching fixes** | **Understand the issue, fix root cause, never suppress** |
 | Adding @ts-ignore/eslint-disable | Fix the actual type or logic issue |
 | "It's just a quick fix" | Quick fixes accumulate into tech debt |
@@ -174,11 +178,14 @@ This applies regardless of:
 - **"Easiest to just eslint-disable..."** → Suppression is not a fix. Fix the code.
 - **"It's a false positive anyway..."** → Are you sure? If genuinely wrong, fix the CONFIG, not suppress per-line.
 - **"Type assertion is fine here..."** → Assertions hide bugs. Use proper types.
+- **"Deploy subagent for max-line..."** → Line-length issues need architectural decisions, not mechanical fixes. Just report them.
 
 ## Subagent Template
 
 ```text
 Fix all lint, type, and formatting issues (errors AND warnings) in {file_path}.
+
+EXCEPTION: Do NOT fix max-line / line-length issues. These require structural refactoring decisions. Report them separately.
 
 CRITICAL: Fix issues PROPERLY, not with monkey-patches.
 - Understand WHY the linter is complaining
@@ -191,11 +198,13 @@ Steps:
 1. Read the file and understand its purpose
 2. Run the linter to identify all issues (errors + warnings)
 3. For EACH issue:
-   a. Understand what the rule is checking for and WHY it failed
-   b. Determine the PROPER fix (not just the quickest one)
-   c. Apply the fix
-4. Re-run linter to verify ALL issues (errors + warnings) are resolved
+   a. If it's a max-line/line-length issue: skip it, note for reporting
+   b. Otherwise, understand what the rule is checking for and WHY it failed
+   c. Determine the PROPER fix (not just the quickest one)
+   d. Apply the fix
+4. Re-run linter to verify ALL fixable issues (errors + warnings) are resolved
 5. Report any issues that genuinely require config changes (not suppression)
+6. Report any max-line/line-length issues separately (these need structural decisions)
 ```
 
 ## Proper Fixes vs. Monkey Patches

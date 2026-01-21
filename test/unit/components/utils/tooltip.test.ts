@@ -366,4 +366,77 @@ describe('Tooltip utility', () => {
 
     expect(getTooltipWrapper()).not.toBeNull();
   });
+
+  it('clears previous timeout when show is called multiple times rapidly', () => {
+    vi.useFakeTimers();
+    const target = createTargetElement();
+
+    // First show call with delay
+    show(target, 'first tooltip', { delay: 100 });
+
+    // Second show call before first timeout completes
+    // This should clear the first timeout and schedule a new one
+    show(target, 'second tooltip', { delay: 100 });
+
+    // Advance time by 50ms - neither timeout should have fired yet
+    vi.advanceTimersByTime(50);
+
+    const wrapper = getTooltipWrapper();
+    expect(wrapper?.textContent).toBe('second tooltip');
+
+    // Advance past the first timeout's delay (100ms)
+    // The first timeout should have been cleared and not fire
+    vi.advanceTimersByTime(50);
+
+    // Tooltip content should still be from the second show call
+    // The first timeout should not have overwritten it
+    expect(wrapper?.textContent).toBe('second tooltip');
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    // Clean up
+    hide();
+  });
+
+  it('does not show tooltip after hide is called before timeout expires', () => {
+    vi.useFakeTimers();
+    const target = createTargetElement();
+
+    // Show tooltip with delay
+    show(target, 'delayed tooltip', { delay: 200 });
+
+    // Hide before timeout expires
+    hide();
+
+    // Advance past the original timeout delay
+    vi.advanceTimersByTime(250);
+
+    const wrapper = getTooltipWrapper();
+    // Tooltip should remain hidden
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('handles rapid show/hide/show cycles correctly', () => {
+    vi.useFakeTimers();
+    const target = createTargetElement();
+
+    // First show
+    show(target, 'first', { delay: 100 });
+
+    // Hide immediately
+    hide();
+
+    // Second show (with different content)
+    show(target, 'second', { delay: 100 });
+
+    // Advance time past the delay
+    vi.advanceTimersByTime(150);
+
+    const wrapper = getTooltipWrapper();
+    // Only the second tooltip content should be visible
+    expect(wrapper?.textContent).toBe('second');
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    // Clean up
+    hide();
+  });
 });

@@ -177,6 +177,16 @@ class Tooltip {
       this.prepare();
     }
 
+    /**
+     * Clear any existing show timeout to prevent orphaned timeouts from firing.
+     * This fixes the bug where tooltips would appear after the user has already
+     * moved away, caused by multiple rapid hover events scheduling multiple timeouts.
+     */
+    if (this.showingTimeout) {
+      clearTimeout(this.showingTimeout);
+      this.showingTimeout = null;
+    }
+
     const basicOptions = {
       placement: 'bottom',
       marginTop: 0,
@@ -224,6 +234,11 @@ class Tooltip {
 
     if (showingOptions && showingOptions.delay) {
       this.showingTimeout = setTimeout(() => {
+        /**
+         * Clear the timeout reference after execution to maintain correct state.
+         */
+        this.showingTimeout = null;
+
         if (this.nodes.wrapper) {
           const classes = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown : [this.CSS.tooltipShown];
 

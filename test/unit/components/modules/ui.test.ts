@@ -25,6 +25,7 @@ const createBlokStub = (): UI["Blok"] => {
 
   return {
     BlockManager: {
+      blocks: [],
       isBlokEmpty: false,
       currentBlock: null,
       currentBlockIndex: -1,

@@ -1,6 +1,6 @@
 #!/bin/bash
-# Hook script to auto-trigger /refactor after EVERY response
-# MANDATORY: Always runs refactor after agent completes any work
+# Hook script to auto-trigger /refactor when agent stops
+# Runs on Stop event - triggers refactor to review code changes
 
 set -e
 
@@ -8,9 +8,7 @@ set -e
 DEBUG=${REFACTOR_HOOK_DEBUG:-0}
 LOG_FILE=".claude/hooks/refactor-hook.log"
 NOTIFICATION_ENABLED=${NOTIFICATION_ENABLED:-1}
-
-# MANDATORY REFACTOR: Always true, never skip
-ALWAYS_REFACTOR=${ALWAYS_REFACTOR:-1}
+SKIP_REFACTOR=${SKIP_REFACTOR:-0}
 
 debug_log() {
     if [ "$DEBUG" = "1" ]; then
@@ -22,7 +20,7 @@ debug_log() {
 # Read JSON input from stdin (required by hook protocol)
 input=$(cat)
 
-# Extract paths from JSON for logging
+# Extract working directory from JSON
 working_dir=$(echo "$input" | grep -o '"working_directory":[^,}]*' | cut -d'"' -f4)
 if [ -z "$working_dir" ]; then
     working_dir="$CLAUDE_PROJECT_DIR"
@@ -34,14 +32,30 @@ if [ "$NOTIFICATION_ENABLED" = "1" ]; then
     debug_log "Agent complete notification sent"
 fi
 
-# MANDATORY: Always output refactor directive
-# No conditions, no early exits, no exceptions
-debug_log "MANDATORY: Triggering refactor"
+# Allow skipping refactor via environment variable
+if [ "$SKIP_REFACTOR" = "1" ]; then
+    debug_log "Refactor skipped (SKIP_REFACTOR=1)"
+    exit 0
+fi
 
-# Always output the directive - agent must run /refactor
-cat <<'EOF'
+# Check for actual code changes before triggering refactor
+if [ -n "$working_dir" ]; then
+    cd "$working_dir" 2>/dev/null || exit 0
+    
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        # Get modified files (excluding hooks, node_modules, etc.)
+        changed_files=$(git diff --name-only HEAD 2>/dev/null | grep -v -E '^(\.claude/|node_modules/|dist/|\.git/|coverage/)' || true)
+        
+        if [ -z "$changed_files" ]; then
+            debug_log "No code changes detected - skipping refactor"
+            exit 0
+        fi
+        
+        debug_log "Code changes detected: $(echo "$changed_files" | wc -l | tr -d ' ') files"
+    fi
+fi
 
-<!-- MANDATORY: Run /refactor now -->
-<system-reminder>MANDATORY: Run /refactor command to review and clean up code changes from this session.</system-reminder>
+debug_log "Triggering /refactor"
 
-EOF
+# Output the refactor command - Claude Code will execute this
+echo "/refactor"

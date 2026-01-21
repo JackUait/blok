@@ -791,11 +791,15 @@ describe('KeyboardNavigation', () => {
       const nextBlock = createBlock({ id: 'next-block', isEmpty: false });
       const emptyCurrentBlock = createBlock({ id: 'empty-current', isEmpty: true });
       const close = vi.fn();
-      const removeBlock = vi.fn();
       const setToBlock = vi.fn();
+      let currentBlockValue = emptyCurrentBlock;
+      const removeBlock = vi.fn((block: Block) => {
+        if (block === emptyCurrentBlock) {
+          currentBlockValue = nextBlock;
+        }
+      });
       const blok = createBlokModules({
         BlockManager: {
-          currentBlock: emptyCurrentBlock,
           nextBlock,
           removeBlock,
           currentBlockIndex: 0,
@@ -808,6 +812,15 @@ describe('KeyboardNavigation', () => {
           close,
         } as unknown as BlokModules['Toolbar'],
       });
+
+      // Define getter after merge to override the static property
+      Object.defineProperty(blok.BlockManager, 'currentBlock', {
+        get() {
+          return currentBlockValue;
+        },
+        configurable: true,
+      });
+
       const keyboardNavigation = new KeyboardNavigation(blok);
       const event = createKeyboardEvent({ key: 'Delete' });
 

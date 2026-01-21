@@ -7,7 +7,9 @@ import { twJoin } from '../../utils/tw';
 export const getToolbarStyles = (): { [name: string]: string } => {
   return {
     toolbar: twJoin(
-      'absolute left-0 right-0 top-0 transition-opacity duration-100 ease-linear will-change-[opacity,top]'
+      'absolute left-0 right-0 top-0 h-toolbox-btn transition-opacity duration-100 ease-linear will-change-[opacity,top]',
+      // Don't intercept pointer events - let them pass through to the block
+      'pointer-events-none'
     ),
     toolbarOpened: 'block',
     toolbarClosed: 'hidden',
@@ -17,6 +19,8 @@ export const getToolbarStyles = (): { [name: string]: string } => {
     actions: twJoin(
       'absolute flex opacity-0 pr-[5px]',
       'right-full',
+      // Re-enable pointer events for interactive elements
+      'pointer-events-auto',
       // Mobile styles
       'mobile:right-auto',
       // RTL styles
@@ -33,7 +37,7 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       '[&_svg]:h-6 [&_svg]:w-6',
       // Hover (can-hover)
       'can-hover:hover:bg-bg-light',
-      // Keep hover background when toolbox is open
+      // Keep hover background when toolbox is opened
       'group-data-[blok-toolbox-opened=true]:bg-bg-light',
       // Mobile styles (static positioning with overlay-pane appearance)
       'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
@@ -47,7 +51,7 @@ export const getToolbarStyles = (): { [name: string]: string } => {
     ),
     plusButtonShortcutKey: 'text-white',
     /**
-     * Data attribute selector used by SortableJS for drag handle
+     * Data attribute selector used for SortableJS for drag handle
      */
     settingsToggler: twJoin(
       // Base toolbox-button styles

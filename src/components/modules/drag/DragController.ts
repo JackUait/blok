@@ -196,6 +196,12 @@ export class DragController extends Module {
   private startActualDrag(blockCount: number): void {
     this.stateMachine.startDrag();
 
+    // Prevent settings menu from opening after drag completes
+    // Must be called when drag actually starts (after threshold) so that
+    // simple clicks don't get affected, but before mouseup so the flag
+    // is set when ClickDragHandler's beforeCallback checks it
+    this.Blok.Toolbar.skipNextSettingsToggle();
+
     // Show preview
     this.preview.show();
 
@@ -333,6 +339,8 @@ export class DragController extends Module {
     if (this.a11y && movedBlock) {
       this.a11y.announceDropComplete(movedBlock, sourceBlocks, isMultiBlockDrag);
     }
+
+    this.Blok.Toolbar.moveAndOpen(sourceBlock);
   }
 
   private async handleDuplicate(
@@ -353,7 +361,6 @@ export class DragController extends Module {
       this.a11y.announceDuplicateComplete(result.duplicatedBlocks);
     }
 
-    this.Blok.Toolbar.skipNextSettingsToggle();
     this.Blok.Toolbar.moveAndOpen(result.duplicatedBlocks[0]);
   }
 

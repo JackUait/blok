@@ -342,14 +342,14 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     await createBlok(page, {
       blocks: [
         {
-          type: 'checklist',
+          type: 'list',
           data: {
+            style: 'checklist',
             items: [
               {
-                text: 'Task 1',
-                checked: false,
+                content: 'Task 1',
                 items: [
-                  { text: 'Subtask 1.1', checked: false },
+                  { content: 'Subtask 1.1' },
                 ],
               },
             ],

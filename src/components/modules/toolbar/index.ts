@@ -291,19 +291,11 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @param target - optional target element that was hovered (for content offset calculation)
    */
   public moveAndOpen(block?: Block | null, target?: Element | null): void {
-    // Debug: set a timestamp attribute when moveAndOpen is called
-    if (this.nodes.wrapper) {
-      this.nodes.wrapper.setAttribute('data-blok-debug-open-time', String(Date.now()));
-    }
-
     /**
      * Skip if toolbar was just closed (e.g., by keyboard operations)
      * This prevents toolbar from being reopened by subsequent hover events
      */
     if (this.preventReopen) {
-      if (this.nodes.wrapper) {
-        this.nodes.wrapper.setAttribute('data-blok-debug-blocked', 'true');
-      }
       return;
     }
 
@@ -499,11 +491,6 @@ export class Toolbar extends Module<ToolbarNodes> {
   public close(): void {
     if (this.Blok.ReadOnly.isEnabled) {
       return;
-    }
-
-    // Debug: set a timestamp attribute
-    if (this.nodes.wrapper) {
-      this.nodes.wrapper.setAttribute('data-blok-debug-close-time', String(Date.now()));
     }
 
     // eslint-disable-next-line @typescript-eslint/no-deprecated

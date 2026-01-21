@@ -589,24 +589,6 @@ test.describe('delete keydown', () => {
     expect(blocks[0].id).toBe('block2');
 
     await expectCaretAtStart(getParagraphByIndex(page, 0));
-
-    // Debug: check attributes
-    const toolbar = page.locator(TOOLBAR_SELECTOR);
-    const debugOpenTime = await toolbar.getAttribute('data-blok-debug-open-time');
-    const debugCloseTime = await toolbar.getAttribute('data-blok-debug-close-time');
-    const debugBlocked = await toolbar.getAttribute('data-blok-debug-blocked');
-    const toolbarCount = await page.locator('[data-blok-testid="toolbar"]').count();
-    console.log('Debug - openTime:', debugOpenTime, 'closeTime:', debugCloseTime, 'blocked:', debugBlocked, 'toolbarCount:', toolbarCount);
-
-    // Check all toolbars
-    const allToolbars = await page.locator('[data-blok-testid="toolbar"]').all();
-    for (let i = 0; i < allToolbars.length; i++) {
-      const tb = allToolbars[i];
-      const opened = await tb.getAttribute('data-blok-opened');
-      const debugClose = await tb.getAttribute('data-blok-debug-close-time');
-      console.log(`  Toolbar ${i}: opened=${opened}, debugClose=${debugClose}`);
-    }
-
     await expectToolbarClosed(page);
   });
 

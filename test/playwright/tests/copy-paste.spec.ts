@@ -1098,7 +1098,7 @@ test.describe('copy and paste', () => {
     });
   });
 
-  test.describe('Google Docs paste', () => {
+  test.describe('google Docs paste', () => {
     test('should preserve numbered list style from Google Docs HTML', async ({ page }) => {
       await createBlok(page);
 
@@ -1140,16 +1140,16 @@ test.describe('copy and paste', () => {
       await expect(listBlocks).toHaveCount(3);
 
       // Check first item is unordered (bulleted)
-      const firstBlock = listBlocks.nth(0);
+      const firstBlock = listBlocks.filter({ hasText: 'Bulleted item' });
       await expect(firstBlock).toHaveAttribute('data-list-style', 'unordered');
       await expect(firstBlock).toContainText('Bulleted item');
 
       // Check second and third items are ordered (numbered)
-      const secondBlock = listBlocks.nth(1);
+      const secondBlock = listBlocks.filter({ hasText: 'Numbered item one' });
       await expect(secondBlock).toHaveAttribute('data-list-style', 'ordered');
       await expect(secondBlock).toContainText('Numbered item one');
 
-      const thirdBlock = listBlocks.nth(2);
+      const thirdBlock = listBlocks.filter({ hasText: 'Numbered item two' });
       await expect(thirdBlock).toHaveAttribute('data-list-style', 'ordered');
       await expect(thirdBlock).toContainText('Numbered item two');
     });

@@ -1,7 +1,7 @@
 /**
  * Shared utility for getting list item depth from a block's DOM
  * @param block - Block to check
- * @returns Depth number or null if not a list item
+ * @returns Depth number (0 for root level) or null if not a list item
  */
 export const getListItemDepth = (block: { holder: HTMLElement }): number | null => {
   // For list items, block.holder IS the wrapper with data-list-depth attribute
@@ -10,9 +10,7 @@ export const getListItemDepth = (block: { holder: HTMLElement }): number | null 
 
   if (depthAttr !== null && depthAttr !== '') {
     const parsed = parseInt(depthAttr, 10);
-    if (!isNaN(parsed)) {
-      return parsed;
-    }
+    return isNaN(parsed) ? null : parsed;
   }
 
   // Fallback: check if any child element has the attribute (for other block types)

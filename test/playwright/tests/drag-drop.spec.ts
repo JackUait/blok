@@ -1,3 +1,7 @@
+/* eslint-disable playwright/no-skipped-test */
+// The two skipped tests below document a known bug in nested list drag behavior.
+// See the FIXME comment above test.skip() on line ~1097 for details.
+// These tests should remain skipped until the underlying issue is fixed.
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';

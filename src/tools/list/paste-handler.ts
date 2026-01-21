@@ -98,13 +98,12 @@ export const detectStyleFromPastedContent = (content: HTMLElement, currentStyle:
   const parentList = content.parentElement;
 
   // First, check parent element tag (most reliable)
-  if (parentList) {
-    if (parentList.tagName === 'OL') return 'ordered';
-    if (parentList.tagName === 'UL') {
-      // Check for checkbox inputs to detect checklist
-      const hasCheckbox = content.querySelector('input[type="checkbox"]');
-      return hasCheckbox ? 'checklist' : 'unordered';
-    }
+  if (parentList?.tagName === 'OL') return 'ordered';
+
+  if (parentList?.tagName === 'UL') {
+    // Check for checkbox inputs to detect checklist
+    const hasCheckbox = content.querySelector('input[type="checkbox"]');
+    return hasCheckbox ? 'checklist' : 'unordered';
   }
 
   // If no parent or parent is not OL/UL, check element's own attributes

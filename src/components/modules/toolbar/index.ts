@@ -79,6 +79,12 @@ export class Toolbar extends Module<ToolbarNodes> {
   private hoveredBlock: Block | null = null;
 
   /**
+   * Flag to prevent toolbar from being reopened immediately after being closed.
+   * This is set to true when close() is called and reset after a short delay.
+   */
+  private preventReopen = false;
+
+  /**
    * Toolbox class instance
    * It will be created in requestIdleCallback so it can be null in some period of time
    */
@@ -285,6 +291,22 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @param target - optional target element that was hovered (for content offset calculation)
    */
   public moveAndOpen(block?: Block | null, target?: Element | null): void {
+    // Debug: set a timestamp attribute when moveAndOpen is called
+    if (this.nodes.wrapper) {
+      this.nodes.wrapper.setAttribute('data-blok-debug-open-time', String(Date.now()));
+    }
+
+    /**
+     * Skip if toolbar was just closed (e.g., by keyboard operations)
+     * This prevents toolbar from being reopened by subsequent hover events
+     */
+    if (this.preventReopen) {
+      if (this.nodes.wrapper) {
+        this.nodes.wrapper.setAttribute('data-blok-debug-blocked', 'true');
+      }
+      return;
+    }
+
     /**
      * Some UI elements creates inside requestIdleCallback, so the can be not ready yet
      */
@@ -479,6 +501,11 @@ export class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
+    // Debug: set a timestamp attribute
+    if (this.nodes.wrapper) {
+      this.nodes.wrapper.setAttribute('data-blok-debug-close-time', String(Date.now()));
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarOpened);
     // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -489,6 +516,21 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.blockActions.hide();
     this.toolboxInstance?.close();
     this.Blok.BlockSettings.close();
+
+    /**
+     * Clear hovered block state to prevent toolbar from reopening
+     * for a block that no longer exists or is no longer valid
+     */
+    this.hoveredBlock = null;
+
+    /**
+     * Set flag to prevent toolbar from being reopened immediately after close.
+     * This is reset after a delay to allow normal hover behavior.
+     */
+    this.preventReopen = true;
+    setTimeout(() => {
+      this.preventReopen = false;
+    }, 5000);
 
     /**
      * Restore plus button visibility in case it was hidden by other interactions
@@ -754,6 +796,13 @@ export class Toolbar extends Module<ToolbarNodes> {
          * Do not move toolbar during drag or rectangle selection operations
          */
         if (this.Blok.DragManager.isDragging || this.Blok.RectangleSelection.isRectActivated()) {
+          return;
+        }
+
+        /**
+         * Skip if toolbar was just closed (e.g., by keyboard operations)
+         */
+        if (this.preventReopen) {
           return;
         }
 

@@ -14,6 +14,80 @@ export const isPasteEventHTMLElement = (data: unknown): data is HTMLElement => {
 };
 
 /**
+ * Ordered list style types from CSS list-style-type property
+ */
+const ORDERED_LIST_STYLE_TYPES = new Set([
+  'decimal',
+  'decimal-leading-zero',
+  'lower-roman',
+  'upper-roman',
+  'lower-greek',
+  'lower-latin',
+  'upper-latin',
+  'lower-alpha',
+  'upper-alpha',
+  'arabic-indic',
+  'armenian',
+  'bengali',
+  'cambodian',
+  'cjk-decimal',
+  'devanagari',
+  'georgian',
+  'gujarati',
+  'gurmukhi',
+  'hebrew',
+  'kannada',
+  'khmer',
+  'lao',
+  'malayalam',
+  'mongolian',
+  'myanmar',
+  'oriya',
+  'persian',
+  'telugu',
+  'thai',
+  'tibetan',
+]);
+
+/**
+ * Unordered list style types from CSS list-style-type property
+ */
+const UNORDERED_LIST_STYLE_TYPES = new Set([
+  'disc',
+  'circle',
+  'square',
+  'none',
+]);
+
+/**
+ * Extract list style type from element's style attribute
+ *
+ * @param content - The element to check
+ * @returns 'ordered', 'unordered', or null if not determined
+ */
+const getListStyleFromAttribute = (content: HTMLElement): 'ordered' | 'unordered' | null => {
+  // Check data-list-style attribute first (used by some editors)
+  const dataStyle = content.getAttribute('data-list-style');
+  if (dataStyle === 'ordered') return 'ordered';
+  if (dataStyle === 'unordered') return 'unordered';
+
+  // Check inline style attribute
+  const styleAttr = content.getAttribute('style');
+  if (!styleAttr) return null;
+
+  // Extract list-style-type from inline style
+  const listStyleMatch = styleAttr.match(/list-style-type\s*:\s*([^;]+)/);
+  if (!listStyleMatch) return null;
+
+  const listStyleType = listStyleMatch[1].trim().toLowerCase();
+
+  if (ORDERED_LIST_STYLE_TYPES.has(listStyleType)) return 'ordered';
+  if (UNORDERED_LIST_STYLE_TYPES.has(listStyleType)) return 'unordered';
+
+  return null;
+};
+
+/**
  * Detect list style from pasted content based on parent element
  *
  * @param content - The pasted content element
@@ -22,14 +96,25 @@ export const isPasteEventHTMLElement = (data: unknown): data is HTMLElement => {
  */
 export const detectStyleFromPastedContent = (content: HTMLElement, currentStyle: ListItemStyle): ListItemStyle => {
   const parentList = content.parentElement;
-  if (!parentList) return currentStyle;
 
-  if (parentList.tagName === 'OL') return 'ordered';
-  if (parentList.tagName !== 'UL') return currentStyle;
+  // First, check parent element tag (most reliable)
+  if (parentList) {
+    if (parentList.tagName === 'OL') return 'ordered';
+    if (parentList.tagName === 'UL') {
+      // Check for checkbox inputs to detect checklist
+      const hasCheckbox = content.querySelector('input[type="checkbox"]');
+      return hasCheckbox ? 'checklist' : 'unordered';
+    }
+  }
 
-  // Check for checkbox inputs to detect checklist
-  const hasCheckbox = content.querySelector('input[type="checkbox"]');
-  return hasCheckbox ? 'checklist' : 'unordered';
+  // If no parent or parent is not OL/UL, check element's own attributes
+  // This handles cases where the list structure is lost during paste processing
+  // (e.g., Google Docs paste where <li> elements are extracted from their parent)
+  const styleFromAttr = getListStyleFromAttribute(content);
+  if (styleFromAttr) return styleFromAttr;
+
+  // Fall back to current style
+  return currentStyle;
 };
 
 /**

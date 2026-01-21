@@ -140,6 +140,129 @@ describe('paste-handler', () => {
 
       expect(result).toBe('unordered');
     });
+
+    describe('Google Docs paste scenario', () => {
+      it('returns ordered when li has data-list-style="ordered" attribute (Google Docs)', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('data-list-style', 'ordered');
+
+        const result = detectStyleFromPastedContent(content, 'unordered');
+
+        expect(result).toBe('ordered');
+      });
+
+      it('returns ordered when li has style with list-style-type: decimal (Google Docs)', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: decimal');
+
+        const result = detectStyleFromPastedContent(content, 'unordered');
+
+        expect(result).toBe('ordered');
+      });
+
+      it('returns ordered when li has style with list-style-type: decimal-leading-zero', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: decimal-leading-zero');
+
+        const result = detectStyleFromPastedContent(content, 'unordered');
+
+        expect(result).toBe('ordered');
+      });
+
+      it('returns ordered when li has style with list-style-type: lower-roman', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: lower-roman');
+
+        const result = detectStyleFromPastedContent(content, 'unordered');
+
+        expect(result).toBe('ordered');
+      });
+
+      it('returns ordered when li has style with list-style-type: upper-roman', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: upper-roman');
+
+        const result = detectStyleFromPastedContent(content, 'unordered');
+
+        expect(result).toBe('ordered');
+      });
+
+      it('returns ordered when li has style with list-style-type: lower-alpha', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: lower-alpha');
+
+        const result = detectStyleFromPastedContent(content, 'unordered');
+
+        expect(result).toBe('ordered');
+      });
+
+      it('returns ordered when li has style with list-style-type: upper-alpha', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: upper-alpha');
+
+        const result = detectStyleFromPastedContent(content, 'unordered');
+
+        expect(result).toBe('ordered');
+      });
+
+      it('returns unordered when li has style with list-style-type: disc', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: disc');
+
+        const result = detectStyleFromPastedContent(content, 'ordered');
+
+        expect(result).toBe('unordered');
+      });
+
+      it('returns unordered when li has style with list-style-type: circle', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: circle');
+
+        const result = detectStyleFromPastedContent(content, 'ordered');
+
+        expect(result).toBe('unordered');
+      });
+
+      it('returns unordered when li has style with list-style-type: square', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: square');
+
+        const result = detectStyleFromPastedContent(content, 'ordered');
+
+        expect(result).toBe('unordered');
+      });
+
+      it('returns current style when li has no parent and no list-style-type attribute', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Orphan item';
+
+        const result = detectStyleFromPastedContent(content, 'unordered');
+
+        expect(result).toBe('unordered');
+      });
+
+      it('prioritizes parent OL over style attribute', () => {
+        const content = document.createElement('li');
+        content.textContent = 'Item text';
+        content.setAttribute('style', 'list-style-type: disc');
+        const ol = document.createElement('ol');
+        ol.appendChild(content);
+
+        const result = detectStyleFromPastedContent(content, 'unordered');
+
+        expect(result).toBe('ordered');
+      });
+    });
   });
 
   describe('extractPastedContent', () => {

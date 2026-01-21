@@ -1097,6 +1097,152 @@ test.describe('copy and paste', () => {
       await expect(blocks).toHaveCount(1); // Only the default empty block
     });
   });
+
+  test.describe('Google Docs paste', () => {
+    test('should preserve numbered list style from Google Docs HTML', async ({ page }) => {
+      await createBlok(page);
+
+      const block = getBlockByIndex(page, 0);
+
+      await block.click();
+
+      // Simulate Google Docs clipboard HTML with numbered lists
+      const googleDocsHTML = `<meta charset="utf-8">
+        <ul style="margin-top:0;margin-bottom:0;padding-inline-start:48px;">
+          <li dir="ltr" style="list-style-type:disc;font-size:11pt;font-family:Arial,sans-serif;" aria-level="1">
+            <p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation">
+              <span style="font-size:11pt;font-family:Arial,sans-serif;">Bulleted item</span>
+            </p>
+          </li>
+        </ul>
+        <ol style="margin-top:0;margin-bottom:0;padding-inline-start:48px;">
+          <li dir="ltr" style="list-style-type:decimal;font-size:11pt;font-family:Arial,sans-serif;" aria-level="1">
+            <p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation">
+              <span style="font-size:11pt;font-family:Arial,sans-serif;">Numbered item one</span>
+            </p>
+          </li>
+          <li dir="ltr" style="list-style-type:decimal;font-size:11pt;font-family:Arial,sans-serif;" aria-level="1">
+            <p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation">
+              <span style="font-size:11pt;font-family:Arial,sans-serif;">Numbered item two</span>
+            </p>
+          </li>
+        </ol>`;
+
+      await paste(page, block, {
+        'text/html': googleDocsHTML,
+        'text/plain': 'Bulleted item\nNumbered item one\nNumbered item two',
+      });
+
+      // Get all list blocks
+      const listBlocks = page.locator('[data-blok-tool="list"]');
+
+      // Should have 3 list items (1 bulleted, 2 numbered)
+      await expect(listBlocks).toHaveCount(3);
+
+      // Check first item is unordered (bulleted)
+      const firstBlock = listBlocks.nth(0);
+      await expect(firstBlock).toHaveAttribute('data-list-style', 'unordered');
+      await expect(firstBlock).toContainText('Bulleted item');
+
+      // Check second and third items are ordered (numbered)
+      const secondBlock = listBlocks.nth(1);
+      await expect(secondBlock).toHaveAttribute('data-list-style', 'ordered');
+      await expect(secondBlock).toContainText('Numbered item one');
+
+      const thirdBlock = listBlocks.nth(2);
+      await expect(thirdBlock).toHaveAttribute('data-list-style', 'ordered');
+      await expect(thirdBlock).toContainText('Numbered item two');
+    });
+
+    test('should detect numbered list from orphaned li with list-style-type attribute', async ({ page }) => {
+      await createBlok(page);
+
+      const block = getBlockByIndex(page, 0);
+
+      await block.click();
+
+      // Simulate HTML where li is extracted from parent (but retains style attribute)
+      // This can happen during paste processing
+      const orphanLiHTML = `<li style="list-style-type:decimal;font-size:11pt;font-family:Arial,sans-serif;">
+        <span>Orphaned numbered item</span>
+      </li>`;
+
+      await paste(page, block, {
+        'text/html': orphanLiHTML,
+        'text/plain': 'Orphaned numbered item',
+      });
+
+      // Should create a numbered list item
+      const listBlock = page.locator('[data-blok-tool="list"]');
+      await expect(listBlock).toHaveCount(1);
+      await expect(listBlock).toHaveAttribute('data-list-style', 'ordered');
+      await expect(listBlock).toContainText('Orphaned numbered item');
+    });
+
+    test('should detect bulleted list from orphaned li with disc style', async ({ page }) => {
+      await createBlok(page);
+
+      const block = getBlockByIndex(page, 0);
+
+      await block.click();
+
+      const orphanLiHTML = `<li style="list-style-type:disc;font-size:11pt;font-family:Arial,sans-serif;">
+        <span>Orphaned bulleted item</span>
+      </li>`;
+
+      await paste(page, block, {
+        'text/html': orphanLiHTML,
+        'text/plain': 'Orphaned bulleted item',
+      });
+
+      const listBlock = page.locator('[data-blok-tool="list"]');
+      await expect(listBlock).toHaveCount(1);
+      await expect(listBlock).toHaveAttribute('data-list-style', 'unordered');
+      await expect(listBlock).toContainText('Orphaned bulleted item');
+    });
+
+    test('should detect lower-alpha numbered list style', async ({ page }) => {
+      await createBlok(page);
+
+      const block = getBlockByIndex(page, 0);
+
+      await block.click();
+
+      const lowerAlphaHTML = `<li style="list-style-type:lower-alpha;font-size:11pt;font-family:Arial,sans-serif;">
+        <span>Lower alpha item</span>
+      </li>`;
+
+      await paste(page, block, {
+        'text/html': lowerAlphaHTML,
+        'text/plain': 'Lower alpha item',
+      });
+
+      const listBlock = page.locator('[data-blok-tool="list"]');
+      await expect(listBlock).toHaveAttribute('data-list-style', 'ordered');
+      await expect(listBlock).toContainText('Lower alpha item');
+    });
+
+    test('should detect lower-roman numbered list style', async ({ page }) => {
+      await createBlok(page);
+
+      const block = getBlockByIndex(page, 0);
+
+      await block.click();
+
+      const lowerRomanHTML = `<li style="list-style-type:lower-roman;font-size:11pt;font-family:Arial,sans-serif;">
+        <span>Lower roman item</span>
+      </li>`;
+
+      await paste(page, block, {
+        'text/html': lowerRomanHTML,
+        'text/plain': 'Lower roman item',
+      });
+
+      const listBlock = page.locator('[data-blok-tool="list"]');
+      await expect(listBlock).toHaveAttribute('data-list-style', 'ordered');
+      await expect(listBlock).toContainText('Lower roman item');
+    });
+  });
 });
 
 declare global {
@@ -1108,5 +1254,3 @@ declare global {
     __maliciousPasteExecuted?: boolean;
   }
 }
-
-

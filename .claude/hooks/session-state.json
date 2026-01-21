@@ -1,20 +1,20 @@
 {
-  "timestamp": "2026-01-21T05:05:00Z",
+  "timestamp": "2026-01-21T06:18:15Z",
   "working_dir": "/Users/jackuait/Packages/blok",
   "branch": "refactor/make-files-smaller",
-  "head_commit": "f8f866e11fc743cacd3481280584ccd43de22fc8",
+  "head_commit": "cbbb465c993d5f2f40538268228ccf804db11f8a",
   "modified_files": [
-    ".claude/hooks/post-response.sh",
     ".claude/hooks/session-state.json",
-    ".claude/hooks/start-chat.sh",
-    "src/components/modules/drag/DragController.ts",
-    "src/components/modules/toolbar/styles.ts",
-    "test/unit/components/modules/blockEvents/composers/keyboardNavigation.test.ts",
-    "test/unit/components/modules/ui.test.ts"
+    "src/components/modules/drag/utils/depthUtils.ts",
+    "src/components/modules/toolbar/index.ts",
+    "src/components/utils/tooltip.ts",
+    "src/tools/list/paste-handler.ts",
+    "test/playwright/tests/copy-paste.spec.ts",
+    "test/playwright/tests/drag-drop.spec.ts",
+    "test/unit/components/utils/tooltip.test.ts",
+    "test/unit/tools/list/paste-handler.test.ts"
   ],
   "staged_files": [
-    ".claude/hooks/post-response.sh",
-    ".claude/hooks/session-state.json",
-    ".claude/hooks/start-chat.sh"
+
   ]
 }

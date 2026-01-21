@@ -8,8 +8,11 @@ export const getListItemDepth = (block: { holder: HTMLElement }): number | null 
   // Try direct attribute access first (for list items where holder has the attribute)
   const depthAttr = block.holder.getAttribute('data-list-depth');
 
-  if (depthAttr !== null) {
-    return parseInt(depthAttr, 10);
+  if (depthAttr !== null && depthAttr !== '') {
+    const parsed = parseInt(depthAttr, 10);
+    if (!isNaN(parsed)) {
+      return parsed;
+    }
   }
 
   // Fallback: check if any child element has the attribute (for other block types)
@@ -21,5 +24,10 @@ export const getListItemDepth = (block: { holder: HTMLElement }): number | null 
 
   const childDepthAttr = listWrapper.getAttribute('data-list-depth');
 
-  return childDepthAttr ? parseInt(childDepthAttr, 10) : 0;
+  if (childDepthAttr && childDepthAttr !== '') {
+    const parsed = parseInt(childDepthAttr, 10);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
 };

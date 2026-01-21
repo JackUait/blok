@@ -38,7 +38,7 @@ import { handleEnter, handleBackspace, handleIndent, handleOutdent } from './lis
 import { renderListItem } from './list-lifecycle';
 import { ListMarkerCalculator } from './marker-calculator';
 import { OrderedMarkerManager } from './ordered-marker-manager';
-import { isPasteEventHTMLElement, detectStyleFromPastedContent, extractPastedContent } from './paste-handler';
+import { isPasteEventHTMLElement, detectStyleFromPastedContent, extractPastedContent, extractDepthFromPastedContent } from './paste-handler';
 import { getListSanitizeConfig, getListPasteConfig, getListConversionConfig } from './static-configs';
 import { STYLE_CONFIGS, getToolboxConfig } from './style-config';
 import type { ListItemStyle, ListItemConfig, StyleConfig, ListItemData } from './types';
@@ -85,11 +85,9 @@ export class ListItem implements BlockTool {
       return;
     }
 
-    if (data.event.type !== 'block-removed') {
-      return;
+    if (data.event.type === 'block-removed' || data.event.type === 'block-added') {
+      this.markerManager?.scheduleUpdateAll();
     }
-
-    this.markerManager?.scheduleUpdateAll();
   };
 
   sanitize?: ToolSanitizerConfig | undefined;
@@ -400,6 +398,8 @@ export class ListItem implements BlockTool {
 
     if (newElement) {
       this._element = newElement;
+      // After rerender, update markers for ordered lists to ensure correct numeration
+      this.updateMarkersAfterPositionChange();
     }
   }
 
@@ -462,11 +462,13 @@ export class ListItem implements BlockTool {
     }
 
     const { text, checked } = extractPastedContent(data);
+    const depth = extractDepthFromPastedContent(data);
 
     this._data = {
       text,
       style: detectStyleFromPastedContent(data, this._data.style),
       checked,
+      depth,
     };
 
     this.rerender();

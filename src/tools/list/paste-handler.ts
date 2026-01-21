@@ -132,3 +132,27 @@ export const extractPastedContent = (content: HTMLElement): { text: string; chec
 
   return { text, checked };
 };
+
+/**
+ * Extract depth from pasted content for nested lists.
+ *
+ * Google Docs (and some other editors) use aria-level to indicate nesting depth.
+ * The aria-level attribute is 1-based (1 = root level), while our depth system is 0-based.
+ *
+ * @param content - The pasted content element
+ * @returns The depth level (0 = root, 1 = first indent, etc.)
+ */
+export const extractDepthFromPastedContent = (content: HTMLElement): number => {
+  // Check for aria-level attribute (used by Google Docs and other editors)
+  const ariaLevel = content.getAttribute('aria-level');
+
+  if (ariaLevel) {
+    const level = parseInt(ariaLevel, 10);
+    // Convert 1-based aria-level to 0-based depth
+    // Also ensure the value is non-negative
+    return Math.max(0, level - 1);
+  }
+
+  // Default to root level (depth 0) if no aria-level attribute
+  return 0;
+};

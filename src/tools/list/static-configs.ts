@@ -27,8 +27,23 @@ export const getListSanitizeConfig = (): ToolSanitizerConfig => ({
 
 /**
  * Paste configuration for list tool
+ *
+ * Allows LI tag with style and aria-level attributes to preserve:
+ * - list-style-type from external sources (e.g., Google Docs, Word)
+ * - aria-level for nested list depth information
  */
-export const getListPasteConfig = (): PasteConfig => ({ tags: ['LI'] });
+export const getListPasteConfig = (): PasteConfig => ({
+  tags: [
+    {
+      li: {
+        // Allow style attribute to preserve list-style-type from external sources
+        style: true,
+        // Allow aria-level attribute to preserve nested list depth
+        'aria-level': true,
+      },
+    },
+  ],
+});
 
 /**
  * Conversion configuration for list tool

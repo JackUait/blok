@@ -3,6 +3,7 @@ import {
   isPasteEventHTMLElement,
   detectStyleFromPastedContent,
   extractPastedContent,
+  extractDepthFromPastedContent,
 } from '../../../../src/tools/list/paste-handler';
 
 describe('paste-handler', () => {
@@ -388,6 +389,76 @@ describe('paste-handler', () => {
 
       expect(result.text).toContain('a href');
       expect(result.text).toContain('Link text');
+    });
+  });
+
+  describe('Google Docs nested list paste scenario', () => {
+    /**
+     * Test for extracting depth from Google Docs nested lists.
+     * Google Docs uses aria-level attribute to indicate nesting depth (1-based).
+     * We need to convert this to our 0-based depth system.
+     */
+    it('extracts depth from Google Docs nested list item with aria-level attribute', () => {
+      const content = document.createElement('li');
+      content.textContent = 'Nested item';
+      content.setAttribute('aria-level', '2'); // Google Docs uses 1-based depth
+
+      const result = extractDepthFromPastedContent(content);
+
+      expect(result).toBe(1); // Should convert to 0-based depth
+    });
+
+    it('returns 0 for root level item with aria-level="1"', () => {
+      const content = document.createElement('li');
+      content.textContent = 'Root item';
+      content.setAttribute('aria-level', '1');
+
+      const result = extractDepthFromPastedContent(content);
+
+      expect(result).toBe(0);
+    });
+
+    it('returns 0 when aria-level attribute is missing', () => {
+      const content = document.createElement('li');
+      content.textContent = 'Item without level';
+
+      const result = extractDepthFromPastedContent(content);
+
+      expect(result).toBe(0);
+    });
+
+    it('extracts depth from deeply nested Google Docs list item', () => {
+      const content = document.createElement('li');
+      content.textContent = 'Deeply nested item';
+      content.setAttribute('aria-level', '4');
+
+      const result = extractDepthFromPastedContent(content);
+
+      expect(result).toBe(3);
+    });
+
+    it('handles Google Docs nested list HTML structure', () => {
+      // Simulate actual Google Docs HTML structure for nested lists
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = `
+        <ol style="padding-inline-start:48px;">
+          <li dir="ltr" style="list-style-type:decimal;" aria-level="1">
+            <p>Parent item</p>
+          </li>
+          <li dir="ltr" style="list-style-type:decimal;" aria-level="2">
+            <p>Nested item</p>
+          </li>
+          <li dir="ltr" style="list-style-type:decimal;" aria-level="2">
+            <p>Another nested item</p>
+          </li>
+        </ol>
+      `;
+
+      const items = wrapper.querySelectorAll('li');
+
+      expect(extractDepthFromPastedContent(items[0])).toBe(0);
+      expect(extractDepthFromPastedContent(items[1])).toBe(1);
+      expect(extractDepthFromPastedContent(items[2])).toBe(1);
     });
   });
 });

@@ -135,16 +135,23 @@ describe('static-configs', () => {
       const config = getListPasteConfig();
 
       if (config !== false && config.tags) {
-        expect(config.tags).toContain('LI');
+        expect(Array.isArray(config.tags)).toBe(true);
       }
     });
 
-    it('only allows LI tags', () => {
+    it('allows LI tags with style attribute', () => {
       const config = getListPasteConfig();
 
       if (config !== false && config.tags) {
+        // tags is now an array of SanitizerConfig objects
         expect(config.tags).toHaveLength(1);
-        expect(config.tags[0]).toBe('LI');
+        const firstTag = config.tags[0];
+        if (isSanitizerConfig(firstTag)) {
+          expect(firstTag).toHaveProperty('li');
+          expect(firstTag.li).toHaveProperty('style', true);
+        } else {
+          throw new Error('Expected first tag to be a SanitizerConfig object');
+        }
       }
     });
   });

@@ -507,6 +507,31 @@ describe('DragManager - Race Conditions and Timing', () => {
 
       expect(dragManager.isDragging).toBe(false);
     });
+
+    it('should not reopen toolbar when cancelTracking is called (regression test)', () => {
+      // Regression test for: https://github.com/JackUait/blok/issues/XXX
+      // When settings toggler is clicked, it calls DragManager.cancelTracking()
+      // which should NOT call Toolbar.moveAndOpen() to prevent unwanted toolbar movement
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(blocks[0].holder);
+
+      const dragHandle = document.createElement('div');
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+
+      // Start tracking but don't pass threshold
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+
+      // Clear any previous calls to moveAndOpen
+      (modules.Toolbar.moveAndOpen as Mock).mockClear();
+
+      // cancelTracking should skip toolbar reopening
+      dragManager.cancelTracking();
+
+      // Verify Toolbar.moveAndOpen was NOT called
+      expect(modules.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+    });
   });
 
   describe('DOM mutation during drag', () => {

@@ -23,22 +23,13 @@
     ]
   },
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/start-chat.sh"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-response.sh"
+            "type": "prompt",
+            "prompt": "Did you run final verification against master AFTER refactor? If not, run these commands:\n\n```bash\ngit worktree add ../blok-master master 2>/dev/null || true\ncd ../blok-master\ngit checkout master\ngit diff ../blok\n\n# Test SOMETHING in both branches to catch behavioral regressions\ncd ../blok-master && yarn test [affected-test]\ncd ../blok && yarn test [affected-test]\n```\n\nIf you made code changes but didn't run final verification, respond \"I need to run final verification\" and do it now.",
+            "once": false
           }
         ]
       }

@@ -231,7 +231,8 @@ export class SettingsTogglerHandler {
     }
 
     this.hoveredBlockInternal = targetBlock;
-    this.setHoveredBlockCallback(targetBlock);
+    // Don't change hoveredBlock when opening settings - this prevents toolbar from repositioning
+    // The settings menu should open for the targetBlock without affecting the toolbar position
     blok.BlockManager.currentBlock = targetBlock;
 
     if (blok.BlockSettings.opened) {

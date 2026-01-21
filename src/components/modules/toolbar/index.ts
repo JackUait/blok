@@ -852,9 +852,9 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Don't reposition if Block Settings or Toolbox is opened
+     * Don't reposition if Block Settings or Toolbox is opened or opening
      */
-    if (this.Blok.BlockSettings.opened || this.toolboxInstance?.opened) {
+    if (this.Blok.BlockSettings.opened || this.Blok.BlockSettings.isOpening || this.toolboxInstance?.opened) {
       return;
     }
 

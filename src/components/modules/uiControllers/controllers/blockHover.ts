@@ -105,20 +105,14 @@ export class BlockHoverController extends Controller {
       ? this.findBlockInHoverZone(event.clientX, event.clientY)
       : undefined;
 
-    if (zoneBlock !== undefined && this.blockHoveredState.lastHoveredBlockId !== zoneBlock.id) {
-      this.blockHoveredState.lastHoveredBlockId = zoneBlock.id;
-      this.blockHoveredState.lastHoveredTarget = zoneBlock.holder;
-
-      this.eventsDispatcher.emit(BlockHovered, {
-        block: zoneBlock,
-        target: zoneBlock.holder,
-      });
-    }
-
+    // Handle hover zone case
     if (zoneBlock !== undefined) {
+      this.handleHoverZoneBlockHovered(zoneBlock, event.clientY);
+
       return;
     }
 
+    // Handle direct hover case
     if (!hoveredBlockElement) {
       return;
     }
@@ -130,62 +124,48 @@ export class BlockHoverController extends Controller {
     }
 
     /**
-     * Normalize the target to a meaningful element for comparison.
-     * For nested elements like list items, we use the closest listitem or contenteditable element.
-     * This ensures that hovering over different parts of the same list item (text, marker, etc.)
-     * doesn't trigger unnecessary events, while hovering over different list items does.
-     */
-    const rawTarget = event.target as Element;
-    const normalizedTarget = this.normalizeHoverTarget(rawTarget);
-
-    /**
      * For multi-block selection, still emit 'block-hovered' event so toolbar can follow the hovered block.
      * The toolbar module will handle the logic of whether to move or not.
-     *
-     * Also emit if the normalized target element changes within the same block (e.g., nested list items).
      */
-    const targetChanged = this.blockHoveredState.lastHoveredTarget !== normalizedTarget;
-
-    if (this.blockHoveredState.lastHoveredBlockId === block.id && !targetChanged) {
+    if (this.blockHoveredState.lastHoveredBlockId === block.id) {
       return;
     }
 
     this.blockHoveredState.lastHoveredBlockId = block.id;
-    this.blockHoveredState.lastHoveredTarget = normalizedTarget;
 
     this.eventsDispatcher.emit(BlockHovered, {
       block,
-      target: rawTarget,
+      target: event.target as Element,
     });
   }
 
   /**
-   * Normalizes the hover target to a meaningful element for comparison.
-   * This helps detect when the user moves to a different nested element (like a list item)
-   * while avoiding false positives when moving between child elements.
-   *
-   * @param element - The raw target element from the event
-   * @returns The normalized element for comparison
+   * Handles block hover when cursor is in the extended hover zone.
+   * Finds the specific list item at the cursor's Y position for accurate toolbar positioning.
+   * @param zoneBlock - The block found in the hover zone
+   * @param clientY - The cursor Y position
    */
-  private normalizeHoverTarget(element: Element | null): Element | null {
-    if (!element) {
-      return null;
+  private handleHoverZoneBlockHovered(zoneBlock: Block, clientY: number): void {
+    // When in hover zone, find the specific list item at the cursor's Y position
+    // This allows the toolbar to correctly calculate content offset based on the actual hovered item
+    const listItemTarget = this.findListItemAtPosition(zoneBlock.holder, clientY);
+    const target = listItemTarget || zoneBlock.holder;
+
+    // Skip if neither block nor target changed
+    const blockChanged = this.blockHoveredState.lastHoveredBlockId !== zoneBlock.id;
+    const targetChanged = this.blockHoveredState.lastHoveredTarget !== target;
+
+    if (!blockChanged && !targetChanged) {
+      return;
     }
 
-    // For list items, use the closest listitem element as the normalized target
-    const listItem = element.closest('[role="listitem"]');
-    if (listItem) {
-      return listItem;
-    }
+    this.blockHoveredState.lastHoveredBlockId = zoneBlock.id;
+    this.blockHoveredState.lastHoveredTarget = target;
 
-    // For contenteditable elements, use the contenteditable itself
-    const contentEditable = element.closest('[contenteditable="true"]');
-    if (contentEditable) {
-      return contentEditable;
-    }
-
-    // For other elements, use the element itself
-    return element;
+    this.eventsDispatcher.emit(BlockHovered, {
+      block: zoneBlock,
+      target,
+    });
   }
 
   /**
@@ -222,6 +202,34 @@ export class BlockHoverController extends Controller {
     }
 
     return undefined;
+  }
+
+  /**
+   * Finds the list item element at the given Y position within a block holder.
+   * Used when hovering in the extended hover zone to determine which list item
+   * the cursor is aligned with, so the toolbar can correctly calculate content offset.
+   * @param blockHolder - The block holder element to search within
+   * @param clientY - The cursor Y position
+   * @returns The list item element at the Y position, or null if not found
+   */
+  private findListItemAtPosition(blockHolder: HTMLElement, clientY: number): Element | null {
+    const listItems = Array.from(blockHolder.querySelectorAll('[role="listitem"]'));
+
+    if (listItems.length === 0) {
+      return null;
+    }
+
+    // Find the list item whose vertical range contains the cursor Y position
+    for (const item of listItems) {
+      const rect = item.getBoundingClientRect();
+
+      if (clientY >= rect.top && clientY <= rect.bottom) {
+        return item;
+      }
+    }
+
+    // Fallback: return the first list item
+    return listItems[0];
   }
 
   /**

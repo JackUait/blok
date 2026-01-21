@@ -66,7 +66,9 @@ export class DragController extends Module {
 
   public cancelTracking(): void {
     if (isDragActive(this.stateMachine.getState()) && !isActuallyDragging(this.stateMachine.getState())) {
-      this.cleanup();
+      // Skip reopening toolbar when cancelling drag tracking
+      // This prevents unwanted toolbar movement when called from settings toggler click
+      this.cleanup(false, true);
     }
   }
 

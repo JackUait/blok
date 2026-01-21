@@ -116,7 +116,7 @@ describe('SettingsTogglerHandler', () => {
       }).not.toThrow();
     });
 
-    it('should open BlockSettings and set hovered block when settings toggler is clicked', () => {
+    it('should open BlockSettings without changing hovered block when settings toggler is clicked', () => {
       settingsTogglerHandler.setHoveredBlock(mockBlock);
       const blok = getBlok();
       const blockSettingsOpenSpy = vi.fn();
@@ -126,8 +126,8 @@ describe('SettingsTogglerHandler', () => {
 
       // Verify BlockSettings.open was called with the target block and settings toggler element
       expect(blockSettingsOpenSpy).toHaveBeenCalledWith(mockBlock, expect.any(HTMLSpanElement));
-      // Verify the callback to set hovered block was invoked
-      expect(setHoveredBlockSpy).toHaveBeenCalledWith(mockBlock);
+      // Verify the callback to set hovered block was NOT invoked (to prevent toolbar repositioning)
+      expect(setHoveredBlockSpy).not.toHaveBeenCalled();
       // Verify the current block was updated on BlockManager
       expect(blok.BlockManager.currentBlock).toBe(mockBlock);
     });

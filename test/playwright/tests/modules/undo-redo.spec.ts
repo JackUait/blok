@@ -4413,6 +4413,7 @@ test.describe('yjs undo/redo', () => {
   test.describe('smart grouping', () => {
     // Boundary timeout: 100ms in implementation + buffer for test reliability
     const BOUNDARY_TIMEOUT = 150;
+    const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+a' : 'Control+a';
 
     test('word boundary + pause creates checkpoint', async ({ page }) => {
       await createBlokWithBlocks(page, [
@@ -4661,7 +4662,7 @@ test.describe('yjs undo/redo', () => {
       const paragraphInput = paragraph.locator('[contenteditable="true"]');
 
       await paragraphInput.click();
-      await page.keyboard.press('Control+a');
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
       await page.keyboard.press('Backspace');
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
@@ -4687,7 +4688,7 @@ test.describe('yjs undo/redo', () => {
       const paragraphInput = paragraph.locator('[contenteditable="true"]');
 
       await paragraphInput.click();
-      await page.keyboard.press('Control+a');
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
       await page.keyboard.press('Backspace');
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);

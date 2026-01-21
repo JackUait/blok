@@ -308,7 +308,15 @@ export class KeyboardNavigation extends BlockEventComposer {
     if (currentBlock.isEmpty) {
       void BlockManager.removeBlock(currentBlock);
 
-      Caret.setToBlock(nextBlock, Caret.positions.START);
+      /**
+       * After removing current block, the next block (if any) should become current.
+       * Use Caret to position cursor at the start of the next block.
+       * Then close toolbar to prevent it from staying open on the removed block.
+       */
+      const newCurrentBlock = BlockManager.currentBlock;
+
+      newCurrentBlock && Caret.setToBlock(newCurrentBlock, Caret.positions.START);
+      this.Blok.Toolbar.close();
 
       return;
     }
@@ -404,9 +412,9 @@ export class KeyboardNavigation extends BlockEventComposer {
       eventTarget?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
       activeElement?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
     ];
-    const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find((candidate): candidate is HTMLElement => {
-      return candidate instanceof HTMLElement;
-    });
+    const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find(
+      (candidate): candidate is HTMLElement => candidate instanceof HTMLElement
+    );
     const caretAtEnd = caretInput !== undefined ? isCaretAtEndOfInput(caretInput) : undefined;
     const shouldEnableCBS = caretAtEnd || this.Blok.BlockSelection.anyBlockSelected;
 
@@ -545,9 +553,9 @@ export class KeyboardNavigation extends BlockEventComposer {
       eventTarget?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
       activeElement?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
     ];
-    const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find((candidate): candidate is HTMLElement => {
-      return candidate instanceof HTMLElement;
-    });
+    const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find(
+      (candidate): candidate is HTMLElement => candidate instanceof HTMLElement
+    );
     const caretAtStart = caretInput !== undefined ? isCaretAtStartOfInput(caretInput) : undefined;
     const shouldEnableCBS = caretAtStart || this.Blok.BlockSelection.anyBlockSelected;
 

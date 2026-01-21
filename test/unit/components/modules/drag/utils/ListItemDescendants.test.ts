@@ -16,9 +16,8 @@ describe('ListItemDescendants', () => {
     holder.setAttribute('data-blok-element', 'block');
 
     if (depth !== null) {
-      const contentWrapper = document.createElement('div');
-      contentWrapper.setAttribute('data-list-depth', String(depth));
-      holder.appendChild(contentWrapper);
+      // For list items, the data-list-depth is on the holder element itself
+      holder.setAttribute('data-list-depth', String(depth));
     }
 
     return {

@@ -208,9 +208,11 @@ export class UI extends Module<UINodes> {
    *
    * If readOnly is true:
    * - removes all listeners from main UI module elements
+   * - sets contenteditable="false" on all block content elements
    *
    * if readOnly is false:
    * - enables all listeners to UI module elements
+   * - sets contenteditable="true" on all block content elements
    * @param {boolean} readOnlyEnabled - "read only" state
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
@@ -223,6 +225,11 @@ export class UI extends Module<UINodes> {
        *
        */
       this.unbindReadOnlySensitiveListeners();
+
+      /**
+       * Set contenteditable="false" on all block content elements
+       */
+      this.updateBlocksContentEditable(false);
 
       return;
     }
@@ -239,6 +246,11 @@ export class UI extends Module<UINodes> {
      */
     bindListeners();
 
+    /**
+     * Set contenteditable="true" on all block content elements
+     */
+    this.updateBlocksContentEditable(true);
+
     const idleCallback = window.requestIdleCallback;
 
     if (typeof idleCallback !== 'function') {
@@ -251,6 +263,22 @@ export class UI extends Module<UINodes> {
     idleCallback(bindListeners, {
       timeout: 2000,
     });
+  }
+
+  /**
+   * Update contenteditable attribute on all block content elements
+   * @param editable - whether blocks should be editable
+   */
+  private updateBlocksContentEditable(editable: boolean): void {
+    const { BlockManager } = this.Blok;
+
+    for (const block of BlockManager.blocks) {
+      const contentEditable = block.holder.querySelector<HTMLElement>('[contenteditable]');
+
+      if (contentEditable) {
+        contentEditable.contentEditable = editable ? 'true' : 'false';
+      }
+    }
   }
 
   /**

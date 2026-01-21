@@ -7,6 +7,7 @@ set -e
 # Configuration (override via environment)
 DEBUG=${REFACTOR_HOOK_DEBUG:-0}
 LOG_FILE=".claude/hooks/refactor-hook.log"
+NOTIFICATION_ENABLED=${NOTIFICATION_ENABLED:-1}
 
 # MANDATORY REFACTOR: Always true, never skip
 ALWAYS_REFACTOR=${ALWAYS_REFACTOR:-1}
@@ -25,6 +26,12 @@ input=$(cat)
 working_dir=$(echo "$input" | grep -o '"working_directory":[^,}]*' | cut -d'"' -f4)
 if [ -z "$working_dir" ]; then
     working_dir="$CLAUDE_PROJECT_DIR"
+fi
+
+# Send notification that agent is done
+if [ "$NOTIFICATION_ENABLED" = "1" ]; then
+    osascript -e 'display notification "Agent finished - awaiting your input" with title "Claude Code" sound name "Glass"' 2>/dev/null || true
+    debug_log "Agent complete notification sent"
 fi
 
 # MANDATORY: Always output refactor directive

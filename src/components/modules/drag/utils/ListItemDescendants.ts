@@ -5,6 +5,8 @@
 
 import type { Block } from '../../../block';
 
+import { getListItemDepth } from './depthUtils';
+
 /**
  * Minimal interface for BlockManager dependency
  * Used by ListItemDescendants to access block collection
@@ -19,24 +21,6 @@ export class ListItemDescendants {
   constructor(private blockManager: BlockManagerAdapter) {}
 
   /**
-   * Gets the depth of a list item block from its DOM.
-   * Returns null if the block is not a list item.
-   * @param block - Block to check
-   * @returns Depth number or null if not a list item
-   */
-  private getListItemDepth(block: Block): number | null {
-    const listWrapper = block.holder.querySelector('[data-list-depth]');
-
-    if (!listWrapper) {
-      return null;
-    }
-
-    const depthAttr = listWrapper.getAttribute('data-list-depth');
-
-    return depthAttr ? parseInt(depthAttr, 10) : 0;
-  }
-
-  /**
    * Gets all descendant list items of a block (direct children and their descendants).
    * Only includes items that are strictly deeper than the dragged item.
    * Stops when encountering a sibling (same depth) or parent (shallower depth).
@@ -44,7 +28,7 @@ export class ListItemDescendants {
    * @returns Array of descendant blocks (empty if block is not a list item or has no descendants)
    */
   getDescendants(block: Block): Block[] {
-    const parentDepth = this.getListItemDepth(block);
+    const parentDepth = getListItemDepth(block);
 
     if (parentDepth === null) {
       return [];
@@ -73,7 +57,7 @@ export class ListItemDescendants {
       return acc;
     }
 
-    const nextDepth = this.getListItemDepth(nextBlock);
+    const nextDepth = getListItemDepth(nextBlock);
 
     // Stop if not a list item or depth <= parent depth (sibling or shallower level)
     // A sibling is an item at the same depth - it's not a child of the dragged item

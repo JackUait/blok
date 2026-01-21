@@ -112,6 +112,7 @@ export class DragController extends Module {
     const descendants = !isBlockSelected && this.listItemDescendants
       ? this.listItemDescendants.getDescendants(block)
       : [];
+
     const blocksToMove = descendants.length > 0
       ? [block, ...descendants]
       : initialBlocks;

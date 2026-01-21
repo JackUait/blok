@@ -5,26 +5,10 @@
 import type { Block } from '../../../block';
 import type { BlockManager } from '../../blockManager';
 
+import { getListItemDepth } from './depthUtils';
+
 export class ListItemDepth {
   constructor(private blockManager: BlockManager) {}
-
-  /**
-   * Gets the depth of a list item block from its DOM.
-   * Returns null if the block is not a list item.
-   * @param block - Block to check
-   * @returns Depth number or null if not a list item
-   */
-  private getListItemDepth(block: Block): number | null {
-    const listWrapper = block.holder.querySelector('[data-list-depth]');
-
-    if (!listWrapper) {
-      return null;
-    }
-
-    const depthAttr = listWrapper.getAttribute('data-list-depth');
-
-    return depthAttr ? parseInt(depthAttr, 10) : 0;
-  }
 
   /**
    * Gets the depth of a block.
@@ -33,7 +17,7 @@ export class ListItemDepth {
    * @returns Depth number or null if not a list item
    */
   getDepth(block: Block): number | null {
-    return this.getListItemDepth(block);
+    return getListItemDepth(block);
   }
 
   /**
@@ -59,11 +43,11 @@ export class ListItemDepth {
       return 0;
     }
 
-    const previousDepth = this.getListItemDepth(previousBlock) ?? 0;
+    const previousDepth = getListItemDepth(previousBlock) ?? 0;
 
     // Get the block that will be immediately after the drop position
     const nextBlock = this.blockManager.getBlockByIndex(dropIndex);
-    const nextDepth = nextBlock ? (this.getListItemDepth(nextBlock) ?? 0) : 0;
+    const nextDepth = nextBlock ? (getListItemDepth(nextBlock) ?? 0) : 0;
 
     // If next item is nested, match its depth (become sibling)
     if (nextDepth > 0 && nextDepth <= previousDepth + 1) {

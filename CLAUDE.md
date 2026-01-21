@@ -2,6 +2,102 @@
 
 Project guidance for Claude Code (claude.ai/code) working with this repository.
 
+---
+
+## IMMEDIATE COMPLETION CHECKLIST
+
+**STOP! Before saying "done" or "complete", verify ALL of the following:**
+
+### For ANY Code Change (No Exceptions)
+
+```
+[ ] 1. Did I write tests FIRST, watch them FAIL, THEN write code? (IRON RULE)
+[ ] 2. Did I run `/refactor` after code changes? (MANDATORY)
+[ ] 3. Did I run final verification against master? (MANDATORY after refactor)
+[ ] 4. Did I `git push` successfully? (Work NOT complete until push succeeds)
+```
+
+**If ANY box is unchecked:** Work is NOT complete. Do it NOW.
+
+**No rationalizations:**
+- "Chat is too long, instructions are far down" → INVALID. You're reading them right now.
+- "User is in a hurry" → INVALID. Half-done work wastes MORE time later.
+- "It's just a small change" → INVALID. Small changes break things too.
+- "I'll do it in next session" → INVALID. That leaves work stranded.
+- "Tests already cover it" → INVALID. Write test FIRST, watch it FAIL.
+
+### For Session End
+
+```
+[ ] 1. All code tested (test first → fail → code → pass)
+[ ] 2. `/refactor` run
+[ ] 3. Final verification against master completed
+[ ] 4. `git push` succeeded
+[ ] 5. Issues updated/closed
+[ ] 6. `git status` shows "up to date with origin"
+```
+
+**Work is DEFINITELY NOT complete if:**
+- Changes exist only locally (not pushed)
+- `/refactor` was never run
+- Final verification was skipped
+- No test was written before code
+
+### Bug Fix IRON RULE
+
+```
+[ ] 1. Write regression test FIRST
+[ ] 2. Run test → watch it FAIL (proves bug exists)
+[ ] 3. Fix bug
+[ ] 4. Run test → watch it PASS
+[ ] 5. Re-run final verification
+```
+
+**Write code before test?** Delete it. Start over.
+
+### Final Verification Commands (Copy-Paste)
+
+```bash
+# After refactor, ALWAYS run this:
+git worktree add ../blok-master master 2>/dev/null || true
+cd ../blok-master
+git checkout master
+git diff ../blok
+
+# Test SOMETHING in both branches to catch behavioral regressions
+cd ../blok-master && yarn test [affected-test]
+cd ../blok && yarn test [affected-test]
+```
+
+### Session End Commands (Copy-Paste)
+
+```bash
+# ALWAYS run before saying "done":
+git pull --rebase
+bd sync
+git push
+git status  # MUST show "up to date with origin"
+```
+
+**This checklist is ALWAYS executed. NO MATTER how long the chat is.**
+
+### Red Flags - You're About to Violate The Rules
+
+If you catch yourself thinking ANY of these, STOP and DO THE CHECKLIST:
+
+- "Chat is too long, I can't find the instructions"
+- "User is in a hurry, I'll skip verification this time"
+- "It's just a small change, doesn't need full process"
+- "I'll do the refactor in the next session"
+- "Tests already exist, I don't need to write one first"
+- "I already manually verified it works"
+- "The push can wait, user can do it"
+- "Final verification takes too long"
+
+**ALL of these mean: You're rationalizing. Run the checklist NOW.**
+
+---
+
 ## Issue Tracking
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
@@ -18,52 +114,23 @@ bd sync               # Sync with git
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**⚠️ CRITICAL: The completion checklist at the TOP of this file MUST be followed.**
 
-**MANDATORY WORKFLOW:**
+Scroll up to "IMMEDIATE COMPLETION CHECKLIST" and verify ALL items before declaring work done.
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Final verification** (MANDATORY if code changed) - After `/refactor`, verify changes against master:
-   ```bash
-   # Create worktree for master comparison (skip if exists)
-   git worktree add ../blok-master master 2>/dev/null || true
-   cd ../blok-master
-   git checkout master
+**If you're reading this section instead of the checklist:** Go to the TOP of the file. The checklist has the exact copy-paste commands you need.
 
-   # Compare your changes to master
-   git diff ../blok
+**Summary (detail is at top):**
+1. File issues for remaining work
+2. Run quality gates (tests, lint, build)
+3. Final verification against master (AFTER refactor - commands at top)
+4. Update issue status
+5. **PUSH TO REMOTE** (commands at top - MANDATORY)
+6. Clean up
+7. Verify `git status` shows "up to date with origin"
+8. Hand off context
 
-   # Run systematic debugging: test SOMETHING in both branches to detect behavioral regressions
-   # Compare behavior between your branch and master to catch bugs introduced during refactoring
-   ```
-
-   **If bugs are found:** Follow the IRON RULE - write behavior test FIRST (watch it fail), THEN fix:
-   1. Write regression test that demonstrates the bug
-   2. Run it → watch it FAIL (proves bug exists)
-   3. Fix the bug
-   4. Run it → watch it PASS
-   5. Re-run final verification to confirm fix
-
-4. **Update issue status** - Close finished work, update in-progress items
-5. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-6. **Clean up** - Clear stashes, prune remote branches
-7. **Verify** - All changes committed AND pushed
-8. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-- **NEVER finish code work without running `/refactor` first** - EVERY code change MUST be followed by `/refactor`. No exceptions. No "I'll do it later". No "it's fine". Run `/refactor` NOW.
-- **NEVER skip final verification after `/refactor`** - Create worktree, compare behavior with master using `/systematic-debugging`. This catches refactoring bugs that tests miss.
+**Remember:** Every code change needs `/refactor` → final verification → push. No exceptions.
 
 ## Project Overview
 
@@ -168,6 +235,8 @@ Import types with `type` keyword: `import type { BlokConfig } from '../../types'
 
 ### IRON RULE: No Code Without Tests
 
+**⚠️ This is also in the completion checklist at the TOP of this file.**
+
 **ALL code changes require behavior tests.**
 
 **Bug fixes MUST follow this exact order:**
@@ -180,6 +249,8 @@ Import types with `type` keyword: `import type { BlokConfig } from '../../types'
 **No exceptions. No "I'll test later". No "it's obvious".**
 
 Write test first. If you write code before test, delete it and start over.
+
+**See "IMMEDIATE COMPLETION CHECKLIST" at TOP of file for the full workflow.**
 
 ### Commands
 ```bash
@@ -282,6 +353,8 @@ const CUSTOM_TOOL = `(() => {
 | Not testing errors | Test both happy path and error cases |
 
 ### Red Flags - You're About to Violate The Rules
+
+**⚠️ More red flags are in the completion checklist at the TOP of this file.**
 
 If you catch yourself thinking ANY of these, STOP:
 - "This is too simple to test"

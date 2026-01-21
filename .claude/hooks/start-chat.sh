@@ -6,7 +6,6 @@ set -e
 
 # Configuration
 DEBUG=${REFACTOR_HOOK_DEBUG:-0}
-STATE_FILE=".claude/hooks/session-state.json"
 LOG_FILE=".claude/hooks/start-chat.log"
 
 debug_log() {
@@ -43,38 +42,6 @@ before_files=$(git diff --name-only HEAD 2>/dev/null || echo "")
 before_staged=$(git diff --name-only --staged 2>/dev/null || echo "")
 current_branch=$(git branch --show-current 2>/dev/null || echo "unknown")
 head_commit=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
-
-# Create state directory
-mkdir -p "$(dirname "$STATE_FILE")"
-
-# Helper to format file list as JSON array content
-format_json_array() {
-    local input="$1"
-    if [ -z "$input" ]; then
-        return
-    fi
-    # Use awk for proper comma handling
-    echo "$input" | awk 'NF {printf "%s    \"%s\"", (NR>1 ? ",\n" : ""), $0}'
-}
-
-modified_json=$(format_json_array "$before_files")
-staged_json=$(format_json_array "$before_staged")
-
-# Save state as JSON
-cat > "$STATE_FILE" << EOF
-{
-  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "working_dir": "$working_dir",
-  "branch": "$current_branch",
-  "head_commit": "$head_commit",
-  "modified_files": [
-$modified_json
-  ],
-  "staged_files": [
-$staged_json
-  ]
-}
-EOF
 
 debug_log "Session state captured: $current_branch@$head_commit"
 debug_log "Modified files: $(echo "$before_files" | wc -l | tr -d ' ')"

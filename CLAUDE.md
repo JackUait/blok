@@ -24,23 +24,46 @@ bd sync               # Sync with git
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+3. **Final verification** (MANDATORY if code changed) - After `/refactor`, verify changes against master:
+   ```bash
+   # Create worktree for master comparison (skip if exists)
+   git worktree add ../blok-master master 2>/dev/null || true
+   cd ../blok-master
+   git checkout master
+
+   # Compare your changes to master
+   git diff ../blok
+
+   # Run systematic debugging: test SOMETHING in both branches to detect behavioral regressions
+   # Compare behavior between your branch and master to catch bugs introduced during refactoring
+   ```
+
+   **If bugs are found:** Follow the IRON RULE - write behavior test FIRST (watch it fail), THEN fix:
+   1. Write regression test that demonstrates the bug
+   2. Run it → watch it FAIL (proves bug exists)
+   3. Fix the bug
+   4. Run it → watch it PASS
+   5. Re-run final verification to confirm fix
+
+4. **Update issue status** - Close finished work, update in-progress items
+5. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
    bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+6. **Clean up** - Clear stashes, prune remote branches
+7. **Verify** - All changes committed AND pushed
+8. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
+- **NEVER finish code work without running `/refactor` first** - EVERY code change MUST be followed by `/refactor`. No exceptions. No "I'll do it later". No "it's fine". Run `/refactor` NOW.
+- **NEVER skip final verification after `/refactor`** - Create worktree, compare behavior with master using `/systematic-debugging`. This catches refactoring bugs that tests miss.
 
 ## Project Overview
 

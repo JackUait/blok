@@ -145,7 +145,10 @@ export default defineConfig({
   webServer: {
     command: 'npx serve . -l 3303 --no-clipboard',
     port: 3303,
-    reuseExistingServer: !process.env.CI,
+    // Don't reuse existing server - it might be a Vite dev server which has
+    // module resolution issues under concurrent test load
+    reuseExistingServer: false,
+    timeout: 120000, // Give the server more time to start up
   },
   timeout: 15_000,
   expect: {

@@ -44,6 +44,8 @@ const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; init
   const blockStub = {
     holder,
     inputs,
+    id: 'test-id',
+    name: 'paragraph',
     save: vi.fn().mockResolvedValue({
       id: 'test',
       tool: 'paragraph',
@@ -51,6 +53,9 @@ const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; init
       tunes: {},
       time: 0,
     }),
+    // Mock preservedData and preservedTunes for clipboard operations
+    preservedData: { text: 'Sample text' },
+    preservedTunes: {},
   };
 
   Object.defineProperty(blockStub, 'selected', {
@@ -408,8 +413,10 @@ describe('BlockSelection', () => {
         (modules.Paste as unknown as { MIME_TYPE: string }).MIME_TYPE,
         expect.stringContaining('"tool":"paragraph"')
       );
-      expect(firstBlock.save).toHaveBeenCalledTimes(1);
-      expect(secondBlock.save).toHaveBeenCalledTimes(1);
+      // copySelectedBlocks now uses preservedData instead of calling async block.save()
+      // This ensures clipboard operations are synchronous for browser compatibility
+      expect(firstBlock.save).not.toHaveBeenCalled();
+      expect(secondBlock.save).not.toHaveBeenCalled();
     });
   });
 

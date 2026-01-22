@@ -778,6 +778,15 @@ export class Toolbar extends Module<ToolbarNodes> {
         }
 
         /**
+         * Do not move toolbar if it was explicitly closed (hoveredBlock is null).
+         * This prevents the toolbar from reopening after being programmatically closed,
+         * such as after block deletion when a block-hovered event is emitted for the next block.
+         */
+        if (this.hoveredBlock === null) {
+          return;
+        }
+
+        /**
          * Check if multiple blocks are selected
          */
         const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;

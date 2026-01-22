@@ -222,7 +222,8 @@ export class DragController extends Module {
     }
 
     hideTooltip();
-    this.Blok.Toolbar.close();
+    // Close toolbar without setting explicitlyClosed flag, so it can reopen after drag is cancelled
+    this.Blok.Toolbar.close({ setExplicitlyClosed: false });
 
     // Announce drag started to screen readers
     const announcementKey = blockCount > 1
@@ -400,6 +401,11 @@ export class DragController extends Module {
         this.Blok.I18n.t('a11y.dropCancelled'),
         { politeness: 'polite' }
       );
+    }
+
+    // Reset block hover state after drag cancellation to allow toolbar to show on next hover
+    if (wasCancelled) {
+      this.Blok.UI.resetBlockHoverState();
     }
 
     if (this.autoScroll) {

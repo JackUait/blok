@@ -63,6 +63,13 @@ export class UI extends Module<UINodes> {
   private redactorTouchHandler: ((event: Event) => void) | null = null;
 
   /**
+   * Reset the block hover state (used after drag cancellation to allow toolbar to show again)
+   */
+  public resetBlockHoverState(): void {
+    this.blockHoverController?.resetHoverState();
+  }
+
+  /**
    * Return Width of center column of Blok
    * @returns {DOMRect}
    */

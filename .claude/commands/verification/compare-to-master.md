@@ -87,7 +87,7 @@ git diff ../blok
 | **Modified event emissions** | Other modules depend on these | `emit`, `dispatch`, events with different payloads |
 | **Altered async flow** | Race conditions, timing issues | `async/await` removed/added, `Promise` handling changed |
 | **Moved/renamed exports** | Importers will break | `export` statements changed |
-| **Type coercion introduced** | Runtime type errors | `as any`, `@ts-ignore`, `!` assertions |
+| **Type coercion introduced** | Runtime type errors | `as any`, `@ts-ignore`, non-null assertions |
 | **Changed loop/mutation logic** | Off-by-one, state corruption | `for` loops, `forEach`, array methods, direct mutations |
 | **Modified dependencies** | Breaking changes from libs | `package.json` deps changed, version bumps |
 | **Deleted/moved tests** | Coverage loss | Files in `test/` removed/renamed |
@@ -98,7 +98,7 @@ git diff ../blok
 - [ ] All public API return values maintain shape
 - [ ] Event emissions preserve existing signatures
 - [ ] Async operations maintain proper sequencing
-- [ ] No `@ts-ignore`, `any`, or `!` introduced
+- [ ] No `@ts-ignore`, `any`, or non-null introduced
 - [ ] Tests preserved or expanded
 
 **If suspicious patterns found:** Fix BEFORE proceeding to behavioral testing. Static analysis catches bugs tests miss.

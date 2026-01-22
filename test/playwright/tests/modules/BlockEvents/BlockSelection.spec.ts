@@ -187,7 +187,7 @@ test.describe('block selection keyboard shortcuts', () => {
       await page.keyboard.press('ArrowUp');
       await page.keyboard.up('Shift');
 
-      const secondBlockWrapper = await getBlockWrapper(page, 1);
+      const secondBlockWrapper = getBlockWrapper(page, 1);
       const thirdBlockWrapper = getBlockWrapper(page, 2);
 
       await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
@@ -302,12 +302,18 @@ test.describe('block selection keyboard shortcuts', () => {
       // Press Cmd+C to copy
       await page.keyboard.press('Meta+c');
 
-      // Paste to verify it was copied (simple test - just verify no crash)
+      // Paste to verify it was copied
       const thirdBlock = getBlockByIndex(page, 2);
       const thirdBlockInput = thirdBlock.locator('[contenteditable="true"]');
 
       await thirdBlockInput.click();
       await page.keyboard.press('Meta+v');
+
+      // Wait for block count to increase after paste (condition-based wait, not arbitrary timeout)
+      await page.waitForFunction(() => {
+        const wrappers = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
+        return wrappers.length > 3;
+      }, { timeout: 2000 });
 
       // Should have more blocks after paste
       const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
@@ -331,6 +337,13 @@ test.describe('block selection keyboard shortcuts', () => {
       // Press Cmd+X to cut
       await page.keyboard.press('Meta+x');
 
+      // Wait for block count to decrease after cut (condition-based wait, not arbitrary timeout)
+      // The cut operation is async: copySelectedBlocks().then(delete blocks)
+      await page.waitForFunction(() => {
+        const wrappers = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
+        return wrappers.length === 2;
+      }, { timeout: 2000 });
+
       const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
 
       expect(blocks).toHaveLength(2);
@@ -352,7 +365,7 @@ test.describe('block selection keyboard shortcuts', () => {
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
 
-      const secondBlockWrapper = await getBlockWrapper(page, 1);
+      const secondBlockWrapper = getBlockWrapper(page, 1);
       const thirdBlockWrapper = getBlockWrapper(page, 2);
 
       await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
@@ -378,7 +391,7 @@ test.describe('block selection keyboard shortcuts', () => {
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
 
-      const secondBlockWrapper = await getBlockWrapper(page, 1);
+      const secondBlockWrapper = getBlockWrapper(page, 1);
       const thirdBlockWrapper = getBlockWrapper(page, 2);
 
       await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');

@@ -8,13 +8,17 @@ const HOLDER_ID = 'blok';
 
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
+    // Clear any pending timeouts or async operations from previous instances
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
     }
 
-    document.getElementById(holder)?.remove();
+    // Force garbage collection of any detached DOM nodes by clearing body
+    // This removes all event listeners and prevents state pollution in WebKit
+    document.body.innerHTML = '';
 
+    // Create a fresh container
     const container = document.createElement('div');
 
     container.id = holder;
@@ -22,6 +26,10 @@ const resetBlok = async (page: Page): Promise<void> => {
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
+
+    // Force a layout calculation to ensure the DOM is fully updated
+    // This helps WebKit and other browsers flush any pending updates
+    void container.offsetHeight;
   }, { holder: HOLDER_ID });
 };
 

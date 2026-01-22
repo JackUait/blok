@@ -1,38 +1,14 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(find:*)",
-      "Bash(npm run build:*)",
-      "Bash(npm test:*)",
-      "Bash(npm run test:e2e:*)",
-      "Bash(npm run:*)",
-      "Bash(lsof:*)",
-      "Bash(yarn lint:*)",
-      "Bash(npx playwright test:*)",
-      "Bash(for:*)",
-      "Bash(do echo \"Run $i:\")",
-      "Bash(done)",
-      "Bash(yarn test:*)",
-      "Bash(cat:*)",
-      "Bash(npx tsc:*)",
-      "Bash(git stash:*)",
-      "Bash(git diff:*)",
-      "Bash(git status:*)",
-      "Bash(npm install:*)",
-      "Bash(npm uninstall:*)"
-    ]
-  },
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "Did you run final verification against master AFTER refactor? If not, run these commands:\n\n```bash\ngit worktree add ../blok-master master 2>/dev/null || true\ncd ../blok-master\ngit checkout master\ngit diff ../blok\n\n# Test SOMETHING in both branches to catch behavioral regressions\ncd ../blok-master && yarn test [affected-test]\ncd ../blok && yarn test [affected-test]\n```\n\nIf you made code changes but didn't run final verification, respond \"I need to run final verification\" and do it now.",
-            "once": false
-          }
-        ]
-      }
-    ]
-  }
+"hooks": {
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "prompt",
+          "prompt": "You are a gatekeeper for final verification before stopping work.\n\nContext: $ARGUMENTS\n\nIf ALL of the following are true:\n1) The agent did NOT make any code changes, OR\n2) The agent has already performed a final verification against master.\n\nthen respond with JSON: {\"ok\": true, \"reason\": \"<short explanation>\"}.\n\nOtherwise (if there were code changes and final verification against master has NOT been run), respond with JSON: {\"ok\": false, \"reason\": \"Explain that final verification against master must be run before stopping.\"}."
+        }
+      ]
+    }
+  ]
+}
 }

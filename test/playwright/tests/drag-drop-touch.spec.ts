@@ -72,23 +72,24 @@ const performTouchLikeDragDrop = async (
   await page.mouse.move(sourceX, sourceY);
   await page.mouse.down();
 
-  // Wait for drag initialization (touch devices have similar delay)
-  // eslint-disable-next-line playwright/no-wait-for-timeout
-  await page.waitForTimeout(50);
-
   // Move to target position with steps to simulate continuous touch movement
+  // The data-blok-dragging attribute is set during this movement
   await page.mouse.move(targetX, targetY, { steps: 10 });
 
-  // Wait for drop target detection
-  // eslint-disable-next-line playwright/no-wait-for-timeout
-  await page.waitForTimeout(50);
+  // Wait for drag state to be set (confirms drag threshold was passed)
+  await page.waitForFunction(() => {
+    const wrapper = document.querySelector('[data-blok-interface=blok]');
+    return wrapper?.getAttribute('data-blok-dragging') === 'true';
+  }, { timeout: 2000 });
 
   // Release to complete drop (translates to touchend)
   await page.mouse.up();
 
-  // Wait for state updates
-  // eslint-disable-next-line playwright/no-wait-for-timeout
-  await page.waitForTimeout(100);
+  // Wait for drag state to be cleared (drop completed)
+  await page.waitForFunction(() => {
+    const wrapper = document.querySelector('[data-blok-interface=blok]');
+    return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+  }, { timeout: 2000 });
 };
 
 type CreateBlokOptions = {
@@ -229,9 +230,7 @@ test.describe('touch-based drag and drop', () => {
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
     await page.mouse.down();
 
-    // Wait and move to trigger drag
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(50);
+    // Move to trigger drag threshold
     await page.mouse.move(sourceBox.x + 50, sourceBox.y + 50);
 
     // Verify dragging state is active
@@ -242,8 +241,11 @@ test.describe('touch-based drag and drop', () => {
     // End the drag
     await page.mouse.up();
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(100);
+    // Wait for dragging state to be cleared
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector('[data-blok-interface=blok]');
+      return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+    }, { timeout: 2000 });
 
     // Verify dragging state is cleared
     await expect(blokWrapper).toHaveCount(0);
@@ -279,9 +281,6 @@ test.describe('touch-based drag and drop', () => {
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
     await page.mouse.down();
 
-    // Wait and end without moving past threshold
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(50);
     await page.mouse.up();
 
     // Verify blocks are still in original order (no drag occurred)
@@ -325,20 +324,23 @@ test.describe('touch-based drag and drop', () => {
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
     await page.mouse.down();
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(50);
+    // Move to target with steps to trigger drag threshold
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height - 1, { steps: 10 });
 
-    // Move to target
-    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height - 1);
-
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(50);
+    // Wait for drag state to be set (confirms drag threshold was passed)
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector('[data-blok-interface=blok]');
+      return wrapper?.getAttribute('data-blok-dragging') === 'true';
+    }, { timeout: 2000 });
 
     // End touch (no Alt key equivalent in touch, so this will move, not duplicate)
     await page.mouse.up();
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(100);
+    // Wait for drag state to be cleared
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector('[data-blok-interface=blok]');
+      return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+    }, { timeout: 2000 });
 
     // Verify block moved (not duplicated)
     await expect(page.getByTestId('block-wrapper')).toHaveCount(2);
@@ -459,10 +461,7 @@ test.describe('touch device viewport interactions', () => {
 
     await secondBlock.hover();
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(100);
-
-    // Verify toolbar is visible again
+    // Verify toolbar is visible again (wait for it to appear)
     const toolbar = page.locator('[data-blok-testid="toolbar"][data-blok-opened="true"]');
 
     await expect(toolbar).toHaveCount(1);

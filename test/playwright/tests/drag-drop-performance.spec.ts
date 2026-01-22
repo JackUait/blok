@@ -74,21 +74,24 @@ const performDragDrop = async (
   await page.mouse.move(sourceX, sourceY);
   await page.mouse.down();
 
-  // eslint-disable-next-line playwright/no-wait-for-timeout
-  await page.waitForTimeout(50);
-
   // Move to target position with steps to trigger drag threshold
+  // The data-blok-dragging attribute is set during this movement
   await page.mouse.move(targetX, targetY, { steps: 15 });
 
-  // Wait longer for auto-scroll when target is off the page
-  // eslint-disable-next-line playwright/no-wait-for-timeout
-  await page.waitForTimeout(isTargetOffPage ? 1000 : 50);
+  // Wait for drag state to be set (confirms drag threshold was passed)
+  await page.waitForFunction(() => {
+    const wrapper = document.querySelector('[data-blok-interface=blok]');
+    return wrapper?.getAttribute('data-blok-dragging') === 'true';
+  }, { timeout: 2000 });
 
   // Release to complete the drop
   await page.mouse.up();
 
-  // eslint-disable-next-line playwright/no-wait-for-timeout
-  await page.waitForTimeout(100);
+  // Wait for drag state to be cleared (drop completed)
+  await page.waitForFunction(() => {
+    const wrapper = document.querySelector('[data-blok-interface=blok]');
+    return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+  }, { timeout: 2000 });
 
   return Date.now() - startTime;
 };
@@ -357,9 +360,15 @@ test.describe("drag and drop performance", () => {
         }
       }, sourceIndex);
 
-      // Give Firefox a moment to process the DOM changes
-      // eslint-disable-next-line playwright/no-wait-for-timeout
-      await page.waitForTimeout(50);
+      // Wait for DOM changes to be applied (settings button to be available)
+      await page.waitForFunction((idx) => {
+        const blocks = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
+        const targetBlock = blocks[idx];
+        if (!targetBlock) return false;
+        const settingsToggler = targetBlock.querySelector('[data-blok-settings-toggler]');
+        // Check if settings toggler exists and is ready (either visible or attached)
+        return settingsToggler !== null;
+      }, sourceIndex, { timeout: 2000 });
 
       const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
@@ -390,9 +399,11 @@ test.describe("drag and drop performance", () => {
       dragTimes.push(dragTime);
 
       // Wait for toolbar to be ready for next iteration
-      // Firefox needs more time for DOM to settle after drag
-      // eslint-disable-next-line playwright/no-wait-for-timeout
-      await page.waitForTimeout(300);
+      // Wait for drag state to be fully cleared and toolbar to be ready
+      await page.waitForFunction(() => {
+        const wrapper = document.querySelector('[data-blok-interface=blok]');
+        return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+      }, { timeout: 2000 });
     }
 
     const totalTime = dragTimes.reduce((sum, time) => sum + time, 0);
@@ -474,8 +485,10 @@ test.describe("drag and drop performance", () => {
     // Scroll to bottom first to ensure last block is rendered
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(100);
+    // Wait for scroll to complete
+    await page.waitForFunction(() => {
+      return window.scrollY > 0;
+    }, { timeout: 2000 });
 
     // Get the last block
     const lastBlock = page
@@ -505,8 +518,8 @@ test.describe("drag and drop performance", () => {
       // Scroll to make the first block visible at the top of the viewport
       await page.evaluate(() => window.scrollTo(0, 0));
 
-      // eslint-disable-next-line playwright/no-wait-for-timeout
-      await page.waitForTimeout(100);
+      // Wait for scroll to complete
+      await page.waitForFunction(() => window.scrollY === 0, { timeout: 2000 });
     }
 
     // Perform drag and measure time
@@ -611,9 +624,14 @@ test.describe("drag and drop stress tests", () => {
         }
       }, op.from);
 
-      // Give Firefox a moment to process the DOM changes
-      // eslint-disable-next-line playwright/no-wait-for-timeout
-      await page.waitForTimeout(50);
+      // Wait for DOM changes to be applied (settings button to be available)
+      await page.waitForFunction((idx) => {
+        const blocks = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
+        const targetBlock = blocks[idx];
+        if (!targetBlock) return false;
+        const settingsToggler = targetBlock.querySelector('[data-blok-settings-toggler]');
+        return settingsToggler !== null;
+      }, op.from, { timeout: 2000 });
 
       const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
@@ -641,10 +659,11 @@ test.describe("drag and drop stress tests", () => {
         browserName === 'firefox' || browserName === 'webkit' ? sourceBlock : undefined,
       );
 
-      // Wait for toolbar to reopen after drag
-      // Firefox may need additional time for DOM to settle
-      // eslint-disable-next-line playwright/no-wait-for-timeout
-      await page.waitForTimeout(300);
+      // Wait for drag state to be fully cleared and toolbar to be ready
+      await page.waitForFunction(() => {
+        const wrapper = document.querySelector('[data-blok-interface=blok]');
+        return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+      }, { timeout: 2000 });
     }
 
     // Verify data integrity
@@ -689,11 +708,7 @@ test.describe("drag and drop stress tests", () => {
         settingsBox.y + settingsBox.height / 2,
       );
       await page.mouse.down();
-      // eslint-disable-next-line playwright/no-wait-for-timeout
-      await page.waitForTimeout(10);
       await page.mouse.up();
-      // eslint-disable-next-line playwright/no-wait-for-timeout
-      await page.waitForTimeout(20);
     }
 
     // Verify no corruption occurred
@@ -748,21 +763,15 @@ test.describe("drag and drop stress tests", () => {
     );
     await page.mouse.down();
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(50);
-
     // Move to trigger drag threshold
     await page.mouse.move(settingsBox.x + 20, settingsBox.y + 20, { steps: 5 });
-
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(50);
 
     // Move cursor near bottom edge to trigger auto-scroll
     const viewportHeight = await page.evaluate(() => window.innerHeight);
     await page.mouse.move(settingsBox.x, viewportHeight - 25, { steps: 10 });
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout
-    await page.waitForTimeout(500);
+    // Wait for auto-scroll to happen (scroll position changes)
+    await page.waitForFunction(() => window.scrollY > 0, { timeout: 5000 });
 
     // Get new scroll position
     const scrolledY = await page.evaluate(() => window.scrollY);

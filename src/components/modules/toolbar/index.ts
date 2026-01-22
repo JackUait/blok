@@ -79,6 +79,12 @@ export class Toolbar extends Module<ToolbarNodes> {
   private hoveredBlock: Block | null = null;
 
   /**
+   * Flag to track if toolbar was explicitly closed (e.g., after block deletion).
+   * This prevents the toolbar from reopening on subsequent block-hovered events.
+   */
+  private explicitlyClosed: boolean = false;
+
+  /**
    * Toolbox class instance
    * It will be created in requestIdleCallback so it can be null in some period of time
    */
@@ -295,6 +301,11 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
+     * Reset explicitlyClosed flag when toolbar is opened
+     */
+    this.explicitlyClosed = false;
+
+    /**
      * Close Toolbox when we move toolbar
      */
     if (this.toolboxInstance.opened) {
@@ -491,10 +502,11 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.Blok.BlockSettings.close();
 
     /**
-     * Clear hovered block state to prevent toolbar from reopening
-     * for a block that no longer exists or is no longer valid
+     * Clear hovered block state and mark as explicitly closed
+     * to prevent toolbar from reopening on subsequent block-hovered events
      */
     this.hoveredBlock = null;
+    this.explicitlyClosed = true;
 
     /**
      * Restore plus button visibility in case it was hidden by other interactions
@@ -778,11 +790,10 @@ export class Toolbar extends Module<ToolbarNodes> {
         }
 
         /**
-         * Do not move toolbar if it was explicitly closed (hoveredBlock is null).
-         * This prevents the toolbar from reopening after being programmatically closed,
-         * such as after block deletion when a block-hovered event is emitted for the next block.
+         * Do not move toolbar if it was explicitly closed (e.g., after block deletion).
+         * This prevents the toolbar from reopening on subsequent block-hovered events.
          */
-        if (this.hoveredBlock === null) {
+        if (this.explicitlyClosed) {
           return;
         }
 

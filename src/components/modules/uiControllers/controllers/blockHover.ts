@@ -28,18 +28,10 @@ export class BlockHoverController extends Controller {
   /**
    * Used to not emit the same block multiple times to the 'block-hovered' event on every mousemove.
    * Stores block ID to ensure consistent comparison regardless of how the block was detected.
-   * Also stores the last hovered target element to support repositioning within the same block
-   * (e.g., when hovering over different nested list items).
    */
-  private blockHoveredState: { lastHoveredBlockId: string | null; lastHoveredTarget: Element | null } = {
+  private blockHoveredState: { lastHoveredBlockId: string | null } = {
     lastHoveredBlockId: null,
-    lastHoveredTarget: null,
   };
-
-  /**
-   * Throttled block hover handler
-   */
-  private throttledHandleBlockHovered: ((...args: unknown[]) => unknown) | null = null;
 
   constructor(options: {
     config: Controller['config'];
@@ -56,11 +48,67 @@ export class BlockHoverController extends Controller {
    * Enable block hover detection
    */
   public override enable(): void {
-    const handleBlockHoveredWrapper = (...args: unknown[]): unknown => {
-      return this.handleBlockHovered(args[0] as Event);
+    /**
+     * Local function that handles block hover detection
+     * Bound to 'this' to preserve context when passed to throttle
+     */
+    const handleBlockHovered = (event: Event): void => {
+      if (typeof MouseEvent === 'undefined' || !(event instanceof MouseEvent)) {
+        return;
+      }
+
+      const hoveredBlockElement = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
+
+      /**
+       * If no block element found directly, try the extended hover zone
+       */
+      const zoneBlock = !hoveredBlockElement
+        ? this.findBlockInHoverZone(event.clientX, event.clientY)
+        : null;
+
+      if (zoneBlock !== null && this.blockHoveredState.lastHoveredBlockId !== zoneBlock.id) {
+        this.blockHoveredState.lastHoveredBlockId = zoneBlock.id;
+
+        this.eventsDispatcher.emit(BlockHovered, {
+          block: zoneBlock,
+          target: zoneBlock.holder,
+        });
+      }
+
+      if (zoneBlock !== null) {
+        return;
+      }
+
+      if (!hoveredBlockElement) {
+        return;
+      }
+
+      const block = this.Blok.BlockManager.getBlockByChildNode(hoveredBlockElement);
+
+      if (!block) {
+        return;
+      }
+
+      /**
+       * For multi-block selection, still emit 'block-hovered' event so toolbar can follow the hovered block.
+       * The toolbar module will handle the logic of whether to move or not.
+       */
+      if (this.blockHoveredState.lastHoveredBlockId === block.id) {
+        return;
+      }
+
+      this.blockHoveredState.lastHoveredBlockId = block.id;
+
+      this.eventsDispatcher.emit(BlockHovered, {
+        block,
+        target: event.target as Element,
+      });
     };
 
-    this.throttledHandleBlockHovered = throttle(handleBlockHoveredWrapper, 20);
+    const throttledHandleBlockHovered = throttle(
+      handleBlockHovered as (...args: unknown[]) => unknown,
+      20
+    );
 
     /**
      * Listen on document to detect hover in the extended zone
@@ -68,103 +116,9 @@ export class BlockHoverController extends Controller {
      * We filter events to only process those over the editor or in the hover zone.
      */
     this.readOnlyMutableListeners.on(document, 'mousemove', (event: Event) => {
-      if (this.throttledHandleBlockHovered) {
-        this.throttledHandleBlockHovered(event);
-      }
+      throttledHandleBlockHovered(event);
     }, {
       passive: true,
-    });
-
-    /**
-     * Also listen to mouseover events to catch programmatic hovers (e.g., from Playwright tests).
-     * This is especially important for Firefox where programmatic hovers may not trigger mousemove.
-     */
-    this.readOnlyMutableListeners.on(document, 'mouseover', (event: Event) => {
-      if (this.throttledHandleBlockHovered) {
-        this.throttledHandleBlockHovered(event);
-      }
-    }, {
-      passive: true,
-    });
-  }
-
-  /**
-   * Main handler for block hover detection
-   */
-  private handleBlockHovered(event: Event): void {
-    if (typeof MouseEvent === 'undefined' || !(event instanceof MouseEvent)) {
-      return;
-    }
-
-    const hoveredBlockElement = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
-
-    /**
-     * If no block element found directly, try the extended hover zone
-     */
-    const zoneBlock = !hoveredBlockElement
-      ? this.findBlockInHoverZone(event.clientX, event.clientY)
-      : undefined;
-
-    // Handle hover zone case
-    if (zoneBlock !== undefined) {
-      this.handleHoverZoneBlockHovered(zoneBlock, event.clientY);
-
-      return;
-    }
-
-    // Handle direct hover case
-    if (!hoveredBlockElement) {
-      return;
-    }
-
-    const block = this.Blok.BlockManager.getBlockByChildNode(hoveredBlockElement);
-
-    if (!block) {
-      return;
-    }
-
-    /**
-     * For multi-block selection, still emit 'block-hovered' event so toolbar can follow the hovered block.
-     * The toolbar module will handle the logic of whether to move or not.
-     */
-    if (this.blockHoveredState.lastHoveredBlockId === block.id) {
-      return;
-    }
-
-    this.blockHoveredState.lastHoveredBlockId = block.id;
-
-    this.eventsDispatcher.emit(BlockHovered, {
-      block,
-      target: event.target as Element,
-    });
-  }
-
-  /**
-   * Handles block hover when cursor is in the extended hover zone.
-   * Finds the specific list item at the cursor's Y position for accurate toolbar positioning.
-   * @param zoneBlock - The block found in the hover zone
-   * @param clientY - The cursor Y position
-   */
-  private handleHoverZoneBlockHovered(zoneBlock: Block, clientY: number): void {
-    // When in hover zone, find the specific list item at the cursor's Y position
-    // This allows the toolbar to correctly calculate content offset based on the actual hovered item
-    const listItemTarget = this.findListItemAtPosition(zoneBlock.holder, clientY);
-    const target = listItemTarget || zoneBlock.holder;
-
-    // Skip if neither block nor target changed
-    const blockChanged = this.blockHoveredState.lastHoveredBlockId !== zoneBlock.id;
-    const targetChanged = this.blockHoveredState.lastHoveredTarget !== target;
-
-    if (!blockChanged && !targetChanged) {
-      return;
-    }
-
-    this.blockHoveredState.lastHoveredBlockId = zoneBlock.id;
-    this.blockHoveredState.lastHoveredTarget = target;
-
-    this.eventsDispatcher.emit(BlockHovered, {
-      block: zoneBlock,
-      target,
     });
   }
 
@@ -175,7 +129,7 @@ export class BlockHoverController extends Controller {
    * @param clientY - Cursor Y position
    * @returns Block at the vertical position, or null if not in hover zone or no block found
    */
-  private findBlockInHoverZone(clientX: number, clientY: number): Block | undefined {
+  private findBlockInHoverZone(clientX: number, clientY: number): Block | null {
     const contentRect = this.contentRectGetter();
 
     /**
@@ -187,7 +141,7 @@ export class BlockHoverController extends Controller {
       : clientX < contentRect.left && clientX >= contentRect.left - HOVER_ZONE_SIZE;
 
     if (!isInHoverZone) {
-      return undefined;
+      return null;
     }
 
     /**
@@ -201,35 +155,7 @@ export class BlockHoverController extends Controller {
       }
     }
 
-    return undefined;
-  }
-
-  /**
-   * Finds the list item element at the given Y position within a block holder.
-   * Used when hovering in the extended hover zone to determine which list item
-   * the cursor is aligned with, so the toolbar can correctly calculate content offset.
-   * @param blockHolder - The block holder element to search within
-   * @param clientY - The cursor Y position
-   * @returns The list item element at the Y position, or null if not found
-   */
-  private findListItemAtPosition(blockHolder: HTMLElement, clientY: number): Element | null {
-    const listItems = Array.from(blockHolder.querySelectorAll('[role="listitem"]'));
-
-    if (listItems.length === 0) {
-      return null;
-    }
-
-    // Find the list item whose vertical range contains the cursor Y position
-    for (const item of listItems) {
-      const rect = item.getBoundingClientRect();
-
-      if (clientY >= rect.top && clientY <= rect.bottom) {
-        return item;
-      }
-    }
-
-    // Fallback: return the first list item
-    return listItems[0];
+    return null;
   }
 
   /**
@@ -237,6 +163,5 @@ export class BlockHoverController extends Controller {
    */
   public resetHoverState(): void {
     this.blockHoveredState.lastHoveredBlockId = null;
-    this.blockHoveredState.lastHoveredTarget = null;
   }
 }

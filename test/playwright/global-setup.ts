@@ -86,7 +86,7 @@ const globalSetup = async (): Promise<void> => {
  * Checks if the build artifacts exist.
  */
 const hasBuildArtifacts = (distPath: string): boolean => {
-  return existsSync(distPath) && existsSync(path.resolve(distPath, 'blok.js'));
+  return existsSync(distPath) && existsSync(path.resolve(distPath, 'blok.mjs'));
 };
 
 /**

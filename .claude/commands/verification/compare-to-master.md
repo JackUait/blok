@@ -31,6 +31,9 @@ digraph compare_flow {
     "Start dev servers" [shape=box];
     "Run systematic-debugging" [shape=box];
     "Behavior matches master?" [shape=diamond];
+    "Many commits since master?" [shape=diamond];
+    "Use git bisect" [shape=box];
+    "Manual code review" [shape=box];
     "Document differences" [shape=box];
     "Verification complete" [shape=doublecircle];
 
@@ -42,9 +45,13 @@ digraph compare_flow {
     "Suspicious patterns found?" -> "Start dev servers" [label="no, or review complete"];
     "Start dev servers" -> "Run systematic-debugging";
     "Run systematic-debugging" -> "Behavior matches master?";
-    "Behavior matches master?" -> "Document differences" [label="no"];
-    "Behavior matches master?" -> "Verification complete" [label="yes"];
+    "Behavior matches master?" -> "Many commits since master?" [label="no"];
+    "Many commits since master?" -> "Use git bisect" [label="yes (>10 commits)"];
+    "Many commits since master?" -> "Manual code review" [label="no (<10 commits)"];
+    "Use git bisect" -> "Document differences";
+    "Manual code review" -> "Document differences";
     "Document differences" -> "Investigate/fix suspicious code";
+    "Behavior matches master?" -> "Verification complete" [label="yes"];
 }
 ```
 
@@ -126,6 +133,56 @@ Use `/dev-browser` for systematic debugging:
 
 Record any behavioral differences found, even if tests pass. Silent bugs are the most dangerous.
 
+**When differences are found and you have many commits (>10) since master, use git bisect to pinpoint the exact commit:**
+
+### Git Bisect for Regression Hunting
+
+```bash
+# 1. Start bisect in your current branch
+git bisect start
+
+# 2. Mark current (broken) state
+git bisect bad
+
+# 3. Mark master (working) state
+git bisect good master
+
+# 4. Git will checkout a midpoint commit. Test it:
+# - Build and serve: yarn build && yarn serve
+# - Run your systematic-debugging test via /dev-browser
+# - Mark result: git bisect good (works) or git bisect bad (broken)
+
+# 5. Repeat until git identifies the culprit commit
+# Bisect will show: "first bad commit is <sha>"
+
+# 6. Reset when done
+git bisect reset
+```
+
+**Automated bisect with a test script:**
+
+```bash
+# Create a script that returns 0 for good, 1 for bad
+cat > test-regression.sh << 'EOF'
+#!/bin/bash
+yarn build > /dev/null 2>&1 || exit 1
+yarn serve > /dev/null 2>&1 &
+SERVE_PID=$!
+sleep 5
+# Add your /dev-browser test here or use curl/puppeteer
+# Test passes → exit 0, fails → exit 1
+kill $SERVE_PID 2>/dev/null
+EOF
+chmod +x test-regression.sh
+
+# Run automated bisect
+git bisect run ./test-regression.sh
+```
+
+**When to use bisect vs manual review:**
+- Use bisect: >10 commits, complex refactor, unclear which change caused issue
+- Manual review: <10 commits, obvious candidate, need quick answer
+
 ## Common Mistakes
 
 | Mistake | Fix |
@@ -138,6 +195,9 @@ Record any behavioral differences found, even if tests pass. Silent bugs are the
 | Recreating master worktree every time | Use existence check - master persists across sessions |
 | Hardcoding branch name | Use `git branch --show-current` dynamically |
 | Assuming specific ports | Check terminal output - dev server auto-selects ports |
+| Manual review for 50+ commits | Use git bisect - O(log n) vs O(n) search |
+| Forgetting to `git bisect reset` | Always reset after bisect to return to original branch |
+| Inconsistent bisect testing | Use same test method at each commit - script it for reliability |
 
 ## Red Flags - You're About to Violate The Rules
 

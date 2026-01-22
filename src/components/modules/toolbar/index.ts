@@ -540,6 +540,14 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * Resets the explicitlyClosed flag to allow the toolbar to reopen on hover.
+   * Called when drag is cancelled to re-enable hover-based toolbar opening.
+   */
+  public resetExplicitlyClosed(): void {
+    this.explicitlyClosed = false;
+  }
+
+  /**
    * Reset the Toolbar position to prevent DOM height growth, for example after blocks deletion
    */
   private reset(): void {

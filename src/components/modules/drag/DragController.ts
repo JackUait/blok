@@ -405,7 +405,9 @@ export class DragController extends Module {
 
     // Reset block hover state after drag cancellation to allow toolbar to show on next hover
     if (wasCancelled) {
-      this.Blok.UI.resetBlockHoverState();
+      // Check if method exists (may not in test environment)
+      this.Blok.UI.resetBlockHoverState?.();
+      this.Blok.Toolbar.resetExplicitlyClosed?.();
     }
 
     if (this.autoScroll) {

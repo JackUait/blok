@@ -307,32 +307,40 @@ const expectToolbarClosed = async (page: Page): Promise<void> => {
   await expect(toolbar).not.toHaveAttribute('data-blok-opened', 'true');
 };
 
+/**
+ * Retry page navigation and Blok loading to handle race conditions
+ * when multiple tests run in parallel and Vite's module resolution
+ * can fail under concurrent load
+ */
+const retryPageLoad = async (page: Page): Promise<void> => {
+  const loadPage = async (): Promise<void> => {
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function', { timeout: 10000 });
+  };
+
+  try {
+    await loadPage();
+  } catch (_error) {
+    // Retry on failure
+    // eslint-disable-next-line playwright/no-wait-for-timeout
+    await page.waitForTimeout(100);
+    try {
+      await loadPage();
+    } catch {
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+      await loadPage(); // Final attempt
+    }
+  }
+};
+
 test.describe('delete keydown', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
-    // Retry page navigation and Blok loading to handle race conditions
-    // when multiple tests run in parallel and Vite's module resolution
-    // can fail under concurrent load
-    let retries = 0;
-    const maxRetries = 3;
-
-    while (retries < maxRetries) {
-      try {
-        await page.goto(TEST_PAGE_URL);
-        await page.waitForFunction(() => typeof window.Blok === 'function', { timeout: 10000 });
-        break; // Success, exit retry loop
-      } catch (error) {
-        retries++;
-        if (retries >= maxRetries) {
-          throw error; // Rethrow after max retries
-        }
-        // Wait a bit before retry to let Vite settle
-        await page.waitForTimeout(100);
-      }
-    }
+    await retryPageLoad(page);
   });
 
   test.describe('ending whitespaces handling', () => {

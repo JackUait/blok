@@ -539,8 +539,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     /**
      * close toolbar when node is changed
+     * Pass setExplicitlyClosed: false so the toolbar can show again on hover after toolbox insertion
      */
-    this.api.toolbar.close();
+    this.api.toolbar.close({ setExplicitlyClosed: false });
   }
 
   /**

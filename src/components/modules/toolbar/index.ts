@@ -1,3 +1,4 @@
+import type { ToolbarCloseOptions } from '../../../../types/api/toolbar';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
 import { Block } from '../../block';
@@ -484,8 +485,9 @@ export class Toolbar extends Module<ToolbarNodes> {
 
   /**
    * Close the Toolbar
+   * @param options - Optional configuration
    */
-  public close(): void {
+  public close(options?: ToolbarCloseOptions): void {
     if (this.Blok.ReadOnly.isEnabled) {
       return;
     }
@@ -502,11 +504,14 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.Blok.BlockSettings.close();
 
     /**
-     * Clear hovered block state and mark as explicitly closed
+     * Clear hovered block state and optionally mark as explicitly closed
      * to prevent toolbar from reopening on subsequent block-hovered events
      */
     this.hoveredBlock = null;
-    this.explicitlyClosed = true;
+    // Only set explicitlyClosed if not explicitly disabled (e.g., when called from toolbox after block insertion)
+    if (options?.setExplicitlyClosed !== false) {
+      this.explicitlyClosed = true;
+    }
 
     /**
      * Restore plus button visibility in case it was hidden by other interactions

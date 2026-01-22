@@ -1,11 +1,23 @@
 /**
+ * Options for closing the toolbar
+ */
+export interface ToolbarCloseOptions {
+  /**
+   * Whether to mark toolbar as explicitly closed (prevents hover reopen).
+   * Default: true
+   */
+  setExplicitlyClosed?: boolean;
+}
+
+/**
  * Describes Toolbar API methods
  */
 export interface Toolbar {
   /**
    * Closes Toolbar
+   * @param options - Optional configuration
    */
-  close(): void;
+  close(options?: ToolbarCloseOptions): void;
 
   /**
    * Opens Toolbar

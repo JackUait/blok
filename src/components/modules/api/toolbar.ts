@@ -1,4 +1,4 @@
-import type { Toolbar } from '../../../../types/api';
+import type { Toolbar, ToolbarCloseOptions } from '../../../../types/api';
 import { Module } from '../../__module';
 
 import { logLabeled } from './../../utils';
@@ -13,7 +13,7 @@ export class ToolbarAPI extends Module {
    */
   public get methods(): Toolbar {
     return {
-      close: (): void => this.close(),
+      close: (options?: ToolbarCloseOptions): void => this.close(options),
       open: (): void => this.open(),
       toggleBlockSettings: (openingState?: boolean): void => this.toggleBlockSettings(openingState),
       toggleToolbox: (openingState?: boolean): void => this.toggleToolbox(openingState),
@@ -29,9 +29,10 @@ export class ToolbarAPI extends Module {
 
   /**
    * Close toolbar and all included elements
+   * @param options - Optional configuration
    */
-  public close(): void {
-    this.Blok.Toolbar.close();
+  public close(options?: ToolbarCloseOptions): void {
+    this.Blok.Toolbar.close(options);
   }
 
   /**

@@ -24,7 +24,9 @@ Compare how `$ARGUMENTS` behaves in your current branch vs master to detect regr
    # Current branch worktree - unique name from branch name
    BRANCH_NAME=$(git branch --show-current)
    WORKTREE_NAME="../blok-$(echo $BRANCH_NAME | sed 's/\//-/g')"
-   git worktree add "$WORKTREE_NAME" "$BRANCH_NAME"
+   if [ ! -d "$WORKTREE_NAME" ]; then
+     git worktree add "$WORKTREE_NAME" "$BRANCH_NAME"
+   fi
    ```
 
 2. **Start dev servers** in parallel on available ports:
@@ -50,6 +52,7 @@ Compare how `$ARGUMENTS` behaves in your current branch vs master to detect regr
 | Mistake | Fix |
 |---------|-----|
 | Recreating master worktree every time | Use the existence check - master persists across sessions |
+| Recreating current branch worktree every time | Use the existence check - allows re-running the skill on the same branch |
 | Hardcoding branch name | Use `git branch --show-current` for dynamic naming |
 | Assuming specific ports | Check terminal output - dev server auto-selects available ports |
 | Removing master worktree | Keep master for reuse, only remove current branch worktree |

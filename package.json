@@ -65,7 +65,8 @@
   ],
   "scripts": {
     "serve": "vite --no-open",
-    "serve:docs": "node scripts/serve-docs.mjs",
+    "serve:docs": "cd docs && npm run serve",
+    "serve:docs:prod": "node scripts/serve-docs.mjs",
     "build": "vite build --mode production && node scripts/build-locales.mjs",
     "build:test": "vite build --mode test && node scripts/build-locales.mjs test",
     "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",

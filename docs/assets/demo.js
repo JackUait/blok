@@ -3,14 +3,12 @@
  * Initializes the Blok editor and handles toolbar actions
  */
 
-import { Blok } from '/dist/full.mjs';
-
 let editor = null;
 
 /**
  * Initialize the Blok editor
  */
-async function initEditor() {
+async function initEditor(BlokClass) {
   try {
     const editorHolder = document.getElementById('blok-editor');
     const placeholder = editorHolder.querySelector('.editor-placeholder');
@@ -21,7 +19,7 @@ async function initEditor() {
     }
 
     // Create the editor
-    editor = new Blok({
+    editor = new BlokClass({
       holder: 'blok-editor',
       tools: {
         header: {
@@ -256,7 +254,7 @@ async function init() {
     window.BlokLink = module.Link;
 
     // Initialize the editor
-    await initEditor();
+    await initEditor(module.Blok);
   } catch (error) {
     console.error('Failed to load Blok module:', error);
   }

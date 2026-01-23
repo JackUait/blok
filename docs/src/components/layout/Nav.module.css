@@ -1,0 +1,4 @@
+/* Nav specific styles for scroll hiding */
+.hidden {
+  transform: translateY(-100%);
+}

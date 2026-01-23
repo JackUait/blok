@@ -6,6 +6,7 @@ Thumbs.db
 /*.sublime-workspace
 
 node_modules/*
+docs/node_modules/*
 
 npm-debug.log
 yarn-error.log

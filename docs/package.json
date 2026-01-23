@@ -1,0 +1,29 @@
+{
+  "name": "blok-docs",
+  "private": true,
+  "version": "0.5.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "serve": "run-s check-dist dev-with-proxy",
+    "check-dist": "node scripts/check-dist.js",
+    "dev-with-proxy": "start-server-and-test dev http://localhost:5174 \"node ../scripts/serve-docs.mjs\""
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "npm-run-all2": "^7.0.2",
+    "rimraf": "^6.0.1",
+    "start-server-and-test": "^2.0.9",
+    "typescript": "~5.6.3",
+    "vite": "^6.0.1"
+  }
+}

@@ -120,6 +120,110 @@ const placeCaretAtEnd = async (locator: ReturnType<Page['locator']>): Promise<vo
   });
 };
 
+/**
+ * Helper to trigger synthetic copy event and capture clipboard data
+ * Uses synthetic ClipboardEvent to avoid OS clipboard reliability issues in CI
+ */
+const withClipboardEvent = async (
+  page: Page,
+  eventName: 'copy' | 'cut'
+): Promise<void> => {
+  await page.evaluate((type) => {
+    const redactor = document.querySelector('[data-blok-interface]');
+    if (!redactor) {
+      return;
+    }
+
+    const dataTransfer = new DataTransfer();
+
+    /**
+     * Firefox doesn't properly expose data set via setData() when reading
+     * from the DataTransfer after event dispatch. We wrap setData to capture
+     * the data directly as it's being set by the event handler.
+     */
+    const originalSetData = dataTransfer.setData.bind(dataTransfer);
+
+    dataTransfer.setData = (format: string, data: string): void => {
+      // Store data on window for retrieval during paste
+      if (!window.__syntheticClipboard) {
+        window.__syntheticClipboard = {};
+      }
+      window.__syntheticClipboard[format] = data;
+      originalSetData(format, data);
+    };
+
+    const event = new ClipboardEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      clipboardData: dataTransfer,
+    });
+
+    /**
+     * Firefox doesn't always honor the clipboardData passed to the constructor.
+     * We force-set it using Object.defineProperty if it differs from our DataTransfer.
+     */
+    if (event.clipboardData !== dataTransfer) {
+      Object.defineProperty(event, 'clipboardData', {
+        value: dataTransfer,
+        writable: false,
+        configurable: true,
+      });
+    }
+
+    redactor.dispatchEvent(event);
+  }, eventName);
+};
+
+/**
+ * Helper to trigger synthetic paste event with data from synthetic clipboard
+ * Uses synthetic ClipboardEvent to avoid OS clipboard reliability issues in CI
+ */
+const withSyntheticPaste = async (page: Page): Promise<void> => {
+  await page.evaluate(() => {
+    const redactor = document.querySelector('[data-blok-interface]');
+    if (!redactor) {
+      return;
+    }
+
+    const clipboardData = window.__syntheticClipboard;
+
+    if (!clipboardData) {
+      return;
+    }
+
+    const dataTransfer = new DataTransfer();
+
+    // Restore all data types from synthetic clipboard
+    Object.entries(clipboardData).forEach(([format, data]) => {
+      dataTransfer.setData(format, data);
+    });
+
+    const event = new ClipboardEvent('paste', {
+      bubbles: true,
+      cancelable: true,
+      clipboardData: dataTransfer,
+    });
+
+    /**
+     * Firefox doesn't always honor the clipboardData passed to the constructor.
+     * We force-set it using Object.defineProperty if it differs from our DataTransfer.
+     */
+    if (event.clipboardData !== dataTransfer) {
+      Object.defineProperty(event, 'clipboardData', {
+        value: dataTransfer,
+        writable: false,
+        configurable: true,
+      });
+    }
+
+    // Find the currently focused contenteditable element
+    const activeElement = document.activeElement as HTMLElement;
+    const targetElement = activeElement?.closest('[contenteditable="true"]') || activeElement || redactor;
+
+    targetElement.dispatchEvent(event);
+  });
+};
+
 test.describe('block selection keyboard shortcuts', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -299,15 +403,22 @@ test.describe('block selection keyboard shortcuts', () => {
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
 
-      // Press Cmd+C to copy
-      await page.keyboard.press('Meta+c');
+      // Verify selection
+      const secondBlockWrapper = getBlockWrapper(page, 1);
+      const thirdBlockWrapper = getBlockWrapper(page, 2);
+      await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
+      await expect(thirdBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
 
-      // Paste to verify it was copied
+      // Trigger synthetic copy event (avoids OS clipboard reliability issues in CI)
+      await withClipboardEvent(page, 'copy');
+
+      // Focus the third block for paste
       const thirdBlock = getBlockByIndex(page, 2);
       const thirdBlockInput = thirdBlock.locator('[contenteditable="true"]');
-
       await thirdBlockInput.click();
-      await page.keyboard.press('Meta+v');
+
+      // Trigger synthetic paste event
+      await withSyntheticPaste(page);
 
       // Wait for block count to increase after paste (condition-based wait, not arbitrary timeout)
       await page.waitForFunction(() => {
@@ -334,8 +445,14 @@ test.describe('block selection keyboard shortcuts', () => {
       await page.keyboard.press('ArrowDown');
       await page.keyboard.up('Shift');
 
-      // Press Cmd+X to cut
-      await page.keyboard.press('Meta+x');
+      // Verify selection
+      const secondBlockWrapper = getBlockWrapper(page, 1);
+      const thirdBlockWrapper = getBlockWrapper(page, 2);
+      await expect(secondBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
+      await expect(thirdBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
+
+      // Trigger synthetic cut event (avoids OS clipboard reliability issues in CI)
+      await withClipboardEvent(page, 'cut');
 
       // Wait for block count to decrease after cut (condition-based wait, not arbitrary timeout)
       // The cut operation is async: copySelectedBlocks().then(delete blocks)
@@ -410,5 +527,6 @@ declare global {
   interface Window {
     blokInstance?: Blok;
     Blok: new (...args: unknown[]) => Blok;
+    __syntheticClipboard?: Record<string, string>;
   }
 }

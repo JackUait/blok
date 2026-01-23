@@ -8,7 +8,7 @@ import fs from 'node:fs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Plugin to handle external /dist imports during dev
-function externalDistPlugin(): Plugin {
+const externalDistPlugin = (): Plugin => {
   const parentDistDir = resolve(__dirname, '..', 'dist');
 
   return {
@@ -29,30 +29,39 @@ function externalDistPlugin(): Plugin {
     configureServer(server) {
       // Serve the parent dist directory at /dist
       server.middlewares.use((req, res, next) => {
-        if (req.url?.startsWith('/dist/')) {
-          const filePath = resolve(parentDistDir, req.url.slice('/dist/'.length));
-          if (fs.existsSync(filePath)) {
-            const ext = filePath.slice(filePath.lastIndexOf('.'));
-            const contentType = ext === '.mjs' || ext === '.js'
-              ? 'application/javascript; charset=utf-8'
-              : ext === '.css'
-                ? 'text/css; charset=utf-8'
-                : 'text/plain; charset=utf-8';
-
-            res.setHeader('Content-Type', contentType);
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            return fs.createReadStream(filePath).pipe(res);
-          } else {
-            res.statusCode = 404;
-            res.end(`Not found: ${req.url}`);
-            return;
-          }
+        if (!req.url?.startsWith('/dist/')) {
+          next();
+          return;
         }
-        next();
+
+        const filePath = resolve(parentDistDir, req.url.slice('/dist/'.length));
+        if (!fs.existsSync(filePath)) {
+          const notFoundRes = res as typeof res & { statusCode: number; end: (data: string) => void };
+          notFoundRes.statusCode = 404;
+          notFoundRes.end(`Not found: ${req.url}`);
+          return;
+        }
+
+        const ext = filePath.slice(filePath.lastIndexOf('.'));
+        const getContentType = (extension: string): string => {
+          if (extension === '.mjs' || extension === '.js') {
+            return 'application/javascript; charset=utf-8';
+          }
+          if (extension === '.css') {
+            return 'text/css; charset=utf-8';
+          }
+          return 'text/plain; charset=utf-8';
+        };
+
+        const contentType = getContentType(ext);
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        fs.createReadStream(filePath).pipe(res);
       });
     },
   };
-}
+};
 
 export default defineConfig({
   plugins: [react(), externalDistPlugin()],

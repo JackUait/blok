@@ -40,21 +40,27 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
   // Handle global keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + K to open search
-      if ((e.metaKey || e.ctrlKey) && e.key === SEARCH_SHORTCUT) {
-        e.preventDefault();
-        if (!open) {
-          // We need to trigger opening through the parent component
-          // This is handled by the Nav component
-        } else {
-          onClose();
-        }
+      const isEscapeKey = e.key === 'Escape';
+      const isEscapeWithOpen = isEscapeKey && open;
+      const isShortcutKey = (e.metaKey || e.ctrlKey) && e.key === SEARCH_SHORTCUT;
+
+      // Handle Escape key separately
+      if (isEscapeWithOpen) {
+        onClose();
+        return;
       }
 
-      // Escape to close
-      if (e.key === 'Escape' && open) {
+      // Cmd/Ctrl + K to open search
+      if (!isShortcutKey) {
+        return;
+      }
+
+      e.preventDefault();
+      if (open) {
         onClose();
       }
+      // If not open, we need to trigger opening through the parent component
+      // This is handled by the Nav component
     };
 
     window.addEventListener('keydown', handleKeyDown);

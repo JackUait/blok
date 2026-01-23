@@ -90,7 +90,7 @@ describe('Search', () => {
         <Search open={true} onClose={vi.fn()} />
       </MemoryRouter>
     );
-    const input = screen.getByPlaceholderText('Search documentation...') as HTMLInputElement;
+    const input = screen.getByPlaceholderText('Search documentation...');
     expect(document.activeElement).toBe(input);
   });
 });

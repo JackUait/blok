@@ -1,6 +1,104 @@
 import type { SearchIndexItem, SearchResult } from '@/types/search';
 import { API_SECTIONS } from '@/components/api/api-data';
 
+const createKeywords = (...parts: (string | undefined)[]): string[] => {
+  return parts.flatMap((part) =>
+    part ? part.toLowerCase().split(/\s+/) : []
+  );
+};
+
+type ApiSection = {
+  id: string;
+  badge?: string | null;
+  title: string;
+  description?: string;
+  methods?: Array<{
+    name: string;
+    description: string;
+    returnType: string;
+  }>;
+  properties?: Array<{
+    name: string;
+    type?: string;
+    description: string;
+  }>;
+  table?: Array<{
+    option: string;
+    description: string;
+    type?: string;
+  }>;
+};
+
+const indexMethods = (index: SearchIndexItem[], section: ApiSection): void => {
+  if (!section.methods) {
+    return;
+  }
+
+  for (const method of section.methods) {
+    const methodName = method.name.replace('()', '');
+    index.push({
+      id: `${section.id}-${methodName}`,
+      title: method.name,
+      description: method.description,
+      category: section.badge ?? 'api',
+      path: '/docs',
+      hash: section.id,
+      keywords: createKeywords(
+        methodName,
+        section.title,
+        method.description,
+        method.returnType
+      ),
+    });
+  }
+};
+
+const indexProperties = (index: SearchIndexItem[], section: ApiSection): void => {
+  if (!section.properties) {
+    return;
+  }
+
+  for (const prop of section.properties) {
+    index.push({
+      id: `${section.id}-${prop.name}`,
+      title: prop.name,
+      description: prop.description,
+      category: section.badge ?? 'api',
+      path: '/docs',
+      hash: section.id,
+      keywords: createKeywords(
+        prop.name,
+        section.title,
+        prop.type,
+        prop.description
+      ),
+    });
+  }
+};
+
+const indexTableOptions = (index: SearchIndexItem[], section: ApiSection): void => {
+  if (!section.table) {
+    return;
+  }
+
+  for (const row of section.table) {
+    index.push({
+      id: `${section.id}-${row.option}`,
+      title: row.option,
+      description: row.description,
+      category: section.badge ?? 'api',
+      path: '/docs',
+      hash: section.id,
+      keywords: createKeywords(
+        row.option,
+        section.title,
+        row.type,
+        row.description
+      ),
+    });
+  }
+};
+
 // Build search index from API documentation
 export const buildSearchIndex = (): SearchIndexItem[] => {
   const index: SearchIndexItem[] = [];
@@ -15,73 +113,17 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       category: section.badge ?? 'api',
       path: '/docs',
       hash: section.id,
-      keywords: [
-        section.title.toLowerCase(),
-        section.id.toLowerCase(),
-        ...(section.description?.toLowerCase().split(/\s+/) ?? []),
-      ],
+      keywords: createKeywords(
+        section.title,
+        section.id,
+        section.description
+      ),
     });
 
-    // Index methods
-    if (section.methods) {
-      for (const method of section.methods) {
-        const methodName = method.name.replace('()', '');
-        index.push({
-          id: `${section.id}-${methodName}`,
-          title: method.name,
-          description: method.description,
-          category: section.badge ?? 'api',
-          path: '/docs',
-          hash: section.id,
-          keywords: [
-            methodName.toLowerCase(),
-            section.title.toLowerCase(),
-            method.description.toLowerCase(),
-            method.returnType.toLowerCase(),
-          ],
-        });
-      }
-    }
-
-    // Index properties
-    if (section.properties) {
-      for (const prop of section.properties) {
-        index.push({
-          id: `${section.id}-${prop.name}`,
-          title: prop.name,
-          description: prop.description,
-          category: section.badge ?? 'api',
-          path: '/docs',
-          hash: section.id,
-          keywords: [
-            prop.name.toLowerCase(),
-            section.title.toLowerCase(),
-            prop.type.toLowerCase(),
-            prop.description.toLowerCase(),
-          ],
-        });
-      }
-    }
-
-    // Index table options (config options)
-    if (section.table) {
-      for (const row of section.table) {
-        index.push({
-          id: `${section.id}-${row.option}`,
-          title: row.option,
-          description: row.description,
-          category: section.badge ?? 'api',
-          path: '/docs',
-          hash: section.id,
-          keywords: [
-            row.option.toLowerCase(),
-            section.title.toLowerCase(),
-            row.type.toLowerCase(),
-            row.description.toLowerCase(),
-          ],
-        });
-      }
-    }
+    // Index subsections
+    indexMethods(index, section);
+    indexProperties(index, section);
+    indexTableOptions(index, section);
   }
 
   // Add page-level entries
@@ -121,7 +163,7 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
   );
 
   return index;
-}
+};
 
 // Simple fuzzy match scoring
 const fuzzyScore = (query: string, text: string): number => {
@@ -195,7 +237,7 @@ export const search = (query: string, index: SearchIndexItem[]): SearchResult[] 
 
 // Memoized search index
 export const getSearchIndex = (): SearchIndexItem[] => {
-  const cachedIndex = globalThis.__blokSearchIndex as SearchIndexItem[] | undefined;
+  const cachedIndex = globalThis.__blokSearchIndex;
   if (cachedIndex) {
     return cachedIndex;
   }

@@ -5,7 +5,7 @@ interface LogoProps {
 }
 
 export const Logo: React.FC<LogoProps> = ({ size = 32, className = '' }) => {
-  const uniqueId = `logo-gradient-${Math.random().toString(36).substr(2, 9)}`;
+  const uniqueId = `logo-gradient-${Math.random().toString(36).slice(2, 11)}`;
 
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 128 128" fill="none">

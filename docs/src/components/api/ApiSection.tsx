@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CodeBlock } from '../common/CodeBlock';
-import { ApiSection as ApiSectionType } from './api-data';
+import type { ApiSection as ApiSectionType } from './api-data';
 import type { PackageManager } from '../common/PackageManagerToggle';
 
 interface ApiSectionProps {

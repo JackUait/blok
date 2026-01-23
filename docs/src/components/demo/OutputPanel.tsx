@@ -10,12 +10,15 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({ output }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    if (output && output !== 'Click "Save" to see the JSON output') {
-      const success = await copyToClipboard(output);
-      if (success) {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
+    const isValidOutput = output && output !== 'Click "Save" to see the JSON output';
+    if (!isValidOutput) {
+      return;
+    }
+
+    const success = await copyToClipboard(output);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 

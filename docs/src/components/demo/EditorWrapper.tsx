@@ -31,18 +31,17 @@ export const EditorWrapper: React.FC<{
   onEditorReadyRef.current = onEditorReady;
 
   useEffect(() => {
-    let editor: BlokEditor | null = null;
-    let isMounted = true;
+    const editorState = { editor: null as BlokEditor | null, isMounted: true };
 
     const initEditor = async () => {
-      if (!containerRef.current || !isMounted) return;
+      if (!containerRef.current || !editorState.isMounted) return;
 
       try {
         // Import the full bundle which includes all tools
         // @ts-ignore - Dynamic import of external Blok module
         const module = (await import('/dist/full.mjs')) as unknown as BlokModule;
 
-        if (!isMounted || !containerRef.current) return;
+        if (!editorState.isMounted || !containerRef.current) return;
 
         // Make tools available globally for the editor config
         (window as unknown as Record<string, unknown>).BlokHeader = module.Header;
@@ -60,7 +59,7 @@ export const EditorWrapper: React.FC<{
 
         // Create the editor
         const BlokClass = module.Blok;
-        editor = new BlokClass({
+        editorState.editor = new BlokClass({
           holder: containerRef.current,
           tools: {
             header: {
@@ -129,11 +128,15 @@ export const EditorWrapper: React.FC<{
           },
         });
 
+        const { editor, isMounted } = editorState;
+        const shouldDestroy = !isMounted && editor?.destroy;
+
+        if (shouldDestroy) {
+          editor.destroy();
+          return;
+        }
+
         if (!isMounted) {
-          // Component unmounted while initializing, destroy editor
-          if (editor.destroy) {
-            editor.destroy();
-          }
           return;
         }
 
@@ -141,7 +144,7 @@ export const EditorWrapper: React.FC<{
         setLoading(false);
         onEditorReadyRef.current(editor);
       } catch (err) {
-        if (isMounted) {
+        if (editorState.isMounted) {
           const errorMessage = err instanceof Error ? err.message : 'Unknown error';
           setError(errorMessage);
           setLoading(false);
@@ -149,13 +152,14 @@ export const EditorWrapper: React.FC<{
       }
     };
 
-    initEditor();
+    void initEditor();
 
     return () => {
-      isMounted = false;
+      editorState.isMounted = false;
       // Cleanup: destroy the editor instance
-      if (editorRef.current?.destroy) {
-        editorRef.current.destroy();
+      const currentEditor = editorRef.current;
+      if (currentEditor?.destroy) {
+        currentEditor.destroy();
         editorRef.current = null;
       }
     };

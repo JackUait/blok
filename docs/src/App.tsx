@@ -5,34 +5,38 @@ import { DemoPage } from './pages/DemoPage';
 import { ApiPage } from './pages/ApiPage';
 import { MigrationPage } from './pages/MigrationPage';
 
-function ScrollHandler() {
+const ScrollHandler = () => {
   const { pathname, hash } = useLocation();
   const initialPath = useRef(pathname);
 
   useEffect(() => {
     // Handle hash scrolling
-    if (hash) {
-      // Remove the # character
-      const id = hash.slice(1);
-      const element = document.getElementById(id);
-
-      if (element) {
-        element.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }
-    } else if (pathname !== initialPath.current) {
-      // Only scroll to top on navigation without hash
-      // Browser handles scroll restoration on reload automatically
+    const shouldScrollToTop = !hash && pathname !== initialPath.current;
+    if (shouldScrollToTop) {
       window.scrollTo(0, 0);
+      return;
+    }
+
+    if (!hash) {
+      return;
+    }
+
+    // Remove the # character
+    const id = hash.slice(1);
+    const element = document.getElementById(id);
+
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
     }
   }, [pathname, hash]);
 
   return null;
-}
+};
 
-function App() {
+const App = () => {
   return (
     <>
       <ScrollHandler />

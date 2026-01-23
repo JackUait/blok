@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { API_SECTIONS, ApiSection } from './api-data';
+import { API_SECTIONS } from './api-data';
 
 describe('API_SECTIONS', () => {
   it('should have all defined sections', () => {

@@ -1820,6 +1820,13 @@ export default defineConfig(
     rules: {
       ...jest.configs.recommended.rules,
       ...vitest.configs.recommended.rules,
+      // Disable strict unsafe-* rules for test files - vitest's vi.fn() and mock utilities
+      // cause TypeScript type inference issues that are false positives
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      // Allow non-null assertions in test files for type narrowing
+      '@typescript-eslint/no-non-null-assertion': 'off',
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
       // Prevent class selectors in unit tests
@@ -2005,6 +2012,78 @@ export default defineConfig(
       'playwright/expect-expect': ['error', {
         assertFunctionNames: ['expect', 'expectDepth'],
       }],
+    },
+  },
+  {
+    files: ['docs/src/**/*.test.{ts,tsx}', 'docs/src/**/*.spec.{ts,tsx}'],
+    plugins: {
+      jest,
+      vitest,
+      'jest-dom': jestDom,
+      'testing-library': testingLibrary,
+      'internal-unit-test': internalUnitTestPlugin,
+    },
+    settings: {
+      'testing-library/utils-module': 'off',
+      'testing-library/custom-renders': 'off',
+      'testing-library/custom-queries': 'off',
+    },
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        vi: 'readonly',
+        vitest: 'readonly',
+      },
+    },
+    rules: {
+      ...vitest.configs.recommended.rules,
+      'internal-unit-test/no-class-selectors': 'error',
+      'internal-unit-test/require-behavior-verification': 'warn',
+      'no-restricted-syntax': 'off',
+      '@typescript-eslint/no-magic-numbers': 'off',
+      '@typescript-eslint/no-deprecated': 'off',
+      // Disable strict unsafe-* rules for test files - vitest's expect.extend() with jest-dom
+      // matchers causes TypeScript type inference issues that are false positives
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      // Allow non-null assertions in test files for type narrowing
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      'vitest/expect-expect': 'off',
+      'vitest/no-conditional-tests': 'warn',
+      'vitest/no-disabled-tests': 'warn',
+      'vitest/no-focused-tests': 'error',
+      'vitest/no-identical-title': 'error',
+      'vitest/no-interpolation-in-snapshots': 'error',
+      'vitest/no-mocks-import': 'error',
+      'vitest/valid-describe-callback': 'error',
+      'vitest/valid-expect': 'error',
+      'vitest/valid-title': 'error',
+      'jest/consistent-test-it': ['error', { fn: 'it' }],
+      'jest/valid-describe-callback': 'error',
+      'jest/valid-expect': 'error',
+      'jest/valid-title': 'error',
+      'jest/no-focused-tests': 'error',
+      'jest/no-disabled-tests': 'warn',
+      'jest/expect-expect': 'error',
+      'jest/no-standalone-expect': 'error',
+      'testing-library/no-await-sync-events': 'warn',
+      'testing-library/no-await-sync-queries': 'warn',
+      'testing-library/no-container': 'warn',
+      'testing-library/no-debugging-utils': 'warn',
+      'testing-library/no-manual-cleanup': 'warn',
+      'testing-library/no-node-access': 'warn',
+      'testing-library/no-wait-for-multiple-assertions': 'warn',
+      'testing-library/no-wait-for-side-effects': 'warn',
+      'testing-library/prefer-find-by': 'warn',
+      'testing-library/prefer-presence-queries': 'warn',
     },
   },
   {

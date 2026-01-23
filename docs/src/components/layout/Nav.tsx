@@ -36,31 +36,37 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
+      const shouldHide = scrollY > 100;
 
       // Track scrolled state for visual enhancement
       setNavScrolled(scrollY > 20);
 
-      if (scrollY > 100) {
-        if (scrollY > lastScrollY && !navHidden) {
-          setNavHidden(true);
-        } else if (scrollY < lastScrollY && navHidden) {
-          setNavHidden(false);
-        }
-      } else {
+      if (!shouldHide) {
         setNavHidden(false);
+        setLastScrollY(scrollY);
+        return;
+      }
+
+      const isScrollingDown = scrollY > lastScrollY;
+      const shouldHideNav = isScrollingDown && !navHidden;
+      const shouldShowNav = !isScrollingDown && navHidden;
+      const shouldUpdateNav = shouldHideNav || shouldShowNav;
+
+      if (shouldUpdateNav) {
+        setNavHidden(shouldHideNav);
       }
 
       setLastScrollY(scrollY);
     };
 
-    let ticking = false;
+    const tickingState = { value: false };
     const onScroll = () => {
-      if (!ticking) {
+      if (!tickingState.value) {
         window.requestAnimationFrame(() => {
           handleScroll();
-          ticking = false;
+          tickingState.value = false;
         });
-        ticking = true;
+        tickingState.value = true;
       }
     };
 

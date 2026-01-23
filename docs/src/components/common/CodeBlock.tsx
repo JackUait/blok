@@ -31,8 +31,19 @@ const getInstallCommand = (packageName: string, manager: PackageManager): string
 };
 
 // Singleton highlighter instance
-let highlighterInstance: Highlighter | null = null;
-let initPromise: Promise<Highlighter> | null = null;
+const highlighterState = {
+  instance: null as Highlighter | null,
+  initPromise: null as Promise<Highlighter> | null,
+};
+
+const getHighlighterInstance = (): Highlighter | null => highlighterState.instance;
+const setHighlighterInstance = (instance: Highlighter | null): void => {
+  highlighterState.instance = instance;
+};
+const getInitPromise = (): Promise<Highlighter> | null => highlighterState.initPromise;
+const setInitPromise = (promise: Promise<Highlighter> | null): void => {
+  highlighterState.initPromise = promise;
+};
 
 const supportedLangs: (BundledLanguage | SpecialLanguage)[] = [
   'javascript',
@@ -65,35 +76,46 @@ const languageDisplayNames: Record<string, string> = {
   python: 'Python',
 };
 
-async function getHighlighter(lang: string): Promise<Highlighter> {
+const loadLanguageIfNeeded = async (highlighter: Highlighter, lang: string): Promise<void> => {
+  const langKey = lang.toLowerCase() as BundledLanguage | SpecialLanguage;
+  const isLangLoaded = highlighter.getLoadedLanguages().includes(langKey);
+
+  if (isLangLoaded) {
+    return;
+  }
+
+  try {
+    await highlighter.loadLanguage(langKey);
+  } catch {
+    // Language not available, will use plaintext
+  }
+};
+
+const getHighlighter = async (lang: string): Promise<Highlighter> => {
+  const highlighterInstance = getHighlighterInstance();
+
   if (highlighterInstance) {
-    // Load the language dynamically if not already loaded
-    const langKey = lang.toLowerCase() as BundledLanguage | SpecialLanguage;
-    if (!highlighterInstance.getLoadedLanguages().includes(langKey)) {
-      try {
-        await highlighterInstance.loadLanguage(langKey);
-      } catch {
-        // Language not available, will use plaintext
-      }
-    }
+    await loadLanguageIfNeeded(highlighterInstance, lang);
     return highlighterInstance;
   }
 
-  if (initPromise) {
-    return initPromise;
+  const initPromise = getInitPromise();
+  if (!initPromise) {
+    // Initialize with only the languages we need
+    const newInitPromise = createHighlighter({
+      themes: ['github-light', 'github-dark'],
+      langs: supportedLangs,
+    }).then((highlighter) => {
+      setHighlighterInstance(highlighter);
+      return highlighter;
+    });
+
+    setInitPromise(newInitPromise);
+    return newInitPromise;
   }
 
-  // Initialize with only the languages we need
-  initPromise = createHighlighter({
-    themes: ['github-light', 'github-dark'],
-    langs: supportedLangs,
-  }).then((highlighter) => {
-    highlighterInstance = highlighter;
-    return highlighter;
-  });
-
   return initPromise;
-}
+};
 
 export const CodeBlock: React.FC<CodeBlockProps> = ({
   code,
@@ -156,7 +178,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       }
     };
 
-    highlight();
+    void highlight();
   }, [displayCode, language, isDark]);
 
   const handleCopy = async () => {
@@ -242,7 +264,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   );
 };
 
-function escapeHtml(text: string): string {
+const escapeHtml = (text: string): string => {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

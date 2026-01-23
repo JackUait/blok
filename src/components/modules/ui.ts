@@ -183,13 +183,12 @@ export class UI extends Module<UINodes> {
     this.selectionController.setWrapperElement(this.nodes.wrapper);
 
     /**
-     * Block hover controller needs content rect getter and RTL flag
+     * Block hover controller needs content rect getter
      */
     this.blockHoverController = new BlockHoverController({
       config: this.config,
       eventsDispatcher: this.eventsDispatcher,
       contentRectGetter: () => this.contentRect,
-      isRtl: this.isRtl,
     });
     this.blockHoverController.state = this.Blok;
 

@@ -761,4 +761,120 @@ test.describe('ui module', () => {
       expect(currentBlockId).toBe('block-rtl-2');
     });
   });
+
+  test.describe('toolbar persistence and full-width hover', () => {
+    test('toolbar remains visible when clicking outside the editor', async ({ page }) => {
+      const singleBlockData: OutputData = {
+        blocks: [
+          { id: 'block-persist-1', type: 'paragraph', data: { text: 'Test block' } },
+        ],
+      };
+
+      await createBlok(page, { data: singleBlockData });
+
+      // First, hover over a block to show the toolbar
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}[data-blok-id="block-persist-1"]`);
+      await paragraph.hover();
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is open
+      const toolbarOpenedBefore = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      expect(toolbarOpenedBefore).toBe(true);
+
+      // Click outside the editor (on the body)
+      await page.mouse.click(10, 10);
+
+      // Verify toolbar is still visible (this is the desired behavior)
+      const toolbarOpenedAfter = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      // The toolbar should remain visible even after clicking outside the editor
+      expect(toolbarOpenedAfter).toBe(true);
+    });
+
+    test('toolbar follows hover across the entire editor width (both sides)', async ({ page }) => {
+      const threeBlocksData: OutputData = {
+        blocks: [
+          { id: 'block-hover-1', type: 'paragraph', data: { text: 'First block' } },
+          { id: 'block-hover-2', type: 'paragraph', data: { text: 'Second block' } },
+          { id: 'block-hover-3', type: 'paragraph', data: { text: 'Third block' } },
+        ],
+      };
+
+      await createBlok(page, { data: threeBlocksData });
+
+      // Get layout information
+      const positions = await page.evaluate(() => {
+        const blocks = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
+        if (!blocks[0] || !blocks[2]) throw new Error('Blocks not found');
+
+        const redactor = document.querySelector('[data-blok-testid="redactor"]');
+        if (!redactor) throw new Error('Redactor not found');
+
+        const redactorRect = redactor.getBoundingClientRect();
+        const firstBlockRect = blocks[0].getBoundingClientRect();
+        const thirdBlockRect = blocks[2].getBoundingClientRect();
+
+        return {
+          redactorLeft: redactorRect.left,
+          redactorRight: redactorRect.right,
+          redactorCenter: (redactorRect.left + redactorRect.right) / 2,
+          firstBlockY: (firstBlockRect.top + firstBlockRect.bottom) / 2,
+          thirdBlockY: (thirdBlockRect.top + thirdBlockRect.bottom) / 2,
+        };
+      });
+
+      // Test 1: Hover at the far right edge of the redactor
+      await page.mouse.move(positions.redactorRight - 20, positions.firstBlockY);
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      const toolbarBlockId1 = await getToolbarBlockId(page);
+      const toolbarOpened1 = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      // Toolbar should be shown when hovering at the right edge of the editor
+      expect(toolbarOpened1).toBe(true);
+      expect(toolbarBlockId1).toBe('block-hover-1');
+
+      // Test 2: Hover at the center of the redactor (over content area)
+      await page.mouse.move(positions.redactorCenter, positions.thirdBlockY);
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      const toolbarBlockId2 = await getToolbarBlockId(page);
+      const toolbarOpened2 = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      // Toolbar should be shown when hovering at the center
+      expect(toolbarOpened2).toBe(true);
+      expect(toolbarBlockId2).toBe('block-hover-3');
+
+      // Test 3: Hover at the far right edge on the third block
+      await page.mouse.move(positions.redactorRight - 20, positions.thirdBlockY);
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      const toolbarBlockId3 = await getToolbarBlockId(page);
+      const toolbarOpened3 = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      // Toolbar should follow to the third block when hovering at right edge
+      expect(toolbarOpened3).toBe(true);
+      expect(toolbarBlockId3).toBe('block-hover-3');
+    });
+  });
 });

@@ -305,4 +305,59 @@ describe('list-lifecycle', () => {
     const contentEl = result.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement;
     expect(contentEl?.contentEditable).toBe('false');
   });
+
+  /**
+   * Regression test for: list items and paragraphs must have same total height
+   *
+   * Paragraph wrapper uses blok-block (py-[3px]) + mt-[2px] mb-px
+   * List wrapper should match this exactly
+   */
+  it('has same vertical spacing as paragraph', () => {
+    const context = createMockContext({ style: 'unordered' });
+    const result = renderListItem(context);
+
+    // Check wrapper has the BASE_STYLES that provide vertical spacing
+    // These match the paragraph wrapper spacing
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing CSS class presence for spacing behavior
+    expect(result.className).toContain('py-[3px]');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing CSS class presence for spacing behavior
+    expect(result.className).toContain('mt-[2px]');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing CSS class presence for spacing behavior
+    expect(result.className).toContain('mb-px');
+
+    // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
+    const listItem = result.querySelector('[role="listitem"]') as HTMLElement;
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Verifying absence of padding classes
+    expect(listItem?.className).not.toContain('pt-[2px]');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Verifying absence of padding classes
+    expect(listItem?.className).not.toContain('pb-[1px]');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Verifying absence of padding classes
+    expect(listItem?.className).not.toContain('py-0.5');
+  });
+
+  /**
+   * Checklist items should also have same vertical spacing on wrapper
+   */
+  it('checklist has same vertical spacing as paragraph', () => {
+    const context = createMockContext({ style: 'checklist' });
+    const result = renderListItem(context);
+
+    // Check wrapper has the BASE_STYLES that provide vertical spacing
+    // These match the paragraph wrapper spacing
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing CSS class presence for spacing behavior
+    expect(result.className).toContain('py-[3px]');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing CSS class presence for spacing behavior
+    expect(result.className).toContain('mt-[2px]');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing CSS class presence for spacing behavior
+    expect(result.className).toContain('mb-px');
+
+    // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
+    const checklistItem = result.querySelector('[role="listitem"]') as HTMLElement;
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Verifying absence of padding classes
+    expect(checklistItem?.className).not.toContain('pt-[2px]');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Verifying absence of padding classes
+    expect(checklistItem?.className).not.toContain('pb-[1px]');
+    // eslint-disable-next-line internal-unit-test/no-class-selectors -- Verifying absence of padding classes
+    expect(checklistItem?.className).not.toContain('py-0.5');
+  });
 });

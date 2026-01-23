@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
@@ -9,6 +9,21 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const REDACTOR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
+
+const getRequiredBoundingBox = async (locator: Locator): Promise<{
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}> => {
+  const box = await locator.boundingBox();
+
+  if (!box) {
+    throw new Error('Unable to determine element bounds');
+  }
+
+  return box;
+};
 
 type CreateBlokOptions = {
   data?: OutputData;
@@ -759,6 +774,370 @@ test.describe('ui module', () => {
       // Verify toolbar moved to second block
       currentBlockId = await getToolbarBlockId(page);
       expect(currentBlockId).toBe('block-rtl-2');
+    });
+  });
+
+  test.describe('toolbar persistence and full-width hover', () => {
+    test('toolbar remains visible when clicking outside the editor', async ({ page }) => {
+      const singleBlockData: OutputData = {
+        blocks: [
+          { id: 'block-persist-1', type: 'paragraph', data: { text: 'Test block' } },
+        ],
+      };
+
+      await createBlok(page, { data: singleBlockData });
+
+      // First, hover over a block to show the toolbar
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}[data-blok-id="block-persist-1"]`);
+      await paragraph.hover();
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is open and visible
+      const toolbarStateBefore = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        if (!toolbar) {
+          return { hasOpenedAttr: false, isVisible: false, displayValue: null };
+        }
+        const styles = window.getComputedStyle(toolbar);
+        return {
+          hasOpenedAttr: toolbar.hasAttribute('data-blok-opened'),
+          isVisible: styles.display !== 'none' && styles.visibility !== 'hidden' && styles.opacity !== '0',
+          displayValue: styles.display,
+        };
+      });
+
+      expect(toolbarStateBefore.hasOpenedAttr).toBe(true);
+      expect(toolbarStateBefore.isVisible).toBe(true);
+
+      // Click outside the editor (on the body)
+      await page.mouse.click(10, 10);
+
+      // Verify toolbar is still visible (this is the desired behavior)
+      const toolbarStateAfter = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        if (!toolbar) {
+          return { hasOpenedAttr: false, isVisible: false, displayValue: null };
+        }
+        const styles = window.getComputedStyle(toolbar);
+        return {
+          hasOpenedAttr: toolbar.hasAttribute('data-blok-opened'),
+          isVisible: styles.display !== 'none' && styles.visibility !== 'hidden' && styles.opacity !== '0',
+          displayValue: styles.display,
+        };
+      });
+
+      // The toolbar should remain visible even after clicking outside the editor
+      expect(toolbarStateAfter.hasOpenedAttr).toBe(true);
+      expect(toolbarStateAfter.isVisible).toBe(true);
+    });
+
+    test('toolbar remains visible when clicking to the left of the editor body', async ({ page }) => {
+      const singleBlockData: OutputData = {
+        blocks: [
+          { id: 'block-persist-2', type: 'paragraph', data: { text: 'Test block' } },
+        ],
+      };
+
+      await createBlok(page, { data: singleBlockData });
+
+      // First, hover over a block to show the toolbar
+      const paragraph = page.locator(`${PARAGRAPH_SELECTOR}[data-blok-id="block-persist-2"]`);
+      await paragraph.hover();
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is open and visible
+      const toolbarStateBefore = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        if (!toolbar) {
+          return { hasOpenedAttr: false, isVisible: false };
+        }
+        const styles = window.getComputedStyle(toolbar);
+        return {
+          hasOpenedAttr: toolbar.hasAttribute('data-blok-opened'),
+          isVisible: styles.display !== 'none' && styles.visibility !== 'hidden' && styles.opacity !== '0',
+        };
+      });
+
+      expect(toolbarStateBefore.hasOpenedAttr).toBe(true);
+      expect(toolbarStateBefore.isVisible).toBe(true);
+
+      // Get the redactor's position and click to the left of it
+      const clickPosition = await page.evaluate(() => {
+        const redactor = document.querySelector('[data-blok-testid="redactor"]');
+        if (!redactor) {
+          return { x: 10, y: 100 };
+        }
+        const rect = redactor.getBoundingClientRect();
+
+        // Determine click position: try to click to the left of the redactor
+        // If the redactor is too close to the left edge, we'll click on the left side
+        // of the redactor itself (which should still be outside the content area)
+        let clickX: number;
+        if (rect.left > 50) {
+          clickX = rect.left - 50; // 50px to the left
+        } else {
+          // Redactor is close to left edge, click just to the left of its left boundary
+          clickX = Math.max(5, rect.left - 10);
+        }
+
+        const clickY = rect.top + rect.height / 2; // At vertical center
+
+        return { x: clickX, y: clickY };
+      });
+
+      // Click to the left of the editor (same vertical level as content)
+      await page.mouse.click(clickPosition.x, clickPosition.y);
+
+      // Verify toolbar is still visible after clicking to the left
+      const toolbarStateAfter = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        if (!toolbar) {
+          return { hasOpenedAttr: false, isVisible: false };
+        }
+        const styles = window.getComputedStyle(toolbar);
+        return {
+          hasOpenedAttr: toolbar.hasAttribute('data-blok-opened'),
+          isVisible: styles.display !== 'none' && styles.visibility !== 'hidden' && styles.opacity !== '0',
+        };
+      });
+
+      // The toolbar should remain visible even after clicking to the left of the editor
+      expect(toolbarStateAfter.hasOpenedAttr).toBe(true);
+      expect(toolbarStateAfter.isVisible).toBe(true);
+    });
+
+    test('toolbar follows hover across the entire editor width (both sides)', async ({ page }) => {
+      const threeBlocksData: OutputData = {
+        blocks: [
+          { id: 'block-hover-1', type: 'paragraph', data: { text: 'First block' } },
+          { id: 'block-hover-2', type: 'paragraph', data: { text: 'Second block' } },
+          { id: 'block-hover-3', type: 'paragraph', data: { text: 'Third block' } },
+        ],
+      };
+
+      await createBlok(page, { data: threeBlocksData });
+
+      // Get layout information
+      const positions = await page.evaluate(() => {
+        const blocks = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
+        if (!blocks[0] || !blocks[2]) throw new Error('Blocks not found');
+
+        const redactor = document.querySelector('[data-blok-testid="redactor"]');
+        if (!redactor) throw new Error('Redactor not found');
+
+        const redactorRect = redactor.getBoundingClientRect();
+        const firstBlockRect = blocks[0].getBoundingClientRect();
+        const thirdBlockRect = blocks[2].getBoundingClientRect();
+
+        return {
+          redactorLeft: redactorRect.left,
+          redactorRight: redactorRect.right,
+          redactorCenter: (redactorRect.left + redactorRect.right) / 2,
+          firstBlockY: (firstBlockRect.top + firstBlockRect.bottom) / 2,
+          thirdBlockY: (thirdBlockRect.top + thirdBlockRect.bottom) / 2,
+        };
+      });
+
+      // Test 1: Hover at the far right edge of the redactor
+      await page.mouse.move(positions.redactorRight - 20, positions.firstBlockY);
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      const toolbarBlockId1 = await getToolbarBlockId(page);
+      const toolbarOpened1 = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      // Toolbar should be shown when hovering at the right edge of the editor
+      expect(toolbarOpened1).toBe(true);
+      expect(toolbarBlockId1).toBe('block-hover-1');
+
+      // Test 2: Hover at the center of the redactor (over content area)
+      await page.mouse.move(positions.redactorCenter, positions.thirdBlockY);
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      const toolbarBlockId2 = await getToolbarBlockId(page);
+      const toolbarOpened2 = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      // Toolbar should be shown when hovering at the center
+      expect(toolbarOpened2).toBe(true);
+      expect(toolbarBlockId2).toBe('block-hover-3');
+
+      // Test 3: Hover at the far right edge on the third block
+      await page.mouse.move(positions.redactorRight - 20, positions.thirdBlockY);
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      const toolbarBlockId3 = await getToolbarBlockId(page);
+      const toolbarOpened3 = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      // Toolbar should follow to the third block when hovering at right edge
+      expect(toolbarOpened3).toBe(true);
+      expect(toolbarBlockId3).toBe('block-hover-3');
+    });
+
+    test('rubber band selection works and toolbar does not close when starting from left margin', async ({ page }) => {
+      const threeBlocksData: OutputData = {
+        blocks: [
+          { id: 'block-rubber-1', type: 'paragraph', data: { text: 'First block' } },
+          { id: 'block-rubber-2', type: 'paragraph', data: { text: 'Second block' } },
+          { id: 'block-rubber-3', type: 'paragraph', data: { text: 'Third block' } },
+        ],
+      };
+
+      await createBlok(page, { data: threeBlocksData });
+
+      const firstBlock = page.locator(`${PARAGRAPH_SELECTOR}[data-blok-id="block-rubber-1"]`);
+      const thirdBlock = page.locator(`${PARAGRAPH_SELECTOR}[data-blok-id="block-rubber-3"]`);
+
+      const firstBox = await getRequiredBoundingBox(firstBlock);
+      const thirdBox = await getRequiredBoundingBox(thirdBlock);
+
+      // First, hover to show the toolbar
+      await firstBlock.hover();
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      const toolbarOpenedBefore = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      expect(toolbarOpenedBefore).toBe(true);
+
+      // Start rubber band selection from left margin (x=10)
+      const startX = 10;
+      const startY = firstBox.y + firstBox.height / 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+
+      // Drag across to the third block
+      const endX = thirdBox.x + thirdBox.width + 50; // Well past the right edge of third block
+      const endY = thirdBox.y + thirdBox.height / 2;
+
+      await page.mouse.move(endX, endY, { steps: 10 });
+
+      // Trigger one more single-pixel move to ensure the final position is fully processed
+      await page.mouse.move(endX + 1, endY);
+
+      // Verify blocks are selected
+      await expect(firstBlock).toHaveAttribute('data-blok-selected', 'true');
+      await expect(thirdBlock).toHaveAttribute('data-blok-selected', 'true');
+
+      // Note: The toolbar might be hidden during the drag (which is expected),
+      // but the key is that starting from outside doesn't break the selection
+
+      // Release mouse - this should complete the selection
+      await page.mouse.up();
+
+      // After mouse up with multiple blocks selected, toolbar should appear for multi-block selection
+      const toolbarOpenedAfter = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      // Toolbar should be open after completing multi-block selection
+      expect(toolbarOpenedAfter).toBe(true);
+    });
+
+    test('toolbar closes when starting rubber band selection from inside editor horizontally', async ({ page }) => {
+      // Create a centered editor with margins
+      await page.evaluate(async ({ holder }) => {
+        const existingHolder = document.getElementById(holder);
+        if (existingHolder) {
+          existingHolder.remove();
+        }
+
+        const container = document.createElement('div');
+        container.id = holder;
+        container.setAttribute('data-blok-testid', holder);
+        // Center the editor with a fixed width to create left/right margins
+        container.style.width = '400px';
+        container.style.margin = '0 auto';
+        container.style.border = '1px dotted #388AE5';
+
+        document.body.appendChild(container);
+
+        // Initialize Blok
+        const blok = new window.Blok({
+          holder: holder,
+          data: {
+            blocks: [
+              { type: 'paragraph', data: { text: 'First block' } },
+              { type: 'paragraph', data: { text: 'Second block' } },
+              { type: 'paragraph', data: { text: 'Third block' } },
+            ],
+          },
+        });
+
+        await blok.isReady;
+        window.blokInstance = blok;
+      }, { holder: HOLDER_ID });
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(200);
+
+      // Get the first block using a specific text filter
+      const firstBlock = page.locator(PARAGRAPH_SELECTOR).filter({
+        hasText: 'First block',
+      });
+
+      // Hover to show the toolbar
+      await firstBlock.hover();
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+
+      const toolbarOpenedBefore = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      expect(toolbarOpenedBefore).toBe(true);
+
+      // Get the position to start selection - use the toolbar position which is inside the redactor
+      // Using locators for auto-waiting and better error messages
+      const toolbarLocator = page.locator('[data-blok-testid="toolbar"]');
+      const redactorLocator = page.locator('[data-blok-testid="redactor"]');
+
+      const toolbarBox = await getRequiredBoundingBox(toolbarLocator);
+      const redactorBox = await getRequiredBoundingBox(redactorLocator);
+
+      const startPos = {
+        x: toolbarBox.x + toolbarBox.width / 2, // Center of toolbar (inside redactor)
+        y: redactorBox.y + 50, // Near top of redactor
+      };
+
+      // Start selection from inside the redactor (toolbar position)
+      await page.mouse.move(startPos.x, startPos.y);
+      await page.mouse.down();
+
+      // Move to right margin to trigger rectangle selection
+      await page.mouse.move(startPos.x + 300, startPos.y + 100, { steps: 10 });
+
+      // Trigger one more single-pixel move
+      await page.mouse.move(startPos.x + 301, startPos.y + 100);
+
+      // When starting from inside the editor horizontally, toolbar should close
+      const toolbarOpenedDuring = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+        return toolbar?.hasAttribute('data-blok-opened') ?? false;
+      });
+
+      // Toolbar should be closed when selection starts from inside horizontal bounds
+      expect(toolbarOpenedDuring).toBe(false);
+
+      await page.mouse.up();
     });
   });
 });

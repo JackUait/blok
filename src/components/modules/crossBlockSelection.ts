@@ -227,6 +227,15 @@ export class CrossBlockSelection extends Module {
      */
     if (this.isCrossBlockSelectionStarted) {
       this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+
+      /**
+       * Reset the block hover state after cross-block selection completes.
+       * Use requestAnimationFrame to ensure this happens after all pending
+       * mouse events have been processed.
+       */
+      requestAnimationFrame(() => {
+        this.Blok.UI.resetBlockHoverState();
+      });
     }
   };
 

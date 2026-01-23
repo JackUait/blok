@@ -1,7 +1,6 @@
 import type { Block } from '../../../block';
 import { BlockHovered } from '../../../events/BlockHovered';
 import { throttle } from '../../../utils';
-import { HOVER_ZONE_SIZE } from '../constants';
 
 import { Controller } from './_base';
 
@@ -21,11 +20,6 @@ export class BlockHoverController extends Controller {
   private contentRectGetter: () => DOMRect;
 
   /**
-   * Whether the editor is in RTL mode
-   */
-  private isRtl: boolean;
-
-  /**
    * Used to not emit the same block multiple times to the 'block-hovered' event on every mousemove.
    * Stores block ID to ensure consistent comparison regardless of how the block was detected.
    */
@@ -37,11 +31,9 @@ export class BlockHoverController extends Controller {
     config: Controller['config'];
     eventsDispatcher: Controller['eventsDispatcher'];
     contentRectGetter: () => DOMRect;
-    isRtl: boolean;
   }) {
     super(options);
     this.contentRectGetter = options.contentRectGetter;
-    this.isRtl = options.isRtl;
   }
 
   /**
@@ -67,8 +59,11 @@ export class BlockHoverController extends Controller {
         : null;
 
       if (zoneBlock !== null && this.blockHoveredState.lastHoveredBlockId !== zoneBlock.id) {
-        this.blockHoveredState.lastHoveredBlockId = zoneBlock.id;
-
+        /**
+         * Emit the event but DON'T set lastHoveredBlockId for hover zone events.
+         * This allows the event to be emitted again when the mouse enters the actual block element,
+         * which is important for proper toolbar positioning after cross-block selection.
+         */
         this.eventsDispatcher.emit(BlockHovered, {
           block: zoneBlock,
           target: zoneBlock.holder,
@@ -80,6 +75,12 @@ export class BlockHoverController extends Controller {
       }
 
       if (!hoveredBlockElement) {
+        /**
+         * When no block is found (mouse left the editor area), reset the hover state.
+         * This allows hover events to be emitted again when re-entering a block,
+         * which is important after cross-block selection completes.
+         */
+        this.blockHoveredState.lastHoveredBlockId = null;
         return;
       }
 
@@ -123,8 +124,9 @@ export class BlockHoverController extends Controller {
   }
 
   /**
-   * Finds a block by vertical position when cursor is in the extended hover zone.
-   * The zone extends HOVER_ZONE_SIZE pixels from the content edge (left for LTR, right for RTL).
+   * Finds a block by vertical position when cursor is in the hover zone.
+   * The hover zone extends indefinitely on both sides of the content (left and right),
+   * allowing the toolbar to follow hover anywhere outside the content area horizontally.
    * @param clientX - Cursor X position
    * @param clientY - Cursor Y position
    * @returns Block at the vertical position, or null if not in hover zone or no block found
@@ -133,12 +135,10 @@ export class BlockHoverController extends Controller {
     const contentRect = this.contentRectGetter();
 
     /**
-     * For LTR: check if cursor is within hover zone to the left of content
-     * For RTL: check if cursor is within hover zone to the right of content
+     * Check if cursor is outside the content area horizontally (either left OR right side).
+     * The zone extends indefinitely on both sides, not limited to HOVER_ZONE_SIZE.
      */
-    const isInHoverZone = this.isRtl
-      ? clientX > contentRect.right && clientX <= contentRect.right + HOVER_ZONE_SIZE
-      : clientX < contentRect.left && clientX >= contentRect.left - HOVER_ZONE_SIZE;
+    const isInHoverZone = clientX < contentRect.left || clientX > contentRect.right;
 
     if (!isInHoverZone) {
       return null;

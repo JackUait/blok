@@ -423,6 +423,11 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
+     * Reset explicitlyClosed flag to allow toolbar to reopen/move on hover
+     */
+    this.explicitlyClosed = false;
+
+    /**
      * Don't close BlockSettings here - it should remain open if the user explicitly opened it via the settings toggler.
      * The hover behavior that calls this method shouldn't interfere with the user's intent to open the menu.
      */

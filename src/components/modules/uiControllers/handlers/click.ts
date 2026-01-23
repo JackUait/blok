@@ -100,10 +100,12 @@ export const createDocumentClickedHandler = (
        * Clear pointer on BlockManager
        *
        * Current page might contain several instances
-       * Click between instances MUST clear focus, pointers and close toolbars
+       * Click between instances MUST clear focus, pointers
+       *
+       * Note: We do NOT close the toolbar here - it should remain visible
+       * so users can continue interacting with the editor even after clicking outside
        */
       Blok.BlockManager.unsetCurrentBlock();
-      Blok.Toolbar.close();
     }
 
     const shouldCloseBlockSettings = Blok.BlockSettings.opened && !context.doNotProcess;

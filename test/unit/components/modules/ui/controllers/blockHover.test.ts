@@ -22,7 +22,6 @@ describe('BlockHoverController', () => {
     blokOverrides?: Partial<BlokModules>;
     configOverrides?: Partial<BlokConfig>;
     contentRect?: DOMRect;
-    isRtl?: boolean;
   }): {
     controller: BlockHoverController;
     blok: BlokModules;
@@ -60,7 +59,6 @@ describe('BlockHoverController', () => {
       } as BlokConfig,
       eventsDispatcher: eventsDispatcher,
       contentRectGetter: () => contentRect,
-      isRtl: options?.isRtl ?? false,
     });
 
     controller.state = blok;
@@ -293,7 +291,6 @@ describe('BlockHoverController', () => {
           y: 0,
           toJSON: () => ({}),
         },
-        isRtl: false,
       });
 
       const block = createMockBlock('block-1', 150, 250);
@@ -322,7 +319,7 @@ describe('BlockHoverController', () => {
       });
     });
 
-    it('does not detect block when cursor is outside hover zone', () => {
+    it('does not detect block via hover zone when cursor is inside content area', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController({
         contentRect: {
           left: 100,
@@ -335,7 +332,6 @@ describe('BlockHoverController', () => {
           y: 0,
           toJSON: () => ({}),
         },
-        isRtl: false,
       });
 
       const block = createMockBlock('block-1', 150, 250);
@@ -347,9 +343,9 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is far left, outside hover zone
+      // Cursor is inside the content area (between left and right), NOT in hover zone
       const event = new MouseEvent('mousemove', {
-        clientX: -10, // Too far left
+        clientX: 400, // Inside content area (100 < 400 < 700)
         clientY: 200,
         bubbles: true,
       });
@@ -358,6 +354,7 @@ describe('BlockHoverController', () => {
       document.dispatchEvent(event);
       vi.runAllTimers();
 
+      // Should NOT emit via hover zone (not on a block element, inside content area)
       expect(eventsDispatcher.emit).not.toHaveBeenCalled();
     });
 
@@ -374,7 +371,6 @@ describe('BlockHoverController', () => {
           y: 0,
           toJSON: () => ({}),
         },
-        isRtl: false,
       });
 
       const block1 = createMockBlock('block-1', 100, 200);
@@ -419,7 +415,6 @@ describe('BlockHoverController', () => {
           y: 0,
           toJSON: () => ({}),
         },
-        isRtl: true,
       });
 
       const block = createMockBlock('block-1', 150, 250);
@@ -448,7 +443,7 @@ describe('BlockHoverController', () => {
       });
     });
 
-    it('does not detect block when cursor is outside RTL hover zone', () => {
+    it('does not detect block via hover zone when cursor is inside content area (RTL)', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController({
         contentRect: {
           left: 100,
@@ -461,7 +456,6 @@ describe('BlockHoverController', () => {
           y: 0,
           toJSON: () => ({}),
         },
-        isRtl: true,
       });
 
       const block = createMockBlock('block-1', 150, 250);
@@ -473,9 +467,9 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is far right, outside hover zone
+      // Cursor is inside the content area (between left and right), NOT in hover zone
       const event = new MouseEvent('mousemove', {
-        clientX: 850, // Too far right (700 + 150 > 700 + 100)
+        clientX: 400, // Inside content area (100 < 400 < 700)
         clientY: 200,
         bubbles: true,
       });
@@ -484,6 +478,7 @@ describe('BlockHoverController', () => {
       document.dispatchEvent(event);
       vi.runAllTimers();
 
+      // Should NOT emit via hover zone (not on a block element, inside content area)
       expect(eventsDispatcher.emit).not.toHaveBeenCalled();
     });
   });

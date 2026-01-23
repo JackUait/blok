@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CodeBlock } from '../common/CodeBlock';
+import { ApiMethodCard } from './ApiMethodCard';
 import type { ApiSection as ApiSectionType } from './api-data';
 import type { PackageManager } from '../common/PackageManagerToggle';
 
@@ -117,16 +118,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
         <div className="api-block">
           <h3 className="api-block-title">Methods</h3>
           {section.methods.map((method, index) => (
-            <div key={index} className="api-method-large">
-              <div className="api-method-header">
-                <span className="api-method-name">{method.name}</span>
-                <span className="api-method-return">{method.returnType}</span>
-              </div>
-              <p className="api-method-description">{method.description}</p>
-              {method.example && (
-                <CodeBlock code={method.example} language="typescript" />
-              )}
-            </div>
+            <ApiMethodCard key={index} method={method} />
           ))}
         </div>
       )}

@@ -24,7 +24,5 @@ export interface BlokModule {
   Link: unknown;
 }
 
-declare module '/dist/full.mjs' {
-  const blok: BlokModule;
-  export default blok;
-}
+// Note: Module declaration for /dist/full.mjs doesn't work with absolute paths in TS
+// This import is resolved at runtime by Vite's externalDistPlugin

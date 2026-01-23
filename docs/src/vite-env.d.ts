@@ -16,4 +16,28 @@ declare global {
 
 import type { SearchIndexItem } from '@/types/search';
 
+// Declare the /dist/ module that is resolved by Vite's externalDistPlugin
+declare module '/dist/full.mjs' {
+  export const Blok: new (config: unknown) => {
+    destroy?(): void;
+    clear(): Promise<void>;
+    render(data: { blocks: unknown[] }): Promise<void>;
+    blocks: {
+      getBlocksCount(): number;
+      clear(): Promise<void>;
+      move(toIndex: number, fromIndex?: number): void;
+      insert(): unknown;
+      insert(type: string, data: unknown, config: unknown, index: number): unknown;
+      render(data: { blocks: unknown[] }): Promise<void>;
+    };
+    [key: string]: unknown;
+  };
+  export const Header: unknown;
+  export const Paragraph: unknown;
+  export const List: unknown;
+  export const Bold: unknown;
+  export const Italic: unknown;
+  export const Link: unknown;
+}
+
 export {};

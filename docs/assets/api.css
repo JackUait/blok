@@ -360,3 +360,208 @@
     font-size: var(--font-size-base);
   }
 }
+
+/* ============================================
+   API Demo Styles
+   ============================================ */
+
+/* API Method Card */
+.api-method-card {
+  padding: var(--spacing-lg);
+  background: var(--color-surface-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-md);
+}
+
+.api-method-card--with-demo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xl);
+}
+
+.api-method-card .api-method-name {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--color-blue);
+}
+
+.api-method-card .api-method-return {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: var(--font-size-sm);
+  color: var(--color-green);
+  padding: 2px 8px;
+  background: rgba(52, 199, 89, 0.1);
+  border-radius: var(--radius-sm);
+}
+
+.api-method-card .api-method-description {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.api-method-card .code-block {
+  margin-top: var(--spacing-md);
+}
+
+/* Demo Section */
+.api-method-demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Mini Blok Editor */
+.mini-blok-editor {
+  height: 200px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-background);
+  position: relative;
+}
+
+.mini-editor-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background);
+}
+
+.mini-editor-placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.mini-editor-error {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.mini-editor-error-message {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+  margin-top: var(--spacing-xs);
+}
+
+/* Demo Controls */
+.api-demo-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.api-demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.api-demo-action-btn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  color: var(--color-blue);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.api-demo-action-btn:hover:not(:disabled) {
+  background: rgba(0, 122, 255, 0.1);
+  border-color: var(--color-blue);
+}
+
+.api-demo-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.api-demo-loading {
+  font-style: italic;
+}
+
+.api-demo-reset-btn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  align-self: flex-start;
+}
+
+.api-demo-reset-btn:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.api-demo-reset-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Demo Output */
+.api-demo-output {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.api-demo-output-success {
+  color: var(--color-green);
+  background: rgba(52, 199, 89, 0.1);
+}
+
+.api-demo-output-error {
+  color: var(--color-error);
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.api-demo-output svg {
+  flex-shrink: 0;
+}
+
+/* Responsive Behavior */
+@media (max-width: 1024px) {
+  .api-method-card--with-demo {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .api-method-card {
+    padding: var(--spacing-md);
+  }
+
+  .mini-blok-editor {
+    height: 180px;
+  }
+
+  .api-demo-actions {
+    flex-direction: column;
+  }
+
+  .api-demo-action-btn {
+    width: 100%;
+  }
+}

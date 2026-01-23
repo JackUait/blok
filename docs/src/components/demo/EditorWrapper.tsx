@@ -51,12 +51,6 @@ export const EditorWrapper: React.FC<{
         (window as unknown as Record<string, unknown>).BlokItalic = module.Italic;
         (window as unknown as Record<string, unknown>).BlokLink = module.Link;
 
-        // Remove placeholder
-        const placeholder = containerRef.current.querySelector('.editor-placeholder');
-        if (placeholder) {
-          placeholder.remove();
-        }
-
         // Create the editor
         const BlokClass = module.Blok;
         editorState.editor = new BlokClass({
@@ -132,7 +126,7 @@ export const EditorWrapper: React.FC<{
         const shouldDestroy = !isMounted && editor?.destroy;
 
         if (shouldDestroy) {
-          editor.destroy();
+          editor.destroy?.();
           return;
         }
 

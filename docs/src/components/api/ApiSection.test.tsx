@@ -91,9 +91,9 @@ describe('ApiSection', () => {
   it('should render method example when provided', () => {
     render(<ApiSection section={mockSection} />);
 
-    // CodeBlock content may not be fully rendered in tests
-    const codeElement = document.querySelector('.api-method-large code');
-    expect(codeElement).toBeInTheDocument();
+    // CodeBlock renders asynchronously, so check for the wrapper
+    const codeBlock = document.querySelector('.api-method-card .code-block');
+    expect(codeBlock).toBeInTheDocument();
   });
 
   it('should render properties when provided', () => {
@@ -207,10 +207,10 @@ describe('ApiSection', () => {
     expect(blockTitle?.tagName.toLowerCase()).toBe('h3');
   });
 
-  it('should have api-method-large div', () => {
+  it('should have api-method-card div', () => {
     const { container } = render(<ApiSection section={mockSection} />);
 
-    const method = container.querySelector('.api-method-large');
+    const method = container.querySelector('.api-method-card');
     expect(method).toBeInTheDocument();
   });
 

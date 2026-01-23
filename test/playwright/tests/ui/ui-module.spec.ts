@@ -1088,8 +1088,10 @@ test.describe('ui module', () => {
       // eslint-disable-next-line playwright/no-wait-for-timeout
       await page.waitForTimeout(200);
 
-      // Get the first block using the specific selector
-      const firstBlock = page.locator(`${PARAGRAPH_SELECTOR}`).first();
+      // Get the first block using a specific text filter
+      const firstBlock = page.locator(PARAGRAPH_SELECTOR).filter({
+        hasText: 'First block',
+      });
 
       // Hover to show the toolbar
       await firstBlock.hover();
@@ -1104,23 +1106,19 @@ test.describe('ui module', () => {
       expect(toolbarOpenedBefore).toBe(true);
 
       // Get the position to start selection - use the toolbar position which is inside the redactor
-      const startPos = await page.evaluate(() => {
-        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
-        const redactor = document.querySelector('[data-blok-testid="redactor"]');
-        if (!toolbar || !redactor) return null;
+      // Using locators for auto-waiting and better error messages
+      const toolbarLocator = page.locator('[data-blok-testid="toolbar"]');
+      const redactorLocator = page.locator('[data-blok-testid="redactor"]');
 
-        const toolbarRect = toolbar.getBoundingClientRect();
-        const redactorRect = redactor.getBoundingClientRect();
+      const [toolbarBox, redactorBox] = await Promise.all([
+        toolbarLocator.boundingBox(),
+        redactorLocator.boundingBox(),
+      ]);
 
-        return {
-          x: toolbarRect.left + toolbarRect.width / 2, // Center of toolbar (inside redactor)
-          y: redactorRect.top + 50, // Near top of redactor
-        };
-      });
-
-      if (!startPos) {
-        throw new Error('Could not determine start position');
-      }
+      const startPos = {
+        x: toolbarBox!.x + toolbarBox!.width / 2, // Center of toolbar (inside redactor)
+        y: redactorBox!.y + 50, // Near top of redactor
+      };
 
       // Start selection from inside the redactor (toolbar position)
       await page.mouse.move(startPos.x, startPos.y);

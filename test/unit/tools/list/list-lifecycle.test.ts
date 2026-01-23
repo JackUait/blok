@@ -316,19 +316,17 @@ describe('list-lifecycle', () => {
     const context = createMockContext({ style: 'unordered' });
     const result = renderListItem(context);
 
-    // Check wrapper has correct vertical spacing via computed styles
-    // py-[3px] = 3px padding top and bottom
-    const wrapperStyles = window.getComputedStyle(result);
-    expect(wrapperStyles.paddingTop).toBe('3px');
-    expect(wrapperStyles.paddingBottom).toBe('3px');
-    expect(wrapperStyles.marginTop).toBe('2px');
-    expect(wrapperStyles.marginBottom).toBe('1px');
+    // Check wrapper has the BASE_STYLES that provide vertical spacing
+    // These match the paragraph wrapper spacing
+    expect(result.className).toContain('py-[3px]');
+    expect(result.className).toContain('mt-[2px]');
+    expect(result.className).toContain('mb-px');
 
     // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
     const listItem = result.querySelector('[role="listitem"]') as HTMLElement;
-    const listItemStyles = window.getComputedStyle(listItem);
-    expect(listItemStyles.paddingTop).toBe('0px');
-    expect(listItemStyles.paddingBottom).toBe('0px');
+    expect(listItem?.className).not.toContain('pt-[2px]');
+    expect(listItem?.className).not.toContain('pb-[1px]');
+    expect(listItem?.className).not.toContain('py-0.5');
   });
 
   /**

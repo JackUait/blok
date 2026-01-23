@@ -2,36 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased](https://github.com/JackUait/blok/compare/v0.4.1-beta.5...HEAD)
-
-### 📚 Documentation
-
-- update playwright guides and documentation ([46c7a0e](https://github.com/JackUait/blok/commit/46c7a0eb3cee7a76f05feceb24a44ed26a831949))
-- update README.md ([1db0708](https://github.com/JackUait/blok/commit/1db0708f44b1fa2a93411763c0dd24ea19871cfb))
-
-### 🐛 Bug Fixes
-
-- failing tests and the total number of tests being run ([bc6d386](https://github.com/JackUait/blok/commit/bc6d3863df14bcb3c352d2b7c7abd771a990cca0))
-- ship all languages ([772356a](https://github.com/JackUait/blok/commit/772356aaf4cac0a059754aa93385abfafb8fc95a))
-
-### ♻️ Refactoring
-
-- simplify translations module ([486c0eb](https://github.com/JackUait/blok/commit/486c0eb866033f52f1c5dd25c1ac1e50c35351d8))
-- simplify the code ([9980f4c](https://github.com/JackUait/blok/commit/9980f4cb1ba1af61041953b56ab2ccbad86c90ee))
-- replace blockTunes.delete.delete with blockTunes.delete ([0437024](https://github.com/JackUait/blok/commit/04370249e203deda13f39a27aa0366b3d1bba4b7))
-
-### 🧪 Tests
-
-- fix failing tests ([fdbe686](https://github.com/JackUait/blok/commit/fdbe6864959bac2733e838fa72f77d95c82112c7))
-- fix failing tests ([794a484](https://github.com/JackUait/blok/commit/794a484fb1a716e6474a5c35e0ded71e79e1b666))
+## [0.5.0](https://github.com/JackUait/blok/compare/v0.4.1-beta.5...v0.5.0) (2026-01-23)
 
 ### ✨ Features
 
-- simplify translation keys ([e205011](https://github.com/JackUait/blok/commit/e205011b7a0b9243ef1a032c42c14f82d8503d2f))
-- lazy importing locales ([d175cc0](https://github.com/JackUait/blok/commit/d175cc0c223065cc0725577ba7e04de9d5ac4ac7))
-- add language presets ([c9543f6](https://github.com/JackUait/blok/commit/c9543f6445d3fefe4ad7a2e2a73f2be2fd27fef7))
-- allow restricting locales ([bd7edd9](https://github.com/JackUait/blok/commit/bd7edd97168b6ae807923e69eb128dc14304bcd7))
-- add transaltions to Amharic, Bosnian, Georgian, Khmer, Lao, Macedonian, Mongolian, Burmese, Nepali, Sinhala, Albanian and Swahili ([6e62c58](https://github.com/JackUait/blok/commit/6e62c589c2a1650940b52ccee7d51705e39cc66f))
+- implement Conflict-Free Replicated Data Type (CRDT) undo/redo ([#33](https://github.com/JackUait/blok/pull/33)) ([98477264](https://github.com/JackUait/blok/commit/984772642af711dcbe23d06f14ed77c003012ecc))
+- handle edge cases when converting lists in old format to lists in new format ([594f3ba7](https://github.com/JackUait/blok/commit/594f3ba77cee0a08bcf5f46bb8251e41d857ea8e))
+- add convertion from the old data model to the new data model for lists ([a87c21b7](https://github.com/JackUait/blok/commit/a87c21b71344e3620bb7fcd6e621730de8442363))
+
+### 🐛 Bug Fixes
+
+- toolbar hover behavior after cross-block selection ([#35](https://github.com/JackUait/blok/pull/35)) ([122a50fc](https://github.com/JackUait/blok/commit/122a50fcdabee2e7003c8f464701ecc35e4fc9af))
+- trigger PatternPasteEvent for internal cut/paste operations ([d98fd369](https://github.com/JackUait/blok/commit/d98fd36951cd5824d728ddb006572d071f6e8650))
+- bundle size bugs ([6a0f760b](https://github.com/JackUait/blok/commit/6a0f760bba5b490c2a2785c853154620b7b32e7b))
+
+### 🔧 CI/CD
+
+- fix bundle size tracking ([#32](https://github.com/JackUait/blok/pull/32)) ([655691fd](https://github.com/JackUait/blok/commit/655691fde852d28cc9ec0c4e9e539ffd25f3ff4c))
+- improve E2E runtime with parallel sharding and PR reporting ([#29](https://github.com/JackUait/blok/pull/29)) ([c4a29f1b](https://github.com/JackUait/blok/commit/c4a29f1bb4b7106ad9475ab5074b57ae10c14356))
+
+### ♻️ Refactoring
+
+- decouple files to reduce their complexity ([#34](https://github.com/JackUait/blok/pull/34)) ([55b77ce7](https://github.com/JackUait/blok/commit/55b77ce7140ec4cc08bec83861ac36bce244086c))
+- reduce bundle size ([#30](https://github.com/JackUait/blok/pull/30)) ([c437a8be](https://github.com/JackUait/blok/commit/c437a8be38290ca1d0a5ac0d1f7978a414df2540))
+- improve publishing ([#28](https://github.com/JackUait/blok/pull/28)) ([9b32f5ba](https://github.com/JackUait/blok/commit/9b32f5ba4274af4d9b51287fff8e6bcb27ca75f5))
+
+### 🧹 Chores
+
+- update storybook-related dependencies ([b5fb5313](https://github.com/JackUait/blok/commit/b5fb531379b5c4df597643e8133275207e919a8f))
+- Pre-v1 Polish: UX Improvements & Bug Fixes ([#31](https://github.com/JackUait/blok/pull/31)) ([1917a221](https://github.com/JackUait/blok/commit/1917a2214f6f3c08923a3df6cf963949ae2125de))
 
 ## [0.4.1-beta.5](https://github.com/JackUait/blok/compare/v0.4.1-beta.4...v0.4.1-beta.5) (2025-12-07)
 

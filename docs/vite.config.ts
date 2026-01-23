@@ -15,34 +15,41 @@ function externalDistPlugin(): Plugin {
     name: 'external-dist',
     enforce: 'pre',
     resolveId(id) {
-      // Tell Vite that /dist/* paths are external URLs
       if (id.startsWith('/dist/')) {
-        return { id, external: true };
+        return { id: resolve(parentDistDir, id.slice('/dist/'.length)) };
+      }
+      return null;
+    },
+    load(id) {
+      if (id.startsWith(parentDistDir)) {
+        return fs.readFileSync(id, 'utf-8');
       }
       return null;
     },
     configureServer(server) {
       // Serve the parent dist directory at /dist
-      return () => {
-        server.middlewares.use((req, res, next) => {
-          if (req.url?.startsWith('/dist/')) {
-            const filePath = resolve(parentDistDir, req.url.slice('/dist/'.length));
-            if (fs.existsSync(filePath)) {
-              const ext = filePath.slice(filePath.lastIndexOf('.'));
-              const contentType = ext === '.mjs' || ext === '.js'
-                ? 'application/javascript'
-                : ext === '.css'
-                  ? 'text/css'
-                  : 'text/plain';
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.startsWith('/dist/')) {
+          const filePath = resolve(parentDistDir, req.url.slice('/dist/'.length));
+          if (fs.existsSync(filePath)) {
+            const ext = filePath.slice(filePath.lastIndexOf('.'));
+            const contentType = ext === '.mjs' || ext === '.js'
+              ? 'application/javascript; charset=utf-8'
+              : ext === '.css'
+                ? 'text/css; charset=utf-8'
+                : 'text/plain; charset=utf-8';
 
-              res.setHeader('Content-Type', contentType);
-              res.setHeader('Access-Control-Allow-Origin', '*');
-              return fs.createReadStream(filePath).pipe(res);
-            }
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            return fs.createReadStream(filePath).pipe(res);
+          } else {
+            res.statusCode = 404;
+            res.end(`Not found: ${req.url}`);
+            return;
           }
-          next();
-        });
-      };
+        }
+        next();
+      });
     },
   };
 }

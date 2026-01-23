@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { CodeBlock } from '../common/CodeBlock';
+import type { PackageManager } from '../common/PackageManagerToggle';
 
-const INSTALL_CODE = 'npm install @jackuait/blok';
+const PACKAGE_NAME = '@jackuait/blok';
 
 const CONFIG_CODE = `import { Blok } from '@jackuait/blok';
 import { Header, Paragraph, List, Bold, Italic, Link } from '@jackuait/blok/tools';
@@ -31,6 +33,22 @@ const SAVE_CODE = `const data = await editor.save();
 // }`;
 
 export const QuickStart: React.FC = () => {
+  const [packageManager, setPackageManager] = useState<PackageManager>('yarn');
+
+  // Default install command (fallback, will be overridden by CodeBlock)
+  const getInstallCommand = (manager: PackageManager): string => {
+    switch (manager) {
+      case 'yarn':
+        return `yarn add ${PACKAGE_NAME}`;
+      case 'npm':
+        return `npm install ${PACKAGE_NAME}`;
+      case 'bun':
+        return `bun add ${PACKAGE_NAME}`;
+      default:
+        return `npm install ${PACKAGE_NAME}`;
+    }
+  };
+
   return (
     <section className="quick-start" id="quick-start">
       <div className="quick-start-bg">
@@ -40,9 +58,7 @@ export const QuickStart: React.FC = () => {
         <div className="section-header">
           <p className="section-eyebrow">Quick Start</p>
           <h2 className="section-title">
-            Up and running
-            <br />
-            in minutes
+            Up and running in minutes
           </h2>
         </div>
         <div className="install-steps">
@@ -59,7 +75,13 @@ export const QuickStart: React.FC = () => {
               <p className="step-description">
                 Add Blok to your project using your favorite package manager.
               </p>
-              <CodeBlock code={INSTALL_CODE} language="bash" />
+              <CodeBlock
+                code={getInstallCommand(packageManager)}
+                language="bash"
+                showPackageManagerToggle
+                packageName={PACKAGE_NAME}
+                onPackageManagerChange={setPackageManager}
+              />
             </div>
           </div>
           <div

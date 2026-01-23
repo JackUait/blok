@@ -74,7 +74,7 @@ export const ApiPreview: React.FC = () => {
           ))}
         </div>
         <div className="api-cta">
-          <Link to="/api" className="btn btn-secondary">
+          <Link to="/docs" className="btn btn-secondary">
             View Full API Reference
           </Link>
         </div>

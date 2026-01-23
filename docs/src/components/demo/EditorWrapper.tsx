@@ -5,6 +5,7 @@ interface BlokEditor {
   clear: () => Promise<void>;
   undo: () => Promise<void>;
   redo: () => Promise<void>;
+  destroy?: () => void;
 }
 
 interface BlokModule {
@@ -21,19 +22,27 @@ export const EditorWrapper: React.FC<{
   onEditorReady: (editor: BlokEditor) => void;
 }> = ({ onEditorReady }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<BlokEditor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Use a ref to store the latest callback without triggering re-runs
+  const onEditorReadyRef = useRef(onEditorReady);
+  onEditorReadyRef.current = onEditorReady;
+
   useEffect(() => {
     let editor: BlokEditor | null = null;
+    let isMounted = true;
 
     const initEditor = async () => {
-      if (!containerRef.current) return;
+      if (!containerRef.current || !isMounted) return;
 
       try {
         // Import the full bundle which includes all tools
         // @ts-ignore - Dynamic import of external Blok module
         const module = (await import('/dist/full.mjs')) as unknown as BlokModule;
+
+        if (!isMounted || !containerRef.current) return;
 
         // Make tools available globally for the editor config
         (window as unknown as Record<string, unknown>).BlokHeader = module.Header;
@@ -120,21 +129,37 @@ export const EditorWrapper: React.FC<{
           },
         });
 
+        if (!isMounted) {
+          // Component unmounted while initializing, destroy editor
+          if (editor.destroy) {
+            editor.destroy();
+          }
+          return;
+        }
+
+        editorRef.current = editor;
         setLoading(false);
-        onEditorReady(editor);
+        onEditorReadyRef.current(editor);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
-        setLoading(false);
+        if (isMounted) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          setError(errorMessage);
+          setLoading(false);
+        }
       }
     };
 
     initEditor();
 
     return () => {
-      // Cleanup would go here if the editor has a destroy method
+      isMounted = false;
+      // Cleanup: destroy the editor instance
+      if (editorRef.current?.destroy) {
+        editorRef.current.destroy();
+        editorRef.current = null;
+      }
     };
-  }, [onEditorReady]);
+  }, []); // Empty deps array - only run once
 
   if (error) {
     return (
@@ -188,8 +213,8 @@ export const EditorWrapper: React.FC<{
                   x2="100%"
                   y2="100%"
                 >
-                  <stop offset="0%" style={{ stopColor: '#007AFF' }} />
-                  <stop offset="100%" style={{ stopColor: '#5856D6' }} />
+                  <stop offset="0%" stopColor="#007AFF" />
+                  <stop offset="100%" stopColor="#5856D6" />
                 </linearGradient>
               </defs>
             </svg>

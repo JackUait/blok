@@ -151,74 +151,85 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
+  height: 56px;
 }
 
 .nav-logo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 10px;
   font-weight: 600;
   font-size: var(--font-size-lg);
   color: var(--color-text-primary);
   text-decoration: none;
-  transition: opacity var(--transition-fast);
-}
-
-.nav-logo:hover {
-  opacity: 0.8;
+  padding-bottom: 2px;
 }
 
 .nav-logo svg {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-logo:hover svg {
+  transform: rotate(-5deg) scale(1.05);
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xl);
+  gap: var(--spacing-md);
 }
 
 .nav-link {
+  position: relative;
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text-secondary);
   text-decoration: none;
-  transition: color var(--transition-fast);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
 }
 
 .nav-link:hover {
   color: var(--color-text-primary);
+  background: var(--color-background);
 }
 
 .nav-link-github {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-md);
+  padding: 8px 14px;
   background: var(--color-surface);
   border-radius: var(--radius-full);
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
 }
 
 .nav-toggle {
   display: none;
   flex-direction: column;
-  gap: 4px;
-  padding: var(--spacing-sm);
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   background: none;
   border: none;
   cursor: pointer;
+  border-radius: var(--radius-md);
 }
 
 .nav-toggle span {
   width: 20px;
   height: 2px;
   background: var(--color-text-primary);
-  border-radius: var(--radius-full);
-  transition: transform var(--transition-base), opacity var(--transition-base);
+  border-radius: 2px;
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s ease;
 }
 
 @media (max-width: 768px) {
@@ -228,6 +239,9 @@ body {
   .nav-toggle {
     display: flex;
   }
+  .nav-container {
+    height: 52px;
+  }
 }
 
 /* Hero Section */
@@ -236,8 +250,14 @@ body {
   min-height: 100vh;
   display: flex;
   align-items: center;
-  padding-top: 52px;
+  padding-top: 56px;
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding-top: 52px;
+  }
 }
 
 .hero-bg {
@@ -688,63 +708,269 @@ body {
 /* Code Blocks */
 .code-block {
   position: relative;
-  background: #1c1c1e;
-  border-radius: var(--radius-md);
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  animation: codeBlockFadeIn 0.4s var(--transition-slow) backwards;
+}
+
+@keyframes codeBlockFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Code Block Header - Mac-style window chrome */
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: linear-gradient(to bottom, #2d2d2d 0%, #252525 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: var(--spacing-md);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* Header right side grouping */
+.code-block-header > *:not(.code-block-controls) {
+  flex-shrink: 0;
+}
+
+.code-block-language {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  flex-grow: 1;
+  text-align: center;
+}
+
+.code-block-controls {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.code-block-control {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.code-block-control--red {
+  background: linear-gradient(135deg, #FF6F61 0%, #E55A4E 100%);
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.code-block-control--yellow {
+  background: linear-gradient(135deg, #FFD06A 0%, #F5C542 100%);
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.code-block-control--green {
+  background: linear-gradient(135deg, #4CD964 0%, #34C759 100%);
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Close/X icon on red dot when hovered */
+.code-block-control--red::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 5px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+
+.code-block-controls:hover .code-block-control--red::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Minus icon on yellow dot when hovered */
+.code-block-control--yellow::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 4px;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease;
+}
+
+.code-block-controls:hover .code-block-control--yellow::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Plus icon on green dot when hovered */
+.code-block-control--green::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0) rotate(0deg);
+  width: 5px;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease;
+}
+
+.code-block-control--green::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0) rotate(0deg);
+  width: 1px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease;
+}
+
+.code-block-controls:hover .code-block-control--green::after,
+.code-block-controls:hover .code-block-control--green::before {
+  transform: translate(-50%, -50%) scale(1) rotate(0deg);
 }
 
 .code-copy {
-  position: absolute;
-  top: var(--spacing-sm);
-  right: var(--spacing-sm);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-md);
-  background: rgba(255, 255, 255, 0.1);
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.08);
   border: none;
   border-radius: var(--radius-sm);
-  color: white;
-  font-size: var(--font-size-xs);
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.code-copy svg {
+  stroke: currentColor;
+  stroke-width: 1.5;
 }
 
 .code-copy:hover {
   background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 1);
 }
 
 .code-copy.copied {
-  background: var(--color-green);
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.2);
 }
 
-.code-block pre {
+.code-copy.copied svg {
+  animation: checkmarkBounce 0.4s ease;
+}
+
+@keyframes checkmarkBounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Code Block Content */
+.code-block-content {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  background: #ffffff;
+}
+
+/* Shiki-generated pre element */
+.code-block-content .shiki {
   padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-lg) calc(var(--spacing-lg) + var(--spacing-md));
   margin: 0;
-  overflow-x: auto;
+  min-width: fit-content;
+  background: transparent !important;
+}
+
+.code-block-content .shiki pre {
+  min-width: fit-content;
+}
+
+/* Inner div wrapper for Shiki HTML */
+.code-block-content > div {
+  min-width: fit-content;
+}
+
+@media (prefers-color-scheme: dark) {
+  .code-block-content {
+    background: #1e1e1e;
+  }
+}
+
+/* Line numbers column background */
+.code-block-content .shiki .line {
+  padding-left: var(--spacing-md);
+}
+
+/* Remove Shiki's default background */
+.code-block-content pre {
+  background: transparent !important;
+}
+
+/* Fallback for non-Shiki code blocks */
+.code-block-content pre:not(.shiki) {
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-lg) calc(var(--spacing-lg) + var(--spacing-md));
+  margin: 0;
+  min-width: fit-content;
+  background: transparent !important;
 }
 
 .code-block code {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
   font-size: var(--font-size-sm);
   line-height: 1.7;
-  color: #f5f5f7;
 }
 
-/* Syntax Highlighting */
-.token-keyword { color: #FF79C6; }
-.token-string { color: #F1FA8C; }
-.token-comment { color: #6272A4; }
-.token-function { color: #50FA7B; }
-.token-number { color: #BD93F9; }
-.token-punctuation { color: #f5f5f7; }
-.token-property { color: #66D9EF; }
-.token-tag { color: #FF79C6; }
-.token-attr-name { color: #50FA7B; }
-.token-attr-value { color: #F1FA8C; }
-.language-bash .token-keyword { color: #8BE9FD; }
+/* Custom scrollbar for code blocks */
+.code-block-content::-webkit-scrollbar {
+  height: 8px;
+}
+
+.code-block-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.code-block-content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.code-block-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
 
 /* API Section */
 .api {
@@ -1011,4 +1237,51 @@ body {
   .migration-title {
     font-size: var(--font-size-2xl);
   }
+}
+
+/* ============================================
+   Package Manager Toggle
+   ============================================ */
+
+/* Toggle sits inside the code block header, blending with Mac chrome */
+.code-block-package-toggle {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+}
+
+.package-manager-toggle {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.package-manager-option {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+  color: rgba(255, 255, 255, 0.4);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.package-manager-option:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.package-manager-option.active {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.package-manager-option:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
 }

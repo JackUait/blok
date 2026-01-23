@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { CodeBlock } from '../common/CodeBlock';
 import { ApiSection as ApiSectionType } from './api-data';
+import type { PackageManager } from '../common/PackageManagerToggle';
 
 interface ApiSectionProps {
   section: ApiSectionType;
 }
 
-const INSTALL_CODE = 'npm install @jackuait/blok';
+const PACKAGE_NAME = '@jackuait/blok';
 
 const CONFIG_CODE = `import { Blok } from '@jackuait/blok';
 import { Header, Paragraph, List, Bold, Italic, Link } from '@jackuait/blok/tools';
@@ -36,18 +38,37 @@ const SAVE_CODE = `const data = await editor.save();
 // }`;
 
 const QuickStartContent: React.FC = () => {
+  const [packageManager, setPackageManager] = useState<PackageManager>('yarn');
+
+  const getInstallCommand = (manager: PackageManager): string => {
+    switch (manager) {
+      case 'yarn':
+        return `yarn add ${PACKAGE_NAME}`;
+      case 'npm':
+        return `npm install ${PACKAGE_NAME}`;
+      case 'bun':
+        return `bun add ${PACKAGE_NAME}`;
+      default:
+        return `npm install ${PACKAGE_NAME}`;
+    }
+  };
+
   return (
     <div className="api-quickstart">
       <div className="api-quickstart-step">
-        <div className="api-quickstart-number">1</div>
         <div className="api-quickstart-content">
           <h3>Install Blok</h3>
           <p>Add Blok to your project using your favorite package manager.</p>
-          <CodeBlock code={INSTALL_CODE} language="bash" />
+          <CodeBlock
+            code={getInstallCommand(packageManager)}
+            language="bash"
+            showPackageManagerToggle
+            packageName={PACKAGE_NAME}
+            onPackageManagerChange={setPackageManager}
+          />
         </div>
       </div>
       <div className="api-quickstart-step">
-        <div className="api-quickstart-number">2</div>
         <div className="api-quickstart-content">
           <h3>Import and configure</h3>
           <p>Import the editor and tools, then configure your block types.</p>
@@ -55,7 +76,6 @@ const QuickStartContent: React.FC = () => {
         </div>
       </div>
       <div className="api-quickstart-step">
-        <div className="api-quickstart-number">3</div>
         <div className="api-quickstart-content">
           <h3>Save content</h3>
           <p>Extract clean JSON data ready to save anywhere.</p>

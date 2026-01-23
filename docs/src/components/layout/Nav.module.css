@@ -1,4 +1,412 @@
-/* Nav specific styles for scroll hiding */
+/* ============================================
+   Nav Component - Enhanced Animations
+   ============================================ */
+
+/* Springy transition for the nav element */
+:global(.nav) {
+  transition:
+    transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+    background-color 0.3s ease,
+    backdrop-filter 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Header slides up when hiding */
 .hidden {
   transform: translateY(-100%);
+}
+
+/* Scrolled state with enhanced depth */
+:global(.nav.scrolled) {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(.nav.scrolled) {
+    background: rgba(0, 0, 0, 0.85);
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.2),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Subtle top highlight/glow on nav */
+:global(.nav::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 122, 255, 0.15) 20%,
+    rgba(88, 86, 214, 0.15) 50%,
+    rgba(0, 122, 255, 0.15) 80%,
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+:global(.nav.scrolled::before) {
+  opacity: 1;
+}
+
+/* Container fade animation */
+:global(.nav-container) {
+  transition: opacity 0.3s ease;
+}
+
+:global(.nav.hidden .nav-container) {
+  opacity: 0;
+}
+
+:global(.nav:not(.hidden) .nav-container) {
+  opacity: 1;
+}
+
+/* ============================================
+   Logo Enhancements
+   ============================================ */
+
+:global(.nav-logo) {
+  position: relative;
+  transition:
+    opacity 0.3s ease,
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:global(.nav-logo::after) {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-blue), var(--color-purple));
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:global(.nav-logo:hover::after) {
+  width: 100%;
+}
+
+:global(.nav.hidden .nav-logo) {
+  opacity: 0;
+  transform: scale(0.95) translateY(-8px);
+}
+
+:global(.nav:not(.hidden) .nav-logo) {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* Subtle pulse on logo hover */
+@keyframes logoPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 0 rgba(0, 122, 255, 0));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(0, 122, 255, 0.3));
+  }
+}
+
+:global(.nav-logo:hover) {
+  animation: logoPulse 2s ease-in-out infinite;
+}
+
+/* ============================================
+   Nav Links Enhancements
+   ============================================ */
+
+:global(.nav-link) {
+  position: relative;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+    color 0.15s ease;
+}
+
+:global(.nav-link::before) {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-blue), var(--color-purple));
+  border-radius: 2px;
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:global(.nav-link:hover::before) {
+  transform: translateX(-50%) scaleX(1);
+}
+
+:global(.nav-link-active) {
+  color: var(--color-blue) !important;
+  font-weight: 600;
+}
+
+:global(.nav-link-active::before) {
+  transform: translateX(-50%) scaleX(1);
+  background: var(--color-blue);
+}
+
+:global(.nav.hidden .nav-link) {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Staggered delays for nav links */
+:global(.nav:not(.hidden) .nav-links > *:nth-child(1)) { transition-delay: 0.05s; }
+:global(.nav:not(.hidden) .nav-links > *:nth-child(2)) { transition-delay: 0.08s; }
+:global(.nav:not(.hidden) .nav-links > *:nth-child(3)) { transition-delay: 0.11s; }
+:global(.nav:not(.hidden) .nav-links > *:nth-child(4)) { transition-delay: 0.14s; }
+:global(.nav:not(.hidden) .nav-links > *:nth-child(5)) { transition-delay: 0.17s; }
+:global(.nav:not(.hidden) .nav-links > *:nth-child(6)) { transition-delay: 0.20s; }
+
+:global(.nav:not(.hidden) .nav-link) {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================================
+   GitHub Link Button Enhancement
+   ============================================ */
+
+:global(.nav-link-github) {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 122, 255, 0.05) 0%,
+    rgba(88, 86, 214, 0.05) 100%
+  ) !important;
+  border: 1px solid rgba(0, 122, 255, 0.2) !important;
+  transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1) !important;
+}
+
+:global(.nav-link-github::before) {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 122, 255, 0.15) 0%,
+    rgba(88, 86, 214, 0.15) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+:global(.nav-link-github:hover) {
+  border-color: rgba(0, 122, 255, 0.4) !important;
+  transform: translateY(-1px) !important;
+  box-shadow:
+    0 2px 8px rgba(0, 122, 255, 0.15),
+    0 4px 16px rgba(0, 122, 255, 0.1) !important;
+}
+
+:global(.nav-link-github:hover::before) {
+  opacity: 1;
+}
+
+:global(.nav-link-github *) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   Search Button Enhancement
+   ============================================ */
+
+:global(.nav-search-button) {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1) !important;
+}
+
+:global(.nav-search-button::before) {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 122, 255, 0.1) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+:global(.nav-search-button:hover::before) {
+  opacity: 1;
+}
+
+:global(.nav-search-button *) {
+  position: relative;
+  z-index: 1;
+}
+
+:global(.nav-search-button:hover) {
+  transform: translateY(-1px) !important;
+  box-shadow:
+    0 2px 8px rgba(0, 122, 255, 0.1),
+    0 4px 16px rgba(0, 122, 255, 0.08) !important;
+}
+
+/* ============================================
+   Mobile Menu Toggle Enhancement
+   ============================================ */
+
+:global(.nav-toggle) {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:global(.nav-toggle::before) {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  background: rgba(0, 122, 255, 0);
+  border-radius: var(--radius-md);
+  transition: background 0.3s ease;
+}
+
+:global(.nav-toggle:hover::before) {
+  background: rgba(0, 122, 255, 0.08);
+}
+
+:global(.nav.hidden .nav-toggle) {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+:global(.nav:not(.hidden) .nav-toggle) {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Hamburger animation */
+:global(.nav-toggle span) {
+  transform-origin: center;
+  transition:
+    transform 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.2s ease;
+}
+
+:global(.nav-toggle.active span:nth-child(1)) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+:global(.nav-toggle.active span:nth-child(2)) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+:global(.nav-toggle.active span:nth-child(3)) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* ============================================
+   Mobile Menu Overlay
+   ============================================ */
+
+:global(.nav-links.open) {
+  position: fixed;
+  inset: 52px 0 0 0;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: var(--spacing-xl);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  gap: 0;
+  animation: menuSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(.nav-links.open) {
+    background: rgba(0, 0, 0, 0.95);
+  }
+}
+
+@keyframes menuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:global(.nav-links.open > *) {
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  text-align: center;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-xs);
+  animation: menuItemFadeIn 0.3s ease backwards;
+}
+
+:global(.nav-links.open > *:nth-child(1)) { animation-delay: 0.05s; }
+:global(.nav-links.open > *:nth-child(2)) { animation-delay: 0.08s; }
+:global(.nav-links.open > *:nth-child(3)) { animation-delay: 0.11s; }
+:global(.nav-links.open > *:nth-child(4)) { animation-delay: 0.14s; }
+:global(.nav-links.open > *:nth-child(5)) { animation-delay: 0.17s; }
+
+@keyframes menuItemFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+:global(.nav-links.open > *:hover) {
+  background: var(--color-background);
+}
+
+/* ============================================
+   Ambient Glow Effect
+   ============================================ */
+
+:global(.nav-glow) {
+  position: absolute;
+  top: -50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 200px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 122, 255, 0.08) 0%,
+    rgba(88, 86, 214, 0.04) 30%,
+    transparent 70%
+  );
+  filter: blur(40px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+:global(.nav-glow.visible) {
+  opacity: 1;
 }

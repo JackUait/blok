@@ -67,11 +67,6 @@ export const ApiPage: React.FC = () => {
       <div className="api-docs">
         <ApiSidebar activeSection={activeSection} />
         <main className="api-main">
-          <div className="api-breadcrumb">
-            <a href="/">Documentation</a>
-            <span className="api-breadcrumb-separator">/</span>
-            <span>API Reference</span>
-          </div>
           {API_SECTIONS.map((section) => (
             <ApiSection key={section.id} section={section} />
           ))}

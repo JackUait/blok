@@ -24,8 +24,8 @@ export const MigrationCard: React.FC = () => {
                 />
                 <defs>
                   <linearGradient id="migration-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style={{ stopColor: '#34C759' }} />
-                    <stop offset="100%" style={{ stopColor: '#30D158' }} />
+                    <stop offset="0%" stopColor="#34C759" />
+                    <stop offset="100%" stopColor="#30D158" />
                   </linearGradient>
                 </defs>
               </svg>

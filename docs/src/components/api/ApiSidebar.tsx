@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { SIDEBAR_SECTIONS } from './api-data';
 
 interface ApiSidebarProps {
@@ -16,11 +15,6 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
 
   return (
     <aside className="api-sidebar" data-api-sidebar>
-      <div className="api-sidebar-header">
-        <Link to="/" className="api-sidebar-back">
-          Back to Docs
-        </Link>
-      </div>
       <nav className="api-sidebar-nav">
         {SIDEBAR_SECTIONS.map((section) => (
           <div key={section.title} className="api-sidebar-section">

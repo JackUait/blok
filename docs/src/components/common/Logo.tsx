@@ -11,8 +11,8 @@ export const Logo: React.FC<LogoProps> = ({ size = 32, className = '' }) => {
     <svg className={className} width={size} height={size} viewBox="0 0 128 128" fill="none">
       <defs>
         <linearGradient id={uniqueId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#007AFF' }} />
-          <stop offset="100%" style={{ stopColor: '#5856D6' }} />
+          <stop offset="0%" stopColor="#007AFF" />
+          <stop offset="100%" stopColor="#5856D6" />
         </linearGradient>
       </defs>
       <rect width="128" height="128" rx="28" fill={`url(#${uniqueId})`} />
